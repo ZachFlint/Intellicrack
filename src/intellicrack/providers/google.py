@@ -17,6 +17,7 @@ import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final, cast, override
 
+import httpx
 from google import genai
 from google.genai import types
 from google.genai.errors import APIError
@@ -98,7 +99,7 @@ class GoogleProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """The provider's name.
 
         Returns:
             ProviderName: The provider name enum value.
@@ -135,7 +136,14 @@ class GoogleProvider(LLMProviderBase):
             if e.code in _RATE_LIMIT_STATUS_CODES:
                 raise RateLimitError(_MSG_RATE_LIMITED) from e
             raise ProviderError(_MSG_CONNECTION_FAILED) from e
-        except (ConnectionError, TimeoutError, OSError, ValueError, RuntimeError) as e:
+        except (
+            ConnectionError,
+            TimeoutError,
+            OSError,
+            ValueError,
+            RuntimeError,
+            httpx.RequestError,
+        ) as e:
             self.connected = False
             self.client = None
             self._logger.warning(

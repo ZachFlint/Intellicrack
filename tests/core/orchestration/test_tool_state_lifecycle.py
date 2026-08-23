@@ -42,7 +42,7 @@ class _FakeBridge(ToolBridgeBase):
 
     @property
     def name(self) -> ToolName:
-        """Return the bridge's tool identity.
+        """The bridge's tool identity.
 
         Returns:
             ToolName: The tool this fake bridge represents.
@@ -51,7 +51,7 @@ class _FakeBridge(ToolBridgeBase):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Return a minimal tool definition.
+        """A minimal tool definition.
 
         Returns:
             ToolDefinition: Definition with no functions.

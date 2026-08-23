@@ -64,7 +64,7 @@ def tab(qapp: QApplication) -> Generator[SystemTab]:
         qapp: Session ``QApplication`` fixture ensuring Qt is initialised.
 
     Yields:
-        Generator[SystemTab]: A ``SystemTab`` wired to a real
+        SystemTab: A ``SystemTab`` wired to a real
         :class:`ProcessBridge` instance.
     """
     del qapp

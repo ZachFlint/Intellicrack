@@ -199,11 +199,7 @@ class TestAutoSaveLoopSurvivesFailures:
         assert manager.is_auto_saving is True, "auto-save must be running before cross-loop close"
 
         def _close_on_foreign_loop() -> None:
-            """Run manager.close() on a brand-new event loop in this thread.
-
-            Raises:
-                RuntimeError: Propagated if close is not loop-agnostic.
-            """
+            """Run manager.close() on a brand-new event loop in this thread."""
             foreign_loop = asyncio.new_event_loop()
             try:
                 foreign_loop.run_until_complete(manager.close())

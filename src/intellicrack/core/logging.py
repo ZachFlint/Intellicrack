@@ -745,7 +745,7 @@ class OperationTimer:
 
     @property
     def elapsed_ms(self) -> float:
-        """Return elapsed time in milliseconds since the timer started.
+        """The elapsed time in milliseconds since the timer started.
 
         Returns:
             float: Elapsed time in milliseconds, or 0.0 if the timer has not started.

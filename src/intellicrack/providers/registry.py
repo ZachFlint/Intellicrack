@@ -360,7 +360,7 @@ class ProviderRegistry:
 
     @property
     def active(self) -> LLMProviderBase | None:
-        """Get the currently active provider.
+        """The currently active provider.
 
         Returns:
             LLMProviderBase | None: The active provider instance or None if none set.
@@ -372,7 +372,7 @@ class ProviderRegistry:
 
     @property
     def active_name(self) -> ProviderName | None:
-        """Get the name of the currently active provider.
+        """The name of the currently active provider.
 
         Returns:
             ProviderName | None: The active provider name or None if none set.

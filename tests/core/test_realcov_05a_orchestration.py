@@ -170,7 +170,7 @@ class _RealBinaryAnalysisBridge(ToolBridgeBase):
     @property
     @override
     def name(self) -> ToolName:
-        """Return the tool name this bridge serves.
+        """The tool name this bridge serves.
 
         Returns:
             ToolName: Always :data:`ToolName.PROCESS`.
@@ -180,7 +180,7 @@ class _RealBinaryAnalysisBridge(ToolBridgeBase):
     @property
     @override
     def tool_definition(self) -> ToolDefinition:
-        """Return the advertised tool definition.
+        """The advertised tool definition.
 
         Returns:
             ToolDefinition: A single read-only ``inspect_binary`` function that
@@ -280,7 +280,7 @@ class _ScriptedProvider(LLMProviderBase):
     @property
     @override
     def name(self) -> ProviderName:
-        """Return the provider name.
+        """The provider name.
 
         Returns:
             ProviderName: Always :data:`ProviderName.OPENAI`.

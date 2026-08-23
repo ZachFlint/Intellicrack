@@ -148,7 +148,7 @@ async def kernel32_bridge(real_pe_dll: Path) -> AsyncGenerator[HexEditorBridge]:
         real_pe_dll: Path to the real ``kernel32.dll`` System32 fixture.
 
     Yields:
-        AsyncGenerator[HexEditorBridge]: Bridge with the real DLL opened.
+        HexEditorBridge: Bridge with the real DLL opened.
     """
     bridge = HexEditorBridge()
     await bridge.open_file(str(real_pe_dll))

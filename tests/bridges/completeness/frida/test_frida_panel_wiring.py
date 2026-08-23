@@ -414,7 +414,7 @@ def attached_bridge() -> Generator[FridaBridge]:
     """Create a FridaBridge attached to the current test process.
 
     Yields:
-        Generator[FridaBridge]: An initialized and self-attached bridge.
+        FridaBridge: An initialized and self-attached bridge.
     """
     b = FridaBridge()
     _run_async(b.initialize())

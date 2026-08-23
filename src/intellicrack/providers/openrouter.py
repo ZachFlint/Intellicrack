@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
+from contextlib import AsyncExitStack
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast, override
 
@@ -163,7 +164,7 @@ class OpenRouterProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """The provider's name.
 
         Returns:
             ProviderName: ProviderName.OPENROUTER
@@ -889,11 +890,15 @@ class OpenRouterProvider(LLMProviderBase):
         if reasoning_effort is not None:
             request_body["reasoning"] = {"effort": reasoning_effort}
 
-        async with self.client.stream(
-            "POST",
-            f"{self._base_url}/chat/completions",
-            json=request_body,
-        ) as response:
+        stack = AsyncExitStack()
+        response = await stack.enter_async_context(
+            self.client.stream(
+                "POST",
+                f"{self._base_url}/chat/completions",
+                json=request_body,
+            ),
+        )
+        try:
             if response.status_code >= HTTP_BAD_REQUEST:
                 body_bytes = await response.aread()
                 body_text = body_bytes.decode("utf-8", errors="replace")
@@ -935,6 +940,8 @@ class OpenRouterProvider(LLMProviderBase):
                                     name=cast("str | None", fn.get("name")),
                                     arguments=cast("str | None", fn.get("arguments")),
                                 )
+        finally:
+            await stack.aclose()
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request.

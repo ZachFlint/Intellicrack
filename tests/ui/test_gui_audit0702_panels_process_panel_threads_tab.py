@@ -61,7 +61,7 @@ def tab(qapp: QApplication) -> Generator[ThreadsTab]:
         qapp: Session ``QApplication`` fixture ensuring Qt is initialised.
 
     Yields:
-        Generator[ThreadsTab]: A ``ThreadsTab`` wired to a real
+        ThreadsTab: A ``ThreadsTab`` wired to a real
         :class:`ProcessBridge` instance and a fake attached PID.
     """
     del qapp

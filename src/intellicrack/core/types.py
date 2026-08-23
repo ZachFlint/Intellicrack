@@ -552,7 +552,7 @@ class DataTypeInfo:
 
     @property
     def display_type(self) -> str:
-        """Get the display string for the data type.
+        """The display string for the data type.
 
         Returns:
             str: Formatted type string including pointer or array notation.
@@ -601,7 +601,7 @@ class FunctionInfo:
 
     @property
     def summary(self) -> str:
-        """Get function summary.
+        """Function summary.
 
         Returns:
             str: Summary string with name, address, convention, and variable count.
@@ -1461,7 +1461,7 @@ class ToolFunction:
 
     @property
     def signature(self) -> str:
-        """Get function signature string.
+        """Function signature string.
 
         Returns:
             str: Formatted signature with name, parameters, and return type.

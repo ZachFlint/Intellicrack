@@ -283,7 +283,7 @@ def panel(qapp: QCoreApplication) -> Generator[ProcessPanel]:
         qapp: Qt application fixture (ensures one QApplication exists).
 
     Yields:
-        Generator[ProcessPanel]: A ProcessPanel instance with no bridge wired.
+        ProcessPanel: A ProcessPanel instance with no bridge wired.
     """
     del qapp
     widget = ProcessPanel()

@@ -64,7 +64,7 @@ class WarningRecorder:
 
     @property
     def titles(self) -> list[str]:
-        """Return the titles of every captured warning dialog, in order.
+        """The titles of every captured warning dialog, in order.
 
         Returns:
             list[str]: Dialog window titles in display order.
@@ -73,7 +73,7 @@ class WarningRecorder:
 
     @property
     def messages(self) -> list[str]:
-        """Return the message text of every captured warning dialog, in order.
+        """The message text of every captured warning dialog, in order.
 
         Returns:
             list[str]: Dialog message bodies in display order.

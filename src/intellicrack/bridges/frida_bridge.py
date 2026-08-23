@@ -87,6 +87,7 @@ _ERR_IMPORT_NOT_FOUND = "import enumeration failed"
 _ERR_RESOLVE_FAILED = "symbol resolution failed"
 _ERR_STALKER_FAILED = "Stalker tracing operation failed"
 _ERR_CHILD_GATING_FAILED = "child gating operation failed"
+_ERR_CHILD_GATING_NOT_SUPPORTED = "child gating is not supported on this OS"
 _ERR_CRASH_REPORTING_FAILED = "crash reporting setup failed"
 _ERR_ENUMERATE_FAILED = "enumeration failed"
 _ERR_REPLACE_FAILED = "function replacement failed"
@@ -4665,6 +4666,12 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             await asyncio.to_thread(self._device.enable_spawn_gating)
             self._child_gating_enabled = True
             _logger.info("child_gating_enabled")
+        except frida.NotSupportedError as e:
+            _logger.warning("child_gating_enable_not_supported", error=str(e))
+            raise ToolError(
+                _ERR_CHILD_GATING_NOT_SUPPORTED,
+                details={"reason": _ERR_CHILD_GATING_NOT_SUPPORTED},
+            ) from e
         except Exception as e:
             reason = str(e) or type(e).__name__
             _logger.warning("child_gating_enable_failed", error=reason)
@@ -4689,6 +4696,12 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             with self._gated_children_lock:
                 self._gated_children.clear()
             _logger.info("child_gating_disabled")
+        except frida.NotSupportedError as e:
+            _logger.warning("child_gating_disable_not_supported", error=str(e))
+            raise ToolError(
+                _ERR_CHILD_GATING_NOT_SUPPORTED,
+                details={"reason": _ERR_CHILD_GATING_NOT_SUPPORTED},
+            ) from e
         except Exception as e:
             _logger.warning("child_gating_disable_failed", error=str(e))
             raise ToolError(_ERR_CHILD_GATING_FAILED) from e

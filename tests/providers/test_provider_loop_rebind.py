@@ -192,7 +192,7 @@ class _StubServer:
 
     @property
     def base_url(self) -> str:
-        """Return the ``http://host:port`` base URL for the bound server.
+        """The ``http://host:port`` base URL for the bound server.
 
         Returns:
             str: The base URL clients should target.

@@ -129,6 +129,9 @@ _MACHO_HEADER_SIZE: Final[int] = 32
 _MACHO_SEGCMD_SIZE: Final[int] = 72
 _MACHO_SYMCMD_SIZE: Final[int] = 24
 _MACHO_NLIST_SIZE: Final[int] = 16
+_PE_EXPORT_NAME: Final[str] = "orch_pe_export"
+_PE_EXPORT_ORDINAL: Final[int] = 1
+_PE_EXPORT_ADDRESS: Final[int] = 0x3000
 
 
 def _build_elf_dynstr_and_dynsym(libc_name_holder: list[int]) -> tuple[bytes, bytes]:
@@ -599,6 +602,117 @@ def _build_macho_fixture_bytes() -> bytes:
     return header + text_seg + linkedit_seg + symtab + sym_export + sym_import + string_table
 
 
+def _pack_pe_export_section(section_va: int, section_size: int) -> tuple[bytes, int]:
+    """Pack a valid ``IMAGE_EXPORT_DIRECTORY`` and its tables into one section.
+
+    The directory, the export-address table, the name-pointer table, the
+    ordinal table, and the two name strings are laid out contiguously from
+    ``section_va`` so their relative virtual addresses can be computed by
+    running offset. All RVAs are section-relative because the fixture maps
+    the section at ``section_va``.
+
+    Args:
+        section_va: Virtual address the ``.rdata`` section is mapped at.
+        section_size: Padded size (raw and virtual) of the section.
+
+    Returns:
+        tuple[bytes, int]: The padded section payload and the byte size of
+        the export data directory (for the optional-header data directory).
+    """
+    dll_name = b"orch_expfix.dll\x00"
+    export_name = _PE_EXPORT_NAME.encode("ascii") + b"\x00"
+    eat_rva = section_va + 0x28
+    names_rva = eat_rva + 0x04
+    ordinals_rva = names_rva + 0x04
+    dll_name_rva = ordinals_rva + 0x02
+    export_name_rva = dll_name_rva + len(dll_name)
+    export_directory = struct.pack(
+        "<IIHHIIIIIII",
+        0,
+        0,
+        0,
+        0,
+        dll_name_rva,
+        _PE_EXPORT_ORDINAL,
+        1,
+        1,
+        eat_rva,
+        names_rva,
+        ordinals_rva,
+    )
+    tables = struct.pack("<IIH", _PE_EXPORT_ADDRESS, export_name_rva, 0)
+    content = export_directory + tables + dll_name + export_name
+    return content.ljust(section_size, b"\x00"), len(content)
+
+
+def _pack_pe_headers(section_va: int, section_size: int, export_size: int) -> bytes:
+    """Pack the DOS stub, PE signature, and PE32+ COFF/optional/section headers.
+
+    The optional header's first data directory points at the export
+    directory produced by :func:`_pack_pe_export_section`; the single
+    section header maps that payload at ``section_va``.
+
+    Args:
+        section_va: Virtual address the ``.rdata`` section is mapped at.
+        section_size: Padded size (raw and virtual) of the section.
+        export_size: Byte size of the export data directory.
+
+    Returns:
+        bytes: The header region, padded to the on-disk header size.
+    """
+    file_align = 0x200
+    section_align = 0x1000
+    header_size = 0x200
+    image_size = section_va + section_align
+    optional_header = struct.pack("<HBBIIIII", 0x20B, 0, 0, 0, 0, 0, 0, section_va)
+    optional_header += struct.pack("<Q", 0x400000)
+    optional_header += struct.pack("<II", section_align, file_align)
+    optional_header += struct.pack("<HHHHHH", 6, 0, 0, 0, 6, 0)
+    optional_header += struct.pack("<I", 0)
+    optional_header += struct.pack("<II", image_size, header_size)
+    optional_header += struct.pack("<I", 0)
+    optional_header += struct.pack("<HH", 2, 0x400)
+    optional_header += struct.pack("<QQQQ", 0x100000, 0x1000, 0x100000, 0x1000)
+    optional_header += struct.pack("<II", 0, 16)
+    optional_header += struct.pack("<II", section_va, export_size)
+    optional_header += struct.pack("<II", 0, 0) * 15
+    coff_header = struct.pack("<HHIIIHH", 0x8664, 1, 0, 0, 0, len(optional_header), 0x2022)
+    section_header = struct.pack(
+        "<8sIIIIIIHHI",
+        b".rdata\x00\x00",
+        section_size,
+        section_va,
+        section_size,
+        header_size,
+        0,
+        0,
+        0,
+        0,
+        0x40000040,
+    )
+    dos_stub = b"MZ" + b"\x00" * 58 + struct.pack("<I", 0x40)
+    headers = dos_stub + b"PE\x00\x00" + coff_header + optional_header + section_header
+    return headers.ljust(header_size, b"\x00")
+
+
+def _build_pe_export_fixture_bytes() -> bytes:
+    """Hand-assemble a minimal PE32+ DLL exporting a single named function.
+
+    ``lief``'s PE ``Binary`` exposes no public constructor, so the fixture
+    is packed directly with :mod:`struct` (mirroring the Mach-O builder).
+    lief parses the result into a real ``lief.PE.Binary`` whose
+    ``get_export()`` returns the single exported entry.
+
+    Returns:
+        bytes: A complete, parseable PE32+ payload with one named export.
+    """
+    section_va = 0x1000
+    section_size = 0x200
+    section, export_size = _pack_pe_export_section(section_va, section_size)
+    headers = _pack_pe_headers(section_va, section_size, export_size)
+    return headers + section
+
+
 def _make_orchestrator(tmp_path: Path) -> Orchestrator:
     """Build an :class:`Orchestrator` with isolated tmp_path dependencies.
 
@@ -689,6 +803,34 @@ def test_extract_exports_elf_uses_dynamic_symbols(tmp_path: Path) -> None:
     exports = extract_exports(binary)
     names = {exp.name for exp in exports}
     assert "audit6_exported_symbol" in names
+
+
+def test_extract_exports_pe_walks_export_directory(tmp_path: Path) -> None:
+    """Verify the PE export path resolves a real export table entry.
+
+    ``extract_exports`` walks ``binary.get_export().entries`` for a
+    ``lief.PE.Binary``. lief types ``get_export()`` as ``Export | None``,
+    so the production helper binds the result and guards against ``None``
+    before iterating (a real concern for the packed and truncated binaries
+    Intellicrack ingests). This test drives a genuine PE32+ fixture with a
+    single valid export through that path and asserts the entry's name,
+    ordinal, and address are extracted verbatim.
+
+    Args:
+        tmp_path: Pytest temporary directory fixture.
+    """
+    pe_path = tmp_path / "audit6_fixture.dll"
+    pe_path.write_bytes(_build_pe_export_fixture_bytes())
+    binary = _lief_parse(str(pe_path))
+    assert isinstance(binary, lief.PE.Binary), "PE fixture failed to parse"
+    assert binary.has_exports, "PE fixture must expose an export directory"
+
+    exports = extract_exports(binary)
+    by_name = {exp.name: exp for exp in exports}
+    assert _PE_EXPORT_NAME in by_name, f"expected {_PE_EXPORT_NAME!r} export, got {exports}"
+    entry = by_name[_PE_EXPORT_NAME]
+    assert entry.ordinal == _PE_EXPORT_ORDINAL, f"ordinal mismatch: {entry.ordinal}"
+    assert entry.address == _PE_EXPORT_ADDRESS, f"address mismatch: {entry.address:#x}"
 
 
 def test_classify_tool_call_read_only_with_hook_substring() -> None:
@@ -1029,7 +1171,7 @@ class _FakeProvider(LLMProviderBase):
     @property
     @override
     def name(self) -> ProviderName:
-        """Return provider name.
+        """The provider name.
 
         Returns:
             ProviderName: Configured provider name.
@@ -1197,7 +1339,7 @@ class _StubBridge(ToolBridgeBase):
     @property
     @override
     def name(self) -> ToolName:
-        """Return tool name.
+        """The tool name.
 
         Returns:
             ToolName: Configured tool name.
@@ -1207,7 +1349,7 @@ class _StubBridge(ToolBridgeBase):
     @property
     @override
     def tool_definition(self) -> ToolDefinition:
-        """Return the configured tool definition.
+        """The configured tool definition.
 
         Returns:
             ToolDefinition: Configured tool definition.

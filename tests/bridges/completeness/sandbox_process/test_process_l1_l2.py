@@ -65,7 +65,7 @@ async def process_bridge() -> AsyncGenerator[ProcessBridge]:
     """Create, initialize, and shutdown a ProcessBridge for the module.
 
     Yields:
-        AsyncGenerator[ProcessBridge]: Initialized bridge that will be shut down on teardown.
+        ProcessBridge: Initialized bridge that will be shut down on teardown.
     """
     bridge = ProcessBridge()
     await bridge.initialize()
@@ -81,7 +81,7 @@ async def attached_bridge(process_bridge: ProcessBridge) -> AsyncGenerator[Proce
         process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
 
     Yields:
-        AsyncGenerator[ProcessBridge]: The shared bridge with an open handle on the current Python process.
+        ProcessBridge: The shared bridge with an open handle on the current Python process.
     """
     await process_bridge.open_process(os.getpid(), "all")
     yield process_bridge
@@ -101,7 +101,7 @@ def notepad_child() -> Generator[int]:
     :class:`ManagedProcess` guarantees teardown.
 
     Yields:
-        Generator[int]: PID of the spawned notepad.exe process.
+        int: PID of the spawned notepad.exe process.
     """
     notepad_path = str(Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe")
     with ManagedProcess([notepad_path], startup_delay=0.5) as proc:

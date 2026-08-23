@@ -564,6 +564,7 @@ classify as destructive. Method names not present in the relevant set are read-o
 classification, which the orchestrator treats as destructive so that newly added bridges fail safe until their methods are catalogued here.
 """
 
+
 def _split_tool_function_name(call: ToolCall) -> tuple[str, str]:
     """Resolve a tool call to a ``(tool_name, method_leaf)`` pair.
 
@@ -769,7 +770,7 @@ class Orchestrator:
 
     @property
     def tool_registry(self) -> ToolRegistry:
-        """Get the tool registry backing this orchestrator.
+        """The tool registry backing this orchestrator.
 
         Returns:
             ToolRegistry: The registry of initialized tool bridges.
@@ -778,7 +779,7 @@ class Orchestrator:
 
     @property
     def state(self) -> OrchestratorState:
-        """Get current orchestrator state.
+        """The current orchestrator state.
 
         Returns:
             OrchestratorState: Current state.
@@ -787,7 +788,7 @@ class Orchestrator:
 
     @property
     def current_session(self) -> Session | None:
-        """Get current session.
+        """The current session.
 
         Returns:
             Session | None: Current session or None.
@@ -796,7 +797,7 @@ class Orchestrator:
 
     @property
     def stats(self) -> OrchestratorStats:
-        """Get orchestrator statistics.
+        """The orchestrator statistics.
 
         Returns:
             OrchestratorStats: Statistics instance.
@@ -805,7 +806,7 @@ class Orchestrator:
 
     @property
     def provider_registry(self) -> ProviderRegistry:
-        """Get the provider registry.
+        """The provider registry.
 
         Returns:
             ProviderRegistry: The provider registry instance.
@@ -814,7 +815,7 @@ class Orchestrator:
 
     @property
     def pending_confirmation(self) -> PendingConfirmation | None:
-        """Return the most-recently registered pending confirmation, if any.
+        """The most-recently registered pending confirmation, if any.
 
         Returns:
             PendingConfirmation | None: The latest entry registered via
@@ -825,7 +826,7 @@ class Orchestrator:
 
     @property
     def pending_confirmations(self) -> frozenset[PendingConfirmation]:
-        """Return a snapshot of every outstanding confirmation.
+        """A snapshot of every outstanding confirmation.
 
         Returns:
             frozenset[PendingConfirmation]: An immutable snapshot of the
@@ -836,7 +837,7 @@ class Orchestrator:
 
     @property
     def shutdown_called(self) -> bool:
-        """Return whether :meth:`shutdown` has been invoked at least once.
+        """Whether :meth:`shutdown` has been invoked at least once.
 
         Returns:
             bool: ``True`` once :meth:`shutdown` has run; ``False`` before.
@@ -845,7 +846,7 @@ class Orchestrator:
 
     @property
     def shutdown_complete(self) -> bool:
-        """Return whether the orchestrator's shutdown event has fired.
+        """Whether the orchestrator's shutdown event has fired.
 
         Returns:
             bool: ``True`` when :meth:`shutdown` has marked the internal
@@ -3225,15 +3226,17 @@ def extract_exports(binary: object) -> list[ExportInfo]:
     """
     result: list[ExportInfo] = []
     if isinstance(binary, lief.PE.Binary) and binary.has_exports:
-        for exp in binary.get_export().entries:
-            exp_name = str(exp.name) if exp.name else ""
-            result.append(
-                ExportInfo(
-                    name=exp_name or f"ord_{exp.ordinal}",
-                    ordinal=int(exp.ordinal),
-                    address=int(exp.address),
-                ),
-            )
+        export = binary.get_export()
+        if export is not None:
+            for exp in export.entries:
+                exp_name = str(exp.name) if exp.name else ""
+                result.append(
+                    ExportInfo(
+                        name=exp_name or f"ord_{exp.ordinal}",
+                        ordinal=int(exp.ordinal),
+                        address=int(exp.address),
+                    ),
+                )
     elif isinstance(binary, lief.ELF.Binary):
         result.extend(ExportInfo(name=str(sym.name), ordinal=0, address=int(sym.value)) for sym in binary.exported_symbols if sym.name)
     elif isinstance(binary, lief.MachO.Binary):

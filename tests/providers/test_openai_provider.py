@@ -55,7 +55,7 @@ async def openai_provider(
         has_openai_key: Whether an OpenAI API key is configured.
 
     Yields:
-        AsyncGenerator[OpenAIProvider]: A connected OpenAIProvider instance.
+        OpenAIProvider: A connected OpenAIProvider instance.
 
     Raises:
         ProviderError: Re-raised when the connection failure is not caused by network absence.

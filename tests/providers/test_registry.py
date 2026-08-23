@@ -53,7 +53,7 @@ class ConcreteTestProvider(LLMProviderBase):
     @property
     @override
     def name(self) -> ProviderName:
-        """Return the provider name.
+        """The provider name.
 
         Returns:
             ProviderName: Configured ProviderName.

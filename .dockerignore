@@ -41,3 +41,11 @@ target/
 *.vhdx
 *.iso
 *.img
+
+# The sandbox always bind-mounts the live tests/ tree read-only over
+# C:\app\tests (scripts/sandbox/docker_sandbox.py). Baking a second copy in
+# via `COPY . ./` leaves an image-layer directory underneath that mount, and
+# pytest then builds the tests package tree twice, collecting every test node
+# under a duplicate nodeid. No build stage reads tests/, so keep it out of the
+# build context entirely and let the mount be the only copy.
+tests/

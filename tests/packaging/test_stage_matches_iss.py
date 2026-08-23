@@ -539,8 +539,7 @@ def test_installer_theme_arch_and_license_directives_are_set() -> None:
         f"ArchitecturesAllowed must be native-x64-only (x64os), got {directives.get('architecturesallowed')!r}"
     )
     assert directives.get("architecturesinstallin64bitmode") == "x64os", (
-        "ArchitecturesInstallIn64BitMode must be x64os, got "
-        f"{directives.get('architecturesinstallin64bitmode')!r}"
+        f"ArchitecturesInstallIn64BitMode must be x64os, got {directives.get('architecturesinstallin64bitmode')!r}"
     )
 
     assert directives.get("licensefile", ""), "LicenseFile must be set for the GPL-3.0 license page"
@@ -563,9 +562,7 @@ def test_installer_declares_no_persistent_environment_change() -> None:
     assert directives.get("changesenvironment", "no").lower() != "yes", (
         "ChangesEnvironment must not be yes: the installer makes no persistent PATH/env changes"
     )
-    assert "\\Environment" not in iss_text, (
-        "the .iss must not write a ...\\Environment registry key (no persistent PATH/JAVA_HOME)"
-    )
+    assert "\\Environment" not in iss_text, "the .iss must not write a ...\\Environment registry key (no persistent PATH/JAVA_HOME)"
 
 
 def test_installer_wizard_images_exist_next_to_iss() -> None:
@@ -629,8 +626,7 @@ def test_installer_declares_appmutex_and_setup_logging() -> None:
     directives = parse_setup_directives(_read_real_iss())
 
     assert directives.get("appmutex") == _EXPECTED_APP_MUTEX, (
-        f"AppMutex must equal {_EXPECTED_APP_MUTEX!r} (the name the app creates), "
-        f"got {directives.get('appmutex')!r}"
+        f"AppMutex must equal {_EXPECTED_APP_MUTEX!r} (the name the app creates), got {directives.get('appmutex')!r}"
     )
     assert directives.get("setuplogging", "").lower() == "yes", (
         f"SetupLogging must be yes for an installer diagnostic log, got {directives.get('setuplogging')!r}"
@@ -651,9 +647,7 @@ def test_run_section_offers_launch_and_defers_dism_to_code() -> None:
 
     launch = [line for line in run_lines if "{#AppExeName}" in line or "Intellicrack.exe" in line]
     assert launch, "[Run] has no entry that launches the Intellicrack launcher on finish"
-    assert any("postinstall" in line.lower() for line in launch), (
-        "the launch-on-finish [Run] entry must carry the postinstall flag"
-    )
+    assert any("postinstall" in line.lower() for line in launch), "the launch-on-finish [Run] entry must carry the postinstall flag"
 
     assert not any("dism" in line.lower() for line in run_lines), (
         "DISM must not run from [Run]; it moved to [Code] ssPostInstall for 3010 reboot detection"
@@ -671,9 +665,7 @@ def test_uninstall_delete_purges_config_and_install_dir() -> None:
     ud_lines = iss_section_lines(_read_real_iss(), "UninstallDelete")
     assert ud_lines, "the [UninstallDelete] section is empty"
 
-    assert any(".intellicrack" in line for line in ud_lines), (
-        "[UninstallDelete] must remove the {app}\\.intellicrack runtime config tree"
-    )
+    assert any(".intellicrack" in line for line in ud_lines), "[UninstallDelete] must remove the {app}\\.intellicrack runtime config tree"
     assert any(re.search(r'Name:\s*"\{app\}"', line) for line in ud_lines), (
         "[UninstallDelete] must sweep the whole {app} directory as its final entry"
     )
@@ -694,13 +686,9 @@ def test_tasks_declare_hyperv_and_defender_optins() -> None:
     defender = [line for line in task_lines if 'Name: "defenderexclusion"' in line]
 
     assert hyperv, "[Tasks] must declare the enablehyperv opt-in"
-    assert any("components: qemu" in line.lower() for line in hyperv), (
-        "the enablehyperv task must be gated on the qemu component"
-    )
+    assert any("components: qemu" in line.lower() for line in hyperv), "the enablehyperv task must be gated on the qemu component"
     assert defender, "[Tasks] must declare the defenderexclusion opt-in"
-    assert any("unchecked" in line.lower() for line in defender), (
-        "the defenderexclusion task must default unchecked"
-    )
+    assert any("unchecked" in line.lower() for line in defender), "the defenderexclusion task must default unchecked"
 
 
 def test_code_wires_reboot_detection_and_uninstall_cleanup() -> None:
@@ -719,9 +707,7 @@ def test_code_wires_reboot_detection_and_uninstall_cleanup() -> None:
     assert "HyperVRestartNeeded" in body, "NeedRestart must be driven by the DISM 3010 result flag"
     assert "procedure CurStepChanged" in body, "[Code] must implement CurStepChanged for the post-install actions"
     assert "procedure CurUninstallStepChanged" in body, "[Code] must implement CurUninstallStepChanged for cleanup"
-    assert body.count("SetDefenderExclusion") >= 2, (
-        "SetDefenderExclusion must be invoked for both add (install) and remove (uninstall)"
-    )
+    assert body.count("SetDefenderExclusion") >= 2, "SetDefenderExclusion must be invoked for both add (install) and remove (uninstall)"
 
 
 # --- Section-parser falsifiability proofs (run everywhere) -------------------

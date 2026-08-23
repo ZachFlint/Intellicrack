@@ -86,7 +86,7 @@ def diff_region_rows(regions: Sequence[Mapping[str, Any]]) -> list[DiffRow]:
     rows: list[DiffRow] = []
     for region in regions:
         diff_type = str(region.get("diff_type", "unknown"))
-        if diff_type == MATCH_DIFF_TYPE:
+        if diff_type.strip().casefold() == MATCH_DIFF_TYPE:
             continue
 
         offset_a = int(region.get("offset_a", 0))
@@ -95,9 +95,7 @@ def diff_region_rows(regions: Sequence[Mapping[str, Any]]) -> list[DiffRow]:
         length_a = int(region.get("length_a", length))
         length_b = int(region.get("length_b", length))
 
-        offset_text = (
-            f"0x{offset_a:08X}" if offset_a == offset_b else f"0x{offset_a:08X} / 0x{offset_b:08X}"
-        )
+        offset_text = f"0x{offset_a:08X}" if offset_a == offset_b else f"0x{offset_a:08X} / 0x{offset_b:08X}"
         length_text = str(length_a) if length_a == length_b else f"{length_a} → {length_b}"
         details = (
             f"Bytes {_span(offset_a, length_a)}"
@@ -321,16 +319,15 @@ class ComparisonMixin:
 
         regions = cast("Sequence[Mapping[str, Any]]", result.get("regions", []))
         total = result.get("total_differences", 0)
-        identical = result.get("files_identical", False)
-        rows = diff_region_rows(regions)
+        identical = bool(result.get("files_identical"))
+        rows = [] if identical else diff_region_rows(regions)
 
         if self._diff_summary_label is not None:
             if identical:
                 self._diff_summary_label.setText("Files are identical")
             else:
                 self._diff_summary_label.setText(
-                    f"{len(rows)} region(s), {total} byte(s) differ  "
-                    f"[{result.get('size_a', 0)} vs {result.get('size_b', 0)} bytes]",
+                    f"{len(rows)} region(s), {total} byte(s) differ  [{result.get('size_a', 0)} vs {result.get('size_b', 0)} bytes]",
                 )
 
         for row in rows:

@@ -25,7 +25,7 @@ import sys
 import tempfile
 import textwrap
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import IO, Any, Literal, cast
 
@@ -121,23 +121,92 @@ _HEADLESS_ENV_BLOCKLIST = (
 )
 
 
+def _find_trailing_result_name(stmts: Sequence[ast.stmt]) -> str | None:
+    """Find the variable name guaranteed to hold a statement suite's trailing result.
+
+    Walks the last statement of ``stmts``, following ``if``/``else`` and
+    ``try`` control flow to determine whether every reachable path
+    through the suite's tail assigns the same single variable name
+    immediately before falling through. This lets
+    :func:`prepare_remote_script` capture the value produced by a
+    Jython script whose result is set inside a trailing conditional or
+    transactional block rather than returned as a bare final
+    expression.
+
+    An ``if`` without a matching ``else`` is treated as unresolvable,
+    since one of its paths would leave the variable unassigned. A
+    ``try`` is resolved from its ``body`` only: an exception raised
+    before the tracked assignment propagates out of ``remote_exec``
+    before the caller ever attempts to read the sentinel back, so
+    ``except``/``finally`` clauses cannot affect what value, if any, is
+    ultimately captured.
+
+    Args:
+        stmts: Statement suite to inspect, most commonly a script's
+            top-level body or an ``if``/``try`` branch reached while
+            recursing.
+
+    Returns:
+        str | None: The variable name assigned by the suite's trailing
+        statement on every reachable path, or ``None`` when the suite
+        is empty or its tail does not resolve to a single consistent
+        name.
+    """
+    if not stmts:
+        return None
+
+    last = stmts[-1]
+
+    if isinstance(last, ast.Assign):
+        if len(last.targets) == 1 and isinstance(last.targets[0], ast.Name):
+            return last.targets[0].id
+        return None
+
+    if isinstance(last, ast.If):
+        if not last.orelse:
+            return None
+        body_name = _find_trailing_result_name(last.body)
+        orelse_name = _find_trailing_result_name(last.orelse)
+        if body_name is not None and body_name == orelse_name:
+            return body_name
+        return None
+
+    if isinstance(last, ast.Try):
+        return _find_trailing_result_name(last.body)
+
+    return None
+
+
 def prepare_remote_script(code: str) -> tuple[str, str | None]:
-    """Dedent a Jython script and rewrite any trailing expression as a sentinel assignment.
+    """Dedent a Jython script and rewrite it to capture its trailing result as a sentinel.
 
     The Ghidra bridge transports user scripts to a remote Jython
     interpreter where they are run via Python's :func:`exec`, which
     discards the value of any trailing expression statement. This
-    helper rewrites such scripts so the trailing expression value is
-    preserved on the remote interpreter as a uniquely named global
-    variable, suitable for retrieval via a follow-up ``remote_eval``.
+    helper rewrites such scripts so the trailing result is preserved on
+    the remote interpreter as a uniquely named global variable,
+    suitable for retrieval via a follow-up ``remote_eval``.
+
+    Two shapes are recognised:
+
+    * The final top-level statement is a bare expression
+      (:class:`ast.Expr`), such as a trailing variable reference or
+      literal. It is rewritten in place into an assignment to the
+      sentinel, preserving evaluation order and side effects exactly.
+    * The final top-level statement is an ``if``/``else`` chain or a
+      ``try`` block whose tail, on every reachable path, assigns the
+      same single variable (see :func:`_find_trailing_result_name`).
+      A ``sentinel = <variable>`` assignment is appended after the
+      script so that variable's final value is captured without
+      altering the script's original control flow.
 
     Args:
         code: Jython source as authored at the call site.
 
     Returns:
         tuple[str, str | None]: Tuple of (rewritten Jython source,
-        sentinel variable name or ``None`` when there is no trailing
-        expression to capture).
+        sentinel variable name or ``None`` when no trailing result
+        could be captured).
 
     Raises:
         ToolError: If the Jython source fails to parse.
@@ -156,19 +225,31 @@ def prepare_remote_script(code: str) -> tuple[str, str | None]:
         return dedented, None
 
     last_stmt = tree.body[-1]
-    if not isinstance(last_stmt, ast.Expr):
+
+    if isinstance(last_stmt, ast.Expr):
+        sentinel = f"{_RESULT_SENTINEL_BASE}{next(_remote_call_counter)}"
+        assign_node = ast.Assign(
+            targets=[ast.Name(id=sentinel, ctx=ast.Store())],
+            value=last_stmt.value,
+        )
+        ast.copy_location(assign_node, last_stmt)
+        tree.body[-1] = assign_node
+        ast.fix_missing_locations(tree)
+        return ast.unparse(tree), sentinel
+
+    result_name = _find_trailing_result_name(tree.body)
+    if result_name is None:
         return dedented, None
 
     sentinel = f"{_RESULT_SENTINEL_BASE}{next(_remote_call_counter)}"
-    assign_node = ast.Assign(
+    capture_node = ast.Assign(
         targets=[ast.Name(id=sentinel, ctx=ast.Store())],
-        value=last_stmt.value,
+        value=ast.Name(id=result_name, ctx=ast.Load()),
     )
-    ast.copy_location(assign_node, last_stmt)
-    ast.fix_missing_locations(assign_node)
-    tree.body[-1] = assign_node
-    rewritten_source = ast.unparse(tree)
-    return rewritten_source, sentinel
+    ast.copy_location(capture_node, last_stmt)
+    tree.body.append(capture_node)
+    ast.fix_missing_locations(tree)
+    return ast.unparse(tree), sentinel
 
 
 _ERR_NOT_CONNECTED = "Ghidra not connected"
@@ -3714,7 +3795,6 @@ metadata
                         _set_ok = True
                     finally:
                         currentProgram.endTransaction(tx_id, _set_ok)
-                _set_ok
             """)
             return bool(result)
 
@@ -4146,7 +4226,6 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     _cf_result = {{'name': func.getName(), 'address': func.getEntryPoint().getOffset(), 'size': func.getBody().getNumAddresses()}}
                 else:
                     _cf_result = None
-                _cf_result
             """)
         except Exception as e:
             _logger.warning("ghidra_create_function_failed", address=hex(address), error=str(e))
@@ -4196,7 +4275,6 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     finally:
                         currentProgram.endTransaction(tx_id, removed)
                     _df_result = {{'exists': True, 'name': name, 'removed': removed}}
-                _df_result
             """)
         except ToolError:
             raise
@@ -4287,7 +4365,6 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                         'return_type': str(func.getReturnType()),
                         'calling_convention': func.getCallingConventionName(),
                     }}
-                _efs_result
             """)
         except Exception as e:
             _logger.warning(
@@ -4518,7 +4595,6 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                         currentProgram.endTransaction(tx_id, _apply_ok)
                 else:
                     _apply_ok = False
-                _apply_ok
             """)
         except Exception as e:
             _logger.warning(
@@ -6355,7 +6431,6 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
                     result_dict = {{'name': created.getName(), 'kind': type_kind, 'size': int(created.getLength()), 'success': True}}
                 else:
                     result_dict = {{'name': {json.dumps(name)}, 'kind': type_kind, 'size': 0, 'success': False}}
-                result_dict
             """)
             return (
                 cast("dict[str, Any]", result)
@@ -6410,7 +6485,6 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
                         listing.clearCodeUnits(addr, addr.add(parsed.getLength() - 1), False)
                     created = listing.createData(addr, parsed)
                     result_dict = {{'address': addr.getOffset(), 'type': {json.dumps(data_type)}, 'size': int(created.getLength()), 'success': True}}
-                result_dict
             """)
             return (
                 cast("dict[str, Any]", result)

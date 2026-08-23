@@ -9,6 +9,28 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **hexbench,core:** Enhance UI accessibility, packaging, and runtime bridges (`a78239d`)
+Implement comprehensive accessibility overhauls across the Hexbench UI, enhance native integration and installer packaging, and expand tool discovery and sandbox orchestration. The web-based Hexbench interface now provides complete ARIA semantics, forced-colors high contrast support, full keyboard navigation across menubars and tab strips, dynamic row sizing, and analytical charts with fallback-safe token mappings. The backend and bridge layers receive structured error remediation, custom tool discovery paths, JDK version validation for Ghidra, and a single-instance mutex matching Inno Setup requirements.
+In the frontend, `shell.js`, `grid.js`, and `panels.js` introduce virtual address translation tracking, numeric and binary search parsing, context-menu operations for block and bit manipulations, and responsive row byte fitting. Design specimen cards and the card generator (`build_cards.py`) were synchronized with the central design tokens, control height standards, and `@media (forced-colors: active)` contrast rules. Canvas-based charting now safely falls back to theme-defined hex colors when CSS custom properties are missing.
+On the core application and packaging side, `admission.py` introduces concurrency gates and capacity planning for Docker Windows containers to prevent Host Compute Service (HCS) resource exhaustion. Single-instance Win32 mutex acquisition was added to prevent conflicting concurrent executions and integrate with Inno Setup's `AppMutex`. Configuration and credential loaders were updated to resolve configuration files beside the executable in frozen PyInstaller builds rather than inside temporary extraction directories.
+* Hexbench UI & Accessibility:
+- Add Windows High Contrast `@media (forced-colors: active)` support and standardized control sizing variables (`--hb-control-h`, `--hb-hit-min`) across `src/hexbench/static/app.css` and `src/hexbench/design/cards/*.html`.
+- Introduce `src/hexbench/design/index.html` component gallery and update `build_cards.py` to regenerate specimen cards with forced-color testing blocks.
+- Implement dynamic row sizing (`BYTES_PER_ROW_CHOICES`, `fitBytesPerRow`), active descendant sync, and debounced screen-reader caret announcements in `src/hexbench/static/grid.js`.
+- Add menubar keyboard bindings (`bindMenubarKeys`), tab strip role assignment (`applyTabStripRoles`), and status bar virtual address translation readouts in `src/hexbench/static/shell.js`.
+- Add numeric and decimal search pattern parsing (`parseSearchInt`, `NUMERIC_SEARCH_PATTERN`) and block/bit editing operations (`copyBlock`, `moveBlock`, `swapBlocks`, `toggleBitAt`) with grid context menus in `src/hexbench/static/shell.js`.
+- Integrate entropy strips, diff tracks, digram visualizations, classification panels, and operation result trees in `src/hexbench/static/panels.js` and `src/hexbench/static/charts.js`.
+* Core & Bridge Integrations:
+- Extend `DispatchError` in `src/hexbench/dispatch.py` to support actionable second-line `detail` remediation guidance.
+- Support custom external tool discovery from `.intellicrack/tools.json` via `_read_configured_tool_path` in `src/intellicrack/bridges/installer.py`.
+- Add `_read_jdk_major` and `_required_min_jdk` validation in `src/intellicrack/bridges/ghidra.py` to verify Java runtime versions prior to JVM startup.
+- Implement `acquire_instance_mutex` in `src/intellicrack/core/single_instance.py` using `Global\IntellicrackSingleInstance` to integrate with Inno Setup's `AppMutex`.
+- Update `src/intellicrack/core/config.py` and `src/intellicrack/credentials/env_loader.py` to resolve `.env` and configuration files from the executable directory during PyInstaller frozen executions.
+* Sandbox, Packaging & Tooling:
+- Add concurrency slot admission control in `scripts/sandbox/admission.py` and `docker_sandbox.py` to prevent HCS exhaustion during parallel Windows container execution.
+- Add `build-intellicrack` target in `justfile` and packaging scripts (`packaging/stage.ps1`, `packaging/intellicrack.iss`, `packaging/launcher/launcher.py`).
+- Introduce test suites verifying Inno Setup staging parity, icon frame formats, frozen path discovery, mutex isolation, Ghidra JDK validation, and Hexbench accessibility semantics.
+
 - **x64dbg:** Arm x64dbg's trace record so hit counts can be non-zero (`8810140`)
 get_trace_record could not return a non-zero hitCount for any address under
 any circumstances. x64dbg allocates a page's per-byte execution counters only
@@ -466,28 +488,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
-
-- **hexbench,core:** Enhance UI accessibility, packaging, and runtime bridges (``)
-Implement comprehensive accessibility overhauls across the Hexbench UI, enhance native integration and installer packaging, and expand tool discovery and sandbox orchestration. The web-based Hexbench interface now provides complete ARIA semantics, forced-colors high contrast support, full keyboard navigation across menubars and tab strips, dynamic row sizing, and analytical charts with fallback-safe token mappings. The backend and bridge layers receive structured error remediation, custom tool discovery paths, JDK version validation for Ghidra, and a single-instance mutex matching Inno Setup requirements.
-In the frontend, `shell.js`, `grid.js`, and `panels.js` introduce virtual address translation tracking, numeric and binary search parsing, context-menu operations for block and bit manipulations, and responsive row byte fitting. Design specimen cards and the card generator (`build_cards.py`) were synchronized with the central design tokens, control height standards, and `@media (forced-colors: active)` contrast rules. Canvas-based charting now safely falls back to theme-defined hex colors when CSS custom properties are missing.
-On the core application and packaging side, `admission.py` introduces concurrency gates and capacity planning for Docker Windows containers to prevent Host Compute Service (HCS) resource exhaustion. Single-instance Win32 mutex acquisition was added to prevent conflicting concurrent executions and integrate with Inno Setup's `AppMutex`. Configuration and credential loaders were updated to resolve configuration files beside the executable in frozen PyInstaller builds rather than inside temporary extraction directories.
-* Hexbench UI & Accessibility:
-- Add Windows High Contrast `@media (forced-colors: active)` support and standardized control sizing variables (`--hb-control-h`, `--hb-hit-min`) across `src/hexbench/static/app.css` and `src/hexbench/design/cards/*.html`.
-- Introduce `src/hexbench/design/index.html` component gallery and update `build_cards.py` to regenerate specimen cards with forced-color testing blocks.
-- Implement dynamic row sizing (`BYTES_PER_ROW_CHOICES`, `fitBytesPerRow`), active descendant sync, and debounced screen-reader caret announcements in `src/hexbench/static/grid.js`.
-- Add menubar keyboard bindings (`bindMenubarKeys`), tab strip role assignment (`applyTabStripRoles`), and status bar virtual address translation readouts in `src/hexbench/static/shell.js`.
-- Add numeric and decimal search pattern parsing (`parseSearchInt`, `NUMERIC_SEARCH_PATTERN`) and block/bit editing operations (`copyBlock`, `moveBlock`, `swapBlocks`, `toggleBitAt`) with grid context menus in `src/hexbench/static/shell.js`.
-- Integrate entropy strips, diff tracks, digram visualizations, classification panels, and operation result trees in `src/hexbench/static/panels.js` and `src/hexbench/static/charts.js`.
-* Core & Bridge Integrations:
-- Extend `DispatchError` in `src/hexbench/dispatch.py` to support actionable second-line `detail` remediation guidance.
-- Support custom external tool discovery from `.intellicrack/tools.json` via `_read_configured_tool_path` in `src/intellicrack/bridges/installer.py`.
-- Add `_read_jdk_major` and `_required_min_jdk` validation in `src/intellicrack/bridges/ghidra.py` to verify Java runtime versions prior to JVM startup.
-- Implement `acquire_instance_mutex` in `src/intellicrack/core/single_instance.py` using `Global\IntellicrackSingleInstance` to integrate with Inno Setup's `AppMutex`.
-- Update `src/intellicrack/core/config.py` and `src/intellicrack/credentials/env_loader.py` to resolve `.env` and configuration files from the executable directory during PyInstaller frozen executions.
-* Sandbox, Packaging & Tooling:
-- Add concurrency slot admission control in `scripts/sandbox/admission.py` and `docker_sandbox.py` to prevent HCS exhaustion during parallel Windows container execution.
-- Add `build-intellicrack` target in `justfile` and packaging scripts (`packaging/stage.ps1`, `packaging/intellicrack.iss`, `packaging/launcher/launcher.py`).
-- Introduce test suites verifying Inno Setup staging parity, icon frame formats, frozen path discovery, mutex isolation, Ghidra JDK validation, and Hexbench accessibility semantics.
 
 
 ### Changed
@@ -5721,5 +5721,21 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+- **ui, bridges, sandbox:** Stabilize UI states, error handling, and test runners (``)
+Fix duplicate assistant bubbles on streamed turns, stale model restores during
+provider switches, and theme repolishing across scroll areas. Improve error
+classification in Frida and Google providers, and migrate container pytest
+collection targets to importable module paths.
+- ui: fold completed messages into active streaming bubbles and fix stale model id restore on provider switch
+- ui: repolish scroll areas and role frames during theme changes
+- ui: add start/end bounds to process memory search and reserve layout widths in Frida syscall tab
+- bridges: handle `frida.NotSupportedError` in child gating and improve Ghidra AST return parsing
+- bridges: fix last-error retrieval across `AdjustTokenPrivileges` invocations in ProcessBridge
+- providers: catch `httpx.RequestError` on Google connect and align HuggingFace router catalog fetching
+- sandbox: convert test runner collection targets to `--pyargs` imports to eliminate duplicate runs
+- sandbox: harden Docker image cache presence probing against timeouts and daemon errors
+- sandbox: resolve guest-specific virtio driver families during Windows provisioning
+- deps: update locked Python dependencies and Rust crates
 
 

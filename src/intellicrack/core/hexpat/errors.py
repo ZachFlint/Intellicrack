@@ -95,7 +95,7 @@ class HexPatParseError(HexPatError):
 
     @property
     def span(self) -> tuple[int, int, int, int] | None:
-        """Return the full source span as a tuple if available.
+        """The full source span as a tuple if available.
 
         Returns:
             tuple[int, int, int, int] | None: A tuple ``(line, column, end_line, end_column)`` when both start and end positions are known, otherwise ``None``.
@@ -150,7 +150,7 @@ class HexPatRuntimeError(HexPatError):
 
     @property
     def data_span(self) -> tuple[int, int] | None:
-        """Return the byte range for the runtime error if available.
+        """The byte range for the runtime error if available.
 
         Returns:
             tuple[int, int] | None: A tuple ``(offset, end_offset)`` when both start and end byte offsets are known, otherwise ``None``.

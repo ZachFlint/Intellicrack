@@ -59,7 +59,7 @@ def tab(qapp: QApplication) -> Generator[SystemTab]:
         qapp: Session ``QApplication`` fixture ensuring Qt is initialised.
 
     Yields:
-        Generator[SystemTab]: A ``SystemTab`` retained for the test body and
+        SystemTab: A ``SystemTab`` retained for the test body and
         deterministically torn down afterwards.
     """
     del qapp

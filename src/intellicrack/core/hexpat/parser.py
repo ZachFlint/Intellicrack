@@ -194,7 +194,7 @@ class HexPatParser:
 
     @property
     def errors(self) -> list[HexPatParseError]:
-        """Return all parse errors collected during recovery-mode parsing.
+        """All parse errors collected during recovery-mode parsing.
 
         Returns:
             list[HexPatParseError]: Errors collected by ``parse()``; empty if none.

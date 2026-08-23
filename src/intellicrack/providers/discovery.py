@@ -514,7 +514,7 @@ class ModelDiscovery:
 
     @property
     def cache(self) -> DiscoveryCache:
-        """Get the discovery cache.
+        """The discovery cache.
 
         Returns:
             DiscoveryCache: The DiscoveryCache instance.

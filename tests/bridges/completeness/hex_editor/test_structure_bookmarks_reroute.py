@@ -52,7 +52,7 @@ result to assert on without needing a full PE image.
 
 
 class TestAutoBookmarkStructureRoutesThroughBridge:
-    """ "Auto Bookmark Structure" must call ``HexEditorBridge.generate_structure_bookmarks``."""
+    """The "Auto Bookmark Structure" action must call ``HexEditorBridge.generate_structure_bookmarks``."""
 
     @staticmethod
     def test_click_with_bridge_dispatches_bridge_and_renders_its_bookmark(qapp: QApplication) -> None:

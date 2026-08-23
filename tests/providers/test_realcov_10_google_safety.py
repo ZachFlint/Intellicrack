@@ -527,7 +527,7 @@ class TestGoogleCancelRequestLive:
             "making subsequent state assertions vacuous"
         )
         full_text = "".join(chunks)
-        assert full_text != "", "Concatenated chunks must produce non-empty text"
+        assert full_text, "Concatenated chunks must produce non-empty text"
 
         assert getattr(google_provider, _CANCEL_FLAG_ATTR) is False, (
             "_cancel_requested must remain False after a stream that completed without any cancellation"

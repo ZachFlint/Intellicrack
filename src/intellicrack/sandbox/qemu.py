@@ -191,6 +191,21 @@ _QEMU_EXIT_UNKNOWN_OUTPUT = "QEMU produced no output before it stopped"
 _QEMU_OUTPUT_TAIL_LINES = 200
 _QEMU_OUTPUT_READ_SIZE = 4096
 
+# QEMU's own convention (warn_report(), used throughout the tree including
+# target/i386/whpx/whpx-apic.c) prefixes a line it wants noticed with this
+# text, so a line carrying it is surfaced rather than left at debug with
+# QEMU's routine output.
+_QEMU_WARNING_LINE_MARKER: Final[str] = "warning:"
+
+# WHPX emulates the local APIC in the hypervisor, and whpx_send_msi() reports
+# this every time the guest issues an MSI whose vector field is 0 - an
+# interrupt with nothing to deliver, which QEMU's own APIC emulation drops
+# rather than injects. It is APIC housekeeping the guest OS performs on its
+# own under WHPX and observed on Windows guests during ordinary boot; it is
+# not evidence of an accelerator fault, so it must not be classified with the
+# warnings above that a caller is meant to act on.
+_QEMU_WHPX_NULL_MSI_WARNING_MARKER: Final[str] = "Ignoring request for interrupt vector 0"
+
 _ERR_NO_FREE_PORTS = "no free ports"
 _ERR_QEMU_HOST_PORT = (
     "QEMU could not bind one of its host ports. On Windows a port can be unusable while nothing is listening on it, because "
@@ -390,6 +405,18 @@ _QGA_FILE_COMMAND_TIMEOUT: Final[float] = 30.0
 # sync command had ever been sent, so the abandoned reply was never consumed and
 # every command after it read the previous command's answer.
 _QEMU_GA_RESYNC_TIMEOUT: Final[float] = _QEMU_GA_CONNECT_TIMEOUT
+
+# Bound on how many times a mid-session hard socket failure re-opens the
+# guest-agent chardev. Two matches the shape MAX_DISPATCH_ATTEMPTS gives the
+# forwarded-port channel: one attempt to recover the connection this client
+# already held, and one more in case that attempt itself hit a transient
+# refusal rather than the peer's own decision never to accept another. A
+# peer that keeps refusing past that is refusing on purpose - see
+# QemuGuestAgentClient._retain_socket_on_handshake_failure - and a socket
+# that was accepted but never answered its sync is not retried here at all,
+# because forfeiting an accepted socket to try for another one is the exact
+# mistake that cost the channel for the life of the VM before.
+_QGA_CHANNEL_RESET_ATTEMPTS: Final[int] = 2
 
 # The guest-shutdown mode that powers the guest off rather than rebooting or
 # halting it. qemu-guest-agent sends no reply to this command, so the real
@@ -1271,9 +1298,14 @@ class QemuJsonProtocolClient:
             except _JsonLineTooLongError as e:
                 _logger.warning(self._event("reply_line_too_long"), error=str(e), read_limit=self._read_limit)
                 await self.disconnect()
+                await self._on_channel_reset(e)
                 return QMPResponse(success=False, error=str(e))
-            except (OSError, json.JSONDecodeError, ConnectionError) as e:
+            except json.JSONDecodeError as e:
                 _logger.warning(self._event("command_failed"), error=str(e), exc_info=True)
+                return QMPResponse(success=False, error=str(e))
+            except (OSError, ConnectionError) as e:
+                _logger.warning(self._event("command_failed"), error=str(e), exc_info=True)
+                await self._on_channel_reset(e)
                 return QMPResponse(success=False, error=str(e))
 
     async def _recover_from_command_timeout(self) -> None:
@@ -1302,6 +1334,7 @@ class QemuJsonProtocolClient:
         except (OSError, ConnectionError) as e:
             _logger.warning(self._event("command_timeout_recovery_failed"), error=str(e), port=self._port)
             await self.disconnect()
+            await self._on_channel_reset(e)
         except SandboxError as e:
             _logger.warning(self._event("command_timeout_resync_unanswered"), error=str(e), port=self._port)
             if self._retain_socket_on_handshake_failure:
@@ -1337,6 +1370,27 @@ class QemuJsonProtocolClient:
 
         The base transport has no way to realign a stream, so it does nothing; subclasses whose protocol provides one override this.
         """
+
+    async def _on_channel_reset(self, error: Exception) -> None:
+        """React to a hard socket failure that ended the channel outright.
+
+        By the time this runs, the socket that raised ``error`` has already
+        been closed and the command it broke has already been reported
+        failed - this is only about what, if anything, is worth doing before
+        the *next* command is attempted. The base transport has nothing
+        useful to add: its peer re-listens after every disconnect on its own,
+        so a fresh connection needs nothing beyond the caller's ordinary
+        :meth:`connect` and costs nothing to defer until that call happens.
+        Subclasses whose peer instead hands out its socket once - see
+        :attr:`_retain_socket_on_handshake_failure` - override this to try to
+        open a replacement immediately, because deferring there would leave
+        the channel dead until something outside this client noticed.
+
+        Args:
+            error: The socket-level exception that ended the previous
+                exchange.
+        """
+        _logger.debug(self._event("channel_reset_deferred"), error=str(error), port=self._port)
 
     async def _exchange_command(
         self,
@@ -1915,6 +1969,75 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
         if self._reader is None or self._writer is None:
             return
         await self._synchronise(_QEMU_GA_RESYNC_TIMEOUT)
+
+    async def _on_channel_reset(self, error: Exception) -> None:
+        """Re-open a freshly accepted channel after a hard socket failure.
+
+        A command timeout is recovered on the socket already open, because
+        :meth:`resynchronise` can retry an unanswered ``guest-sync-delimited``
+        without giving up the only connection this project has measured
+        qemu-guest-agent's chardev to grant for the life of a VM. A hard
+        socket error is a different kind of failure: the connection this
+        client held is provably gone - nothing further can be read or written
+        on it no matter what the peer would have accepted next - so the
+        existing socket has nothing left to retry on, and the only question is
+        whether a *new* one is worth opening.
+
+        That question does not have one answer for every peer this channel
+        could be talking to. The QMP monitor's own socket chardev re-listens
+        after every disconnect, and an independent client outside this
+        application measured qemu-guest-agent's chardev refusing a second
+        connection outright for the rest of a VM's life - both configured
+        identically as ``-chardev socket,...,server,nowait``. Rather than
+        assume either behaviour, this tries the reopen and accepts whatever
+        :meth:`connect` reports: a peer that still accepts recovers the
+        channel transparently, and a peer that refuses ends up exactly where
+        the pre-existing behaviour already left it - disconnected, with the
+        command that hit ``error`` already reported failed to its caller.
+
+        The attempt is made at most :data:`_QGA_CHANNEL_RESET_ATTEMPTS` times,
+        and only while each attempt fails at the transport level (a refused or
+        timed-out connect, which :meth:`connect` itself already leaves fully
+        disconnected). A connect whose socket opens but whose handshake is
+        never answered is not retried here at all: that socket has already
+        been accepted, so tearing it down for another attempt would forfeit
+        the one connection this peer may only ever grant once - the exact
+        mistake that cost the channel for the life of the VM before this
+        method existed. That socket is left in place for
+        :meth:`resynchronise` to keep trying, the same as an unanswered sync
+        during initial bring-up.
+
+        Because each attempt opens an unrelated stream, any bytes still
+        arriving on the socket ``error`` ended are abandoned along with it -
+        nothing read on the new connection can be mistaken for a reply that
+        belonged to the old one.
+
+        Args:
+            error: The socket-level exception that ended the previous
+                exchange.
+        """
+        _logger.warning(self._event("channel_reset"), port=self._port, error=str(error))
+        for attempt in range(1, _QGA_CHANNEL_RESET_ATTEMPTS + 1):
+            await self.disconnect()
+            try:
+                reconnected = await self.connect(time_limit=_QEMU_GA_CONNECT_TIMEOUT)
+            except SandboxError as sync_error:
+                _logger.warning(
+                    self._event("channel_reset_sync_unanswered"),
+                    port=self._port,
+                    attempt=attempt,
+                    error=str(sync_error),
+                )
+                return
+            if reconnected:
+                _logger.info(self._event("channel_reset_recovered"), port=self._port, attempt=attempt)
+                return
+            _logger.debug(self._event("channel_reset_retry"), port=self._port, attempt=attempt)
+        _logger.warning(
+            self._event("channel_reset_unrecoverable"),
+            port=self._port,
+            attempts=_QGA_CHANNEL_RESET_ATTEMPTS,
+        )
 
     async def _synchronise(self, time_limit: float) -> None:
         """Flush the agent parser and align the reply stream with this client.
@@ -3121,6 +3244,35 @@ class QemuOutputRecorder:
         if pending.strip():
             self._retain(pending, channel)
 
+    @staticmethod
+    def _classify_output_line(text: str) -> Literal["benign", "warning", "routine"]:
+        """Classify one line of QEMU's stdout or stderr for logging.
+
+        Every line QEMU emits is kept in the tail regardless of this
+        classification; only the level it is logged at depends on it. A line
+        QEMU itself flagged as a warning is ordinarily worth surfacing, so it
+        is reported as one - except this one specific WHPX null-MSI warning,
+        confirmed to be APIC housekeeping the guest performs on its own under
+        WHPX rather than evidence of an accelerator fault, which is left at
+        the same routine level as QEMU's ordinary output. No other warning is
+        matched here: recognising more than this one known line would hide a
+        genuine fault behind the same reasoning that excuses this one.
+
+        Args:
+            text: One line of QEMU's stdout or stderr, already stripped.
+
+        Returns:
+            Literal["benign", "warning", "routine"]: ``"benign"`` for the one
+            known-harmless WHPX warning, ``"warning"`` for every other line
+            carrying QEMU's own warning marker, ``"routine"`` for everything
+            else.
+        """
+        if _QEMU_WHPX_NULL_MSI_WARNING_MARKER in text:
+            return "benign"
+        if _QEMU_WARNING_LINE_MARKER in text.lower():
+            return "warning"
+        return "routine"
+
     def _retain(self, line: str, channel: str) -> None:
         """Log one output line and keep it in the bounded tail.
 
@@ -3131,7 +3283,13 @@ class QemuOutputRecorder:
         text = line.strip()
         if not text:
             return
-        _logger.debug("qemu_output", channel=channel, line=text)
+        classification = self._classify_output_line(text)
+        if classification == "warning":
+            _logger.warning("qemu_output_warning", channel=channel, line=text)
+        elif classification == "benign":
+            _logger.debug("qemu_output_benign_warning", channel=channel, line=text)
+        else:
+            _logger.debug("qemu_output", channel=channel, line=text)
         self._tail.append(f"{channel}: {text}")
 
 
@@ -6195,8 +6353,8 @@ class QEMUSandbox(SandboxBase):
     def _unregister_qemu_pid(self) -> None:
         """Drop this sandbox's PID registration if it still holds one.
 
-        A start that fails after the VM was registered would otherwise leave the
-        process manager tracking a process this cleanup has just ended.
+        A start that fails after the VM was registered would otherwise leave the process manager tracking a process this cleanup has just
+        ended.
         """
         if self._qemu_pid is None:
             return

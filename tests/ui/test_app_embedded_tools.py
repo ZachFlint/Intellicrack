@@ -108,7 +108,7 @@ def patched_window(
         monkeypatch: Pytest monkeypatch fixture.
 
     Yields:
-        Generator[MainWindow]:: MainWindow instance.
+        MainWindow:: MainWindow instance.
     """
     _ = qapp
     monkeypatch.setattr("intellicrack.ui.app.SandboxManager", NoOpSandboxManager)

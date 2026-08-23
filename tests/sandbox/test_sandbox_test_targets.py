@@ -43,6 +43,9 @@ _FIXED_TARGET_TYPES = tuple(t for t in TestType if t not in _NO_FIXED_TARGET)
 def _target_of(test_type: TestType) -> str:
     """Return the pytest collection target a run mode selects.
 
+    Targets are emitted as importable ``--pyargs`` names, so the vector leads
+    with that flag; the target is the positional argument that follows it.
+
     Args:
         test_type: The run mode whose argument vector is built.
 
@@ -50,7 +53,20 @@ def _target_of(test_type: TestType) -> str:
         str: The leading positional argument of the built pytest argv.
     """
     args = build_pytest_args(TestRunSpec(test_type=test_type, timestamp=_TIMESTAMP))
-    return args[0]
+    positional = args[1:] if args and args[0] == "--pyargs" else args
+    return positional[0]
+
+
+def _resolve_target(target: str) -> Path:
+    """Resolve an importable collection target to its directory on disk.
+
+    Args:
+        target: Dotted target such as ``tests.hexpat.e2e``.
+
+    Returns:
+        Path: The directory the target names within the repository.
+    """
+    return _REPO_ROOT / target.replace(".", "/")
 
 
 def _collectable_modules(directory: Path) -> list[Path]:
@@ -83,14 +99,10 @@ def test_fixed_target_mode_collects_existing_tests(test_type: TestType) -> None:
         test_type: The run mode under test.
     """
     target = _target_of(test_type)
-    assert not target.startswith("-"), (
-        f"{test_type.value} has no leading positional target; got {target!r}"
-    )
+    assert not target.startswith("-"), f"{test_type.value} has no leading positional target; got {target!r}"
 
-    resolved = _REPO_ROOT / target
-    assert resolved.is_dir(), (
-        f"{test_type.value} targets {target!r}, which is not a directory under {_REPO_ROOT}"
-    )
+    resolved = _resolve_target(target)
+    assert resolved.is_dir(), f"{test_type.value} targets {target!r}, which is not a directory under {_REPO_ROOT}"
 
     modules = _collectable_modules(resolved)
     assert modules, f"{test_type.value} targets {target!r}, which holds no test_*.py modules"
@@ -99,9 +111,9 @@ def test_fixed_target_mode_collects_existing_tests(test_type: TestType) -> None:
 def test_e2e_targets_the_hexpat_end_to_end_suite() -> None:
     """The e2e mode must select the hexpat end-to-end suite, not an absent directory."""
     target = _target_of(TestType.E2E)
-    assert target == "tests/hexpat/e2e/", f"e2e target regressed to {target!r}"
+    assert target == "tests.hexpat.e2e", f"e2e target regressed to {target!r}"
 
-    modules = _collectable_modules(_REPO_ROOT / target)
+    modules = _collectable_modules(_resolve_target(target))
     names = {module.name for module in modules}
     assert "test_bridge_transforms_deep.py" in names, (
         f"e2e target {target!r} does not contain the bridge transform suite; found {sorted(names)}"

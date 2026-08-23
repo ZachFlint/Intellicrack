@@ -1242,9 +1242,8 @@ class SandboxPanel(AnalysisPanelBase):
     def _on_browse_companions(self) -> None:
         """Offer the two shapes a companion really takes: files, or a folder.
 
-        A resource or locale tree has to arrive whole, and picking its members
-        one by one would flatten it, so a folder is its own choice rather than
-        a multi-selection of files.
+        A resource or locale tree has to arrive whole, and picking its members one by one would flatten it, so a folder is its own choice
+        rather than a multi-selection of files.
         """
         menu = QMenu(self)
         files_action = menu.addAction("Files...")

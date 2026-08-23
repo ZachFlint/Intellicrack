@@ -104,9 +104,7 @@ def test_mutex_name_matches_iss_app_mutex() -> None:
     assert _ISS_PATH.is_file(), f"Inno Setup script missing: {_ISS_PATH}"
     app_mutex = _iss_app_mutex(_ISS_PATH.read_text(encoding="utf-8-sig"))
     assert app_mutex is not None, "the .iss [Setup] section declares no AppMutex"
-    assert app_mutex == MUTEX_NAME, (
-        f"AppMutex/{MUTEX_NAME!r} drift: the .iss declares {app_mutex!r} but the app creates {MUTEX_NAME!r}"
-    )
+    assert app_mutex == MUTEX_NAME, f"AppMutex/{MUTEX_NAME!r} drift: the .iss declares {app_mutex!r} but the app creates {MUTEX_NAME!r}"
 
 
 def test_iss_app_mutex_parser_is_section_scoped() -> None:
@@ -115,13 +113,7 @@ def test_iss_app_mutex_parser_is_section_scoped() -> None:
     Proves a same-named line under another section does not shadow the real
     value; a section-blind parser would return the wrong string.
     """
-    sample = (
-        "[Setup]\n"
-        "AppMutex=Global\\Correct\n"
-        "\n"
-        "[UninstallRun]\n"
-        "AppMutex=Global\\Wrong\n"
-    )
+    sample = "[Setup]\nAppMutex=Global\\Correct\n\n[UninstallRun]\nAppMutex=Global\\Wrong\n"
     assert _iss_app_mutex(sample) == "Global\\Correct"
     assert _iss_app_mutex("[Setup]\nAppName=x\n") is None
 
@@ -143,8 +135,7 @@ def test_acquire_creates_kernel_mutex_discoverable_by_name() -> None:
     opened = _open_named_mutex(MUTEX_NAME)
     try:
         assert opened != 0, (
-            f"no kernel mutex named {MUTEX_NAME!r} exists after acquire "
-            f"(OpenMutexW failed, last error {ctypes.get_last_error()})"
+            f"no kernel mutex named {MUTEX_NAME!r} exists after acquire (OpenMutexW failed, last error {ctypes.get_last_error()})"
         )
     finally:
         if opened:

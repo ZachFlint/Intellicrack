@@ -307,15 +307,11 @@ class BridgeCallWorker(_RetainedWorker):
     def run(self) -> None:
         """Execute the coroutine on the persistent event loop.
 
-        An ``IntellicrackError`` reaching this handler is an anticipated
-        outcome of the call, not a fault in the worker: a bad API key, a rate
-        limit, or a bridge that is not connected all arrive as domain errors
-        and are delivered to the caller's ``on_error`` for display. Those are
-        logged at warning with the error and its type, matching
-        :func:`run_bridge_coroutine_logged`. A traceback under a generic
-        "worker failed" event is reserved for exceptions that really do mean
-        the worker plumbing broke, so routine provider failures stop burying
-        the real ones.
+        An ``IntellicrackError`` reaching this handler is an anticipated outcome of the call, not a fault in the worker: a bad API key, a
+        rate limit, or a bridge that is not connected all arrive as domain errors and are delivered to the caller's ``on_error`` for
+        display. Those are logged at warning with the error and its type, matching :func:`run_bridge_coroutine_logged`. A traceback under a
+        generic "worker failed" event is reserved for exceptions that really do mean the worker plumbing broke, so routine provider failures
+        stop burying the real ones.
         """
         try:
             loop = _ensure_loop()

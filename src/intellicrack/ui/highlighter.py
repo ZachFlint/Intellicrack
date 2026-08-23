@@ -39,17 +39,23 @@ _STRING_DELIMITERS: tuple[str, ...] = ('"', "'", "`")
 class HighlightRule:
     """A syntax highlighting rule."""
 
-    __slots__ = ("format", "pattern")
+    __slots__ = ("format", "group", "pattern")
 
-    def __init__(self, pattern: str, text_format: QTextCharFormat) -> None:
-        """Initialize the HighlightRule with a pattern and format.
+    def __init__(self, pattern: str, text_format: QTextCharFormat, group: int = 0) -> None:
+        r"""Initialize the HighlightRule with a pattern, format, and capture group.
 
         Args:
             pattern: Regular expression pattern to match.
             text_format: Text character format to apply to matches.
+            group: Index of the regex capture group whose span receives the
+                format. ``0`` (the default) formats the whole match; a
+                positive index formats only that captured subgroup, which
+                keyword rules such as ``def\s+(name)`` use so the format
+                lands on the captured name rather than the keyword itself.
         """
         self.pattern = QRegularExpression(pattern)
         self.format = text_format
+        self.group = group
 
 
 class _ThemedSyntaxHighlighter(QSyntaxHighlighter):
@@ -81,7 +87,7 @@ class _ThemedSyntaxHighlighter(QSyntaxHighlighter):
         """
         super().__init__(parent)
         self._rules: list[HighlightRule] = []
-        self._rule_specs: list[tuple[str, str, bool, bool]] = []
+        self._rule_specs: list[tuple[str, str, bool, bool, int]] = []
         self._comment_role: str | None = None
         self._string_role: str | None = None
         self._multi_line_comment_format = QTextCharFormat()
@@ -146,7 +152,8 @@ class _ThemedSyntaxHighlighter(QSyntaxHighlighter):
         triple-quoted-string formats when the subclass declares those roles.
         """
         self._rules = [
-            HighlightRule(pattern, self._create_format(role, bold=bold, italic=italic)) for pattern, role, bold, italic in self._rule_specs
+            HighlightRule(pattern, self._create_format(role, bold=bold, italic=italic), group)
+            for pattern, role, bold, italic, group in self._rule_specs
         ]
         if self._comment_role is not None:
             self._multi_line_comment_format = self._create_format(self._comment_role, italic=True)
@@ -167,14 +174,50 @@ class _ThemedSyntaxHighlighter(QSyntaxHighlighter):
     def _apply_rules(self, text: str) -> None:
         """Apply every single-line highlighting rule to a block of text.
 
+        Rules are applied in declaration order, but a rule never overwrites a
+        span that an earlier rule already formatted: only the still-unclaimed
+        portion of each match is formatted, and it is then marked claimed.
+        This keeps a later, broader rule (for example a generic operator or
+        function-call pattern) from clobbering a more specific rule that
+        already colored part of the same match, such as a keyword immediately
+        followed by ``(`` or a comment opener made of operator characters.
+
         Args:
             text: The text block to highlight.
         """
+        claimed = bytearray(len(text))
         for rule in self._rules:
             iterator = rule.pattern.globalMatch(text)
             while iterator.hasNext():
                 match = iterator.next()
-                self.setFormat(match.capturedStart(), match.capturedLength(), rule.format)
+                start = match.capturedStart(rule.group)
+                length = match.capturedLength(rule.group)
+                if start < 0 or length <= 0:
+                    continue
+                self._format_unclaimed(claimed, start, length, rule.format)
+
+    def _format_unclaimed(self, claimed: bytearray, start: int, length: int, text_format: QTextCharFormat) -> None:
+        """Apply ``text_format`` to the subranges of ``[start, start + length)`` not yet claimed.
+
+        Args:
+            claimed: Per-character claim flags for the block being highlighted,
+                mutated in place to mark the newly formatted characters.
+            start: Start index of the candidate span within the block.
+            length: Length of the candidate span within the block.
+            text_format: Text character format to apply to the unclaimed
+                portion of the span.
+        """
+        end = start + length
+        index = start
+        while index < end:
+            if claimed[index]:
+                index += 1
+                continue
+            run_start = index
+            while index < end and not claimed[index]:
+                claimed[index] = 1
+                index += 1
+            self.setFormat(run_start, index - run_start, text_format)
 
     @staticmethod
     def _find_token_outside_strings(text: str, token: str, offset: int = 0) -> int:
@@ -448,17 +491,17 @@ class CSyntaxHighlighter(_ThemedSyntaxHighlighter):
         super().__init__(parent)
         self._comment_role = "comment"
         self._rule_specs = [
-            *((rf"\b{keyword}\b", "keyword", True, False) for keyword in self.KEYWORDS),
-            *((rf"\b{type_name}\b", "type", False, False) for type_name in self.TYPES),
-            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False),
-            (r"'[^'\\]*(\\.[^'\\]*)*'", "string", False, False),
-            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False),
-            (r"\b0b[01]+\b", "number", False, False),
-            (r"\b\d+\.?\d*[fFlL]?\b", "number", False, False),
-            (r"\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()", "function", False, False),
-            (r"//[^\n]*", "comment", False, True),
-            (r"#\s*\w+", "meta", False, False),
-            (r"[+\-*/%&|^~<>=!]+", "operator", False, False),
+            *((rf"\b{keyword}\b", "keyword", True, False, 0) for keyword in self.KEYWORDS),
+            *((rf"\b{type_name}\b", "type", False, False, 0) for type_name in self.TYPES),
+            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False, 0),
+            (r"'[^'\\]*(\\.[^'\\]*)*'", "string", False, False, 0),
+            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False, 0),
+            (r"\b0b[01]+\b", "number", False, False, 0),
+            (r"\b\d+\.?\d*[fFlL]?\b", "number", False, False, 0),
+            (r"\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()", "function", False, False, 0),
+            (r"//[^\n]*", "comment", False, True, 0),
+            (r"#\s*\w+", "meta", False, False, 0),
+            (r"[+\-*/%&|^~<>=!]+", "operator", False, False, 0),
         ]
         self._setup_rules()
 
@@ -851,18 +894,18 @@ class AssemblySyntaxHighlighter(_ThemedSyntaxHighlighter):
         """
         super().__init__(parent)
         self._rule_specs = [
-            *((rf"\b{instr}\b", "keyword", True, False) for instr in self.INSTRUCTIONS),
-            *((rf"\b{reg}\b", "variable", False, False) for reg in self.REGISTERS),
-            *((rf"\b{mem_kw}\b", "type", False, False) for mem_kw in self.MEMORY_KEYWORDS),
-            (r"^\s*\.(text|data|bss|section|globl?|extern)\b", "meta", False, False),
-            (r"\b(db|dw|dd|dq|resb|resw|resd|resq)\b", "meta", False, False),
-            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False),
-            (r"\b[0-9A-Fa-f]+h\b", "number", False, False),
-            (r"\b\d+\b", "number", False, False),
-            (r"^[A-Za-z_][A-Za-z0-9_]*:", "function", False, False),
-            (r";.*$", "comment", False, True),
-            (r'"[^"]*"', "string", False, False),
-            (r"'[^']*'", "string", False, False),
+            *((rf"\b{instr}\b", "keyword", True, False, 0) for instr in self.INSTRUCTIONS),
+            *((rf"\b{reg}\b", "variable", False, False, 0) for reg in self.REGISTERS),
+            *((rf"\b{mem_kw}\b", "type", False, False, 0) for mem_kw in self.MEMORY_KEYWORDS),
+            (r"^\s*\.(text|data|bss|section|globl?|extern)\b", "meta", False, False, 0),
+            (r"\b(db|dw|dd|dq|resb|resw|resd|resq)\b", "meta", False, False, 0),
+            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False, 0),
+            (r"\b[0-9A-Fa-f]+h\b", "number", False, False, 0),
+            (r"\b\d+\b", "number", False, False, 0),
+            (r"^[A-Za-z_][A-Za-z0-9_]*:", "function", False, False, 0),
+            (r";.*$", "comment", False, True, 0),
+            (r'"[^"]*"', "string", False, False, 0),
+            (r"'[^']*'", "string", False, False, 0),
         ]
         self._setup_rules()
 
@@ -1004,20 +1047,20 @@ class PythonSyntaxHighlighter(_ThemedSyntaxHighlighter):
         super().__init__(parent)
         self._string_role = "string"
         self._rule_specs = [
-            *((rf"\b{keyword}\b", "keyword", True, False) for keyword in self.KEYWORDS),
-            *((rf"\b{builtin}\b", "type", False, False) for builtin in self.BUILTINS),
-            (r"\bdef\s+([A-Za-z_][A-Za-z0-9_]*)", "function", False, False),
-            (r"\bclass\s+([A-Za-z_][A-Za-z0-9_]*)", "function", False, False),
-            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False),
-            (r"'[^'\\]*(\\.[^'\\]*)*'", "string", False, False),
-            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False),
-            (r"\b0b[01]+\b", "number", False, False),
-            (r"\b0o[0-7]+\b", "number", False, False),
-            (r"\b\d+\.?\d*\b", "number", False, False),
-            (r"#[^\n]*", "comment", False, True),
-            (r"@[A-Za-z_][A-Za-z0-9_]*", "meta", False, False),
-            (r"\bself\b", "variable", False, False),
-            (r"\bcls\b", "variable", False, False),
+            *((rf"\b{keyword}\b", "keyword", True, False, 0) for keyword in self.KEYWORDS),
+            *((rf"\b{builtin}\b", "type", False, False, 0) for builtin in self.BUILTINS),
+            (r"\bdef\s+([A-Za-z_][A-Za-z0-9_]*)", "function", False, False, 1),
+            (r"\bclass\s+([A-Za-z_][A-Za-z0-9_]*)", "function", False, False, 1),
+            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False, 0),
+            (r"'[^'\\]*(\\.[^'\\]*)*'", "string", False, False, 0),
+            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False, 0),
+            (r"\b0b[01]+\b", "number", False, False, 0),
+            (r"\b0o[0-7]+\b", "number", False, False, 0),
+            (r"\b\d+\.?\d*\b", "number", False, False, 0),
+            (r"#[^\n]*", "comment", False, True, 0),
+            (r"@[A-Za-z_][A-Za-z0-9_]*", "meta", False, False, 0),
+            (r"\bself\b", "variable", False, False, 0),
+            (r"\bcls\b", "variable", False, False, 0),
         ]
         self._setup_rules()
 
@@ -1190,14 +1233,14 @@ class JavaScriptSyntaxHighlighter(_ThemedSyntaxHighlighter):
         self._comment_role = "comment"
         self._string_role = "string"
         self._rule_specs = [
-            *((rf"\b{keyword}\b", "keyword", True, False) for keyword in self.KEYWORDS),
-            *((rf"\b{frida_global}\b", "type", True, False) for frida_global in self.FRIDA_GLOBALS),
-            (r"\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()", "function", False, False),
-            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False),
-            (r"'[^'\\]*(\\.[^'\\]*)*'", "string", False, False),
-            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False),
-            (r"\b\d+\.?\d*\b", "number", False, False),
-            (r"//[^\n]*", "comment", False, True),
+            *((rf"\b{keyword}\b", "keyword", True, False, 0) for keyword in self.KEYWORDS),
+            *((rf"\b{frida_global}\b", "type", True, False, 0) for frida_global in self.FRIDA_GLOBALS),
+            (r"\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()", "function", False, False, 0),
+            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False, 0),
+            (r"'[^'\\]*(\\.[^'\\]*)*'", "string", False, False, 0),
+            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False, 0),
+            (r"\b\d+\.?\d*\b", "number", False, False, 0),
+            (r"//[^\n]*", "comment", False, True, 0),
         ]
         self._setup_rules()
 
@@ -1401,18 +1444,18 @@ class HexPatSyntaxHighlighter(_ThemedSyntaxHighlighter):
         super().__init__(parent)
         self._comment_role = "comment"
         self._rule_specs = [
-            *((rf"\b{keyword}\b", "keyword", True, False) for keyword in self.KEYWORDS),
-            *((rf"\b{type_name}\b", "type", False, False) for type_name in self.TYPES),
-            *((rf"\b{endian_kw}\b", "meta", False, False) for endian_kw in self.ENDIANNESS),
-            *((rf"\b{builtin_name}\b", "function", False, False) for builtin_name in self.BUILTINS),
-            (r"\$", "function", False, False),
-            (r"\[\[.*?\]\]", "meta", False, False),
-            *((rf"\b{attr_kw}\b", "variable", False, False) for attr_kw in ("color", "validate", "description", "min", "max")),
-            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False),
-            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False),
-            (r"\b\d+\b", "number", False, False),
-            (r"//[^\n]*", "comment", False, True),
-            (r"[+\-*/%&|^~<>=!]+", "operator", False, False),
+            *((rf"\b{keyword}\b", "keyword", True, False, 0) for keyword in self.KEYWORDS),
+            *((rf"\b{type_name}\b", "type", False, False, 0) for type_name in self.TYPES),
+            *((rf"\b{endian_kw}\b", "meta", False, False, 0) for endian_kw in self.ENDIANNESS),
+            *((rf"\b{builtin_name}\b", "function", False, False, 0) for builtin_name in self.BUILTINS),
+            (r"\$", "function", False, False, 0),
+            (r"\[\[.*?\]\]", "meta", False, False, 0),
+            *((rf"\b{attr_kw}\b", "variable", False, False, 0) for attr_kw in ("color", "validate", "description", "min", "max")),
+            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False, 0),
+            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False, 0),
+            (r"\b\d+\b", "number", False, False, 0),
+            (r"//[^\n]*", "comment", False, True, 0),
+            (r"[+\-*/%&|^~<>=!]+", "operator", False, False, 0),
         ]
         self._setup_rules()
 

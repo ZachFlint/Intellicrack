@@ -68,7 +68,7 @@ class _RaisingProvider(LLMProviderBase):
     @property
     @override
     def name(self) -> ProviderName:
-        """Return the provider's enum name.
+        """The provider's enum name.
 
         Returns:
             ProviderName: The configured provider name.
@@ -215,7 +215,7 @@ class _SuccessfulProvider(LLMProviderBase):
     @property
     @override
     def name(self) -> ProviderName:
-        """Return the provider's enum name.
+        """The provider's enum name.
 
         Returns:
             ProviderName: The configured provider name.

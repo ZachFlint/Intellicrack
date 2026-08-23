@@ -116,7 +116,7 @@ class _BareProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Return a placeholder provider name.
+        """A placeholder provider name.
 
         Returns:
             ProviderName: ``ProviderName.OPENAI`` chosen arbitrarily;

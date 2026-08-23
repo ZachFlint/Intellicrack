@@ -445,6 +445,18 @@ class MemoryTab(QWidget):
         self._search_pattern.setPlaceholderText("48 8B ?? ?? 90 CC")
         toolbar.addWidget(self._search_pattern)
 
+        toolbar.addWidget(QLabel("Start:"))
+        self._search_start_addr = QLineEdit()
+        self._search_start_addr.setMaximumWidth(160)
+        self._search_start_addr.setPlaceholderText("0x... (optional)")
+        toolbar.addWidget(self._search_start_addr)
+
+        toolbar.addWidget(QLabel("End:"))
+        self._search_end_addr = QLineEdit()
+        self._search_end_addr.setMaximumWidth(160)
+        self._search_end_addr.setPlaceholderText("0x... (optional)")
+        toolbar.addWidget(self._search_end_addr)
+
         search_btn = QPushButton("Search")
         search_btn.setObjectName("tool_button")
         search_btn.clicked.connect(self._on_search)
@@ -1024,7 +1036,7 @@ class MemoryTab(QWidget):
             self._search_cancel_btn.setEnabled(False)
 
     def _on_search(self) -> None:
-        """Search for a byte pattern in process memory."""
+        """Search for a byte pattern in process memory, optionally bounded to an address range."""
         if self._bridge is None:
             return
         if self._attached_pid is None:
@@ -1033,6 +1045,25 @@ class MemoryTab(QWidget):
 
         pattern = self._search_pattern.text().strip()
         if not pattern:
+            return
+
+        start_text = self._search_start_addr.text().strip()
+        end_text = self._search_end_addr.text().strip()
+
+        try:
+            start_address = int(start_text, 16) if start_text else None
+        except ValueError:
+            self._search_status.setText(f"Invalid start address: {start_text}")
+            return
+
+        try:
+            end_address = int(end_text, 16) if end_text else None
+        except ValueError:
+            self._search_status.setText(f"Invalid end address: {end_text}")
+            return
+
+        if start_address is not None and end_address is not None and start_address >= end_address:
+            self._search_status.setText("Start address must be less than end address")
             return
 
         self._search_status.setText("Searching...")
@@ -1075,6 +1106,8 @@ class MemoryTab(QWidget):
         run_bridge_coroutine_logged(
             self._bridge.search_pattern(
                 pattern,
+                start_address=start_address,
+                end_address=end_address,
                 cancel_event=cancel_event,
                 progress_callback=self._search_progress.emit,
             ),
@@ -1084,4 +1117,6 @@ class MemoryTab(QWidget):
             event="process_search_pattern",
             logger=_logger,
             pattern_length=len(pattern),
+            start_address=start_address,
+            end_address=end_address,
         )

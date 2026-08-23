@@ -41,7 +41,14 @@ from scripts.sandbox import (
     reporting,
     test_types as sandbox_test_types,
 )
-from scripts.sandbox.test_types import TestRunSpec, TestType, build_pytest_args, new_run_id, run_token
+from scripts.sandbox.test_types import (
+    TestRunSpec,
+    TestType,
+    build_pytest_args,
+    new_run_id,
+    run_token,
+    to_pyargs_target,
+)
 
 
 if TYPE_CHECKING:
@@ -361,10 +368,12 @@ def test_both_spec_files_survive_with_their_own_pytest_argv(
     argv_a = list(payload_a["pytest_args"])
     argv_b = list(payload_b["pytest_args"])
 
-    assert "tests/sandbox" in argv_a, f"first run lost its own argv: {argv_a!r}"
-    assert "tests/test_core" not in argv_a, f"first run picked up the second run's argv: {argv_a!r}"
-    assert "tests/test_core" in argv_b, f"second run lost its own argv: {argv_b!r}"
-    assert "tests/sandbox" not in argv_b, f"second run picked up the first run's argv: {argv_b!r}"
+    target_a = to_pyargs_target("tests/sandbox")
+    target_b = to_pyargs_target("tests/test_core")
+    assert target_a in argv_a, f"first run lost its own argv: {argv_a!r}"
+    assert target_b not in argv_a, f"first run picked up the second run's argv: {argv_a!r}"
+    assert target_b in argv_b, f"second run lost its own argv: {argv_b!r}"
+    assert target_a not in argv_b, f"second run picked up the first run's argv: {argv_b!r}"
     assert payload_a["run_id"] == spec_a.run_id
     assert payload_b["run_id"] == spec_b.run_id
 
@@ -551,7 +560,7 @@ def test_discarding_one_run_leaves_a_concurrent_siblings_control_files(
     assert not finished_exit.exists()
     assert sibling_spec.is_file(), "cleanup deleted a concurrently running sibling's spec file"
     assert sibling_exit.is_file(), "cleanup deleted a concurrently running sibling's exit-code file"
-    assert "tests/test_core" in json.loads(sibling_spec.read_text(encoding="utf-8"))["pytest_args"]
+    assert to_pyargs_target("tests/test_core") in json.loads(sibling_spec.read_text(encoding="utf-8"))["pytest_args"]
 
 
 def test_control_files_survive_a_failed_run_and_vanish_after_a_clean_one(

@@ -347,6 +347,8 @@ class TestRestartGuiL3:
         def responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
             if command == "exec":
                 return ok("")
+            if command == "reg_get":
+                return ok("1234")
             if command == "status":
                 return ok({"paused": True, "debugging": True})
             if command in _RESIDUAL_REFRESH_RPCS:

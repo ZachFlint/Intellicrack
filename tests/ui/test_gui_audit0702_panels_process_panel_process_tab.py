@@ -63,7 +63,7 @@ def process_tab(qapp: QApplication) -> Generator[ProcessTab]:
         qapp: Session ``QApplication`` fixture ensuring Qt is initialised.
 
     Yields:
-        Generator[ProcessTab]: A shown ``ProcessTab`` with the "Process Info"
+        ProcessTab: A shown ``ProcessTab`` with the "Process Info"
         sub-tab selected and the info splitter sized to a known geometry.
     """
     del qapp

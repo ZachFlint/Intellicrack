@@ -186,7 +186,7 @@ def bridge() -> Generator[_TestableFridaBridge]:
     """Create and initialize a FridaBridge without attaching it.
 
     Yields:
-        Generator[_TestableFridaBridge]: An initialized (device-resolved) bridge.
+        _TestableFridaBridge: An initialized (device-resolved) bridge.
     """
     b = _TestableFridaBridge()
     _run_async(b.initialize())

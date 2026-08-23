@@ -311,7 +311,7 @@ class BuiltinFunctions:
 
     @property
     def endian(self) -> str:
-        """Return the active default endian, kept in sync with ``set_endian``.
+        """The active default endian, kept in sync with ``set_endian``.
 
         Returns:
             str: ``"little"`` or ``"big"`` reflecting the current default.

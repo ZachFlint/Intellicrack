@@ -308,12 +308,20 @@ class Group:
             the tests root (path separators replaced with ``__``; the root
             itself is ``_root``).
         target: Absolute path to the leaf test directory.
+        dotted: Importable package name for the same directory, for example
+            ``tests.bridges.completeness.ghidra``, or ``None`` when the chain
+            from the tests root down to this directory is not a package.
+            Collection is addressed by import path rather than by filesystem
+            path because a filesystem target makes pytest build the package
+            chain twice inside the container, running every test in the group
+            twice.
         ignores: Immediate child test directories excluded via ``--ignore`` so
             they run as their own groups instead of being double-counted here.
     """
 
     name: str
     target: Path
+    dotted: str | None
     ignores: tuple[Path, ...]
 
 
@@ -333,6 +341,31 @@ class GroupResult:
     exit_code: int
     duration: float
     junit: Path
+
+
+def _is_package_chain(root: Path, parts: tuple[str, ...]) -> bool:
+    """Report whether ``root`` and every directory under it is a package.
+
+    ``--pyargs`` resolves a target by importing it, so a dotted name is only
+    usable when the whole chain carries ``__init__.py``. A namespace directory
+    anywhere along it makes the import fail, and pytest reports that as a usage
+    error rather than running the group.
+
+    Args:
+        root: The tests root the dotted name is anchored at.
+        parts: Path components from ``root`` down to the group directory.
+
+    Returns:
+        bool: True when ``root`` and each named component hold ``__init__.py``.
+    """
+    directory = root
+    if not (directory / "__init__.py").is_file():
+        return False
+    for part in parts:
+        directory /= part
+        if not (directory / "__init__.py").is_file():
+            return False
+    return True
 
 
 def discover_groups(tests_root: Path) -> list[Group]:
@@ -369,17 +402,50 @@ def discover_groups(tests_root: Path) -> list[Group]:
             ),
         )
         relative = directory.relative_to(root)
-        name = "_root" if str(relative) == "." else str(relative).replace("\\", "__").replace("/", "__")
-        groups.append(Group(name=name, target=directory, ignores=ignores))
+        is_root = str(relative) == "."
+        name = "_root" if is_root else str(relative).replace("\\", "__").replace("/", "__")
+        parts = () if is_root else relative.parts
+        dotted = ".".join((root.name, *parts)) if _is_package_chain(root, parts) else None
+        groups.append(Group(name=name, target=directory, dotted=dotted, ignores=ignores))
 
     groups.sort(key=lambda group: group.name)
     return groups
+
+
+def group_collection_target(group: Group, tests_root: Path, workspace_root: Path) -> list[str]:
+    """Choose how one group's tests are addressed on the pytest command line.
+
+    An import-path target is used whenever it is genuinely resolvable, because
+    a filesystem target makes pytest build the group's package chain twice and
+    run every test in it twice. Resolvability takes two things: the chain has
+    to be a real package (:func:`_is_package_chain`), and the directory that
+    chain is anchored at has to be the one pytest runs from, since that is the
+    only path entry the target is looked up against. When either fails the
+    filesystem path is used, which still collects the right tests - twice, but
+    correctly - rather than failing the group with a usage error.
+
+    Args:
+        group: The group to address.
+        tests_root: Root the groups were discovered under.
+        workspace_root: Working directory pytest is launched in.
+
+    Returns:
+        list[str]: The target tokens, either ``["--pyargs", "<dotted>"]`` or a
+            single filesystem path.
+    """
+    anchored = tests_root.resolve().parent == workspace_root.resolve()
+    if group.dotted is not None and anchored:
+        return ["--pyargs", group.dotted]
+    return [str(group.target)]
 
 
 def _pytest_command(
     group: Group,
     junit: Path,
     extra: list[str],
+    *,
+    tests_root: Path,
+    workspace_root: Path,
 ) -> list[str]:
     """Build the ``pytest`` argument vector for one group.
 
@@ -387,11 +453,13 @@ def _pytest_command(
         group: The group to run.
         junit: Path the group's JUnit XML report is written to.
         extra: Additional pytest arguments forwarded from the caller.
+        tests_root: Root the groups were discovered under.
+        workspace_root: Working directory pytest is launched in.
 
     Returns:
         list[str]: Argument vector beginning with the current interpreter.
     """
-    args: list[str] = [str(group.target)]
+    args: list[str] = group_collection_target(group, tests_root, workspace_root)
     args.extend(f"--ignore={ignore}" for ignore in group.ignores)
     args.extend(
         [
@@ -460,6 +528,7 @@ def _flush_group_log(
 def run_group(
     group: Group,
     *,
+    tests_root: Path,
     workspace_root: Path,
     reports_root: Path,
     combine_dir: Path,
@@ -477,6 +546,8 @@ def run_group(
 
     Args:
         group: The group to run.
+        tests_root: Root the groups were discovered under, used to decide
+            whether the group can be addressed by import path.
         workspace_root: Working directory for pytest (repo root, so the
             relative ``--cov=src/intellicrack`` source path resolves).
         reports_root: Directory the per-group JUnit XML is written to.
@@ -499,7 +570,7 @@ def run_group(
     env = os.environ.copy()
     env["COVERAGE_FILE"] = str(combine_dir / f".coverage.{safe}")
 
-    command = _pytest_command(group, junit, extra)
+    command = _pytest_command(group, junit, extra, tests_root=tests_root, workspace_root=workspace_root)
 
     with log_lock:
         print(f"START GROUP: {group.name}", flush=True)
@@ -678,6 +749,7 @@ def orchestrate(
             executor.submit(
                 run_group,
                 group,
+                tests_root=tests_root,
                 workspace_root=workspace_root,
                 reports_root=reports_root,
                 combine_dir=combine_dir,

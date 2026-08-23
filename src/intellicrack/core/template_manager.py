@@ -465,7 +465,7 @@ class TemplateManager:
 
     @property
     def patterns_dir(self) -> Path:
-        """Get the community .hexpat patterns directory.
+        """The community .hexpat patterns directory.
 
         Returns:
             Path: The vendor community patterns directory path.

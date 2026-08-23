@@ -234,6 +234,7 @@ class MainWindow(QMainWindow):
         self._status_failure_count: int = 0
         self._status_refresh_in_flight: bool = False
         self._pending_model_restore: str = ""
+        self._pending_model_restore_provider: ProviderName | None = None
         self._session_token_total: int = 0
         self._binary_dependent_buttons: list[QPushButton] = []
         self._initial_discovery_triggered: bool = False
@@ -298,6 +299,7 @@ class MainWindow(QMainWindow):
                         self._provider_combo.setCurrentIndex(idx)
                     break
             self._pending_model_restore = self._remembered_model_for(target_provider)
+            self._pending_model_restore_provider = target_provider
 
         QTimer.singleShot(250, self._kickoff_initial_discovery)
         QTimer.singleShot(750, self._kickoff_initial_session)
@@ -1227,7 +1229,7 @@ class MainWindow(QMainWindow):
     def _connect_signals(self) -> None:
         """Connect Qt signals."""
         self._chat_panel.message_submitted.connect(self._on_user_message)
-        self.message_received.connect(self._chat_panel.add_message)
+        self.message_received.connect(self._on_message_received)
         self.tool_call_received.connect(self._on_tool_call)
         self.tool_result_received.connect(self._on_tool_result)
         self.stream_chunk_received.connect(self._on_stream_chunk)
@@ -1592,7 +1594,7 @@ class MainWindow(QMainWindow):
         never streams therefore never gets a placeholder bubble at all, so no
         empty orphan "Intellicrack" bubble is left above the user's message
         (S16-D05); the real reply then arrives as the turn's only assistant
-        bubble via ``message_received``.
+        bubble via ``message_received`` -> ``_on_message_received``.
 
         Args:
             chunk: Text chunk from LLM.
@@ -1601,6 +1603,30 @@ class MainWindow(QMainWindow):
             self._stream_append = self._chat_panel.add_streaming_message()
         self._stream_append(chunk)
         self._accumulate_usage_from_payload(chunk)
+
+    def _on_message_received(self, message: Message) -> None:
+        """Route a completed orchestrator message to the chat panel.
+
+        A turn whose text already streamed rendered that content
+        incrementally into a bubble created by ``_on_stream_chunk``
+        (``self._stream_append`` stays non-``None`` for the rest of the
+        turn). Appending the orchestrator's completed message here as well
+        would leave that turn with two assistant bubbles carrying the same
+        text -- the live streamed bubble and a duplicate final one -- so
+        while a streaming bubble is active for this turn the completed
+        message is folded into it instead of rendered as a new bubble. A
+        turn that never streamed (``self._stream_append`` is ``None``, e.g.
+        streaming disabled, or any non-assistant message such as the user's
+        own echoed message) still renders through ``add_message`` exactly as
+        before, preserving the single-bubble non-streamed path (S16-D05).
+
+        Args:
+            message: The completed message delivered by the orchestrator.
+        """
+        if message.role == "assistant" and self._stream_append is not None:
+            self._chat_panel.finalize_streaming_message(message)
+            return
+        self._chat_panel.add_message(message)
 
     def _on_tool_call(self, call: ToolCall) -> None:
         """Handle tool call notification.
@@ -2550,7 +2576,7 @@ class MainWindow(QMainWindow):
                 if line_edit is not None:
                     line_edit.setCursorPosition(0)
             else:
-                self._on_refresh_models()
+                self._on_refresh_models(provider_switch=True)
 
     def _apply_provider_settings(self, settings: dict[str, dict[str, object]]) -> None:
         """Apply provider configuration settings at runtime.
@@ -2653,12 +2679,26 @@ class MainWindow(QMainWindow):
         _logger.warning("provider_reconnect_batch_failed", error=str(error))
         self.status_update.emit("Provider reconnection failed")
 
-    def _on_refresh_models(self) -> None:
+    def _on_refresh_models(self, *, provider_switch: bool = False) -> None:
         """Handle refresh models action.
 
         Prefers the already-connected provider instance (if any) so the refresh reuses its authenticated client and resolved endpoint (e.g.
         the HuggingFace token already verified at connect time, or the Ollama cloud endpoint when local Ollama is not running) instead of
         re-deriving credentials and falling back to a bare HTTP probe against a possibly-empty token or an unreachable local endpoint.
+
+        Args:
+            provider_switch: True when this refresh was triggered by the
+                toolbar's provider combo switching to a provider whose
+                catalog is not yet cached. In that case the model combo
+                still displays the OUTGOING provider's model id, so the
+                restore target on completion must be the NEW provider's own
+                remembered model rather than the combo's stale current text
+                -- otherwise the old provider's model id gets restored as
+                free text against the new provider's catalog. False (the
+                default) is a plain user-initiated refresh of the currently
+                selected provider, where the combo's current text (including
+                a deliberately typed custom model id) is the legitimate
+                restore target.
         """
         provider_data: object = self._provider_combo.currentData()
         if not provider_data:
@@ -2666,6 +2706,7 @@ class MainWindow(QMainWindow):
             return
 
         provider_id: str = provider_data.value if isinstance(provider_data, ProviderName) else str(provider_data)
+        provider_enum: ProviderName | None = provider_data if isinstance(provider_data, ProviderName) else None
 
         connected_instance = None
         if isinstance(provider_data, ProviderName):
@@ -2708,7 +2749,11 @@ class MainWindow(QMainWindow):
             reuse_connected_instance=connected_instance is not None,
         )
         self.status_update.emit("Refreshing models...")
-        self._pending_model_restore = self.model_combo.currentText().strip()
+        if provider_switch and provider_enum is not None:
+            self._pending_model_restore = self._remembered_model_for(provider_enum)
+        else:
+            self._pending_model_restore = self.model_combo.currentText().strip()
+        self._pending_model_restore_provider = provider_enum
         self.model_combo.clear()
         self.model_combo.setEnabled(False)
 
@@ -2742,7 +2787,9 @@ class MainWindow(QMainWindow):
         self.model_combo.setEnabled(True)
         if success and models:
             previous_model = self._pending_model_restore
+            previous_provider = self._pending_model_restore_provider
             self._pending_model_restore = ""
+            self._pending_model_restore_provider = None
             with QSignalBlocker(self.model_combo):
                 self.model_combo.clear()
                 self.model_combo.addItems(models)
@@ -2752,6 +2799,8 @@ class MainWindow(QMainWindow):
                         self.model_combo.setCurrentIndex(idx)
                     else:
                         self.model_combo.setCurrentText(previous_model)
+                elif previous_provider is not None:
+                    self._select_model_for_provider(previous_provider, models)
             self.status_update.emit(f"Found {len(models)} models")
         else:
             self.status_update.emit("Failed to refresh models")
@@ -2916,18 +2965,20 @@ class MainWindow(QMainWindow):
                     models_list = [m.id for m in cached]
 
             if models_list:
+                restore_applies = bool(self._pending_model_restore) and self._pending_model_restore_provider == provider_data
                 with QSignalBlocker(self.model_combo):
                     self.model_combo.clear()
                     self.model_combo.addItems(models_list)
-                    if self._pending_model_restore:
+                    if restore_applies:
                         idx = self.model_combo.findText(self._pending_model_restore)
                         if idx >= 0:
                             self.model_combo.setCurrentIndex(idx)
                         else:
                             self.model_combo.setCurrentText(self._pending_model_restore)
-                        self._pending_model_restore = ""
                     else:
                         self._select_model_for_provider(provider_data, models_list)
+                    self._pending_model_restore = ""
+                    self._pending_model_restore_provider = None
                 line_edit = self.model_combo.lineEdit()
                 if line_edit is not None:
                     line_edit.setCursorPosition(0)
@@ -4019,7 +4070,7 @@ class MainWindow(QMainWindow):
                 if line_edit is not None:
                     line_edit.setCursorPosition(0)
             else:
-                self._on_refresh_models()
+                self._on_refresh_models(provider_switch=True)
 
     def _prompt_provider_not_connected(self, provider_name: str) -> str:
         """Show the disconnected-provider dialog and return the user's choice.
