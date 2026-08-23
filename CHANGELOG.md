@@ -9,16 +9,6 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
-- **packaging,sandbox:** Relocate user state and add guest process picker (`dca310a`)
-Relocate user-writable configuration, credentials, and state under `%LOCALAPPDATA%` to prevent permission issues in read-only installation directories, and add guest process enumeration to the Windows Sandbox backend for targeted memory dumping.
-- Redirect config, logs, data, and `.env` resolution to per-user state directory
-- Add `list_guest_processes` to Windows Sandbox backend and bridge
-- Introduce `GuestProcessPickerDialog` for memory dump targeting in Sandbox UI
-- Wire exact-byte memory searching directly in x64dbg panel
-- Add Hexbench launcher and PyInstaller specs for packaging
-- Optimize Windows guest provisioning by reusing single mounted virtio medium
-- Update Inno Setup packaging scripts, stage workflow, and asset generation
-
 - **hexbench,core:** Enhance UI accessibility, packaging, and runtime bridges (`a78239d`)
 Implement comprehensive accessibility overhauls across the Hexbench UI, enhance native integration and installer packaging, and expand tool discovery and sandbox orchestration. The web-based Hexbench interface now provides complete ARIA semantics, forced-colors high contrast support, full keyboard navigation across menubars and tab strips, dynamic row sizing, and analytical charts with fallback-safe token mappings. The backend and bridge layers receive structured error remediation, custom tool discovery paths, JDK version validation for Ghidra, and a single-instance mutex matching Inno Setup requirements.
 In the frontend, `shell.js`, `grid.js`, and `panels.js` introduce virtual address translation tracking, numeric and binary search parsing, context-menu operations for block and bit manipulations, and responsive row byte fitting. Design specimen cards and the card generator (`build_cards.py`) were synchronized with the central design tokens, control height standards, and `@media (forced-colors: active)` contrast rules. Canvas-based charting now safely falls back to theme-defined hex colors when CSS custom properties are missing.
@@ -1119,33 +1109,6 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
-
-- **packaging:** Harden installer scripts and enforce runtime deps (`4eea4e7`)
-Expand declared runtime dependencies in `pyproject.toml` and refine the
-staging and Inno Setup configuration to ensure safe, unattended
-deployments and prevent runtime dependency relocation bugs during ML splits.
-- Declare missing module-scope dependencies in `pyproject.toml`
-- Add `packaging/prune_dev.py` to prune dev tools via transitive dependency closure
-- Add `packaging/launcher/version_resource.py` to single-source launcher version info
-- Harden Inno Setup script with compiler floor, safe defaults, and suppressible dialogs
-- Update `stage.ps1` with ShouldProcess support, checksum manifests, and conda ownership checks
-- Add verification test suites covering installer hardening, runtime deps, and staging coverage
-
-- **ui, bridges, sandbox:** Stabilize UI states, error handling, and test runners (`6eb3723`)
-Fix duplicate assistant bubbles on streamed turns, stale model restores during
-provider switches, and theme repolishing across scroll areas. Improve error
-classification in Frida and Google providers, and migrate container pytest
-collection targets to importable module paths.
-- ui: fold completed messages into active streaming bubbles and fix stale model id restore on provider switch
-- ui: repolish scroll areas and role frames during theme changes
-- ui: add start/end bounds to process memory search and reserve layout widths in Frida syscall tab
-- bridges: handle `frida.NotSupportedError` in child gating and improve Ghidra AST return parsing
-- bridges: fix last-error retrieval across `AdjustTokenPrivileges` invocations in ProcessBridge
-- providers: catch `httpx.RequestError` on Google connect and align HuggingFace router catalog fetching
-- sandbox: convert test runner collection targets to `--pyargs` imports to eliminate duplicate runs
-- sandbox: harden Docker image cache presence probing against timeouts and daemon errors
-- sandbox: resolve guest-specific virtio driver families during Windows provisioning
-- deps: update locked Python dependencies and Rust crates
 
 - **sandbox:** Close a sandbox by its real window, and outlast the teardown (`0977e74`)
 S18-D24. Stopping a Windows Sandbox left the VM resident. The filed guess was
@@ -5758,3 +5721,21 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+- **ui, bridges, sandbox:** Stabilize UI states, error handling, and test runners (``)
+Fix duplicate assistant bubbles on streamed turns, stale model restores during
+provider switches, and theme repolishing across scroll areas. Improve error
+classification in Frida and Google providers, and migrate container pytest
+collection targets to importable module paths.
+- ui: fold completed messages into active streaming bubbles and fix stale model id restore on provider switch
+- ui: repolish scroll areas and role frames during theme changes
+- ui: add start/end bounds to process memory search and reserve layout widths in Frida syscall tab
+- bridges: handle `frida.NotSupportedError` in child gating and improve Ghidra AST return parsing
+- bridges: fix last-error retrieval across `AdjustTokenPrivileges` invocations in ProcessBridge
+- providers: catch `httpx.RequestError` on Google connect and align HuggingFace router catalog fetching
+- sandbox: convert test runner collection targets to `--pyargs` imports to eliminate duplicate runs
+- sandbox: harden Docker image cache presence probing against timeouts and daemon errors
+- sandbox: resolve guest-specific virtio driver families during Windows provisioning
+- deps: update locked Python dependencies and Rust crates
+
+

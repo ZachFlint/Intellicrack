@@ -79,14 +79,6 @@ _MEMORY_DUMP_OUTCOME: Final[str] = "tests/sandbox/qemu/test_memory_dump_outcome_
 _GUEST_COMPUTER_NAME: Final[str] = "tests/sandbox/qemu/test_guest_computer_name_s17d46.py"
 _LINUX_AGENT_BOOTSTRAP: Final[str] = "tests/sandbox/qemu/test_linux_agent_bootstrap_s17d82.py"
 _APP_ICON_FRAMES: Final[str] = "tests/ui/test_app_icon_frames.py"
-_VERSION_CONSISTENCY: Final[str] = "tests/packaging/test_version_consistency.py"
-_STAGE_MATCHES_ISS: Final[str] = "tests/packaging/test_stage_matches_iss.py"
-_STAGE_ISS_COVERAGE: Final[str] = "tests/packaging/test_stage_iss_coverage.py"
-_RUNTIME_DEPS: Final[str] = "tests/packaging/test_project_runtime_dependencies.py"
-_STAGE_EXCLUDES: Final[str] = "tests/packaging/test_stage_excludes.py"
-_PIXI_ENVIRONMENTS: Final[str] = "tests/packaging/test_pixi_runtime_environment.py"
-_BUILD_INSTALLER_LOG: Final[str] = "tests/packaging/test_build_installer_logging.py"
-_PRECOMMIT_RUFF_PIN: Final[str] = "tests/packaging/test_precommit_ruff_pin.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -203,44 +195,6 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_SEH_X64_PDATA, "test_seh_chain_x64_target_returns_nonempty_pdata_handlers"),
         (_SEH_X64_PDATA, "test_seh_chain_x64_addresses_resolve_within_loaded_modules"),
         (_APP_ICON_FRAMES, "test_rebranded_tool_icon_matches_app_icon"),
-        (_VERSION_CONSISTENCY, "test_pyproject_package_and_workspace_versions_agree"),
-        (_VERSION_CONSISTENCY, "test_all_metadata_locations_agree_with_pyproject"),
-        (_STAGE_MATCHES_ISS, "test_launcher_specs_and_bootstrappers_are_tracked"),
-        # The staged tree lives under build\stage, which is not mounted into the
-        # test container, so in the sandbox these can only ever skip. They gate
-        # the real staging output and must run on the build host.
-        (_STAGE_MATCHES_ISS, "test_staged_runtime_has_no_build_path_shims"),
-        (_STAGE_MATCHES_ISS, "test_staged_runtime_has_no_editable_dist_info"),
-        (_STAGE_MATCHES_ISS, "test_every_iss_source_exists_in_stage"),
-        (_STAGE_MATCHES_ISS, "test_required_binaries_present_in_stage"),
-        (_STAGE_ISS_COVERAGE, "test_every_staged_file_is_packaged_by_the_iss"),
-        (_STAGE_MATCHES_ISS, "test_staged_vendor_trees_carry_no_vcs_metadata"),
-        (_RUNTIME_DEPS, "test_added_runtime_distributions_are_declared"),
-        (_RUNTIME_DEPS, "test_every_module_level_src_import_is_declared"),
-        (_RUNTIME_DEPS, "test_core_packaging_stays_out_of_ml_overlay"),
-        (_STAGE_EXCLUDES, "test_runtime_stage_excludes_pixi_trash"),
-        (_STAGE_EXCLUDES, "test_hexbench_stage_excludes_dev_tooling"),
-        (_PIXI_ENVIRONMENTS, "test_runtime_environment_excludes_build_and_dev_features"),
-        (_PIXI_ENVIRONMENTS, "test_build_toolchain_lives_only_in_the_build_feature"),
-        (_PIXI_ENVIRONMENTS, "test_runtime_feature_retains_shipping_dependencies"),
-        (_PIXI_ENVIRONMENTS, "test_default_environment_still_composes_every_feature"),
-        (_PIXI_ENVIRONMENTS, "test_every_project_dependency_is_declared_in_the_runtime_feature"),
-        (_PIXI_ENVIRONMENTS, "test_stage_script_sources_the_runtime_environment"),
-        (_STAGE_EXCLUDES, "test_runtime_trim_strips_libs_headers_tests_and_docs"),
-        (_BUILD_INSTALLER_LOG, "test_build_log_strips_ansi_but_keeps_console_colour"),
-        (_BUILD_INSTALLER_LOG, "test_build_log_accumulates_every_line_in_order"),
-        (_BUILD_INSTALLER_LOG, "test_empty_recipe_arguments_do_not_become_empty_command_arguments"),
-        (_BUILD_INSTALLER_LOG, "test_build_installer_recipe_delegates_to_the_logging_script"),
-        (_BUILD_INSTALLER_LOG, "test_build_script_logs_to_the_repository_logs_directory"),
-        (_BUILD_INSTALLER_LOG, "test_build_script_streams_stderr_into_the_log"),
-        (_BUILD_INSTALLER_LOG, "test_build_script_runs_no_tests"),
-        (_BUILD_INSTALLER_LOG, "test_logged_step_records_exit_code_and_duration"),
-        # .pre-commit-config.yaml, .gitattributes and the pixi ruff all live
-        # outside the container's mounts, so the pin gates run on the host.
-        (_PRECOMMIT_RUFF_PIN, "test_pinned_ruff_matches_the_pixi_toolchain_version"),
-        (_PRECOMMIT_RUFF_PIN, "test_the_pinned_ruff_can_parse_the_project_ruff_configuration"),
-        (_PRECOMMIT_RUFF_PIN, "test_the_pinned_ruff_formatter_can_parse_the_project_ruff_configuration"),
-        (_PRECOMMIT_RUFF_PIN, "test_mixed_line_ending_hook_skips_every_lf_only_path"),
     },
 )
 

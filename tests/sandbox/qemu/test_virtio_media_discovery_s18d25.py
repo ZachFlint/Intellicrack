@@ -175,12 +175,7 @@ def test_the_provisioner_searches_its_own_images_directory_for_the_medium() -> N
 
     Discovery accepting a priority root is worth nothing if the caller never
     supplies one, which is exactly the state the live run failed in. This reads
-    the call the provisioner really makes. ``provision`` resolves the medium's
-    path through :func:`~scripts.sandbox.provision_windows_guest.require_virtio_media`
-    rather than :func:`~scripts.sandbox.provision_windows_guest.resolve_virtio_medium`
-    now, so that the medium is mounted once - held across verification and
-    staging - instead of the latter's own separate mount; the priority-root
-    contract this gate protects is unchanged.
+    the call the provisioner really makes.
 
     Raises:
         AssertionError: If ``provision`` does not resolve the virtio medium.
@@ -191,7 +186,7 @@ def test_the_provisioner_searches_its_own_images_directory_for_the_medium() -> N
         for definition in module.body
         if isinstance(definition, ast.FunctionDef) and definition.name == "provision"
         for node in ast.walk(definition)
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "require_virtio_media"
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "resolve_virtio_medium"
     ]
     if not calls:
         message = "provision() no longer resolves a virtio medium at all"

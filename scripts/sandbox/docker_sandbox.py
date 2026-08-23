@@ -843,13 +843,6 @@ def _build_docker_run_argv(
     packaging_dir = _PROJECT_ROOT / "packaging"
     if packaging_dir.is_dir():
         argv.extend(["--volume", f"{packaging_dir}:{_CONTAINER_WORKSPACE}\\packaging:ro"])
-    # Mount the Jupyter notebooks tree when present so the executable-tutorial
-    # gate (``tests/core/test_hexcore_tutorial_notebook.py``) validates the live
-    # ``notebooks/hexcore_tutorial.ipynb`` against the in-container hexcore build
-    # rather than a copy baked into the image at build time.
-    notebooks_dir = _PROJECT_ROOT / "notebooks"
-    if notebooks_dir.is_dir():
-        argv.extend(["--volume", f"{notebooks_dir}:{_CONTAINER_WORKSPACE}\\notebooks:ro"])
     argv.extend([
         "--workdir",
         _CONTAINER_WORKSPACE,
@@ -1776,7 +1769,8 @@ def main(raw_args: list[str] | None = None) -> int:
         cpus=plan.cpus,
     )
     print(
-        f"[sandbox] Host capacity: up to {plan.slots} concurrent run(s), {plan.memory} / {plan.cpus} CPU(s) each.",
+        f"[sandbox] Host capacity: up to {plan.slots} concurrent run(s), "
+        f"{plan.memory} / {plan.cpus} CPU(s) each.",
         file=sys.stderr,
     )
 

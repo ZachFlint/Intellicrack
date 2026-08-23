@@ -82,35 +82,6 @@ test-hexcore:
 clean-hexcore:
     cd src/intellicrack-hexcore && {{ pixi }} cargo clean
 
-# Stage flags for build-installer's dependency invocation; empty means a full stage.
-STAGE_ARGS := ""
-
-# The heavy step: recreates build/stage from scratch (runtime, tools, JDK, launchers).
-# Flags are forwarded to stage.ps1, e.g. -SkipJdkDownload -SkipGuestImage -SkipSigning.
-[doc('Stage the installer payload into build/stage (packaging/stage.ps1)')]
-[group('installer')]
-stage-installer *ARGS:
-    @if (-not (Test-Path 'packaging/stage.ps1')) { Write-Host 'packaging/stage.ps1 is missing, so the payload cannot be staged' -ForegroundColor Red; exit 1 }
-    pwsh -NoLogo -NonInteractive -File packaging/stage.ps1 {{ ARGS }}
-    @Write-Host "==> build/stage" -ForegroundColor Green
-
-# Stages the payload, then compiles it with Inno Setup. scripts/build-installer.ps1
-# drives both steps and captures their combined output in logs/installer/build.log
-# (rolling: each build replaces the previous). It runs no tests -- verify the staged
-# tree separately with `just test module --module tests/packaging` when you want it.
-# ARGS reach iscc, e.g. just build-installer /DSignToolName=intellicrack.
-# Stage flags come from the STAGE_ARGS variable, since they go to a different tool:
-# just STAGE_ARGS='-SkipJdkDownload -SkipGuestImage' build-installer
-[doc('Build the Setup executable: stage, then compile with Inno Setup')]
-[group('installer')]
-build-installer *ARGS:
-    @& scripts/build-installer.ps1 -StageArgs "{{ STAGE_ARGS }}" -IsccArgs "{{ ARGS }}"
-
-[doc('Delete installer build artifacts (build/ and packaging/Output/)')]
-[group('installer')]
-clean-installer:
-    @foreach ($p in @('build', 'packaging/Output')) { if (Test-Path $p) { $gb = [math]::Round((Get-ChildItem $p -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum / 1GB, 2); Remove-Item $p -Recurse -Force; Write-Host "==> removed $p ($gb GB)" -ForegroundColor Green } else { Write-Host "==> already absent: $p" -ForegroundColor DarkGray } }
-
 [doc('Download and install the latest QEMU emulator')]
 [group('install')]
 install-qemu:

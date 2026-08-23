@@ -25,9 +25,7 @@ $OptDir = Join-Path $Here 'options'
 $Scale = 3
 $BannerW = 164 * $Scale
 $BannerH = 314 * $Scale
-# Inno's small wizard image is 55x58 at the classic base size, not square.
-$SmallW = 55 * $Scale
-$SmallH = 58 * $Scale
+$SmallSz = 55 * $Scale
 $Accent = [System.Drawing.Color]::FromArgb(7, 197, 255)
 
 # All brand backgrounds, in presentation order. The active wizard banner uses
@@ -214,31 +212,16 @@ function Add-IconTile {
 function Add-Subtitle {
     <#
     .SYNOPSIS
-        Draw the subtitle on a scrim chip so it stays legible on any art.
+        Draw the subtitle on a dark scrim chip so it stays legible on any art.
     .DESCRIPTION
-        A semi-transparent chip with a hairline border sits behind the text, and
-        the text carries a soft drop shadow, so the label reads cleanly over both
-        dark and bright regions of a background. A cyan accent rule underlines the
-        chip. The chip, border, shadow, and text colours are supplied by the
-        caller so the same routine serves the dark and light banners.
+        A semi-transparent navy chip with a cyan hairline sits behind the text,
+        and the text carries a soft drop shadow, so the label reads cleanly over
+        both dark and bright regions of a photographic background. A cyan accent
+        rule underlines the chip.
     .PARAMETER G
         Target Graphics context.
-    .PARAMETER ChipColor
-        Fill colour of the scrim chip behind the subtitle.
-    .PARAMETER ChipBorder
-        Colour of the chip's hairline border.
-    .PARAMETER ShadowColor
-        Colour of the subtitle's drop shadow.
-    .PARAMETER TextColor
-        Colour of the subtitle text.
     #>
-    param(
-        [Parameter(Mandatory)][System.Drawing.Graphics]$G,
-        [Parameter(Mandatory)][System.Drawing.Color]$ChipColor,
-        [Parameter(Mandatory)][System.Drawing.Color]$ChipBorder,
-        [Parameter(Mandatory)][System.Drawing.Color]$ShadowColor,
-        [Parameter(Mandatory)][System.Drawing.Color]$TextColor
-    )
+    param([Parameter(Mandatory)][System.Drawing.Graphics]$G)
     $subtitle = 'Binary Analysis Platform'
     $fmt = New-Object System.Drawing.StringFormat
     $fmt.Alignment = [System.Drawing.StringAlignment]::Center
@@ -256,18 +239,18 @@ function Add-Subtitle {
         $chipY = [single]($ty - $chipH / 2)
         $chip = New-RoundedRectPath $chipX $chipY $chipW $chipH ([single]($chipH / 2))
         try {
-            $cb = New-Object System.Drawing.SolidBrush($ChipColor)
+            $cb = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(120, 4, 10, 20))
             $G.FillPath($cb, $chip); $cb.Dispose()
-            $cp = New-Object System.Drawing.Pen($ChipBorder, [single]1.0)
+            $cp = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(45, 7, 197, 255), [single]1.0)
             $G.DrawPath($cp, $chip); $cp.Dispose()
         } finally {
             $chip.Dispose()
         }
 
-        $shadow = New-Object System.Drawing.SolidBrush($ShadowColor)
+        $shadow = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(150, 0, 0, 0))
         $G.DrawString($subtitle, $font, $shadow, [single]($cx + 1), [single]($ty + 1), $fmt)
         $shadow.Dispose()
-        $text = New-Object System.Drawing.SolidBrush($TextColor)
+        $text = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(240, 247, 253))
         $G.DrawString($subtitle, $font, $text, $cx, $ty, $fmt)
         $text.Dispose()
 
@@ -277,32 +260,6 @@ function Add-Subtitle {
         $pen.Dispose()
     } finally {
         $font.Dispose(); $fmt.Dispose()
-    }
-}
-
-function Add-LightBackground {
-    <#
-    .SYNOPSIS
-        Paint a soft light vertical gradient for the light-theme banner.
-    .PARAMETER G
-        Target Graphics context.
-    #>
-    param([Parameter(Mandatory)][System.Drawing.Graphics]$G)
-    $rect = New-Object System.Drawing.Rectangle(0, 0, $BannerW, $BannerH)
-    $top = [System.Drawing.Color]::FromArgb(247, 250, 253)
-    $bottom = [System.Drawing.Color]::FromArgb(210, 227, 240)
-    $brush = New-Object System.Drawing.Drawing2D.LinearGradientBrush($rect, $top, $bottom, [single]90.0)
-    try {
-        $G.FillRectangle($brush, $rect)
-    } finally {
-        $brush.Dispose()
-    }
-    # A faint cyan accent band along the bottom ties it to the brand palette.
-    $band = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(28, 7, 197, 255))
-    try {
-        $G.FillRectangle($band, 0, [int]($BannerH * 0.86), $BannerW, [int]($BannerH * 0.14))
-    } finally {
-        $band.Dispose()
     }
 }
 
@@ -332,11 +289,7 @@ function New-Banner {
         $iconX = [int](($BannerW - $iconSize) / 2)
         $iconY = [int]($BannerH * 0.18)
         Add-IconTile -G $g -Icon $Icon -X $iconX -Y $iconY -Size $iconSize
-        Add-Subtitle -G $g `
-            -ChipColor ([System.Drawing.Color]::FromArgb(120, 4, 10, 20)) `
-            -ChipBorder ([System.Drawing.Color]::FromArgb(45, 7, 197, 255)) `
-            -ShadowColor ([System.Drawing.Color]::FromArgb(150, 0, 0, 0)) `
-            -TextColor ([System.Drawing.Color]::FromArgb(240, 247, 253))
+        Add-Subtitle -G $g
 
         $bmp.Save($OutFile, [System.Drawing.Imaging.ImageFormat]::Png)
         Write-Host "wrote $OutFile ($BannerW x $BannerH)"
@@ -345,75 +298,27 @@ function New-Banner {
     }
 }
 
-function New-LightBanner {
-    <#
-    .SYNOPSIS
-        Render the light-theme welcome banner (light gradient, icon tile, subtitle).
-    .DESCRIPTION
-        The dark banner composites the app tile over dark brand artwork; under the
-        light Windows theme that reads as a near-black slab. This renders a genuine
-        light variant on a soft light gradient with a dark-on-light subtitle, so
-        WizardImageFileDynamicDark actually swaps a distinct image per theme.
-    .PARAMETER OutFile
-        Destination PNG path.
-    .PARAMETER Icon
-        The 256px icon bitmap to place as the app tile.
-    #>
-    param(
-        [Parameter(Mandatory)][string]$OutFile,
-        [Parameter(Mandatory)][System.Drawing.Bitmap]$Icon
-    )
-    $bmp = New-Object System.Drawing.Bitmap($BannerW, $BannerH, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
-    $g = [System.Drawing.Graphics]::FromImage($bmp)
-    try {
-        Set-Quality -G $g
-        Add-LightBackground -G $g
-
-        $iconSize = 256
-        $iconX = [int](($BannerW - $iconSize) / 2)
-        $iconY = [int]($BannerH * 0.18)
-        Add-IconTile -G $g -Icon $Icon -X $iconX -Y $iconY -Size $iconSize
-        Add-Subtitle -G $g `
-            -ChipColor ([System.Drawing.Color]::FromArgb(205, 255, 255, 255)) `
-            -ChipBorder ([System.Drawing.Color]::FromArgb(90, 7, 120, 160)) `
-            -ShadowColor ([System.Drawing.Color]::FromArgb(70, 255, 255, 255)) `
-            -TextColor ([System.Drawing.Color]::FromArgb(16, 34, 52))
-
-        $bmp.Save($OutFile, [System.Drawing.Imaging.ImageFormat]::Png)
-        Write-Host "wrote $OutFile ($BannerW x $BannerH, light)"
-    } finally {
-        $g.Dispose(); $bmp.Dispose()
-    }
-}
-
 function New-SmallIcon {
     <#
     .SYNOPSIS
-        Render the small page icon used on interior wizard pages.
-    .DESCRIPTION
-        Sized to Inno's 55x58 small-image ratio (not a square) and drawn as the
-        rounded app tile centred with a transparent margin, so it reads as a small
-        logo rather than a full-bleed near-black box with a clipped wordmark.
+        Render the transparent small page icon used on interior wizard pages.
     .PARAMETER OutFile
         Destination PNG path.
     .PARAMETER Icon
-        The 256px icon bitmap.
+        The 256px icon bitmap, downscaled onto a transparent canvas.
     #>
     param(
         [Parameter(Mandatory)][string]$OutFile,
         [Parameter(Mandatory)][System.Drawing.Bitmap]$Icon
     )
-    $bmp = New-Object System.Drawing.Bitmap($SmallW, $SmallH, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $bmp = New-Object System.Drawing.Bitmap($SmallSz, $SmallSz, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $g = [System.Drawing.Graphics]::FromImage($bmp)
     try {
         Set-Quality -G $g
         $g.Clear([System.Drawing.Color]::Transparent)
-        $tile = [int]([Math]::Min($SmallW, $SmallH) * 0.80)
-        $x = [int](($SmallW - $tile) / 2)
-        $y = [int](($SmallH - $tile) / 2)
-        Add-IconTile -G $g -Icon $Icon -X $x -Y $y -Size $tile
+        $g.DrawImage($Icon, 0, 0, $SmallSz, $SmallSz)
         $bmp.Save($OutFile, [System.Drawing.Imaging.ImageFormat]::Png)
-        Write-Host "wrote $OutFile ($SmallW x $SmallH)"
+        Write-Host "wrote $OutFile ($SmallSz x $SmallSz)"
     } finally {
         $g.Dispose(); $bmp.Dispose()
     }
@@ -433,12 +338,11 @@ try {
         New-Banner -OutFile (Join-Path $OptDir ("option-{0}.png" -f $bg.Key)) -BackgroundPath $bgPath -Icon $icon
     }
 
-    # The active wizard banners. modern-dynamic swaps light/dark by system theme,
-    # so the dark slot gets the dark brand composite and the light slot gets a
-    # genuinely light render -- the two are distinct images, not the same file.
+    # The active wizard banner. modern-dynamic swaps light/dark by system theme;
+    # the chosen artwork is dark and works in both, so both slots use it.
     $selectedPath = Join-Path $BgDir $selected.File
     New-Banner -OutFile (Join-Path $Here 'banner-dark.png') -BackgroundPath $selectedPath -Icon $icon
-    New-LightBanner -OutFile (Join-Path $Here 'banner-light.png') -Icon $icon
+    New-Banner -OutFile (Join-Path $Here 'banner-light.png') -BackgroundPath $selectedPath -Icon $icon
     New-SmallIcon -OutFile (Join-Path $Here 'small.png') -Icon $icon
 } finally {
     $icon.Dispose()

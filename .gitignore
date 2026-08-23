@@ -37,10 +37,8 @@ MANIFEST
 # Exception for Windows application manifest required for build
 !intellicrack-launcher/intellicrack.exe.manifest
 *.spec
-# Exceptions for tracked PyInstaller specs: build inputs, not artifacts.
+# Exception for the Hexbench PyInstaller spec, a build input, not an artifact
 !/src/hexbench/hexbench.spec
-!/packaging/launcher/launcher.spec
-!/packaging/launcher/hexbench_launcher.spec
 
 # Installer logs
 pip-log.txt
@@ -542,8 +540,5 @@ prompts/
 
 # Ad-hoc captured diff fragments (regenerable scratch, never tracked)
 /diff_ghidra.txt
-
-# Runtime data directory (caches, databases, user scripts)
-/data/
 
 prompts.md

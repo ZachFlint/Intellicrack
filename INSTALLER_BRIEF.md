@@ -61,10 +61,6 @@ check, not as truth to copy. Re-run each check yourself and correct any drift.
   resource_hacker, pmd, google-java-format, AdobeInjector, IDMActivator,
   WindowsPatch. Inventory the REAL tree; confirm which are actually referenced by
   code vs incidental.
-  RESOLVED: the staged tool subset is radare2, cutter, NASM (plus x64dbg, Ghidra
-  and QEMU staged in their own steps). resource_hacker was incidental — nothing
-  in src/ or the .iss referenced it and only its docs/samples were ever tracked,
-  so tools\resource_hacker and its dead stage.ps1 warning have been removed.
 - Ghidra needs JDK 21 (tools\ghidra\Ghidra\application.properties:
   application.java.min=21). No JDK is bundled in tools\ghidra. The bridge's JVM
   resolver GhidraBridge._discover_jdk() (src\intellicrack\bridges\ghidra.py, ~line
@@ -97,11 +93,6 @@ Produce a written dependency/asset manifest, each row backed by a check:
    `pixi list` and a live import probe (import every runtime + ml module) in
    .pixi\envs\default. Record what a RUNTIME-ONLY subset needs (exclude
    dev/test/docs/profile) — this defines what the shipped runtime must contain.
-   RESOLVED: that subset is now a real pixi environment. [tool.pixi] is split
-   into features (build/tooling/dev/test/docs/profile) plus a default feature
-   holding only runtime dependencies; `runtime` composes the default feature
-   alone and `default` composes them all. packaging\stage.ps1 stages the
-   installer from .pixi\envs\runtime, so the build toolchain never ships.
 2. Native artifacts: read the justfile recipes build-hexcore and
    install-x64dbg-plugin and scripts\install-*.ps1. Confirm hexcore's installed
    location in the env and the exact plugin artifact paths. Determine precisely

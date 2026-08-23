@@ -81,7 +81,6 @@ from intellicrack.ui.panels.async_bridge import (
     run_bridge_coroutine_async,
     run_bridge_coroutine_logged,
 )
-from intellicrack.ui.panels.base_panel import compute_control_min_height, compute_toolbar_height
 from intellicrack.ui.provider_config import ModelRefreshWorker, ModelSelectionDialog, ProviderConfigDialog
 from intellicrack.ui.resources import FontManager, IconManager, ThemeManager
 from intellicrack.ui.sandbox_config import SandboxConfigDialog, SandboxMonitorWidget
@@ -908,7 +907,7 @@ class MainWindow(QMainWindow):
         """Set up the toolbar."""
         toolbar = OverflowToolBar("Main Toolbar")
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(compute_toolbar_height(self))
+        toolbar.setFixedHeight(40)
         self.addToolBar(toolbar)
 
         load_btn = QPushButton("Load Binary")
@@ -924,7 +923,6 @@ class MainWindow(QMainWindow):
 
         self._provider_combo = QComboBox()
         self._provider_combo.setMinimumWidth(150)
-        self._provider_combo.setMinimumHeight(compute_control_min_height(self))
         self._provider_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._provider_combo.setObjectName("toolbar_combo")
         for provider in ProviderName:
@@ -938,7 +936,6 @@ class MainWindow(QMainWindow):
 
         self.model_combo = QComboBox()
         self.model_combo.setMinimumWidth(250)
-        self.model_combo.setMinimumHeight(compute_control_min_height(self))
         self.model_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.model_combo.setObjectName("toolbar_combo")
         self.model_combo.setEditable(True)
