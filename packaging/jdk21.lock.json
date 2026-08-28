@@ -1,0 +1,8 @@
+{
+  "_comment": "Pinned Temurin (Eclipse Adoptium) JDK 21 for the bundled Ghidra runtime. This file is the trust anchor for the download: packaging/stage.ps1 fetches the exact url below and refuses to proceed unless its SHA-256 matches sha256 here. The url is an immutable GitHub release asset, so the build is reproducible. To bump: pick a newer Temurin 21 GA release, update every field from the Adoptium assets API (https://api.adoptium.net/v3/assets/latest/21/hotspot?os=windows&architecture=x64&image_type=jdk&vendor=eclipse), and commit.",
+  "release": "jdk-21.0.12.1+1",
+  "version": "21.0.12+101.0.LTS",
+  "url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_x64_windows_hotspot_21.0.12.1_1.zip",
+  "sha256": "f9d6e191ab098c0d416e7d588a24420a8621cd2f4720dab2459b8b7b2d2d8b4e",
+  "size": 205073461
+}

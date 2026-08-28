@@ -90,6 +90,42 @@ function Remove-MatchingItem {
     }
 }
 
+function Invoke-OptionalSign {
+    <#
+    .SYNOPSIS
+        Authenticode-sign a file when signing credentials are configured, else warn.
+    .DESCRIPTION
+        Signs $Path with signtool when INTELLICRACK_SIGN_PFX names a code-signing
+        certificate. INTELLICRACK_SIGN_PASS supplies the .pfx password and
+        INTELLICRACK_SIGN_TS an RFC-3161 timestamp URL when present. With no
+        certificate configured the file is left unsigned and a warning is emitted;
+        the build never hardcodes a certificate.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$What
+    )
+    $pfx = $env:INTELLICRACK_SIGN_PFX
+    if (-not $pfx) {
+        Write-Warning "$What is unsigned (set INTELLICRACK_SIGN_PFX to a code-signing .pfx to sign it)"
+        return
+    }
+    if (-not (Test-Path -LiteralPath $pfx)) {
+        throw "INTELLICRACK_SIGN_PFX points at a missing file: $pfx"
+    }
+    $signtool = (Get-Command signtool.exe -ErrorAction SilentlyContinue)?.Source
+    if (-not $signtool) {
+        throw 'INTELLICRACK_SIGN_PFX is set but signtool.exe is not on PATH (install the Windows SDK)'
+    }
+    $signArgs = @('sign', '/fd', 'SHA256', '/f', $pfx)
+    if ($env:INTELLICRACK_SIGN_PASS) { $signArgs += @('/p', $env:INTELLICRACK_SIGN_PASS) }
+    if ($env:INTELLICRACK_SIGN_TS) { $signArgs += @('/tr', $env:INTELLICRACK_SIGN_TS, '/td', 'SHA256') }
+    $signArgs += $Path
+    & $signtool @signArgs
+    if ($LASTEXITCODE -ne 0) { throw "signtool failed for $What (exit $LASTEXITCODE)" }
+    Write-Success "$What signed"
+}
+
 Write-Banner 'Intellicrack Stage Build'
 Write-Step 'STAGE' "Repo root: $RepoRoot"
 Write-Step 'STAGE' "Stage dir: $Stage"
@@ -143,6 +179,39 @@ foreach ($pth in @('_editable_impl_intellicrack.pth', 'a1_coverage.pth')) {
         Write-Progress "Removed $pth"
     }
 }
+
+# The pip/distlib console-script launchers under Scripts\ embed the absolute
+# build-interpreter path (D:\...\.pixi\envs\default\python.exe). On a target
+# that path does not exist, and worse, if it is user-writable anyone who plants
+# a python.exe there gains code execution through any invoked shim. The
+# application never runs these shims (it launches python via -m), so every shim
+# that embeds the build interpreter is stripped here and Scripts\ is dropped
+# from the launchers' child PATH.
+Write-Progress 'Removing console-script shims that embed the build interpreter path...'
+$ScriptsDir = Join-Path $RuntimeDir 'Scripts'
+$ShimsRemoved = 0
+if (Test-Path -LiteralPath $ScriptsDir) {
+    foreach ($exe in Get-ChildItem -LiteralPath $ScriptsDir -Filter '*.exe' -File -ErrorAction SilentlyContinue) {
+        $bytes = [System.IO.File]::ReadAllBytes($exe.FullName)
+        $ascii = [System.Text.Encoding]::ASCII.GetString($bytes)
+        if ($ascii.Contains($PixiEnv)) {
+            Remove-Item -LiteralPath $exe.FullName -Force
+            $ShimsRemoved++
+        }
+    }
+}
+Write-Progress "Removed $ShimsRemoved build-path console-script shim(s)"
+
+# The editable install's dist-info carries a direct_url.json that records
+# file:///D:/Intellicrack. The app source ships under app\src and is placed on
+# PYTHONPATH by the launcher, so this dist-info is dead weight that only leaks
+# the build tree path. Remove it.
+Write-Progress 'Removing the editable-install dist-info that leaks the source path...'
+$EditableDistInfo = @(Get-ChildItem -LiteralPath $RuntimeSitePackages -Directory -Filter 'intellicrack*.dist-info' -ErrorAction SilentlyContinue)
+foreach ($di in $EditableDistInfo) {
+    Remove-Item -LiteralPath $di.FullName -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Progress "Removed $($di.Name)"
+}
 Write-Success 'runtime staged and trimmed'
 
 # ---------------------------------------------------------------------------
@@ -151,6 +220,17 @@ Write-Success 'runtime staged and trimmed'
 Write-Step 'STAGE' 'Step 3/14: rebuilding portable hexcore wheel...'
 $HexcoreDir = Join-Path $RepoRoot 'src\intellicrack-hexcore'
 Assert-Source -Path (Join-Path $HexcoreDir 'Cargo.toml') -What 'hexcore crate'
+
+# Empty the wheels directory before building so the wheel staged below is
+# provably the one this build produced. maturin/cargo honour CARGO_TARGET_DIR
+# redirection, and picking the newest-mtime wheel from a shared directory would
+# silently stage a stale .pyd whenever the redirect leaves an older wheel behind.
+$WheelsDir = Join-Path $HexcoreDir 'target\wheels'
+if (Test-Path -LiteralPath $WheelsDir) {
+    Get-ChildItem -LiteralPath $WheelsDir -Filter '*.whl' -File -ErrorAction SilentlyContinue |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+}
+
 $env:RUSTFLAGS = '-C target-cpu=x86-64-v2'
 Push-Location $HexcoreDir
 try {
@@ -162,11 +242,13 @@ try {
     Pop-Location
 }
 
-$WheelsDir = Join-Path $HexcoreDir 'target\wheels'
 Assert-Produced -Path $WheelsDir -What 'hexcore wheels dir'
-$Wheel = Get-ChildItem -LiteralPath $WheelsDir -Filter '*.whl' -File |
-    Sort-Object LastWriteTime -Descending | Select-Object -First 1
-if (-not $Wheel) { throw "No hexcore wheel found under $WheelsDir" }
+$Wheels = @(Get-ChildItem -LiteralPath $WheelsDir -Filter '*.whl' -File)
+if ($Wheels.Count -ne 1) {
+    $names = ($Wheels | ForEach-Object { $_.Name }) -join ', '
+    throw "Expected exactly one freshly-built hexcore wheel under $WheelsDir, found $($Wheels.Count): $names"
+}
+$Wheel = $Wheels[0]
 Write-Progress "Using wheel: $($Wheel.Name)"
 
 $WheelExtract = Join-Path $BuildRoot '_hexcore_wheel'
@@ -295,28 +377,44 @@ Write-Success 'Ghidra staged'
 # ---------------------------------------------------------------------------
 # Step 9: bundled Temurin JDK 21 under the Ghidra tree.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 9/14: downloading Temurin JDK 21...'
-$JdkBinaryUrl = 'https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jdk/hotspot/normal/eclipse'
-$JdkAssetsUrl = 'https://api.adoptium.net/v3/assets/latest/21/hotspot?os=windows&architecture=x64&image_type=jdk&vendor=eclipse'
+Write-Step 'STAGE' 'Step 9/14: staging pinned Temurin JDK 21...'
+# Provenance is anchored in the repo, not the download host: packaging/jdk21.lock.json
+# pins an immutable GitHub release asset and its SHA-256. We fetch that exact url
+# (with bounded retry) and refuse to proceed unless the hash matches the pin.
+$JdkLockPath = Join-Path $RepoRoot 'packaging\jdk21.lock.json'
+Assert-Source -Path $JdkLockPath -What 'JDK pin lock file'
+$JdkLock = Get-Content -LiteralPath $JdkLockPath -Raw | ConvertFrom-Json
+foreach ($field in @('url', 'sha256', 'release')) {
+    if (-not $JdkLock.$field) { throw "packaging/jdk21.lock.json is missing required field '$field'" }
+}
+Write-Progress "Pinned Temurin release: $($JdkLock.release)"
 $ProgressPreference = 'SilentlyContinue'
-
-$JdkAssets = Invoke-RestMethod -Uri $JdkAssetsUrl -TimeoutSec 60
-$JdkAsset = @($JdkAssets) | Select-Object -First 1
-if (-not $JdkAsset) { throw 'Adoptium assets API returned no JDK 21 asset' }
-$ExpectedSha = $JdkAsset.binary.package.checksum
-if (-not $ExpectedSha) { throw 'Adoptium assets API returned no checksum for JDK 21' }
-Write-Progress "Adoptium release: $($JdkAsset.release_name)"
 
 $JdkZip = Join-Path $BuildRoot '_temurin21.zip'
 if (Test-Path -LiteralPath $JdkZip) { Remove-Item -LiteralPath $JdkZip -Force }
-Invoke-WebRequest -Uri $JdkBinaryUrl -OutFile $JdkZip -TimeoutSec 600
+
+$Downloaded = $false
+for ($attempt = 1; $attempt -le 4; $attempt++) {
+    try {
+        Invoke-WebRequest -Uri $JdkLock.url -OutFile $JdkZip -TimeoutSec 600
+        $Downloaded = $true
+        break
+    } catch {
+        Write-Warning "Temurin download attempt $attempt failed: $($_.Exception.Message)"
+        if (Test-Path -LiteralPath $JdkZip) { Remove-Item -LiteralPath $JdkZip -Force -ErrorAction SilentlyContinue }
+        if ($attempt -lt 4) { Start-Sleep -Seconds ([int][math]::Pow(2, $attempt)) }
+    }
+}
+if (-not $Downloaded) { throw "Temurin JDK download failed after 4 attempts: $($JdkLock.url)" }
 Assert-Produced -Path $JdkZip -What 'downloaded Temurin JDK zip'
 
+$ExpectedSha = $JdkLock.sha256.ToLowerInvariant()
 $ActualSha = (Get-FileHash -LiteralPath $JdkZip -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($ActualSha -ne $ExpectedSha.ToLowerInvariant()) {
-    throw "Temurin JDK SHA-256 mismatch: expected $ExpectedSha, got $ActualSha"
+if ($ActualSha -ne $ExpectedSha) {
+    Remove-Item -LiteralPath $JdkZip -Force -ErrorAction SilentlyContinue
+    throw "Temurin JDK SHA-256 mismatch (pinned in packaging/jdk21.lock.json): expected $ExpectedSha, got $ActualSha"
 }
-Write-Progress 'JDK checksum verified'
+Write-Progress 'JDK checksum verified against the in-repo pin'
 
 [System.IO.Compression.ZipFile]::ExtractToDirectory($JdkZip, $GhidraDest)
 Remove-Item -LiteralPath $JdkZip -Force -ErrorAction SilentlyContinue
@@ -384,24 +482,92 @@ Invoke-Robocopy -Source $HexbenchSrc -Destination $HexbenchDest -ExcludeDirs @('
 Write-Success 'hexbench staged'
 
 # ---------------------------------------------------------------------------
-# Step 14: PyInstaller launcher.
+# Step 14: PyInstaller launchers.
+#
+# Both are small stdlib-only bootstrappers that resolve the runtime staged
+# beside them. Hexbench is deliberately NOT built from src/hexbench/hexbench.spec
+# here: that spec freezes the editor with an interpreter of its own for
+# standalone distribution, which inside the installer would duplicate the
+# runtime, webview and hexcore this stage already carries.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 14/14: building the launcher...'
-$LauncherSpec = Join-Path $RepoRoot 'packaging\launcher\launcher.spec'
-Assert-Source -Path $LauncherSpec -What 'launcher.spec'
-Push-Location $RepoRoot
-try {
-    & pixi run pyinstaller 'packaging/launcher/launcher.spec'
-    if ($LASTEXITCODE -ne 0) {
-        throw "pyinstaller failed (exit $LASTEXITCODE)"
+Write-Step 'STAGE' 'Step 14/14: building the launchers...'
+$Launchers = @(
+    @{ Spec = 'packaging/launcher/launcher.spec'; Exe = 'Intellicrack.exe'; What = 'launcher' }
+    @{ Spec = 'packaging/launcher/hexbench_launcher.spec'; Exe = 'Hexbench.exe'; What = 'hexbench launcher' }
+)
+foreach ($Launcher in $Launchers) {
+    $LauncherSpec = Join-Path $RepoRoot ($Launcher.Spec -replace '/', '\')
+    Assert-Source -Path $LauncherSpec -What $Launcher.Spec
+    Push-Location $RepoRoot
+    try {
+        & pixi run pyinstaller $Launcher.Spec
+        if ($LASTEXITCODE -ne 0) {
+            throw "pyinstaller failed for $($Launcher.Spec) (exit $LASTEXITCODE)"
+        }
+    } finally {
+        Pop-Location
     }
-} finally {
-    Pop-Location
+    $LauncherExe = Join-Path $RepoRoot "dist\$($Launcher.Exe)"
+    Assert-Produced -Path $LauncherExe -What "built $($Launcher.What) $($Launcher.Exe)"
+    $StagedExe = Join-Path $Stage $Launcher.Exe
+    Copy-Item -LiteralPath $LauncherExe -Destination $StagedExe -Force
+    Assert-Produced -Path $StagedExe -What "staged $($Launcher.Exe)"
+    Invoke-OptionalSign -Path $StagedExe -What $Launcher.Exe
+    Write-Success "$($Launcher.What) staged"
 }
-$LauncherExe = Join-Path $RepoRoot 'dist\Intellicrack.exe'
-Assert-Produced -Path $LauncherExe -What 'built launcher Intellicrack.exe'
-Copy-Item -LiteralPath $LauncherExe -Destination (Join-Path $Stage 'Intellicrack.exe') -Force
-Assert-Produced -Path (Join-Path $Stage 'Intellicrack.exe') -What 'staged Intellicrack.exe'
-Write-Success 'launcher staged'
+
+# ---------------------------------------------------------------------------
+# Finalize: single-source the installer version and stamp build provenance.
+# ---------------------------------------------------------------------------
+Write-Step 'STAGE' 'Finalizing: version stamp and build metadata...'
+
+# Derive the installer version defines from the single source of truth so the
+# .iss never carries a hand-typed version. intellicrack.iss #includes the file
+# written here; tests/packaging/test_version_consistency.py gates that every
+# copy of the version across the repo agrees.
+$MetadataPath = Join-Path $RepoRoot 'src\intellicrack\_metadata.py'
+Assert-Source -Path $MetadataPath -What '_metadata.py'
+$VersionMatch = Select-String -LiteralPath $MetadataPath -Pattern '__version__:\s*str\s*=\s*"([^"]+)"' |
+    Select-Object -First 1
+if (-not $VersionMatch) { throw 'could not read __version__ from _metadata.py' }
+$AppVersion = $VersionMatch.Matches[0].Groups[1].Value
+$Release = ($AppVersion -replace '(?i)(a|b|rc|\.dev|\.post)\d+.*$', '')
+$Parts = @($Release -split '\.')
+while ($Parts.Count -lt 4) { $Parts += '0' }
+$AppVerNumeric = ($Parts[0..3] -join '.')
+
+$VersionIssPath = Join-Path $RepoRoot 'packaging\version.generated.iss'
+$VersionIssLines = @(
+    '; AUTO-GENERATED by packaging/stage.ps1 from src/intellicrack/_metadata.py.'
+    '; Do not edit by hand: packaging/intellicrack.iss #includes this file, and'
+    '; tests/packaging/test_version_consistency.py gates that every copy of the'
+    '; version across the repository agrees with pyproject.toml.'
+    "#define AppVersion `"$AppVersion`""
+    "#define AppVerNumeric `"$AppVerNumeric`""
+)
+[System.IO.File]::WriteAllText(
+    $VersionIssPath,
+    (($VersionIssLines -join "`r`n") + "`r`n"),
+    (New-Object System.Text.UTF8Encoding($false)))
+Write-Success "version.generated.iss written ($AppVersion / $AppVerNumeric)"
+
+# Stamp the staged app tree with the exact commit it was built from so every
+# artifact is traceable. build-info.json lives under build/stage (never tracked).
+$Commit = (& git -C $RepoRoot rev-parse HEAD 2>$null)
+$Short = (& git -C $RepoRoot rev-parse --short HEAD 2>$null)
+$Porcelain = (& git -C $RepoRoot status --porcelain 2>$null)
+$Dirty = [bool]$Porcelain
+if ($Dirty) { Write-Warning 'Working tree is dirty; build-info.json will record dirty=true' }
+$BuildInfo = [ordered]@{
+    commit    = "$Commit"
+    short     = "$Short"
+    dirty     = $Dirty
+    version   = $AppVersion
+    built_utc = (Get-Date).ToUniversalTime().ToString('o')
+}
+$BuildInfoPath = Join-Path $Stage 'app\build-info.json'
+$BuildInfo | ConvertTo-Json | Set-Content -LiteralPath $BuildInfoPath -Encoding UTF8
+Assert-Produced -Path $BuildInfoPath -What 'staged build-info.json'
+Write-Success "build-info stamped: $Short (dirty=$Dirty)"
 
 Write-Footer 'Stage build complete' $StartTime

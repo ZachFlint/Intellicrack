@@ -24,11 +24,22 @@ Driven against the real provisioner on this host before these gates were
 written, one flag apart and nothing else:
 
 * with ``--skip-content-verify``: ``media_content`` is ``null`` and
-  ``Windows11-NoPrompt.iso`` is never mounted; the virtio medium is mounted
+  ``Windows11-NoPrompt.iso`` is never mounted; the virtio medium was mounted
   three times all the same.
 * without it: ``install_media_verified image=...Windows11-NoPrompt.iso
-  install_image=J:\sources\install.wim`` appears, and the virtio medium is
+  install_image=J:\sources\install.wim`` appears, and the virtio medium was
   still mounted three times.
+
+The three mounts were :func:`verify_virtio_contents` checking the medium
+before use, :func:`stage_winpe_drivers` mounting it again to copy the boot-
+critical drivers, and :func:`stage_spawn_helpers` mounting it a third time
+whenever the bundled QEMU tree lacked GLib's spawn helpers - roughly 14 of a
+29 second run, each extra mount paying its own ``Mount-DiskImage`` round trip
+plus the 750 ms settle the provisioner waits out. That is the regression
+:class:`TestTheMediumIsMountedExactlyOnce` below gates: the medium is now
+mounted exactly once per provisioning run, its one mount held across
+verification and both staging steps, so the numbers above are what a run
+against the pre-fix provisioner measured rather than what today's code does.
 
 The gates here pin that scope, keep the help text tied to what the code really
 does, and cover the offline half of the same Verify clause - that a medium
@@ -51,6 +62,7 @@ from typing import Final
 import defusedxml.ElementTree as DefusedET
 import pytest
 
+import scripts.sandbox.provision_windows_guest as provisioner
 from scripts.sandbox.provision_windows_guest import (
     WINPE_DRIVER_DIRECTORIES,
     WINPE_DRIVER_FAMILY_PREFERENCE,
@@ -62,8 +74,9 @@ from scripts.sandbox.provision_windows_guest import (
     require_boot_critical_package,
     resolve_install_media,
     select_winpe_driver_packages,
+    stage_virtio_medium,
 )
-from tests.sandbox.qemu.virtio_installer_harness import answer_settings
+from tests.sandbox.qemu.virtio_installer_harness import answer_settings, build_bundled_tools
 
 
 _FLAG: Final[str] = "--skip-content-verify"
@@ -607,3 +620,125 @@ def test_families_the_preference_list_never_heard_of_are_still_staged(tmp_path: 
     )
     assert packages == _UNRANKED_SELECTION, f"a medium of unrecognised families selected {packages}"
     require_boot_critical_package(packages, str(medium), _ARCHITECTURE)
+
+
+class TestTheMediumIsMountedExactlyOnce:
+    """The S17-D44 follow-up regression: the medium mounted twice, then thrice.
+
+    S17-D44 established that verification does not mount the medium twice by
+    itself. It said nothing about staging, which mounted the same medium
+    again to copy the boot-critical drivers, and a third time whenever the
+    bundled QEMU tree lacked GLib's spawn helpers - the "mounted three times"
+    measurement in this module's own docstring. These gates replace
+    ``mount_disk_image``/``dismount_disk_image`` with counters and drive the
+    real :func:`stage_virtio_medium`, the function ``build_answer_medium`` and
+    therefore ``provision`` now use to verify and stage a virtio-win medium in
+    one held mount, holding the count to exactly one on both the successful
+    path and the path where staging itself raises.
+    """
+
+    def test_a_successful_run_mounts_the_medium_exactly_once(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verification and both staging steps share one mount, not three.
+
+        Args:
+            tmp_path: Per-test temporary directory.
+            monkeypatch: Pytest fixture used to replace the real mount calls.
+        """
+        medium = _build_medium(tmp_path / "virtio", _W11_MEDIUM)
+        tools = build_bundled_tools(tmp_path / "tools", spawn_helpers=True)
+        staging = tmp_path / "staging"
+        staging.mkdir()
+        calls = {"mount": 0, "dismount": 0}
+
+        def fake_mount(path: Path) -> Path:
+            """Record a mount call and hand back the prebuilt medium tree.
+
+            Args:
+                path: ISO path the real provisioner would have mounted.
+
+            Returns:
+                Path: The prebuilt medium directory, standing in for the
+                drive letter a real mount would return.
+            """
+            del path
+            calls["mount"] += 1
+            return medium
+
+        def fake_dismount(path: Path) -> None:
+            """Record a dismount call.
+
+            Args:
+                path: ISO path the real provisioner would have dismounted.
+            """
+            del path
+            calls["dismount"] += 1
+
+        monkeypatch.setattr(provisioner, "mount_disk_image", fake_mount)
+        monkeypatch.setattr(provisioner, "dismount_disk_image", fake_dismount)
+
+        autounattend, subpaths = stage_virtio_medium(staging, answer_settings(), tools / "qemu-ga.exe", tools, medium)
+
+        assert calls == {"mount": 1, "dismount": 1}, (
+            f"one provisioning run mounted the virtio medium {calls['mount']} time(s) and dismounted it "
+            f"{calls['dismount']} time(s); S17-D44 established exactly one mount, not {calls['mount']}"
+        )
+        assert subpaths, "verification reported no driver subpaths, so staging cannot have reused them"
+        assert autounattend, "no answer file text was produced"
+        staged_dir = staging / answer_settings().driver_directory
+        assert (staged_dir / "viostor.inf").is_file(), (
+            f"{staged_dir} carries no viostor.inf, so staging never really ran on the one held mount"
+        )
+
+    def test_a_staging_failure_still_leaves_the_mount_balanced(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A ``ProvisioningError`` raised mid-staging must still dismount once.
+
+        The medium carries a ``viostor`` directory - so verification accepts
+        it - but no ``amd64`` package under it, so ``require_boot_critical_package``
+        raises once staging tries to select a package for every driver. The
+        held mount has to survive that exception intact: exactly one mount,
+        exactly one dismount, never a mount stranded open.
+
+        Args:
+            tmp_path: Per-test temporary directory.
+            monkeypatch: Pytest fixture used to replace the real mount calls.
+        """
+        medium = _build_medium(tmp_path / "virtio", {"vioserial": {"w11": ("amd64",)}, "NetKVM": {"w11": ("amd64",)}})
+        (medium / "viostor").mkdir()
+        tools = build_bundled_tools(tmp_path / "tools", spawn_helpers=True)
+        staging = tmp_path / "staging"
+        staging.mkdir()
+        calls = {"mount": 0, "dismount": 0}
+
+        def fake_mount(path: Path) -> Path:
+            """Record a mount call and hand back the prebuilt medium tree.
+
+            Args:
+                path: ISO path the real provisioner would have mounted.
+
+            Returns:
+                Path: The prebuilt medium directory, standing in for the
+                drive letter a real mount would return.
+            """
+            del path
+            calls["mount"] += 1
+            return medium
+
+        def fake_dismount(path: Path) -> None:
+            """Record a dismount call.
+
+            Args:
+                path: ISO path the real provisioner would have dismounted.
+            """
+            del path
+            calls["dismount"] += 1
+
+        monkeypatch.setattr(provisioner, "mount_disk_image", fake_mount)
+        monkeypatch.setattr(provisioner, "dismount_disk_image", fake_dismount)
+
+        with pytest.raises(ProvisioningError, match="carries no viostor package"):
+            stage_virtio_medium(staging, answer_settings(), tools / "qemu-ga.exe", tools, medium)
+
+        assert calls == {"mount": 1, "dismount": 1}, (
+            f"a staging failure left mount calls={calls['mount']} dismount calls={calls['dismount']}; the medium "
+            f"must be dismounted exactly once even when staging raises, never left mounted and never mounted twice"
+        )

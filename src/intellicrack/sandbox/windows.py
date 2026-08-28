@@ -37,6 +37,7 @@ from intellicrack.core.subprocess_compat import CREATE_NEW_CONSOLE, PIPE, Comple
 from intellicrack.sandbox.base import (
     ExecutionReport,
     ExecutionResult,
+    GuestProcessInfo,
     SandboxBase,
     SandboxConfig,
     SandboxError,
@@ -169,6 +170,7 @@ _ERR_MEMORY_DUMP_TARGET_PID_REQUIRED = (
     "target_pid is required for Windows Sandbox memory_dump: MiniDumpWriteDump must target a specific guest process"
 )
 _ERR_MEMORY_DUMP_TARGET_PID_INVALID = "target_pid must be a positive integer guest PID"
+_ERR_LIST_PROCESSES_FAILED = "Guest process listing failed"
 _ERR_EXTRACT_FILES_FAILED = "Dropped file extraction failed"
 _ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
 _ERR_DISPATCHER_NOT_READY = "Sandbox dispatcher did not signal ready"
@@ -313,6 +315,67 @@ def find_sandbox_session_pid(wsb_name: str) -> int | None:
         if isinstance(pid_val, int) and pid_val > 0:
             return pid_val
     return None
+
+
+def parse_guest_process_list(text: str) -> list[GuestProcessInfo]:
+    """Parse ``Get-Process | ConvertTo-Json`` output into process records.
+
+    Tolerates the shapes a redirected PowerShell stdout stream can arrive
+    in: a leading UTF-8 byte-order-mark character (see :data:`_UTF8_BOM`),
+    surrounding whitespace, a single ``pscustomobject`` (when the guest has
+    exactly one matching process, which ``ConvertTo-Json`` serialises as a
+    bare object rather than a one-element array unless the caller forced
+    array output), and a ``Path`` value of ``null`` for processes the
+    enumerating account cannot query. Malformed rows are dropped rather than
+    raised so one bad record does not blank the whole picker.
+
+    Args:
+        text: Raw stdout captured from the in-guest PowerShell command.
+
+    Returns:
+        list[GuestProcessInfo]: Parsed process records, empty when the
+        guest reported nothing or the payload could not be parsed.
+    """
+    cleaned = text.strip().strip(_UTF8_BOM).strip()
+    if not cleaned:
+        return []
+
+    try:
+        parsed: object = json.loads(cleaned)
+    except (ValueError, TypeError) as parse_err:
+        _logger.warning(
+            "guest_process_list_parse_failed",
+            error=str(parse_err),
+            output_prefix=cleaned[:200],
+        )
+        return []
+
+    if isinstance(parsed, dict):
+        rows: list[object] = [parsed]
+    elif isinstance(parsed, list):
+        rows = cast("list[object]", parsed)
+    else:
+        _logger.warning("guest_process_list_unexpected_payload", payload_preview=str(parsed)[:200])
+        return []
+
+    processes: list[GuestProcessInfo] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        row_dict = cast("dict[str, object]", row)
+        pid_val = row_dict.get("Id")
+        if not isinstance(pid_val, int) or pid_val <= 0:
+            continue
+        name_val = row_dict.get("ProcessName")
+        path_val = row_dict.get("Path")
+        processes.append(
+            GuestProcessInfo(
+                pid=pid_val,
+                name=str(name_val) if name_val is not None else "",
+                path=str(path_val) if path_val is not None else "",
+            ),
+        )
+    return processes
 
 
 def _is_sandbox_failure_text(text: str) -> bool:
@@ -2895,6 +2958,44 @@ class WindowsSandbox(SandboxBase):
             return output_path
 
         return dump_path
+
+    async def list_processes(self) -> list[GuestProcessInfo]:
+        """List processes currently running inside the Windows Sandbox guest.
+
+        Runs ``Get-Process`` inside the guest via the dispatcher and parses
+        the JSON payload it returns with :func:`parse_guest_process_list`.
+        Used by the Sandbox panel's guest process picker so a user can
+        choose a ``target_pid`` for :meth:`dump_memory` without already
+        knowing a guest PID (S17-D10b).
+
+        Returns:
+            list[GuestProcessInfo]: Every process observed in the guest at
+            the moment of the call, in the order ``Get-Process`` reported
+            them.
+
+        Raises:
+            SandboxError: If the sandbox is not running, the shared folder
+                is not initialized, or the guest command fails.
+        """
+        _logger.info("windows_sandbox_list_processes_started")
+        if self.state.status != "running":
+            raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
+
+        ps_script = (
+            "$procs = @(Get-Process -ErrorAction SilentlyContinue |"
+            " Select-Object -Property Id, ProcessName, Path);"
+            " ConvertTo-Json -InputObject $procs -Compress"
+        )
+        exit_code, stdout, stderr = await self.run_command(f'powershell -NoProfile -NonInteractive -Command "{ps_script}"')
+        if exit_code != _RETURNCODE_SUCCESS:
+            _logger.warning("guest_process_list_command_failed", exit_code=exit_code, stderr=stderr[:500])
+            raise SandboxError(_ERR_LIST_PROCESSES_FAILED)
+
+        processes = parse_guest_process_list(stdout)
+        _logger.info("guest_process_list_retrieved", count=len(processes))
+        return processes
 
     @staticmethod
     async def _minidump_via_procdump(pid: int, dump_path: Path) -> bool:

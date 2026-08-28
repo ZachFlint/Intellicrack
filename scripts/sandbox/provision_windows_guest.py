@@ -52,6 +52,7 @@ Invoke via ``pixi run python -m scripts.sandbox.provision_windows_guest --help``
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib
 import importlib.util
 import json
@@ -66,12 +67,15 @@ import time
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Final, cast
+from typing import IO, TYPE_CHECKING, Final, cast
 
 from intellicrack.core.config import get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.xml_gen import Element, SubElement, indent, tostring
 
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 _LOGGER = get_logger("sandbox.provision.windows")
 
@@ -1095,6 +1099,23 @@ def dismount_disk_image(path: Path) -> None:
         _LOGGER.warning("install_media_dismount_failed", image=str(path), stderr=result.stderr.strip())
 
 
+@contextlib.contextmanager
+def mounted_disk_image(path: Path) -> Generator[Path]:
+    """Mount an ISO for the scope of a ``with`` block and always dismount it.
+
+    Args:
+        path: ISO image to mount.
+
+    Yields:
+        Path: Root directory of the mounted volume.
+    """
+    root = mount_disk_image(path)
+    try:
+        yield root
+    finally:
+        dismount_disk_image(path)
+
+
 def verify_media_contents(path: Path) -> MediaContent:
     """Mount an install medium, classify its tree, and dismount it again.
 
@@ -1343,6 +1364,53 @@ def require_boot_critical_package(packages: tuple[str, ...], source: str, archit
     raise ProvisioningError(message)
 
 
+def _stage_winpe_driver_files(
+    medium_root: Path,
+    virtio_iso: Path,
+    architecture: str,
+    image_name: str,
+    driver_subpaths: tuple[str, ...] | None,
+    destination: Path,
+) -> tuple[str, ...]:
+    r"""Select and copy the boot-critical driver files off a mounted medium.
+
+    Args:
+        medium_root: Root directory of the mounted virtio-win medium.
+        virtio_iso: virtio-win medium the files are copied from, named in any
+            error this raises.
+        architecture: Architecture directory name the guest needs.
+        image_name: Windows edition name selected for the install, used to
+            prefer that edition's own virtio-win family over the Windows 11
+            fallback when the medium carries both.
+        driver_subpaths: Driver subpaths already enumerated off the medium,
+            or None to enumerate them here.
+        destination: Directory the files are copied into.
+
+    Returns:
+        tuple[str, ...]: Packages selected for staging, one per driver.
+
+    Raises:
+        ProvisioningError: If the medium carries no ``viostor`` package for
+            the architecture, or two packages would overwrite each other.
+    """
+    subpaths = driver_subpaths if driver_subpaths is not None else enumerate_virtio_driver_subpaths(medium_root, architecture)
+    packages = select_winpe_driver_packages(subpaths, preference=driver_family_preference(image_name))
+    require_boot_critical_package(packages, str(virtio_iso), architecture)
+
+    origins: dict[str, str] = {}
+    for package in packages:
+        for source in sorted((medium_root / package).iterdir()):
+            if not source.is_file():
+                continue
+            previous = origins.get(source.name.casefold())
+            if previous is not None:
+                message = f"{package} and {previous} both carry {source.name}; staging one would hide the other"
+                raise ProvisioningError(message)
+            origins[source.name.casefold()] = package
+            shutil.copy2(source, destination / source.name)
+    return packages
+
+
 def stage_winpe_drivers(
     virtio_iso: Path,
     staging: Path,
@@ -1350,13 +1418,18 @@ def stage_winpe_drivers(
     directory: str = WINPE_DRIVER_STAGE_DIRECTORY,
     *,
     image_name: str = _DEFAULT_IMAGE_NAME,
+    medium_root: Path | None = None,
+    driver_subpaths: tuple[str, ...] | None = None,
 ) -> tuple[str, ...]:
     r"""Copy the boot-critical driver files onto the answer medium.
 
     The files are laid down flat in one directory so Setup needs neither a
     recursive search nor more than one path per drive letter, and so the
     package set is the provisioner's own rather than whatever the virtio
-    medium happens to be mounted as in WinPE.
+    medium happens to be mounted as in WinPE. Propagates the
+    ``ProvisioningError`` :func:`_stage_winpe_driver_files` raises when the
+    medium carries no ``viostor`` package for the architecture, or when two
+    packages would overwrite each other.
 
     Args:
         virtio_iso: virtio-win medium to copy from.
@@ -1367,36 +1440,26 @@ def stage_winpe_drivers(
         image_name: Windows edition name selected for the install, used to
             prefer that edition's own virtio-win family over the Windows 11
             fallback when the medium carries both.
+        medium_root: Root of an already-mounted ``virtio_iso`` to stage from,
+            or None to mount it for the duration of this call. Passing an
+            already-mounted root lets a caller that is also verifying the
+            same medium hold a single mount across both steps.
+        driver_subpaths: Driver subpaths already enumerated off the medium,
+            or None to enumerate them here. Ignored unless ``medium_root`` is
+            also given, since a medium this call mounts itself has nothing
+            enumerated off it yet.
 
     Returns:
         tuple[str, ...]: Names of the files staged, sorted.
-
-    Raises:
-        ProvisioningError: If the medium carries no ``viostor`` package for
-            the architecture, or two packages would overwrite each other.
     """
     destination = staging / directory
     destination.mkdir(parents=True, exist_ok=True)
 
-    medium_root = mount_disk_image(virtio_iso)
-    try:
-        subpaths = enumerate_virtio_driver_subpaths(medium_root, architecture)
-        packages = select_winpe_driver_packages(subpaths, preference=driver_family_preference(image_name))
-        require_boot_critical_package(packages, str(virtio_iso), architecture)
-
-        origins: dict[str, str] = {}
-        for package in packages:
-            for source in sorted((medium_root / package).iterdir()):
-                if not source.is_file():
-                    continue
-                previous = origins.get(source.name.casefold())
-                if previous is not None:
-                    message = f"{package} and {previous} both carry {source.name}; staging one would hide the other"
-                    raise ProvisioningError(message)
-                origins[source.name.casefold()] = package
-                shutil.copy2(source, destination / source.name)
-    finally:
-        dismount_disk_image(virtio_iso)
+    if medium_root is not None:
+        packages = _stage_winpe_driver_files(medium_root, virtio_iso, architecture, image_name, driver_subpaths, destination)
+    else:
+        with mounted_disk_image(virtio_iso) as root:
+            packages = _stage_winpe_driver_files(root, virtio_iso, architecture, image_name, None, destination)
 
     staged = tuple(sorted(path.name for path in destination.iterdir() if path.is_file()))
     _LOGGER.info(
@@ -1420,11 +1483,12 @@ def _holds_driver_package(directory: Path) -> bool:
     return any(entry.is_file() and entry.suffix.casefold() == _DRIVER_INF_SUFFIX for entry in directory.iterdir())
 
 
-def verify_virtio_contents(path: Path, architecture: str = _COMPONENT_ARCHITECTURE) -> tuple[str, ...]:
-    """Mount a virtio-win medium, confirm its drivers, and map its packages.
+def _check_virtio_medium(root: Path, source: Path, architecture: str) -> tuple[str, ...]:
+    """Confirm an already-mounted virtio-win medium and map its packages.
 
     Args:
-        path: Driver ISO to verify.
+        root: Root directory of the mounted medium.
+        source: ISO the medium was mounted from, named in any error raised.
         architecture: Architecture directory name the guest needs.
 
     Returns:
@@ -1435,23 +1499,37 @@ def verify_virtio_contents(path: Path, architecture: str = _COMPONENT_ARCHITECTU
         ProvisioningError: If the medium lacks the marker driver directories,
             or carries no package for ``architecture``.
     """
-    root = mount_disk_image(path)
-    try:
-        recognised = looks_like_virtio_media(root)
-        subpaths = enumerate_virtio_driver_subpaths(root, architecture) if recognised else ()
-    finally:
-        dismount_disk_image(path)
-    if not recognised:
-        message = f"{path} mounted but carries none of the expected virtio driver directories: {', '.join(VIRTIO_MARKER_DIRECTORIES)}"
+    if not looks_like_virtio_media(root):
+        message = f"{source} mounted but carries none of the expected virtio driver directories: {', '.join(VIRTIO_MARKER_DIRECTORIES)}"
         raise ProvisioningError(message)
+    subpaths = enumerate_virtio_driver_subpaths(root, architecture)
     if not subpaths:
         message = (
-            f"{path} carries no {architecture} driver package under any of "
+            f"{source} carries no {architecture} driver package under any of "
             f"{', '.join(WINPE_DRIVER_DIRECTORIES)}, so WinPE would have nothing to load"
         )
         raise ProvisioningError(message)
-    _LOGGER.info("virtio_media_verified", image=str(path), driver_subpaths=len(subpaths))
+    _LOGGER.info("virtio_media_verified", image=str(source), driver_subpaths=len(subpaths))
     return subpaths
+
+
+def verify_virtio_contents(path: Path, architecture: str = _COMPONENT_ARCHITECTURE) -> tuple[str, ...]:
+    """Mount a virtio-win medium, confirm its drivers, and map its packages.
+
+    Propagates the ``ProvisioningError`` :func:`_check_virtio_medium` raises
+    when the medium lacks the marker driver directories, or carries no
+    package for ``architecture``.
+
+    Args:
+        path: Driver ISO to verify.
+        architecture: Architecture directory name the guest needs.
+
+    Returns:
+        tuple[str, ...]: WinPE driver subpaths the medium really carries for
+        ``architecture``.
+    """
+    with mounted_disk_image(path) as root:
+        return _check_virtio_medium(root, path, architecture)
 
 
 def require_virtio_media(
@@ -2385,7 +2463,13 @@ def collect_named_files(root: Path, names: tuple[str, ...]) -> dict[str, Path]:
     return located
 
 
-def stage_spawn_helpers(tools_path: Path, virtio_iso: Path, destination: Path) -> tuple[Path, ...]:
+def stage_spawn_helpers(
+    tools_path: Path,
+    virtio_iso: Path,
+    destination: Path,
+    *,
+    medium_root: Path | None = None,
+) -> tuple[Path, ...]:
     """Place GLib's Windows spawn helpers beside the staged guest agent.
 
     ``guest-exec`` is the only way Intellicrack runs anything inside a Windows
@@ -2398,6 +2482,9 @@ def stage_spawn_helpers(tools_path: Path, virtio_iso: Path, destination: Path) -
         tools_path: Directory holding the bundled QEMU build.
         virtio_iso: virtio-win medium to fall back to.
         destination: Directory the helpers are copied into.
+        medium_root: Root of an already-mounted ``virtio_iso`` to unpack the
+            fallback package from, or None to mount it for the duration of
+            this call, only when the bundled tree lacks the helpers.
 
     Returns:
         tuple[Path, ...]: The staged helper paths, in declaration order.
@@ -2413,12 +2500,13 @@ def stage_spawn_helpers(tools_path: Path, virtio_iso: Path, destination: Path) -
     if outstanding:
         with tempfile.TemporaryDirectory(prefix="intellicrack_guest_agent_") as raw_payload:
             payload = Path(raw_payload)
-            media_root = mount_disk_image(virtio_iso)
-            try:
-                package = select_guest_agent_package(media_root)
+            if medium_root is not None:
+                package = select_guest_agent_package(medium_root)
                 extract_msi_payload(package, payload)
-            finally:
-                dismount_disk_image(virtio_iso)
+            else:
+                with mounted_disk_image(virtio_iso) as root:
+                    package = select_guest_agent_package(root)
+                    extract_msi_payload(package, payload)
             located = collect_named_files(payload, tuple(outstanding))
             missing = [name for name in outstanding if name not in located]
             if missing:
@@ -2436,7 +2524,16 @@ def stage_spawn_helpers(tools_path: Path, virtio_iso: Path, destination: Path) -
     return staged
 
 
-def stage_answer_tree(staging: Path, settings: UnattendSettings, qemu_agent: Path, tools_path: Path, virtio_iso: Path) -> str:
+def stage_answer_tree(
+    staging: Path,
+    settings: UnattendSettings,
+    qemu_agent: Path,
+    tools_path: Path,
+    virtio_iso: Path,
+    *,
+    medium_root: Path | None = None,
+    driver_subpaths: tuple[str, ...] | None = None,
+) -> str:
     """Populate the staging directory that becomes the answer medium.
 
     Args:
@@ -2446,6 +2543,13 @@ def stage_answer_tree(staging: Path, settings: UnattendSettings, qemu_agent: Pat
         tools_path: Directory holding the agent's runtime libraries.
         virtio_iso: virtio-win medium carrying the boot-critical drivers and
             the GLib spawn helpers.
+        medium_root: Root of an already-mounted ``virtio_iso`` to stage from,
+            or None to let each step below mount it for its own duration.
+            Passing an already-mounted root holds a single mount across the
+            driver copy and the spawn-helper unpack.
+        driver_subpaths: Driver subpaths already enumerated off the medium,
+            or None to enumerate them during staging. Ignored unless
+            ``medium_root`` is also given.
 
     Returns:
         str: The generated ``autounattend.xml`` text.
@@ -2454,7 +2558,15 @@ def stage_answer_tree(staging: Path, settings: UnattendSettings, qemu_agent: Pat
         ProvisioningError: If a required guest agent library is missing, or
             the virtio medium carries no boot-critical driver package.
     """
-    stage_winpe_drivers(virtio_iso, staging, _COMPONENT_ARCHITECTURE, settings.driver_directory, image_name=settings.image_name)
+    stage_winpe_drivers(
+        virtio_iso,
+        staging,
+        _COMPONENT_ARCHITECTURE,
+        settings.driver_directory,
+        image_name=settings.image_name,
+        medium_root=medium_root,
+        driver_subpaths=driver_subpaths,
+    )
 
     autounattend = render_autounattend(settings)
     (staging / "autounattend.xml").write_bytes(autounattend.encode("utf-8"))
@@ -2477,7 +2589,7 @@ def stage_answer_tree(staging: Path, settings: UnattendSettings, qemu_agent: Pat
     if missing:
         message = f"bundled qemu-ga runtime libraries missing from {tools_path}: {', '.join(missing)}"
         raise ProvisioningError(message)
-    stage_spawn_helpers(tools_path, virtio_iso, agent_dir)
+    stage_spawn_helpers(tools_path, virtio_iso, agent_dir, medium_root=medium_root)
 
     _LOGGER.info("answer_tree_staged", staging=str(staging), agent=str(qemu_agent))
     return autounattend
@@ -2958,6 +3070,58 @@ def build_unattend_settings(args: argparse.Namespace, driver_directory: str = WI
     )
 
 
+def stage_virtio_medium(
+    staging: Path,
+    settings: UnattendSettings,
+    qemu_agent: Path,
+    tools_path: Path,
+    virtio_iso: Path,
+    architecture: str = _COMPONENT_ARCHITECTURE,
+) -> tuple[str, tuple[str, ...]]:
+    r"""Verify the virtio-win medium and stage its drivers in one held mount.
+
+    Mounting an ISO on Windows pays a full ``Mount-DiskImage`` round trip plus
+    the 750 ms settle :func:`mount_disk_image` waits out, so verifying the
+    medium's contents and then staging its drivers used to mount it twice for
+    the same provisioning run: S17-D44 established the medium is checked
+    before use, and that check paid its own mount on top of the one staging
+    already needed. This mounts ``virtio_iso`` exactly once, confirms it with
+    :func:`_check_virtio_medium`, and threads that one mount and its
+    enumeration straight into :func:`stage_answer_tree`, dismounting in a
+    ``finally`` that runs even when staging raises.
+
+    Propagates the ``ProvisioningError`` raised when the medium lacks the
+    marker driver directories, carries no package for ``architecture``,
+    carries no boot-critical driver package, or a required guest agent
+    library is missing.
+
+    Args:
+        staging: Directory to populate with the answer tree.
+        settings: Answer file settings.
+        qemu_agent: Bundled ``qemu-ga.exe`` to stage into the guest.
+        tools_path: Directory holding the agent's runtime libraries.
+        virtio_iso: virtio-win medium carrying the boot-critical drivers and
+            the GLib spawn helpers.
+        architecture: Architecture directory name the guest needs.
+
+    Returns:
+        tuple[str, tuple[str, ...]]: The generated ``autounattend.xml`` text
+        and the driver subpaths the medium was confirmed to carry.
+    """
+    with mounted_disk_image(virtio_iso) as medium_root:
+        driver_subpaths = _check_virtio_medium(medium_root, virtio_iso, architecture)
+        autounattend = stage_answer_tree(
+            staging,
+            settings,
+            qemu_agent,
+            tools_path,
+            virtio_iso,
+            medium_root=medium_root,
+            driver_subpaths=driver_subpaths,
+        )
+    return (autounattend, driver_subpaths)
+
+
 def build_answer_medium(
     settings: UnattendSettings,
     qemu_agent: Path,
@@ -2965,16 +3129,24 @@ def build_answer_medium(
     virtio_iso: Path,
     answer_iso: Path,
     preferred_tool: str | None,
+    architecture: str = _COMPONENT_ARCHITECTURE,
 ) -> tuple[str, str]:
     """Stage and author the answer medium the install boots alongside.
+
+    Propagates the ``ProvisioningError`` raised when the medium lacks the
+    marker driver directories, carries no package for ``architecture``,
+    carries no boot-critical driver package, a required guest agent library
+    is missing, or no ISO authoring tool is available.
 
     Args:
         settings: Answer file settings.
         qemu_agent: Bundled ``qemu-ga.exe`` to stage into the guest.
         tools_path: Directory holding the agent's runtime libraries.
-        virtio_iso: virtio-win medium carrying the GLib spawn helpers.
+        virtio_iso: virtio-win medium carrying the boot-critical drivers and
+            the GLib spawn helpers.
         answer_iso: Destination ISO path.
         preferred_tool: ISO authoring tool to force, or None to autodetect.
+        architecture: Architecture directory name the guest needs.
 
     Returns:
         tuple[str, str]: The generated answer file text and the name of the
@@ -2983,7 +3155,7 @@ def build_answer_medium(
     tool_name, tool_executable = resolve_iso_authoring_tool(preferred_tool)
     with tempfile.TemporaryDirectory(prefix="intellicrack_answer_") as raw_staging:
         staging = Path(raw_staging)
-        autounattend = stage_answer_tree(staging, settings, qemu_agent, tools_path, virtio_iso)
+        autounattend, _driver_subpaths = stage_virtio_medium(staging, settings, qemu_agent, tools_path, virtio_iso, architecture)
         author_iso(tool_name, tool_executable, staging, answer_iso, _ANSWER_ISO_LABEL)
     return (autounattend, tool_name)
 
@@ -3031,13 +3203,13 @@ def provision(args: argparse.Namespace) -> ProvisionPlan:
 
     probe, content = resolve_install_media(args, images_dir)
 
-    virtio = resolve_virtio_medium(
+    virtio_iso = require_virtio_media(
         Path(args.virtio_iso) if args.virtio_iso else None,
         available_drive_roots(),
         args.scan_depth,
         args.scan_budget,
-        _COMPONENT_ARCHITECTURE,
         priority_roots=(images_dir,) if images_dir.is_dir() else (),
+        verify_contents=False,
     )
 
     disk_image = images_dir / args.disk_name
@@ -3048,9 +3220,10 @@ def provision(args: argparse.Namespace) -> ProvisionPlan:
         build_unattend_settings(args),
         qemu_agent,
         tools_path,
-        virtio.path,
+        virtio_iso,
         answer_iso,
         args.iso_tool,
+        _COMPONENT_ARCHITECTURE,
     )
 
     spec = InstallCommandSpec(
@@ -3061,7 +3234,7 @@ def provision(args: argparse.Namespace) -> ProvisionPlan:
         disk_image=disk_image,
         install_iso=probe.path,
         answer_iso=answer_iso,
-        virtio_iso=virtio.path,
+        virtio_iso=virtio_iso,
         display=args.display,
         vnc_port=find_free_port(_VNC_PORT_BASE, _VNC_PORT_MAX),
         agent_port=_DEFAULT_AGENT_PORT,
@@ -3070,7 +3243,7 @@ def provision(args: argparse.Namespace) -> ProvisionPlan:
     plan = ProvisionPlan(
         install_media=probe,
         media_content=content,
-        virtio_iso=virtio.path,
+        virtio_iso=virtio_iso,
         disk_image=disk_image,
         answer_iso=answer_iso,
         authoring_tool=tool_name,

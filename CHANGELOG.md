@@ -489,6 +489,16 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
 
+- **packaging,sandbox:** Relocate user state and add guest process picker (``)
+Relocate user-writable configuration, credentials, and state under `%LOCALAPPDATA%` to prevent permission issues in read-only installation directories, and add guest process enumeration to the Windows Sandbox backend for targeted memory dumping.
+- Redirect config, logs, data, and `.env` resolution to per-user state directory
+- Add `list_guest_processes` to Windows Sandbox backend and bridge
+- Introduce `GuestProcessPickerDialog` for memory dump targeting in Sandbox UI
+- Wire exact-byte memory searching directly in x64dbg panel
+- Add Hexbench launcher and PyInstaller specs for packaging
+- Optimize Windows guest provisioning by reusing single mounted virtio medium
+- Update Inno Setup packaging scripts, stage workflow, and asset generation
+
 
 ### Changed
 
@@ -1109,6 +1119,22 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **ui, bridges, sandbox:** Stabilize UI states, error handling, and test runners (`6eb3723`)
+Fix duplicate assistant bubbles on streamed turns, stale model restores during
+provider switches, and theme repolishing across scroll areas. Improve error
+classification in Frida and Google providers, and migrate container pytest
+collection targets to importable module paths.
+- ui: fold completed messages into active streaming bubbles and fix stale model id restore on provider switch
+- ui: repolish scroll areas and role frames during theme changes
+- ui: add start/end bounds to process memory search and reserve layout widths in Frida syscall tab
+- bridges: handle `frida.NotSupportedError` in child gating and improve Ghidra AST return parsing
+- bridges: fix last-error retrieval across `AdjustTokenPrivileges` invocations in ProcessBridge
+- providers: catch `httpx.RequestError` on Google connect and align HuggingFace router catalog fetching
+- sandbox: convert test runner collection targets to `--pyargs` imports to eliminate duplicate runs
+- sandbox: harden Docker image cache presence probing against timeouts and daemon errors
+- sandbox: resolve guest-specific virtio driver families during Windows provisioning
+- deps: update locked Python dependencies and Rust crates
 
 - **sandbox:** Close a sandbox by its real window, and outlast the teardown (`0977e74`)
 S18-D24. Stopping a Windows Sandbox left the VM resident. The filed guess was
@@ -5721,21 +5747,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- **ui, bridges, sandbox:** Stabilize UI states, error handling, and test runners (``)
-Fix duplicate assistant bubbles on streamed turns, stale model restores during
-provider switches, and theme repolishing across scroll areas. Improve error
-classification in Frida and Google providers, and migrate container pytest
-collection targets to importable module paths.
-- ui: fold completed messages into active streaming bubbles and fix stale model id restore on provider switch
-- ui: repolish scroll areas and role frames during theme changes
-- ui: add start/end bounds to process memory search and reserve layout widths in Frida syscall tab
-- bridges: handle `frida.NotSupportedError` in child gating and improve Ghidra AST return parsing
-- bridges: fix last-error retrieval across `AdjustTokenPrivileges` invocations in ProcessBridge
-- providers: catch `httpx.RequestError` on Google connect and align HuggingFace router catalog fetching
-- sandbox: convert test runner collection targets to `--pyargs` imports to eliminate duplicate runs
-- sandbox: harden Docker image cache presence probing against timeouts and daemon errors
-- sandbox: resolve guest-specific virtio driver families during Windows provisioning
-- deps: update locked Python dependencies and Rust crates
 
 

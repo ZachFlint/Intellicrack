@@ -11,6 +11,7 @@ components.
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 import tomllib
 from dataclasses import dataclass, field
@@ -47,13 +48,148 @@ def get_project_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
 
-def get_config_dir() -> Path:
-    """Return the project-local configuration directory.
+_STATE_DIR_NAME = "Intellicrack"
+
+_USER_PROFILE_ANCHOR_VARS: tuple[str, ...] = ("LOCALAPPDATA", "APPDATA", "USERPROFILE")
+
+
+def _resolve_path(value: str) -> Path | None:
+    """Resolve a raw path string to a normalized absolute path.
+
+    ``..`` segments are collapsed and symlinks are followed where possible so a
+    later containment check cannot be defeated by directory traversal. Resolution
+    is non-strict, so a path that does not yet exist still resolves.
+
+    Args:
+        value: The raw path string to resolve.
 
     Returns:
-        Path: Path to ``<project_root>/.intellicrack/``.
+        Path | None: The resolved absolute path, or ``None`` when ``value`` is
+        empty or cannot be interpreted as a path.
     """
-    return get_project_root() / ".intellicrack"
+    if not value:
+        return None
+    try:
+        return Path(value).resolve()
+    except (OSError, ValueError, RuntimeError):
+        return None
+
+
+def _user_profile_anchors() -> list[Path]:
+    """Collect the resolved per-user directories a trusted state root may sit under.
+
+    The anchors come from the ``LOCALAPPDATA``, ``APPDATA`` and ``USERPROFILE``
+    environment variables, which the operating system sets to the current user's
+    own profile locations. Only absolute values that resolve successfully are
+    returned.
+
+    Returns:
+        list[Path]: The resolved absolute anchor directories, possibly empty.
+    """
+    anchors: list[Path] = []
+    for var in _USER_PROFILE_ANCHOR_VARS:
+        raw = os.environ.get(var)
+        if not raw:
+            continue
+        resolved = _resolve_path(raw)
+        if resolved is not None and resolved.is_absolute():
+            anchors.append(resolved)
+    return anchors
+
+
+def _is_within(path: Path, anchor: Path) -> bool:
+    """Return whether ``path`` is ``anchor`` itself or lives beneath it.
+
+    Comparison is case-insensitive on platforms with case-insensitive file
+    systems (via :func:`os.path.normcase`) and boundary-aware, so a sibling whose
+    name merely shares a prefix with the anchor is not treated as contained.
+
+    Args:
+        path: The candidate path (already resolved and absolute).
+        anchor: The anchor directory (already resolved and absolute).
+
+    Returns:
+        bool: ``True`` when ``path`` equals ``anchor`` or is nested under it.
+    """
+    anchor_str = os.path.normcase(str(anchor))
+    path_str = os.path.normcase(str(path))
+    if path_str == anchor_str:
+        return True
+    prefix = anchor_str if anchor_str.endswith(os.sep) else anchor_str + os.sep
+    return path_str.startswith(prefix)
+
+
+def _default_state_root() -> Path:
+    """Compute the safe default per-user state root.
+
+    Mirrors the launcher's own choice of the ``Intellicrack`` directory under
+    ``%LOCALAPPDATA%`` so the application still writes to the correct per-user
+    location when the supplied
+    ``INTELLICRACK_STATE_DIR`` is rejected. When ``LOCALAPPDATA`` is unavailable
+    (a non-Windows development host) the project root is used, preserving the
+    dev-checkout layout.
+
+    Returns:
+        Path: The safe default writable state root.
+    """
+    local_app_data = _resolve_path(os.environ.get("LOCALAPPDATA", ""))
+    if local_app_data is not None and local_app_data.is_absolute():
+        return local_app_data / _STATE_DIR_NAME
+    return get_project_root()
+
+
+def get_state_root() -> Path:
+    """Compute the writable per-user state root.
+
+    Returns the directory that holds user-writable state: credentials, config,
+    logs, and data. When the launcher runs the installed application it exports
+    ``INTELLICRACK_STATE_DIR`` (a per-user directory under ``%LOCALAPPDATA%``),
+    which keeps writable state out of the read-only, world-readable install
+    directory under ``Program Files`` and out of reach of the uninstaller's
+    directory sweep. In a development checkout the variable is unset and the
+    repository root is returned, so the developer layout is unchanged.
+
+    Because the ``.env`` credential file, provider config, and logs are resolved
+    under this root, an attacker who could poison ``INTELLICRACK_STATE_DIR`` (for
+    example, pointing it at a UNC network share or a world-writable directory)
+    could redirect credential writes for exfiltration or drop poisoned config for
+    the application to read. The value is therefore only honoured when it is an
+    absolute local path contained within one of the current user's own profile
+    directories (``%LOCALAPPDATA%``, ``%APPDATA%`` or ``%USERPROFILE%``). Any
+    other value -- a network share, a directory-traversal escape, a path outside
+    the user profile, or an unparseable string -- is rejected and the safe
+    default (the ``Intellicrack`` directory under ``%LOCALAPPDATA%``) is used
+    instead.
+
+    Returns:
+        Path: Path to the writable per-user state root.
+    """
+    raw = os.environ.get("INTELLICRACK_STATE_DIR")
+    if not raw:
+        return get_project_root()
+
+    resolved = _resolve_path(raw)
+    if resolved is not None and resolved.is_absolute():
+        anchors = _user_profile_anchors()
+        if anchors and any(_is_within(resolved, anchor) for anchor in anchors):
+            return resolved
+
+    fallback = _default_state_root()
+    _logger.warning(
+        "state_dir_untrusted_rejected",
+        supplied=raw,
+        fallback=str(fallback),
+    )
+    return fallback
+
+
+def get_config_dir() -> Path:
+    """Return the writable configuration directory.
+
+    Returns:
+        Path: Path to ``<state_root>/.intellicrack/``.
+    """
+    return get_state_root() / ".intellicrack"
 
 
 def get_config_file(filename: str) -> Path:
@@ -69,17 +205,18 @@ def get_config_file(filename: str) -> Path:
 
 
 def get_env_file() -> Path:
-    """Return the path to the project-local ``.env`` credential file.
+    """Return the path to the ``.env`` credential file.
 
-    The file is resolved relative to :func:`get_project_root`, so it is found
-    beside the executable in a frozen build and at the repository root in a
-    development checkout, rather than depending on the current working
+    The file is resolved relative to :func:`get_state_root`, so on an installed
+    build it lives in the per-user ``%LOCALAPPDATA%`` state directory (not the
+    world-readable install directory), and in a development checkout it remains
+    at the repository root, rather than depending on the current working
     directory.
 
     Returns:
-        Path: Path to ``<project_root>/.env``.
+        Path: Path to ``<state_root>/.env``.
     """
-    return get_project_root() / ".env"
+    return get_state_root() / ".env"
 
 
 @dataclass
@@ -308,8 +445,8 @@ class Config:
     """
 
     tools_directory: Path = field(default_factory=lambda: get_project_root() / "tools")
-    logs_directory: Path = field(default_factory=lambda: get_project_root() / "logs")
-    data_directory: Path = field(default_factory=lambda: get_project_root() / "data")
+    logs_directory: Path = field(default_factory=lambda: get_state_root() / "logs")
+    data_directory: Path = field(default_factory=lambda: get_state_root() / "data")
 
     default_provider: ProviderName = ProviderName.ANTHROPIC
     confirmation_level: ConfirmationLevel = ConfirmationLevel.DESTRUCTIVE
@@ -354,10 +491,10 @@ class Config:
         Returns:
             tuple[Path, Path, Path, ProviderName, ConfirmationLevel]: Tuple of (tools_dir, logs_dir, data_dir, default_provider, confirmation_level).
         """
-        root = get_project_root()
-        tools_dir = Path(general.get("tools_directory", str(root / "tools")))
-        logs_dir = Path(general.get("logs_directory", str(root / "logs")))
-        data_dir = Path(general.get("data_directory", str(root / "data")))
+        state_root = get_state_root()
+        tools_dir = Path(general.get("tools_directory", str(get_project_root() / "tools")))
+        logs_dir = Path(general.get("logs_directory", str(state_root / "logs")))
+        data_dir = Path(general.get("data_directory", str(state_root / "data")))
 
         default_provider_str = general.get("default_provider", "anthropic")
         try:

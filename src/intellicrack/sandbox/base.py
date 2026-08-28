@@ -57,6 +57,7 @@ _ERR_ANTI_EVASION_NOT_IMPL = "Anti-evasion not implemented"
 _ERR_MEMORY_DUMP_NOT_IMPL = "Memory dump not implemented"
 _ERR_EXTRACT_FILES_NOT_IMPL = "Dropped file extraction not implemented"
 _ERR_YARA_SCAN_NOT_IMPL = "YARA scan not implemented"
+_ERR_LIST_PROCESSES_NOT_IMPL = "Guest process listing not implemented"
 
 SandboxStatus = Literal["stopped", "starting", "running", "stopping", "error"]
 ExecutionResult = Literal["success", "timeout", "error", "crashed"]
@@ -341,6 +342,24 @@ class SandboxConfig:
     shared_folders: list[tuple[Path, str, bool]] = field(default_factory=list)
     startup_commands: list[str] = field(default_factory=list)
     environment_variables: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class GuestProcessInfo:
+    """One process observed running inside a live sandbox guest.
+
+    Attributes:
+        pid: Guest-side process identifier.
+        name: Process image name (e.g. ``notepad.exe``), empty when the
+            guest could not report one.
+        path: Full path to the process executable on the guest, empty when
+            the guest could not report it (commonly a protected process the
+            enumerating account cannot query).
+    """
+
+    pid: int
+    name: str
+    path: str
 
 
 @dataclass
@@ -872,3 +891,20 @@ class SandboxBase:
         _logger.debug("base_sandbox_yara_scan_called", class_name=type(self).__name__)
         del rules_path, scan_target
         raise SandboxError(_ERR_YARA_SCAN_NOT_IMPL)
+
+    async def list_processes(self) -> list[GuestProcessInfo]:
+        """List processes currently running inside the sandbox guest.
+
+        Concrete sandbox types that can enumerate guest processes (Windows
+        Sandbox via an in-guest ``Get-Process`` call) override this to
+        support target selection for process-scoped operations such as
+        :meth:`dump_memory`.
+
+        Returns:
+            list[GuestProcessInfo]: Every process observed in the guest.
+
+        Raises:
+            SandboxError: If guest process listing is not implemented or fails.
+        """
+        _logger.debug("base_sandbox_list_processes_called", class_name=type(self).__name__)
+        raise SandboxError(_ERR_LIST_PROCESSES_NOT_IMPL)

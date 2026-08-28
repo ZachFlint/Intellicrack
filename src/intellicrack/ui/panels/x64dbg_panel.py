@@ -39,6 +39,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.bridges.base import MemorySearchResult
 from intellicrack.bridges.x64dbg import (
     TRACE_RECORD_DEFAULT_TYPE,
     TRACE_RECORD_PAGE_SIZE,
@@ -2970,6 +2971,16 @@ class X64DbgPanel(AnalysisPanelBase):
                 logger=_logger,
                 rule_length=len(pattern),
             )
+        elif mode == "Byte":
+            run_bridge_coroutine_logged(
+                self._bridge.scan_memory(pattern),
+                on_success=self._on_search_complete,
+                on_error=lambda e: self._on_generic_error("Search", e, self._search_btn),
+                parent=self,
+                event="x64dbg_scan_memory",
+                logger=_logger,
+                pattern_length=len(pattern),
+            )
         else:
             run_bridge_coroutine_logged(
                 self._bridge.find_pattern(pattern),
@@ -2994,7 +3005,12 @@ class X64DbgPanel(AnalysisPanelBase):
             row = self._search_table.rowCount()
             self._search_table.insertRow(row)
             self._search_table.setItem(row, 0, QTableWidgetItem(str(i)))
-            if isinstance(match, dict):
+            if isinstance(match, MemorySearchResult):
+                self._search_table.setItem(row, 1, QTableWidgetItem(f"0x{match.address:X}"))
+                self._search_table.setItem(row, 2, QTableWidgetItem(match.matched_bytes))
+                context = f"{match.context_before} [{match.matched_bytes}] {match.context_after}"
+                self._search_table.setItem(row, 3, QTableWidgetItem(context))
+            elif isinstance(match, dict):
                 md = cast("dict[str, object]", match)
                 self._search_table.setItem(row, 1, QTableWidgetItem(str(md.get("address", ""))))
                 self._search_table.setItem(row, 2, QTableWidgetItem(str(md.get("matched_bytes", ""))))

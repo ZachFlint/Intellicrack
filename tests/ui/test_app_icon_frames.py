@@ -7,10 +7,11 @@
 
 The app icon is the single source of the Intellicrack wordmark: the installer's
 ``SetupIconFile``, the app/window icon, and the wizard banners are all derived
-from it. These tests assert the icon stays a crisp multi-frame ICO (small BMP
-frames plus a PNG-compressed 256px master that decodes to a true 256x256), and
-that the rebranded AdobeInjector tool icon remains byte-identical to it so the
-brand does not drift out of sync across the project.
+from it. These tests assert the icon stays a crisp multi-frame ICO (the full
+title-bar-through-master frame set, PNG-compressed for Windows 10+, with a 256px
+master that decodes to a true 256x256), and that the rebranded AdobeInjector
+tool icon remains byte-identical to it so the brand does not drift out of sync
+across the project.
 
 Parsing is done from raw bytes with the standard library (no Pillow dependency)
 so the gate runs anywhere the repository is checked out.
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
 
 
 _PNG_SIGNATURE: bytes = b"\x89PNG\r\n\x1a\n"
-_EXPECTED_FRAME_SIZES: frozenset[int] = frozenset({24, 32, 48, 64, 256})
+_EXPECTED_FRAME_SIZES: frozenset[int] = frozenset({16, 20, 24, 32, 40, 48, 64, 128, 256})
 _MASTER_FRAME_SIZE: int = 256
 
 

@@ -354,15 +354,17 @@ def _import_credential_loader() -> type[CredentialLoader]:
 
 
 def _resolve_env_path() -> Path:
-    """Resolve the ``.env`` credential file path via the config module.
+    r"""Resolve the ``.env`` credential file path via the config module.
 
-    Delegates to :func:`intellicrack.core.config.get_env_file` so the path is
-    anchored to the deployment root (beside the executable in a frozen build,
-    the repository root in development) rather than the current working
+    Delegates to :func:`intellicrack.core.config.get_env_file`, which anchors the
+    path to the writable per-user state root: the ``%LOCALAPPDATA%\Intellicrack``
+    directory exported by the launcher on an installed build, or the repository
+    root in a development checkout. This keeps credentials out of the read-only,
+    world-readable install directory and independent of the current working
     directory.
 
     Returns:
-        Path: Absolute path to the project-local ``.env`` file.
+        Path: Absolute path to the ``.env`` credential file under the state root.
     """
     mod = importlib.import_module("intellicrack.core.config")
     return cast("Callable[[], Path]", mod.get_env_file)()
