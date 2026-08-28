@@ -10,9 +10,12 @@
 #define AppName "Intellicrack"
 #define AppPublisher "Zachary Flint"
 #define AppUrl "https://github.com/zacharyflint/intellicrack"
-#define AppVersion "0.1.0a1"
-#define AppVerNumeric "0.1.0.0"
+; Version is single-sourced: packaging/stage.ps1 regenerates version.generated.iss
+; from src/intellicrack/_metadata.py, and tests/packaging/test_version_consistency.py
+; gates that every copy of the version across the repository agrees.
+#include "version.generated.iss"
 #define AppExeName "Intellicrack.exe"
+#define HexbenchExeName "Hexbench.exe"
 #define StageRoot "..\build\stage"
 #define AppIcon StageRoot + "\app\src\intellicrack\assets\icon.ico"
 
@@ -38,8 +41,12 @@ PrivilegesRequired=admin
 DefaultDirName={autopf}\Intellicrack
 DefaultGroupName=Intellicrack
 DisableProgramGroupPage=yes
+; Show the welcome page so the wizard banner is seen up front, not only at the end.
+DisableWelcomePage=no
 Compression=lzma2/ultra64
-SolidCompression=yes
+; Non-solid so a Compact/custom install does not decompress the whole archive just
+; to skip the multi-GB optional components the user did not select.
+SolidCompression=no
 OutputBaseFilename=Intellicrack-Setup
 SetupIconFile={#AppIcon}
 UninstallDisplayIcon={app}\{#AppExeName}
@@ -79,6 +86,19 @@ Name: "hexbench"; Description: "Hexbench: standalone enhanced hex GUI that runs 
 Name: "qemu"; Description: "Bundled QEMU sandbox backend"; Types: full
 Name: "qemu\debianguest"; Description: "Ready-to-run Debian sandbox guest image (~800 MB)"; Types: full
 
+[InstallDelete]
+; Clear install-managed trees before files are copied so upgrades never leave
+; stale files shadowing new ones on PYTHONPATH, and so deselecting a component
+; (for example the multi-GB ML overlay merged into the runtime site-packages)
+; actually removes it. All user-writable state now lives under %LOCALAPPDATA%,
+; never under {app}, so nothing here can touch credentials, config, logs, or data.
+Type: filesandordirs; Name: "{app}\runtime"
+Type: filesandordirs; Name: "{app}\app\src"
+Type: filesandordirs; Name: "{app}\app\tools"
+Type: filesandordirs; Name: "{app}\app\vendor"
+Type: filesandordirs; Name: "{app}\hexbench"
+Type: filesandordirs; Name: "{app}\qemu-guest"
+
 [Files]
 ; Core platform: launcher, Python runtime, application source, vendor data.
 Source: "{#StageRoot}\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion; Components: core
@@ -102,8 +122,11 @@ Source: "{#StageRoot}\app\tools\qemu\*"; DestDir: "{app}\app\tools\qemu"; Flags:
 ; ML overlay: merges into the runtime site-packages tree.
 Source: "{#StageRoot}\ml_overlay\Lib\site-packages\*"; DestDir: "{app}\runtime\Lib\site-packages"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ml
 
-; Hexbench standalone GUI.
+; Hexbench standalone GUI: the package source, plus the bootstrapper that runs
+; it on the bundled runtime. The editor is not frozen separately -- it imports
+; hexcore and webview from {app}\runtime like the main application does.
 Source: "{#StageRoot}\hexbench\*"; DestDir: "{app}\hexbench"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: hexbench
+Source: "{#StageRoot}\{#HexbenchExeName}"; DestDir: "{app}"; Flags: ignoreversion; Components: hexbench
 
 ; Optional bundled Debian sandbox guest image.
 Source: "{#StageRoot}\qemu-guest\*"; DestDir: "{app}\qemu-guest"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: qemu\debianguest
@@ -111,12 +134,12 @@ Source: "{#StageRoot}\qemu-guest\*"; DestDir: "{app}\qemu-guest"; Flags: ignorev
 [Tasks]
 Name: "startmenuicon"; Description: "Create a Start menu shortcut"; GroupDescription: "Shortcuts:"
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
-Name: "enablehyperv"; Description: "Enable the Windows Hypervisor Platform (required for QEMU/WHPX sandbox acceleration; may require a reboot)"; GroupDescription: "Sandbox acceleration:"; Components: qemu
+Name: "enablehyperv"; Description: "Enable the Windows Hypervisor Platform (required for QEMU/WHPX sandbox acceleration; may require a reboot)"; GroupDescription: "Sandbox acceleration:"; Components: qemu; Flags: unchecked
 Name: "defenderexclusion"; Description: "Add a Microsoft Defender exclusion for the install folder (the bundled activation/injection utilities can trip antivirus heuristics)"; GroupDescription: "Antivirus:"; Flags: unchecked
 
 [Icons]
 Name: "{group}\Intellicrack"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppExeName}"; Tasks: startmenuicon
-Name: "{group}\Hexbench"; Filename: "{app}\hexbench\hexbench.exe"; IconFilename: "{app}\hexbench\hexbench.exe"; Components: hexbench; Tasks: startmenuicon
+Name: "{group}\Hexbench"; Filename: "{app}\{#HexbenchExeName}"; IconFilename: "{app}\{#HexbenchExeName}"; Components: hexbench; Tasks: startmenuicon
 Name: "{group}\Uninstall Intellicrack"; Filename: "{uninstallexe}"; Tasks: startmenuicon
 Name: "{autodesktop}\Intellicrack"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
@@ -149,14 +172,34 @@ procedure SetDefenderExclusion(const Verb: String);
 var
   ResultCode: Integer;
   Params: String;
+  AppPath: String;
 begin
+  { Escape single quotes in the install path (PowerShell single-quoted strings
+    double an embedded quote) so a directory such as C:\Users\O'Brien\App cannot
+    break out of the -ExclusionPath literal. Windows paths cannot contain the
+    double quote that wraps the -Command script, so escaping the single quote is
+    the complete hardening. }
+  AppPath := ExpandConstant('{app}');
+  StringChangeEx(AppPath, '''', '''''', True);
   Params := '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "' + Verb
-    + '-MpPreference -ExclusionPath ''' + ExpandConstant('{app}') + '''"';
+    + '-MpPreference -ExclusionPath ''' + AppPath + '''"';
   if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), Params,
       '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    Log('Defender exclusion (' + Verb + ') could not be launched.')
+  begin
+    Log('Defender exclusion (' + Verb + ') could not be launched.');
+    if (Verb = 'Add') and (not WizardSilent()) then
+      MsgBox('The Microsoft Defender exclusion could not be applied automatically. '
+        + 'If the bundled utilities are quarantined, add an exclusion for the install '
+        + 'folder manually under Windows Security.', mbInformation, MB_OK);
+  end
   else
+  begin
     Log('Defender exclusion (' + Verb + ') returned exit code ' + IntToStr(ResultCode) + '.');
+    if (Verb = 'Add') and (ResultCode <> 0) and (not WizardSilent()) then
+      MsgBox('The Microsoft Defender exclusion command returned a non-zero exit code ('
+        + IntToStr(ResultCode) + '). The exclusion may not be active; you can add it '
+        + 'manually under Windows Security.', mbInformation, MB_OK);
+  end;
 end;
 
 { Enable the Windows Hypervisor Platform feature via DISM. A 3010 exit code
@@ -164,17 +207,44 @@ end;
 procedure EnableHyperVPlatform();
 var
   ResultCode: Integer;
+  ProgressPage: TOutputProgressWizardPage;
+  Launched: Boolean;
 begin
-  if Exec(ExpandConstant('{sys}\dism.exe'),
+  { Run DISM through ExecAndLogOutput behind a progress page. ExecAndLogOutput
+    pumps the message queue while the feature is enabling, so the wizard stays
+    responsive instead of going "Not Responding" during the blocking call. }
+  ProgressPage := CreateOutputProgressPage('Windows Hypervisor Platform',
+    'Enabling the Windows Hypervisor Platform for QEMU/WHPX sandbox acceleration. This can take a minute.');
+  ProgressPage.SetProgress(0, 100);
+  ProgressPage.Show();
+  try
+    Launched := ExecAndLogOutput(ExpandConstant('{sys}\dism.exe'),
       '/online /enable-feature /featurename:HypervisorPlatform /all /norestart',
-      '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode, nil);
+  finally
+    ProgressPage.Hide();
+  end;
+
+  if not Launched then
   begin
-    Log('DISM HypervisorPlatform enable returned exit code ' + IntToStr(ResultCode) + '.');
-    if ResultCode = DismRebootRequired then
-      HyperVRestartNeeded := True;
-  end
-  else
     Log('DISM could not be launched to enable the Windows Hypervisor Platform.');
+    if not WizardSilent() then
+      MsgBox('Could not launch DISM to enable the Windows Hypervisor Platform. '
+        + 'You can enable it later from "Turn Windows features on or off".',
+        mbInformation, MB_OK);
+    Exit;
+  end;
+
+  Log('DISM HypervisorPlatform enable returned exit code ' + IntToStr(ResultCode) + '.');
+  if ResultCode = DismRebootRequired then
+    HyperVRestartNeeded := True
+  else if ResultCode <> 0 then
+  begin
+    if not WizardSilent() then
+      MsgBox('Enabling the Windows Hypervisor Platform failed (DISM exit code '
+        + IntToStr(ResultCode) + '). QEMU/WHPX acceleration may be unavailable until '
+        + 'it is enabled manually.', mbInformation, MB_OK);
+  end;
 end;
 
 function InitializeSetup(): Boolean;
@@ -202,16 +272,8 @@ begin
     Result := False;
     Exit;
   end;
-
-  { Surface the portable-build minimum-CPU note (x86-64-v2 baseline). The
-    bundled hexcore .pyd is compiled for the x86-64-v2 microarchitecture level
-    (SSE4.2 + POPCNT). Systems older than that baseline cannot load it. Skipped
-    for silent/unattended installs so it never blocks an automated run. }
-  if not WizardSilent() then
-    MsgBox('Note: Intellicrack ships a portable native runtime built for the '
-      + 'x86-64-v2 CPU baseline (SSE4.2 and POPCNT, roughly Intel Nehalem / AMD '
-      + 'Bulldozer and newer). Older processors are not supported.',
-      mbInformation, MB_OK);
+  { The x86-64-v2 CPU-baseline note is surfaced on the ready page (UpdateReadyMemo),
+    not as a blocking dialog before the wizard opens. }
 end;
 
 { Append custom notes to the ready-to-install page. }
@@ -246,7 +308,7 @@ begin
       + 'in Windows Features, or use the bundled QEMU backend.';
 
   Memo := Memo + 'Sandbox backends:' + NewLine + SandboxNote + NewLine
-    + Space + 'The QEMU/WHPX backend can be enabled from the final page of this installer.';
+    + Space + 'The QEMU/WHPX backend can be enabled from the Select Tasks page of this installer.';
 
   Result := Memo;
 end;
@@ -287,12 +349,20 @@ end;
   enable the Windows Hypervisor Platform and/or add the Defender exclusion. }
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
+  { Add the Defender exclusion BEFORE files are extracted. ssInstall fires just
+    ahead of the [Files] copy, so the bundled activation/injection utilities are
+    excluded before they land on disk and can trip antivirus heuristics. }
+  if CurStep = ssInstall then
+  begin
+    if WizardIsTaskSelected('defenderexclusion') then
+      SetDefenderExclusion('Add');
+  end;
+
+  { Enable the Hypervisor Platform after the payload is installed. }
   if CurStep = ssPostInstall then
   begin
     if WizardIsTaskSelected('enablehyperv') then
       EnableHyperVPlatform();
-    if WizardIsTaskSelected('defenderexclusion') then
-      SetDefenderExclusion('Add');
   end;
 end;
 
@@ -303,8 +373,8 @@ begin
 end;
 
 { On uninstall, undo the Defender exclusion (harmless if none was added) and
-  offer to purge the out-of-install user tool cache. Credential files under the
-  install directory are never touched here. }
+  offer to purge the out-of-install user tool cache. Credential and config files
+  live under %LOCALAPPDATA%\Intellicrack and are never touched here. }
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   ToolsDir: String;

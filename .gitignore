@@ -37,8 +37,10 @@ MANIFEST
 # Exception for Windows application manifest required for build
 !intellicrack-launcher/intellicrack.exe.manifest
 *.spec
-# Exception for the Hexbench PyInstaller spec, a build input, not an artifact
+# Exceptions for tracked PyInstaller specs: build inputs, not artifacts.
 !/src/hexbench/hexbench.spec
+!/packaging/launcher/launcher.spec
+!/packaging/launcher/hexbench_launcher.spec
 
 # Installer logs
 pip-log.txt

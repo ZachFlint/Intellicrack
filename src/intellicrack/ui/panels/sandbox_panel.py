@@ -17,6 +17,7 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDialog,
     QFileDialog,
     QHBoxLayout,
     QHeaderView,
@@ -40,7 +41,8 @@ from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.logging import get_logger
 from intellicrack.sandbox.qemu import QEMUSandbox
 from intellicrack.sandbox.settings import load_qemu_config
-from intellicrack.ui.dialogs_helpers import show_error
+from intellicrack.ui.dialogs_helpers import show_error, show_info
+from intellicrack.ui.guest_process_picker import GuestProcessPickerDialog, GuestProcessRow
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
 from intellicrack.ui.panels.qt_compat import (
@@ -1820,12 +1822,41 @@ class SandboxPanel(AnalysisPanelBase):
         self._restore_qemu_only_control(self.pcap_btn)
 
     def _on_memory_dump(self) -> None:
-        """Dump guest memory from the sandbox."""
+        """Dump guest memory from the sandbox.
+
+        Windows Sandbox targets a specific guest process, so on that backend
+        this first enumerates the live guest processes and lets the user
+        pick one via :class:`GuestProcessPickerDialog` before dispatching
+        the dump; ``SandboxBridge.memory_dump`` otherwise rejects the call
+        outright for a missing ``target_pid`` (S17-D10b / audit7 F-0021).
+        QEMU dumps the whole guest and needs no PID, so that path dispatches
+        directly, unchanged from before this picker existed.
+        """
+        if self._bridge is None or self.sandbox_id is None:
+            return
+        if self._effective_sandbox_type() == "windows":
+            self._start_windows_memory_dump()
+            return
+        self._dispatch_memory_dump()
+
+    def _dispatch_memory_dump(self, *, target_pid: int | None = None) -> None:
+        """Dispatch the bridge memory-dump call.
+
+        Args:
+            target_pid: Guest-side PID to target. ``None`` dispatches a
+                whole-guest dump (QEMU); the bridge requires a positive PID
+                for Windows Sandbox instances.
+        """
         if self._bridge is None or self.sandbox_id is None:
             return
         self.memdump_btn.setEnabled(False)
+        coro = (
+            self._bridge.memory_dump(self.sandbox_id)
+            if target_pid is None
+            else self._bridge.memory_dump(self.sandbox_id, target_pid=target_pid)
+        )
         run_bridge_coroutine_logged(
-            self._bridge.memory_dump(self.sandbox_id),
+            coro,
             on_success=self._on_memory_dump_success,
             on_error=self._on_memory_dump_error,
             parent=self,
@@ -1834,6 +1865,97 @@ class SandboxPanel(AnalysisPanelBase):
             level="info",
             sandbox_id=self.sandbox_id,
         )
+
+    def _start_windows_memory_dump(self) -> None:
+        """Enumerate guest processes so the user can pick a memory-dump target.
+
+        Windows Sandbox's ``MiniDumpWriteDump`` implementation requires a
+        specific guest PID. This dispatches
+        :meth:`SandboxBridge.list_guest_processes` and, on success, opens
+        the process picker so the user can choose one.
+        """
+        if self._bridge is None or self.sandbox_id is None:
+            return
+        self.memdump_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.list_guest_processes(self.sandbox_id),
+            on_success=self._on_list_guest_processes_for_dump_success,
+            on_error=self._on_list_guest_processes_for_dump_error,
+            parent=self,
+            event="sandbox_list_guest_processes",
+            logger=_logger,
+            level="debug",
+            sandbox_id=self.sandbox_id,
+        )
+
+    def _on_list_guest_processes_for_dump_success(self, result: object) -> None:
+        """Open the guest process picker once enumeration succeeds.
+
+        Args:
+            result: Dictionary with a ``processes`` list from the bridge.
+        """
+        processes = self._parse_guest_process_rows(result)
+        if not processes:
+            self._restore_shared_control(self.memdump_btn)
+            show_info(self, "Memory Dump", "The guest reported no running processes to dump.")
+            return
+
+        dialog = GuestProcessPickerDialog(processes, parent=self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            self._restore_shared_control(self.memdump_btn)
+            return
+        pid = dialog.selected_pid()
+        if pid is None:
+            self._restore_shared_control(self.memdump_btn)
+            return
+        self._dispatch_memory_dump(target_pid=pid)
+
+    def _on_list_guest_processes_for_dump_error(self, exc: object) -> None:
+        """Handle a failed guest process enumeration.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._report_failure("Memory Dump Failed", "Failed to enumerate guest processes", exc)
+        self._restore_shared_control(self.memdump_btn)
+
+    @staticmethod
+    def _parse_guest_process_rows(result: object) -> list[GuestProcessRow]:
+        """Extract process rows from a ``list_guest_processes`` bridge result.
+
+        Args:
+            result: Raw bridge return value, expected to be a dict with a
+                ``processes`` list of ``{"pid", "name", "path"}`` mappings.
+
+        Returns:
+            list[GuestProcessRow]: Well-formed process rows; malformed or
+            missing entries are dropped rather than raised.
+        """
+        if not isinstance(result, dict):
+            return []
+        typed = cast("dict[str, object]", result)
+        raw_processes = typed.get("processes")
+        if not isinstance(raw_processes, list):
+            return []
+
+        rows: list[GuestProcessRow] = []
+        for entry in cast("list[object]", raw_processes):
+            if not isinstance(entry, dict):
+                continue
+            entry_dict = cast("dict[str, object]", entry)
+            pid_val = entry_dict.get("pid")
+            if not isinstance(pid_val, int) or pid_val <= 0:
+                continue
+            name_val = entry_dict.get("name")
+            path_val = entry_dict.get("path")
+            rows.append(
+                GuestProcessRow(
+                    pid=pid_val,
+                    name=str(name_val) if name_val is not None else "",
+                    path=str(path_val) if path_val is not None else "",
+                ),
+            )
+        return rows
 
     def _on_memory_dump_success(self, result: object) -> None:
         """Handle successful memory dump.

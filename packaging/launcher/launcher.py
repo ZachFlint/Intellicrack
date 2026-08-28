@@ -21,9 +21,11 @@ The installed layout the launcher targets is::
 
 from __future__ import annotations
 
+import ctypes
 import os
 import subprocess
 import sys
+from ctypes import wintypes
 from pathlib import Path
 
 
@@ -32,7 +34,6 @@ _PATH_SEGMENTS: tuple[tuple[str, ...], ...] = (
     ("runtime", "Library", "bin"),
     ("runtime", "Library", "mingw-w64", "bin"),
     ("runtime", "Library", "usr", "bin"),
-    ("runtime", "Scripts"),
     ("runtime", "DLLs"),
     ("app", "tools", "cutter"),
     ("app", "tools", "radare2", "bin"),
@@ -42,6 +43,12 @@ _PYTHONW_SEGMENTS: tuple[str, ...] = ("runtime", "pythonw.exe")
 _APP_SEGMENT: str = "app"
 _APP_SRC_SEGMENTS: tuple[str, ...] = ("app", "src")
 _GHIDRA_GLOB: str = "tools/ghidra/jdk-21*"
+_STATE_DIR_NAME: str = "Intellicrack"
+
+_ERROR_TITLE: str = "Intellicrack"
+_USER_LIBRARY: str = "user32"
+_MB_OK: int = 0x00000000
+_MB_ICONERROR: int = 0x00000010
 
 
 def resolve_install_dir() -> Path:
@@ -85,10 +92,28 @@ def build_child_env(install_dir: Path) -> dict[str, str]:
 
     The returned mapping is a copy of the current process environment with the
     bundled runtime and tool directories prepended to ``PATH``, ``PYTHONPATH``
-    pointed at the application source, and ``JAVA_HOME`` set to the bundled JDK
-    when present. Only directories that actually exist are added, so tool
-    components the user did not install do not shadow their own configuration.
-    The current process environment is never modified.
+    pointed at the application source, ``JAVA_HOME`` set to the bundled JDK when
+    present, and ``INTELLICRACK_STATE_DIR`` pointed at a per-user writable state
+    directory under ``%LOCALAPPDATA%`` so credentials, config, logs, and data are
+    never written under the read-only, world-readable install directory. Only
+    directories that actually exist are added, so tool components the user did
+    not install do not shadow their own configuration. The current process
+    environment is never modified.
+
+    The full parent environment is inherited deliberately, not filtered. The
+    child is the first-party Intellicrack application the user explicitly
+    launched -- the same trust position a shortcut launched from Explorer gives
+    it, which also passes the entire user environment. Inheritance is required
+    for correct operation: the application authenticates AI providers from an
+    open-ended set of environment credentials (``ANTHROPIC_API_KEY``,
+    ``GEMINI_API_KEY``, ``OPENAI_API_KEY``, ``GROK_*``, ``OPENROUTER_API_KEY``,
+    ``HF_TOKEN``/``HUGGINGFACE_HUB_TOKEN`` and user-defined variants), and the
+    external tools it spawns (Ghidra, x64dbg, QEMU, radare2) rely on inherited
+    ``JAVA_HOME``/``PATH``/tool configuration. An allowlist would silently drop
+    credentials the user adds; a secret-pattern denylist would strip exactly the
+    ``*_API_KEY``/``*_TOKEN`` values the application needs. The launcher itself
+    introduces no new secret -- it adds only the non-sensitive path and
+    state-directory variables above.
 
     Args:
         install_dir: The resolved install directory.
@@ -120,19 +145,46 @@ def build_child_env(install_dir: Path) -> dict[str, str]:
     if java_home is not None:
         env["JAVA_HOME"] = str(java_home)
 
+    local_app_data = env.get("LOCALAPPDATA")
+    if local_app_data:
+        state_dir = Path(local_app_data) / _STATE_DIR_NAME
+        state_dir.mkdir(parents=True, exist_ok=True)
+        env["INTELLICRACK_STATE_DIR"] = str(state_dir)
+
     return env
 
 
-def _creation_flags() -> int:
+def report_error(message: str) -> None:
+    """Report a fatal startup failure to whoever can see it.
+
+    A session started from a terminal has a usable ``sys.stderr`` and gets the
+    message there. The frozen launcher is windowed, so a session started from the
+    Start menu or a shortcut has no stream to read: there the message is shown in
+    a dialog instead, because a shortcut that fails silently is indistinguishable
+    from one that did nothing at all.
+
+    Args:
+        message: The failure to report.
+    """
+    stream = sys.stderr
+    if stream is not None:
+        stream.write(f"{message}\n")
+        stream.flush()
+
+    user32 = ctypes.WinDLL(_USER_LIBRARY)
+    message_box = user32.MessageBoxW
+    message_box.argtypes = (wintypes.HWND, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.UINT)
+    message_box.restype = ctypes.c_int
+    message_box(None, message, _ERROR_TITLE, _MB_OK | _MB_ICONERROR)
+
+
+def creation_flags() -> int:
     """Compute the process creation flags for a detached, windowless child.
 
     Returns:
-        int: The Windows creation flags that detach the child and suppress a console window, or ``0``
-        on platforms without those flags.
+        int: The Windows creation flags that detach the child and suppress its console window.
     """
-    if sys.platform == "win32":
-        return subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-    return 0
+    return subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
 
 
 def launch(argv: list[str]) -> int:
@@ -155,7 +207,7 @@ def launch(argv: list[str]) -> int:
     app_dir = install_dir / _APP_SEGMENT
 
     if not pythonw.is_file():
-        sys.stderr.write(f"Intellicrack runtime not found: {pythonw}\n")
+        report_error(f"Intellicrack runtime not found: {pythonw}")
         return 1
 
     env = build_child_env(install_dir)
@@ -166,11 +218,11 @@ def launch(argv: list[str]) -> int:
             command,
             cwd=str(app_dir),
             env=env,
-            creationflags=_creation_flags(),
+            creationflags=creation_flags(),
             close_fds=True,
         )
     except OSError as error:
-        sys.stderr.write(f"Failed to start Intellicrack: {error}\n")
+        report_error(f"Failed to start Intellicrack: {error}")
         return 1
 
     return 0

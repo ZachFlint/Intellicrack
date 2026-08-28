@@ -83,6 +83,8 @@ _ERR_PCAP_STOP_FAILED = "Failed to stop PCAP capture"
 _ERR_SCREENSHOT_FAILED = "Failed to capture screenshot"
 _ERR_ANTI_EVASION_FAILED = "Failed to apply anti-evasion"
 _ERR_MEMORY_DUMP_FAILED = "Failed to dump guest memory"
+_ERR_LIST_PROCESSES_FAILED = "Failed to list guest processes"
+_ERR_WINDOWS_REQUIRED = "Operation requires Windows Sandbox"
 _ERR_EXTRACT_FILES_FAILED = "Failed to extract dropped files"
 _ERR_YARA_SCAN_FAILED = "Failed to run YARA scan"
 _ERR_YARA_INVALID_MODE = "Invalid scan_target; must be 'files' or 'memory'"
@@ -859,6 +861,22 @@ class SandboxBridge(ToolBridgeBase):
                         ),
                     ],
                     returns="Dictionary with memory dump file path",
+                ),
+                ToolFunction(
+                    name="sandbox.list_guest_processes",
+                    description=(
+                        "List processes currently running inside a Windows Sandbox guest, "
+                        "for choosing a target_pid before calling sandbox.memory_dump."
+                    ),
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the Windows Sandbox instance",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dictionary with a list of guest process records (pid, name, path)",
                 ),
                 ToolFunction(
                     name="sandbox.extract_dropped_files",
@@ -2290,6 +2308,52 @@ class SandboxBridge(ToolBridgeBase):
                     "instance_id": instance_id,
                     "dump_path": str(dump_path),
                     "target_pid": target_pid,
+                }
+
+    async def list_guest_processes(self, instance_id: str) -> dict[str, Any]:
+        """List processes currently running inside a Windows Sandbox guest.
+
+        Lets a caller discover a valid ``target_pid`` before calling
+        :meth:`memory_dump` against a Windows Sandbox instance, which
+        rejects a missing or non-positive ``target_pid`` outright.
+
+        Args:
+            instance_id: ID of the Windows Sandbox instance.
+
+        Returns:
+            dict[str, Any]: Dictionary with ``instance_id`` and a
+            ``processes`` list of ``{"pid", "name", "path"}`` records.
+
+        Raises:
+            ToolError: If the instance is not found, is not a Windows
+                Sandbox, or the guest process listing fails.
+        """
+        _logger.info("list_guest_processes_started")
+
+        async with self._track_state("list_guest_processes"):
+            manager = self.ensure_manager()
+
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
+
+            if instance.sandbox_type != "windows":
+                msg = f"{_ERR_LIST_PROCESSES_FAILED}: {_ERR_WINDOWS_REQUIRED}"
+                raise ToolError(msg)
+
+            try:
+                processes = await instance.sandbox.list_processes()
+                instance.touch()
+                _logger.info("guest_processes_listed", instance_id=instance_id, count=len(processes))
+            except SandboxError as e:
+                _logger.warning("list_guest_processes_failed", error=str(e))
+                msg = f"{_ERR_LIST_PROCESSES_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id": instance_id,
+                    "processes": [{"pid": proc.pid, "name": proc.name, "path": proc.path} for proc in processes],
                 }
 
     async def extract_dropped_files(

@@ -15,10 +15,11 @@ This module deliberately contains no Qt imports so that both the dialog (``intel
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast
 
-from intellicrack.core.config import get_config_file
+from intellicrack.core.config import get_config_file, get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.sandbox.qemu import GuestOS, QEMUConfig
 
@@ -49,6 +50,21 @@ QEMU_DEFAULT_MEMORY_MB: Final[int] = 4096
 QEMU_MIN_AGENT_TIMEOUT: Final[float] = 5.0
 QEMU_MAX_AGENT_TIMEOUT: Final[float] = 1800.0
 QEMU_DEFAULT_AGENT_TIMEOUT: Final[float] = 60.0
+
+# Deployment-root-relative directories where a bundled QEMU guest image may live.
+# The installer stages the guest at <install_root>/qemu-guest; a development
+# checkout keeps guest images under tools/qemu/images.
+_BUNDLED_GUEST_DIRS: Final[tuple[tuple[str, ...], ...]] = (
+    ("qemu-guest",),
+    ("tools", "qemu", "images"),
+)
+
+# Name of the bundled Python runtime directory the frozen launcher lays down
+# beside the application and spawns the interpreter from
+# (``<install_root>/runtime/pythonw.exe``; see packaging/launcher/launcher.py).
+# When the running interpreter sits directly inside a directory of this name its
+# grandparent is the authoritative install root.
+_BUNDLED_RUNTIME_DIR: Final[str] = "runtime"
 
 
 def get_settings_file() -> Path:
@@ -178,6 +194,88 @@ def _coerce_guest_os(value: object) -> GuestOS:
     return QEMU_DEFAULT_GUEST_OS
 
 
+def _deployment_roots() -> list[Path]:
+    """Return the deployment roots to probe for a bundled QEMU guest, most authoritative first.
+
+    Two stable anchors are combined so guest discovery does not depend on how
+    deep the ``intellicrack`` package sits under the deployment root:
+
+    * **The bundled runtime's install root.** The frozen launcher spawns the
+      installed application as ``<install_root>/runtime/pythonw.exe`` (see
+      ``packaging/launcher/launcher.py``), so whenever the running interpreter
+      lives directly inside a :data:`_BUNDLED_RUNTIME_DIR` directory its
+      grandparent is the install root -- the exact directory the installer
+      stages ``qemu-guest`` into. Deriving the root from the interpreter rather
+      than from ``__file__`` keeps discovery correct across packaging changes and
+      when running from a wheel or ``site-packages``, where the package-relative
+      heuristic silently points elsewhere.
+    * **The package-relative project root** from :func:`get_project_root` and its
+      parent, which locates the guest in a development checkout
+      (``tools/qemu/images``) and remains a defensive fallback for the installed
+      layout.
+
+    Returns:
+        list[Path]: De-duplicated candidate deployment roots, most authoritative
+        first.
+    """
+    roots: list[Path] = []
+
+    def _add(candidate: Path | None) -> None:
+        if candidate is None:
+            return
+        try:
+            resolved = candidate.resolve()
+        except (OSError, RuntimeError, ValueError):
+            return
+        if resolved not in roots:
+            roots.append(resolved)
+
+    executable = sys.executable
+    if executable:
+        try:
+            interpreter: Path | None = Path(executable).resolve()
+        except (OSError, RuntimeError, ValueError):
+            interpreter = None
+        if interpreter is not None and interpreter.parent.name.casefold() == _BUNDLED_RUNTIME_DIR:
+            _add(interpreter.parent.parent)
+
+    project_root = get_project_root()
+    _add(project_root)
+    _add(project_root.parent)
+
+    return roots
+
+
+def default_qemu_image() -> Path | None:
+    """Discover a bundled QEMU guest image when the user has configured none.
+
+    The installer lays the guest image down at ``<install_root>/qemu-guest`` and a
+    development checkout keeps guest images under ``tools/qemu/images``. Candidate
+    deployment roots are resolved by :func:`_deployment_roots`, which anchors the
+    installed layout on the bundled runtime's install root instead of a
+    package-depth heuristic, so a freshly installed sandbox has a usable disk
+    image without the user first browsing to one. The first ``*.qcow2`` found is
+    returned. This never influences backend availability -- it only supplies a
+    default disk image.
+
+    Returns:
+        Path | None: Path to a discovered bundled guest image, or ``None`` when no
+        bundled guest is present.
+    """
+    seen: set[Path] = set()
+    for root in _deployment_roots():
+        for segments in _BUNDLED_GUEST_DIRS:
+            directory = root.joinpath(*segments)
+            if directory in seen or not directory.is_dir():
+                continue
+            seen.add(directory)
+            images = sorted(directory.glob("*.qcow2"))
+            if images:
+                _logger.info("sandbox_bundled_guest_discovered", image=str(images[0]))
+                return images[0]
+    return None
+
+
 def build_qemu_config(settings: Mapping[str, object]) -> QEMUConfig:
     """Build a QEMU backend configuration from persisted settings.
 
@@ -185,13 +283,14 @@ def build_qemu_config(settings: Mapping[str, object]) -> QEMUConfig:
         settings: Parsed sandbox settings document.
 
     Returns:
-        QEMUConfig: Backend configuration carrying the configured disk image,
+        QEMUConfig: Backend configuration carrying the configured disk image
+        (falling back to a discovered bundled guest when none is configured),
         guest OS, CPU/memory allocation, acceleration preference, guest-agent
         timeout, and shared folder.
     """
     return QEMUConfig(
         guest_os=_coerce_guest_os(settings.get(QEMU_GUEST_OS_KEY)),
-        image_path=_coerce_path(settings.get(QEMU_IMAGE_PATH_KEY)),
+        image_path=_coerce_path(settings.get(QEMU_IMAGE_PATH_KEY)) or default_qemu_image(),
         cpu_cores=_coerce_int(
             settings.get(QEMU_CPU_CORES_KEY),
             QEMU_DEFAULT_CPU_CORES,

@@ -346,6 +346,14 @@ def test_windows_backend_keeps_the_qemu_controls_gated_after_a_shared_failure(
 ) -> None:
     """A failure on a Windows instance must not reinstate the QEMU-only controls.
 
+    Memory Dump on Windows Sandbox first enumerates guest processes via
+    ``SandboxBridge.list_guest_processes`` so the user can pick a
+    ``target_pid`` (S17-D10b). The real ``LocalProcessSandbox`` test double
+    behind this panel does not override ``list_processes``, so it inherits
+    ``SandboxBase``'s "not implemented" failure - a genuine backend error,
+    surfaced through the same ``Memory Dump Failed`` dialog and console path
+    the pre-picker code used for a direct ``memory_dump`` failure.
+
     Args:
         qapp: Session ``QApplication``.
         dismisser: Closes the real failure dialog the handler raises.
@@ -354,7 +362,7 @@ def test_windows_backend_keeps_the_qemu_controls_gated_after_a_shared_failure(
     assert not panel.screenshot_btn.isEnabled(), "test premise: Windows gates Screenshot out"
 
     panel.memdump_btn.trigger()
-    _pump_until(qapp, panel, "[-] Memory dump failed")
+    _pump_until(qapp, panel, "[-] Failed to enumerate guest processes")
 
     assert dismisser.titles == ["Memory Dump Failed"], f"the real failure handler did not run: {dismisser.titles!r}"
     assert panel.memdump_btn.isEnabled(), "the shared control must come back on a live Windows sandbox"

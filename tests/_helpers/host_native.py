@@ -79,6 +79,8 @@ _MEMORY_DUMP_OUTCOME: Final[str] = "tests/sandbox/qemu/test_memory_dump_outcome_
 _GUEST_COMPUTER_NAME: Final[str] = "tests/sandbox/qemu/test_guest_computer_name_s17d46.py"
 _LINUX_AGENT_BOOTSTRAP: Final[str] = "tests/sandbox/qemu/test_linux_agent_bootstrap_s17d82.py"
 _APP_ICON_FRAMES: Final[str] = "tests/ui/test_app_icon_frames.py"
+_VERSION_CONSISTENCY: Final[str] = "tests/packaging/test_version_consistency.py"
+_STAGE_MATCHES_ISS: Final[str] = "tests/packaging/test_stage_matches_iss.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -195,6 +197,9 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_SEH_X64_PDATA, "test_seh_chain_x64_target_returns_nonempty_pdata_handlers"),
         (_SEH_X64_PDATA, "test_seh_chain_x64_addresses_resolve_within_loaded_modules"),
         (_APP_ICON_FRAMES, "test_rebranded_tool_icon_matches_app_icon"),
+        (_VERSION_CONSISTENCY, "test_pyproject_package_and_workspace_versions_agree"),
+        (_VERSION_CONSISTENCY, "test_all_metadata_locations_agree_with_pyproject"),
+        (_STAGE_MATCHES_ISS, "test_launcher_specs_and_bootstrappers_are_tracked"),
     },
 )
 

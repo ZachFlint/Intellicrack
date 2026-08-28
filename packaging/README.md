@@ -27,14 +27,18 @@ The wizard is configured for a modern, native Windows presentation:
   and the uninstaller follow the machine's current Windows app theme
   automatically - dark on a dark machine, light on a light one - with no user
   choice required.
-- **Custom wizard banner.** The welcome/finished page shows the Intellicrack
-  banner (the app-icon tile composited over a brand background, currently the
-  Neural Ring artwork), with a dark variant (`WizardImageFileDynamicDark`) that
-  swaps in under the dark theme. `wizard/generate_banners.ps1` extracts the crisp
-  256px tile straight from `icon.ico` - the single source of the wordmark - and
-  composites it over the chosen background from `wizard/backgrounds/`. Every
-  background is also rendered to `wizard/options/` so any can be promoted by
-  changing `$SelectedKey` in the generator and re-running it.
+- **Custom wizard banner, per theme.** The welcome/finished page shows the
+  Intellicrack banner. `WizardImageFile` (`banner-light.png`) is a genuinely
+  light render - the app-icon tile on a soft light gradient with a dark subtitle -
+  and `WizardImageFileDynamicDark` (`banner-dark.png`) is the app-icon tile
+  composited over a dark brand background (currently the Neural Ring artwork);
+  Setup swaps to the dark one under the dark theme, so the two are distinct
+  images rather than the same file. `wizard/generate_banners.ps1` extracts the
+  crisp 256px tile straight from `icon.ico` - the single source of the wordmark -
+  and renders both variants plus the small page icon. Every dark background is
+  also rendered to `wizard/options/` so any can be promoted by changing
+  `$SelectedKey` in the generator and re-running it. `wizard/generate_icon.ps1`
+  rebuilds `icon.ico` itself with a full 16-256px frame set.
 - **GPL-3.0 license page.** Setup shows the project `LICENSE` (GPL-3.0-or-later)
   and requires acceptance before installing.
 - **Native x64 only.** `ArchitecturesAllowed=x64os` restricts installation to
@@ -57,19 +61,35 @@ The wizard is configured for a modern, native Windows presentation:
 - **Setup logging.** `SetupLogging=yes` writes a full install log to the user's
   temp directory for post-mortem diagnosis of a failed install.
 - **Optional Hypervisor Platform enable.** When the QEMU component is selected,
-  the Select Tasks page offers to enable the Windows Hypervisor Platform
-  (needed for QEMU/WHPX acceleration). Setup runs DISM with the installer's
-  elevation; if DISM reports exit code 3010 (feature staged, reboot required)
-  the wizard requests a restart at the end.
+  the Select Tasks page offers - **default-unchecked** - to enable the Windows
+  Hypervisor Platform (needed for QEMU/WHPX acceleration). Setup runs DISM
+  through `ExecAndLogOutput` behind a progress page so the wizard stays
+  responsive instead of going "Not Responding"; exit code 3010 (feature staged,
+  reboot required) requests a restart at the end, and any other non-zero DISM
+  result is surfaced to the user rather than silently logged.
 - **Optional Defender exclusion.** A default-unchecked task adds a Microsoft
-  Defender folder exclusion for the install directory, because the bundled
-  activation/injection utilities can trip antivirus heuristics. Uninstall
-  removes the exclusion again.
+  Defender folder exclusion for the install directory **before** the bundled
+  activation/injection utilities are extracted (at `ssInstall`), so they never
+  land on disk unexcluded. A failure to apply it is surfaced to the user;
+  uninstall removes the exclusion again.
+- **Per-user writable state.** The launcher points the application at a per-user
+  state directory under `%LOCALAPPDATA%\Intellicrack` (via `INTELLICRACK_STATE_DIR`),
+  so credentials (`.env`), config, logs, and data are written there rather than
+  under the read-only, world-readable install directory - and survive uninstall.
+- **Startup diagnostics.** `Intellicrack.exe` is windowed, so a fatal startup
+  failure (missing runtime, spawn error) is shown in a message box rather than
+  written to a `sys.stderr` that does not exist in a windowed process.
+- **Upgrade-safe installs.** `[InstallDelete]` clears the install-managed trees
+  (runtime, app source/tools/vendor, hexbench, guest image) before files are
+  copied, so an upgrade never leaves stale files shadowing new ones on
+  `PYTHONPATH`, and deselecting a component (e.g. the multi-GB ML overlay)
+  actually removes it. `SolidCompression=no` keeps a Compact/custom install from
+  decompressing the whole archive just to skip components.
 - **Clean uninstall.** `[UninstallDelete]` removes the runtime-generated
   `.intellicrack` config tree and then sweeps the whole install directory so no
   logs or `__pycache__` are orphaned. Uninstall also offers to remove the
   out-of-install tool cache at `%LOCALAPPDATA%\intellicrack_tools`; credential
-  files are never touched by that prompt.
+  and config files (under `%LOCALAPPDATA%\Intellicrack`) are never touched.
 
 Regenerate the wizard images after changing the app icon:
 
@@ -85,11 +105,16 @@ pwsh packaging\wizard\generate_banners.ps1
 | `intellicrack.iss` | Inno Setup 6 script; maps `build/stage` 1:1 onto the install directory. |
 | `launcher/launcher.py` | Source of the frozen `Intellicrack.exe` launcher. |
 | `launcher/launcher.spec` | PyInstaller spec that builds the launcher. |
+| `launcher/hexbench_launcher.py` | Source of the frozen `Hexbench.exe` launcher. |
+| `launcher/hexbench_launcher.spec` | PyInstaller spec that builds the Hexbench launcher. |
 | `ml_split.py` | Computes the ML-only distribution closure the stager moves into `ml_overlay/`. |
-| `wizard/*.png` | The active wizard images (light/dark welcome banner + small page icon). |
-| `wizard/backgrounds/*.png` | Brand background artwork the banner is composited over. |
-| `wizard/options/*.png` | Every background rendered as a full banner, for picking the active one. |
-| `wizard/generate_banners.ps1` | Regenerates the wizard images from the app icon and a chosen background. |
+| `jdk21.lock.json` | Pins the exact Temurin JDK 21 asset URL and SHA-256; the in-repo trust anchor `stage.ps1` verifies the download against. |
+| `version.generated.iss` | Version defines (`AppVersion`/`AppVerNumeric`) that `stage.ps1` regenerates from `_metadata.py` and `intellicrack.iss` `#include`s. |
+| `wizard/*.png` | The active wizard images (distinct light/dark welcome banners + small page icon). |
+| `wizard/backgrounds/*.png` | Brand background artwork the dark banner is composited over. |
+| `wizard/options/*.png` | Every dark background rendered as a full banner, for picking the active one. |
+| `wizard/generate_banners.ps1` | Regenerates the wizard images (light + dark banners, small icon) from the app icon. |
+| `wizard/generate_icon.ps1` | Rebuilds `icon.ico` with a full 16-256px frame set from the 256px source. |
 
 The staging script and the `.iss` share a fixed contract: `stage.ps1` writes
 `<repo>/build/stage` and `intellicrack.iss` anchors every `[Files]` `Source:`
@@ -106,12 +131,13 @@ end user needs none of them.
 - **Rust toolchain + maturin** - `stage.ps1` rebuilds `hexcore` as a portable
   wheel via `pixi run maturin build --release` with
   `RUSTFLAGS=-C target-cpu=x86-64-v2`.
-- **PyInstaller** (available through pixi) - builds the launcher from
-  `launcher/launcher.spec`.
+- **PyInstaller** (available through pixi) - builds the two launchers from
+  `launcher/launcher.spec` and `launcher/hexbench_launcher.spec`.
 - **Inno Setup 6** with `iscc` on `PATH` - compiles the `.iss` into the Setup
   executable.
-- **Internet access** - `stage.ps1` downloads Temurin JDK 21 from the Adoptium
-  API and verifies its SHA-256 checksum.
+- **Internet access** - `stage.ps1` downloads the exact Temurin JDK 21 asset
+  pinned in `jdk21.lock.json` (with bounded retry) and refuses to proceed unless
+  its SHA-256 matches the in-repo pin.
 - **Prebuilt x64dbg bridge plugin** already present under
   `tools/x64dbg/release` (the staging script asserts the `.dp64`/`.dp32`
   plugins exist; it does not build them).
@@ -143,7 +169,7 @@ This is the heavy step. It recreates `build/stage` from scratch and:
 - downloads and checksum-verifies Temurin JDK 21 under the Ghidra tree;
 - copies the vendor pattern trees and the standalone `hexbench` GUI;
 - stages the optional bundled Debian sandbox guest image; and
-- builds the `Intellicrack.exe` launcher with PyInstaller.
+- builds the `Intellicrack.exe` and `Hexbench.exe` launchers with PyInstaller.
 
 A missing source is a hard failure, never a silent skip.
 
@@ -229,15 +255,28 @@ child process the launcher spawns:
 Only directories that actually exist are added, so a tool component the user
 did not install never shadows a bring-your-own configuration.
 
+`Hexbench.exe` is the same idea for the optional hex editor, with two
+differences that matter. It puts the install directory itself on `PYTHONPATH`
+and runs `runtime\python.exe -m hexbench`, because the editor resolves its
+`static` tree relative to its own `__file__` and so must be imported as a module
+of the staged package. And it spawns that child under `CREATE_NO_WINDOW` rather
+than from `pythonw.exe`: hexbench writes diagnostics to `sys.stderr`
+unconditionally, and a windowless interpreter leaves that stream as `None`,
+which would turn the first diagnostic into an `AttributeError`. The editor is
+deliberately not frozen by `src/hexbench/hexbench.spec` for the installer --
+that spec is for standalone distribution and would embed a second interpreter,
+webview and hexcore next to the ones `runtime\` already provides.
+
 ## Runtime layout on the target
 
 ```
 <installdir>\Intellicrack.exe     the frozen launcher
+<installdir>\Hexbench.exe         the frozen Hexbench launcher (hexbench component)
 <installdir>\runtime\             the bundled Python 3.13 environment
 <installdir>\app\src\             the application source (intellicrack package)
 <installdir>\app\tools\           the installed external tool components
 <installdir>\app\vendor\          the vendor pattern / data trees
-<installdir>\hexbench\            optional standalone Hexbench GUI
+<installdir>\hexbench\            optional Hexbench GUI (package source)
 <installdir>\qemu-guest\          optional bundled Debian sandbox guest image
 ```
 
