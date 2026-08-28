@@ -100,6 +100,13 @@ def build_child_env(install_dir: Path) -> dict[str, str]:
     not install do not shadow their own configuration. The current process
     environment is never modified.
 
+    Creating the state directory is the one step here that touches the disk, so
+    it is the one that can fail -- a locked-down profile, or a file already
+    occupying that name, raises :class:`OSError`. It is deliberately left to
+    propagate: :func:`launch` turns it into the same reported failure a refused
+    spawn produces, rather than silently dropping the variable and letting the
+    application fall back to writing under the read-only install directory.
+
     The full parent environment is inherited deliberately, not filtered. The
     child is the first-party Intellicrack application the user explicitly
     launched -- the same trust position a shortcut launched from Explorer gives
@@ -195,12 +202,16 @@ def launch(argv: list[str]) -> int:
     with the pass-through arguments in the application directory, without a
     console window. The launcher does not wait for the child.
 
+    Every failure on this path is reported through :func:`report_error` so a
+    session started from a shortcut gets a dialog naming the cause, instead of
+    the raw traceback the bootloader would otherwise put on screen.
+
     Args:
         argv: Extra arguments to forward to the ``intellicrack`` module.
 
     Returns:
-        int: ``0`` on a successful spawn, or ``1`` when the bundled runtime is missing or the child
-        could not be started.
+        int: ``0`` on a successful spawn, or ``1`` when the bundled runtime is missing, the
+        environment could not be prepared, or the child could not be started.
     """
     install_dir = resolve_install_dir()
     pythonw = install_dir.joinpath(*_PYTHONW_SEGMENTS)
@@ -210,7 +221,12 @@ def launch(argv: list[str]) -> int:
         report_error(f"Intellicrack runtime not found: {pythonw}")
         return 1
 
-    env = build_child_env(install_dir)
+    try:
+        env = build_child_env(install_dir)
+    except OSError as error:
+        report_error(f"Failed to prepare the Intellicrack environment: {error}")
+        return 1
+
     command = [str(pythonw), "-m", "intellicrack", *argv]
 
     try:

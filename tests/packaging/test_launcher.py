@@ -319,6 +319,52 @@ def test_launch_reports_and_fails_when_the_runtime_is_absent(tmp_path: Path, mon
     assert "runtime not found" in reported[0]
 
 
+def test_launch_reports_and_fails_when_the_state_dir_cannot_be_created(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    r"""A state directory that cannot be created is reported, not raised at the user.
+
+    ``build_child_env`` performs the one disk-touching step on the launch path:
+    it creates ``%LOCALAPPDATA%\Intellicrack``. A file already occupying that
+    name -- or a locked-down profile -- makes that ``mkdir`` raise, and the call
+    used to sit outside every ``try``, so the exception escaped ``launch`` and
+    the frozen windowed bootloader put a raw traceback on screen.
+
+    The failure is produced for real rather than simulated: a *file* is placed
+    where the directory must go, and the precondition below confirms
+    ``build_child_env`` genuinely raises there before the routing is asserted.
+    Removing the ``except OSError`` guard turns this red with the raw
+    ``FileExistsError`` propagating out of ``launch``.
+
+    Args:
+        tmp_path: Pytest temporary directory used to build a fake install.
+        monkeypatch: Pytest patching fixture.
+    """
+    install = _make_fake_install(tmp_path / "app")
+    local_app_data = tmp_path / "LocalAppData"
+    local_app_data.mkdir()
+    (local_app_data / "Intellicrack").write_bytes(b"not a directory")
+    monkeypatch.setenv("LOCALAPPDATA", str(local_app_data))
+    monkeypatch.setattr(launcher, "resolve_install_dir", lambda: install)
+
+    with pytest.raises(OSError, match="Intellicrack"):
+        launcher.build_child_env(install)
+
+    reported: list[str] = []
+
+    def _record(message: str) -> None:
+        reported.append(message)
+
+    monkeypatch.setattr(launcher, "report_error", _record)
+
+    def _fail_popen(*_args: object, **_kwargs: object) -> object:
+        pytest.fail("launch must not spawn a child when the environment could not be prepared")
+
+    monkeypatch.setattr(launcher.subprocess, "Popen", _fail_popen)
+
+    assert launcher.launch([]) == 1, "an unusable state directory must fail the launch, not spawn without one"
+    assert reported, "the state-directory failure escaped launch() instead of reaching report_error"
+    assert "environment" in reported[0].lower(), f"the reported message does not name the failure: {reported[0]!r}"
+
+
 def test_launch_spawns_pythonw_detached(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A well-formed install spawns ``pythonw.exe -m intellicrack`` detached.
 

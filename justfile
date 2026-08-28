@@ -82,6 +82,36 @@ test-hexcore:
 clean-hexcore:
     cd src/intellicrack-hexcore && {{ pixi }} cargo clean
 
+# Stage flags for build-installer's dependency invocation; empty means a full stage.
+STAGE_ARGS := ""
+
+# The heavy step: recreates build/stage from scratch (runtime, tools, JDK, launchers).
+# Flags are forwarded to stage.ps1, e.g. -SkipJdkDownload -SkipGuestImage -SkipSigning.
+[doc('Stage the installer payload into build/stage (packaging/stage.ps1)')]
+[group('installer')]
+stage-installer *ARGS:
+    @if (-not (Test-Path 'packaging/stage.ps1')) { Write-Host 'packaging/stage.ps1 is missing, so the payload cannot be staged' -ForegroundColor Red; exit 1 }
+    pwsh -NoLogo -NonInteractive -File packaging/stage.ps1 {{ ARGS }}
+    @Write-Host "==> build/stage" -ForegroundColor Green
+
+# Runs stage-installer first, then verifies the staged tree against the .iss so a
+# missing payload entry fails here rather than producing a broken Setup. ARGS reach
+# iscc, e.g. just build-installer /DSignToolName=intellicrack "/Sintellicrack=<cmd>".
+# Stage flags come from the STAGE_ARGS variable, since they go to a different tool:
+# just STAGE_ARGS='-SkipJdkDownload -SkipGuestImage' build-installer
+[doc('Build the Setup executable: stage, verify, then compile with Inno Setup')]
+[group('installer')]
+build-installer *ARGS: (stage-installer STAGE_ARGS)
+    @if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) { Write-Host 'iscc is not on PATH; install Inno Setup 6.6.0 or newer' -ForegroundColor Red; exit 1 }
+    {{ pixi }} python -m scripts.sandbox.docker_sandbox module --module tests/packaging/test_stage_matches_iss.py
+    iscc packaging/intellicrack.iss {{ ARGS }}
+    @$exe = 'packaging/Output/Intellicrack-Setup.exe'; if (-not (Test-Path $exe)) { Write-Host 'Inno Setup produced no Intellicrack-Setup.exe' -ForegroundColor Red; exit 1 }; Write-Host "==> $exe" -ForegroundColor Green
+
+[doc('Delete installer build artifacts (build/ and packaging/Output/)')]
+[group('installer')]
+clean-installer:
+    @foreach ($p in @('build', 'packaging/Output')) { if (Test-Path $p) { $gb = [math]::Round((Get-ChildItem $p -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum / 1GB, 2); Remove-Item $p -Recurse -Force; Write-Host "==> removed $p ($gb GB)" -ForegroundColor Green } else { Write-Host "==> already absent: $p" -ForegroundColor DarkGray } }
+
 [doc('Download and install the latest QEMU emulator')]
 [group('install')]
 install-qemu:

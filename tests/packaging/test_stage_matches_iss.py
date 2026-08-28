@@ -1124,25 +1124,52 @@ _TRACKED_LAUNCHER_FILES: Final[tuple[str, ...]] = (
     "launcher.spec",
     "hexbench_launcher.py",
     "hexbench_launcher.spec",
+    # Both specs import this at build time to generate their Win32 version
+    # resource, so an untracked copy breaks the launcher build on a clean clone
+    # exactly as a swallowed spec did.
+    "version_resource.py",
 )
 
 
 def test_launcher_specs_and_bootstrappers_are_tracked() -> None:
-    """Real gate: every launcher bootstrapper and spec is git-tracked.
+    """Real gate: no launcher build input is swallowed by a gitignore rule.
 
     Reads the git index at the repository root (outside the sandbox's mounted
     subtree), so it runs in the host-native pass. Falsifiable by re-adding a
     blanket ``*.spec`` ignore without the per-file negation: the swallowed specs
-    drop out of ``git ls-files`` and this turns red.
+    drop out of ``git ls-files`` and ``git add`` becomes a silent no-op, so a
+    clean clone cannot build them.
+
+    A file that is present and merely uncommitted passes, because ``git add``
+    will pick it up; a file git refuses to add does not. That distinction is the
+    whole failure mode -- a rule that makes staging silently do nothing is
+    invisible in every other check.
     """
     git = shutil.which("git")
     assert git is not None, "git executable not found on PATH"
-    result = subprocess.run(
+    listed = subprocess.run(
         [git, "-C", str(_REPO_ROOT), "ls-files", "packaging/launcher"],
         capture_output=True,
         text=True,
         check=True,
     )
-    tracked = {line.rsplit("/", 1)[-1] for line in result.stdout.splitlines() if line.strip()}
-    missing = [name for name in _TRACKED_LAUNCHER_FILES if name not in tracked]
-    assert missing == [], f"launcher build inputs are not git-tracked (a clean clone cannot build them): {missing}"
+    tracked = {line.rsplit("/", 1)[-1] for line in listed.stdout.splitlines() if line.strip()}
+
+    launcher_dir = _REPO_ROOT / "packaging" / "launcher"
+    untracked = [name for name in _TRACKED_LAUNCHER_FILES if name not in tracked]
+    absent = [name for name in untracked if not (launcher_dir / name).is_file()]
+    assert absent == [], f"launcher build inputs are neither tracked nor present on disk: {absent}"
+
+    if not untracked:
+        return
+
+    # `git check-ignore` exits 0 when it matched at least one path, 1 when it
+    # matched none, and >1 on a real error -- so a nonzero exit is not a failure.
+    ignored = subprocess.run(
+        [git, "-C", str(_REPO_ROOT), "check-ignore", "--", *(f"packaging/launcher/{name}" for name in untracked)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    swallowed = sorted(line.rsplit("/", 1)[-1] for line in ignored.stdout.splitlines() if line.strip())
+    assert swallowed == [], f"a gitignore rule swallows these launcher build inputs, so `git add` silently drops them: {swallowed}"

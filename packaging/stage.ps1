@@ -1,4 +1,15 @@
 #Requires -Version 7
+[CmdletBinding(SupportsShouldProcess)]
+param(
+    [switch]$SkipJdkDownload,
+    [switch]$SkipGuestImage,
+    [switch]$SkipSigning,
+    [ValidateSet('release', 'debug')]
+    [string]$HexcoreProfile = 'release',
+    [ValidateRange(1, 10)]
+    [int]$JdkDownloadRetries = 4
+)
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . "$PSScriptRoot/../scripts/common.ps1"
@@ -9,12 +20,18 @@ Set-StrictMode -Version Latest
 # consumes verbatim. Every expected source is asserted before use: a missing
 # source is a hard failure (throw / nonzero exit), never a silent skip. The
 # script is idempotent - it recreates build/stage from scratch on each run.
+#
+# Every parameter is opt-in: with no arguments the script behaves exactly as it
+# did before they existed. The -Skip* switches drop optional or network-bound
+# steps for a CI job that only needs the rest, and each one warns that the
+# resulting stage is incomplete rather than pretending it is shippable.
 
 $StartTime = Get-Date
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $Stage = Join-Path $RepoRoot 'build\stage'
 $BuildRoot = Join-Path $RepoRoot 'build'
+$GitPath = (Get-Command git -ErrorAction SilentlyContinue)?.Source
 
 function Assert-Source {
     <#
@@ -126,16 +143,171 @@ function Invoke-OptionalSign {
     Write-Success "$What signed"
 }
 
+function Get-ContentStamp {
+    <#
+    .SYNOPSIS
+        Return the moment a tracked file's content last changed, as a Unix time.
+    .DESCRIPTION
+        Ordering a committed input against a committed output cannot use raw
+        mtimes: a fresh clone stamps every working-tree file with the checkout
+        time, so the comparison would be decided by checkout order. Git history
+        gives the same answer on every clone, so it is preferred. A path with
+        uncommitted changes, or any path git cannot date (git absent, no history
+        for the path, a source export with no repository), falls back to its
+        filesystem write time, which is the only signal available there.
+    .PARAMETER Path
+        The existing file to date.
+    .OUTPUTS
+        System.Int64. Seconds since the Unix epoch.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Path
+    )
+    if ($script:GitPath) {
+        # A host that promotes a nonzero native exit code to a terminating error
+        # would turn "this is not a repository" into a build failure instead of
+        # the documented fallback, so the interrogation is contained here.
+        try {
+            $dirty = @(& $script:GitPath -C $script:RepoRoot status --porcelain -- $Path 2>$null)
+            if ($dirty.Count -eq 0) {
+                $committed = @(& $script:GitPath -C $script:RepoRoot log -1 --format=%ct -- $Path 2>$null)
+                if ($committed.Count -gt 0 -and $committed[0]) {
+                    return [long]$committed[0]
+                }
+            }
+        } catch {
+            Write-Progress "git could not date $Path ($($_.Exception.Message)); falling back to its write time"
+        }
+    }
+    $written = (Get-Item -LiteralPath $Path).LastWriteTimeUtc
+    return [long](($written - [datetime]::UnixEpoch).TotalSeconds)
+}
+
+function Get-CondaOwnedEntry {
+    <#
+    .SYNOPSIS
+        Map every top-level site-packages entry to the conda package that owns it.
+    .DESCRIPTION
+        The runtime is a copy of a pixi (conda) environment, and conda-meta
+        records exactly which files each conda package laid down. Those packages
+        are the base of the runtime - the interpreter, setuptools, jinja2,
+        pygments and friends - so nothing may relocate them out of it, whatever
+        a pip-metadata closure computed over the same directory concludes.
+    .PARAMETER EnvironmentRoot
+        Root of the conda environment whose conda-meta records are read.
+    .OUTPUTS
+        System.Collections.Hashtable. Entry name -> owning conda package name.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$EnvironmentRoot
+    )
+    $metaDir = Join-Path $EnvironmentRoot 'conda-meta'
+    if (-not (Test-Path -LiteralPath $metaDir)) {
+        throw "Environment carries no conda-meta records: $metaDir"
+    }
+    $owners = @{}
+    foreach ($record in Get-ChildItem -LiteralPath $metaDir -Filter '*.json' -File) {
+        $data = Get-Content -LiteralPath $record.FullName -Raw | ConvertFrom-Json
+        $properties = $data.PSObject.Properties.Name
+        if ($properties -notcontains 'files' -or -not $data.files) { continue }
+        $package = $record.BaseName
+        if ($properties -contains 'name' -and $data.name) { $package = [string]$data.name }
+        foreach ($file in $data.files) {
+            $normalized = ([string]$file).Replace('\', '/')
+            if ($normalized -notmatch '^lib/site-packages/([^/]+)') { continue }
+            $entry = $Matches[1]
+            if (-not $owners.ContainsKey($entry)) { $owners[$entry] = $package }
+        }
+    }
+    return $owners
+}
+
 Write-Banner 'Intellicrack Stage Build'
 Write-Step 'STAGE' "Repo root: $RepoRoot"
 Write-Step 'STAGE' "Stage dir: $Stage"
+
+# ---------------------------------------------------------------------------
+# Preflight: the committed wizard images must not be stale.
+#
+# packaging/wizard/*.png are generated from the app icon by
+# packaging/wizard/generate_banners.ps1 and committed; intellicrack.iss consumes
+# those committed files directly. Regenerating them is a documented manual step,
+# so changing the icon and forgetting it ships an installer whose branding is a
+# release behind, with nothing to notice it. The generator is parsed rather than
+# restated so the gate follows a change of icon path, background directory or
+# selected background instead of silently guarding the wrong files.
+# ---------------------------------------------------------------------------
+Write-Step 'STAGE' 'Preflight: checking wizard image freshness...'
+$WizardDir = Join-Path $RepoRoot 'packaging\wizard'
+$WizardGenerator = Join-Path $WizardDir 'generate_banners.ps1'
+Assert-Source -Path $WizardGenerator -What 'wizard image generator'
+$GeneratorText = Get-Content -LiteralPath $WizardGenerator -Raw
+
+if ($GeneratorText -notmatch "Join-Path\s+\`$Here\s+'([^']*icon\.ico)'") {
+    throw ('packaging/wizard/generate_banners.ps1 no longer resolves its icon through Join-Path $Here; ' +
+        'update the freshness gate in packaging/stage.ps1')
+}
+$WizardIcon = [System.IO.Path]::GetFullPath((Join-Path $WizardDir $Matches[1]))
+
+if ($GeneratorText -notmatch "\`$BgDir\s*=\s*Join-Path\s+\`$Here\s+'([^']+)'") {
+    throw 'packaging/wizard/generate_banners.ps1 no longer declares $BgDir; update the freshness gate in packaging/stage.ps1'
+}
+$WizardBackgroundDir = Join-Path $WizardDir $Matches[1]
+
+if ($GeneratorText -notmatch "\`$SelectedKey\s*=\s*'([^']+)'") {
+    throw 'packaging/wizard/generate_banners.ps1 no longer declares $SelectedKey; update the freshness gate in packaging/stage.ps1'
+}
+$WizardSelectedKey = $Matches[1]
+if ($GeneratorText -notmatch "Key\s*=\s*'$([regex]::Escape($WizardSelectedKey))'[^}]*File\s*=\s*'([^']+)'") {
+    throw "packaging/wizard/generate_banners.ps1 selects the background '$WizardSelectedKey' but declares no file for it"
+}
+$WizardBackground = Join-Path $WizardBackgroundDir $Matches[1]
+
+$WizardImageNames = @([regex]::Matches($GeneratorText, "Join-Path\s+\`$Here\s+'([^']+\.png)'") |
+        ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+if ($WizardImageNames.Count -eq 0) {
+    throw 'packaging/wizard/generate_banners.ps1 writes no wizard image beside itself; update the freshness gate in packaging/stage.ps1'
+}
+
+# The generator rewrites every image beside it in a single run, so the freshness
+# question is whether that run happened after the last source change - not
+# whether one particular image changed. Comparing the newest source against the
+# newest image answers exactly that, and stays right when a re-run leaves one
+# image byte-identical (git then reports its content as older than the icon's
+# even though it was regenerated from it).
+$WizardSources = @($WizardIcon, $WizardGenerator, $WizardBackground)
+$WizardNewestSource = ''
+$WizardNewestSourceStamp = [long]::MinValue
+foreach ($wizardSource in $WizardSources) {
+    Assert-Source -Path $wizardSource -What "wizard image source $(Split-Path -Leaf $wizardSource)"
+    $stamp = Get-ContentStamp -Path $wizardSource
+    if ($stamp -gt $WizardNewestSourceStamp) {
+        $WizardNewestSourceStamp = $stamp
+        $WizardNewestSource = $wizardSource
+    }
+}
+$WizardNewestImageStamp = [long]::MinValue
+foreach ($imageName in $WizardImageNames) {
+    $imagePath = Join-Path $WizardDir $imageName
+    Assert-Source -Path $imagePath -What "committed wizard image $imageName"
+    $stamp = Get-ContentStamp -Path $imagePath
+    if ($stamp -gt $WizardNewestImageStamp) { $WizardNewestImageStamp = $stamp }
+}
+if ($WizardNewestSourceStamp -gt $WizardNewestImageStamp) {
+    $staleSource = $WizardNewestSource -replace [regex]::Escape($RepoRoot + '\'), ''
+    throw ("Stale wizard images: $staleSource changed after packaging/wizard/$($WizardImageNames -join ', ') were last written. " +
+        'The installer ships those committed images verbatim, so regenerate them with: pwsh packaging\wizard\generate_banners.ps1')
+}
+Write-Success "wizard images current ($($WizardImageNames.Count) checked against $($WizardSources.Count) sources)"
 
 # ---------------------------------------------------------------------------
 # Step 1: recreate build/stage clean.
 # ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 1/14: recreating build/stage clean...'
 if (Test-Path -LiteralPath $Stage) {
-    Remove-Item -LiteralPath $Stage -Recurse -Force
+    if ($PSCmdlet.ShouldProcess($Stage, 'Remove the previously staged tree')) {
+        Remove-Item -LiteralPath $Stage -Recurse -Force
+    }
 }
 New-Item -ItemType Directory -Path $Stage -Force | Out-Null
 Write-Success 'build/stage recreated'
@@ -154,17 +326,31 @@ Assert-Produced -Path (Join-Path $RuntimeDir 'python.exe') -What 'staged runtime
 Assert-Produced -Path $RuntimeSitePackages -What 'staged runtime site-packages'
 
 Write-Progress 'Removing dev-only distributions from runtime...'
-$DevPatterns = @('pytest*', '_pytest*', 'ruff*', 'basedpyright*', 'sphinx*', 'mypy*')
-foreach ($pattern in $DevPatterns) {
-    $siteMatches = Get-ChildItem -LiteralPath $RuntimeSitePackages -Force -Filter $pattern -ErrorAction SilentlyContinue
-    foreach ($m in $siteMatches) {
-        Remove-Item -LiteralPath $m.FullName -Recurse -Force -ErrorAction SilentlyContinue
-    }
-    $binMatches = Get-ChildItem -LiteralPath (Join-Path $RuntimeDir 'Scripts') -Force -Filter $pattern -ErrorAction SilentlyContinue
-    foreach ($m in $binMatches) {
-        Remove-Item -LiteralPath $m.FullName -Recurse -Force -ErrorAction SilentlyContinue
+$RuntimePython = Join-Path $RuntimeDir 'python.exe'
+$Pyproject = Join-Path $RepoRoot 'pyproject.toml'
+Assert-Source -Path $Pyproject -What 'pyproject.toml'
+$PruneDevScript = Join-Path $RepoRoot 'packaging\prune_dev.py'
+Assert-Source -Path $PruneDevScript -What 'prune_dev.py'
+
+$DevEntries = & $RuntimePython $PruneDevScript $Pyproject
+if ($LASTEXITCODE -ne 0) {
+    throw "dev-prune closure computation failed (exit $LASTEXITCODE)"
+}
+$DevEntries = @($DevEntries | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+if ($DevEntries.Count -eq 0) {
+    throw ('dev-prune computed zero entries to remove; the dev/test/docs/profile ' +
+        'extras resolve to nothing, so the closure computation is broken and the ' +
+        'runtime would ship the entire development toolchain')
+}
+$DevRemoved = 0
+foreach ($entry in $DevEntries) {
+    $target = Join-Path $RuntimeSitePackages $entry
+    if (Test-Path -LiteralPath $target) {
+        Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction SilentlyContinue
+        $DevRemoved++
     }
 }
+Write-Progress "Removed $DevRemoved of $($DevEntries.Count) computed dev-only site-packages entries"
 
 Write-Progress 'Removing node.exe, *.pdb, *.pyd.old_*, and __pycache__ from runtime...'
 Remove-MatchingItem -Root $RuntimeDir -Filter 'node.exe'
@@ -232,9 +418,15 @@ if (Test-Path -LiteralPath $WheelsDir) {
 }
 
 $env:RUSTFLAGS = '-C target-cpu=x86-64-v2'
+$MaturinArgs = @('build')
+if ($HexcoreProfile -eq 'release') {
+    $MaturinArgs += '--release'
+} else {
+    Write-Warning "hexcore is being built with the '$HexcoreProfile' profile; the resulting stage is for iteration only, never for release"
+}
 Push-Location $HexcoreDir
 try {
-    & pixi run maturin build --release
+    & pixi run maturin @MaturinArgs
     if ($LASTEXITCODE -ne 0) {
         throw "maturin build failed (exit $LASTEXITCODE)"
     }
@@ -298,6 +490,22 @@ if ($LASTEXITCODE -ne 0) {
     throw "ML-split closure computation failed (exit $LASTEXITCODE)"
 }
 $MlEntries = @($MlEntries | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+
+# ml_split.py reasons over pip metadata alone, so it can hand back an entry that
+# the conda half of the environment owns: torch declares an unconditional
+# setuptools dependency while no core pip root declares one outside an extra, so
+# setuptools - and jinja2, markupsafe and pygments through the same route - come
+# back as "ML-only". They are not: conda installed them as part of the base
+# runtime, and relocating them would carve pieces out of the interpreter's own
+# environment. The conda-meta records staged with the runtime say who owns what,
+# so they get the final word on what may move.
+$CondaOwners = Get-CondaOwnedEntry -EnvironmentRoot $RuntimeDir
+$VetoedEntries = @($MlEntries | Where-Object { $CondaOwners.ContainsKey($_) })
+foreach ($vetoed in $VetoedEntries) {
+    Write-Warning "Keeping '$vetoed' in runtime: the conda package '$($CondaOwners[$vetoed])' installs it as part of the base runtime"
+}
+$MlEntries = @($MlEntries | Where-Object { -not $CondaOwners.ContainsKey($_) })
+
 if ($MlEntries.Count -eq 0) {
     throw 'ML split computed zero entries to move; refusing to produce a runtime that still contains torch/transformers'
 }
@@ -323,6 +531,183 @@ foreach ($required in @('torch', 'transformers')) {
         throw "ML split failed: '$required' was not moved into ml_overlay"
     }
 }
+
+foreach ($ownedEntry in $CondaOwners.Keys) {
+    if (Test-Path -LiteralPath (Join-Path $MlOverlaySite $ownedEntry)) {
+        throw ("ML split failed: '$ownedEntry' reached ml_overlay, but the conda package " +
+            "'$($CondaOwners[$ownedEntry])' installs it as part of the base runtime")
+    }
+}
+
+# The assertions above name only the packages this split exists to remove and the
+# ones it must never touch. The failure that reaches a user is a third one: an entry the core
+# runtime still needs went to ml_overlay, so an installation without the optional
+# ML component cannot start. ml_split.py computes the core side of the closure
+# from [project.dependencies], which does not describe this runtime - PyQt6,
+# structlog and tiktoken are all imported by the application and named nowhere in
+# it - so that closure cannot be trusted to have kept everything back. This gate
+# asks the staged runtime itself instead: the application source is the source of
+# truth for what it imports, and the runtime must satisfy every one of those
+# imports with ml_overlay absent, exactly as a core-only installation will.
+Write-Progress 'Verifying the core runtime still satisfies the application without ml_overlay...'
+$CoreGateScript = Join-Path $BuildRoot '_core_runtime_gate.py'
+$CoreGateSource = @'
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+"""Verify the staged core runtime stands on its own without ``ml_overlay``.
+
+Generated by ``packaging/stage.ps1`` after the ML split and run with the staged
+runtime's own ``python.exe``; it is a build artifact and is never shipped.
+
+Two checks, both derived from the staged application source rather than from a
+hand-written list of packages:
+
+1. Every unconditional module-level third-party import in the staged application
+   source must resolve. An import that is a direct child of a module body is one
+   the interpreter always executes when that module is loaded, so the core
+   runtime alone has to satisfy it. Genuinely optional dependencies are guarded
+   with ``try``/``except ImportError`` throughout the codebase and are therefore
+   excluded here, which is what keeps ``torch`` and ``transformers`` from being
+   demanded of a runtime that deliberately no longer carries them.
+2. The production startup chain - the modules ``python -m intellicrack`` loads
+   before any window exists - must import.
+
+A failure means the split relocated something the core runtime still needs, so a
+user who does not select the optional ML component gets an installation that
+cannot start.
+"""
+
+from __future__ import annotations
+
+import ast
+import importlib
+import sys
+from pathlib import Path
+
+
+APP_PACKAGE = "intellicrack"
+STARTUP_MODULES = ("intellicrack.__main__", "intellicrack.main")
+
+
+def module_level_imports(source: Path) -> set[str]:
+    """Return the unconditionally executed module-level imports of one file.
+
+    Args:
+        source: The ``.py`` file to parse.
+
+    Returns:
+        set[str]: Dotted module names imported at the top level of the module
+        body, excluding imports nested in ``try``, ``if`` or function scopes.
+    """
+    tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+    names: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            names.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            names.add(node.module)
+    return names
+
+
+def third_party_surface(app_src: Path) -> list[str]:
+    """Collect the third-party import surface of the staged application source.
+
+    Args:
+        app_src: The staged ``app/src`` directory.
+
+    Returns:
+        list[str]: Sorted dotted module names that belong to neither the standard
+        library nor the application package itself.
+    """
+    names: set[str] = set()
+    for source in sorted((app_src / APP_PACKAGE).rglob("*.py")):
+        names |= module_level_imports(source)
+    return sorted(
+        name
+        for name in names
+        if name.split(".")[0] not in sys.stdlib_module_names and name.split(".")[0] != APP_PACKAGE
+    )
+
+
+def import_all(names: list[str]) -> list[str]:
+    """Import every named module, collecting one message per failure.
+
+    Args:
+        names: Dotted module names to import.
+
+    Returns:
+        list[str]: A message for each module that could not be imported.
+    """
+    failures: list[str] = []
+    for name in names:
+        try:
+            importlib.import_module(name)
+        except Exception as error:
+            failures.append(f"{name}: {type(error).__name__}: {error}")
+    return failures
+
+
+def main(argv: list[str]) -> int:
+    """Check the staged core runtime against the staged application source.
+
+    Args:
+        argv: ``argv[0]`` is the staged ``app/src`` directory.
+
+    Returns:
+        int: ``0`` when the core runtime is self-sufficient, ``1`` otherwise.
+    """
+    app_src = Path(argv[0])
+    surface = third_party_surface(app_src)
+    if not surface:
+        sys.stderr.write(
+            "ERROR: no third-party module-level imports found under "
+            f"{app_src / APP_PACKAGE}; the gate would pass vacuously\n"
+        )
+        return 1
+    failures = import_all(surface)
+    sys.path.insert(0, str(app_src))
+    failures += import_all(list(STARTUP_MODULES))
+    for failure in failures:
+        sys.stderr.write(f"ERROR: the core runtime cannot import {failure}\n")
+    if failures:
+        sys.stderr.write(
+            f"ERROR: {len(failures)} import(s) failed with ml_overlay absent; the ML split "
+            "relocated a package the core runtime still needs\n"
+        )
+        return 1
+    sys.stdout.write(
+        f"core runtime gate: {len(surface)} third-party module(s) and "
+        f"{len(STARTUP_MODULES)} startup module(s) import cleanly\n"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
+'@
+if ($PSCmdlet.ShouldProcess($CoreGateScript, 'Write the core-runtime gate script')) {
+    [System.IO.File]::WriteAllText(
+        $CoreGateScript,
+        $CoreGateSource,
+        (New-Object System.Text.UTF8Encoding($false)))
+}
+$AppSrcRoot = Join-Path $Stage 'app\src'
+Push-Location (Join-Path $Stage 'app')
+try {
+    & $RuntimePython $CoreGateScript $AppSrcRoot
+    $gateCode = $LASTEXITCODE
+} finally {
+    Pop-Location
+}
+if ($gateCode -ne 0) {
+    throw ("Core-runtime gate failed (exit $gateCode): the ML split moved something the core " +
+        "runtime still needs. The gate script is kept at $CoreGateScript so it can be re-run " +
+        'against the staged runtime.')
+}
+Remove-Item -LiteralPath $CoreGateScript -Force -ErrorAction SilentlyContinue
+
 Write-Success "ML split complete ($($MlEntries.Count) entries moved to ml_overlay)"
 
 # ---------------------------------------------------------------------------
@@ -343,8 +728,7 @@ Write-Success 'x64dbg staged'
 # Step 7: remaining tool subset.
 # ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 7/14: staging tool subset...'
-$ToolSubset = @('radare2', 'cutter', 'NASM', 'pmd', 'google-java-format',
-    'AdobeInjector', 'IDMActivator', 'WindowsPatch')
+$ToolSubset = @('radare2', 'cutter', 'NASM')
 foreach ($tool in $ToolSubset) {
     $toolSrc = Join-Path $RepoRoot "tools\$tool"
     Assert-Source -Path $toolSrc -What "tool $tool"
@@ -353,14 +737,9 @@ foreach ($tool in $ToolSubset) {
     Write-Progress "Staged tool: $tool"
 }
 Write-Warning 'tools/resource_hacker skipped (ResourceHacker.exe is absent from the repo)'
-Write-Warning 'tools/pmd-bin-7.8.0 skipped (only the extracted pmd/ tree is shipped)'
 Assert-Produced -Path (Join-Path $Stage 'app\tools\cutter\rizin.exe') -What 'cutter rizin.exe'
 Assert-Produced -Path (Join-Path $Stage 'app\tools\radare2\bin\radare2.exe') -What 'radare2.exe'
 Assert-Produced -Path (Join-Path $Stage 'app\tools\NASM\nasm.exe') -What 'nasm.exe'
-Assert-Produced -Path (Join-Path $Stage 'app\tools\google-java-format\google-java-format.jar') -What 'google-java-format.jar'
-Assert-Produced -Path (Join-Path $Stage 'app\tools\IDMActivator\IDMA.ps1') -What 'IDMA.ps1'
-Assert-Produced -Path (Join-Path $Stage 'app\tools\WindowsPatch\WindowsActivator.cmd') -What 'WindowsActivator.cmd'
-Assert-Produced -Path (Join-Path $Stage 'app\tools\AdobeInjector\AdobeInjector.exe') -What 'AdobeInjector.exe'
 Write-Success 'tool subset staged'
 
 # ---------------------------------------------------------------------------
@@ -378,50 +757,55 @@ Write-Success 'Ghidra staged'
 # Step 9: bundled Temurin JDK 21 under the Ghidra tree.
 # ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 9/14: staging pinned Temurin JDK 21...'
-# Provenance is anchored in the repo, not the download host: packaging/jdk21.lock.json
-# pins an immutable GitHub release asset and its SHA-256. We fetch that exact url
-# (with bounded retry) and refuse to proceed unless the hash matches the pin.
-$JdkLockPath = Join-Path $RepoRoot 'packaging\jdk21.lock.json'
-Assert-Source -Path $JdkLockPath -What 'JDK pin lock file'
-$JdkLock = Get-Content -LiteralPath $JdkLockPath -Raw | ConvertFrom-Json
-foreach ($field in @('url', 'sha256', 'release')) {
-    if (-not $JdkLock.$field) { throw "packaging/jdk21.lock.json is missing required field '$field'" }
-}
-Write-Progress "Pinned Temurin release: $($JdkLock.release)"
-$ProgressPreference = 'SilentlyContinue'
-
-$JdkZip = Join-Path $BuildRoot '_temurin21.zip'
-if (Test-Path -LiteralPath $JdkZip) { Remove-Item -LiteralPath $JdkZip -Force }
-
-$Downloaded = $false
-for ($attempt = 1; $attempt -le 4; $attempt++) {
-    try {
-        Invoke-WebRequest -Uri $JdkLock.url -OutFile $JdkZip -TimeoutSec 600
-        $Downloaded = $true
-        break
-    } catch {
-        Write-Warning "Temurin download attempt $attempt failed: $($_.Exception.Message)"
-        if (Test-Path -LiteralPath $JdkZip) { Remove-Item -LiteralPath $JdkZip -Force -ErrorAction SilentlyContinue }
-        if ($attempt -lt 4) { Start-Sleep -Seconds ([int][math]::Pow(2, $attempt)) }
+if ($SkipJdkDownload) {
+    Write-Skip 'Temurin JDK download skipped (-SkipJdkDownload)'
+    Write-Warning 'The stage carries no bundled JDK; Ghidra will have no interpreter and the installer must not be built from it'
+} else {
+    # Provenance is anchored in the repo, not the download host: packaging/jdk21.lock.json
+    # pins an immutable GitHub release asset and its SHA-256. We fetch that exact url
+    # (with bounded retry) and refuse to proceed unless the hash matches the pin.
+    $JdkLockPath = Join-Path $RepoRoot 'packaging\jdk21.lock.json'
+    Assert-Source -Path $JdkLockPath -What 'JDK pin lock file'
+    $JdkLock = Get-Content -LiteralPath $JdkLockPath -Raw | ConvertFrom-Json
+    foreach ($field in @('url', 'sha256', 'release')) {
+        if (-not $JdkLock.$field) { throw "packaging/jdk21.lock.json is missing required field '$field'" }
     }
-}
-if (-not $Downloaded) { throw "Temurin JDK download failed after 4 attempts: $($JdkLock.url)" }
-Assert-Produced -Path $JdkZip -What 'downloaded Temurin JDK zip'
+    Write-Progress "Pinned Temurin release: $($JdkLock.release)"
+    $ProgressPreference = 'SilentlyContinue'
 
-$ExpectedSha = $JdkLock.sha256.ToLowerInvariant()
-$ActualSha = (Get-FileHash -LiteralPath $JdkZip -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($ActualSha -ne $ExpectedSha) {
+    $JdkZip = Join-Path $BuildRoot '_temurin21.zip'
+    if (Test-Path -LiteralPath $JdkZip) { Remove-Item -LiteralPath $JdkZip -Force }
+
+    $Downloaded = $false
+    for ($attempt = 1; $attempt -le $JdkDownloadRetries; $attempt++) {
+        try {
+            Invoke-WebRequest -Uri $JdkLock.url -OutFile $JdkZip -TimeoutSec 600
+            $Downloaded = $true
+            break
+        } catch {
+            Write-Warning "Temurin download attempt $attempt failed: $($_.Exception.Message)"
+            if (Test-Path -LiteralPath $JdkZip) { Remove-Item -LiteralPath $JdkZip -Force -ErrorAction SilentlyContinue }
+            if ($attempt -lt $JdkDownloadRetries) { Start-Sleep -Seconds ([int][math]::Pow(2, $attempt)) }
+        }
+    }
+    if (-not $Downloaded) { throw "Temurin JDK download failed after $JdkDownloadRetries attempts: $($JdkLock.url)" }
+    Assert-Produced -Path $JdkZip -What 'downloaded Temurin JDK zip'
+
+    $ExpectedSha = $JdkLock.sha256.ToLowerInvariant()
+    $ActualSha = (Get-FileHash -LiteralPath $JdkZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($ActualSha -ne $ExpectedSha) {
+        Remove-Item -LiteralPath $JdkZip -Force -ErrorAction SilentlyContinue
+        throw "Temurin JDK SHA-256 mismatch (pinned in packaging/jdk21.lock.json): expected $ExpectedSha, got $ActualSha"
+    }
+    Write-Progress 'JDK checksum verified against the in-repo pin'
+
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($JdkZip, $GhidraDest)
     Remove-Item -LiteralPath $JdkZip -Force -ErrorAction SilentlyContinue
-    throw "Temurin JDK SHA-256 mismatch (pinned in packaging/jdk21.lock.json): expected $ExpectedSha, got $ActualSha"
+    $JdkRoot = Get-ChildItem -LiteralPath $GhidraDest -Directory -Filter 'jdk-21*' | Select-Object -First 1
+    if (-not $JdkRoot) { throw 'Extracted Temurin archive produced no jdk-21* directory' }
+    Assert-Produced -Path (Join-Path $JdkRoot.FullName 'bin\java.exe') -What 'bundled JDK java.exe'
+    Write-Success "Temurin JDK staged: $($JdkRoot.Name)"
 }
-Write-Progress 'JDK checksum verified against the in-repo pin'
-
-[System.IO.Compression.ZipFile]::ExtractToDirectory($JdkZip, $GhidraDest)
-Remove-Item -LiteralPath $JdkZip -Force -ErrorAction SilentlyContinue
-$JdkRoot = Get-ChildItem -LiteralPath $GhidraDest -Directory -Filter 'jdk-21*' | Select-Object -First 1
-if (-not $JdkRoot) { throw 'Extracted Temurin archive produced no jdk-21* directory' }
-Assert-Produced -Path (Join-Path $JdkRoot.FullName 'bin\java.exe') -What 'bundled JDK java.exe'
-Write-Success "Temurin JDK staged: $($JdkRoot.Name)"
 
 # ---------------------------------------------------------------------------
 # Step 10: QEMU program tree, excluding images/.
@@ -442,14 +826,19 @@ Write-Success 'QEMU staged'
 # Step 11: optional bundled Debian sandbox guest.
 # ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 11/14: staging Debian sandbox guest...'
-$GuestSrc = Join-Path $RepoRoot 'tools\qemu\images\debian13-intellicrack.qcow2'
-Assert-Source -Path $GuestSrc -What 'Debian sandbox guest image'
-$GuestDestDir = Join-Path $Stage 'qemu-guest'
-New-Item -ItemType Directory -Path $GuestDestDir -Force | Out-Null
-Copy-Item -LiteralPath $GuestSrc -Destination (Join-Path $GuestDestDir 'debian13-intellicrack.qcow2') -Force
-Assert-Produced -Path (Join-Path $GuestDestDir 'debian13-intellicrack.qcow2') -What 'staged Debian guest'
-Write-Warning 'Debian guest must have qemu-guest-agent installed in-guest to be usable by the sandbox'
-Write-Success 'Debian sandbox guest staged'
+if ($SkipGuestImage) {
+    Write-Skip 'Debian sandbox guest image skipped (-SkipGuestImage)'
+    Write-Warning 'The stage carries no guest image; the installer must not be built from it'
+} else {
+    $GuestSrc = Join-Path $RepoRoot 'tools\qemu\images\debian13-intellicrack.qcow2'
+    Assert-Source -Path $GuestSrc -What 'Debian sandbox guest image'
+    $GuestDestDir = Join-Path $Stage 'qemu-guest'
+    New-Item -ItemType Directory -Path $GuestDestDir -Force | Out-Null
+    Copy-Item -LiteralPath $GuestSrc -Destination (Join-Path $GuestDestDir 'debian13-intellicrack.qcow2') -Force
+    Assert-Produced -Path (Join-Path $GuestDestDir 'debian13-intellicrack.qcow2') -What 'staged Debian guest'
+    Write-Warning 'Debian guest must have qemu-guest-agent installed in-guest to be usable by the sandbox'
+    Write-Success 'Debian sandbox guest staged'
+}
 
 # ---------------------------------------------------------------------------
 # Step 12: vendor pattern/data trees.
@@ -500,7 +889,10 @@ foreach ($Launcher in $Launchers) {
     Assert-Source -Path $LauncherSpec -What $Launcher.Spec
     Push-Location $RepoRoot
     try {
-        & pixi run pyinstaller $Launcher.Spec
+        # --clean discards PyInstaller's cached analysis and its build directory
+        # first, so a spec, launcher or runtime change can never be masked by an
+        # artifact left over from an earlier build.
+        & pixi run pyinstaller --clean $Launcher.Spec
         if ($LASTEXITCODE -ne 0) {
             throw "pyinstaller failed for $($Launcher.Spec) (exit $LASTEXITCODE)"
         }
@@ -512,7 +904,11 @@ foreach ($Launcher in $Launchers) {
     $StagedExe = Join-Path $Stage $Launcher.Exe
     Copy-Item -LiteralPath $LauncherExe -Destination $StagedExe -Force
     Assert-Produced -Path $StagedExe -What "staged $($Launcher.Exe)"
-    Invoke-OptionalSign -Path $StagedExe -What $Launcher.Exe
+    if ($SkipSigning) {
+        Write-Skip "$($Launcher.Exe) signing skipped (-SkipSigning)"
+    } else {
+        Invoke-OptionalSign -Path $StagedExe -What $Launcher.Exe
+    }
     Write-Success "$($Launcher.What) staged"
 }
 
@@ -545,10 +941,12 @@ $VersionIssLines = @(
     "#define AppVersion `"$AppVersion`""
     "#define AppVerNumeric `"$AppVerNumeric`""
 )
-[System.IO.File]::WriteAllText(
-    $VersionIssPath,
-    (($VersionIssLines -join "`r`n") + "`r`n"),
-    (New-Object System.Text.UTF8Encoding($false)))
+if ($PSCmdlet.ShouldProcess($VersionIssPath, 'Write the generated version defines')) {
+    [System.IO.File]::WriteAllText(
+        $VersionIssPath,
+        (($VersionIssLines -join "`r`n") + "`r`n"),
+        (New-Object System.Text.UTF8Encoding($false)))
+}
 Write-Success "version.generated.iss written ($AppVersion / $AppVerNumeric)"
 
 # Stamp the staged app tree with the exact commit it was built from so every
@@ -569,5 +967,43 @@ $BuildInfoPath = Join-Path $Stage 'app\build-info.json'
 $BuildInfo | ConvertTo-Json | Set-Content -LiteralPath $BuildInfoPath -Encoding UTF8
 Assert-Produced -Path $BuildInfoPath -What 'staged build-info.json'
 Write-Success "build-info stamped: $Short (dirty=$Dirty)"
+
+# Checksum every staged file so an installer built from this tree can be verified
+# offline, file by file, against what the stage actually produced. The manifest
+# is written beside build/stage rather than inside it: a manifest that lived in
+# the tree would have to list itself, and intellicrack.iss packages the tree
+# verbatim, so it would also ship as if it were application content.
+Write-Step 'STAGE' 'Finalizing: hashing the staged tree...'
+$ManifestPath = Join-Path $BuildRoot 'stage-SHA256SUMS.txt'
+$StagePrefix = $Stage.TrimEnd('\') + '\'
+$StagedFiles = @(Get-ChildItem -LiteralPath $Stage -Recurse -File -Force)
+if ($StagedFiles.Count -eq 0) {
+    throw "Refusing to write an empty checksum manifest: no files under $Stage"
+}
+$StagedByRelative = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::Ordinal)
+foreach ($staged in $StagedFiles) {
+    $relative = $staged.FullName.Substring($StagePrefix.Length).Replace('\', '/')
+    if ($StagedByRelative.ContainsKey($relative)) {
+        throw "Duplicate staged path while building the checksum manifest: $relative"
+    }
+    $StagedByRelative[$relative] = $staged.FullName
+}
+# Ordinal sorting, not the culture-aware default, so the manifest a French or
+# Turkish build host produces is byte-for-byte the one an invariant host does.
+$RelativePaths = [string[]]@($StagedByRelative.Keys)
+[Array]::Sort($RelativePaths, [System.StringComparer]::Ordinal)
+$ManifestLines = [System.Collections.Generic.List[string]]::new()
+foreach ($relative in $RelativePaths) {
+    $digest = (Get-FileHash -LiteralPath $StagedByRelative[$relative] -Algorithm SHA256).Hash.ToLowerInvariant()
+    $ManifestLines.Add("$digest  $relative")
+}
+if ($PSCmdlet.ShouldProcess($ManifestPath, 'Write the staged-tree SHA-256 manifest')) {
+    [System.IO.File]::WriteAllText(
+        $ManifestPath,
+        (($ManifestLines -join "`n") + "`n"),
+        (New-Object System.Text.UTF8Encoding($false)))
+    Assert-Produced -Path $ManifestPath -What 'staged-tree SHA-256 manifest'
+}
+Write-Success "SHA-256 manifest written ($($ManifestLines.Count) files): build\stage-SHA256SUMS.txt"
 
 Write-Footer 'Stage build complete' $StartTime
