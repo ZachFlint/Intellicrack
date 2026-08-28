@@ -11,6 +11,13 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# PowerShell 7.4+ defaults $PSNativeCommandUseErrorActionPreference to $true, which
+# turns any non-zero native exit into a terminating error before the caller can read
+# $LASTEXITCODE. This script checks every native exit code explicitly, and robocopy
+# reports success as a bitmask where only >= 8 is a failure (1 means "files copied"),
+# so that default would abort a healthy staging run. Exit-code handling stays with
+# the explicit checks at each call site.
+$PSNativeCommandUseErrorActionPreference = $false
 Set-StrictMode -Version Latest
 . "$PSScriptRoot/../scripts/common.ps1"
 
@@ -313,50 +320,73 @@ New-Item -ItemType Directory -Path $Stage -Force | Out-Null
 Write-Success 'build/stage recreated'
 
 # ---------------------------------------------------------------------------
-# Step 2: runtime = trimmed copy of the pixi default env.
+# Step 2: runtime = trimmed copy of the slim pixi runtime environment.
 # ---------------------------------------------------------------------------
+# The shipped runtime is staged from the dedicated `runtime` pixi environment,
+# which composes only the default (runtime) feature. The build/dev/test/docs/
+# profile/tooling features - the Rust and clang toolchains, cmake/ninja, the
+# PyPI linters/formatters/test runners - live in the `default` environment used
+# for development and the maturin/pyinstaller build steps, and are absent here,
+# so ~2 GB of build-only payload never reaches the installer.
 Write-Step 'STAGE' 'Step 2/14: staging runtime (trimmed pixi env)...'
-$PixiEnv = Join-Path $RepoRoot '.pixi\envs\default'
-Assert-Source -Path $PixiEnv -What 'pixi default env'
+$PixiEnv = Join-Path $RepoRoot '.pixi\envs\runtime'
+if (-not (Test-Path -LiteralPath (Join-Path $PixiEnv 'python.exe'))) {
+    Write-Progress 'Runtime pixi environment missing; provisioning it (pixi install --locked -e runtime)...'
+    Push-Location $RepoRoot
+    try {
+        # --locked: a plain `pixi install` silently updates pixi.lock when the
+        # manifest has drifted, which would mutate a tracked file mid-build and
+        # ship a runtime that differs from the locked one. Fail loudly instead.
+        & pixi install --locked -e runtime
+        if ($LASTEXITCODE -ne 0) {
+            throw "pixi install --locked -e runtime failed (exit $LASTEXITCODE); run 'pixi install -e runtime' and commit the updated pixi.lock"
+        }
+    } finally {
+        Pop-Location
+    }
+}
+Assert-Source -Path $PixiEnv -What 'pixi runtime env'
 Assert-Source -Path (Join-Path $PixiEnv 'python.exe') -What 'runtime python.exe'
 $RuntimeDir = Join-Path $Stage 'runtime'
-Invoke-Robocopy -Source $PixiEnv -Destination $RuntimeDir
+# pixi quarantines superseded binaries it cannot delete in-place into a top-level
+# .trash directory (old DLL/exe versions with a hash suffix). Those are dead
+# weight that nothing loads, so excluding them keeps ~100 MB of duplicate
+# binaries out of the shipped runtime and the installer.
+Invoke-Robocopy -Source $PixiEnv -Destination $RuntimeDir -ExcludeDirs @('.trash')
 $RuntimeSitePackages = Join-Path $RuntimeDir 'Lib\site-packages'
 Assert-Produced -Path (Join-Path $RuntimeDir 'python.exe') -What 'staged runtime python.exe'
 Assert-Produced -Path $RuntimeSitePackages -What 'staged runtime site-packages'
 
-Write-Progress 'Removing dev-only distributions from runtime...'
-$RuntimePython = Join-Path $RuntimeDir 'python.exe'
-$Pyproject = Join-Path $RepoRoot 'pyproject.toml'
-Assert-Source -Path $Pyproject -What 'pyproject.toml'
-$PruneDevScript = Join-Path $RepoRoot 'packaging\prune_dev.py'
-Assert-Source -Path $PruneDevScript -What 'prune_dev.py'
-
-$DevEntries = & $RuntimePython $PruneDevScript $Pyproject
-if ($LASTEXITCODE -ne 0) {
-    throw "dev-prune closure computation failed (exit $LASTEXITCODE)"
-}
-$DevEntries = @($DevEntries | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
-if ($DevEntries.Count -eq 0) {
-    throw ('dev-prune computed zero entries to remove; the dev/test/docs/profile ' +
-        'extras resolve to nothing, so the closure computation is broken and the ' +
-        'runtime would ship the entire development toolchain')
-}
-$DevRemoved = 0
-foreach ($entry in $DevEntries) {
-    $target = Join-Path $RuntimeSitePackages $entry
-    if (Test-Path -LiteralPath $target) {
-        Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction SilentlyContinue
-        $DevRemoved++
-    }
-}
-Write-Progress "Removed $DevRemoved of $($DevEntries.Count) computed dev-only site-packages entries"
-
+# The runtime is staged from the slim `runtime` pixi environment, which never
+# carried the dev/test/docs/profile toolchains, so there is nothing to prune per
+# distribution here - the former prune_dev closure step has been retired.
 Write-Progress 'Removing node.exe, *.pdb, *.pyd.old_*, and __pycache__ from runtime...'
 Remove-MatchingItem -Root $RuntimeDir -Filter 'node.exe'
 Remove-MatchingItem -Root $RuntimeDir -Filter '*.pdb'
 Remove-MatchingItem -Root $RuntimeDir -Filter '*.pyd.old_*'
 Remove-MatchingItem -Root $RuntimeDir -Filter '__pycache__' -Directories
+
+# Static import libraries (*.lib), C headers and bundled package test suites are
+# link/compile/test-time artifacts that the frozen runtime never loads at
+# runtime; share/doc and share/man are documentation. Stripping them removes
+# ~75 MB of dead weight from the shipped runtime. Test-dir removal is scoped to
+# site-packages so it can only touch third-party package test suites.
+#
+# Header removal is scoped to the interpreter's own include trees rather than a
+# recursive name match: several shipped packages keep an `include` directory that
+# their own code resolves at runtime (triton's Intel XPU backend builds a SYCL
+# helper from torch\include, triton\backends\intel\include and
+# opt\compiler\include), so a blind recursive delete would break them.
+Write-Progress 'Removing static import libs, C headers, bundled test suites and docs from runtime...'
+Remove-MatchingItem -Root $RuntimeDir -Filter '*.lib'
+Remove-MatchingItem -Root $RuntimeSitePackages -Filter 'tests' -Directories
+Remove-MatchingItem -Root $RuntimeSitePackages -Filter 'test' -Directories
+foreach ($deadDir in @('include', 'Library\include', 'share\doc', 'share\man')) {
+    $deadPath = Join-Path $RuntimeDir $deadDir
+    if (Test-Path -LiteralPath $deadPath) {
+        Remove-Item -LiteralPath $deadPath -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
 
 foreach ($pth in @('_editable_impl_intellicrack.pth', 'a1_coverage.pth')) {
     $pthPath = Join-Path $RuntimeSitePackages $pth
@@ -367,21 +397,26 @@ foreach ($pth in @('_editable_impl_intellicrack.pth', 'a1_coverage.pth')) {
 }
 
 # The pip/distlib console-script launchers under Scripts\ embed the absolute
-# build-interpreter path (D:\...\.pixi\envs\default\python.exe). On a target
+# build-interpreter path (D:\...\.pixi\envs\runtime\python.exe). On a target
 # that path does not exist, and worse, if it is user-writable anyone who plants
 # a python.exe there gains code execution through any invoked shim. The
 # application never runs these shims (it launches python via -m), so every shim
 # that embeds the build interpreter is stripped here and Scripts\ is dropped
 # from the launchers' child PATH.
+#
+# Every file is checked, not just *.exe: the entry-point scripts pip installs
+# without a launcher (bottle.py, readelf.py, dul-receive-pack, dul-upload-pack)
+# carry the same absolute path in a shebang line. Scripts\ is not on sys.path,
+# so removing them cannot break an import.
 Write-Progress 'Removing console-script shims that embed the build interpreter path...'
 $ScriptsDir = Join-Path $RuntimeDir 'Scripts'
 $ShimsRemoved = 0
 if (Test-Path -LiteralPath $ScriptsDir) {
-    foreach ($exe in Get-ChildItem -LiteralPath $ScriptsDir -Filter '*.exe' -File -ErrorAction SilentlyContinue) {
-        $bytes = [System.IO.File]::ReadAllBytes($exe.FullName)
+    foreach ($shim in Get-ChildItem -LiteralPath $ScriptsDir -File -Force -ErrorAction SilentlyContinue) {
+        $bytes = [System.IO.File]::ReadAllBytes($shim.FullName)
         $ascii = [System.Text.Encoding]::ASCII.GetString($bytes)
         if ($ascii.Contains($PixiEnv)) {
-            Remove-Item -LiteralPath $exe.FullName -Force
+            Remove-Item -LiteralPath $shim.FullName -Force
             $ShimsRemoved++
         }
     }
@@ -867,7 +902,15 @@ Write-Step 'STAGE' 'Step 13/14: staging hexbench...'
 $HexbenchSrc = Join-Path $RepoRoot 'src\hexbench'
 Assert-Source -Path $HexbenchSrc -What 'hexbench source'
 $HexbenchDest = Join-Path $Stage 'hexbench'
-Invoke-Robocopy -Source $HexbenchSrc -Destination $HexbenchDest -ExcludeDirs @('__pycache__') -ExcludeFiles @('*.pyc')
+# hexbench keeps its test suite and dev tooling inside its own package tree
+# (src/hexbench/tests, gate.ps1, update-deps.ps1, .qodo) rather than under the
+# repo-root tests/ dir, so a plain mirror would ship all of it. None of it is
+# imported at runtime; hexbench.spec is deliberately unused here (Step 14 builds
+# Hexbench.exe from packaging/launcher/hexbench_launcher.spec). Exclude them so
+# only the runnable GUI reaches the installer.
+Invoke-Robocopy -Source $HexbenchSrc -Destination $HexbenchDest `
+    -ExcludeDirs @('__pycache__', 'tests', '.qodo') `
+    -ExcludeFiles @('*.pyc', 'gate.ps1', 'update-deps.ps1', 'hexbench.spec')
 Write-Success 'hexbench staged'
 
 # ---------------------------------------------------------------------------

@@ -1120,6 +1120,17 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 ### Fixed
 
+- **packaging:** Harden installer scripts and enforce runtime deps (`4eea4e7`)
+Expand declared runtime dependencies in `pyproject.toml` and refine the
+staging and Inno Setup configuration to ensure safe, unattended
+deployments and prevent runtime dependency relocation bugs during ML splits.
+- Declare missing module-scope dependencies in `pyproject.toml`
+- Add `packaging/prune_dev.py` to prune dev tools via transitive dependency closure
+- Add `packaging/launcher/version_resource.py` to single-source launcher version info
+- Harden Inno Setup script with compiler floor, safe defaults, and suppressible dialogs
+- Update `stage.ps1` with ShouldProcess support, checksum manifests, and conda ownership checks
+- Add verification test suites covering installer hardening, runtime deps, and staging coverage
+
 - **ui, bridges, sandbox:** Stabilize UI states, error handling, and test runners (`6eb3723`)
 Fix duplicate assistant bubbles on streamed turns, stale model restores during
 provider switches, and theme repolishing across scroll areas. Improve error
@@ -5747,16 +5758,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- **packaging:** Harden installer scripts and enforce runtime deps (``)
-Expand declared runtime dependencies in `pyproject.toml` and refine the
-staging and Inno Setup configuration to ensure safe, unattended
-deployments and prevent runtime dependency relocation bugs during ML splits.
-- Declare missing module-scope dependencies in `pyproject.toml`
-- Add `packaging/prune_dev.py` to prune dev tools via transitive dependency closure
-- Add `packaging/launcher/version_resource.py` to single-source launcher version info
-- Harden Inno Setup script with compiler floor, safe defaults, and suppressible dialogs
-- Update `stage.ps1` with ShouldProcess support, checksum manifests, and conda ownership checks
-- Add verification test suites covering installer hardening, runtime deps, and staging coverage
 
 

@@ -148,8 +148,11 @@ the chosen install directory.
 These are required on the **build host**, not on the end-user machine. The
 end user needs none of them.
 
-- **pixi environment** present at `.pixi/envs/default` (the project's Python
-  3.13 runtime; it becomes the bundled `runtime/`).
+- **pixi environments** present: `.pixi/envs/default` (the full dev/build
+  environment that drives the maturin and PyInstaller build steps) and
+  `.pixi/envs/runtime` (the slim runtime-only environment that becomes the
+  bundled `runtime/`; `stage.ps1` provisions it with `pixi install -e runtime`
+  automatically when it is missing).
 - **Rust toolchain + maturin** - `stage.ps1` rebuilds `hexcore` as a portable
   wheel via `pixi run maturin build --release` with
   `RUSTFLAGS=-C target-cpu=x86-64-v2`.
@@ -188,8 +191,9 @@ pwsh packaging\stage.ps1
 
 This is the heavy step. It recreates `build/stage` from scratch and:
 
-- copies the pixi env into `runtime/`, trimming dev-only and ML-only
-  distributions;
+- copies the slim `runtime` pixi env into `runtime/` and trims residual
+  non-runtime weight (`*.pdb`, `__pycache__`, static `*.lib`, C headers,
+  third-party package test suites, and `share/doc`/`share/man`);
 - rebuilds the portable `hexcore` wheel and installs it into the runtime;
 - materializes `app/src/intellicrack`;
 - moves the ML-only distributions (torch, transformers, and their exclusive

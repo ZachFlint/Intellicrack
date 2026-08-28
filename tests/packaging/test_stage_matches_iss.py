@@ -1009,9 +1009,11 @@ def test_iss_section_lines_is_scoped_and_skips_comments() -> None:
 # --- Staged-runtime build-path hygiene ---------------------------------------
 
 # The build interpreter path substring that pip/distlib console-script shims and
-# the editable dist-info embed. It is drive/checkout-independent, so it is a
-# stable marker of a leaked build path regardless of where the repo was built.
-_BUILD_PATH_MARKER: Final[str] = r".pixi\envs\default"
+# the editable dist-info embed. It is drive/checkout- and env-independent (the
+# installer stages from the ``runtime`` env, dev builds from ``default``), so
+# matching ``.pixi\envs\`` generically flags a leaked build path regardless of
+# which pixi environment the runtime was staged from or where it was built.
+_BUILD_PATH_MARKER: Final[str] = r".pixi\envs" + "\\"
 
 _SCRIPTS_REL: Final[str] = "runtime/Scripts"
 _SITE_PACKAGES_REL: Final[str] = "runtime/Lib/site-packages"
@@ -1021,22 +1023,27 @@ def scripts_shims_embedding_build_path(stage_root: Path) -> list[str]:
     r"""Return staged ``runtime\Scripts`` exes that embed the build interpreter path.
 
     These pip/distlib console-script launchers hardcode the absolute build
-    interpreter (``...\.pixi\envs\default\python.exe``); on a target that path
-    is absent and, if user-writable, a code-execution surface. ``stage.ps1``
+    interpreter (``...\.pixi\envs\runtime\python.exe`` for the staged runtime,
+    ``...\.pixi\envs\default\python.exe`` for a dev build); on a target that
+    path is absent and, if user-writable, a code-execution surface. ``stage.ps1``
     strips every such shim, so any survivor is a staging regression.
+
+    Every file is checked, not just ``*.exe``: pip also installs entry points as
+    plain scripts (``bottle.py``, ``dul-receive-pack``) whose shebang carries the
+    same absolute path, and those leak the build tree just as an exe does.
 
     Args:
         stage_root: The staged tree that mirrors the installed ``{app}`` layout.
 
     Returns:
-        list[str]: The names of ``Scripts`` exes still embedding the build path,
+        list[str]: The names of ``Scripts`` files still embedding the build path,
             empty when the strip step did its job (or no ``Scripts`` dir exists).
     """
     scripts = _rel_to_path(stage_root, _SCRIPTS_REL)
     if not scripts.is_dir():
         return []
     marker = _BUILD_PATH_MARKER.encode("ascii")
-    return [exe.name for exe in sorted(scripts.glob("*.exe")) if marker in exe.read_bytes()]
+    return [item.name for item in sorted(scripts.iterdir()) if item.is_file() and marker in item.read_bytes()]
 
 
 def editable_dist_infos(stage_root: Path) -> list[str]:
@@ -1065,7 +1072,7 @@ def test_staged_runtime_has_no_build_path_shims() -> None:
 
     Skips when the staging tree is absent (for example in the sandbox); on a
     build host it fails loudly if the shim-strip step regressed and left a
-    console-script launcher hardcoding ``.pixi\envs\default``.
+    console-script launcher hardcoding a ``.pixi\envs\`` build path.
     """
     if not _BUILD_STAGE.is_dir():
         pytest.skip(f"staging tree not built: {_BUILD_STAGE} is absent (run packaging/stage.ps1 on a build host first)")
@@ -1091,8 +1098,10 @@ def test_build_path_hygiene_checkers_are_falsifiable(tmp_path: Path) -> None:
     """The shim and dist-info checkers pass on a clean stage and flag a leak.
 
     Builds a tiny fake stage: a clean ``Scripts`` exe and a clean site-packages,
-    confirms both checkers report nothing, then plants a shim embedding the build
-    path and an ``intellicrack*.dist-info`` and confirms both are detected.
+    confirms both checkers report nothing, then plants a shim embedding the
+    runtime-env build path (the current staging source), a *non-exe* entry-point
+    script carrying the same path in a shebang, and an ``intellicrack*.dist-info``
+    and confirms all three are detected.
 
     Args:
         tmp_path: Pytest temporary directory used to build a fake stage.
@@ -1103,15 +1112,22 @@ def test_build_path_hygiene_checkers_are_falsifiable(tmp_path: Path) -> None:
     scripts.mkdir(parents=True)
     site_packages.mkdir(parents=True)
     (scripts / "clean.exe").write_bytes(b"MZ\x90\x00 no build path here")
+    (scripts / "clean.py").write_bytes(b"#!python\nprint(1)\n")
 
     assert scripts_shims_embedding_build_path(stage) == []
     assert editable_dist_infos(stage) == []
 
-    (scripts / "pip.exe").write_bytes(b"MZ shebang C:\\build\\.pixi\\envs\\default\\python.exe")
+    (scripts / "pip.exe").write_bytes(b"MZ shebang C:\\build\\.pixi\\envs\\runtime\\python.exe")
+    (scripts / "bottle.py").write_bytes(b"#!C:\\build\\.pixi\\envs\\runtime\\python.exe\nprint(1)\n")
     (site_packages / "intellicrack-0.1.0a1.dist-info").mkdir()
 
-    assert scripts_shims_embedding_build_path(stage) == ["pip.exe"]
-    assert editable_dist_infos(stage) == ["intellicrack-0.1.0a1.dist-info"]
+    assert scripts_shims_embedding_build_path(stage) == ["bottle.py", "pip.exe"], (
+        "the shim checker missed a planted build-path leak; it must flag every file "
+        "under Scripts, not just *.exe"
+    )
+    assert editable_dist_infos(stage) == ["intellicrack-0.1.0a1.dist-info"], (
+        "the dist-info checker missed a planted editable install"
+    )
 
 
 # --- Git tracking of the launcher build inputs (host-native) -----------------

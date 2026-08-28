@@ -183,6 +183,23 @@ impl MmapDocument {
         self.save(path)
     }
 
+    /// Releases the memory map backing this document.
+    ///
+    /// The current content is copied into an owned in-memory buffer and the
+    /// piece table is rebuilt from that buffer, dropping every reference into
+    /// the mapped file so the underlying `Arc<Mmap>` is freed and the OS file
+    /// section is unmapped. The document remains fully usable in memory (reads,
+    /// edits, and a later `save`/`save_as` all continue to work); it is simply
+    /// no longer backed by, or holding a lock on, the file. On Windows this is
+    /// the deterministic way to make a saved or opened file deletable or
+    /// replaceable again without waiting for the document to be dropped. The
+    /// call is idempotent and leaves the file path and modified flag untouched.
+    pub fn close(&mut self) {
+        let data = self.piece_table.materialize();
+        self.piece_table = PieceTable::new(&data);
+        self.mmap = None;
+    }
+
     pub fn apply_insert(&mut self, offset: usize, data: &[u8]) {
         self.piece_table.insert(offset, data);
     }
@@ -353,5 +370,40 @@ mod tests {
 
         let _ = fs::remove_file(&path);
         let _ = fs::remove_dir_all(&blocked_target);
+    }
+
+    /// `close()` must drop the memory map while preserving the current content
+    /// in an owned buffer. On Windows the released map is observable: a live
+    /// mapping refuses a truncating rewrite of the same path (os error 1224),
+    /// and only after `close()` does that rewrite succeed. The closed document
+    /// keeps its own copy, so the external rewrite does not change its bytes.
+    #[test]
+    fn test_close_releases_mmap_and_preserves_content() {
+        let dir = std::env::temp_dir();
+        let path = dir.join("hexcore_test_close_release.bin");
+        let original: &[u8] = b"CLOSE ME PLEASE 0123456789";
+        fs::write(&path, original).unwrap();
+
+        let mut doc = MmapDocument::open(&path).unwrap();
+        assert!(doc.mmap.is_some(), "open must memory-map a non-empty file");
+        assert_eq!(doc.piece_table.materialize(), original);
+
+        doc.close();
+        assert!(doc.mmap.is_none(), "close must drop the memory map");
+        assert_eq!(
+            doc.piece_table.materialize(),
+            original,
+            "close must preserve the current content in an owned buffer"
+        );
+
+        fs::write(&path, b"REPLACED").expect("file must be writable after close releases the map");
+
+        assert_eq!(
+            doc.piece_table.materialize(),
+            original,
+            "the closed document keeps its own copy, unaffected by the rewrite"
+        );
+
+        let _ = fs::remove_file(&path);
     }
 }

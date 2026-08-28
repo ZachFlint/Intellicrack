@@ -184,6 +184,10 @@ impl DocumentState {
         self.save(path)
     }
 
+    fn close(&mut self) {
+        self.inner.close();
+    }
+
     fn length(&self) -> usize {
         self.inner.document_size()
     }
@@ -1360,6 +1364,10 @@ impl HexDocument {
 
     fn save_as(&self, py: Python<'_>, path: &str) -> PyResult<()> {
         self.lock_write(py).save_as(path)
+    }
+
+    fn close(&self, py: Python<'_>) {
+        self.lock_write(py).close();
     }
 
     fn length(&self, py: Python<'_>) -> usize {
