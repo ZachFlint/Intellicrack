@@ -771,7 +771,6 @@ foreach ($tool in $ToolSubset) {
     Invoke-Robocopy -Source $toolSrc -Destination $toolDest
     Write-Progress "Staged tool: $tool"
 }
-Write-Warning 'tools/resource_hacker skipped (ResourceHacker.exe is absent from the repo)'
 Assert-Produced -Path (Join-Path $Stage 'app\tools\cutter\rizin.exe') -What 'cutter rizin.exe'
 Assert-Produced -Path (Join-Path $Stage 'app\tools\radare2\bin\radare2.exe') -What 'radare2.exe'
 Assert-Produced -Path (Join-Path $Stage 'app\tools\NASM\nasm.exe') -What 'nasm.exe'
