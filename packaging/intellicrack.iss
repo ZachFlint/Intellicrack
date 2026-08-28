@@ -7,6 +7,10 @@
 ; assembles an ephemeral child environment at runtime, so the machine and user
 ; environments are never touched.
 
+#if VER < EncodeVer(6, 6, 0)
+#error Inno Setup 6.6.0 or newer is required to compile this script. It uses WizardStyle=modern dynamic and WizardImageFileDynamicDark (both added in 6.6.0) and ArchitecturesAllowed/ArchitecturesInstallIn64BitMode=x64os (added in 6.3.0).
+#endif
+
 #define AppName "Intellicrack"
 #define AppPublisher "Zachary Flint"
 #define AppUrl "https://github.com/zacharyflint/intellicrack"
@@ -37,6 +41,7 @@ VersionInfoProductName={#AppName}
 VersionInfoCopyright=Copyright (C) 2026 {#AppPublisher}
 ArchitecturesAllowed=x64os
 ArchitecturesInstallIn64BitMode=x64os
+MinVersion=10.0
 PrivilegesRequired=admin
 DefaultDirName={autopf}\Intellicrack
 DefaultGroupName=Intellicrack
@@ -57,9 +62,20 @@ CloseApplications=yes
 RestartApplications=yes
 SetupLogging=yes
 AppMutex=Global\IntellicrackSingleInstance
+; AppMutex only detects a running Intellicrack; SetupMutex is what stops two
+; Setup processes from racing on the same {app} tree during [InstallDelete].
+SetupMutex=IntellicrackSetupSingleInstance,Global\IntellicrackSetupSingleInstance
 WizardImageFile=wizard\banner-light.png
 WizardImageFileDynamicDark=wizard\banner-dark.png
 WizardSmallImageFile=wizard\small.png
+; Code signing is opt-in, mirroring the launcher signing in stage.ps1: define
+; SignToolName at compile time (ISCC /DSignToolName=<name>) and register the
+; matching command with ISCC /S<name>=<command>. With the define absent the
+; script compiles unsigned, so a local build needs no certificate.
+#ifdef SignToolName
+SignTool={#SignToolName}
+SignedUninstaller=yes
+#endif
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -76,11 +92,6 @@ Name: "tool_radare2"; Description: "radare2 reverse-engineering framework (unche
 Name: "tool_rizin"; Description: "Cutter / rizin analysis toolkit (uncheck to use your own install, configured in Tools -> Tool Settings -> Browse to your install)"; Types: full
 Name: "tool_x64dbg"; Description: "x64dbg debugger with the Intellicrack bridge plugins (uncheck to use your own install, configured in Tools -> Tool Settings -> Browse to your install)"; Types: full
 Name: "tool_nasm"; Description: "NASM assembler (uncheck to use your own install, configured in Tools -> Tool Settings -> Browse to your install)"; Types: full
-Name: "tool_pmd"; Description: "PMD source analyzer (uncheck to use your own install, configured in Tools -> Tool Settings -> Browse to your install)"; Types: full
-Name: "tool_gjf"; Description: "google-java-format formatter (uncheck to use your own install, configured in Tools -> Tool Settings -> Browse to your install)"; Types: full
-Name: "tool_adobeinjector"; Description: "Adobe injector helper (uncheck to use your own install, configured in Tools -> Tool Settings -> Browse to your install)"; Types: full
-Name: "tool_idmactivator"; Description: "IDM activator helper (uncheck to use your own install, configured in Tools -> Tool Settings -> Browse to your install)"; Types: full
-Name: "tool_windowspatch"; Description: "Windows activation helper (uncheck to use your own install, configured in Tools -> Tool Settings -> Browse to your install)"; Types: full
 Name: "ml"; Description: "Local ML inference stack (multi-GB: torch + transformers)"; Types: full
 Name: "hexbench"; Description: "Hexbench: standalone enhanced hex GUI that runs the hexcore runtime in a separate process, independent of the main app"; Types: full
 Name: "qemu"; Description: "Bundled QEMU sandbox backend"; Types: full
@@ -105,6 +116,8 @@ Source: "{#StageRoot}\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion; Co
 Source: "{#StageRoot}\runtime\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 Source: "{#StageRoot}\app\src\*"; DestDir: "{app}\app\src"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 Source: "{#StageRoot}\app\vendor\*"; DestDir: "{app}\app\vendor"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+; Provenance stamp written by stage.ps1 (commit, dirty flag, version, build time).
+Source: "{#StageRoot}\app\build-info.json"; DestDir: "{app}\app"; Flags: ignoreversion; Components: core
 
 ; External tools (each optional, one component per tool).
 Source: "{#StageRoot}\app\tools\ghidra\*"; DestDir: "{app}\app\tools\ghidra"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: tool_ghidra
@@ -112,11 +125,6 @@ Source: "{#StageRoot}\app\tools\radare2\*"; DestDir: "{app}\app\tools\radare2"; 
 Source: "{#StageRoot}\app\tools\cutter\*"; DestDir: "{app}\app\tools\cutter"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: tool_rizin
 Source: "{#StageRoot}\app\tools\x64dbg\*"; DestDir: "{app}\app\tools\x64dbg"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: tool_x64dbg
 Source: "{#StageRoot}\app\tools\NASM\*"; DestDir: "{app}\app\tools\NASM"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: tool_nasm
-Source: "{#StageRoot}\app\tools\pmd\*"; DestDir: "{app}\app\tools\pmd"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: tool_pmd
-Source: "{#StageRoot}\app\tools\google-java-format\*"; DestDir: "{app}\app\tools\google-java-format"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: tool_gjf
-Source: "{#StageRoot}\app\tools\AdobeInjector\*"; DestDir: "{app}\app\tools\AdobeInjector"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: tool_adobeinjector
-Source: "{#StageRoot}\app\tools\IDMActivator\*"; DestDir: "{app}\app\tools\IDMActivator"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: tool_idmactivator
-Source: "{#StageRoot}\app\tools\WindowsPatch\*"; DestDir: "{app}\app\tools\WindowsPatch"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: tool_windowspatch
 Source: "{#StageRoot}\app\tools\qemu\*"; DestDir: "{app}\app\tools\qemu"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: qemu
 
 ; ML overlay: merges into the runtime site-packages tree.
@@ -160,11 +168,22 @@ const
   MinMlFreeBytes = 12884901888;
   { DISM exit code signalling the feature was enabled but a reboot is required. }
   DismRebootRequired = 3010;
+  { Windows 10 RTM build number: the oldest build this platform supports. }
+  MinWindowsBuild = 10240;
+  { The DISM gauge advances one step per output line and stops short of the
+    ceiling, because how many lines DISM will emit is not known in advance. }
+  DismProgressStep = 5;
+  DismProgressCeiling = 95;
+  DismProgressMax = 100;
 
 var
   { Set when enabling the Windows Hypervisor Platform reports a pending reboot,
     so NeedRestart can request one at the end of the wizard. }
   HyperVRestartNeeded: Boolean;
+  { The DISM progress page and its current position, at file scope because the
+    ExecAndLogOutput callback that advances them takes no user data. }
+  DismProgressPage: TOutputProgressWizardPage;
+  DismProgressPos: Integer;
 
 { Add or remove the Microsoft Defender folder exclusion for the install dir.
   Verb is 'Add' or 'Remove'; the matching *-MpPreference cmdlet is invoked. }
@@ -187,18 +206,46 @@ begin
       '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
   begin
     Log('Defender exclusion (' + Verb + ') could not be launched.');
-    if (Verb = 'Add') and (not WizardSilent()) then
-      MsgBox('The Microsoft Defender exclusion could not be applied automatically. '
-        + 'If the bundled utilities are quarantined, add an exclusion for the install '
-        + 'folder manually under Windows Security.', mbInformation, MB_OK);
+    { WizardSilent is a Setup-only function, so the 'Remove' call made from
+      uninstall must not reach it even if the compiler stops short-circuiting. }
+    if Verb = 'Add' then
+    begin
+      if not WizardSilent() then
+        MsgBox('The Microsoft Defender exclusion could not be applied automatically. '
+          + 'If the bundled utilities are quarantined, add an exclusion for the install '
+          + 'folder manually under Windows Security.', mbInformation, MB_OK);
+    end;
   end
   else
   begin
     Log('Defender exclusion (' + Verb + ') returned exit code ' + IntToStr(ResultCode) + '.');
-    if (Verb = 'Add') and (ResultCode <> 0) and (not WizardSilent()) then
-      MsgBox('The Microsoft Defender exclusion command returned a non-zero exit code ('
-        + IntToStr(ResultCode) + '). The exclusion may not be active; you can add it '
-        + 'manually under Windows Security.', mbInformation, MB_OK);
+    if Verb = 'Add' then
+    begin
+      if (ResultCode <> 0) and (not WizardSilent()) then
+        MsgBox('The Microsoft Defender exclusion command returned a non-zero exit code ('
+          + IntToStr(ResultCode) + '). The exclusion may not be active; you can add it '
+          + 'manually under Windows Security.', mbInformation, MB_OK);
+    end;
+  end;
+end;
+
+{ ExecAndLogOutput callback for the DISM run. Supplying a handler replaces the
+  automatic logging Inno performs when OnLog is nil, so every line is written to
+  the log here explicitly as well as driving the gauge. }
+procedure DismLogOutput(const S: String; const Error, FirstLine: Boolean);
+begin
+  if FirstLine then
+    Log('DISM output:');
+  Log(S);
+  if DismProgressPage <> nil then
+  begin
+    if DismProgressPos < DismProgressCeiling then
+      DismProgressPos := DismProgressPos + DismProgressStep;
+    DismProgressPage.SetProgress(DismProgressPos, DismProgressMax);
+    if not Error then
+      DismProgressPage.SetText(
+        'Enabling the Windows Hypervisor Platform for QEMU/WHPX sandbox acceleration.',
+        Trim(S));
   end;
 end;
 
@@ -207,22 +254,31 @@ end;
 procedure EnableHyperVPlatform();
 var
   ResultCode: Integer;
-  ProgressPage: TOutputProgressWizardPage;
   Launched: Boolean;
 begin
-  { Run DISM through ExecAndLogOutput behind a progress page. ExecAndLogOutput
-    pumps the message queue while the feature is enabling, so the wizard stays
-    responsive instead of going "Not Responding" during the blocking call. }
-  ProgressPage := CreateOutputProgressPage('Windows Hypervisor Platform',
+  { Run DISM through ExecAndLogOutput behind a progress page. Plain Exec pumps
+    the message queue just as well; ExecAndLogOutput is used because it hands
+    the child process output to the script line by line, which is what lets the
+    run be logged and the gauge advanced while the feature is enabling. }
+  DismProgressPage := CreateOutputProgressPage('Windows Hypervisor Platform',
     'Enabling the Windows Hypervisor Platform for QEMU/WHPX sandbox acceleration. This can take a minute.');
-  ProgressPage.SetProgress(0, 100);
-  ProgressPage.Show();
+  DismProgressPos := 0;
+  DismProgressPage.SetProgress(DismProgressPos, DismProgressMax);
+  DismProgressPage.Show();
+  Launched := False;
   try
-    Launched := ExecAndLogOutput(ExpandConstant('{sys}\dism.exe'),
-      '/online /enable-feature /featurename:HypervisorPlatform /all /norestart',
-      '', SW_HIDE, ewWaitUntilTerminated, ResultCode, nil);
+    try
+      Launched := ExecAndLogOutput(ExpandConstant('{sys}\dism.exe'),
+        '/online /enable-feature /featurename:HypervisorPlatform /all /norestart',
+        '', SW_HIDE, ewWaitUntilTerminated, ResultCode, @DismLogOutput);
+    except
+      Log('DISM could not be run to enable the Windows Hypervisor Platform: '
+        + GetExceptionMessage);
+      Launched := False;
+    end;
   finally
-    ProgressPage.Hide();
+    DismProgressPage.Hide();
+    DismProgressPage := nil;
   end;
 
   if not Launched then
@@ -253,22 +309,14 @@ var
 begin
   Result := True;
 
-  { Guard: refuse anything that is not a 64-bit install. }
-  if not Is64BitInstallMode() then
-  begin
-    MsgBox('Intellicrack requires 64-bit (x64) Windows. Setup cannot continue on this system.',
-      mbCriticalError, MB_OK);
-    Result := False;
-    Exit;
-  end;
-
   { Guard: require Windows 10 (build 10240) or newer. }
   GetWindowsVersionEx(Version);
-  if (Version.Major < 10) then
+  if (Version.Major < 10)
+    or ((Version.Major = 10) and (Version.Build < MinWindowsBuild)) then
   begin
-    MsgBox('Intellicrack requires Windows 10 or Windows 11 (64-bit). '
+    SuppressibleMsgBox('Intellicrack requires Windows 10 or Windows 11 (64-bit). '
       + 'The detected Windows version is not supported.',
-      mbCriticalError, MB_OK);
+      mbCriticalError, MB_OK, IDOK);
     Result := False;
     Exit;
   end;
@@ -386,11 +434,15 @@ begin
     ToolsDir := ExpandConstant('{localappdata}\intellicrack_tools');
     if DirExists(ToolsDir) then
     begin
-      if MsgBox('Also remove the Intellicrack tool cache outside the install '
+      { Suppressible so an unattended uninstall is not blocked on a modal, and
+        defaulted to IDNO so a silent run never destroys the cache unasked. }
+      if SuppressibleMsgBox('Also remove the Intellicrack tool cache outside the install '
           + 'folder (' + ToolsDir + ')?' + #13#10
           + 'Your credential files are not affected.',
-          mbConfirmation, MB_YESNO) = IDYES then
-        DelTree(ToolsDir, True, True, True);
+          mbConfirmation, MB_YESNO, IDNO) = IDYES then
+        DelTree(ToolsDir, True, True, True)
+      else
+        Log('Tool cache left in place: ' + ToolsDir);
     end;
   end;
 end;

@@ -81,6 +81,8 @@ _LINUX_AGENT_BOOTSTRAP: Final[str] = "tests/sandbox/qemu/test_linux_agent_bootst
 _APP_ICON_FRAMES: Final[str] = "tests/ui/test_app_icon_frames.py"
 _VERSION_CONSISTENCY: Final[str] = "tests/packaging/test_version_consistency.py"
 _STAGE_MATCHES_ISS: Final[str] = "tests/packaging/test_stage_matches_iss.py"
+_RUNTIME_DEPS: Final[str] = "tests/packaging/test_project_runtime_dependencies.py"
+_PRUNE_DEV: Final[str] = "tests/packaging/test_prune_dev.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -200,6 +202,13 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_VERSION_CONSISTENCY, "test_pyproject_package_and_workspace_versions_agree"),
         (_VERSION_CONSISTENCY, "test_all_metadata_locations_agree_with_pyproject"),
         (_STAGE_MATCHES_ISS, "test_launcher_specs_and_bootstrappers_are_tracked"),
+        (_RUNTIME_DEPS, "test_added_runtime_distributions_are_declared"),
+        (_RUNTIME_DEPS, "test_every_module_level_src_import_is_declared"),
+        (_RUNTIME_DEPS, "test_core_packaging_stays_out_of_ml_overlay"),
+        (_PRUNE_DEV, "test_prune_set_is_non_trivial"),
+        (_PRUNE_DEV, "test_known_dev_tools_are_pruned"),
+        (_PRUNE_DEV, "test_runtime_dependencies_are_never_pruned"),
+        (_PRUNE_DEV, "test_foundational_packaging_floor_is_protected"),
     },
 )
 

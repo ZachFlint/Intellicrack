@@ -21,13 +21,32 @@
 # path, and reports a failure it cannot recover from in a dialog instead, so it
 # needs no console of its own -- while the child it spawns is started under
 # CREATE_NO_WINDOW precisely so that the child keeps one.
+#
+# The Win32 version resource is generated into the build directory rather than
+# tracked, because every field in it is derived from src/intellicrack/_metadata.py
+# by version_resource.py beside this file. This bootstrapper ships with the
+# installer, so it carries the installed product's version, not the standalone
+# editor's own.
 
+import sys
 from pathlib import Path
 
 
-REPO_ROOT = Path(SPECPATH).resolve().parents[1]
+SPEC_DIR = Path(SPECPATH).resolve()
+if str(SPEC_DIR) not in sys.path:
+    sys.path.insert(0, str(SPEC_DIR))
+
+from version_resource import write_version_resource
+
+REPO_ROOT = SPEC_DIR.parents[1]
 LAUNCHER_SCRIPT = REPO_ROOT / "packaging" / "launcher" / "hexbench_launcher.py"
 ICON_FILE = REPO_ROOT / "src" / "hexbench" / "hexbench.ico"
+VERSION_FILE = write_version_resource(
+    destination=Path(workpath) / "Hexbench.version.txt",
+    repo_root=REPO_ROOT,
+    executable_name="Hexbench",
+    description="Standalone hex GUI that runs the Intellicrack hexcore runtime in its own process.",
+)
 
 
 a = Analysis(
@@ -54,6 +73,7 @@ exe = EXE(
     [],
     name="Hexbench",
     icon=str(ICON_FILE),
+    version=str(VERSION_FILE),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

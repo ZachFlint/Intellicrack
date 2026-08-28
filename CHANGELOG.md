@@ -9,6 +9,16 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **packaging,sandbox:** Relocate user state and add guest process picker (`dca310a`)
+Relocate user-writable configuration, credentials, and state under `%LOCALAPPDATA%` to prevent permission issues in read-only installation directories, and add guest process enumeration to the Windows Sandbox backend for targeted memory dumping.
+- Redirect config, logs, data, and `.env` resolution to per-user state directory
+- Add `list_guest_processes` to Windows Sandbox backend and bridge
+- Introduce `GuestProcessPickerDialog` for memory dump targeting in Sandbox UI
+- Wire exact-byte memory searching directly in x64dbg panel
+- Add Hexbench launcher and PyInstaller specs for packaging
+- Optimize Windows guest provisioning by reusing single mounted virtio medium
+- Update Inno Setup packaging scripts, stage workflow, and asset generation
+
 - **hexbench,core:** Enhance UI accessibility, packaging, and runtime bridges (`a78239d`)
 Implement comprehensive accessibility overhauls across the Hexbench UI, enhance native integration and installer packaging, and expand tool discovery and sandbox orchestration. The web-based Hexbench interface now provides complete ARIA semantics, forced-colors high contrast support, full keyboard navigation across menubars and tab strips, dynamic row sizing, and analytical charts with fallback-safe token mappings. The backend and bridge layers receive structured error remediation, custom tool discovery paths, JDK version validation for Ghidra, and a single-instance mutex matching Inno Setup requirements.
 In the frontend, `shell.js`, `grid.js`, and `panels.js` introduce virtual address translation tracking, numeric and binary search parsing, context-menu operations for block and bit manipulations, and responsive row byte fitting. Design specimen cards and the card generator (`build_cards.py`) were synchronized with the central design tokens, control height standards, and `@media (forced-colors: active)` contrast rules. Canvas-based charting now safely falls back to theme-defined hex colors when CSS custom properties are missing.
@@ -488,16 +498,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
-
-- **packaging,sandbox:** Relocate user state and add guest process picker (``)
-Relocate user-writable configuration, credentials, and state under `%LOCALAPPDATA%` to prevent permission issues in read-only installation directories, and add guest process enumeration to the Windows Sandbox backend for targeted memory dumping.
-- Redirect config, logs, data, and `.env` resolution to per-user state directory
-- Add `list_guest_processes` to Windows Sandbox backend and bridge
-- Introduce `GuestProcessPickerDialog` for memory dump targeting in Sandbox UI
-- Wire exact-byte memory searching directly in x64dbg panel
-- Add Hexbench launcher and PyInstaller specs for packaging
-- Optimize Windows guest provisioning by reusing single mounted virtio medium
-- Update Inno Setup packaging scripts, stage workflow, and asset generation
 
 
 ### Changed
@@ -5747,5 +5747,16 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+- **packaging:** Harden installer scripts and enforce runtime deps (``)
+Expand declared runtime dependencies in `pyproject.toml` and refine the
+staging and Inno Setup configuration to ensure safe, unattended
+deployments and prevent runtime dependency relocation bugs during ML splits.
+- Declare missing module-scope dependencies in `pyproject.toml`
+- Add `packaging/prune_dev.py` to prune dev tools via transitive dependency closure
+- Add `packaging/launcher/version_resource.py` to single-source launcher version info
+- Harden Inno Setup script with compiler floor, safe defaults, and suppressible dialogs
+- Update `stage.ps1` with ShouldProcess support, checksum manifests, and conda ownership checks
+- Add verification test suites covering installer hardening, runtime deps, and staging coverage
 
 
