@@ -61,6 +61,10 @@ check, not as truth to copy. Re-run each check yourself and correct any drift.
   resource_hacker, pmd, google-java-format, AdobeInjector, IDMActivator,
   WindowsPatch. Inventory the REAL tree; confirm which are actually referenced by
   code vs incidental.
+  RESOLVED: the staged tool subset is radare2, cutter, NASM (plus x64dbg, Ghidra
+  and QEMU staged in their own steps). resource_hacker was incidental — nothing
+  in src/ or the .iss referenced it and only its docs/samples were ever tracked,
+  so tools\resource_hacker and its dead stage.ps1 warning have been removed.
 - Ghidra needs JDK 21 (tools\ghidra\Ghidra\application.properties:
   application.java.min=21). No JDK is bundled in tools\ghidra. The bridge's JVM
   resolver GhidraBridge._discover_jdk() (src\intellicrack\bridges\ghidra.py, ~line
