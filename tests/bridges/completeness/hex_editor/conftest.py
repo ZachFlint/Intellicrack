@@ -29,6 +29,7 @@ calls into, exactly the pattern already established in
 
 from __future__ import annotations
 
+import asyncio
 import gc
 import os
 import tempfile
@@ -266,6 +267,8 @@ class FakeSandboxBridge(ToolBridgeBase):
         self.next_instance_id: str = "fake-instance-1"
         self.copy_should_fail: bool = False
         self.run_binary_result: dict[str, Any] = {"exit_code": 0, "stdout": "ok", "stderr": ""}
+        self.capture_source_bytes: bool = False
+        self.copied_payloads: list[bytes] = []
 
     @property
     def name(self) -> ToolName:
@@ -358,6 +361,8 @@ class FakeSandboxBridge(ToolBridgeBase):
             RuntimeError: When ``copy_should_fail`` has been set by the test.
         """
         self.copy_calls.append({"instance_id": instance_id, "source": source, "dest": dest})
+        if self.capture_source_bytes:
+            self.copied_payloads.append(await asyncio.to_thread(Path(source).read_bytes))
         if self.copy_should_fail:
             msg = "simulated copy_to failure"
             raise RuntimeError(msg)

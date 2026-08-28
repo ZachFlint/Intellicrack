@@ -5201,6 +5201,8 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
                             instance_id=instance_id,
                         )
             if tmp_path is not None:
+                if self.document is not None:
+                    self.document.close()
                 try:
                     await asyncio.to_thread(Path(tmp_path).unlink)
                 except OSError:

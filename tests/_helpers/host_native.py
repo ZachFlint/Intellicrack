@@ -82,7 +82,8 @@ _APP_ICON_FRAMES: Final[str] = "tests/ui/test_app_icon_frames.py"
 _VERSION_CONSISTENCY: Final[str] = "tests/packaging/test_version_consistency.py"
 _STAGE_MATCHES_ISS: Final[str] = "tests/packaging/test_stage_matches_iss.py"
 _RUNTIME_DEPS: Final[str] = "tests/packaging/test_project_runtime_dependencies.py"
-_PRUNE_DEV: Final[str] = "tests/packaging/test_prune_dev.py"
+_STAGE_EXCLUDES: Final[str] = "tests/packaging/test_stage_excludes.py"
+_PIXI_ENVIRONMENTS: Final[str] = "tests/packaging/test_pixi_runtime_environment.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -202,13 +203,26 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_VERSION_CONSISTENCY, "test_pyproject_package_and_workspace_versions_agree"),
         (_VERSION_CONSISTENCY, "test_all_metadata_locations_agree_with_pyproject"),
         (_STAGE_MATCHES_ISS, "test_launcher_specs_and_bootstrappers_are_tracked"),
+        # The staged tree lives under build\stage, which is not mounted into the
+        # test container, so in the sandbox these can only ever skip. They gate
+        # the real staging output and must run on the build host.
+        (_STAGE_MATCHES_ISS, "test_staged_runtime_has_no_build_path_shims"),
+        (_STAGE_MATCHES_ISS, "test_staged_runtime_has_no_editable_dist_info"),
+        (_STAGE_MATCHES_ISS, "test_every_iss_source_exists_in_stage"),
+        (_STAGE_MATCHES_ISS, "test_required_binaries_present_in_stage"),
+        (_STAGE_MATCHES_ISS, "test_every_staged_file_is_packaged_by_the_iss"),
         (_RUNTIME_DEPS, "test_added_runtime_distributions_are_declared"),
         (_RUNTIME_DEPS, "test_every_module_level_src_import_is_declared"),
         (_RUNTIME_DEPS, "test_core_packaging_stays_out_of_ml_overlay"),
-        (_PRUNE_DEV, "test_prune_set_is_non_trivial"),
-        (_PRUNE_DEV, "test_known_dev_tools_are_pruned"),
-        (_PRUNE_DEV, "test_runtime_dependencies_are_never_pruned"),
-        (_PRUNE_DEV, "test_foundational_packaging_floor_is_protected"),
+        (_STAGE_EXCLUDES, "test_runtime_stage_excludes_pixi_trash"),
+        (_STAGE_EXCLUDES, "test_hexbench_stage_excludes_dev_tooling"),
+        (_PIXI_ENVIRONMENTS, "test_runtime_environment_excludes_build_and_dev_features"),
+        (_PIXI_ENVIRONMENTS, "test_build_toolchain_lives_only_in_the_build_feature"),
+        (_PIXI_ENVIRONMENTS, "test_runtime_feature_retains_shipping_dependencies"),
+        (_PIXI_ENVIRONMENTS, "test_default_environment_still_composes_every_feature"),
+        (_PIXI_ENVIRONMENTS, "test_every_project_dependency_is_declared_in_the_runtime_feature"),
+        (_PIXI_ENVIRONMENTS, "test_stage_script_sources_the_runtime_environment"),
+        (_STAGE_EXCLUDES, "test_runtime_trim_strips_libs_headers_tests_and_docs"),
     },
 )
 

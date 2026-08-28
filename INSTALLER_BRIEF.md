@@ -93,6 +93,11 @@ Produce a written dependency/asset manifest, each row backed by a check:
    `pixi list` and a live import probe (import every runtime + ml module) in
    .pixi\envs\default. Record what a RUNTIME-ONLY subset needs (exclude
    dev/test/docs/profile) — this defines what the shipped runtime must contain.
+   RESOLVED: that subset is now a real pixi environment. [tool.pixi] is split
+   into features (build/tooling/dev/test/docs/profile) plus a default feature
+   holding only runtime dependencies; `runtime` composes the default feature
+   alone and `default` composes them all. packaging\stage.ps1 stages the
+   installer from .pixi\envs\runtime, so the build toolchain never ships.
 2. Native artifacts: read the justfile recipes build-hexcore and
    install-x64dbg-plugin and scripts\install-*.ps1. Confirm hexcore's installed
    location in the env and the exact plugin artifact paths. Determine precisely
