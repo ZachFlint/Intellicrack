@@ -208,7 +208,50 @@ def test_empty_recipe_arguments_do_not_become_empty_command_arguments(tmp_path: 
     assert "real=2:-SkipJdkDownload,-SkipGuestImage" in out, f"real flags were not split correctly: {out}"
 
 
-def test_build_installer_recipe_delegates_to_the_logging_script() -> None:
+def test_logged_step_records_exit_code_and_duration(tmp_path: Path) -> None:
+    """Every step must log a completion line carrying its real exit code and time.
+
+    ``Invoke-LoggedStep`` is lifted verbatim and run against a child that prints a
+    line and exits ``7``. The log must show the child's output followed by a
+    ``done in <n>s (exit 7)`` line -- the exit code read from ``$LASTEXITCODE``,
+    not a hardcoded ``0`` -- and the function must return that same ``7`` so the
+    caller's failure check still fires. Deleting the completion line, hardcoding
+    the code, or dropping the duration reddens this gate.
+
+    Args:
+        tmp_path: Pytest-provided per-test temporary directory.
+    """
+    log = tmp_path / "build.log"
+    script = "\n".join(
+        (
+            "Set-StrictMode -Version Latest",
+            "$ErrorActionPreference = 'Stop'",
+            "$PSNativeCommandUseErrorActionPreference = $false",
+            _ansi_pattern(),
+            f"$LogPath = '{log}'",
+            "Set-Content -LiteralPath $LogPath -Value '' -Encoding utf8 -NoNewline",
+            _extract_ps_function("Write-LogLine"),
+            _extract_ps_function("Write-Both"),
+            _extract_ps_function("Invoke-LoggedStep"),
+            "$pwsh = (Get-Process -Id $PID).Path",
+            "$childArgs = @('-NoProfile', '-NonInteractive', '-Command', \"Write-Output 'child ran'; exit 7\")",
+            "$code = Invoke-LoggedStep -What 'probe step' -FilePath $pwsh -ArgumentList $childArgs",
+            'Write-Output "returned=$code"',
+        ),
+    )
+    completed = _run_pwsh(script, tmp_path)
+    assert completed.returncode == 0, f"probe failed:\n{completed.stdout}\n{completed.stderr}"
+
+    assert "returned=7" in completed.stdout, (
+        f"Invoke-LoggedStep did not return the child's exit code for the caller to check: {completed.stdout!r}"
+    )
+
+    written = log.read_text(encoding="utf-8")
+    match = re.search(r"--- probe step : done in \d+(?:\.\d+)?s \(exit 7\) ---", written)
+    assert match is not None, f"the log has no completion line with the real exit code and duration:\n{written}"
+
+    child_at = written.index("child ran")
+    assert child_at < match.start(), f"the completion line was logged before the step's own output, not after it:\n{written}"
     """``just build-installer`` must run the logging script, not inline the steps.
 
     If the recipe called ``iscc`` (or the staging script) directly again, the build
