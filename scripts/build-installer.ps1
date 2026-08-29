@@ -48,8 +48,11 @@ function Invoke-LoggedStep {
         Run a native command, streaming its output to the console and the log.
     .DESCRIPTION
         stderr is merged into the output stream so a failing tool's diagnostics land
-        in the log next to the step that produced them. The command's exit code is
-        returned unchanged for the caller to check.
+        in the log next to the step that produced them. A completion line carrying
+        the exit code and wall-clock duration is written after the step so the log
+        records each step's outcome uniformly -- greppable on both success and
+        failure -- and the command's exit code is returned unchanged for the caller
+        to check.
     #>
     param(
         [Parameter(Mandatory)][string]$What,
@@ -58,12 +61,17 @@ function Invoke-LoggedStep {
     )
     Write-Both ''
     Write-Both "--- $What : $FilePath $($ArgumentList -join ' ') ---"
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     & $FilePath @ArgumentList 2>&1 | ForEach-Object {
         $line = if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { [string]$_ }
         Write-Host $line
         Write-LogLine -Line $line
     }
-    return $LASTEXITCODE
+    $code = $LASTEXITCODE
+    $stopwatch.Stop()
+    $seconds = [math]::Round($stopwatch.Elapsed.TotalSeconds, 1)
+    Write-Both "--- $What : done in ${seconds}s (exit $code) ---"
+    return $code
 }
 
 function Split-CommandArgument {

@@ -234,6 +234,7 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_BUILD_INSTALLER_LOG, "test_build_script_logs_to_the_repository_logs_directory"),
         (_BUILD_INSTALLER_LOG, "test_build_script_streams_stderr_into_the_log"),
         (_BUILD_INSTALLER_LOG, "test_build_script_runs_no_tests"),
+        (_BUILD_INSTALLER_LOG, "test_logged_step_records_exit_code_and_duration"),
         # .pre-commit-config.yaml, .gitattributes and the pixi ruff all live
         # outside the container's mounts, so the pin gates run on the host.
         (_PRECOMMIT_RUFF_PIN, "test_pinned_ruff_matches_the_pixi_toolchain_version"),
