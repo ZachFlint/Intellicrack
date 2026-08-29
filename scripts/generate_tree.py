@@ -278,11 +278,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 
 """
 
-    tree_output = (
-        generate_fallback_tree(root_path)
-        if os.name == "nt"
-        else _run_system_tree(root_path) or generate_fallback_tree(root_path)
-    )
+    tree_output = generate_fallback_tree(root_path) if os.name == "nt" else _run_system_tree(root_path) or generate_fallback_tree(root_path)
 
     with Path(output_file).open("w", encoding="utf-8") as f:
         f.write(header_content)

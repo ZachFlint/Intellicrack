@@ -92,25 +92,24 @@ def find_mock_usage(file_path: Path) -> list[tuple[int, str, str]]:
 
     try:
         lines = file_path.read_text(encoding="utf-8").splitlines(keepends=True)
-
-        is_validation_script = any(
-            "validation" in str(file_path).lower() or "check" in str(file_path).lower() or "verify" in str(file_path).lower()
-            for _ in [None]
-        )
-
-        for line_num, line in enumerate(lines, 1):
-            if line.strip().startswith("#") and any(x in line.lower() for x in ["pattern", "avoid", "check", "detect"]):
-                continue
-
-            if is_validation_script and any(x in line for x in ["in line", "not in", "check", "detect", "validate"]):
-                continue
-
-            for pattern in MOCK_PATTERNS:
-                if re.search(pattern, line, re.IGNORECASE):
-                    violations.append((line_num, line.strip(), pattern))
-                    break
     except (OSError, UnicodeDecodeError) as e:
         print(f"Error reading {file_path}: {e}")
+        return violations
+
+    lowered_path = str(file_path).lower()
+    is_validation_script = any(marker in lowered_path for marker in ("validation", "check", "verify"))
+
+    for line_num, line in enumerate(lines, 1):
+        if line.strip().startswith("#") and any(x in line.lower() for x in ["pattern", "avoid", "check", "detect"]):
+            continue
+
+        if is_validation_script and any(x in line for x in ["in line", "not in", "check", "detect", "validate"]):
+            continue
+
+        for pattern in MOCK_PATTERNS:
+            if re.search(pattern, line, re.IGNORECASE):
+                violations.append((line_num, line.strip(), pattern))
+                break
 
     return violations
 

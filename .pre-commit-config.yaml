@@ -71,7 +71,7 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Code Quality - Advanced Linting & Formatting (Updated to Latest)
 
-    rev: v0.12.11
+    rev: v0.16.4
     hooks:
       - id: ruff-check
         args: [--fix, --exit-non-zero-on-fix]
@@ -107,6 +107,8 @@ repos:
       - id: check-ast
       - id: debug-statements
       - id: mixed-line-ending
+        # Excludes mirror the LF-only rules in .gitattributes (pixi.lock is
+        # -text; .envrc and *.sh are shell-sourced and break on a trailing CR)
         args: ['--fix=crlf']
-        exclude: '^pixi\.lock$'
+        exclude: '^(pixi\.lock|\.envrc)$|\.sh$'
       - id: fix-byte-order-marker

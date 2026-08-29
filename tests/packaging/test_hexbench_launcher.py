@@ -298,8 +298,7 @@ def test_child_env_prepends_only_runtime_directories_that_exist(tmp_path: Path) 
     assert str(install / "runtime") in entries
     assert str(install / "runtime" / "Library" / "bin") in entries
     assert str(install / "runtime" / "Scripts") not in entries, (
-        "runtime\\Scripts hosts pip console-script shims that embed the build "
-        "interpreter path; it must never be placed on the child PATH"
+        "runtime\\Scripts hosts pip console-script shims that embed the build interpreter path; it must never be placed on the child PATH"
     )
     assert str(install / "runtime" / "DLLs") not in entries, "a directory that does not exist must not be added to PATH"
 

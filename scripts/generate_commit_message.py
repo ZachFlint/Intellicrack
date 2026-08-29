@@ -252,8 +252,7 @@ def _get_model(client: genai.Client | None = None) -> str:
     if client is not None:
         api_client = getattr(client, "_api_client", None)
         is_vertex = bool(
-            getattr(client, "vertexai", False)
-            or getattr(api_client, "vertexai", False),
+            getattr(client, "vertexai", False) or getattr(api_client, "vertexai", False),
         )
 
         if is_vertex:
@@ -555,10 +554,7 @@ def _split_text_by_lines(text: str, max_chars: int) -> list[str]:
                 pieces.append("".join(current))
                 current = []
                 current_size = 0
-            pieces.extend(
-                line[start : start + max_chars]
-                for start in range(0, len(line), max_chars)
-            )
+            pieces.extend(line[start : start + max_chars] for start in range(0, len(line), max_chars))
             continue
 
         if current_size + len(line) > max_chars and current_size > 0:
@@ -689,9 +685,7 @@ def _split_diff_on_file_boundaries(diff_input: str) -> list[str]:
         f"(~{total_chars // num_chunks:,} chars each)",
     )
 
-    bins: list[tuple[int, int, list[str]]] = [
-        (0, i, []) for i in range(num_chunks)
-    ]
+    bins: list[tuple[int, int, list[str]]] = [(0, i, []) for i in range(num_chunks)]
     heapq.heapify(bins)
 
     for group in file_groups:
@@ -704,15 +698,15 @@ def _split_diff_on_file_boundaries(diff_input: str) -> list[str]:
         else:
             heapq.heappush(bins, (bin_chars, bin_idx, bin_pieces))
             for piece_text, piece_size in sorted(
-                group, key=operator.itemgetter(1), reverse=True,
+                group,
+                key=operator.itemgetter(1),
+                reverse=True,
             ):
                 b_chars, b_idx, b_pieces = heapq.heappop(bins)
                 b_pieces.append(piece_text)
                 heapq.heappush(bins, (b_chars + piece_size, b_idx, b_pieces))
 
-    chunks = [
-        "".join(bp) for _, _, bp in sorted(bins, key=operator.itemgetter(1)) if bp
-    ]
+    chunks = ["".join(bp) for _, _, bp in sorted(bins, key=operator.itemgetter(1)) if bp]
 
     _progress(
         f"Split complete: {len(chunks)} chunks from {len(file_diffs)} files",
@@ -928,12 +922,10 @@ def _batch_generate(
     total_chunks = len(chunks)
     estimated_time = total_chunks * (15 + BATCH_COOLDOWN)
     _log(
-        f"Batch mode: {total_chunks} chunks, "
-        f"~{estimated_time // 60}m {estimated_time % 60}s estimated",
+        f"Batch mode: {total_chunks} chunks, ~{estimated_time // 60}m {estimated_time % 60}s estimated",
     )
     _log(
-        f"Chunk summaries via {_get_fallback_model()}, "
-        f"final reduce via {_get_model(client)}",
+        f"Chunk summaries via {_get_fallback_model()}, final reduce via {_get_model(client)}",
     )
 
     summaries: list[str] = []

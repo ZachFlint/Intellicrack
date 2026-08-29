@@ -735,7 +735,7 @@ def test_try_except_detection_distinguishes_except_from_finally() -> None:
     except_at = re.search(r"\bexcept\b", after)
     finally_at = re.search(r"\bfinally\b", after)
     assert except_at is not None
-    assert (finally_at is None or except_at.start() < finally_at.start())
+    assert finally_at is None or except_at.start() < finally_at.start()
 
     call = unguarded.find("ExecAndLogOutput")
     after = unguarded[call:]

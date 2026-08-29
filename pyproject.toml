@@ -1090,66 +1090,66 @@ lint.select = [
   "W",  # pycodestyle warnings
 ]
 lint.ignore = [
-  "DOC202",  # conflicts with pydoclint DOC201/DOC203 for abstract-style methods that always raise but declare a non-None return type honored by subclasses
-  "DOC502",  # conflicts with pydoclint DOC501/DOC503 for re-raised exceptions caught in except blocks
-  "E501",  # line-too-long
-  "PLR0911",  # too-many-return-statements
-  "PLR0912",  # too-many-branches
-  "PLR0913",  # too-many-arguments
-  "PLR0915",  # too-many-statements
-  "PLR1702",  # too-many-nested-blocks
-  "RUF105",  # opinionated preview-only stylistic rule (`# noqa` vs `# ruff: ignore`); the codebase deliberately uses `# noqa` for native-API-mirror method names, lazy/platform-gated imports, and post-``importorskip`` imports -- its own docs invite disabling when noqa is preferred
-  "S405",  # project-wide: write-side xml.etree usage is centralized in ``intellicrack.core.xml_gen``; parsing of untrusted XML uses ``defusedxml`` elsewhere -- see ``[tool.bandit] skips`` for the matching rationale
+  "docstring-extraneous-returns",  # conflicts with pydoclint DOC201/DOC203 for abstract-style methods that always raise but declare a non-None return type honored by subclasses
+  "docstring-extraneous-exception",  # conflicts with pydoclint DOC501/DOC503 for re-raised exceptions caught in except blocks
+  "line-too-long",
+  "too-many-return-statements",
+  "too-many-branches",
+  "too-many-arguments",
+  "too-many-statements",
+  "too-many-nested-blocks",
+  "noqa-comments",  # opinionated preview-only stylistic rule (`# noqa` vs `# ruff: ignore`); the codebase deliberately uses `# noqa` for native-API-mirror method names, lazy/platform-gated imports, and post-``importorskip`` imports -- its own docs invite disabling when noqa is preferred
+  "suspicious-xml-etree-import",  # project-wide: write-side xml.etree usage is centralized in ``intellicrack.core.xml_gen``; parsing of untrusted XML uses ``defusedxml`` elsewhere -- see ``[tool.bandit] skips`` for the matching rationale
 ]
-lint.per-file-ignores.".claude/**" = ["S404"]
-lint.per-file-ignores."docker/**" = ["N999", "S404", "S603", "S607", "T201"]
-lint.per-file-ignores."packaging/**" = ["N999", "S404", "S603", "S607", "T201"]
-lint.per-file-ignores."scripts/**" = ["N999", "S404", "S603", "S607", "T201"]
-lint.per-file-ignores."src/intellicrack/bridges/win32_types.py" = ["N801"]
-lint.per-file-ignores."src/intellicrack/bridges/process.py" = ["N801"]
+lint.per-file-ignores.".claude/**" = ["suspicious-subprocess-import"]
+lint.per-file-ignores."docker/**" = ["invalid-module-name", "suspicious-subprocess-import", "subprocess-without-shell-equals-true", "start-process-with-partial-path", "print"]
+lint.per-file-ignores."packaging/**" = ["invalid-module-name", "suspicious-subprocess-import", "subprocess-without-shell-equals-true", "start-process-with-partial-path", "print"]
+lint.per-file-ignores."scripts/**" = ["invalid-module-name", "suspicious-subprocess-import", "subprocess-without-shell-equals-true", "start-process-with-partial-path", "print"]
+lint.per-file-ignores."src/intellicrack/bridges/win32_types.py" = ["invalid-class-name"]
+lint.per-file-ignores."src/intellicrack/bridges/process.py" = ["invalid-class-name"]
 lint.per-file-ignores."src/intellicrack/core/hexpat/evaluator.py" = [
-  "C901",
-  "PLR0914",
-  "PLR2004",
-  "TRY003",
+  "complex-structure",
+  "too-many-locals",
+  "magic-value-comparison",
+  "raise-vanilla-args",
 ]
-lint.per-file-ignores."src/intellicrack/core/hexpat/interpreter.py" = ["PLC0415"]
-lint.per-file-ignores."src/intellicrack/core/hexpat/lexer.py" = ["C901"]
-lint.per-file-ignores."src/intellicrack/core/hexpat/parser.py" = ["C901", "PLR0914"]
-lint.per-file-ignores."src/intellicrack/core/hexpat/preprocessor.py" = ["PLR0914"]
-lint.per-file-ignores."src/intellicrack/core/hexpat/stdlib.py" = ["PLR2004", "TRY003"]
-lint.per-file-ignores."src/intellicrack/core/orchestrator.py" = ["PLC0415"]
-lint.per-file-ignores."src/intellicrack/core/tools.py" = ["PLC0415"]
-lint.per-file-ignores."src/intellicrack/main.py" = ["PLC0415"]
-lint.per-file-ignores."src/intellicrack/ui/app.py" = ["PLC0415"]
-lint.per-file-ignores."src/intellicrack/ui/panels/frida_panel.py" = ["PLR0914"]
-lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_disassembly.py" = ["PLR0914"]
-lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_search.py" = ["PLR0914"]
-lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_widgets.py" = ["N802"]
-lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/panel.py" = ["PLR0914"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/interpreter.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/lexer.py" = ["complex-structure"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/parser.py" = ["complex-structure", "too-many-locals"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/preprocessor.py" = ["too-many-locals"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/stdlib.py" = ["magic-value-comparison", "raise-vanilla-args"]
+lint.per-file-ignores."src/intellicrack/core/orchestrator.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/core/tools.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/main.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/ui/app.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/ui/panels/frida_panel.py" = ["too-many-locals"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_disassembly.py" = ["too-many-locals"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_search.py" = ["too-many-locals"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_widgets.py" = ["invalid-function-name"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/panel.py" = ["too-many-locals"]
 lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor_panel.py" = [
-  "N802",
-  "PLR0914",
-  "S324",
+  "invalid-function-name",
+  "too-many-locals",
+  "hashlib-insecure-hash-function",
 ]
 lint.per-file-ignores."tests/**" = [
-  "B009",
-  "B010",
-  "PLC2701",
-  "PLR2004",
-  "PLR6301",
-  "S101",
-  "S102",
-  "S105",
-  "S106",
-  "S107",
-  "S404",
-  "S603",
-  "SLF001",
-  "TC006",
+  "get-attr-with-constant",
+  "set-attr-with-constant",
+  "import-private-name",
+  "magic-value-comparison",
+  "no-self-use",
+  "assert",
+  "exec-builtin",
+  "hardcoded-password-string",
+  "hardcoded-password-func-arg",
+  "hardcoded-password-default",
+  "suspicious-subprocess-import",
+  "subprocess-without-shell-equals-true",
+  "private-member-access",
+  "runtime-cast-value",
 ]
 lint.fixable = ["ALL"]
-lint.unfixable = ["PTH123", "RET503", "RUF013", "RUF022", "TID252", "TRY400"]
+lint.unfixable = ["builtin-open", "implicit-return", "implicit-optional", "unsorted-dunder-all", "relative-imports", "error-instead-of-exception"]
 lint.dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 lint.isort.combine-as-imports = true
 lint.isort.force-wrap-aliases = true

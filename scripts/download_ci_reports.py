@@ -419,7 +419,12 @@ def generate_summary_txt(results: list[WorkflowResult], dest: Path) -> None:
     total_artifacts = sum(r.artifacts_downloaded for r in results)
     total_skipped = sum(1 for r in results if r.skipped)
 
-    lines.extend((f"Workflows: {len(results)} total, {len(results) - total_skipped} downloaded, {total_skipped} skipped", f"Jobs:      {total_jobs} total, {total_logs} logs downloaded", f"Artifacts: {total_artifacts} downloaded", ""))
+    lines.extend((
+        f"Workflows: {len(results)} total, {len(results) - total_skipped} downloaded, {total_skipped} skipped",
+        f"Jobs:      {total_jobs} total, {total_logs} logs downloaded",
+        f"Artifacts: {total_artifacts} downloaded",
+        "",
+    ))
 
     for r in results:
         if r.skipped:

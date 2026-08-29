@@ -393,7 +393,9 @@ def test_destructive_and_generating_steps_are_wrapped_in_shouldprocess() -> None
     preview flag.
     """
     script = strip_here_strings(read_stage_script())
-    assert "[CmdletBinding(SupportsShouldProcess)]" in script, "the script no longer opts into ShouldProcess, so -WhatIf is not even accepted"
+    assert "[CmdletBinding(SupportsShouldProcess)]" in script, (
+        "the script no longer opts into ShouldProcess, so -WhatIf is not even accepted"
+    )
 
     guarded = "\n".join(guarded_statements(script, _SHOULD_PROCESS))
     assert "Remove-Item -LiteralPath $Stage -Recurse -Force" in guarded, "the stage wipe is no longer behind ShouldProcess"
@@ -647,7 +649,9 @@ def test_core_runtime_gate_checks_the_real_startup_chain(core_runtime_gate: Modu
 
     for module in startup:
         relative = Path(*module.split(".")[1:]).with_suffix(".py")
-        assert (_SRC_INTELLICRACK / relative).is_file(), f"the gate imports {module}, but src/intellicrack/{relative.as_posix()} does not exist"
+        assert (_SRC_INTELLICRACK / relative).is_file(), (
+            f"the gate imports {module}, but src/intellicrack/{relative.as_posix()} does not exist"
+        )
 
 
 def test_embedded_core_runtime_gate_is_valid_python() -> None:
@@ -687,9 +691,9 @@ def test_conda_owned_entries_are_vetoed_before_the_move() -> None:
     """
     script = strip_here_strings(read_stage_script())
     assert "function Get-CondaOwnedEntry" in script, "the conda ownership lookup is gone"
-    assert re.search(r"\$MlEntries\s*=\s*@\(\$MlEntries\s*\|\s*Where-Object\s*\{\s*-not \$CondaOwners\.ContainsKey\(\$_\)", script) is not None, (
-        "conda-owned entries are no longer removed from the ML move list"
-    )
+    assert (
+        re.search(r"\$MlEntries\s*=\s*@\(\$MlEntries\s*\|\s*Where-Object\s*\{\s*-not \$CondaOwners\.ContainsKey\(\$_\)", script) is not None
+    ), "conda-owned entries are no longer removed from the ML move list"
     assert re.search(r"foreach \(\$ownedEntry in \$CondaOwners\.Keys\)", script) is not None, (
         "the post-move assertion that no conda-owned entry reached ml_overlay is gone"
     )

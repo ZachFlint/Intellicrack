@@ -81,11 +81,7 @@ def _read_events(stream: io.StringIO) -> list[dict[str, Any]]:
     Returns:
         list[dict[str, Any]]: One dict per emitted log event in order.
     """
-    return [
-        cast("dict[str, Any]", json.loads(line))
-        for raw in stream.getvalue().splitlines()
-        if (line := raw.strip())
-    ]
+    return [cast("dict[str, Any]", json.loads(line)) for raw in stream.getvalue().splitlines() if (line := raw.strip())]
 
 
 def test_parse_valid_object_returns_dict() -> None:

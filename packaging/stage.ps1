@@ -883,7 +883,14 @@ foreach ($vendor in $VendorSubset) {
     $vendorSrc = Join-Path $RepoRoot "vendor\$vendor"
     Assert-Source -Path $vendorSrc -What "vendor $vendor"
     $vendorDest = Join-Path $Stage "app\vendor\$vendor"
-    Invoke-Robocopy -Source $vendorSrc -Destination $vendorDest
+    # These are git submodules, so each carries a `.git` gitdir pointer file (a
+    # directory in a non-submodule checkout) that would ship as a dangling
+    # reference to a .git/modules tree the target machine does not have, and an
+    # upstream `tests` corpus nothing reads at runtime -- 74 MB across the two
+    # pattern trees alone. The runtime only reads patterns/ and includes/.
+    Invoke-Robocopy -Source $vendorSrc -Destination $vendorDest `
+        -ExcludeDirs @('.git', '.github', '.idea', 'tests', '__pycache__') `
+        -ExcludeFiles @('.git', '.gitmodules', '.gitattributes', '.gitignore', '*.pyc')
     Write-Progress "Staged vendor: $vendor"
 }
 $CommunityPatternsDir = Join-Path $Stage 'app\vendor\community-patterns\patterns'

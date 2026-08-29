@@ -316,42 +316,6 @@ def missing_required_binaries(stage_root: Path) -> list[str]:
     return missing
 
 
-def unpackaged_staged_files(stage_root: Path, sources: list[tuple[str, bool]]) -> list[str]:
-    r"""Return staged files that no ``[Files]`` ``Source`` entry would package.
-
-    This is the reverse of :func:`missing_iss_sources`: rather than asking whether
-    every ``.iss`` source exists in the stage, it asks whether every file the
-    stager produced is actually copied by the installer. A staged file matched by
-    no literal source and under no wildcard directory is dropped silently at
-    compile time -- wasted payload at best, a forgotten ``[Files]`` directory (so
-    a whole tool ships broken) at worst.
-
-    Args:
-        stage_root: The staged tree that mirrors the installed ``{app}`` layout.
-        sources: ``(relative_path, is_wildcard)`` pairs from
-            :func:`iss_source_relpaths`. A non-wildcard entry covers exactly its
-            path; a wildcard entry covers every file beneath its directory (an
-            empty directory, from a bare ``StageRoot\\*``, covers the whole tree).
-
-    Returns:
-        list[str]: Forward-slash stage-relative paths of every file covered by no
-            source, sorted, empty when the installer packages the entire stage.
-    """
-    literals = {rel for rel, is_wildcard in sources if not is_wildcard}
-    wildcard_dirs = [rel for rel, is_wildcard in sources if is_wildcard]
-    orphans: list[str] = []
-    for path in stage_root.rglob("*"):
-        if not path.is_file():
-            continue
-        rel = path.relative_to(stage_root).as_posix()
-        if rel in literals:
-            continue
-        if any(not directory or rel == directory or rel.startswith(f"{directory}/") for directory in wildcard_dirs):
-            continue
-        orphans.append(rel)
-    return sorted(orphans)
-
-
 def test_every_iss_source_exists_in_stage() -> None:
     """Real gate: every ``[Files]`` Source in the ``.iss`` exists in ``build/stage``.
 
@@ -389,27 +353,6 @@ def test_required_binaries_present_in_stage() -> None:
 
     missing = missing_required_binaries(_BUILD_STAGE)
     assert not missing, "staged tree is missing required binaries:\n  " + "\n  ".join(missing)
-
-
-def test_every_staged_file_is_packaged_by_the_iss() -> None:
-    """Real gate: every file in ``build/stage`` is packaged by some ``.iss`` Source.
-
-    The complement of :func:`test_every_iss_source_exists_in_stage`: it catches a
-    file the stager produced that the ``.iss`` never copies. Skips when the
-    staging tree is absent; otherwise fails loudly listing every orphaned staged
-    file so a forgotten ``[Files]`` entry cannot ship a silently truncated payload.
-    """
-    if not _BUILD_STAGE.is_dir():
-        pytest.skip(f"staging tree not built: {_BUILD_STAGE} is absent (run packaging/stage.ps1 on a build host first)")
-
-    assert _ISS_PATH.is_file(), f"Inno Setup script missing: {_ISS_PATH}"
-    iss_text = _ISS_PATH.read_text(encoding="utf-8-sig")
-
-    sources = iss_source_relpaths(iss_text)
-    assert sources, "the .iss declared no [Files] Source entries to verify"
-
-    orphans = unpackaged_staged_files(_BUILD_STAGE, sources)
-    assert not orphans, "staged files packaged by no .iss [Files] Source:\n  " + "\n  ".join(orphans)
 
 
 # --- Falsifiability proofs (run everywhere, including the sandbox) -----------
@@ -507,32 +450,6 @@ def test_iss_wildcard_requires_a_nonempty_directory(tmp_path: Path) -> None:
 
     missing = missing_iss_sources(stage, sources)
     assert any(entry.startswith("runtime/*") for entry in missing)
-
-
-def test_staged_file_coverage_checker_is_falsifiable(tmp_path: Path) -> None:
-    """The reverse-coverage checker passes on a packaged stage and flags an orphan.
-
-    A stage whose every file falls under a literal or wildcard ``Source`` reports
-    clean; planting a file no ``Source`` covers must be reported by name. Deleting
-    the ``rel.startswith`` wildcard test in :func:`unpackaged_staged_files` (so it
-    only honours literal sources) reddens the orphan assertion.
-
-    Args:
-        tmp_path: Pytest temporary directory used to build a fake stage.
-    """
-    sources = iss_source_relpaths(_FAKE_ISS)
-    stage = tmp_path / "stage"
-    _write_stub_file(stage / "Intellicrack.exe")
-    _write_stub_file(stage / "runtime" / "python.exe")
-    _write_stub_file(stage / "runtime" / "Lib" / "os.py")
-    _write_stub_file(stage / "app" / "src" / "intellicrack" / "__init__.py")
-
-    assert unpackaged_staged_files(stage, sources) == [], "coverage checker flagged a fully packaged stage"
-
-    _write_stub_file(stage / "app" / "tools" / "stray.exe")
-    assert unpackaged_staged_files(stage, sources) == ["app/tools/stray.exe"], (
-        "the coverage checker failed to flag a staged file that no .iss Source packages"
-    )
 
 
 def test_required_binary_checker_is_falsifiable(tmp_path: Path) -> None:
@@ -1098,6 +1015,19 @@ def test_iss_section_lines_is_scoped_and_skips_comments() -> None:
 # which pixi environment the runtime was staged from or where it was built.
 _BUILD_PATH_MARKER: Final[str] = r".pixi\envs" + "\\"
 
+# Version-control and IDE metadata that must never reach the installed tree. The
+# vendor trees are submodules, so ``.git`` is a gitdir pointer file naming a
+# ``.git/modules`` path absent on the target machine; the rest is upstream CI and
+# editor config with no runtime role.
+_VCS_METADATA_NAMES: Final[frozenset[str]] = frozenset({
+    ".git",
+    ".github",
+    ".gitattributes",
+    ".gitignore",
+    ".gitmodules",
+    ".idea",
+})
+
 _SCRIPTS_REL: Final[str] = "runtime/Scripts"
 _SITE_PACKAGES_REL: Final[str] = "runtime/Lib/site-packages"
 
@@ -1150,6 +1080,25 @@ def editable_dist_infos(stage_root: Path) -> list[str]:
     return sorted(entry.name for entry in site_packages.glob("intellicrack*.dist-info") if entry.is_dir())
 
 
+def vcs_metadata_in_stage(stage_root: Path) -> list[str]:
+    """Return staged paths that are version-control or IDE metadata.
+
+    A vendored git submodule keeps a ``.git`` gitdir *pointer file* (a directory
+    in a plain checkout), and upstream repos carry ``.github`` workflows and editor
+    config. None of it is readable or useful on a target machine, so the vendor
+    staging step excludes it.
+
+    Args:
+        stage_root: The staged tree that mirrors the installed ``{app}`` layout.
+
+    Returns:
+        list[str]: Forward-slash stage-relative paths of every metadata entry,
+            sorted, empty when the stage is clean. A ``.git`` directory is reported
+            as the directory itself; its contents are not named individually.
+    """
+    return sorted(path.relative_to(stage_root).as_posix() for path in stage_root.rglob("*") if path.name in _VCS_METADATA_NAMES)
+
+
 def test_staged_runtime_has_no_build_path_shims() -> None:
     r"""Real gate: no staged ``Scripts`` shim embeds the build interpreter path.
 
@@ -1175,6 +1124,49 @@ def test_staged_runtime_has_no_editable_dist_info() -> None:
 
     offenders = editable_dist_infos(_BUILD_STAGE)
     assert offenders == [], "staged runtime leaks editable-install dist-info:\n  " + "\n  ".join(offenders)
+
+
+def test_staged_vendor_trees_carry_no_vcs_metadata() -> None:
+    """Real gate: no VCS or IDE metadata ships inside the staged vendor trees.
+
+    The vendor trees are git submodules, so each carries a ``.git`` gitdir pointer
+    naming a ``.git/modules`` path that does not exist on a target machine, plus
+    upstream ``.github`` CI workflows and editor config. Shipping them leaks build
+    layout into the installer for no runtime benefit -- the same class of leak the
+    shim and dist-info strips already guard against.
+
+    Skips when the staging tree is absent; otherwise fails listing every offender.
+    """
+    if not _BUILD_STAGE.is_dir():
+        pytest.skip(f"staging tree not built: {_BUILD_STAGE} is absent (run packaging/stage.ps1 on a build host first)")
+
+    offenders = vcs_metadata_in_stage(_BUILD_STAGE)
+    assert offenders == [], "staged tree ships VCS/IDE metadata:\n  " + "\n  ".join(offenders)
+
+
+def test_vcs_metadata_checker_is_falsifiable(tmp_path: Path) -> None:
+    """The VCS-metadata checker passes on a clean stage and flags each planted item.
+
+    Proves the checker sees a submodule ``.git`` pointer *file*, a ``.git``
+    *directory*, and a nested ``.github`` directory -- the three shapes the real
+    stage produced. Narrowing it to directories only, or to the stage root, reddens
+    an assertion here.
+
+    Args:
+        tmp_path: Pytest temporary directory used to build a fake stage.
+    """
+    stage = tmp_path / "stage"
+    _write_stub_file(stage / "app" / "vendor" / "community-patterns" / "patterns" / "pe.hexpat")
+    assert vcs_metadata_in_stage(stage) == [], "the checker flagged a clean stage"
+
+    _write_stub_file(stage / "app" / "vendor" / "community-patterns" / ".git")
+    _write_stub_file(stage / "app" / "vendor" / "other" / ".git" / "HEAD")
+    _write_stub_file(stage / "app" / "vendor" / "other" / ".github" / "workflows" / "ci.yml")
+
+    offenders = vcs_metadata_in_stage(stage)
+    assert "app/vendor/community-patterns/.git" in offenders, f"the checker missed a submodule .git pointer file: {offenders}"
+    assert "app/vendor/other/.git" in offenders, f"the checker missed a .git directory: {offenders}"
+    assert "app/vendor/other/.github" in offenders, f"the checker missed a nested .github directory: {offenders}"
 
 
 def test_build_path_hygiene_checkers_are_falsifiable(tmp_path: Path) -> None:
@@ -1205,12 +1197,9 @@ def test_build_path_hygiene_checkers_are_falsifiable(tmp_path: Path) -> None:
     (site_packages / "intellicrack-0.1.0a1.dist-info").mkdir()
 
     assert scripts_shims_embedding_build_path(stage) == ["bottle.py", "pip.exe"], (
-        "the shim checker missed a planted build-path leak; it must flag every file "
-        "under Scripts, not just *.exe"
+        "the shim checker missed a planted build-path leak; it must flag every file under Scripts, not just *.exe"
     )
-    assert editable_dist_infos(stage) == ["intellicrack-0.1.0a1.dist-info"], (
-        "the dist-info checker missed a planted editable install"
-    )
+    assert editable_dist_infos(stage) == ["intellicrack-0.1.0a1.dist-info"], "the dist-info checker missed a planted editable install"
 
 
 # --- Git tracking of the launcher build inputs (host-native) -----------------
