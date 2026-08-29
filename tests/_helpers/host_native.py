@@ -84,6 +84,7 @@ _STAGE_MATCHES_ISS: Final[str] = "tests/packaging/test_stage_matches_iss.py"
 _RUNTIME_DEPS: Final[str] = "tests/packaging/test_project_runtime_dependencies.py"
 _STAGE_EXCLUDES: Final[str] = "tests/packaging/test_stage_excludes.py"
 _PIXI_ENVIRONMENTS: Final[str] = "tests/packaging/test_pixi_runtime_environment.py"
+_BUILD_INSTALLER_LOG: Final[str] = "tests/packaging/test_build_installer_logging.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -223,6 +224,12 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_PIXI_ENVIRONMENTS, "test_every_project_dependency_is_declared_in_the_runtime_feature"),
         (_PIXI_ENVIRONMENTS, "test_stage_script_sources_the_runtime_environment"),
         (_STAGE_EXCLUDES, "test_runtime_trim_strips_libs_headers_tests_and_docs"),
+        (_BUILD_INSTALLER_LOG, "test_build_log_strips_ansi_but_keeps_console_colour"),
+        (_BUILD_INSTALLER_LOG, "test_build_log_accumulates_every_line_in_order"),
+        (_BUILD_INSTALLER_LOG, "test_empty_recipe_arguments_do_not_become_empty_command_arguments"),
+        (_BUILD_INSTALLER_LOG, "test_build_installer_recipe_delegates_to_the_logging_script"),
+        (_BUILD_INSTALLER_LOG, "test_build_script_logs_to_the_repository_logs_directory"),
+        (_BUILD_INSTALLER_LOG, "test_build_script_streams_stderr_into_the_log"),
     },
 )
 
