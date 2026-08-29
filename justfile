@@ -94,18 +94,17 @@ stage-installer *ARGS:
     pwsh -NoLogo -NonInteractive -File packaging/stage.ps1 {{ ARGS }}
     @Write-Host "==> build/stage" -ForegroundColor Green
 
-# Runs stage-installer first, then verifies the staged tree against the .iss so a
-# missing payload entry fails here rather than producing a broken Setup. ARGS reach
-# iscc, e.g. just build-installer /DSignToolName=intellicrack "/Sintellicrack=<cmd>".
+# Stages the payload, verifies the staged tree against the .iss so a missing entry
+# fails here rather than producing a broken Setup, then compiles with Inno Setup.
+# scripts/build-installer.ps1 drives all three steps and captures their combined
+# output in logs/installer/build.log (rolling: each build replaces the previous).
+# ARGS reach iscc, e.g. just build-installer /DSignToolName=intellicrack.
 # Stage flags come from the STAGE_ARGS variable, since they go to a different tool:
 # just STAGE_ARGS='-SkipJdkDownload -SkipGuestImage' build-installer
 [doc('Build the Setup executable: stage, verify, then compile with Inno Setup')]
 [group('installer')]
-build-installer *ARGS: (stage-installer STAGE_ARGS)
-    @if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) { Write-Host 'iscc is not on PATH; install Inno Setup 6.6.0 or newer' -ForegroundColor Red; exit 1 }
-    {{ pixi }} python -m scripts.sandbox.docker_sandbox module --module tests/packaging/test_stage_matches_iss.py
-    iscc packaging/intellicrack.iss {{ ARGS }}
-    @$exe = 'packaging/Output/Intellicrack-Setup.exe'; if (-not (Test-Path $exe)) { Write-Host 'Inno Setup produced no Intellicrack-Setup.exe' -ForegroundColor Red; exit 1 }; Write-Host "==> $exe" -ForegroundColor Green
+build-installer *ARGS:
+    @& scripts/build-installer.ps1 -Pixi "{{ pixi }}" -StageArgs "{{ STAGE_ARGS }}" -IsccArgs "{{ ARGS }}"
 
 [doc('Delete installer build artifacts (build/ and packaging/Output/)')]
 [group('installer')]

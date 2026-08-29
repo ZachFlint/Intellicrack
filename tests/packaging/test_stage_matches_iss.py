@@ -316,6 +316,42 @@ def missing_required_binaries(stage_root: Path) -> list[str]:
     return missing
 
 
+def unpackaged_staged_files(stage_root: Path, sources: list[tuple[str, bool]]) -> list[str]:
+    r"""Return staged files that no ``[Files]`` ``Source`` entry would package.
+
+    This is the reverse of :func:`missing_iss_sources`: rather than asking whether
+    every ``.iss`` source exists in the stage, it asks whether every file the
+    stager produced is actually copied by the installer. A staged file matched by
+    no literal source and under no wildcard directory is dropped silently at
+    compile time -- wasted payload at best, a forgotten ``[Files]`` directory (so
+    a whole tool ships broken) at worst.
+
+    Args:
+        stage_root: The staged tree that mirrors the installed ``{app}`` layout.
+        sources: ``(relative_path, is_wildcard)`` pairs from
+            :func:`iss_source_relpaths`. A non-wildcard entry covers exactly its
+            path; a wildcard entry covers every file beneath its directory (an
+            empty directory, from a bare ``StageRoot\\*``, covers the whole tree).
+
+    Returns:
+        list[str]: Forward-slash stage-relative paths of every file covered by no
+            source, sorted, empty when the installer packages the entire stage.
+    """
+    literals = {rel for rel, is_wildcard in sources if not is_wildcard}
+    wildcard_dirs = [rel for rel, is_wildcard in sources if is_wildcard]
+    orphans: list[str] = []
+    for path in stage_root.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(stage_root).as_posix()
+        if rel in literals:
+            continue
+        if any(not directory or rel == directory or rel.startswith(f"{directory}/") for directory in wildcard_dirs):
+            continue
+        orphans.append(rel)
+    return sorted(orphans)
+
+
 def test_every_iss_source_exists_in_stage() -> None:
     """Real gate: every ``[Files]`` Source in the ``.iss`` exists in ``build/stage``.
 
@@ -353,6 +389,27 @@ def test_required_binaries_present_in_stage() -> None:
 
     missing = missing_required_binaries(_BUILD_STAGE)
     assert not missing, "staged tree is missing required binaries:\n  " + "\n  ".join(missing)
+
+
+def test_every_staged_file_is_packaged_by_the_iss() -> None:
+    """Real gate: every file in ``build/stage`` is packaged by some ``.iss`` Source.
+
+    The complement of :func:`test_every_iss_source_exists_in_stage`: it catches a
+    file the stager produced that the ``.iss`` never copies. Skips when the
+    staging tree is absent; otherwise fails loudly listing every orphaned staged
+    file so a forgotten ``[Files]`` entry cannot ship a silently truncated payload.
+    """
+    if not _BUILD_STAGE.is_dir():
+        pytest.skip(f"staging tree not built: {_BUILD_STAGE} is absent (run packaging/stage.ps1 on a build host first)")
+
+    assert _ISS_PATH.is_file(), f"Inno Setup script missing: {_ISS_PATH}"
+    iss_text = _ISS_PATH.read_text(encoding="utf-8-sig")
+
+    sources = iss_source_relpaths(iss_text)
+    assert sources, "the .iss declared no [Files] Source entries to verify"
+
+    orphans = unpackaged_staged_files(_BUILD_STAGE, sources)
+    assert not orphans, "staged files packaged by no .iss [Files] Source:\n  " + "\n  ".join(orphans)
 
 
 # --- Falsifiability proofs (run everywhere, including the sandbox) -----------
@@ -450,6 +507,32 @@ def test_iss_wildcard_requires_a_nonempty_directory(tmp_path: Path) -> None:
 
     missing = missing_iss_sources(stage, sources)
     assert any(entry.startswith("runtime/*") for entry in missing)
+
+
+def test_staged_file_coverage_checker_is_falsifiable(tmp_path: Path) -> None:
+    """The reverse-coverage checker passes on a packaged stage and flags an orphan.
+
+    A stage whose every file falls under a literal or wildcard ``Source`` reports
+    clean; planting a file no ``Source`` covers must be reported by name. Deleting
+    the ``rel.startswith`` wildcard test in :func:`unpackaged_staged_files` (so it
+    only honours literal sources) reddens the orphan assertion.
+
+    Args:
+        tmp_path: Pytest temporary directory used to build a fake stage.
+    """
+    sources = iss_source_relpaths(_FAKE_ISS)
+    stage = tmp_path / "stage"
+    _write_stub_file(stage / "Intellicrack.exe")
+    _write_stub_file(stage / "runtime" / "python.exe")
+    _write_stub_file(stage / "runtime" / "Lib" / "os.py")
+    _write_stub_file(stage / "app" / "src" / "intellicrack" / "__init__.py")
+
+    assert unpackaged_staged_files(stage, sources) == [], "coverage checker flagged a fully packaged stage"
+
+    _write_stub_file(stage / "app" / "tools" / "stray.exe")
+    assert unpackaged_staged_files(stage, sources) == ["app/tools/stray.exe"], (
+        "the coverage checker failed to flag a staged file that no .iss Source packages"
+    )
 
 
 def test_required_binary_checker_is_falsifiable(tmp_path: Path) -> None:
