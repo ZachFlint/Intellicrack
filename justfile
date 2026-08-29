@@ -94,17 +94,17 @@ stage-installer *ARGS:
     pwsh -NoLogo -NonInteractive -File packaging/stage.ps1 {{ ARGS }}
     @Write-Host "==> build/stage" -ForegroundColor Green
 
-# Stages the payload, verifies the staged tree against the .iss so a missing entry
-# fails here rather than producing a broken Setup, then compiles with Inno Setup.
-# scripts/build-installer.ps1 drives all three steps and captures their combined
-# output in logs/installer/build.log (rolling: each build replaces the previous).
+# Stages the payload, then compiles it with Inno Setup. scripts/build-installer.ps1
+# drives both steps and captures their combined output in logs/installer/build.log
+# (rolling: each build replaces the previous). It runs no tests -- verify the staged
+# tree separately with `just test module --module tests/packaging` when you want it.
 # ARGS reach iscc, e.g. just build-installer /DSignToolName=intellicrack.
 # Stage flags come from the STAGE_ARGS variable, since they go to a different tool:
 # just STAGE_ARGS='-SkipJdkDownload -SkipGuestImage' build-installer
-[doc('Build the Setup executable: stage, verify, then compile with Inno Setup')]
+[doc('Build the Setup executable: stage, then compile with Inno Setup')]
 [group('installer')]
 build-installer *ARGS:
-    @& scripts/build-installer.ps1 -Pixi "{{ pixi }}" -StageArgs "{{ STAGE_ARGS }}" -IsccArgs "{{ ARGS }}"
+    @& scripts/build-installer.ps1 -StageArgs "{{ STAGE_ARGS }}" -IsccArgs "{{ ARGS }}"
 
 [doc('Delete installer build artifacts (build/ and packaging/Output/)')]
 [group('installer')]

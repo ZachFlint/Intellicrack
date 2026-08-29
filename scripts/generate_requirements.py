@@ -235,8 +235,7 @@ def generate_requirements(output_path: str = "requirements.txt") -> int:
         for name in missing:
             print(f"  - {name} (declared as {pip_required[name]!r})", file=sys.stderr)
         print(
-            "The lockfile is out of sync with pyproject.toml. "
-            "Run 'pixi install' to refresh it.",
+            "The lockfile is out of sync with pyproject.toml. Run 'pixi install' to refresh it.",
             file=sys.stderr,
         )
         return 1
@@ -245,8 +244,7 @@ def generate_requirements(output_path: str = "requirements.txt") -> int:
     lines = [f"{name}=={version}" for name, version in sorted_entries]
     _ = output.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(
-        f"Generated {output_path}: {len(lines)} pinned packages "
-        f"({len(pip_required)} pip-resolved declared deps verified)",
+        f"Generated {output_path}: {len(lines)} pinned packages ({len(pip_required)} pip-resolved declared deps verified)",
     )
     return 0
 

@@ -160,11 +160,7 @@ def _purge_settings_locks() -> None:
         return
     for path in settings_dir.iterdir():
         name = path.name
-        if (
-            name.startswith("settings")
-            and name.endswith(".yml")
-            and name != "settings.yml"
-        ):
+        if name.startswith("settings") and name.endswith(".yml") and name != "settings.yml":
             try:
                 path.unlink()
             except OSError:
@@ -232,11 +228,7 @@ def main() -> int:
     args = parser.parse_args()
 
     configs: tuple[str, ...] = tuple(args.config) if args.config else DEFAULT_CONFIGS
-    target_paths: list[Path] = (
-        [Path(t).resolve() for t in args.targets]
-        if args.targets
-        else [DEFAULT_TARGET]
-    )
+    target_paths: list[Path] = [Path(t).resolve() for t in args.targets] if args.targets else [DEFAULT_TARGET]
 
     files: list[Path] = []
     for target in target_paths:
@@ -260,8 +252,7 @@ def main() -> int:
         if exit_code not in {0, 1}:
             batch_failures += 1
             print(
-                f"[run-semgrep] batch {total_batches} failed (exit {exit_code}): "
-                f"{stderr[-400:]}",
+                f"[run-semgrep] batch {total_batches} failed (exit {exit_code}): {stderr[-400:]}",
                 file=sys.stderr,
             )
             continue

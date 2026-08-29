@@ -14,9 +14,9 @@ Findings are sorted by file, with files having the most findings listed first.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import datetime
-import io
 import json
 import re
 import sqlite3
@@ -2578,6 +2578,12 @@ def _build_sarif_output(
     }
 
 
+_VERMIN_HEADER_RE = re.compile(r"^[~!]?\d.*\s+(\S+\.py)$")
+_VERMIN_FINDING_RE = re.compile(r"^\s+L(\d+)\s+C(\d+):\s+(.+)$")
+_VERMIN_INCOMPATIBLE_RE = re.compile(r"^File with incompatible versions:\s*(.+\.py)\s*$")
+_VERMIN_INCOMPATIBLE_DETAIL_RE = re.compile(r"^\s+Versions could not be combined:\s*(.+)$")
+
+
 def process_vermin_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
     """Process vermin Python version compatibility checker text output.
 
@@ -2601,14 +2607,6 @@ def process_vermin_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]
         A tuple of (grouped findings by file, total count).
     """
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    header_pattern = re.compile(r"^[~!]?\d.*\s+(\S+\.py)$")
-    finding_pattern = re.compile(r"^\s+L(\d+)\s+C(\d+):\s+(.+)$")
-    incompatible_pattern = re.compile(
-        r"^File with incompatible versions:\s*(.+\.py)\s*$",
-    )
-    incompatible_detail_pattern = re.compile(
-        r"^\s+Versions could not be combined:\s*(.+)$",
-    )
     current_file = ""
     pending_incompatible: str | None = None
 
@@ -2616,7 +2614,7 @@ def process_vermin_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]
         if not line.strip():
             continue
 
-        incompat_match = incompatible_pattern.match(line)
+        incompat_match = _VERMIN_INCOMPATIBLE_RE.match(line)
         if incompat_match:
             current_file = incompat_match.group(1).strip()
             pending_incompatible = current_file
@@ -2629,21 +2627,19 @@ def process_vermin_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]
             })
             continue
 
-        detail_match = incompatible_detail_pattern.match(line)
+        detail_match = _VERMIN_INCOMPATIBLE_DETAIL_RE.match(line)
         if detail_match and pending_incompatible:
             findings = grouped[pending_incompatible]
             if findings:
-                findings[-1]["message"] = (
-                    f"Incompatible Python versions: {detail_match.group(1).strip()}"
-                )
+                findings[-1]["message"] = f"Incompatible Python versions: {detail_match.group(1).strip()}"
             continue
 
-        header_match = header_pattern.match(line)
+        header_match = _VERMIN_HEADER_RE.match(line)
         if header_match:
             current_file = header_match.group(1)
             pending_incompatible = None
             continue
-        finding_match = finding_pattern.match(line)
+        finding_match = _VERMIN_FINDING_RE.match(line)
         if finding_match and current_file:
             line_num = int(finding_match.group(1))
             col_num = int(finding_match.group(2))
@@ -2891,6 +2887,46 @@ def write_sql_output(tool: str, grouped: dict[str, list[dict[str, Any]]], cnt: i
     _write_sql_dump(db_path)
 
 
+def _decode_json_payload(content: str) -> dict[str, Any] | list[Any]:
+    """Decode the first JSON document embedded anywhere in *content*.
+
+    Args:
+        content: Raw text that may wrap a JSON document in non-JSON noise.
+
+    Returns:
+        dict[str, Any] | list[Any]: The decoded document, or an empty dict when
+            no JSON document could be recovered.
+    """
+    if not content:
+        return {}
+
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    decoder = json.JSONDecoder()
+
+    def _try_decode(start: int) -> dict[str, Any] | list[Any] | None:
+        try:
+            obj, _ = decoder.raw_decode(content[start:])
+        except json.JSONDecodeError:
+            return None
+        if isinstance(obj, (dict, list)):
+            return obj
+        return None
+
+    line_start_candidates: list[int] = [i for i, ch in enumerate(content) if ch in "{[" and (i == 0 or content[i - 1] == "\n")]
+    any_candidates: list[int] = [i for i, ch in enumerate(content) if ch in "{["]
+
+    for start in (*line_start_candidates, *any_candidates):
+        result = _try_decode(start)
+        if result is not None:
+            return result
+
+    return {}
+
+
 def load_json_file(input_file: str) -> dict[str, Any] | list[Any]:
     """Load JSON from a file, handling BOM, encoding, and non-JSON noise.
 
@@ -2910,44 +2946,10 @@ def load_json_file(input_file: str) -> dict[str, Any] | list[Any]:
     """
     try:
         content = Path(input_file).read_text(encoding="utf-8-sig").strip()
-        if not content:
-            return {}
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            pass
-
-        decoder = json.JSONDecoder()
-
-        def _try_decode(start: int) -> dict[str, Any] | list[Any] | None:
-            try:
-                obj, _ = decoder.raw_decode(content[start:])
-            except json.JSONDecodeError:
-                return None
-            if isinstance(obj, (dict, list)):
-                return obj
-            return None
-
-        line_start_candidates: list[int] = [
-            i for i, ch in enumerate(content)
-            if ch in "{[" and (i == 0 or content[i - 1] == "\n")
-        ]
-        for start in line_start_candidates:
-            result = _try_decode(start)
-            if result is not None:
-                return result
-
-        any_candidates: list[int] = [i for i, ch in enumerate(content) if ch in "{["]
-        for start in any_candidates:
-            result = _try_decode(start)
-            if result is not None:
-                return result
-
+    except (OSError, UnicodeDecodeError, ValueError):
         return {}
-    except FileNotFoundError:
-        return {}
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
-        return {}
+
+    return _decode_json_payload(content)
 
 
 def load_text_file(input_file: str) -> str:
@@ -2972,22 +2974,24 @@ def load_json_stdin() -> dict[str, Any] | list[Any]:
     """
     try:
         content = sys.stdin.read().strip()
-        if not content:
-            return {}
-        lines = content.split("\n")
-        for line in lines:
-            stripped_line = line.strip()
-            if stripped_line.startswith(("{", "[")):
-                try:
-                    return json.loads(stripped_line)
-                except json.JSONDecodeError:
-                    continue
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            return {"_raw_text": content}
     except (OSError, UnicodeDecodeError, ValueError):
         return {}
+
+    if not content:
+        return {}
+
+    for line in content.split("\n"):
+        stripped_line = line.strip()
+        if stripped_line.startswith(("{", "[")):
+            try:
+                return json.loads(stripped_line)
+            except json.JSONDecodeError:
+                continue
+
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        return {"_raw_text": content}
 
 
 TEXT_PROCESSORS: dict[str, Callable[[str], tuple[dict[str, list[dict[str, Any]]], int]]] = {
@@ -3474,7 +3478,8 @@ def _build_html_template(json_data: str, generated_ts: str, title: str) -> str:
         A complete HTML document as a string.
     """
     return (
-        _HTML_TEMPLATE.replace("__JSON_DATA__", json_data)
+        _HTML_TEMPLATE
+        .replace("__JSON_DATA__", json_data)
         .replace("__TITLE__", html_escape(title))
         .replace("__GENERATED__", html_escape(generated_ts))
     )
@@ -3494,6 +3499,33 @@ def _emit_dashboard_chart(dashboard_data: dict[str, Any]) -> None:
     chart_values = [int(t["total_findings"]) for t in sorted_tools]
     chart_colors = [severity_color_for_count(v) for v in chart_values]
     print_sixel_legend(chart_labels, chart_values, chart_colors)
+
+
+def _merge_findings_db(cur: sqlite3.Cursor, db_file: Path) -> None:
+    """Copy the findings and summary rows of *db_file* into the consolidated DB.
+
+    Args:
+        cur: Cursor on the consolidated database that receives the rows.
+        db_file: Per-tool SQLite findings database to merge.
+    """
+    tool_name = db_file.stem.replace("_findings", "")
+    with contextlib.closing(sqlite3.connect(str(db_file))) as src_conn:
+        src_cur = src_conn.cursor()
+        src_cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='findings'")
+        if not src_cur.fetchone():
+            return
+
+        src_cur.execute("SELECT file, line, column_, severity, code, rule, message FROM findings")
+        cur.executemany(
+            "INSERT INTO findings (tool, file, line, column_, severity, code, rule, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [(tool_name, *row) for row in src_cur.fetchall()],
+        )
+
+        src_cur.execute("SELECT * FROM summary")
+        cur.executemany(
+            "INSERT INTO summary (tool, generated, total_findings, total_files) VALUES (?, ?, ?, ?)",
+            src_cur.fetchall(),
+        )
 
 
 def generate_report(
@@ -3551,23 +3583,7 @@ def generate_report(
             if db_file.name == "all_findings.db":
                 continue
             try:
-                src_conn = sqlite3.connect(str(db_file))
-                src_cur = src_conn.cursor()
-                src_cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='findings'")
-                if not src_cur.fetchone():
-                    src_conn.close()
-                    continue
-                src_cur.execute("SELECT file, line, column_, severity, code, rule, message FROM findings")
-                tool_name = db_file.stem.replace("_findings", "")
-                for row in src_cur.fetchall():
-                    cur.execute(
-                        "INSERT INTO findings (tool, file, line, column_, severity, code, rule, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        (tool_name, *row),
-                    )
-                src_cur.execute("SELECT * FROM summary")
-                for srow in src_cur.fetchall():
-                    cur.execute("INSERT INTO summary (tool, generated, total_findings, total_files) VALUES (?, ?, ?, ?)", srow)
-                src_conn.close()
+                _merge_findings_db(cur, db_file)
             except sqlite3.Error:
                 continue
         cur.execute("CREATE INDEX IF NOT EXISTS idx_findings_tool ON findings (tool)")

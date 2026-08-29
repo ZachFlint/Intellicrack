@@ -394,11 +394,7 @@ def discover_groups(tests_root: Path) -> list[Group]:
             continue
         ignores = tuple(
             sorted(
-                child
-                for child in directory.iterdir()
-                if child.is_dir()
-                and child.name != "__pycache__"
-                and not child.name.startswith(".")
+                child for child in directory.iterdir() if child.is_dir() and child.name != "__pycache__" and not child.name.startswith(".")
             ),
         )
         relative = directory.relative_to(root)
@@ -505,10 +501,7 @@ def _flush_group_log(
         lock: Serialises writes to ``log_path``.
     """
     rule = "-" * 80
-    header = (
-        f"\n{rule}\nCOVERAGE GROUP: {entry_name}   exit={exit_code}   "
-        f"duration={duration:.2f}s\n{rule}\n"
-    )
+    header = f"\n{rule}\nCOVERAGE GROUP: {entry_name}   exit={exit_code}   duration={duration:.2f}s\n{rule}\n"
     body = ""
     if out_path.exists():
         body += out_path.read_text(encoding="utf-8", errors="replace")
@@ -737,8 +730,7 @@ def orchestrate(
     combine_dir.mkdir(parents=True, exist_ok=True)
 
     print(
-        f"COVERAGE ISOLATED START   groups={len(groups)}   jobs={jobs}   "
-        f"group_timeout={group_timeout:.0f}s",
+        f"COVERAGE ISOLATED START   groups={len(groups)}   jobs={jobs}   group_timeout={group_timeout:.0f}s",
         flush=True,
     )
 
@@ -774,10 +766,7 @@ def orchestrate(
     )
 
     failed = [f"{result.name}={result.exit_code}" for result in results if result.exit_code not in {0, _EXIT_NO_TESTS}]
-    summary = (
-        f"\n{'=' * 80}\nCOVERAGE ISOLATED SUMMARY   groups={len(groups)}   "
-        f"failed={len(failed)}   coverage_gate_exit={gate}\n"
-    )
+    summary = f"\n{'=' * 80}\nCOVERAGE ISOLATED SUMMARY   groups={len(groups)}   failed={len(failed)}   coverage_gate_exit={gate}\n"
     if failed:
         summary += f"FAILED GROUPS: {', '.join(failed)}\n"
     summary += "=" * 80

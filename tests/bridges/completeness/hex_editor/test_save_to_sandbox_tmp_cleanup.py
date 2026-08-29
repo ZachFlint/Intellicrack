@@ -85,9 +85,7 @@ def test_save_to_sandbox_copies_real_document_bytes_and_leaves_document_usable()
 
     asyncio.run(bridge.save_to_sandbox(_SANDBOX_DEST_PATH))
 
-    assert fake.copied_payloads == [_DOCUMENT_BYTES], (
-        "the sandbox must receive the real document bytes"
-    )
+    assert fake.copied_payloads == [_DOCUMENT_BYTES], "the sandbox must receive the real document bytes"
 
     assert bridge.document is not None
     assert bridge.document.read(0, bridge.document.length()) == _DOCUMENT_BYTES, (

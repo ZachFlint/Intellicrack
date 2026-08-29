@@ -141,6 +141,7 @@ python -m intellicrack
 
 ```python
 from intellicrack import main
+
 main()
 ```
 

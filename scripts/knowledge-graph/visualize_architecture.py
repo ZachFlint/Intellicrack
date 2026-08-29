@@ -28,7 +28,7 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 
 try:
@@ -39,10 +39,78 @@ except ImportError as e:
     sys.exit(1)
 
 
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 _MAX_DOCSTRING_LENGTH = 500
+
+
+def _normalize_file_to_crlf(path: Path) -> None:
+    """Rewrite *path* so every line ends with CRLF and the file ends with one.
+
+    Args:
+        path: File to normalize in place.
+    """
+    raw = path.read_bytes()
+    if raw.endswith(b"\r\n"):
+        return
+
+    raw = raw.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+    if not raw.endswith(b"\r\n"):
+        raw += b"\r\n"
+    path.write_bytes(raw)
+
+
+def _parse_sfdp_positions(data: dict[str, Any]) -> dict[str, dict[str, float]]:
+    """Extract node positions from decoded ``sfdp -Tjson`` output.
+
+    Args:
+        data: Decoded JSON document produced by Graphviz ``sfdp``.
+
+    Returns:
+        dict[str, dict[str, float]]: Mapping of node names to x/y positions.
+    """
+    layout_map: dict[str, dict[str, float]] = {}
+    for node in data.get("objects", []):
+        name = node.get("name")
+        pos = node.get("pos")
+        if not name or not pos:
+            continue
+        try:
+            x, y = (float(component) for component in pos.split(","))
+        except ValueError:
+            continue
+        layout_map[name] = {"x": x * 5, "y": y * -5}
+    return layout_map
+
+
+def _write_dot(filtered_graph: nx.DiGraph, dot_path: Path) -> None:
+    """Write *filtered_graph* to *dot_path* in Graphviz DOT format.
+
+    Uses ``networkx``'s pydot writer when available and falls back to a
+    self-contained writer otherwise.
+
+    Args:
+        filtered_graph: Graph to serialize.
+        dot_path: Destination DOT file.
+    """
+    try:
+        nx.drawing.nx_pydot.write_dot(filtered_graph, str(dot_path))
+    except (ImportError, AttributeError):
+        with dot_path.open("w", encoding="utf-8", newline="\r\n") as f:
+            f.write('digraph "Intellicrack" {\n')
+            for n in filtered_graph.nodes:
+                safe_n = n.replace('"', '\\"')
+                f.write(f'  "{safe_n}";\n')
+            for u, v in filtered_graph.edges:
+                safe_u = u.replace('"', '\\"')
+                safe_v = v.replace('"', '\\"')
+                f.write(f'  "{safe_u}" -> "{safe_v}";\n')
+            f.write("}\n")
 
 
 class ClusterManager:
@@ -213,62 +281,84 @@ class KnowledgeGraphGenerator:
         self.cluster_manager.build_clusters(depth=2)
         logger.info("Built %d clusters.", len(self.cluster_manager.clusters))
 
+    def _walk_files(self, root: Path, suffixes: tuple[str, ...]) -> Iterator[Path]:
+        """Walk *root*, yielding files whose name ends with one of *suffixes*.
+
+        Args:
+            root: Directory tree to walk.
+            suffixes: File-name suffixes to keep.
+
+        Yields:
+            Path: Each matching file path.
+        """
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [d for d in dirnames if d not in self._WALK_EXCLUDE_DIRS]
+            for filename in filenames:
+                if filename.endswith(suffixes):
+                    yield Path(dirpath) / filename
+
+    def _add_javascript_node(self, path: Path, import_re: re.Pattern[str]) -> None:
+        """Add a JavaScript/TypeScript file and its import edges to the graph.
+
+        Args:
+            path: Source file to record.
+            import_re: Compiled pattern matching ``import``/``require`` targets.
+        """
+        try:
+            content = path.read_text(encoding="utf-8")
+        except OSError as e:
+            logger.debug("Skipping JS file %s: %s", path, e)
+            return
+
+        node_id = str(path.relative_to(self.repo_root)).replace(os.sep, "/")
+        self.graph.add_node(node_id, type="javascript", lang="javascript", path=str(path), label=path.name)
+        for match in import_re.finditer(content):
+            self.graph.add_edge(node_id, match.group(1), type="imports")
+
+    def _add_asset_node(self, path: Path) -> None:
+        """Add a config or documentation file to the graph.
+
+        Args:
+            path: Asset file to record.
+        """
+        node_id = str(path.relative_to(self.repo_root)).replace(os.sep, "/")
+        node_type = "documentation" if path.name.endswith(".md") else "config"
+        self.graph.add_node(node_id, type=node_type, path=str(path), label=path.name)
+
+    def _add_python_node(self, path: Path) -> None:
+        """Add a Python module node and parse its deep structure.
+
+        Args:
+            path: Python source file to record.
+        """
+        module_name = self._get_module_name(path)
+        self.module_map[path] = module_name
+        self.graph.add_node(module_name, type="module", lang="python", path=str(path), label=module_name)
+        self._parse_python_file(path, module_name)
+
     def _scan_javascript(self) -> None:
         """Scans JS/TS files in the repository."""
         import_re = re.compile(r'(?:import|require)\s*\(?[\'"]([^\'"]+)[\'"]\)?')
         try:
-            for root, dirs, files in os.walk(self.repo_root):
-                dirs[:] = [d for d in dirs if d not in self._WALK_EXCLUDE_DIRS]
-                for file in files:
-                    if file.endswith((".js", ".ts", ".jsx", ".tsx", ".cjs", ".mjs")):
-                        path = Path(root) / file
-                        try:
-                            rel_path = path.relative_to(self.repo_root)
-                            node_id = str(rel_path).replace(os.sep, "/")
-                            self.graph.add_node(node_id, type="javascript", lang="javascript", path=str(path), label=file)
-
-                            content = path.read_text(encoding="utf-8")
-                            for match in import_re.finditer(content):
-                                target = match.group(1)
-                                self.graph.add_edge(node_id, target, type="imports")
-                        except OSError as e:
-                            logger.debug("Skipping JS file %s: %s", path, e)
+            for path in self._walk_files(self.repo_root, (".js", ".ts", ".jsx", ".tsx", ".cjs", ".mjs")):
+                self._add_javascript_node(path, import_re)
         except Exception:
             logger.exception("Error scanning javascript")
 
     def _scan_assets(self) -> None:
         """Scans config and documentation files."""
         try:
-            for root, dirs, files in os.walk(self.repo_root):
-                dirs[:] = [d for d in dirs if d not in self._WALK_EXCLUDE_DIRS]
-                for file in files:
-                    if file.endswith((".json", ".toml", ".yaml", ".yml", ".md")):
-                        path = Path(root) / file
-                        try:
-                            rel_path = path.relative_to(self.repo_root)
-                            node_id = str(rel_path).replace(os.sep, "/")
-                            node_type = "documentation" if file.endswith(".md") else "config"
-                            self.graph.add_node(node_id, type=node_type, path=str(path), label=file)
-                        except OSError as e:
-                            logger.debug("Skipping asset %s: %s", path, e)
+            for path in self._walk_files(self.repo_root, (".json", ".toml", ".yaml", ".yml", ".md")):
+                self._add_asset_node(path)
         except Exception:
             logger.exception("Error scanning assets")
 
     def _scan_python(self) -> None:
         """Scans Python files and parses deep structure."""
         try:
-            for root, dirs, files in os.walk(self.root_dir):
-                dirs[:] = [d for d in dirs if d not in self._WALK_EXCLUDE_DIRS]
-                for file in files:
-                    if file.endswith(".py"):
-                        path = Path(root) / file
-                        if "tests" in path.parts:
-                            continue
-
-                        module_name = self._get_module_name(path)
-                        self.module_map[path] = module_name
-                        self.graph.add_node(module_name, type="module", lang="python", path=str(path), label=module_name)
-                        self._parse_python_file(path, module_name)
+            for path in self._walk_files(self.root_dir, (".py",)):
+                if "tests" not in path.parts:
+                    self._add_python_node(path)
         except (PermissionError, OSError):
             logger.exception("Error identifying files in directory %s", self.root_dir)
 
@@ -354,15 +444,11 @@ class KnowledgeGraphGenerator:
         """Export the graph to GraphML format."""
         try:
             nx.write_graphml(self.graph, str(output_path))
-            raw = output_path.read_bytes()
-            if not raw.endswith(b"\r\n"):
-                raw = raw.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
-                if not raw.endswith(b"\r\n"):
-                    raw += b"\r\n"
-                output_path.write_bytes(raw)
-            logger.info("GraphML saved to: %s", output_path)
+            _normalize_file_to_crlf(output_path)
         except Exception:
             logger.exception("Failed to save GraphML file:")
+        else:
+            logger.info("GraphML saved to: %s", output_path)
 
     @staticmethod
     def _calculate_hierarchical_layout(filtered_graph: nx.DiGraph) -> dict[str, dict[str, float]]:
@@ -475,22 +561,8 @@ class KnowledgeGraphGenerator:
                 text=True,
                 stderr=subprocess_mod.PIPE,
             )
-
-            data = json.loads(json_output)
-
-            if "objects" in data:
-                for node in data["objects"]:
-                    name = node.get("name")
-                    pos = node.get("pos")
-                    if name and pos:
-                        try:
-                            x, y = map(float, pos.split(","))
-                            layout_map[name] = {"x": x * 5, "y": y * -5}
-                        except ValueError:
-                            pass
-
+            layout_map.update(_parse_sfdp_positions(json.loads(json_output)))
             logger.info("SFDP layout calculated for %d nodes.", len(layout_map))
-
         except subprocess_mod.CalledProcessError as e:
             logger.exception("Graphviz layout calculation failed: %s", e.stderr)
         except FileNotFoundError:
@@ -508,25 +580,8 @@ class KnowledgeGraphGenerator:
             bool: True if the file was written successfully, False otherwise.
         """
         try:
-            try:
-                nx.drawing.nx_pydot.write_dot(filtered_graph, str(dot_path))
-            except (ImportError, AttributeError):
-                with dot_path.open("w", encoding="utf-8", newline="\r\n") as f:
-                    f.write('digraph "Intellicrack" {\n')
-                    for n in filtered_graph.nodes:
-                        safe_n = n.replace('"', '\\"')
-                        f.write(f'  "{safe_n}";\n')
-                    for u, v in filtered_graph.edges:
-                        safe_u = u.replace('"', '\\"')
-                        safe_v = v.replace('"', '\\"')
-                        f.write(f'  "{safe_u}" -> "{safe_v}";\n')
-                    f.write("}\n")
-            raw = dot_path.read_bytes()
-            if not raw.endswith(b"\r\n"):
-                raw = raw.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
-                if not raw.endswith(b"\r\n"):
-                    raw += b"\r\n"
-                dot_path.write_bytes(raw)
+            _write_dot(filtered_graph, dot_path)
+            _normalize_file_to_crlf(dot_path)
         except Exception:
             logger.exception("Failed to generate DOT file.")
             return False

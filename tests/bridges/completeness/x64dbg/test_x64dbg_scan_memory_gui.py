@@ -148,7 +148,7 @@ class TestByteModeDispatch:
 
     @staticmethod
     def test_hex_mode_click_still_calls_find_pattern_and_never_scan_memory(qapp: QApplication) -> None:
-        """"Hex" mode must keep dispatching to ``find_pattern``, unaffected by the "Byte" wiring.
+        """Hex mode must keep dispatching to ``find_pattern``, unaffected by the "Byte" wiring.
 
         Regression guard: proves the new "Byte" branch was added as an
         ``elif``, not by replacing the pre-existing wildcard-capable "Hex"

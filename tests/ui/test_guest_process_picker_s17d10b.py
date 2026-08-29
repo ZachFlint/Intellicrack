@@ -118,9 +118,7 @@ def test_accept_captures_the_pid_of_the_selected_row(qapp: QApplication) -> None
     dialog = GuestProcessPickerDialog(_SAMPLE_PROCESSES)
     try:
         target_row = next(
-            row
-            for row in range(dialog._table.rowCount())
-            if dialog._table.item(row, _PID_COLUMN).data(Qt.ItemDataRole.UserRole) == 4242
+            row for row in range(dialog._table.rowCount()) if dialog._table.item(row, _PID_COLUMN).data(Qt.ItemDataRole.UserRole) == 4242
         )
         dialog._table.selectRow(target_row)
         dialog._on_accept()
@@ -141,9 +139,7 @@ def test_double_click_accepts_immediately(qapp: QApplication) -> None:
     dialog = GuestProcessPickerDialog(_SAMPLE_PROCESSES)
     try:
         target_row = next(
-            row
-            for row in range(dialog._table.rowCount())
-            if dialog._table.item(row, _PID_COLUMN).data(Qt.ItemDataRole.UserRole) == 777
+            row for row in range(dialog._table.rowCount()) if dialog._table.item(row, _PID_COLUMN).data(Qt.ItemDataRole.UserRole) == 777
         )
         dialog._table.selectRow(target_row)
         item = dialog._table.item(target_row, _NAME_COLUMN)

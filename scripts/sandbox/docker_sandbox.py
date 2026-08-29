@@ -1776,8 +1776,7 @@ def main(raw_args: list[str] | None = None) -> int:
         cpus=plan.cpus,
     )
     print(
-        f"[sandbox] Host capacity: up to {plan.slots} concurrent run(s), "
-        f"{plan.memory} / {plan.cpus} CPU(s) each.",
+        f"[sandbox] Host capacity: up to {plan.slots} concurrent run(s), {plan.memory} / {plan.cpus} CPU(s) each.",
         file=sys.stderr,
     )
 

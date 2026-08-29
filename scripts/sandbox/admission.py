@@ -292,11 +292,7 @@ def select_stale_reservations(
         tuple[Reservation, ...]: Reservations whose owning run has ended, safe to
             delete so their slot is reclaimed.
     """
-    return tuple(
-        reservation
-        for reservation in reservations
-        if not _reservation_is_active(reservation, live_tokens, alive_pids)
-    )
+    return tuple(reservation for reservation in reservations if not _reservation_is_active(reservation, live_tokens, alive_pids))
 
 
 def count_active_reservations(
@@ -320,8 +316,7 @@ def count_active_reservations(
     return sum(
         1
         for reservation in reservations
-        if reservation.token != exclude_token
-        and _reservation_is_active(reservation, live_tokens, alive_pids)
+        if reservation.token != exclude_token and _reservation_is_active(reservation, live_tokens, alive_pids)
     )
 
 
@@ -636,8 +631,7 @@ class SlotGate:
                 announced = True
             if self._clock() >= deadline:
                 message = (
-                    f"no sandbox concurrency slot became free within {self._wait_timeout:.0f}s "
-                    f"({self._budget} slot(s) stayed occupied)"
+                    f"no sandbox concurrency slot became free within {self._wait_timeout:.0f}s ({self._budget} slot(s) stayed occupied)"
                 )
                 raise AdmissionError(message)
             self._sleep(self._poll)

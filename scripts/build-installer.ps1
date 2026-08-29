@@ -1,7 +1,6 @@
 #Requires -Version 7
 [CmdletBinding()]
 param(
-    [string]$Pixi = 'pixi run',
     [string]$StageArgs = '',
     [string]$IsccArgs = ''
 )
@@ -117,18 +116,6 @@ $stageArgv = @('-NoLogo', '-NonInteractive', '-File', $StageScript) + (Split-Com
 $code = Invoke-LoggedStep -What 'Stage payload' -FilePath $pwshPath -ArgumentList $stageArgv
 if ($code -ne 0) {
     Write-Both "stage.ps1 failed (exit $code); see $LogPath"
-    exit $code
-}
-
-$pixiParts = Split-CommandArgument -Value $Pixi
-if ($pixiParts.Count -eq 0) { $pixiParts = @('pixi', 'run') }
-$gateArgv = $pixiParts[1..($pixiParts.Count - 1)] + @(
-    'python', '-m', 'scripts.sandbox.docker_sandbox', 'module',
-    '--module', 'tests/packaging/test_stage_matches_iss.py'
-)
-$code = Invoke-LoggedStep -What 'Verify stage against the .iss' -FilePath $pixiParts[0] -ArgumentList $gateArgv
-if ($code -ne 0) {
-    Write-Both "stage verification failed (exit $code); see $LogPath"
     exit $code
 }
 

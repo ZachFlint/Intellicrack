@@ -353,26 +353,7 @@ def run_tool(tool: Tool) -> ToolResult:
     start = time.monotonic()
     try:
         result = _run_just(tool.recipe)
-        recipe_seconds = round(time.monotonic() - start, 1)
-        output = (result.stdout or "") + (result.stderr or "")
-        duration = _parse_tool_seconds(output, recipe_seconds)
-        findings = 0
-        if not tool.is_formatter:
-            findings = _parse_findings(output)
-            if findings == 0:
-                report_findings = _read_report_findings(tool.recipe)
-                if report_findings is not None and report_findings > 0:
-                    findings = report_findings
-        return ToolResult(
-            tool.name,
-            tool.recipe,
-            findings,
-            duration,
-            recipe_seconds,
-            success=True,
-            is_formatter=tool.is_formatter,
-        )
-    except subprocess.TimeoutExpired:
+    except (subprocess.TimeoutExpired, OSError):
         recipe_seconds = round(time.monotonic() - start, 1)
         return ToolResult(
             tool.name,
@@ -383,17 +364,27 @@ def run_tool(tool: Tool) -> ToolResult:
             success=False,
             is_formatter=tool.is_formatter,
         )
-    except OSError:
-        recipe_seconds = round(time.monotonic() - start, 1)
-        return ToolResult(
-            tool.name,
-            tool.recipe,
-            0,
-            recipe_seconds,
-            recipe_seconds,
-            success=False,
-            is_formatter=tool.is_formatter,
-        )
+
+    recipe_seconds = round(time.monotonic() - start, 1)
+    output = (result.stdout or "") + (result.stderr or "")
+    duration = _parse_tool_seconds(output, recipe_seconds)
+    findings = 0
+    if not tool.is_formatter:
+        findings = _parse_findings(output)
+        if findings == 0:
+            report_findings = _read_report_findings(tool.recipe)
+            if report_findings is not None and report_findings > 0:
+                findings = report_findings
+
+    return ToolResult(
+        tool.name,
+        tool.recipe,
+        findings,
+        duration,
+        recipe_seconds,
+        success=True,
+        is_formatter=tool.is_formatter,
+    )
 
 
 def _format_eta(seconds: float) -> str:
@@ -771,6 +762,48 @@ def _run_phase_sequential(
         tracker.record_completion(tool, result)
 
 
+def _submit_tools(
+    pool: ThreadPoolExecutor,
+    tools: list[Tool],
+    tracker: ProgressTracker,
+) -> dict[Future[ToolResult], Tool]:
+    """Submit every tool to *pool* and record its start with *tracker*.
+
+    Args:
+        pool: Thread pool executing the tools.
+        tools: Tools to schedule.
+        tracker: Progress tracker for output management.
+
+    Returns:
+        dict[Future[ToolResult], Tool]: Mapping of each scheduled future to its
+            originating tool.
+    """
+    future_to_tool: dict[Future[ToolResult], Tool] = {}
+    for tool in tools:
+        tracker.record_start()
+        future_to_tool[pool.submit(run_tool, tool)] = tool
+    return future_to_tool
+
+
+def _collect_tool_results(
+    future_to_tool: dict[Future[ToolResult], Tool],
+    tracker: ProgressTracker,
+    results: dict[str, ToolResult],
+) -> None:
+    """Drain *future_to_tool* as futures complete, updating *results*.
+
+    Args:
+        future_to_tool: Mapping of scheduled futures to their tools.
+        tracker: Progress tracker for output management.
+        results: Mutable results dict to update with completions.
+    """
+    for completed in as_completed(future_to_tool):
+        tool = future_to_tool[completed]
+        result = completed.result()
+        results[tool.recipe] = result
+        tracker.record_completion(tool, result)
+
+
 def _run_phase_parallel(
     tools: list[Tool],
     tracker: ProgressTracker,
@@ -807,17 +840,7 @@ def _run_phase_parallel(
     tracker.set_phase(phase_label)
     pool = ThreadPoolExecutor(max_workers=max_workers)
     try:
-        future_to_tool: dict[Future[ToolResult], Tool] = {}
-        for tool in tools:
-            tracker.record_start()
-            future = pool.submit(run_tool, tool)
-            future_to_tool[future] = tool
-
-        for completed in as_completed(future_to_tool):
-            tool = future_to_tool[completed]
-            result = completed.result()
-            results[tool.recipe] = result
-            tracker.record_completion(tool, result)
+        _collect_tool_results(_submit_tools(pool, tools, tracker), tracker, results)
     except KeyboardInterrupt:
         pool.shutdown(wait=False, cancel_futures=True)
         raise
@@ -844,6 +867,40 @@ def _print_summary(results: dict[str, ToolResult], elapsed: float) -> None:
     )
 
 
+def _run_all_phases(
+    tracker: ProgressTracker,
+    results: dict[str, ToolResult],
+    formatters: list[Tool],
+    linters: list[Tool],
+    dashboard: list[Tool],
+    max_workers: int,
+) -> None:
+    """Run the formatting, linting, and dashboard phases in order.
+
+    Args:
+        tracker: Progress tracker for output management.
+        results: Mutable results dict to update with completions.
+        formatters: Formatter tools run sequentially first.
+        linters: Linter tools run concurrently.
+        dashboard: Dashboard tools run sequentially last.
+        max_workers: Maximum number of concurrent linter workers.
+    """
+    tracker.start()
+    _run_phase_sequential(formatters, tracker, results, "Formatting")
+    if linters:
+        print(f"\n  {GRAY}-- Source & Config --{RESET}\n")
+    _run_phase_parallel(
+        linters,
+        tracker,
+        results,
+        max_workers,
+        phase_label="Linting Source & Config",
+        group_header=None,
+    )
+    _run_phase_sequential(dashboard, tracker, results, "Dashboard")
+    tracker.stop()
+
+
 def main() -> None:
     """Run all development tools with parallel linting and progress tracking."""
     skip_list, group_filter, max_workers = _parse_args()
@@ -864,20 +921,7 @@ def main() -> None:
     global_start = time.monotonic()
 
     try:
-        tracker.start()
-        _run_phase_sequential(formatters, tracker, results, "Formatting")
-        if linters:
-            print(f"\n  {GRAY}-- Source & Config --{RESET}\n")
-        _run_phase_parallel(
-            linters,
-            tracker,
-            results,
-            max_workers,
-            phase_label="Linting Source & Config",
-            group_header=None,
-        )
-        _run_phase_sequential(dashboard, tracker, results, "Dashboard")
-        tracker.stop()
+        _run_all_phases(tracker, results, formatters, linters, dashboard, max_workers)
     except KeyboardInterrupt:
         tracker.stop()
         print(f"\n\n  {RED}Interrupted{RESET}")

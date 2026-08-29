@@ -238,19 +238,11 @@ def _normalize_version(spec: object) -> str:
             return f"path={path_text}"
         git_text = _str_or_none(spec_map.get("git"))
         if git_text is not None:
-            rev_text = (
-                _str_or_none(spec_map.get("rev"))
-                or _str_or_none(spec_map.get("tag"))
-                or _str_or_none(spec_map.get("branch"))
-            )
+            rev_text = _str_or_none(spec_map.get("rev")) or _str_or_none(spec_map.get("tag")) or _str_or_none(spec_map.get("branch"))
             if rev_text is not None:
                 return f"git={git_text}@{rev_text}"
             return f"git={git_text}"
-        scalar_pairs = sorted(
-            (str(key), str(val))
-            for key, val in spec_map.items()
-            if not isinstance(val, (Mapping, list))
-        )
+        scalar_pairs = sorted((str(key), str(val)) for key, val in spec_map.items() if not isinstance(val, (Mapping, list)))
         rendered = ", ".join(f"{key}={val}" for key, val in scalar_pairs)
         return rendered or "*"
     return str(spec)
@@ -480,18 +472,10 @@ def _diff_section(
         (in that order).
     """
     updated_changes = [
-        DepChange(ecosystem, name, old[name], new[name])
-        for name in sorted(old.keys() & new.keys())
-        if old[name] != new[name]
+        DepChange(ecosystem, name, old[name], new[name]) for name in sorted(old.keys() & new.keys()) if old[name] != new[name]
     ]
-    added_changes = [
-        DepChange(ecosystem, name, None, new[name])
-        for name in sorted(new.keys() - old.keys())
-    ]
-    removed_changes = [
-        DepChange(ecosystem, name, old[name], None)
-        for name in sorted(old.keys() - new.keys())
-    ]
+    added_changes = [DepChange(ecosystem, name, None, new[name]) for name in sorted(new.keys() - old.keys())]
+    removed_changes = [DepChange(ecosystem, name, old[name], None) for name in sorted(old.keys() - new.keys())]
     return updated_changes + added_changes + removed_changes
 
 
@@ -529,10 +513,7 @@ def _format_change_line(change: DepChange) -> str:
         return f"**{change.ecosystem}:** {change.name}: {change.new_version}"
     if change.new_version is None and change.old_version is not None:
         return f"**{change.ecosystem}:** {change.name} (was {change.old_version})"
-    return (
-        f"**{change.ecosystem}:** {change.name}: "
-        f"{change.old_version} to {change.new_version}"
-    )
+    return f"**{change.ecosystem}:** {change.name}: {change.old_version} to {change.new_version}"
 
 
 def _emit_subsection(
@@ -679,10 +660,7 @@ def _build_parser() -> argparse.ArgumentParser:
         argparse.ArgumentParser: Configured :class:`argparse.ArgumentParser`.
     """
     parser = argparse.ArgumentParser(
-        description=(
-            "Emit a Markdown 'Dependency changes' section by diffing manifests "
-            "between two git refs."
-        ),
+        description=("Emit a Markdown 'Dependency changes' section by diffing manifests between two git refs."),
     )
     parser.add_argument(
         "--from",
@@ -705,10 +683,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--allow-no-tag",
         action="store_true",
-        help=(
-            "When --from is not supplied and no v* tag exists, fall back to the "
-            "first commit instead of producing empty output."
-        ),
+        help=("When --from is not supplied and no v* tag exists, fall back to the first commit instead of producing empty output."),
     )
     return parser
 

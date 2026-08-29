@@ -5,15 +5,17 @@
 
 r"""Falsifiable tests that the installer build captures a reviewable log.
 
-``just build-installer`` used to run its three steps -- ``packaging/stage.ps1``,
-the staged-tree verification and ``iscc`` -- as separate recipe lines whose output
-went only to the console. Once the terminal was cleared the build was
+``just build-installer`` used to run its steps as separate recipe lines whose
+output went only to the console. Once the terminal was cleared the build was
 unreconstructable: no log file existed anywhere, so a warning noticed mid-build
 could not be read back.
 
-``scripts/build-installer.ps1`` now drives the whole pipeline and streams every
-step's combined stdout/stderr to ``logs/installer/build.log`` (a single rolling
-file, replaced each run) as well as the console.
+``scripts/build-installer.ps1`` now drives the whole pipeline -- stage the
+payload, then compile it with ``iscc`` -- and streams every step's combined
+stdout/stderr to ``logs/installer/build.log`` (a single rolling file, replaced
+each run) as well as the console. It runs no tests: a build must not depend on
+the test container being up, and an unrelated test failure must not fail a
+compile, so staging and verification stay separate operations.
 
 These gates hold that behavior honest by *executing* the script's real logging
 functions rather than restating them: ``Write-LogLine``, ``Write-Both`` and
@@ -32,6 +34,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Final
 
 import pytest
 
@@ -39,6 +42,17 @@ import pytest
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _BUILD_SCRIPT = _REPO_ROOT / "scripts" / "build-installer.ps1"
 _JUSTFILE = _REPO_ROOT / "justfile"
+
+# Invocations that would mean the installer build is running tests. Building and
+# verifying are separate operations: a build must not depend on the test container
+# being up, and an unrelated test failure must not fail a compile.
+_TEST_RUNNER_TOKENS: Final[tuple[str, ...]] = (
+    "docker_sandbox",
+    "host_native_tests",
+    "pytest",
+    "just test",
+    "unittest",
+)
 
 
 def _extract_ps_function(name: str) -> str:
@@ -221,12 +235,36 @@ def test_build_script_logs_to_the_repository_logs_directory() -> None:
 
     assert "'logs\\installer'" in text, "the build script no longer writes into logs/installer"
     assert "'build.log'" in text, "the build script no longer writes build.log"
-    assert "Set-Content -LiteralPath $LogPath" in text, (
-        "the build script no longer truncates the log at start, so runs would concatenate"
-    )
+    assert "Set-Content -LiteralPath $LogPath" in text, "the build script no longer truncates the log at start, so runs would concatenate"
 
     gitignore = (_REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
     assert re.search(r"^logs/", gitignore, re.MULTILINE), "logs/ is no longer git-ignored; build logs would be committed"
+
+
+def test_build_script_runs_no_tests() -> None:
+    """The build pipeline must stage and compile only -- it must never run tests.
+
+    An earlier revision of the recipe ran the staged-tree gate through the Docker
+    test sandbox between staging and ``iscc``. That made a build depend on the
+    container being up, turned an unrelated test failure into a failed build, and
+    cost minutes on every compile. Building and verifying are deliberately
+    separate operations here: run the gates yourself via the normal test runner.
+
+    Re-adding any test-runner invocation to the build script or the recipe reddens
+    this gate.
+    """
+    script_text = _BUILD_SCRIPT.read_text(encoding="utf-8")
+
+    justfile_text = _JUSTFILE.read_text(encoding="utf-8")
+    start = justfile_text.index("\nbuild-installer *ARGS:")
+    end = justfile_text.index("\n[doc(", start)
+    recipe_body = justfile_text[start:end]
+
+    for source, label in ((script_text, "scripts/build-installer.ps1"), (recipe_body, "the build-installer recipe")):
+        for token in _TEST_RUNNER_TOKENS:
+            assert token not in source, (
+                f"{label} invokes a test runner ({token!r}); the installer build must only stage and compile, never run tests"
+            )
 
 
 def test_build_script_streams_stderr_into_the_log() -> None:

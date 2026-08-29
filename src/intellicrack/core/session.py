@@ -335,21 +335,18 @@ class SessionStore:
                 NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL, active_binary_index INTEGER DEFAULT -1, notes TEXT DEFAULT '',
 
                 data TEXT NOT NULL )
-                """
-                   ,
+                """,
             )
 
             conn.execute(
-                """CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions (updated_at DESC)"""
-                                                                                                   ,
+                """CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions (updated_at DESC)""",
             )
 
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS session_tags ( session_id TEXT NOT NULL, tag TEXT NOT NULL, PRIMARY KEY (session_id, tag),
 
                 FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE )
-                """
-                   ,
+                """,
             )
 
             _logger.debug("database_schema_initialized", db_path=str(self.db_path))
@@ -385,8 +382,7 @@ class SessionStore:
             conn.execute(
                 """INSERT OR REPLACE INTO sessions (id, name, created_at, updated_at, provider, model, active_binary_index, notes, data)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """
-                   ,
+                """,
                 (
                     session.id,
                     session.name,
@@ -535,8 +531,7 @@ class SessionStore:
         _logger.debug("session_list_all_query", limit=limit)
         with self._connection() as conn:
             rows = conn.execute(
-                """SELECT id, name, created_at, updated_at, provider, model, data FROM sessions ORDER BY updated_at DESC LIMIT ?"""
-                                                                                                                                   ,
+                """SELECT id, name, created_at, updated_at, provider, model, data FROM sessions ORDER BY updated_at DESC LIMIT ?""",
                 (limit,),
             ).fetchall()
 

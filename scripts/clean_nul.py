@@ -50,6 +50,31 @@ def _walk_filtered(root: str) -> Iterator[Path]:
             yield Path(dirpath, fname)
 
 
+def _delete_if_reserved(filepath: Path) -> bool:
+    """Delete *filepath* when its stem is a Windows reserved device name.
+
+    Args:
+        filepath: Candidate file discovered during the directory walk.
+
+    Returns:
+        bool: True when the file matched a reserved name and was deleted.
+    """
+    basename = filepath.name.lower()
+    stem = basename.rsplit(".", 1)[0] if "." in basename else basename
+    if stem not in RESERVED_NAMES:
+        return False
+
+    prefixed_path = "\\\\?\\" + str(filepath.resolve())
+    try:
+        Path(prefixed_path).unlink()
+    except OSError as e:
+        print(f"  [!!!] FAILED to delete: {filepath}. Reason: {e}")
+        return False
+
+    print(f"  [OK] Deleted: {filepath}")
+    return True
+
+
 def clean_nul_files() -> None:
     """Recursively find and delete Windows reserved-name files in the cwd.
 
@@ -63,16 +88,7 @@ def clean_nul_files() -> None:
 
     try:
         for filepath in _walk_filtered(root_dir):
-            basename = filepath.name.lower()
-            stem = basename.rsplit(".", 1)[0] if "." in basename else basename
-            if stem in RESERVED_NAMES:
-                prefixed_path = "\\\\?\\" + str(filepath.resolve())
-                try:
-                    Path(prefixed_path).unlink()
-                    print(f"  [OK] Deleted: {filepath}")
-                    files_deleted += 1
-                except OSError as e:
-                    print(f"  [!!!] FAILED to delete: {filepath}. Reason: {e}")
+            files_deleted += int(_delete_if_reserved(filepath))
     except OSError as e:
         print(f"[!!!] The script failed with an unexpected error: {e}")
         sys.exit(1)
