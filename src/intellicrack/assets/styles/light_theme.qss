@@ -12,7 +12,7 @@ QWidget {
     background-color: #eceef2;
     color: #1a1d21;
     font-family: "Segoe UI", "Inter", sans-serif;
-    font-size: 9pt;
+    font-size: 12px;
 }
 
 /* Menu Bar */
@@ -99,6 +99,12 @@ QPushButton:disabled {
     color: #9aa3ad;
 }
 
+QPushButton:checked {
+    background-color: #00529c;
+    border: 1px solid #0067c0;
+    color: #ffffff;
+}
+
 QPushButton[flat="true"] {
     background-color: transparent;
     border: 1px solid #c2c8d0;
@@ -107,28 +113,6 @@ QPushButton[flat="true"] {
 
 QPushButton[flat="true"]:hover {
     background-color: #dde1e7;
-}
-
-/* Secondary Button */
-QPushButton[secondary="true"] {
-    background-color: transparent;
-    border: 1px solid #c2c8d0;
-    color: #1a1d21;
-}
-
-QPushButton[secondary="true"]:hover {
-    background-color: #dde1e7;
-}
-
-/* Danger Button */
-QPushButton[danger="true"] {
-    background-color: #fdecee;
-    border: 1px solid #e53935;
-    color: #c62828;
-}
-
-QPushButton[danger="true"]:hover {
-    background-color: #fbd5d8;
 }
 
 /* Combo Box */
@@ -303,6 +287,16 @@ QTabBar::tab:selected {
 }
 
 QTabBar::tab:hover:!selected {
+    background-color: #dde1e7;
+}
+
+QTabBar::close-button {
+    subcontrol-position: right;
+    margin-left: 6px;
+    border-radius: 3px;
+}
+
+QTabBar::close-button:hover {
     background-color: #dde1e7;
 }
 
@@ -541,13 +535,8 @@ QLabel {
 }
 
 QLabel[heading="true"] {
-    font-size: 12pt;
+    font-size: 16px;
     font-weight: bold;
-}
-
-QLabel[subheading="true"] {
-    font-size: 10pt;
-    color: #5a6370;
 }
 
 QLabel[muted="true"] {
@@ -556,18 +545,6 @@ QLabel[muted="true"] {
 
 QLabel[success="true"] {
     color: #2e7d32;
-}
-
-QLabel[error="true"] {
-    color: #c62828;
-}
-
-QLabel[warning="true"] {
-    color: #ef6c00;
-}
-
-QLabel[info="true"] {
-    color: #1565c0;
 }
 
 /* Status Indicator */
@@ -622,12 +599,6 @@ QFrame[toolResult="error"] {
     border-left: 3px solid #c62828;
 }
 
-/* Panel Headers */
-QFrame[panelHeader="true"] {
-    background-color: #e3e6eb;
-    border-bottom: 1px solid #c2c8d0;
-}
-
 /* ========================================
    Object Name Styles
    ======================================== */
@@ -672,6 +643,29 @@ QLabel#code_label {
 QLabel#toolbar_label {
     color: #1a1d21;
     margin-left: 8px;
+}
+
+/* Tool Button */
+QPushButton#tool_button {
+    background-color: transparent;
+    border: 1px solid #b4bcc6;
+    color: #1a1d21;
+    border-radius: 4px;
+    padding: 4px 12px;
+}
+
+QPushButton#tool_button:hover {
+    background-color: #e3e6eb;
+    border-color: #0067c0;
+}
+
+QPushButton#tool_button:pressed {
+    background-color: #dde1e7;
+}
+
+QPushButton#tool_button:disabled {
+    color: #9aa3ad;
+    border-color: #c2c8d0;
 }
 
 /* Secondary Button */
@@ -1097,23 +1091,31 @@ QRadioButton:focus {
 
 QLabel#search_status_label {
     color: #5a6370;
-    font-size: 8pt;
+    font-size: 11px;
 }
 
-QLabel#muted_label {
-    color: #5a6370;
-}
-
-QPlainTextEdit#code_preview_text {
+QTextEdit#code_preview_text {
     background-color: #ffffff;
     color: #1a1d21;
     font-family: "JetBrains Mono", "Consolas", monospace;
     border: none;
 }
 
+QTextEdit#user_notes_text {
+    background-color: #ffffff;
+    color: #1a1d21;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    border: 1px solid #b4bcc6;
+    border-radius: 4px;
+}
+
+QTextEdit#user_notes_text:focus {
+    border-color: #0067c0;
+}
+
 QLabel#credential_source_label {
     color: #0451a5;
-    font-size: 8pt;
+    font-size: 11px;
 }
 
 QLabel#bold_label {
@@ -1124,7 +1126,7 @@ QLabel#bold_label {
 QLabel#hint_label {
     color: #5a6370;
     font-style: italic;
-    font-size: 8pt;
+    font-size: 11px;
 }
 
 QPushButton#execute_button {
@@ -1313,4 +1315,22 @@ QWidget#script_manager_panel QPushButton {
 
 QWidget#script_manager_panel QPushButton#execute_button {
     padding: 5px 10px;
+}
+
+/* ========================================
+   Process Panel Attach Hint Overlay
+   ======================================== */
+
+QWidget#attach_hint_overlay {
+    background-color: rgba(236, 238, 242, 0.85);
+}
+
+QLabel#attach_hint_label {
+    color: #1a1d21;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 16px 24px;
+    border: 1px solid #c2c8d0;
+    border-radius: 6px;
+    background-color: rgba(255, 255, 255, 0.95);
 }

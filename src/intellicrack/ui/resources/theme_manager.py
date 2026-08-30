@@ -11,11 +11,12 @@ system's light/dark preference and tracks live OS changes.
 from __future__ import annotations
 
 import sys
-from typing import ClassVar, Final
+from importlib import resources
+from typing import ClassVar, Final, override
 
-from PyQt6.QtCore import QObject, Qt, pyqtBoundSignal, pyqtSignal
+from PyQt6.QtCore import QEvent, QObject, Qt, pyqtBoundSignal, pyqtSignal
 from PyQt6.QtGui import QColor, QGuiApplication
-from PyQt6.QtWidgets import QAbstractScrollArea, QApplication, QFrame, QMenuBar, QToolBar
+from PyQt6.QtWidgets import QAbstractScrollArea, QApplication, QFrame, QMenuBar, QStyle, QToolBar, QWidget
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources.resource_helper import get_assets_path, get_style_path
@@ -30,11 +31,28 @@ _logger = get_logger(__name__)
 
 THEME_DARK: Final[str] = "dark"
 THEME_LIGHT: Final[str] = "light"
+THEME_DARK2: Final[str] = "dark2"
+THEME_LIGHT2: Final[str] = "light2"
 THEME_SYSTEM: Final[str] = "system"
 DEFAULT_THEME: Final[str] = THEME_DARK
 
+_DARK_FAMILY: Final[frozenset[str]] = frozenset({THEME_DARK, THEME_DARK2})
+_CONCRETE_THEMES: Final[frozenset[str]] = frozenset({THEME_DARK, THEME_LIGHT, THEME_DARK2, THEME_LIGHT2})
+_SELECTABLE_THEMES: Final[frozenset[str]] = frozenset(
+    {THEME_DARK, THEME_LIGHT, THEME_DARK2, THEME_LIGHT2, THEME_SYSTEM},
+)
+_TOGGLE_PARTNER: Final[dict[str, str]] = {
+    THEME_DARK: THEME_LIGHT,
+    THEME_LIGHT: THEME_DARK,
+    THEME_DARK2: THEME_LIGHT2,
+    THEME_LIGHT2: THEME_DARK2,
+}
+
 _WINDOWS_PERSONALIZE_KEY: Final[str] = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
 _WINDOWS_APPS_LIGHT_VALUE: Final[str] = "AppsUseLightTheme"
+
+_STYLED_GENERATION_PROPERTY: Final[str] = "_ic_theme_styled_generation"
+_LAZY_REPOLISH_FILTER_PROPERTY: Final[str] = "_ic_theme_lazy_repolish_filter_installed"
 
 
 def _detect_windows_system_theme() -> str | None:
@@ -76,1314 +94,144 @@ class _ThemeNotifier(QObject):
     theme_changed = pyqtSignal(str)
 
 
-DARK_THEME_FALLBACK: Final[str] = """
-/* ========================================
-   Intellicrack Dark Theme
-   ======================================== */
-
-/* Main Window */
-QMainWindow {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
-}
-
-QWidget {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
-    font-family: "Segoe UI", "Inter", sans-serif;
-    font-size: 9pt;
-}
-
-/* Menu Bar */
-QMenuBar {
-    background-color: #2d2d30;
-    color: #d4d4d4;
-    border-bottom: 1px solid #3e3e42;
-    padding: 2px;
-}
-
-QMenuBar::item {
-    background-color: transparent;
-    padding: 4px 8px;
-}
-
-QMenuBar::item:selected {
-    background-color: #3e3e42;
-}
-
-QMenuBar::item:pressed {
-    background-color: #094771;
-}
-
-/* Menus */
-QMenu {
-    background-color: #2d2d30;
-    color: #d4d4d4;
-    border: 1px solid #3e3e42;
-    padding: 4px;
-}
-
-QMenu::item {
-    padding: 6px 24px 6px 8px;
-    border-radius: 2px;
-}
-
-QMenu::item:selected {
-    background-color: #094771;
-}
-
-QMenu::separator {
-    height: 1px;
-    background-color: #3e3e42;
-    margin: 4px 8px;
-}
-
-/* Toolbar */
-QToolBar {
-    background-color: #2d2d30;
-    border: none;
-    border-bottom: 1px solid #3e3e42;
-    spacing: 4px;
-    padding: 4px;
-}
-
-QToolBar::separator {
-    width: 1px;
-    background-color: #3e3e42;
-    margin: 4px 8px;
-}
-
-/* Push Buttons */
-QPushButton {
-    background-color: #0e639c;
-    color: #ffffff;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 16px;
-    min-height: 24px;
-}
-
-QPushButton:hover {
-    background-color: #1177bb;
-}
-
-QPushButton:pressed {
-    background-color: #094771;
-}
-
-QPushButton:disabled {
-    background-color: #3e3e42;
-    color: #6e6e6e;
-}
-
-QPushButton[flat="true"] {
-    background-color: transparent;
-    border: 1px solid #3e3e42;
-    color: #d4d4d4;
-}
-
-QPushButton[flat="true"]:hover {
-    background-color: #3e3e42;
-}
-
-/* Secondary Button */
-QPushButton[secondary="true"] {
-    background-color: transparent;
-    border: 1px solid #3e3e42;
-    color: #d4d4d4;
-}
-
-QPushButton[secondary="true"]:hover {
-    background-color: #3e3e42;
-}
-
-/* Danger Button */
-QPushButton[danger="true"] {
-    background-color: #5a1d1d;
-    border: 1px solid #f44747;
-    color: #f44747;
-}
-
-QPushButton[danger="true"]:hover {
-    background-color: #6e2222;
-}
-
-/* Combo Box */
-QComboBox {
-    background-color: #3e3e42;
-    color: #d4d4d4;
-    border: 1px solid #3e3e42;
-    border-radius: 4px;
-    padding: 4px 8px;
-    min-height: 24px;
-    min-width: 90px;
-}
-
-QComboBox:hover {
-    border-color: #007acc;
-}
-
-QComboBox:focus {
-    border-color: #007acc;
-}
-
-QComboBox::drop-down {
-    border: none;
-    width: 20px;
-}
-
-QComboBox QAbstractItemView {
-    background-color: #2d2d30;
-    color: #d4d4d4;
-    selection-background-color: #094771;
-    border: 1px solid #3e3e42;
-}
-
-/* Grouped Toolbar Dropdown Button */
-QToolButton#tool_menu_button {
-    background-color: transparent;
-    color: #d4d4d4;
-    border: 1px solid #3e3e42;
-    border-radius: 4px;
-    padding: 6px 8px;
-    min-height: 24px;
-}
-
-QToolButton#tool_menu_button:hover {
-    background-color: #3e3e42;
-    border-color: #007acc;
-}
-
-QToolButton#tool_menu_button:pressed {
-    background-color: #094771;
-}
-
-QToolButton#tool_menu_button:disabled {
-    color: #6e6e6e;
-    border-color: #3e3e42;
-}
-
-QToolButton#tool_menu_button::menu-indicator {
-    subcontrol-origin: padding;
-    subcontrol-position: right center;
-    width: 10px;
-}
-
-/* Line Edit */
-QLineEdit {
-    background-color: #3c3c3c;
-    color: #d4d4d4;
-    border: 1px solid #3e3e42;
-    border-radius: 4px;
-    padding: 6px 8px;
-    selection-background-color: #094771;
-}
-
-QLineEdit:focus {
-    border-color: #007acc;
-}
-
-QLineEdit:disabled {
-    background-color: #2d2d30;
-    color: #6e6e6e;
-}
-
-/* Text Edit */
-QTextEdit, QPlainTextEdit {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
-    border: 1px solid #3e3e42;
-    border-radius: 4px;
-    selection-background-color: #094771;
-    font-family: "JetBrains Mono", "Consolas", monospace;
-}
-
-QTextEdit:focus, QPlainTextEdit:focus {
-    border-color: #007acc;
-}
-
-/* Scroll Area */
-QScrollArea {
-    background-color: transparent;
-    border: none;
-}
-
-QScrollArea > QWidget > QWidget {
-    background-color: transparent;
-}
-
-/* Scroll Bar */
-QScrollBar:vertical {
-    background-color: #1e1e1e;
-    width: 12px;
-    margin: 0;
-}
-
-QScrollBar::handle:vertical {
-    background-color: #5a5a5a;
-    min-height: 20px;
-    border-radius: 6px;
-    margin: 2px;
-}
-
-QScrollBar::handle:vertical:hover {
-    background-color: #6e6e6e;
-}
-
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-    height: 0;
-}
-
-QScrollBar:horizontal {
-    background-color: #1e1e1e;
-    height: 12px;
-    margin: 0;
-}
-
-QScrollBar::handle:horizontal {
-    background-color: #5a5a5a;
-    min-width: 20px;
-    border-radius: 6px;
-    margin: 2px;
-}
-
-QScrollBar::handle:horizontal:hover {
-    background-color: #6e6e6e;
-}
-
-QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-    width: 0;
-}
-
-/* Tab Widget */
-QTabWidget::pane {
-    border: 1px solid #3e3e42;
-    background-color: #1e1e1e;
-    border-radius: 4px;
-}
-
-QTabBar::tab {
-    background-color: #2d2d30;
-    color: #d4d4d4;
-    padding: 8px 16px;
-    border: none;
-    border-bottom: 2px solid transparent;
-}
-
-QTabBar::tab:selected {
-    background-color: #1e1e1e;
-    border-bottom: 2px solid #007acc;
-}
-
-QTabBar::tab:hover:!selected {
-    background-color: #3e3e42;
-}
-
-QTabBar::close-button {
-    subcontrol-position: right;
-    margin-left: 6px;
-    border-radius: 3px;
-}
-
-QTabBar::close-button:hover {
-    background-color: #3e3e42;
-}
-
-/* List Widget */
-QListWidget, QListView {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
-    border: 1px solid #3e3e42;
-    border-radius: 4px;
-    outline: none;
-}
-
-QListWidget::item, QListView::item {
-    padding: 6px 8px;
-    border-radius: 2px;
-}
-
-QListWidget::item:selected, QListView::item:selected {
-    background-color: #094771;
-}
-
-QListWidget::item:hover:!selected, QListView::item:hover:!selected {
-    background-color: #2a2d2e;
-}
-
-/* Tree Widget */
-QTreeWidget, QTreeView {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
-    border: 1px solid #3e3e42;
-    border-radius: 4px;
-    outline: none;
-}
-
-QTreeWidget::item, QTreeView::item {
-    padding: 4px 8px;
-}
-
-QTreeWidget::item:selected, QTreeView::item:selected {
-    background-color: #094771;
-}
-
-QTreeWidget::item:hover:!selected, QTreeView::item:hover:!selected {
-    background-color: #2a2d2e;
-}
-
-/* Table Widget */
-QTableWidget, QTableView {
-    background-color: #1e1e1e;
-    alternate-background-color: #232326;
-    color: #d4d4d4;
-    border: 1px solid #3e3e42;
-    gridline-color: #3e3e42;
-    outline: none;
-}
-
-QTableWidget::item, QTableView::item {
-    padding: 4px;
-}
-
-QTableWidget::item:selected, QTableView::item:selected {
-    background-color: #094771;
-}
-
-QHeaderView::section {
-    background-color: #2d2d30;
-    color: #d4d4d4;
-    padding: 6px;
-    border: none;
-    border-right: 1px solid #3e3e42;
-    border-bottom: 1px solid #3e3e42;
-}
-
-/* Group Box */
-QGroupBox {
-    background-color: #252526;
-    border: 1px solid #3e3e42;
-    border-radius: 4px;
-    margin-top: 12px;
-    padding-top: 8px;
-}
-
-QGroupBox::title {
-    subcontrol-origin: margin;
-    subcontrol-position: top left;
-    padding: 0 8px;
-    color: #d4d4d4;
-}
-
-/* Check Box */
-QCheckBox {
-    color: #d4d4d4;
-    spacing: 8px;
-}
-
-QCheckBox::indicator {
-    width: 16px;
-    height: 16px;
-    border: 1px solid #3e3e42;
-    border-radius: 3px;
-    background-color: #3c3c3c;
-}
-
-QCheckBox::indicator:checked {
-    background-color: #007acc;
-    border-color: #007acc;
-}
-
-QCheckBox::indicator:hover {
-    border-color: #007acc;
-}
-
-/* Radio Button */
-QRadioButton {
-    color: #d4d4d4;
-    spacing: 8px;
-}
-
-QRadioButton::indicator {
-    width: 16px;
-    height: 16px;
-    border: 1px solid #3e3e42;
-    border-radius: 8px;
-    background-color: #3c3c3c;
-}
-
-QRadioButton::indicator:checked {
-    background-color: #007acc;
-    border-color: #007acc;
-}
-
-QRadioButton::indicator:hover {
-    border-color: #007acc;
-}
-
-/* Spin Box */
-QSpinBox, QDoubleSpinBox {
-    background-color: #3c3c3c;
-    color: #d4d4d4;
-    border: 1px solid #3e3e42;
-    border-radius: 4px;
-    padding: 4px 8px;
-    min-width: 90px;
-}
-
-QSpinBox:focus, QDoubleSpinBox:focus {
-    border-color: #007acc;
-}
-
-/* Slider */
-QSlider::groove:horizontal {
-    background-color: #3e3e42;
-    height: 4px;
-    border-radius: 2px;
-}
-
-QSlider::handle:horizontal {
-    background-color: #007acc;
-    width: 16px;
-    height: 16px;
-    margin: -6px 0;
-    border-radius: 8px;
-}
-
-QSlider::handle:horizontal:hover {
-    background-color: #1177bb;
-}
-
-/* Progress Bar */
-QProgressBar {
-    background-color: #3e3e42;
-    border: none;
-    border-radius: 4px;
-    height: 8px;
-    text-align: center;
-}
-
-QProgressBar::chunk {
-    background-color: #007acc;
-    border-radius: 4px;
-}
-
-/* Status Bar */
-QStatusBar {
-    background-color: #007acc;
-    color: #ffffff;
-    border: none;
-}
-
-QStatusBar::item {
-    border: none;
-}
-
-/* Splitter */
-QSplitter::handle {
-    background-color: #3e3e42;
-}
-
-QSplitter::handle:horizontal {
-    width: 8px;
-}
-
-QSplitter::handle:vertical {
-    height: 8px;
-}
-
-QSplitter::handle:hover {
-    background-color: #007acc;
-}
-
-/* Tool Tip */
-QToolTip {
-    background-color: #2d2d30;
-    color: #d4d4d4;
-    border: 1px solid #3e3e42;
-    padding: 4px 8px;
-}
-
-/* Dialog */
-QDialog {
-    background-color: #1e1e1e;
-}
-
-/* Frame */
-QFrame[frameShape="4"], QFrame[frameShape="5"] {
-    color: #3e3e42;
-}
-
-/* Label */
-QLabel {
-    color: #d4d4d4;
-    background-color: transparent;
-}
-
-QLabel[heading="true"] {
-    font-size: 12pt;
-    font-weight: bold;
-}
-
-QLabel[subheading="true"] {
-    font-size: 10pt;
-    color: #888888;
-}
-
-QLabel[muted="true"] {
-    color: #888888;
-}
-
-QLabel[success="true"] {
-    color: #4CAF50;
-}
-
-QLabel[error="true"] {
-    color: #F44336;
-}
-
-QLabel[warning="true"] {
-    color: #FF9800;
-}
-
-QLabel[info="true"] {
-    color: #2196F3;
-}
-
-/* Status Indicator */
-QLabel[status="success"] {
-    color: #4CAF50;
-}
-
-QLabel[status="error"] {
-    color: #F44336;
-}
-
-QLabel[status="warning"] {
-    color: #FF9800;
-}
-
-QLabel[status="info"] {
-    color: #2196F3;
-}
-
-QLabel[status="idle"] {
-    color: #888888;
-}
-
-/* Dock Widget */
-QDockWidget {
-    titlebar-close-icon: none;
-    titlebar-normal-icon: none;
-    color: #d4d4d4;
-}
-
-QDockWidget::title {
-    background-color: #2d2d30;
-    border-bottom: 1px solid #3e3e42;
-    padding: 6px;
-    text-align: left;
-}
-
-/* Message Box */
-QMessageBox {
-    background-color: #1e1e1e;
-}
-
-/* Disabled States */
-QComboBox:disabled {
-    background-color: #2d2d30;
-    color: #6e6e6e;
-    border-color: #3e3e42;
-}
-
-QCheckBox:disabled { color: #6e6e6e; }
-QRadioButton:disabled { color: #6e6e6e; }
-QLabel:disabled { color: #6e6e6e; }
-
-QSpinBox:disabled, QDoubleSpinBox:disabled {
-    background-color: #2d2d30;
-    color: #6e6e6e;
-}
-
-/* Focus States */
-QTableWidget:focus, QTableView:focus { border-color: #007acc; }
-QTreeWidget:focus, QTreeView:focus { border-color: #007acc; }
-QListWidget:focus, QListView:focus { border-color: #007acc; }
-
-/* ObjectName Selectors */
-QLabel#search_status_label { color: #9d9d9d; font-size: 8pt; }
-QLabel#muted_label { color: #888888; }
-QLabel#bold_label { font-weight: bold; }
-QLabel#hint_label { color: #9d9d9d; font-style: italic; font-size: 8pt; }
-
-QTabWidget#analysis_tabs::pane { border: none; background: #1e1e1e; }
-QTabWidget#analysis_tabs > QTabBar::tab { padding: 6px 12px; }
-
-QTextEdit#code_preview_text {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
-    border: none;
-}
-
-QPushButton#execute_button {
-    background-color: #0e639c;
-    color: #ffffff;
-    font-weight: bold;
-    padding: 8px 20px;
-}
-"""
-
-
-LIGHT_THEME_FALLBACK: Final[str] = """
-/* ========================================
-   Intellicrack Light Theme
-   ======================================== */
-
-/* Main Window */
-QMainWindow {
-    background-color: #eceef2;
-    color: #1a1d21;
-}
-
-QWidget {
-    background-color: #eceef2;
-    color: #1a1d21;
-    font-family: "Segoe UI", "Inter", sans-serif;
-    font-size: 9pt;
-}
-
-/* Menu Bar */
-QMenuBar {
-    background-color: #ffffff;
-    color: #1a1d21;
-    border-bottom: 1px solid #c2c8d0;
-    padding: 2px;
-}
-
-QMenuBar::item {
-    background-color: transparent;
-    padding: 4px 8px;
-}
-
-QMenuBar::item:selected {
-    background-color: #dde1e7;
-}
-
-QMenuBar::item:pressed {
-    background-color: #0067c0;
-    color: #ffffff;
-}
-
-/* Menus */
-QMenu {
-    background-color: #ffffff;
-    color: #1a1d21;
-    border: 1px solid #c2c8d0;
-    padding: 4px;
-}
-
-QMenu::item {
-    padding: 6px 24px 6px 8px;
-    border-radius: 2px;
-}
-
-QMenu::item:selected {
-    background-color: #0067c0;
-    color: #ffffff;
-}
-
-QMenu::separator {
-    height: 1px;
-    background-color: #c2c8d0;
-    margin: 4px 8px;
-}
-
-/* Toolbar */
-QToolBar {
-    background-color: #ffffff;
-    border: none;
-    border-bottom: 1px solid #c2c8d0;
-    spacing: 4px;
-    padding: 4px;
-}
-
-QToolBar::separator {
-    width: 1px;
-    background-color: #c2c8d0;
-    margin: 4px 8px;
-}
-
-/* Push Buttons */
-QPushButton {
-    background-color: #0067c0;
-    color: #ffffff;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 16px;
-    min-height: 24px;
-}
-
-QPushButton:hover {
-    background-color: #1378d4;
-}
-
-QPushButton:pressed {
-    background-color: #00529c;
-}
-
-QPushButton:disabled {
-    background-color: #c2c8d0;
-    color: #9aa3ad;
-}
-
-QPushButton[flat="true"] {
-    background-color: transparent;
-    border: 1px solid #c2c8d0;
-    color: #1a1d21;
-}
-
-QPushButton[flat="true"]:hover {
-    background-color: #e3e6eb;
-}
-
-/* Secondary Button */
-QPushButton[secondary="true"] {
-    background-color: transparent;
-    border: 1px solid #c2c8d0;
-    color: #1a1d21;
-}
-
-QPushButton[secondary="true"]:hover {
-    background-color: #e3e6eb;
-}
-
-/* Danger Button */
-QPushButton[danger="true"] {
-    background-color: #ffebee;
-    border: 1px solid #f44336;
-    color: #d32f2f;
-}
-
-QPushButton[danger="true"]:hover {
-    background-color: #ffcdd2;
-}
-
-/* Combo Box */
-QComboBox {
-    background-color: #ffffff;
-    color: #1a1d21;
-    border: 1px solid #c2c8d0;
-    border-radius: 4px;
-    padding: 4px 8px;
-    min-height: 24px;
-    min-width: 90px;
-}
-
-QComboBox:hover {
-    border-color: #0067c0;
-}
-
-QComboBox:focus {
-    border-color: #0067c0;
-}
-
-QComboBox::drop-down {
-    border: none;
-    width: 20px;
-}
-
-QComboBox QAbstractItemView {
-    background-color: #ffffff;
-    color: #1a1d21;
-    selection-background-color: #0067c0;
-    selection-color: #ffffff;
-    border: 1px solid #c2c8d0;
-}
-
-/* Grouped Toolbar Dropdown Button */
-QToolButton#tool_menu_button {
-    background-color: transparent;
-    color: #1a1d21;
-    border: 1px solid #c2c8d0;
-    border-radius: 4px;
-    padding: 6px 8px;
-    min-height: 24px;
-}
-
-QToolButton#tool_menu_button:hover {
-    background-color: #e3e6eb;
-    border-color: #0067c0;
-}
-
-QToolButton#tool_menu_button:pressed {
-    background-color: #dde1e7;
-}
-
-QToolButton#tool_menu_button:disabled {
-    color: #9aa3ad;
-    border-color: #c2c8d0;
-}
-
-QToolButton#tool_menu_button::menu-indicator {
-    subcontrol-origin: padding;
-    subcontrol-position: right center;
-    width: 10px;
-}
-
-/* Line Edit */
-QLineEdit {
-    background-color: #ffffff;
-    color: #1a1d21;
-    border: 1px solid #c2c8d0;
-    border-radius: 4px;
-    padding: 6px 8px;
-    selection-background-color: #0067c0;
-}
-
-QLineEdit:focus {
-    border-color: #0067c0;
-}
-
-QLineEdit:disabled {
-    background-color: #e3e6eb;
-    color: #9aa3ad;
-}
-
-/* Text Edit */
-QTextEdit, QPlainTextEdit {
-    background-color: #ffffff;
-    color: #1a1d21;
-    border: 1px solid #c2c8d0;
-    border-radius: 4px;
-    selection-background-color: #0067c0;
-    font-family: "JetBrains Mono", "Consolas", monospace;
-}
-
-QTextEdit:focus, QPlainTextEdit:focus {
-    border-color: #0067c0;
-}
-
-/* Scroll Area */
-QScrollArea {
-    background-color: transparent;
-    border: none;
-}
-
-QScrollArea > QWidget > QWidget {
-    background-color: transparent;
-}
-
-/* Scroll Bar */
-QScrollBar:vertical {
-    background-color: #eceef2;
-    width: 12px;
-    margin: 0;
-}
-
-QScrollBar::handle:vertical {
-    background-color: #b4bcc6;
-    min-height: 20px;
-    border-radius: 6px;
-    margin: 2px;
-}
-
-QScrollBar::handle:vertical:hover {
-    background-color: #9aa3ad;
-}
-
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-    height: 0;
-}
-
-QScrollBar:horizontal {
-    background-color: #eceef2;
-    height: 12px;
-    margin: 0;
-}
-
-QScrollBar::handle:horizontal {
-    background-color: #b4bcc6;
-    min-width: 20px;
-    border-radius: 6px;
-    margin: 2px;
-}
-
-QScrollBar::handle:horizontal:hover {
-    background-color: #9aa3ad;
-}
-
-QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-    width: 0;
-}
-
-/* Tab Widget */
-QTabWidget::pane {
-    border: 1px solid #c2c8d0;
-    background-color: #ffffff;
-    border-radius: 4px;
-}
-
-QTabBar::tab {
-    background-color: #e3e6eb;
-    color: #1a1d21;
-    padding: 8px 16px;
-    border: none;
-    border-bottom: 2px solid transparent;
-}
-
-QTabBar::tab:selected {
-    background-color: #ffffff;
-    border-bottom: 2px solid #0067c0;
-}
-
-QTabBar::tab:hover:!selected {
-    background-color: #dde1e7;
-}
-
-QTabBar::close-button {
-    subcontrol-position: right;
-    margin-left: 6px;
-    border-radius: 3px;
-}
-
-QTabBar::close-button:hover {
-    background-color: #dde1e7;
-}
-
-/* List Widget */
-QListWidget, QListView {
-    background-color: #ffffff;
-    color: #1a1d21;
-    border: 1px solid #c2c8d0;
-    border-radius: 4px;
-    outline: none;
-}
-
-QListWidget::item, QListView::item {
-    padding: 6px 8px;
-    border-radius: 2px;
-}
-
-QListWidget::item:selected, QListView::item:selected {
-    background-color: #0067c0;
-    color: #ffffff;
-}
-
-QListWidget::item:hover:!selected, QListView::item:hover:!selected {
-    background-color: #e3e6eb;
-}
-
-/* Tree Widget */
-QTreeWidget, QTreeView {
-    background-color: #ffffff;
-    color: #1a1d21;
-    border: 1px solid #c2c8d0;
-    border-radius: 4px;
-    outline: none;
-}
-
-QTreeWidget::item, QTreeView::item {
-    padding: 4px 8px;
-}
-
-QTreeWidget::item:selected, QTreeView::item:selected {
-    background-color: #0067c0;
-    color: #ffffff;
-}
-
-QTreeWidget::item:hover:!selected, QTreeView::item:hover:!selected {
-    background-color: #e3e6eb;
-}
-
-/* Table Widget */
-QTableWidget, QTableView {
-    background-color: #ffffff;
-    alternate-background-color: #f5f6f8;
-    color: #1a1d21;
-    border: 1px solid #c2c8d0;
-    gridline-color: #c2c8d0;
-    outline: none;
-}
-
-QTableWidget::item, QTableView::item {
-    padding: 4px;
-}
-
-QTableWidget::item:selected, QTableView::item:selected {
-    background-color: #0067c0;
-    color: #ffffff;
-}
-
-QHeaderView::section {
-    background-color: #ffffff;
-    color: #1a1d21;
-    padding: 6px;
-    border: none;
-    border-right: 1px solid #c2c8d0;
-    border-bottom: 1px solid #c2c8d0;
-}
-
-/* Group Box */
-QGroupBox {
-    background-color: #ffffff;
-    border: 1px solid #c2c8d0;
-    border-radius: 4px;
-    margin-top: 12px;
-    padding-top: 8px;
-}
-
-QGroupBox::title {
-    subcontrol-origin: margin;
-    subcontrol-position: top left;
-    padding: 0 8px;
-    color: #1a1d21;
-}
-
-/* Check Box */
-QCheckBox {
-    color: #1a1d21;
-    spacing: 8px;
-}
-
-QCheckBox::indicator {
-    width: 16px;
-    height: 16px;
-    border: 1px solid #c2c8d0;
-    border-radius: 3px;
-    background-color: #ffffff;
-}
-
-QCheckBox::indicator:checked {
-    background-color: #0067c0;
-    border-color: #0067c0;
-}
-
-QCheckBox::indicator:hover {
-    border-color: #0067c0;
-}
-
-/* Radio Button */
-QRadioButton {
-    color: #1a1d21;
-    spacing: 8px;
-}
-
-QRadioButton::indicator {
-    width: 16px;
-    height: 16px;
-    border: 1px solid #c2c8d0;
-    border-radius: 8px;
-    background-color: #ffffff;
-}
-
-QRadioButton::indicator:checked {
-    background-color: #0067c0;
-    border-color: #0067c0;
-}
-
-QRadioButton::indicator:hover {
-    border-color: #0067c0;
-}
-
-/* Spin Box */
-QSpinBox, QDoubleSpinBox {
-    background-color: #ffffff;
-    color: #1a1d21;
-    border: 1px solid #c2c8d0;
-    border-radius: 4px;
-    padding: 4px 8px;
-    min-width: 90px;
-}
-
-QSpinBox:focus, QDoubleSpinBox:focus {
-    border-color: #0067c0;
-}
-
-/* Slider */
-QSlider::groove:horizontal {
-    background-color: #c2c8d0;
-    height: 4px;
-    border-radius: 2px;
-}
-
-QSlider::handle:horizontal {
-    background-color: #0067c0;
-    width: 16px;
-    height: 16px;
-    margin: -6px 0;
-    border-radius: 8px;
-}
-
-QSlider::handle:horizontal:hover {
-    background-color: #1378d4;
-}
-
-/* Status Bar */
-QStatusBar {
-    background-color: #0067c0;
-    color: #ffffff;
-    border: none;
-}
-
-QStatusBar::item {
-    border: none;
-}
-
-/* Progress Bar */
-QProgressBar {
-    background-color: #c2c8d0;
-    border: none;
-    border-radius: 4px;
-    height: 8px;
-    text-align: center;
-}
-
-QProgressBar::chunk {
-    background-color: #0067c0;
-    border-radius: 4px;
-}
-
-/* Splitter */
-QSplitter::handle {
-    background-color: #c2c8d0;
-}
-
-QSplitter::handle:horizontal {
-    width: 8px;
-}
-
-QSplitter::handle:vertical {
-    height: 8px;
-}
-
-QSplitter::handle:hover {
-    background-color: #0067c0;
-}
-
-/* Frame */
-QFrame[frameShape="4"], QFrame[frameShape="5"] {
-    color: #c2c8d0;
-}
-
-/* Label */
-QLabel {
-    color: #1a1d21;
-    background-color: transparent;
-}
-
-QLabel[heading="true"] {
-    font-size: 12pt;
-    font-weight: bold;
-}
-
-QLabel[subheading="true"] {
-    font-size: 10pt;
-    color: #5a6370;
-}
-
-QLabel[success="true"] {
-    color: #2e7d32;
-}
-
-QLabel[error="true"] {
-    color: #c62828;
-}
-
-QLabel[warning="true"] {
-    color: #ef6c00;
-}
-
-QLabel[info="true"] {
-    color: #1565c0;
-}
-
-QLabel[muted="true"] {
-    color: #5a6370;
-}
-
-QLabel[status="success"] {
-    color: #2e7d32;
-}
-
-QLabel[status="error"] {
-    color: #c62828;
-}
-
-QLabel[status="warning"] {
-    color: #ef6c00;
-}
-
-QLabel[status="info"] {
-    color: #1565c0;
-}
-
-QLabel[status="idle"] {
-    color: #5a6370;
-}
-
-/* Dock Widget */
-QDockWidget {
-    titlebar-close-icon: none;
-    titlebar-normal-icon: none;
-    color: #1a1d21;
-}
-
-QDockWidget::title {
-    background-color: #e3e6eb;
-    border-bottom: 1px solid #c2c8d0;
-    padding: 6px;
-    text-align: left;
-}
-
-/* Message Box */
-QMessageBox {
-    background-color: #eceef2;
-}
-
-/* Disabled States */
-QComboBox:disabled {
-    background-color: #e3e6eb;
-    color: #9aa3ad;
-    border-color: #c2c8d0;
-}
-
-QCheckBox:disabled { color: #9aa3ad; }
-QRadioButton:disabled { color: #9aa3ad; }
-QLabel:disabled { color: #9aa3ad; }
-
-QSpinBox:disabled, QDoubleSpinBox:disabled {
-    background-color: #e3e6eb;
-    color: #9aa3ad;
-}
-
-/* Focus States */
-QTableWidget:focus, QTableView:focus { border-color: #0067c0; }
-QTreeWidget:focus, QTreeView:focus { border-color: #0067c0; }
-QListWidget:focus, QListView:focus { border-color: #0067c0; }
-
-/* ObjectName Selectors */
-QLabel#search_status_label { color: #5a6370; font-size: 8pt; }
-QLabel#muted_label { color: #5a6370; }
-QLabel#bold_label { font-weight: bold; }
-QLabel#hint_label { color: #5a6370; font-style: italic; font-size: 8pt; }
-
-QTabWidget#analysis_tabs::pane { border: none; background: #ffffff; }
-QTabWidget#analysis_tabs > QTabBar::tab { padding: 6px 12px; }
-
-QTextEdit#code_preview_text {
-    background-color: #ffffff;
-    color: #1a1d21;
-    border: none;
-}
-
-QPushButton#execute_button {
-    background-color: #0067c0;
-    color: #ffffff;
-    font-weight: bold;
-    padding: 8px 20px;
-}
-"""
+class _LazyChromeRepolishFilter(QObject):
+    """Repolishes a hidden chrome widget the next time it becomes visible.
+
+    ``ThemeManager._repolish_chrome`` only unpolishes/repolishes chrome that
+    is visible at the moment a theme is applied. A widget that was hidden at
+    that moment (an inactive tab page, a docked panel nobody has opened, a
+    detached window that is not currently shown) would otherwise keep
+    rendering with whichever theme it was last polished under until *some*
+    unrelated event happened to touch it. This filter is installed once per
+    chrome widget and, on every :attr:`~PyQt6.QtCore.QEvent.Type.Show`
+    event, asks the owning :class:`ThemeManager` to repolish the widget only
+    if it is stale relative to the most recent ``apply_theme`` call -- so a
+    widget shown and hidden repeatedly between theme changes is repolished
+    at most once per change, never once per show.
+    """
+
+    def __init__(self, theme_manager: ThemeManager, widget: QWidget) -> None:
+        """Initialize the filter and install it on the target widget.
+
+        Args:
+            theme_manager: Owning theme manager, consulted for the current
+                styled generation whenever the widget is shown.
+            widget: The chrome widget this filter watches and repolishes.
+        """
+        super().__init__(widget)
+        self._theme_manager = theme_manager
+        self._widget = widget
+        widget.installEventFilter(self)
+
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        """Repolish the watched widget on Show if it is stale.
+
+        Args:
+            a0: The watched object (expected to be the widget this filter
+                was installed on).
+            a1: The event being filtered.
+
+        Returns:
+            bool: Always False; the event is never consumed.
+        """
+        if a1 is not None and a1.type() == QEvent.Type.Show and a0 is self._widget:
+            self._theme_manager.repolish_if_stale(self._widget)
+        return False
+
+
+_PACKAGE_NAME: Final[str] = "intellicrack"
+
+_EMERGENCY_STYLESHEET_DARK: Final[str] = "QWidget { background-color: #1e1e1e; color: #d4d4d4; } QMainWindow { background-color: #1e1e1e; }"
+_EMERGENCY_STYLESHEET_LIGHT: Final[str] = (
+    "QWidget { background-color: #eceef2; color: #1a1d21; } QMainWindow { background-color: #eceef2; }"
+)
+
+
+def _family_theme_filename(theme: str) -> str:
+    """Get the representative stylesheet file name for a theme's family.
+
+    Args:
+        theme: Theme name.
+
+    Returns:
+        str: ``"dark_theme.qss"`` for the dark family (:data:`THEME_DARK` or
+        :data:`THEME_DARK2`), otherwise ``"light_theme.qss"``.
+    """
+    return f"{THEME_DARK if theme in _DARK_FAMILY else THEME_LIGHT}_theme.qss"
+
+
+def _read_packaged_theme_asset(filename: str) -> str:
+    """Read a packaged theme stylesheet through :mod:`importlib.resources`.
+
+    Resolves ``filename`` inside the installed ``intellicrack`` distribution
+    -- a source checkout, an installed wheel, or a frozen bundle that
+    preserves package data -- so the caller reads the exact bytes shipped in
+    ``assets/styles`` without duplicating that text as a literal Python
+    string.
+
+    Args:
+        filename: Stylesheet file name relative to ``assets/styles``, e.g.
+            ``"dark_theme.qss"``.
+
+    Returns:
+        str: The full text contents of the asset.
+    """
+    asset = resources.files(_PACKAGE_NAME).joinpath("assets", "styles", filename)
+    return asset.read_text(encoding="utf-8")
+
+
+def _read_bundled_theme_asset(filename: str) -> str:
+    """Read a packaged theme stylesheet from the resolved assets directory.
+
+    Secondary read route used when :func:`_read_packaged_theme_asset` cannot
+    resolve the asset. Resolves through the same
+    :func:`~intellicrack.ui.resources.resource_helper.get_style_path` path
+    resolution used for the theme-specific stylesheet lookup, which also
+    covers frozen (PyInstaller) builds.
+
+    Args:
+        filename: Stylesheet file name relative to ``assets/styles``, e.g.
+            ``"dark_theme.qss"``.
+
+    Returns:
+        str: The full text contents of the asset.
+    """
+    return get_style_path(filename).read_text(encoding="utf-8")
+
+
+def _load_family_fallback_stylesheet(theme: str) -> str:
+    """Load the representative stylesheet asset for a theme's family.
+
+    Used whenever the theme-specific ``.qss`` asset cannot be read. Both
+    read routes resolve the exact same packaged ``dark_theme.qss`` /
+    ``light_theme.qss`` file, so the value returned here can never diverge
+    from the ``.qss`` asset it stands in for -- there is no hand-maintained
+    copy of the stylesheet text to fall out of sync with the asset.
+
+    Args:
+        theme: Theme name whose family's representative stylesheet should be
+            returned.
+
+    Returns:
+        str: The full contents of the representative stylesheet asset, or a
+        minimal built-in stylesheet if the asset cannot be read through
+        either route.
+    """
+    filename = _family_theme_filename(theme)
+    try:
+        return _read_packaged_theme_asset(filename)
+    except (ModuleNotFoundError, OSError):
+        _logger.debug("packaged_theme_asset_unavailable", style_file=filename)
+    try:
+        return _read_bundled_theme_asset(filename)
+    except OSError:
+        _logger.exception("bundled_theme_asset_unreadable", style_file=filename)
+    return _EMERGENCY_STYLESHEET_DARK if theme in _DARK_FAMILY else _EMERGENCY_STYLESHEET_LIGHT
+
+
+DARK_THEME_FALLBACK: Final[str] = _load_family_fallback_stylesheet(THEME_DARK)
+LIGHT_THEME_FALLBACK: Final[str] = _load_family_fallback_stylesheet(THEME_LIGHT)
 
 
 class ThemeManager:
@@ -1400,6 +248,7 @@ class ThemeManager:
         self._requested_theme: str = DEFAULT_THEME
         self._notifier: _ThemeNotifier = _ThemeNotifier()
         self._system_watch_connected: bool = False
+        self._styled_generation: int = 0
         self.theme_cache: dict[str, str] = {}
         self.styles_available: bool = self._check_styles_available()
 
@@ -1505,30 +354,31 @@ class ThemeManager:
         """Resolve a requested theme name to a concrete theme.
 
         Args:
-            theme: Requested theme name (``"dark"``, ``"light"`` or
-                ``"system"``).
+            theme: Requested theme name (``"dark"``, ``"light"``, ``"dark2"``,
+                ``"light2"`` or ``"system"``).
 
         Returns:
-            str: The concrete theme to render: :data:`THEME_DARK` or
-            :data:`THEME_LIGHT`. Unknown names resolve to
+            str: The concrete theme to render: one of :data:`THEME_DARK`,
+            :data:`THEME_LIGHT`, :data:`THEME_DARK2` or :data:`THEME_LIGHT2`.
+            ``"system"`` resolves to dark or light; unknown names resolve to
             :data:`DEFAULT_THEME`.
         """
         if theme == THEME_SYSTEM:
             return cls.detect_system_theme()
-        return theme if theme in {THEME_DARK, THEME_LIGHT} else DEFAULT_THEME
+        return theme if theme in _CONCRETE_THEMES else DEFAULT_THEME
 
     def apply_theme(self, theme: str = DEFAULT_THEME) -> bool:
         r"""Apply a theme to the application.
 
         Args:
-            theme: Requested theme name (``"dark"``, ``"light"`` or
-                ``"system"``). ``"system"`` follows the OS light/dark
-                preference and keeps tracking live OS changes.
+            theme: Requested theme name (``"dark"``, ``"light"``, ``"dark2"``,
+                ``"light2"`` or ``"system"``). ``"system"`` follows the OS
+                light/dark preference and keeps tracking live OS changes.
 
         Returns:
             bool: True if theme was applied successfully.
         """
-        if theme not in {THEME_DARK, THEME_LIGHT, THEME_SYSTEM}:
+        if theme not in _SELECTABLE_THEMES:
             _logger.warning("unknown_theme", theme=theme, default=DEFAULT_THEME)
             theme = DEFAULT_THEME
 
@@ -1549,9 +399,8 @@ class ThemeManager:
         _logger.warning("no_qapplication_instance")
         return False
 
-    @staticmethod
-    def _repolish_chrome(app_instance: QApplication) -> None:
-        """Force chrome and content viewports to repaint after a live stylesheet change.
+    def _repolish_chrome(self, app_instance: QApplication) -> None:
+        """Force visible chrome and content viewports to repaint after a live stylesheet change.
 
         ``QApplication.setStyleSheet`` reliably restyles ordinary widgets on
         a live theme change, but on Windows a :class:`~PyQt6.QtWidgets.QMenuBar`
@@ -1566,35 +415,129 @@ class ThemeManager:
         styled via a ``role`` dynamic property selector) that never subscribe
         to :attr:`theme_changed` and instead depend entirely on the global
         stylesheet restyling an already-polished widget. Explicitly
-        unpolishing and repolishing every live instance -- and, for scroll
+        unpolishing and repolishing every such instance -- and, for scroll
         areas, their viewport widget as well, since the viewport is what
         actually paints the content background -- forces Qt to recompute
         style from the new stylesheet immediately, instead of leaving them
         visually stuck on the previous theme until the next resize or window
         recreation.
 
+        Sweeping every live widget in the whole application
+        (``QApplication.allWidgets()``) to find these instances blocks the
+        event loop for seconds on a fully populated window, because it pays
+        the unpolish/polish/update cost for hundreds of widgets nobody is
+        looking at -- every scroll area and role-propertied frame in every
+        inactive tab of every panel. Instead, this method walks only the
+        currently *visible* top-level windows (the main window plus any
+        shown, undocked panel windows) and repolishes only the chrome inside
+        them that is itself visible right now. A chrome widget that exists
+        but is hidden (an inactive tab page, a closed dock) is left alone
+        here and instead gets a one-shot :class:`_LazyChromeRepolishFilter`
+        that repolishes it the moment it is next shown, so the cost of
+        styling a page nobody is viewing is deferred until someone actually
+        views it.
+
         Args:
-            app_instance: The active QApplication instance whose chrome and
-                content-viewport widgets are repolished.
+            app_instance: The active QApplication instance whose visible
+                chrome and content-viewport widgets are repolished.
         """
         style = app_instance.style()
         if style is None:
             return
-        for widget in app_instance.allWidgets():
-            needs_repolish = isinstance(widget, (QMenuBar, QToolBar, QAbstractScrollArea)) or (
-                isinstance(widget, QFrame) and widget.property("role") is not None
-            )
-            if not needs_repolish:
+        self._styled_generation += 1
+        for top_level in app_instance.topLevelWidgets():
+            if not top_level.isVisible():
                 continue
-            style.unpolish(widget)
-            style.polish(widget)
-            widget.update()
-            if isinstance(widget, QAbstractScrollArea):
-                viewport = widget.viewport()
-                if viewport is not None:
-                    style.unpolish(viewport)
-                    style.polish(viewport)
-                    viewport.update()
+            top_level.setUpdatesEnabled(False)
+            try:
+                self._repolish_visible_chrome_in(style, top_level)
+            finally:
+                top_level.setUpdatesEnabled(True)
+
+    def _repolish_visible_chrome_in(self, style: QStyle, top_level: QWidget) -> None:
+        """Repolish the currently-visible chrome inside one visible top-level window.
+
+        Any matching chrome widget that is not currently visible is left
+        unstyled here and instead scheduled for a deferred repolish the next
+        time it is shown, via :meth:`_schedule_lazy_repolish`.
+
+        Args:
+            style: The active application style used to unpolish/repolish.
+            top_level: A visible top-level widget (the main window or a
+                shown, undocked panel window) to search for chrome.
+        """
+        candidates: list[QWidget] = [
+            *top_level.findChildren(QMenuBar),
+            *top_level.findChildren(QToolBar),
+            *top_level.findChildren(QAbstractScrollArea),
+            *(frame for frame in top_level.findChildren(QFrame) if frame.property("role") is not None),
+        ]
+        for widget in candidates:
+            if widget.isVisible():
+                self._repolish_widget(style, widget)
+                widget.setProperty(_STYLED_GENERATION_PROPERTY, self._styled_generation)
+            else:
+                self._schedule_lazy_repolish(widget)
+
+    def _schedule_lazy_repolish(self, widget: QWidget) -> None:
+        """Install a one-shot lazy repolish filter on a hidden chrome widget.
+
+        A no-op if the widget already carries a
+        :class:`_LazyChromeRepolishFilter` from a previous theme apply --
+        that filter re-checks staleness against the current generation on
+        every subsequent Show event, so a single installation covers every
+        future theme change for the widget's lifetime.
+
+        Args:
+            widget: The hidden chrome widget to watch.
+        """
+        if widget.property(_LAZY_REPOLISH_FILTER_PROPERTY) is True:
+            return
+        _LazyChromeRepolishFilter(self, widget)
+        filter_installed = True
+        widget.setProperty(_LAZY_REPOLISH_FILTER_PROPERTY, filter_installed)
+
+    def repolish_if_stale(self, widget: QWidget) -> None:
+        """Repolish a chrome widget if it predates the current styled generation.
+
+        Called from :class:`_LazyChromeRepolishFilter` when a previously
+        hidden chrome widget is shown. A widget already tagged with the
+        current generation (because it was visible and eagerly repolished
+        during the most recent ``apply_theme``, or already lazily repolished
+        on an earlier Show within the same generation) is left untouched.
+
+        Args:
+            widget: The chrome widget that was just shown.
+        """
+        app_instance = QApplication.instance()
+        if not isinstance(app_instance, QApplication):
+            return
+        style = app_instance.style()
+        if style is None:
+            return
+        stored_generation = widget.property(_STYLED_GENERATION_PROPERTY)
+        if isinstance(stored_generation, int) and stored_generation >= self._styled_generation:
+            return
+        self._repolish_widget(style, widget)
+        widget.setProperty(_STYLED_GENERATION_PROPERTY, self._styled_generation)
+
+    @staticmethod
+    def _repolish_widget(style: QStyle, widget: QWidget) -> None:
+        """Unpolish and repolish one chrome widget, and its viewport if it has one.
+
+        Args:
+            style: The active application style used to unpolish/repolish.
+            widget: The chrome widget to repolish.
+        """
+        style.unpolish(widget)
+        style.polish(widget)
+        widget.update()
+        if isinstance(widget, QAbstractScrollArea):
+            viewport = widget.viewport()
+            if viewport is not None:
+                style.unpolish(viewport)
+                style.polish(viewport)
+                viewport.update()
 
     def _update_system_watch(self) -> None:
         """Connect or disconnect live OS color-scheme tracking.
@@ -1673,7 +616,7 @@ class ThemeManager:
                 )
 
         _logger.debug("using_fallback_stylesheet", theme=theme)
-        return DARK_THEME_FALLBACK if theme == THEME_DARK else LIGHT_THEME_FALLBACK
+        return _load_family_fallback_stylesheet(theme)
 
     @staticmethod
     def _read_stylesheet_file(filename: str) -> str | None:
@@ -1696,13 +639,17 @@ class ThemeManager:
         return None
 
     def toggle_theme(self) -> str:
-        """Toggle between dark and light themes.
+        """Toggle between light and dark within the current theme family.
+
+        Flips ``dark`` <-> ``light`` and the restyled ``dark2`` <-> ``light2``,
+        so a user who selected a restyled variant stays in that family instead
+        of dropping back to the base themes.
 
         Returns:
             str: The new theme name.
         """
         old_theme = self._current_theme
-        new_theme = THEME_LIGHT if self._current_theme == THEME_DARK else THEME_DARK
+        new_theme = _TOGGLE_PARTNER.get(old_theme, THEME_LIGHT if old_theme == THEME_DARK else THEME_DARK)
         _logger.debug("theme_toggling", from_theme=old_theme, to_theme=new_theme)
         self.apply_theme(new_theme)
         return new_theme
@@ -1733,7 +680,7 @@ class ThemeManager:
         Returns:
             bool: True if dark theme is active.
         """
-        return self._current_theme == THEME_DARK
+        return self._current_theme in _DARK_FAMILY
 
     def get_analysis_colors(self) -> dict[str, QColor]:
         """Get theme-aware semantic colors for custom painting and analysis views.
@@ -1822,7 +769,8 @@ class ThemeManager:
         """Get list of available theme names.
 
         Returns:
-            list[str]: List of theme names, including the ``"system"`` option
-            that follows the OS light/dark preference.
+            list[str]: List of theme names, including the restyled ``"dark2"``
+            and ``"light2"`` variants and the ``"system"`` option that follows
+            the OS light/dark preference.
         """
-        return [THEME_DARK, THEME_LIGHT, THEME_SYSTEM]
+        return [THEME_DARK, THEME_LIGHT, THEME_DARK2, THEME_LIGHT2, THEME_SYSTEM]
