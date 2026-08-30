@@ -202,6 +202,7 @@ QLineEdit {
     border: 1px solid #3e3e42;
     border-radius: 4px;
     padding: 6px 8px;
+    min-height: 20px;
     selection-background-color: #094771;
 }
 
@@ -721,6 +722,15 @@ QComboBox#toolbar_combo {
     border: 1px solid #3e3e42;
     border-radius: 4px;
     padding: 4px 8px;
+    min-height: 24px;
+}
+
+QComboBox#toolbar_combo QLineEdit {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    min-height: 0;
 }
 
 QComboBox#toolbar_combo::drop-down {
