@@ -32,6 +32,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.base_panel import compute_toolbar_height
 from intellicrack.ui.panels.qt_compat import set_sorting_enabled
 
 
@@ -42,7 +43,6 @@ _logger = get_logger(__name__)
 
 _MARGIN: Final[int] = 0
 _SPACING: Final[int] = 4
-_TOOLBAR_HEIGHT: Final[int] = 32
 _BYTES_PER_LINE: Final[int] = 16
 _ASCII_PRINTABLE_MIN: Final[int] = 32
 _ASCII_PRINTABLE_MAX: Final[int] = 127
@@ -180,7 +180,7 @@ class MemoryTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         refresh_btn = QPushButton("Refresh")
         refresh_btn.setObjectName("tool_button")
@@ -237,7 +237,7 @@ class MemoryTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         toolbar.addWidget(QLabel("Address:"))
         self._read_addr = QLineEdit()
@@ -283,7 +283,7 @@ class MemoryTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         toolbar.addWidget(QLabel("Address:"))
         self._write_addr = QLineEdit()
@@ -321,7 +321,7 @@ class MemoryTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         toolbar.addWidget(QLabel("Size:"))
         self._alloc_size = QSpinBox()
@@ -391,7 +391,7 @@ class MemoryTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         toolbar.addWidget(QLabel("Address:"))
         self._prot_addr = QLineEdit()
@@ -437,7 +437,7 @@ class MemoryTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         toolbar.addWidget(QLabel("Pattern:"))
         self._search_pattern = QLineEdit()

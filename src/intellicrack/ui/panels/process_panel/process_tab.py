@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager
 from intellicrack.ui.panels.async_bridge import drain_bridge_workers_for, run_bridge_coroutine_logged
+from intellicrack.ui.panels.base_panel import compute_toolbar_height
 from intellicrack.ui.panels.process_panel.workers import TrackedRefreshWorker
 from intellicrack.ui.panels.qt_compat import set_sorting_enabled
 
@@ -45,7 +46,6 @@ _logger = get_logger(__name__)
 
 _MARGIN: Final[int] = 0
 _SPACING: Final[int] = 4
-_TOOLBAR_HEIGHT: Final[int] = 32
 _SEARCH_MAX_WIDTH: Final[int] = 250
 _SPLIT_LEFT: Final[int] = 500
 _SPLIT_RIGHT: Final[int] = 300
@@ -159,7 +159,7 @@ class ProcessTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         self._search_input = QLineEdit()
         self._search_input.setPlaceholderText("Filter by name or PID...")
@@ -257,7 +257,7 @@ class ProcessTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         self._tracked_refresh_btn = QPushButton("Refresh")
         self._tracked_refresh_btn.setObjectName("tool_button")
