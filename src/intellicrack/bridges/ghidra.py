@@ -4949,11 +4949,15 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         """Patch bytes at an address in the program.
 
         Opens a Ghidra transaction, sign-folds every byte to the signed
-        ``-128..127`` range Ghidra's Java ``byte[]`` requires, writes via
-        ``Memory.setBytes``, then reads the bytes back and compares them
-        to the requested payload. The transaction is committed only when
-        the readback matches; otherwise it is rolled back and a
-        ``ToolError`` is raised.
+        ``-128..127`` range Ghidra's Java ``byte[]`` requires, clears any
+        existing code units spanning the write range (``Memory.setBytes``
+        otherwise raises ``MemoryAccessException`` when the target bytes
+        fall inside an already-disassembled instruction -- the common case
+        for a real binary patch, e.g. overwriting a jump or a license
+        check), writes via ``Memory.setBytes``, then reads the bytes back
+        and compares them to the requested payload. The transaction is
+        committed only when the readback matches; otherwise it is rolled
+        back and a ``ToolError`` is raised.
 
         Args:
             address: Address to write at.
@@ -4997,6 +5001,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                 memory = currentProgram.getMemory()
                 payload = jpype.JArray(jpype.JByte)([{byte_list_str}])
                 expected_length = {length}
+                end_addr = addr.add(expected_length - 1)
 
                 tx_id = currentProgram.startTransaction('intellicrack.write_bytes')
                 commit_ok = False
@@ -5005,6 +5010,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                 write_error = None
                 try:
                     try:
+                        currentProgram.getListing().clearCodeUnits(addr, end_addr, False)
                         memory.setBytes(addr, payload)
                     except Exception as _write_exc:
                         write_error = str(_write_exc)
