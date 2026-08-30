@@ -543,4 +543,7 @@ prompts/
 # Ad-hoc captured diff fragments (regenerable scratch, never tracked)
 /diff_ghidra.txt
 
+# Runtime data directory (caches, databases, user scripts)
+/data/
+
 prompts.md
