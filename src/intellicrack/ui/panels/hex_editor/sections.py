@@ -317,8 +317,13 @@ class SectionsMixin:
         self._strings_tree.addTopLevelItem(pending_row)
 
         previous = getattr(self, "_strings_worker", None)
-        if isinstance(previous, GenericCallableWorker) and previous.isRunning():
-            previous.requestInterruption()
+        if isinstance(previous, GenericCallableWorker):
+            try:
+                previous_running = previous.isRunning()
+            except RuntimeError:
+                previous_running = False
+            if previous_running:
+                previous.requestInterruption()
 
         _logger.info(
             "strings_extract_started",
