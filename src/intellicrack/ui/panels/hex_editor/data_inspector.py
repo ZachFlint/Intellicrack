@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from PyQt6.QtWidgets import (
     QComboBox,
+    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -38,7 +39,8 @@ if TYPE_CHECKING:
 
 
 _BIT_COUNT: int = 8
-_BIT_BUTTON_WIDTH: int = 28
+_BIT_BUTTON_MIN_WIDTH: int = 40
+_BIT_BUTTON_LABELS: tuple[str, ...] = ("0", "1", "?")
 _DECODE_DEFAULT_LEN: int = 64
 _DECODE_MAX_LEN: int = 4096
 
@@ -130,20 +132,62 @@ class DataInspectorMixin:
 
         self._update_bit_buttons(offset)
 
+    @staticmethod
+    def _compute_bit_button_width() -> int:
+        """Compute a bit-toggle button width wide enough to render its label.
+
+        Probes the application's live ``QStyle`` (which reflects the
+        current stylesheet's padding, border, and any state-dependent
+        rules such as a ``:checked`` border) with a fresh throwaway
+        button for every label the bit editor can display (``"0"``,
+        ``"1"``, the error state ``"?"``) crossed with both the
+        unchecked and checked states, and takes the widest reported
+        :meth:`QPushButton.sizeHint`. A fresh button is constructed for
+        each combination rather than toggling one reused instance,
+        because ``QPushButton`` does not invalidate its cached
+        ``sizeHint`` on a plain ``setChecked`` call, which would
+        otherwise mask a checked-state stylesheet rule (e.g. an added
+        border) that only widens the *first* size computed. Querying
+        the style directly - rather than hand-adding a fixed padding
+        constant - keeps the computed width correct even if the
+        stylesheet's checked-state rule changes independently of this
+        module.
+
+        Returns:
+            int: Button width in pixels, never narrower than
+            :data:`_BIT_BUTTON_MIN_WIDTH`.
+        """
+        widest = _BIT_BUTTON_MIN_WIDTH
+        for label in _BIT_BUTTON_LABELS:
+            for checked in (False, True):
+                probe = QPushButton(label)
+                probe.setCheckable(True)
+                probe.setChecked(checked)
+                widest = max(widest, probe.sizeHint().width())
+                probe.deleteLater()
+        return widest
+
     def _create_bit_editor_group(self) -> QGroupBox:
         """Create the bit-level editor group box with 8 toggle buttons.
+
+        The 8 toggles are arranged in a 2-row by 4-column grid (MSB to
+        LSB, left to right, top to bottom) rather than a single row so
+        the group's minimum size hint stays narrow enough to fit inside
+        the hex editor's collapsible side pane.
 
         Returns:
             QGroupBox: Container with 8 bit toggle buttons (MSB to LSB).
         """
         box = QGroupBox("Bit Editor")
-        layout = QHBoxLayout(box)
+        layout = QGridLayout(box)
         layout.setSpacing(2)
         self._bit_buttons = []
         self._bit_editor_offset = 0
+        button_width = self._compute_bit_button_width()
+        columns = _BIT_COUNT // 2
         for i in range(_BIT_COUNT):
             btn = QPushButton("0")
-            btn.setFixedWidth(_BIT_BUTTON_WIDTH)
+            btn.setFixedWidth(button_width)
             btn.setCheckable(True)
             bit_index = 7 - i
 
@@ -172,8 +216,7 @@ class DataInspectorMixin:
 
             btn.clicked.connect(_make_bit_handler(bit_index))
             self._bit_buttons.append(btn)
-            layout.addWidget(btn)
-        layout.addStretch()
+            layout.addWidget(btn, i // columns, i % columns)
         return box
 
     def _update_bit_buttons(self, offset: int) -> None:

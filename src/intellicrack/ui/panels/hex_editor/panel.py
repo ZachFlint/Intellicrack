@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QFontMetrics, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -46,6 +46,8 @@ from intellicrack.ui.panels.hex_editor.base import (
     CURSOR_CONTEXT_BYTES,
     HASH_ALGORITHMS,
     PREVIEW_BYTES,
+    VSPLIT_NUMERIC_IDX,
+    VSPLIT_PATTERN_IDX,
     HexDocumentEvent_cls,
     format_size,
     hexcore,
@@ -94,10 +96,18 @@ if TYPE_CHECKING:
     from intellicrack.ui.panels.async_bridge import GenericCallableWorker
     from intellicrack.ui.panels.hex_editor.pattern_code_editor import PatternCodeEditor
 
-_MODE_LABEL_WIDTH: Final[int] = 30
-_SEARCH_MODE_WIDTH: Final[int] = 80
+_MODE_LABEL_HPADDING: Final[int] = 16
+_SEARCH_MODE_COMBO_HPADDING: Final[int] = 32
+# 180px truncated a representative byte-pattern query (e.g. an 11-byte hex
+# signature) before it could be typed in full without horizontal scrolling
+# (S19-D03). Widened just enough to fit that query plus the styled
+# QLineEdit's horizontal chrome (padding: 6px 8px + 1px border each side)
+# across the fallback UI fonts a target system may substitute for Segoe UI.
+_SEARCH_INPUT_MAX_WIDTH: Final[int] = 260
 _ENCODING_COMBO_WIDTH: Final[int] = 120
-_LOG_BTN_WIDTH: Final[int] = 70
+_LOG_BTN_HPADDING: Final[int] = 24
+_HSPLIT_HEX_MIN_WIDTH: Final[int] = 240
+_HSPLIT_SIDE_MIN_WIDTH: Final[int] = 200
 _ZERO_MARGIN: Final[int] = 0
 _STATS_MARGIN: Final[int] = 2
 _STATS_SPACING: Final[int] = 4
@@ -280,7 +290,9 @@ class HexEditorPanel(
         toolbar.addSeparator()
 
         self._mode_label = QLabel("OVR")
-        self._mode_label.setFixedWidth(_MODE_LABEL_WIDTH)
+        mode_metrics = QFontMetrics(self._mode_label.font())
+        mode_min_width = max(mode_metrics.horizontalAdvance("OVR"), mode_metrics.horizontalAdvance("INS")) + _MODE_LABEL_HPADDING
+        self._mode_label.setMinimumWidth(mode_min_width)
         toolbar.addWidget(self._mode_label)
         toolbar.addSeparator()
 
@@ -288,11 +300,13 @@ class HexEditorPanel(
         self._add_secondary_button(toolbar, "Go", self._on_goto_offset)
         toolbar.addSeparator()
 
-        self._search_input = self._add_toolbar_input(toolbar, "Search...", max_width=180)
+        self._search_input = self._add_toolbar_input(toolbar, "Search...", max_width=_SEARCH_INPUT_MAX_WIDTH)
 
         self._search_mode_combo = QComboBox()
         self._search_mode_combo.addItems(["Hex", "Text", "Regex", "Numeric"])
-        self._search_mode_combo.setFixedWidth(_SEARCH_MODE_WIDTH)
+        self._search_mode_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        combo_metrics = QFontMetrics(self._search_mode_combo.font())
+        self._search_mode_combo.setMinimumWidth(combo_metrics.horizontalAdvance("Numeric") + _SEARCH_MODE_COMBO_HPADDING)
         toolbar.addWidget(self._search_mode_combo)
 
         self._add_secondary_button(toolbar, "Find", self._on_search)
@@ -386,14 +400,22 @@ class HexEditorPanel(
         self._hex_widget.selection_changed.connect(self._on_selection_changed)
         if self._encoding_combo is not None:
             self._encoding_combo.currentTextChanged.connect(self._on_encoding_changed)
+        self._hex_widget.setMinimumWidth(_HSPLIT_HEX_MIN_WIDTH)
         hsplit.addWidget(self._hex_widget)
 
         self._side_tabs = QTabWidget()
+        self._side_tabs.setMinimumWidth(_HSPLIT_SIDE_MIN_WIDTH)
+        side_tab_bar = self._side_tabs.tabBar()
+        if side_tab_bar is not None:
+            side_tab_bar.setElideMode(Qt.TextElideMode.ElideNone)
+            side_tab_bar.setExpanding(False)
+        self._side_tabs.setUsesScrollButtons(True)
         self._build_side_panels()
         hsplit.addWidget(self._side_tabs)
 
         hsplit.setStretchFactor(0, 3)
         hsplit.setStretchFactor(1, 1)
+        hsplit.setChildrenCollapsible(False)
 
         self._main_vsplit.addWidget(hsplit)
 
@@ -404,6 +426,10 @@ class HexEditorPanel(
         self._numeric_search_frame = self._build_numeric_search_panel()
         self._numeric_search_frame.setVisible(False)
         self._main_vsplit.addWidget(self._numeric_search_frame)
+
+        vsplit_pane_not_collapsible = False
+        self._main_vsplit.setCollapsible(VSPLIT_PATTERN_IDX, vsplit_pane_not_collapsible)
+        self._main_vsplit.setCollapsible(VSPLIT_NUMERIC_IDX, vsplit_pane_not_collapsible)
 
         if self._search_mode_combo is not None:
             self._search_mode_combo.currentTextChanged.connect(self._on_search_mode_changed)
@@ -512,6 +538,7 @@ class HexEditorPanel(
         bm_layout = QVBoxLayout(bookmarks_container)
         bm_layout.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
         self._bookmarks_tree = self._make_tree(["Offset", "Length", "Label"])
+        self._bookmarks_tree.itemDoubleClicked.connect(self._on_bookmark_double_clicked)
         bm_layout.addWidget(self._bookmarks_tree)
         bm_btn_layout = QHBoxLayout()
         add_bm_btn = QPushButton("Add")
@@ -566,7 +593,8 @@ class HexEditorPanel(
         dist_header = QHBoxLayout()
         dist_header.addWidget(QLabel("Byte Distribution"))
         log_btn = QPushButton("Log Scale")
-        log_btn.setFixedWidth(_LOG_BTN_WIDTH)
+        log_metrics = QFontMetrics(log_btn.font())
+        log_btn.setMinimumWidth(log_metrics.horizontalAdvance(log_btn.text()) + _LOG_BTN_HPADDING)
         log_btn.setCheckable(True)
         self._byte_dist_widget = ByteDistributionWidget()
         dist_ref = self._byte_dist_widget
@@ -801,6 +829,11 @@ class HexEditorPanel(
         self._search_results.clear()
         self._search_index = 0
 
+        self._load_bookmarks_sidecar()
+        self._refresh_bookmarks_tree()
+        if self._patches_tree is not None:
+            self._patches_tree.clear()
+
         if self.state_holder is not None:
             self.state_holder.set_document(self.document, path, source="panel")
 
@@ -919,8 +952,9 @@ class HexEditorPanel(
         goto_fn = getattr(self._hex_widget, "goto_offset", None)
         if not callable(goto_fn):
             return
+        hex_text = text[2:] if text.lower().startswith("0x") else text
         try:
-            offset = int(text, 16) if text.lower().startswith("0x") else int(text)
+            offset = int(hex_text, 16)
         except ValueError:
             _logger.warning("invalid_offset_input", text=text)
         else:
@@ -1445,12 +1479,25 @@ class HexEditorPanel(
         ``QThread`` and abort the process, so every known worker attribute is
         requested to interrupt and then joined with a bounded wait before its
         reference is cleared.
+
+        A ``GenericCallableWorker`` wires ``finished -> deleteLater``, so a
+        worker that has already completed may have had its underlying C++
+        object destroyed while the panel still holds the dangling sip wrapper.
+        Probing such a wrapper (``isRunning``) raises ``RuntimeError``; that
+        state simply means the worker is finished and needs no join, so it is
+        caught and the reference is cleared -- mirroring the defensive probe in
+        :func:`~intellicrack.ui.panels.async_bridge._retain_worker`.
         """
         for attr in _PENDING_WORKER_ATTRS:
             worker: Any = getattr(self, attr, None)
-            if worker is not None and worker.isRunning():
-                worker.requestInterruption()
-                worker.wait(_WORKER_SHUTDOWN_WAIT_MS)
+            if worker is not None:
+                try:
+                    still_running = worker.isRunning()
+                except RuntimeError:
+                    still_running = False
+                if still_running:
+                    worker.requestInterruption()
+                    worker.wait(_WORKER_SHUTDOWN_WAIT_MS)
             setattr(self, attr, None)
 
     def _cleanup(self) -> None:

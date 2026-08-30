@@ -65,6 +65,9 @@ _logger = get_logger(__name__)
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
 _DEVICE_COMBO_MIN_WIDTH: Final[int] = 120
+_PROCESS_COL_PID: Final[int] = 0
+_PROCESS_COL_NAME: Final[int] = 1
+_PROCESS_PID_COLUMN_WIDTH: Final[int] = 70
 _STALKER_TID_MAX_WIDTH: Final[int] = 100
 _TOP_SPLIT: Final[list[int]] = [200, 400, 300]
 _MAIN_SPLIT: Final[list[int]] = [400, 200]
@@ -72,6 +75,8 @@ _SPACING_STALKER: Final[int] = 4
 _CONSOLE_MAX_BLOCK_COUNT: Final[int] = 5000
 _CONSOLE_DRAIN_INTERVAL_MS: Final[int] = 50
 _CONSOLE_DRAIN_BATCH_SIZE: Final[int] = 200
+_RUN_SCRIPT_IDLE_TOOLTIP: Final[str] = "Run the script editor contents against the attached process"
+_RUN_SCRIPT_BLOCKED_TOOLTIP: Final[str] = "A persistent script is already loaded - stop it to run a new one"
 _CONSOLE_QUEUE_MAXLEN: Final[int] = 10000
 
 
@@ -152,6 +157,7 @@ class FridaPanel(AnalysisPanelBase):
         toolbar.addWidget(self._device_combo)
 
         self._refresh_devices_btn = self._add_secondary_button(toolbar, "Refresh Devices", self.refresh_devices)
+        self._add_remote_device_btn = self._add_secondary_button(toolbar, "Add Remote Device", self._on_add_remote_device)
 
         toolbar.addSeparator()
 
@@ -178,16 +184,17 @@ class FridaPanel(AnalysisPanelBase):
         toolbar.addSeparator()
 
         self.run_btn = self._add_tool_button(toolbar, "Run Script", self._on_run_script)
+        self.run_btn.setToolTip(_RUN_SCRIPT_IDLE_TOOLTIP)
+        self._stop_btn = self._add_tool_button(toolbar, "Stop", self._on_stop_script, enabled=False)
+        self._stop_btn.setToolTip("Stop the active persistent script")
         script_actions = self._add_tool_menu(
             toolbar,
             "Scripts",
             [
-                ToolMenuEntry("Stop", self._on_stop_script, enabled=False),
                 ToolMenuEntry("Stop All Scripts", self._on_stop_all_scripts, enabled=False),
                 ToolMenuEntry("Clear Console", self._on_clear_console),
             ],
         )
-        self._stop_btn = script_actions["Stop"]
         self._stop_all_btn = script_actions["Stop All Scripts"]
         self._clear_btn = script_actions["Clear Console"]
 
@@ -304,8 +311,9 @@ class FridaPanel(AnalysisPanelBase):
         self._process_table.doubleClicked.connect(self._on_process_double_click)
         proc_header = self._process_table.horizontalHeader()
         if proc_header is not None:
-            proc_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            proc_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            proc_header.setSectionResizeMode(_PROCESS_COL_PID, QHeaderView.ResizeMode.Interactive)
+            proc_header.setSectionResizeMode(_PROCESS_COL_NAME, QHeaderView.ResizeMode.Stretch)
+            proc_header.resizeSection(_PROCESS_COL_PID, _PROCESS_PID_COLUMN_WIDTH)
         layout.addWidget(self._process_table)
         return container
 
@@ -716,6 +724,7 @@ class FridaPanel(AnalysisPanelBase):
         self._attached_pid = None
         self._active_script_id = None
         self.run_btn.setEnabled(True)
+        self.run_btn.setToolTip(_RUN_SCRIPT_IDLE_TOOLTIP)
         self._stop_btn.setEnabled(False)
         self._stop_all_btn.setEnabled(False)
         self._set_status("Not attached")
@@ -786,6 +795,7 @@ class FridaPanel(AnalysisPanelBase):
             self._active_script_id = None
             self._console.appendPlainText("[-] Unable to track script handle - persistent load aborted")
             self.run_btn.setEnabled(True)
+            self.run_btn.setToolTip(_RUN_SCRIPT_IDLE_TOOLTIP)
             self._stop_btn.setEnabled(False)
             self._stop_all_btn.setEnabled(False)
             _logger.warning(
@@ -795,8 +805,9 @@ class FridaPanel(AnalysisPanelBase):
             )
             return
         self._active_script_id = result
-        self._console.appendPlainText("[+] Script loaded (persistent)")
+        self._console.appendPlainText("[+] Script loaded (persistent) - Stop the active script to run a new one")
         self.run_btn.setEnabled(False)
+        self.run_btn.setToolTip(_RUN_SCRIPT_BLOCKED_TOOLTIP)
         self._stop_btn.setEnabled(True)
         self._stop_all_btn.setEnabled(True)
         self._script_messaging.set_active_script_id(result)
@@ -812,6 +823,7 @@ class FridaPanel(AnalysisPanelBase):
         self._console.appendPlainText(f"[-] Script execution failed: {exc}")
         _logger.warning("frida_script_execution_failed", error=str(exc))
         self.run_btn.setEnabled(True)
+        self.run_btn.setToolTip(_RUN_SCRIPT_IDLE_TOOLTIP)
         self._stop_btn.setEnabled(False)
         self._active_script_id = None
 
@@ -824,6 +836,7 @@ class FridaPanel(AnalysisPanelBase):
             self._console.appendPlainText("[!] No persistent script handle to stop")
             self._stop_btn.setEnabled(False)
             self.run_btn.setEnabled(True)
+            self.run_btn.setToolTip(_RUN_SCRIPT_IDLE_TOOLTIP)
             _logger.warning("frida_stop_script_no_handle")
             return
 
@@ -843,6 +856,7 @@ class FridaPanel(AnalysisPanelBase):
         """Handle successful script stop."""
         self._active_script_id = None
         self.run_btn.setEnabled(True)
+        self.run_btn.setToolTip(_RUN_SCRIPT_IDLE_TOOLTIP)
         self._stop_all_btn.setEnabled(False)
         self._script_messaging.set_active_script_id(None)
         self._console.appendPlainText("[+] Script stopped")
@@ -880,6 +894,7 @@ class FridaPanel(AnalysisPanelBase):
         """Handle successful bulk teardown of every active script."""
         self._active_script_id = None
         self.run_btn.setEnabled(True)
+        self.run_btn.setToolTip(_RUN_SCRIPT_IDLE_TOOLTIP)
         self._script_messaging.set_active_script_id(None)
         self._console.appendPlainText("[+] All scripts stopped")
         _logger.info("frida_all_scripts_stopped")
@@ -1216,6 +1231,19 @@ class FridaPanel(AnalysisPanelBase):
         initial ``local`` entry or manually configured ``usb`` /
         ``remote:<host>`` entries.
 
+        A ``"remote"``-typed enumerated entry needs one further distinction.
+        A device previously connected through :meth:`connect_device` with
+        ``"remote"`` carries a Frida-assigned id of the form
+        ``"<label>@<host>"`` (e.g. ``"socket@10.0.0.9:27042"``), and the
+        ``<host>`` half is still a genuine, DNS-resolvable endpoint worth
+        reconnecting to directly. A device Frida enumerates on its own -
+        such as the built-in Local Socket provider, whose id is the bare
+        token ``"socket"`` with no ``"@"`` - is *not* a hostname at all, so
+        treating it as one and handing it to
+        ``DeviceManager.add_remote_device`` tries to DNS-resolve the literal
+        id. Those bare ids are instead routed through ``"enumerated"``,
+        which looks the device up by identity via ``frida.get_device``.
+
         Args:
             user_data: The selected combo item's ``userData``, expected to be a
                 mapping carrying ``id`` and ``type`` keys for enumerated
@@ -1225,18 +1253,20 @@ class FridaPanel(AnalysisPanelBase):
 
         Returns:
             tuple[str, str | None]: The bridge device type (``"local"``,
-            ``"usb"``, or ``"remote"``) and the remote host, which is ``None``
-            for non-remote devices.
+            ``"usb"``, ``"remote"``, or ``"enumerated"``) and either the
+            remote host (for ``"remote"``), the enumerated device id (for
+            ``"enumerated"``), or ``None`` for non-remote devices.
         """
         if isinstance(user_data, dict):
             data = cast("dict[str, object]", user_data)
             device_type = str(data.get("type", "")).strip().lower()
             device_id = str(data.get("id", "")).strip()
-            if device_type in {"local", "usb", "remote"}:
-                host: str | None = None
-                if device_type == "remote" and device_id:
-                    host = device_id.split("@", 1)[1] if "@" in device_id else device_id
-                return device_type, host
+            if device_type in {"local", "usb"}:
+                return device_type, None
+            if device_type == "remote" and device_id:
+                if "@" in device_id:
+                    return "remote", device_id.split("@", 1)[1]
+                return "enumerated", device_id
 
         text = device_text.strip()
         if text.startswith("remote:"):
@@ -1270,6 +1300,60 @@ class FridaPanel(AnalysisPanelBase):
             host=host,
         )
 
+    def _on_add_remote_device(self) -> None:
+        """Prompt for a ``host:port`` and connect a new remote Frida device.
+
+        Unlike selecting an already-enumerated device (which is looked up by
+        id, never by hostname), this dialog is the entry point for adding a
+        remote endpoint Frida has not seen before - the entered text is
+        passed straight to the bridge as the ``host[:port]`` of a *new*
+        remote device.
+        """
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+
+        host_port, accepted = QInputDialog.getText(
+            self,
+            "Add Remote Device",
+            "Remote host:port (e.g. 192.168.1.10:27042):",
+        )
+        if not accepted:
+            return
+
+        host_port = host_port.strip()
+        if not host_port:
+            self._console.appendPlainText("[!] Remote host:port is required")
+            return
+
+        self._console.appendPlainText(f"[*] Adding remote device {host_port}...")
+        run_bridge_coroutine_logged(
+            self._bridge.connect_device("remote", host_port),
+            on_success=lambda r: self._on_remote_device_added(host_port, r),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Add remote device failed: {e}"),
+            parent=self,
+            event="frida_add_remote_device",
+            logger=_logger,
+            level="info",
+            host=host_port,
+        )
+
+    def _on_remote_device_added(self, host_port: str, result: object) -> None:
+        """Insert the newly connected remote device into the device combo.
+
+        Args:
+            host_port: The ``host:port`` string entered by the user.
+            result: The ``FridaDeviceInfo`` returned by the bridge on success.
+        """
+        entry_text = f"remote:{host_port}"
+        with QSignalBlocker(self._device_combo):
+            idx = self._device_combo.findText(entry_text)
+            if idx < 0:
+                self._device_combo.addItem(entry_text)
+                idx = self._device_combo.count() - 1
+            self._device_combo.setCurrentIndex(idx)
+        self._console.appendPlainText(f"[+] Connected to device: {getattr(result, 'name', entry_text)}")
+
     def _on_refresh_processes(self) -> None:
         """Refresh the process browser table."""
         if self._bridge is None:
@@ -1300,17 +1384,25 @@ class FridaPanel(AnalysisPanelBase):
                 self._process_table.insertRow(row)
                 pid_val = getattr(proc, "pid", 0)
                 name_val = getattr(proc, "name", "")
-                self._process_table.setItem(row, 0, QTableWidgetItem(str(pid_val)))
-                self._process_table.setItem(row, 1, QTableWidgetItem(str(name_val)))
+                self._process_table.setItem(row, _PROCESS_COL_PID, QTableWidgetItem(str(pid_val)))
+                self._process_table.setItem(row, _PROCESS_COL_NAME, QTableWidgetItem(str(name_val)))
         self._refresh_procs_btn.setEnabled(True)
 
     def _on_refresh_processes_error(self, exc: object) -> None:
         """Handle process enumeration failure.
 
+        Routes every enumeration failure - including
+        ``frida.ServerNotRunningError`` and ``frida.TransportError`` from a
+        remote device with no reachable ``frida-server``, which the bridge
+        reports as a ``ToolError`` rather than letting escape - to an
+        in-panel message instead of the application's unhandled-exception
+        hook, and always re-enables the Refresh button so the panel stays
+        usable after a failed remote enumeration.
+
         Args:
             exc: The exception that occurred.
         """
-        self._console.appendPlainText(f"[-] Process enumeration failed: {exc}")
+        self._console.appendPlainText(f"[-] Remote enumerate failed: {exc}")
         _logger.warning("frida_process_enum_failed", error=str(exc))
         self._refresh_procs_btn.setEnabled(True)
 
@@ -1320,7 +1412,7 @@ class FridaPanel(AnalysisPanelBase):
         if row < 0:
             return
 
-        pid_item = self._process_table.item(row, 0)
+        pid_item = self._process_table.item(row, _PROCESS_COL_PID)
         if pid_item is None:
             return
 
@@ -1561,6 +1653,7 @@ class FridaPanel(AnalysisPanelBase):
         """
         self._console.appendPlainText(f"[+] Script result: {result}")
         self.run_btn.setEnabled(True)
+        self.run_btn.setToolTip(_RUN_SCRIPT_IDLE_TOOLTIP)
         self.script_executed.emit()
         _logger.info("frida_oneshot_script_executed", script_size=script_size)
 

@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import re
 import struct
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -22,13 +23,19 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSpinBox,
+    QSplitter,
     QWidget,
 )
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_warning
 from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_logged
-from intellicrack.ui.panels.hex_editor.base import MAX_SEARCH_RESULTS
+from intellicrack.ui.panels.hex_editor.base import (
+    MAX_SEARCH_RESULTS,
+    VSPLIT_HSPLIT_IDX,
+    VSPLIT_NUMERIC_IDX,
+    VSPLIT_PATTERN_IDX,
+)
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
@@ -47,6 +54,8 @@ _MAX_INPUT_WIDTH: Final[int] = 100
 _HIGHLIGHT_DARK: Final[str] = "#FFAA00"
 _HIGHLIGHT_LIGHT: Final[str] = "#FF8800"
 _NUMERIC_SCAN_CHUNK_SIZE: Final[int] = 65536
+_HEX_PATTERN_RE: Final[re.Pattern[str]] = re.compile(r"^[0-9A-Fa-f]*$")
+_INVALID_HEX_MESSAGE: Final[str] = "Invalid hex pattern: use only hex digits 0-9/A-F, with an even number of digits."
 
 
 _NUMERIC_FORMAT_MAP: Final[dict[tuple[int, bool, bool], str]] = {
@@ -156,6 +165,31 @@ def pack_numeric_value(value_text: str, fmt_info: _NumericSearchFormat) -> bytes
     """
     value: float = float(value_text) if fmt_info.is_float else int(value_text, 0)
     return struct.pack(fmt_info.fmt, value)
+
+
+def parse_hex_pattern_bytes(hex_text: str) -> bytes:
+    """Validate a hex-digit string and decode it to bytes without leaking ``fromhex``'s raw message.
+
+    ``bytes.fromhex`` raises ``ValueError: non-hexadecimal number found in
+    fromhex() arg at position N`` for malformed input, which is not a
+    user-facing message. This validates the pattern first (even length,
+    only ``0-9A-Fa-f`` characters) and raises a friendly ``ValueError``
+    instead whenever it would not decode cleanly.
+
+    Args:
+        hex_text: Hex-digit string with spaces already stripped by the caller.
+
+    Returns:
+        bytes: The decoded byte string.
+
+    Raises:
+        ValueError: If ``hex_text`` has an odd number of characters or
+            contains a character outside ``0-9A-Fa-f``. The message never
+            contains the substring ``fromhex``.
+    """
+    if len(hex_text) % 2 != 0 or not _HEX_PATTERN_RE.fullmatch(hex_text):
+        raise ValueError(_INVALID_HEX_MESSAGE)
+    return bytes.fromhex(hex_text)
 
 
 def _get_highlight_color() -> str:
@@ -392,6 +426,8 @@ class SearchMixin:
     _search_worker: GenericCallableWorker | None
     _numeric_search_worker: GenericCallableWorker | None
     _search_status_label: QLabel | None
+    _main_vsplit: QSplitter | None
+    _pattern_frame: QFrame | None
     _numeric_search_frame: QFrame | None
     _numeric_value_input: QLineEdit | None
     _numeric_size_combo: QComboBox | None
@@ -657,6 +693,36 @@ class SearchMixin:
         """
         self._reset_search_state()
 
+    def _apply_numeric_search_panel_size(self, *, show: bool) -> None:
+        """Resize the main vertical splitter so the numeric search panel is not collapsed.
+
+        ``QSplitter`` returns a hidden pane's size to its neighbors and does
+        not restore a non-zero size automatically when the pane becomes
+        visible again, so the numeric search frame must be given an explicit
+        height here whenever it is shown.
+
+        Args:
+            show: ``True`` when the numeric search panel is becoming visible;
+                ``False`` to reclaim its space for the hex/side-panel area.
+        """
+        vsplit = self._main_vsplit
+        frame = self._numeric_search_frame
+        if vsplit is None or frame is None:
+            return
+        sizes = vsplit.sizes()
+        if len(sizes) <= VSPLIT_NUMERIC_IDX:
+            return
+        total = sum(sizes) or vsplit.height()
+        pattern_frame = self._pattern_frame
+        pattern_size = sizes[VSPLIT_PATTERN_IDX] if pattern_frame is not None and pattern_frame.isVisible() else 0
+        numeric_size = frame.sizeHint().height() if show else 0
+        hsplit_size = max(total - pattern_size - numeric_size, 0)
+        new_sizes = list(sizes)
+        new_sizes[VSPLIT_HSPLIT_IDX] = hsplit_size
+        new_sizes[VSPLIT_PATTERN_IDX] = pattern_size
+        new_sizes[VSPLIT_NUMERIC_IDX] = numeric_size
+        vsplit.setSizes(new_sizes)
+
     def _on_search_mode_changed(self, mode: str) -> None:
         """Show or hide the numeric search panel and apply input validators based on mode.
 
@@ -670,6 +736,7 @@ class SearchMixin:
         show_numeric = mode == "Numeric"
         if self._numeric_search_frame is not None:
             self._numeric_search_frame.setVisible(show_numeric)
+            self._apply_numeric_search_panel_size(show=show_numeric)
         if self._search_input is not None:
             self._search_input.setEnabled(not show_numeric)
             if mode == "Hex":
@@ -913,10 +980,17 @@ class SearchMixin:
         Note:
             Numeric mode may propagate ``ValueError`` or ``struct.error``
             from :func:`pack_numeric_value` when a value cannot be parsed
-            for, or does not fit, the resolved format.
+            for, or does not fit, the resolved format. Hex mode raises a
+            friendly ``ValueError`` (never containing the substring
+            ``fromhex``) when either the find pattern or the replacement
+            is not a valid hex-byte string.
         """
         if mode == "Hex":
-            return query.replace(" ", ""), replace_text.replace(" ", "")
+            pattern_hex = query.replace(" ", "")
+            replacement_hex = replace_text.replace(" ", "")
+            parse_hex_pattern_bytes(pattern_hex)
+            parse_hex_pattern_bytes(replacement_hex)
+            return pattern_hex, replacement_hex
 
         if mode == "Numeric":
             value_text = query.strip()
@@ -1165,9 +1239,10 @@ class SearchMixin:
 
         Note:
             Numeric mode may propagate ``ValueError`` or ``struct.error``
-            from :func:`pack_numeric_value`, and Hex mode may propagate
-            ``ValueError`` from :func:`bytes.fromhex`, when the replacement
-            text cannot be parsed for the active mode.
+            from :func:`pack_numeric_value`, and Hex mode may propagate a
+            friendly ``ValueError`` (never containing the substring
+            ``fromhex``) from :func:`parse_hex_pattern_bytes`, when the
+            replacement text cannot be parsed for the active mode.
         """
         if mode == "Numeric":
             if self._numeric_value_input is None:
@@ -1175,7 +1250,7 @@ class SearchMixin:
             params = self._read_numeric_search_params(self._numeric_value_input.text().strip())
             fmt_info = _resolve_numeric_search_format(params)
             return pack_numeric_value(replace_text.strip(), fmt_info)
-        return bytes.fromhex(replace_text.replace(" ", ""))
+        return parse_hex_pattern_bytes(replace_text.replace(" ", ""))
 
     def _apply_single_replacement(self, document: object, offset: int, length: int, replacement_bytes: bytes) -> None:
         """Write ``replacement_bytes`` at ``offset`` and propagate the change to the GUI.

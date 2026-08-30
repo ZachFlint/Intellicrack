@@ -72,6 +72,51 @@ _ARCH_64_POINTER_BYTES = 8
 _HEX_TOKEN_LENGTH = 2
 _BOOKMARK_READBACK_PAIR_LEN = 2
 
+# ``ghidra.app.util.parser.DataTypeParser`` pulls in Swing (it backs the GUI
+# "type chooser" dialog) and cannot be imported by a headless PyGhidra/jpype
+# process. Every remote-exec payload that used to construct
+# ``DataTypeParser(dtm)`` defines this helper instead: it resolves a type
+# name against the program's ``DataTypeManager`` and the shared
+# ``BuiltInDataTypeManager`` first (covering plain names such as ``dword`` or
+# a struct/enum already registered in the program), then falls back to
+# ``ghidra.app.util.cparser.C.CParser``, which imports fine headless, for
+# compound C declarations such as ``int *`` or ``char[16]``. It never calls
+# ``DataTypeManager.resolve``/``addDataType`` itself, so it stays safe to call
+# outside an open Ghidra transaction, matching how ``DataTypeParser.parse``
+# was used at every one of these call sites. Every embedding site shares the
+# same 16-space base indentation, so this is pre-indented to match.
+_DT_RESOLVE_HELPER_SRC = (
+    "                def _ic_resolve_data_type(dtm, type_str):\n"
+    "                    type_str = (type_str or '').strip()\n"
+    "                    if not type_str:\n"
+    "                        return None\n"
+    "                    lookup_path = type_str if type_str.startswith('/') else ('/' + type_str)\n"
+    "                    direct = dtm.getDataType(lookup_path)\n"
+    "                    if direct is not None:\n"
+    "                        return direct\n"
+    "                    all_types = dtm.getAllDataTypes()\n"
+    "                    while all_types.hasNext():\n"
+    "                        candidate = all_types.next()\n"
+    "                        if candidate.getName() == type_str:\n"
+    "                            return candidate\n"
+    "                    from ghidra.program.model.data import BuiltInDataTypeManager\n"
+    "                    builtin_mgr = BuiltInDataTypeManager.getDataTypeManager()\n"
+    "                    builtin = builtin_mgr.getDataType(lookup_path)\n"
+    "                    if builtin is not None:\n"
+    "                        return builtin\n"
+    "                    builtin_types = builtin_mgr.getAllDataTypes()\n"
+    "                    while builtin_types.hasNext():\n"
+    "                        candidate = builtin_types.next()\n"
+    "                        if candidate.getName() == type_str:\n"
+    "                            return candidate\n"
+    "                    try:\n"
+    "                        from ghidra.app.util.cparser.C import CParser\n"
+    "                        cparser = CParser(dtm)\n"
+    "                        return cparser.parse(type_str)\n"
+    "                    except Exception:\n"
+    "                        return None\n"
+)
+
 _RESULT_SENTINEL_BASE = "_intellicrack_ghidra_result_"
 
 # jfx_bridge defaults its per-RPC response timeout to 2 seconds
@@ -1681,16 +1726,22 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         PyGhidra* (``python -m pyghidra.ghidra_launch ... AnalyzeHeadless``)
         with ``sys.executable`` as the interpreter, so the bridge post-script
         runs under CPython/jpype. The installation is first validated with
-        :meth:`_resolve_headless_executable`. An UTF-8 bridge script is deployed
-        under a unique temporary directory and passed as the ``-postScript``; it
-        starts a :class:`jfx_bridge.bridge.BridgeServer` whose eval/exec hooks
+        :meth:`_resolve_headless_executable`, which also refuses to proceed
+        (:meth:`_check_no_live_jython_extension`) when the install still
+        carries a live ``Jython`` extension that would conflict with the
+        CPython bridge. An UTF-8 bridge script is deployed under a unique
+        temporary directory and passed as the ``-postScript``; it starts a
+        :class:`jfx_bridge.bridge.BridgeServer` whose eval/exec hooks
         run in the live PyGhidra script namespace. The JVM is spawned with
         ``cwd`` set to the Ghidra install root, ``creationflags=CREATE_NO_WINDOW``
         on Windows, a scrubbed environment that strips Ghidra/Java/Python
         overrides which can hijack the JVM, and ``JAVA_HOME`` pointed at a
         discovered JDK (:meth:`_discover_jdk`). Stdout and stderr are drained
         continuously by background threads to prevent pipe-buffer deadlock
-        during ``_wait_for_bridge_port``.
+        during ``_wait_for_bridge_port``; the captured stderr tail is appended
+        to every ``ToolError`` this method or its helpers raise once the
+        subprocess has been spawned, so a launch failure is diagnosable
+        instead of a silent hang.
 
         Args:
             project_dir: Directory for Ghidra project.
@@ -1698,8 +1749,9 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
 
         Raises:
             ToolError: If Ghidra cannot be started, the headless script is
-                missing for the current platform, the bridge port never opens,
-                or the RPC client cannot connect.
+                missing for the current platform, a live Jython extension is
+                present in the installation, the bridge port never opens, or
+                the RPC client cannot connect.
         """
         if self._ghidra_path is None:
             error_message = "Ghidra path not set"
@@ -1794,8 +1846,8 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                 response_timeout=_GHIDRA_RESPONSE_TIMEOUT,
             )
         except Exception as e:
+            error_message = self._format_with_stderr_tail(f"Failed to connect to Ghidra: {e}")
             _logger.warning("ghidra_connect_failed", port=self._port, error=str(e))
-            error_message = f"Failed to connect to Ghidra: {e}"
             self.state.last_error = error_message
             raise ToolError(error_message) from e
         else:
@@ -1804,8 +1856,58 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
             _logger.info("ghidra_headless_connected", port=self._port)
 
     @staticmethod
+    def _check_no_live_jython_extension(ghidra_path: Path) -> None:
+        """Refuse to proceed when a live ``Features/Jython`` extension is installed.
+
+        The Intellicrack bridge drives Ghidra headless through PyGhidra so the
+        bundled post-script runs under CPython/jpype. A Ghidra installation
+        that still ships an *enabled* ``Jython`` extension (i.e. a
+        ``Ghidra/Features/Jython`` directory, as opposed to the
+        ``Jython.disabled`` name Ghidra's module loader ignores) loads its own
+        Jython interpreter into the same JVM and can shadow or otherwise
+        collide with the CPython bridge's Jython-free remote-exec payloads.
+        This is a static, filesystem-only check (it looks for at least one
+        ``*.jar`` under the extension's ``lib`` directory) run before the JVM
+        is ever spawned, so a conflicting extension is refused with an
+        actionable message instead of producing a confusing runtime failure.
+
+        Args:
+            ghidra_path: Root directory of the Ghidra installation.
+
+        Raises:
+            ToolError: If a live ``Jython`` extension with at least one jar
+                under its ``lib`` directory is present in the installation.
+        """
+        jython_ext_dir = ghidra_path / "Ghidra" / "Features" / "Jython"
+        if not jython_ext_dir.is_dir():
+            return
+
+        jython_jars = sorted(jython_ext_dir.glob("lib/*.jar"))
+        if not jython_jars:
+            return
+
+        _logger.error(
+            "ghidra_live_jython_extension_detected",
+            extension_dir=str(jython_ext_dir),
+            jar_count=len(jython_jars),
+        )
+        error_message = (
+            f"A live Jython extension is installed at {jython_ext_dir}. The Intellicrack "
+            "Ghidra bridge requires the CPython/PyGhidra bridge and cannot run reliably "
+            "alongside a live Jython extension in the same Ghidra installation. Remove the "
+            "extension or disable it by renaming its directory to 'Jython.disabled', then "
+            "retry."
+        )
+        raise ToolError(error_message)
+
+    @staticmethod
     def _resolve_headless_executable(ghidra_path: Path) -> Path:
         """Resolve the platform-appropriate ``analyzeHeadless`` executable.
+
+        Also refuses the installation, via
+        :meth:`_check_no_live_jython_extension`, when it still carries a live
+        ``Jython`` extension that would conflict with the CPython/PyGhidra
+        bridge this class drives.
 
         Args:
             ghidra_path: Root directory of the Ghidra installation.
@@ -1814,8 +1916,12 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
             Path: Path to the resolved ``analyzeHeadless`` launcher.
 
         Raises:
-            ToolError: If the launcher does not exist for the current platform.
+            ToolError: If the launcher does not exist for the current
+                platform, or a live ``Jython`` extension is present in the
+                installation.
         """
+        _GhidraBridgeBase._check_no_live_jython_extension(ghidra_path)
+
         support = ghidra_path / "support"
         candidate = support / ("analyzeHeadless.bat" if os.name == "nt" else "analyzeHeadless")
 
@@ -3265,7 +3371,7 @@ metadata
         produce a ``(0x00, 0x00)`` byte/mask pair; everything else must
         be exactly two hex digits and is converted to a ``(byte,
         0xFF)`` pair. The returned values are folded into the
-        ``-128..127`` signed range Ghidra's ``jarray`` requires.
+        ``-128..127`` signed range Ghidra's Java ``byte[]`` requires.
 
         Args:
             raw_hex: User-supplied hex pattern, optionally with ``??``
@@ -3273,8 +3379,8 @@ metadata
 
         Returns:
             tuple[list[int], list[int]]: ``(byte_vals, mask_vals)``
-            both already sign-folded for the remote ``jarray('b')``
-            constructor.
+            both already sign-folded for the remote
+            ``jpype.JArray(jpype.JByte)`` constructor.
 
         Raises:
             ToolError: If ``raw_hex`` is empty after trimming or
@@ -3354,13 +3460,13 @@ metadata
             try:
                 result = await self._execute_remote(
                     f"""
-                    from jarray import array
+                    import jpype
                     addresses = []
                     memory = currentProgram.getMemory()
                     start = memory.getMinAddress()
                     end = memory.getMaxAddress()
-                    byte_arr = array([{byte_arr_str}], 'b')
-                    mask_arr = array([{mask_arr_str}], 'b')
+                    byte_arr = jpype.JArray(jpype.JByte)([{byte_arr_str}])
+                    mask_arr = jpype.JArray(jpype.JByte)([{mask_arr_str}])
                     found = memory.findBytes(start, end, byte_arr, mask_arr, True, monitor)
                     while found is not None:
                         addresses.append(found.getOffset())
@@ -3604,9 +3710,12 @@ metadata
                 st = currentProgram.getSymbolTable()
 
                 for sym in st.getExternalSymbols():
+                    parent = sym.getParentSymbol()
+                    dll_name = parent.getName() if parent is not None else ''
+                    func_name = sym.getName()
                     imports.append({
-                        'dll': str(sym.getParentSymbol().getName()) if sym.getParentSymbol() else '',
-                        'function': sym.getName(),
+                        'dll': str(dll_name) if dll_name is not None else '',
+                        'function': str(func_name) if func_name is not None else '',
                         'address': sym.getAddress().getOffset(),
                     })
 
@@ -3774,13 +3883,11 @@ metadata
 
         try:
             result = await self._execute_remote(f"""
-                from ghidra.app.util.parser import DataTypeParser
-
+{_DT_RESOLVE_HELPER_SRC}
                 addr = toAddr({address})
                 listing = currentProgram.getListing()
                 dtm = currentProgram.getDataTypeManager()
-                parser = DataTypeParser(dtm)
-                parsed = parser.parse({data_type_literal})
+                parsed = _ic_resolve_data_type(dtm, {data_type_literal})
 
                 _set_ok = False
                 if parsed is None:
@@ -4330,8 +4437,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         try:
             result = await self._execute_remote(f"""
                 from ghidra.program.model.symbol import SourceType
-                from ghidra.app.util.parser import DataTypeParser
-
+{_DT_RESOLVE_HELPER_SRC}
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
                 _efs_result = None
@@ -4346,8 +4452,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     try:
                         if rt is not None:
                             dtm = currentProgram.getDataTypeManager()
-                            parser = DataTypeParser(dtm)
-                            parsed = parser.parse(rt)
+                            parsed = _ic_resolve_data_type(dtm, rt)
                             if parsed is not None:
                                 func.setReturnType(parsed, SourceType.USER_DEFINED)
 
@@ -4406,15 +4511,13 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         try:
             result = await self._execute_remote(f"""
                 from ghidra.program.model.symbol import SourceType
-                from ghidra.app.util.parser import DataTypeParser
-
+{_DT_RESOLVE_HELPER_SRC}
                 addr = toAddr({func_address})
                 func = getFunctionContaining(addr)
                 found = False
                 if func is not None:
                     dtm = currentProgram.getDataTypeManager()
-                    parser = DataTypeParser(dtm)
-                    parsed = parser.parse({json.dumps(new_type)})
+                    parsed = _ic_resolve_data_type(dtm, {json.dumps(new_type)})
                     if parsed is not None:
                         tx_id = currentProgram.startTransaction('intellicrack.set_function_variable_type')
                         try:
@@ -4467,31 +4570,29 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             result = await self._execute_remote(f"""
                 import json as _json
                 from ghidra.program.model.data import StructureDataType, CategoryPath
-
+{_DT_RESOLVE_HELPER_SRC}
                 fields_data = _json.loads({json.dumps(fields_json)})
                 struct = StructureDataType(CategoryPath.ROOT, {json.dumps(name)}, 0)
+                dtm = currentProgram.getDataTypeManager()
 
                 type_map = {{
-                    'byte': currentProgram.getDataTypeManager().getDataType('/byte'),
-                    'word': currentProgram.getDataTypeManager().getDataType('/word'),
-                    'dword': currentProgram.getDataTypeManager().getDataType('/dword'),
-                    'qword': currentProgram.getDataTypeManager().getDataType('/qword'),
-                    'float': currentProgram.getDataTypeManager().getDataType('/float'),
-                    'double': currentProgram.getDataTypeManager().getDataType('/double'),
-                    'char': currentProgram.getDataTypeManager().getDataType('/char'),
-                    'pointer': currentProgram.getDataTypeManager().getDataType('/pointer'),
+                    'byte': dtm.getDataType('/byte'),
+                    'word': dtm.getDataType('/word'),
+                    'dword': dtm.getDataType('/dword'),
+                    'qword': dtm.getDataType('/qword'),
+                    'float': dtm.getDataType('/float'),
+                    'double': dtm.getDataType('/double'),
+                    'char': dtm.getDataType('/char'),
+                    'pointer': dtm.getDataType('/pointer'),
                 }}
 
                 for f in fields_data:
                     ft = type_map.get(f.get('type', 'byte'))
                     if ft is None:
-                        from ghidra.app.util.parser import DataTypeParser
-                        parser = DataTypeParser(currentProgram.getDataTypeManager())
-                        ft = parser.parse(f.get('type', 'byte'))
+                        ft = _ic_resolve_data_type(dtm, f.get('type', 'byte'))
                     if ft is not None:
                         struct.add(ft, f.get('size', ft.getLength()), f.get('name', ''), '')
 
-                dtm = currentProgram.getDataTypeManager()
                 tx_id = currentProgram.startTransaction('intellicrack.define_structure')
                 try:
                     added = dtm.addDataType(struct, None)
@@ -4848,7 +4949,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         """Patch bytes at an address in the program.
 
         Opens a Ghidra transaction, sign-folds every byte to the signed
-        ``-128..127`` range Jython's ``jarray`` requires, writes via
+        ``-128..127`` range Ghidra's Java ``byte[]`` requires, writes via
         ``Memory.setBytes``, then reads the bytes back and compares them
         to the requested payload. The transaction is committed only when
         the readback matches; otherwise it is rolled back and a
@@ -4890,11 +4991,11 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
 
         try:
             result = await self._execute_remote(f"""
-                from jarray import array, zeros
+                import jpype
 
                 addr = toAddr({address})
                 memory = currentProgram.getMemory()
-                payload = array([{byte_list_str}], 'b')
+                payload = jpype.JArray(jpype.JByte)([{byte_list_str}])
                 expected_length = {length}
 
                 tx_id = currentProgram.startTransaction('intellicrack.write_bytes')
@@ -4908,7 +5009,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     except Exception as _write_exc:
                         write_error = str(_write_exc)
 
-                    buf = zeros(expected_length, 'b')
+                    buf = jpype.JArray(jpype.JByte)(expected_length)
                     try:
                         memory.getBytes(addr, buf)
                         readback_bytes = [((b + 256) % 256) for b in buf]
@@ -4986,9 +5087,9 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         try:
             result = await self._execute_remote(
                 f"""
-                from jarray import zeros
+                import jpype
                 addr = toAddr({address})
-                buf = zeros({length}, 'b')
+                buf = jpype.JArray(jpype.JByte)({length})
                 currentProgram.getMemory().getBytes(addr, buf)
                 _read_bytes_payload = [((b + 256) % 256) for b in buf]
                 {{'address': addr.getOffset(), 'bytes': _read_bytes_payload}}
@@ -6392,39 +6493,39 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             result = await self._execute_remote(f"""
                 import json as _json
                 from ghidra.program.model.data import CategoryPath, EnumDataType, UnionDataType, TypedefDataType
-
+{_DT_RESOLVE_HELPER_SRC}
                 cat_path = CategoryPath({json.dumps(category)})
                 dtm = currentProgram.getDataTypeManager()
                 type_kind = {json.dumps(type_kind)}
                 fields_data = _json.loads({json.dumps(fields_json)})
                 created = None
 
-                if type_kind == 'enum':
-                    enum_dt = EnumDataType(cat_path, {json.dumps(name)}, 4)
-                    for f in fields_data:
-                        enum_dt.add(f.get('name', ''), int(f.get('value', 0)))
-                    created = dtm.addDataType(enum_dt, None)
-                elif type_kind == 'union':
-                    union_dt = UnionDataType(cat_path, {json.dumps(name)})
-                    for f in fields_data:
-                        from ghidra.app.util.parser import DataTypeParser
-                        parser = DataTypeParser(dtm)
-                        ft = parser.parse(f.get('type', 'byte'))
-                        if ft is not None:
-                            union_dt.add(ft, f.get('size', ft.getLength()), f.get('name', ''), '')
-                    created = dtm.addDataType(union_dt, None)
-                elif type_kind == 'typedef':
-                    base_name = fields_data[0].get('type', 'dword') if fields_data else 'dword'
-                    from ghidra.app.util.parser import DataTypeParser
-                    parser = DataTypeParser(dtm)
-                    base_dt = parser.parse(base_name)
-                    if base_dt is not None:
-                        typedef_dt = TypedefDataType(cat_path, {json.dumps(name)}, base_dt)
-                        created = dtm.addDataType(typedef_dt, None)
-                elif type_kind == 'function_def':
-                    from ghidra.program.model.data import FunctionDefinitionDataType
-                    func_def = FunctionDefinitionDataType(cat_path, {json.dumps(name)})
-                    created = dtm.addDataType(func_def, None)
+                tx_id = currentProgram.startTransaction('intellicrack.create_data_type')
+                try:
+                    if type_kind == 'enum':
+                        enum_dt = EnumDataType(cat_path, {json.dumps(name)}, 4)
+                        for f in fields_data:
+                            enum_dt.add(f.get('name', ''), int(f.get('value', 0)))
+                        created = dtm.addDataType(enum_dt, None)
+                    elif type_kind == 'union':
+                        union_dt = UnionDataType(cat_path, {json.dumps(name)})
+                        for f in fields_data:
+                            ft = _ic_resolve_data_type(dtm, f.get('type', 'byte'))
+                            if ft is not None:
+                                union_dt.add(ft, f.get('size', ft.getLength()), f.get('name', ''), '')
+                        created = dtm.addDataType(union_dt, None)
+                    elif type_kind == 'typedef':
+                        base_name = fields_data[0].get('type', 'dword') if fields_data else 'dword'
+                        base_dt = _ic_resolve_data_type(dtm, base_name)
+                        if base_dt is not None:
+                            typedef_dt = TypedefDataType(cat_path, {json.dumps(name)}, base_dt)
+                            created = dtm.addDataType(typedef_dt, None)
+                    elif type_kind == 'function_def':
+                        from ghidra.program.model.data import FunctionDefinitionDataType
+                        func_def = FunctionDefinitionDataType(cat_path, {json.dumps(name)})
+                        created = dtm.addDataType(func_def, None)
+                finally:
+                    currentProgram.endTransaction(tx_id, created is not None)
 
                 result_dict = None
                 if created is not None:
@@ -6469,22 +6570,25 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
         _logger.debug("data_creating", address=hex(address), data_type=data_type)
         try:
             result = await self._execute_remote(f"""
-                from ghidra.app.util.parser import DataTypeParser
-
+{_DT_RESOLVE_HELPER_SRC}
                 addr = toAddr({address})
                 listing = currentProgram.getListing()
                 dtm = currentProgram.getDataTypeManager()
-                parser = DataTypeParser(dtm)
-                parsed = parser.parse({json.dumps(data_type)})
+                parsed = _ic_resolve_data_type(dtm, {json.dumps(data_type)})
                 result_dict = None
                 if parsed is None:
                     result_dict = {{'address': {address}, 'type': {json.dumps(data_type)}, 'size': 0, 'success': False}}
                 else:
-                    existing = listing.getDataAt(addr)
-                    if existing is not None:
-                        listing.clearCodeUnits(addr, addr.add(parsed.getLength() - 1), False)
-                    created = listing.createData(addr, parsed)
-                    result_dict = {{'address': addr.getOffset(), 'type': {json.dumps(data_type)}, 'size': int(created.getLength()), 'success': True}}
+                    tx_id = currentProgram.startTransaction('intellicrack.create_data')
+                    created = None
+                    try:
+                        existing = listing.getDataAt(addr)
+                        if existing is not None:
+                            listing.clearCodeUnits(addr, addr.add(parsed.getLength() - 1), False)
+                        created = listing.createData(addr, parsed)
+                    finally:
+                        currentProgram.endTransaction(tx_id, created is not None)
+                    result_dict = {{'address': addr.getOffset(), 'type': {json.dumps(data_type)}, 'size': int(created.getLength()) if created is not None else 0, 'success': created is not None}}
             """)
             return (
                 cast("dict[str, Any]", result)

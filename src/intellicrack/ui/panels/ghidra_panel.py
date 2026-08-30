@@ -76,6 +76,20 @@ _CODE_SPLIT_RATIO_BOTTOM: Final[int] = 300
 _MAIN_SPLIT_RATIO_LEFT: Final[int] = 600
 _MAIN_SPLIT_RATIO_RIGHT: Final[int] = 250
 
+_DATA_TABS_MIN_HEIGHT: Final[int] = 32
+
+_ADDRESS_INPUT_MAX_WIDTH: Final[int] = 160
+_TYPE_INPUT_MAX_WIDTH: Final[int] = 220
+
+_TABLE_MIN_VISIBLE_ROWS: Final[int] = 8
+_TABLE_MIN_VISIBLE_ROWS_COMPACT: Final[int] = 4
+_TABLE_ROW_HEIGHT_FALLBACK_PX: Final[int] = 24
+_TABLE_HEADER_HEIGHT_FALLBACK_PX: Final[int] = 24
+
+_TEXT_MIN_VISIBLE_LINES: Final[int] = 5
+_TEXT_MIN_VISIBLE_LINES_COMPACT: Final[int] = 3
+_TEXT_EDIT_PADDING_PX: Final[int] = 10
+
 _FUNC_COLUMNS: Final[list[str]] = ["Name", "Address", "Size"]
 _IMPORT_COLUMNS: Final[list[str]] = ["DLL", "Function", "Address"]
 _EXPORT_COLUMNS: Final[list[str]] = ["Name", "Ordinal", "Address"]
@@ -132,6 +146,43 @@ def _make_table(columns: list[str]) -> QTableWidget:
     if header is not None:
         header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
     return table
+
+
+def _table_min_height(table: QTableWidget, visible_rows: int) -> int:
+    """Compute a minimum table height that keeps a number of rows visible.
+
+    Args:
+        table: The table widget to measure.
+        visible_rows: Minimum number of data rows that should stay visible
+            without scrolling.
+
+    Returns:
+        int: Minimum height in pixels covering the header plus the
+        requested row count.
+    """
+    v_header = table.verticalHeader()
+    row_height = v_header.defaultSectionSize() if v_header is not None else _TABLE_ROW_HEIGHT_FALLBACK_PX
+    h_header = table.horizontalHeader()
+    header_height = h_header.sizeHint().height() if h_header is not None else _TABLE_HEADER_HEIGHT_FALLBACK_PX
+    frame = table.frameWidth() * 2
+    return header_height + row_height * visible_rows + frame
+
+
+def _text_edit_min_height(edit: QPlainTextEdit, visible_lines: int) -> int:
+    """Compute a minimum height for a plain text edit that keeps lines visible.
+
+    Args:
+        edit: Plain text edit widget to measure.
+        visible_lines: Minimum number of text lines that should remain
+            visible without scrolling.
+
+    Returns:
+        int: Minimum height in pixels covering the requested line count
+        plus frame padding.
+    """
+    line_height = edit.fontMetrics().lineSpacing()
+    frame = edit.frameWidth() * 2
+    return line_height * visible_lines + frame + _TEXT_EDIT_PADDING_PX
 
 
 class GhidraPanel(AnalysisPanelBase):
@@ -290,6 +341,12 @@ class GhidraPanel(AnalysisPanelBase):
         """
         tabs = QTabWidget()
         self._data_tabs = tabs
+        tabs.setMinimumHeight(_DATA_TABS_MIN_HEIGHT)
+        data_tab_bar = tabs.tabBar()
+        if data_tab_bar is not None:
+            data_tab_bar.setElideMode(Qt.TextElideMode.ElideNone)
+            data_tab_bar.setExpanding(False)
+        tabs.setUsesScrollButtons(True)
 
         self._strings_table = _make_table(_STRING_COLUMNS)
         strings_container = QWidget()
@@ -557,7 +614,8 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(mem_top)
 
         self._memory_table = _make_table(_MEMORY_COLUMNS)
-        layout.addWidget(self._memory_table)
+        self._memory_table.setMinimumHeight(_table_min_height(self._memory_table, _TABLE_MIN_VISIBLE_ROWS))
+        layout.addWidget(self._memory_table, 1)
 
         read_label = QLabel(self.tr("Read Bytes"))
         layout.addWidget(read_label)
@@ -577,7 +635,7 @@ class GhidraPanel(AnalysisPanelBase):
 
         self._hex_dump_view = QPlainTextEdit()
         self._hex_dump_view.setReadOnly(True)
-        self._hex_dump_view.setFixedHeight(100)
+        self._hex_dump_view.setMinimumHeight(_text_edit_min_height(self._hex_dump_view, _TEXT_MIN_VISIBLE_LINES))
         layout.addWidget(self._hex_dump_view)
 
         write_label = QLabel(self.tr("Write Bytes"))
@@ -804,7 +862,7 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(cmt_form1)
 
         self._cmt_text_input = QPlainTextEdit()
-        self._cmt_text_input.setFixedHeight(60)
+        self._cmt_text_input.setMinimumHeight(_text_edit_min_height(self._cmt_text_input, _TEXT_MIN_VISIBLE_LINES_COMPACT))
         self._cmt_text_input.setPlaceholderText("Comment text")
         layout.addWidget(self._cmt_text_input)
 
@@ -816,7 +874,7 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(cmt_btns)
 
         self._comments_table = _make_table(_COMMENT_COLUMNS)
-        layout.addWidget(self._comments_table)
+        layout.addWidget(self._comments_table, 1)
 
         refresh_row = QHBoxLayout()
         self._refresh_cmt_range_btn = QPushButton(self.tr("Refresh Range"))
@@ -858,14 +916,15 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(sym_form)
 
         self._symbols_table = _make_table(_SYMBOL_COLUMNS)
-        layout.addWidget(self._symbols_table)
+        self._symbols_table.setMinimumHeight(_table_min_height(self._symbols_table, _TABLE_MIN_VISIBLE_ROWS))
+        layout.addWidget(self._symbols_table, 2)
 
         ns_label = QLabel(self.tr("Namespaces"))
         layout.addWidget(ns_label)
 
         self._namespaces_table = _make_table(_NAMESPACE_COLUMNS)
-        self._namespaces_table.setFixedHeight(80)
-        layout.addWidget(self._namespaces_table)
+        self._namespaces_table.setMinimumHeight(_table_min_height(self._namespaces_table, _TABLE_MIN_VISIBLE_ROWS_COMPACT))
+        layout.addWidget(self._namespaces_table, 1)
 
         ns_form = QHBoxLayout()
         self._ns_name_input = QLineEdit()
@@ -886,8 +945,8 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addWidget(eq_label)
 
         self._equates_table = _make_table(_EQUATE_COLUMNS)
-        self._equates_table.setFixedHeight(80)
-        layout.addWidget(self._equates_table)
+        self._equates_table.setMinimumHeight(_table_min_height(self._equates_table, _TABLE_MIN_VISIBLE_ROWS_COMPACT))
+        layout.addWidget(self._equates_table, 1)
 
         eq_form = QHBoxLayout()
         self._eq_addr_input = QLineEdit()
@@ -918,8 +977,8 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(rel_top)
 
         self._relocations_table = _make_table(_RELOCATION_COLUMNS)
-        self._relocations_table.setFixedHeight(80)
-        layout.addWidget(self._relocations_table)
+        self._relocations_table.setMinimumHeight(_table_min_height(self._relocations_table, _TABLE_MIN_VISIBLE_ROWS_COMPACT))
+        layout.addWidget(self._relocations_table, 1)
 
         ext_label = QLabel(self.tr("External Functions"))
         layout.addWidget(ext_label)
@@ -966,7 +1025,7 @@ class GhidraPanel(AnalysisPanelBase):
             doc = self._script_editor.document()
             if doc is not None:
                 PythonSyntaxHighlighter(doc)
-        layout.addWidget(self._script_editor)
+        layout.addWidget(self._script_editor, 2)
 
         params_row = QHBoxLayout()
         params_lbl = QLabel(self.tr("Params (JSON):"))
@@ -991,8 +1050,8 @@ class GhidraPanel(AnalysisPanelBase):
 
         self._script_output = QPlainTextEdit()
         self._script_output.setReadOnly(True)
-        self._script_output.setFixedHeight(100)
-        layout.addWidget(self._script_output)
+        self._script_output.setMinimumHeight(_text_edit_min_height(self._script_output, _TEXT_MIN_VISIBLE_LINES))
+        layout.addWidget(self._script_output, 1)
 
         decomp_label = QLabel(self.tr("Decompiler Options"))
         layout.addWidget(decomp_label)
@@ -1029,7 +1088,9 @@ class GhidraPanel(AnalysisPanelBase):
         self._analyzer_options_input.setPlaceholderText(
             'Analyzer options as JSON, e.g. {"aggressive": true, "timeout_s": 120}',
         )
-        self._analyzer_options_input.setFixedHeight(72)
+        self._analyzer_options_input.setMinimumHeight(
+            _text_edit_min_height(self._analyzer_options_input, _TEXT_MIN_VISIBLE_LINES_COMPACT),
+        )
         layout.addWidget(self._analyzer_options_input)
 
         return container
@@ -1059,7 +1120,7 @@ class GhidraPanel(AnalysisPanelBase):
         get_addr_label.setFont(fm.get_ui_font(9))
         get_row.addWidget(get_addr_label)
         self._dt_get_addr_input = QLineEdit()
-        self._dt_get_addr_input.setMaximumWidth(_MAIN_SPLIT_RATIO_RIGHT)
+        self._dt_get_addr_input.setMaximumWidth(_ADDRESS_INPUT_MAX_WIDTH)
         self._dt_get_addr_input.setPlaceholderText("0x...")
         get_row.addWidget(self._dt_get_addr_input)
         self._dt_get_btn = QPushButton(self.tr("Get"))
@@ -1072,7 +1133,7 @@ class GhidraPanel(AnalysisPanelBase):
         self._dt_result_view = QPlainTextEdit()
         self._dt_result_view.setReadOnly(True)
         self._dt_result_view.setFont(fm.get_code_font(10))
-        self._dt_result_view.setFixedHeight(120)
+        self._dt_result_view.setMinimumHeight(_text_edit_min_height(self._dt_result_view, _TEXT_MIN_VISIBLE_LINES))
         layout.addWidget(self._dt_result_view)
 
         set_label = QLabel(self.tr("Set Data Type"))
@@ -1084,7 +1145,7 @@ class GhidraPanel(AnalysisPanelBase):
         set_addr_label.setFont(fm.get_ui_font(9))
         set_row.addWidget(set_addr_label)
         self._dt_set_addr_input = QLineEdit()
-        self._dt_set_addr_input.setMaximumWidth(_MAIN_SPLIT_RATIO_RIGHT)
+        self._dt_set_addr_input.setMaximumWidth(_ADDRESS_INPUT_MAX_WIDTH)
         self._dt_set_addr_input.setPlaceholderText("0x...")
         set_row.addWidget(self._dt_set_addr_input)
 
@@ -1092,7 +1153,7 @@ class GhidraPanel(AnalysisPanelBase):
         type_label.setFont(fm.get_ui_font(9))
         set_row.addWidget(type_label)
         self._dt_type_input = QLineEdit()
-        self._dt_type_input.setMaximumWidth(_CODE_SPLIT_RATIO_BOTTOM)
+        self._dt_type_input.setMaximumWidth(_TYPE_INPUT_MAX_WIDTH)
         self._dt_type_input.setPlaceholderText("e.g. dword, byte[16], char*")
         set_row.addWidget(self._dt_type_input)
 
