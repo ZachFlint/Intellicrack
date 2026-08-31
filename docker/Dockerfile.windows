@@ -1,0 +1,206 @@
+#
+# Intellicrack Windows test sandbox image.
+#
+# Layered build: each stage isolates expensive setup so cache survives across
+# routine source changes. Only the pixi stage invalidates when pixi.lock moves;
+# the Python/Java/tool stages invalidate only when their respective version
+# pins change.
+#
+# Build:  docker build --file docker/Dockerfile.windows --isolation process -t intellicrack-sandbox:latest .
+# Run:    docker run --rm --isolation process -v D:\Intellicrack:C:\workspace:ro \
+#             -v D:\Intellicrack\reports:C:\workspace\reports intellicrack-sandbox:latest unit
+
+ARG WINDOWS_VERSION=ltsc2022
+
+# Stage 1 -- base tools (Python 3.13, Git, VC redist, 7-Zip)
+FROM mcr.microsoft.com/windows/servercore:${WINDOWS_VERSION} AS base
+
+SHELL ["powershell", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"]
+
+ENV chocolateyVersion="2.2.2" \
+    chocolateyUseWindowsCompression="true"
+
+RUN $ErrorActionPreference = 'Stop'; \
+    Set-ExecutionPolicy Bypass -Scope Process -Force; \
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; \
+    iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1')); \
+    choco feature disable --name showDownloadProgress
+
+RUN choco install -y --no-progress python313 --version=3.13.1 --params='/InstallDir:C:\Python313' ; \
+    choco install -y --no-progress git --params='/GitAndUnixToolsOnPath /NoAutoCrlf' ; \
+    choco install -y --no-progress 7zip ; \
+    choco install -y --no-progress vcredist140 ; \
+    choco install -y --no-progress powershell-core --install-arguments='ADD_PATH=1'
+
+ENV PATH="C:\\Program Files\\PowerShell\\7;C:\\ProgramData\\chocolatey\\bin;C:\\Python313;C:\\Python313\\Scripts;C:\\Program Files\\Git\\cmd;C:\\Program Files\\7-Zip;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Windows\\System32\\OpenSSH"
+
+RUN python --version ; pip --version ; git --version ; pwsh -NoLogo -NoProfile -Command "$PSVersionTable.PSVersion"
+
+# Stage 2 -- external analysis tools (JDK 21, Ghidra, radare2)
+FROM base AS tools
+
+ENV JAVA_VERSION="21.0.5.11.1" \
+    GHIDRA_VERSION="11.2.1_PUBLIC_20241105" \
+    RADARE2_VERSION="5.9.8"
+
+RUN choco install -y --no-progress temurin21
+
+RUN $ErrorActionPreference = 'Stop'; \
+    $javaHome = (Get-ChildItem 'C:\Program Files\Eclipse Adoptium' -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'jdk-21*' } | Select-Object -First 1).FullName; \
+    if (-not $javaHome) { throw 'Temurin21 install dir not found under C:\Program Files\Eclipse Adoptium' }; \
+    New-Item -ItemType Directory -Force -Path 'C:\tools' | Out-Null; \
+    if (Test-Path 'C:\tools\jdk') { Remove-Item 'C:\tools\jdk' -Force }; \
+    New-Item -ItemType Junction -Path 'C:\tools\jdk' -Target $javaHome | Out-Null; \
+    Write-Host "Java linked: C:\tools\jdk -> $javaHome"
+
+ENV JAVA_HOME="C:\\tools\\jdk"
+
+RUN $ErrorActionPreference = 'Stop'; \
+    $ProgressPreference = 'SilentlyContinue'; \
+    $ghidraUrl = 'https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.2.1_build/ghidra_11.2.1_PUBLIC_20241105.zip'; \
+    $ghidraZip = 'C:\temp\ghidra.zip'; \
+    New-Item -ItemType Directory -Force -Path 'C:\temp' | Out-Null; \
+    New-Item -ItemType Directory -Force -Path 'C:\tools' | Out-Null; \
+    Write-Host 'Downloading Ghidra...'; \
+    Invoke-WebRequest -Uri $ghidraUrl -OutFile $ghidraZip -UseBasicParsing; \
+    Write-Host 'Extracting with 7-Zip...'; \
+    & 'C:\Program Files\7-Zip\7z.exe' x $ghidraZip -oC:\tools -bsp0 -bso0 -aoa; \
+    if ($LASTEXITCODE -ne 0) { throw '7z extract failed' }; \
+    Remove-Item $ghidraZip -Force; \
+    Get-ChildItem -Path 'C:\tools' -Directory -Filter 'ghidra_*' | ForEach-Object { Rename-Item -Path $_.FullName -NewName 'ghidra' }; \
+    Write-Host 'Ghidra ready.'
+
+RUN $ErrorActionPreference = 'Stop'; \
+    $ProgressPreference = 'SilentlyContinue'; \
+    $r2Url = 'https://github.com/radareorg/radare2/releases/download/5.9.8/radare2-5.9.8-w64.zip'; \
+    $r2Zip = 'C:\temp\radare2.zip'; \
+    Write-Host 'Downloading radare2...'; \
+    Invoke-WebRequest -Uri $r2Url -OutFile $r2Zip -UseBasicParsing; \
+    Write-Host 'Extracting with 7-Zip...'; \
+    & 'C:\Program Files\7-Zip\7z.exe' x $r2Zip -oC:\tools -bsp0 -bso0 -aoa; \
+    if ($LASTEXITCODE -ne 0) { throw '7z extract failed' }; \
+    Remove-Item $r2Zip -Force; \
+    Get-ChildItem -Path 'C:\tools' -Directory -Filter 'radare2-*' | ForEach-Object { Rename-Item -Path $_.FullName -NewName 'radare2' }; \
+    Write-Host 'radare2 ready.'
+
+ENV GHIDRA_INSTALL_DIR="C:\\tools\\ghidra" \
+    RADARE2_HOME="C:\\tools\\radare2"
+
+ENV PATH="C:\\tools\\jdk\\bin;C:\\tools\\ghidra\\support;C:\\tools\\radare2\\bin;${PATH}"
+
+# MSVC Build Tools 2022 -- required so source-only Python sdists (tree-sitter
+# grammars, C extensions) can build during `pixi install`. setuptools locates
+# the toolchain automatically via vswhere.exe; no PATH edits needed.
+RUN $ErrorActionPreference = 'Stop'; \
+    choco install -y --no-progress visualstudio2022buildtools --package-parameters '--quiet --wait --norestart --nocache --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows11SDK.22621 --includeRecommended'; \
+    $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'; \
+    if (-not (Test-Path $vswhere)) { throw 'vswhere.exe missing after VS Build Tools install' }; \
+    $installPath = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath; \
+    if (-not $installPath) { throw 'VC Tools workload not found via vswhere' }; \
+    Write-Host "MSVC Build Tools installed at $installPath"
+
+# Stage 3 -- pixi environment. Only invalidates when pixi.lock or pyproject.toml change.
+FROM tools AS pixi-env
+
+ARG PIXI_VERSION
+ENV PIXI_VERSION="${PIXI_VERSION}"
+
+RUN if (-not $env:PIXI_VERSION) { throw 'PIXI_VERSION build-arg is required (pass via docker build --build-arg PIXI_VERSION=<version>)' }
+
+RUN $ErrorActionPreference = 'Stop'; \
+    $ProgressPreference = 'SilentlyContinue'; \
+    New-Item -ItemType Directory -Force -Path 'C:\Users\ContainerAdministrator\.pixi\bin' | Out-Null; \
+    New-Item -ItemType Directory -Force -Path 'C:\temp' | Out-Null; \
+    $pixiUrl = 'https://github.com/prefix-dev/pixi/releases/download/v' + $env:PIXI_VERSION + '/pixi-x86_64-pc-windows-msvc.zip'; \
+    $pixiZip = 'C:\temp\pixi.zip'; \
+    Write-Host 'Downloading pixi...'; \
+    Invoke-WebRequest -Uri $pixiUrl -OutFile $pixiZip -UseBasicParsing; \
+    & 'C:\Program Files\7-Zip\7z.exe' x $pixiZip '-oC:\Users\ContainerAdministrator\.pixi\bin' -bsp0 -bso0 -aoa; \
+    if ($LASTEXITCODE -ne 0) { throw '7z extract failed' }; \
+    Remove-Item $pixiZip -Force
+
+ENV PATH="C:\\Users\\ContainerAdministrator\\.pixi\\bin;${PATH}"
+
+WORKDIR C:\\app
+
+# Stage the inputs pixi needs to resolve and install the env so that
+# edits to other files (docker/entrypoint.ps1, scripts, docs, tests)
+# do not invalidate this expensive layer.
+COPY pyproject.toml pixi.lock README.md LICENSE ./
+COPY src/ ./src/
+
+RUN pixi install --frozen
+
+ENV PATH="C:\\app\\.pixi\\envs\\default;C:\\app\\.pixi\\envs\\default\\Scripts;C:\\app\\.pixi\\envs\\default\\Library\\bin;${PATH}"
+
+# Build the Rust native module intellicrack_hexcore into the pixi env so
+# tests/test_bridges/conftest.py can import it. Uses portable defaults
+# (no meteorlake-targeted RUSTFLAGS) so the image runs on any x86_64
+# Windows host. Source is already staged via COPY src/.
+RUN $ErrorActionPreference = 'Stop'; \
+    Set-Location 'C:\app\src\intellicrack-hexcore'; \
+    & 'C:\app\.pixi\envs\default\Scripts\maturin.exe' build --release --interpreter 'C:\app\.pixi\envs\default\python.exe'; \
+    if ($LASTEXITCODE -ne 0) { throw 'maturin build failed' }; \
+    $wheel = Get-ChildItem 'C:\app\src\intellicrack-hexcore\target\wheels' -Filter 'intellicrack_hexcore-*.whl' | Select-Object -First 1; \
+    if (-not $wheel) { throw 'intellicrack_hexcore wheel not produced' }; \
+    & 'C:\app\.pixi\envs\default\python.exe' -m pip install --no-deps --force-reinstall $wheel.FullName; \
+    if ($LASTEXITCODE -ne 0) { throw 'wheel install failed' }; \
+    & 'C:\app\.pixi\envs\default\python.exe' -c 'import intellicrack_hexcore, sys; sys.exit(0)'; \
+    if ($LASTEXITCODE -ne 0) { throw 'intellicrack_hexcore import verification failed' }; \
+    Remove-Item -Recurse -Force 'C:\app\src\intellicrack-hexcore\target' -ErrorAction SilentlyContinue; \
+    Write-Host 'intellicrack_hexcore native module built and installed.'
+
+# Pre-cache tiktoken BPE encodings so the orchestrator's token counting works
+# inside the network-isolated sandbox. The build host has network; the cache is
+# baked into the image and TIKTOKEN_CACHE_DIR points runtime lookups at it.
+ENV TIKTOKEN_CACHE_DIR="C:\\app\\.tiktoken_cache"
+
+# Bring in the rest of the project (docs, scripts, docker/, tests, configs).
+# Changes here do not invalidate the pixi-install / hexcore-build layers above.
+COPY . ./
+
+# Warm the tiktoken cache via a script file (an inline Python one-liner gets
+# mangled by the Windows PowerShell RUN shell). Runs after COPY so the script
+# is present in the image.
+RUN $ErrorActionPreference = 'Stop'; \
+    & 'C:\app\.pixi\envs\default\python.exe' 'C:\app\docker\warm_tiktoken.py'; \
+    if ($LASTEXITCODE -ne 0) { throw 'tiktoken encoding cache warm failed' }
+
+# Bake the local-inference test model into the Hugging Face cache so the
+# transformers/CPU-inference tests run against a real model. HF_HOME points
+# both the build-time download and runtime lookups at the same baked cache.
+ENV HF_HOME="C:\\app\\.hf_cache"
+RUN $ErrorActionPreference = 'Stop'; \
+    & 'C:\app\.pixi\envs\default\python.exe' 'C:\app\docker\warm_model.py'; \
+    if ($LASTEXITCODE -ne 0) { throw 'local inference model cache warm failed' }
+
+# Stage 4 -- final image
+FROM pixi-env AS final
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=utf-8 \
+    PYTHONUTF8=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    INTELLICRACK_SANDBOXED=1 \
+    INTELLICRACK_LOCAL_TESTS=1 \
+    QT_QPA_PLATFORM=offscreen \
+    PYTEST_ADDOPTS="--color=yes --tb=short -o cache_dir=C:\\cache\\pytest" \
+    COVERAGE_FILE="C:\\cache\\.coverage" \
+    CI=1 \
+    GIT_PYTHON_REFRESH=quiet
+
+# Force transformers to materialize model tensors sequentially. The default
+# parallel loader spawns one worker thread per CPU, each copying full-precision
+# tensors concurrently, which spikes peak RSS past the container memory cap and
+# crashes the CPU-inference provider tests. Sequential loading stays within the
+# quota; production hosts keep the parallel default.
+ENV HF_DEACTIVATE_ASYNC_LOAD=1
+
+LABEL intellicrack-sandbox=1 \
+      org.opencontainers.image.title="Intellicrack Test Sandbox" \
+      org.opencontainers.image.description="Windows process-isolated test runner for Intellicrack"
+
+WORKDIR C:\\app
+
+ENTRYPOINT ["pwsh.exe", "-NoProfile", "-NoLogo", "-ExecutionPolicy", "Bypass", "-File", "C:\\app\\docker\\entrypoint.ps1"]
+CMD ["unit"]

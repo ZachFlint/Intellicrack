@@ -1,0 +1,2720 @@
+use std::collections::HashMap;
+
+use super::{
+    field_size, format_field_value, read_numeric_value, ConditionOp, Endianness, FieldDefinition,
+    FieldType, FieldValidation, ParsedField, StructTemplate, TemplateError, TemplateRegistry,
+};
+
+const MAX_DEPTH: usize = 16;
+
+pub struct TemplateEvaluator<'a> {
+    data: &'a [u8],
+    current_offset: usize,
+    base_offset: usize,
+    default_endian: Endianness,
+    parsed_values: HashMap<String, i64>,
+    registry: &'a TemplateRegistry,
+    depth: usize,
+}
+
+impl<'a> TemplateEvaluator<'a> {
+    #[must_use]
+    pub fn new(
+        data: &'a [u8],
+        base_offset: usize,
+        default_endian: Endianness,
+        registry: &'a TemplateRegistry,
+    ) -> Self {
+        Self {
+            data,
+            current_offset: base_offset,
+            base_offset,
+            default_endian,
+            parsed_values: HashMap::new(),
+            registry,
+            depth: 0,
+        }
+    }
+
+    /// Evaluate a slice of field definitions against the binary data.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TemplateError` if evaluation fails due to insufficient data,
+    /// invalid field references, expression errors, or circular references.
+    pub fn evaluate_fields(
+        &mut self,
+        fields: &[FieldDefinition],
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let mut results = Vec::new();
+        for field in fields {
+            let parsed = self.evaluate_field(field)?;
+            results.extend(parsed);
+        }
+        Ok(results)
+    }
+
+    fn evaluate_field(
+        &mut self,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let endian = field.endianness.unwrap_or(self.default_endian);
+
+        match &field.field_type {
+            FieldType::DynamicArray {
+                element_type,
+                count_field,
+            } => self.eval_dynamic_array(&field.name, element_type, count_field, endian, field),
+
+            FieldType::Conditional {
+                condition_field,
+                condition_value,
+                condition_op,
+                fields,
+            } => self.eval_conditional(condition_field, *condition_value, *condition_op, fields),
+
+            FieldType::StructRef(template_name) => {
+                self.eval_struct_ref(&field.name, template_name, field)
+            }
+
+            FieldType::Pointer {
+                pointer_type,
+                target_template,
+            } => self.eval_pointer(&field.name, pointer_type, target_template, endian, field),
+
+            FieldType::Union { variants } => self.eval_union(&field.name, variants, field),
+
+            FieldType::Enum {
+                backing_type,
+                values,
+            } => self.eval_enum(&field.name, backing_type, values, endian, field),
+
+            FieldType::Bitfield {
+                bit_width,
+                backing_type,
+                flags,
+            } => self.eval_bitfield(
+                &field.name,
+                *bit_width,
+                backing_type,
+                flags.as_deref(),
+                endian,
+                field,
+            ),
+
+            FieldType::Computed {
+                expression,
+                display_type,
+            } => self.eval_computed(&field.name, expression, display_type, field),
+
+            FieldType::EndiannessSwitch {
+                peek_offset,
+                big_value,
+            } => self.eval_endianness_switch(&field.name, *peek_offset, *big_value, field),
+
+            _ => {
+                let size = field_size(&field.field_type).ok_or_else(|| {
+                    TemplateError::UnsizedFieldType(format!(
+                        "field '{}' has a type with no static size",
+                        field.name
+                    ))
+                })?;
+                if self.current_offset + size > self.data.len() {
+                    return Err(TemplateError::InsufficientData {
+                        offset: self.current_offset,
+                        needed: size,
+                        available: self.data.len().saturating_sub(self.current_offset),
+                    });
+                }
+
+                let raw = self.data[self.current_offset..self.current_offset + size].to_vec();
+                let display = format_field_value(&field.field_type, &raw, endian);
+
+                let numeric = read_numeric_value(&field.field_type, &raw, endian);
+                self.parsed_values.insert(field.name.clone(), numeric);
+
+                let validation_passed = field
+                    .validation
+                    .as_ref()
+                    .map(|v| check_validation(v, numeric, &raw));
+
+                let children = self.eval_array_children(&field.field_type, endian);
+
+                let parsed = ParsedField {
+                    name: field.name.clone(),
+                    offset: self.current_offset,
+                    size,
+                    raw_bytes: raw,
+                    display_value: display,
+                    children,
+                    color: field.color.clone(),
+                    validation_passed,
+                    description: field.description.clone(),
+                };
+
+                self.current_offset += size;
+                Ok(vec![parsed])
+            }
+        }
+    }
+
+    fn eval_array_children(&self, ft: &FieldType, endian: Endianness) -> Vec<ParsedField> {
+        if let FieldType::Array {
+            element_type,
+            count,
+        } = ft
+        {
+            // `None` means the element type has no static size at all; `Some(0)`
+            // means a legitimate zero-byte element (e.g. `Padding(0)`). Either way
+            // there is nothing bounded to walk element-by-element: a zero-sized
+            // element never advances `arr_offset`, so the data-length break
+            // condition would never scale with `i` and a large `count` would spin
+            // the loop unboundedly. There is also nothing meaningful to show per
+            // element, so we simply emit no per-element children.
+            let Some(inner_size) = field_size(element_type) else {
+                return Vec::new();
+            };
+            if inner_size == 0 {
+                return Vec::new();
+            }
+            let mut children = Vec::new();
+            for i in 0..*count {
+                let arr_offset = self.current_offset + i * inner_size;
+                if arr_offset + inner_size > self.data.len() {
+                    break;
+                }
+                let arr_raw = self.data[arr_offset..arr_offset + inner_size].to_vec();
+                let arr_display = format_field_value(element_type, &arr_raw, endian);
+                children.push(ParsedField {
+                    name: format!("[{i}]"),
+                    offset: arr_offset,
+                    size: inner_size,
+                    raw_bytes: arr_raw,
+                    display_value: arr_display,
+                    children: Vec::new(),
+                    color: None,
+                    validation_passed: None,
+                    description: String::new(),
+                });
+            }
+            children
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn eval_dynamic_array(
+        &mut self,
+        name: &str,
+        element_type: &FieldType,
+        count_field: &str,
+        endian: Endianness,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let count_raw = self
+            .parsed_values
+            .get(count_field)
+            .copied()
+            .ok_or_else(|| {
+                TemplateError::InvalidFieldReference(format!(
+                    "count_field '{count_field}' not found in parsed values"
+                ))
+            })?;
+
+        let count = usize::try_from(count_raw.max(0))
+            .map_err(|e| TemplateError::ExpressionError(format!("count overflow: {e}")))?;
+        let inner_size = field_size(element_type).ok_or_else(|| {
+            TemplateError::UnsizedFieldType(format!(
+                "DynamicArray '{name}' element_type has no static size"
+            ))
+        })?;
+        if inner_size == 0 && count > 0 {
+            return Err(TemplateError::UnsizedFieldType(format!(
+                "DynamicArray '{name}' element_type is zero-sized; a count of {count} cannot be bounded by data length"
+            )));
+        }
+        let total_size = inner_size.checked_mul(count).ok_or_else(|| {
+            TemplateError::ExpressionError(format!("DynamicArray '{name}' size overflow"))
+        })?;
+
+        if self.current_offset + total_size > self.data.len() {
+            return Err(TemplateError::InsufficientData {
+                offset: self.current_offset,
+                needed: total_size,
+                available: self.data.len().saturating_sub(self.current_offset),
+            });
+        }
+
+        let raw = self.data[self.current_offset..self.current_offset + total_size].to_vec();
+        let mut children = Vec::new();
+
+        for i in 0..count {
+            let arr_offset = self.current_offset + i * inner_size;
+            let arr_raw = self.data[arr_offset..arr_offset + inner_size].to_vec();
+            let arr_display = format_field_value(element_type, &arr_raw, endian);
+            children.push(ParsedField {
+                name: format!("[{i}]"),
+                offset: arr_offset,
+                size: inner_size,
+                raw_bytes: arr_raw,
+                display_value: arr_display,
+                children: Vec::new(),
+                color: None,
+                validation_passed: None,
+                description: String::new(),
+            });
+        }
+
+        let parsed = ParsedField {
+            name: name.to_string(),
+            offset: self.current_offset,
+            size: total_size,
+            raw_bytes: raw,
+            display_value: format!("[{count} x {}]", super::field_type_name(element_type)),
+            children,
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
+        };
+
+        self.current_offset += total_size;
+        Ok(vec![parsed])
+    }
+
+    fn eval_conditional(
+        &mut self,
+        condition_field: &str,
+        condition_value: i64,
+        condition_op: ConditionOp,
+        fields: &[FieldDefinition],
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let actual = self
+            .parsed_values
+            .get(condition_field)
+            .copied()
+            .ok_or_else(|| {
+                TemplateError::InvalidFieldReference(format!(
+                    "condition_field '{condition_field}' not found"
+                ))
+            })?;
+
+        let condition_met = match condition_op {
+            ConditionOp::Eq => actual == condition_value,
+            ConditionOp::Ne => actual != condition_value,
+            ConditionOp::Gt => actual > condition_value,
+            ConditionOp::Lt => actual < condition_value,
+            ConditionOp::Ge => actual >= condition_value,
+            ConditionOp::Le => actual <= condition_value,
+            ConditionOp::BitAnd => (actual & condition_value) != 0,
+            ConditionOp::BitAndZero => (actual & condition_value) == 0,
+        };
+
+        if condition_met {
+            self.evaluate_fields(fields)
+        } else {
+            Ok(Vec::new())
+        }
+    }
+
+    fn eval_struct_ref(
+        &mut self,
+        name: &str,
+        template_name: &str,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        if self.depth >= MAX_DEPTH {
+            return Err(TemplateError::CircularReference(format!(
+                "max nesting depth {MAX_DEPTH} exceeded for '{template_name}'"
+            )));
+        }
+
+        let template = self
+            .registry
+            .get(template_name)
+            .ok_or_else(|| TemplateError::NotFound(template_name.to_string()))?;
+
+        let saved_endian = self.default_endian;
+        let saved_base = self.base_offset;
+        self.default_endian = template.default_endianness;
+        self.base_offset = self.current_offset;
+        self.depth += 1;
+
+        let start_offset = self.current_offset;
+        let children = self.evaluate_fields(&template.fields)?;
+        let end_offset = self.current_offset;
+
+        self.depth -= 1;
+        self.default_endian = saved_endian;
+        self.base_offset = saved_base;
+
+        let size = end_offset - start_offset;
+        let raw = if start_offset + size <= self.data.len() {
+            self.data[start_offset..start_offset + size].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok(vec![ParsedField {
+            name: name.to_string(),
+            offset: start_offset,
+            size,
+            raw_bytes: raw,
+            display_value: format!("struct {template_name}"),
+            children,
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
+        }])
+    }
+
+    fn eval_pointer(
+        &mut self,
+        name: &str,
+        pointer_type: &FieldType,
+        target_template: &str,
+        endian: Endianness,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let ptr_size = field_size(pointer_type).ok_or_else(|| {
+            TemplateError::UnsizedFieldType(format!(
+                "Pointer '{name}' pointer_type has no static size"
+            ))
+        })?;
+        if self.current_offset + ptr_size > self.data.len() {
+            return Err(TemplateError::InsufficientData {
+                offset: self.current_offset,
+                needed: ptr_size,
+                available: self.data.len().saturating_sub(self.current_offset),
+            });
+        }
+
+        let raw = self.data[self.current_offset..self.current_offset + ptr_size].to_vec();
+        let ptr_numeric = read_numeric_value(pointer_type, &raw, endian);
+        let ptr_value = usize::try_from(ptr_numeric).unwrap_or(0);
+        let ptr_i64 = i64::try_from(ptr_value).unwrap_or(0);
+        self.parsed_values.insert(name.to_string(), ptr_i64);
+
+        let display = format!("-> 0x{ptr_value:X} ({target_template})");
+
+        let children = if ptr_value >= self.data.len() {
+            Vec::new()
+        } else if self.depth >= MAX_DEPTH {
+            return Err(TemplateError::CircularReference(format!(
+                "max nesting depth {MAX_DEPTH} exceeded for pointer '{name}' -> '{target_template}'"
+            )));
+        } else if let Some(template) = self.registry.get(target_template) {
+            let saved_offset = self.current_offset;
+            let saved_endian = self.default_endian;
+            let saved_base = self.base_offset;
+            self.current_offset = ptr_value;
+            self.default_endian = template.default_endianness;
+            self.base_offset = ptr_value;
+            self.depth += 1;
+            let result = self.evaluate_fields(&template.fields);
+            self.depth -= 1;
+            self.current_offset = saved_offset;
+            self.default_endian = saved_endian;
+            self.base_offset = saved_base;
+            result?
+        } else {
+            Vec::new()
+        };
+
+        let parsed = ParsedField {
+            name: name.to_string(),
+            offset: self.current_offset,
+            size: ptr_size,
+            raw_bytes: raw,
+            display_value: display,
+            children,
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
+        };
+
+        self.current_offset += ptr_size;
+        Ok(vec![parsed])
+    }
+
+    fn eval_union(
+        &mut self,
+        name: &str,
+        variants: &[FieldDefinition],
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let start = self.current_offset;
+        let mut max_size: usize = 0;
+        let mut all_children = Vec::new();
+
+        for variant in variants {
+            self.current_offset = start;
+            let children = self.evaluate_field(variant)?;
+            let variant_end = self.current_offset;
+            let variant_size = variant_end - start;
+            if variant_size > max_size {
+                max_size = variant_size;
+            }
+            all_children.extend(children);
+        }
+
+        self.current_offset = start + max_size;
+
+        let raw = if start + max_size <= self.data.len() {
+            self.data[start..start + max_size].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok(vec![ParsedField {
+            name: name.to_string(),
+            offset: start,
+            size: max_size,
+            raw_bytes: raw,
+            display_value: format!("union<{} variants>", variants.len()),
+            children: all_children,
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
+        }])
+    }
+
+    fn eval_enum(
+        &mut self,
+        name: &str,
+        backing_type: &FieldType,
+        values: &[(String, i64)],
+        endian: Endianness,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let size = field_size(backing_type).ok_or_else(|| {
+            TemplateError::UnsizedFieldType(format!(
+                "Enum '{name}' backing_type has no static size"
+            ))
+        })?;
+        if self.current_offset + size > self.data.len() {
+            return Err(TemplateError::InsufficientData {
+                offset: self.current_offset,
+                needed: size,
+                available: self.data.len().saturating_sub(self.current_offset),
+            });
+        }
+
+        let raw = self.data[self.current_offset..self.current_offset + size].to_vec();
+        let numeric = read_numeric_value(backing_type, &raw, endian);
+        self.parsed_values.insert(name.to_string(), numeric);
+
+        let variant_name = values
+            .iter()
+            .find(|(_, v)| *v == numeric)
+            .map_or("unknown", |(n, _)| n.as_str());
+
+        let display = format!("{variant_name} ({numeric}, 0x{numeric:X})");
+
+        let parsed = ParsedField {
+            name: name.to_string(),
+            offset: self.current_offset,
+            size,
+            raw_bytes: raw.clone(),
+            display_value: display,
+            children: Vec::new(),
+            color: field.color.clone(),
+            validation_passed: field
+                .validation
+                .as_ref()
+                .map(|v| check_validation(v, numeric, &raw)),
+            description: field.description.clone(),
+        };
+
+        self.current_offset += size;
+        Ok(vec![parsed])
+    }
+
+    fn eval_bitfield(
+        &mut self,
+        name: &str,
+        bit_width: u8,
+        backing_type: &FieldType,
+        flags: Option<&[(String, u64)]>,
+        endian: Endianness,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let size = field_size(backing_type).ok_or_else(|| {
+            TemplateError::UnsizedFieldType(format!(
+                "Bitfield '{name}' backing_type has no static size"
+            ))
+        })?;
+        if self.current_offset + size > self.data.len() {
+            return Err(TemplateError::InsufficientData {
+                offset: self.current_offset,
+                needed: size,
+                available: self.data.len().saturating_sub(self.current_offset),
+            });
+        }
+
+        let raw = self.data[self.current_offset..self.current_offset + size].to_vec();
+        let numeric = read_numeric_value(backing_type, &raw, endian);
+        let mask = if bit_width >= 64 {
+            u64::MAX
+        } else {
+            (1u64 << bit_width) - 1
+        };
+        let numeric_bits = u64::from_ne_bytes(numeric.to_ne_bytes());
+        let masked = numeric_bits & mask;
+        self.parsed_values
+            .insert(name.to_string(), i64::from_ne_bytes(masked.to_ne_bytes()));
+
+        let mut children = Vec::new();
+        if let Some(flag_list) = flags {
+            for (flag_name, flag_value) in flag_list {
+                let is_set = (masked & flag_value) != 0;
+                children.push(ParsedField {
+                    name: flag_name.clone(),
+                    offset: self.current_offset,
+                    size: 0,
+                    raw_bytes: Vec::new(),
+                    display_value: if is_set {
+                        format!("SET (0x{flag_value:X})")
+                    } else {
+                        format!("CLEAR (0x{flag_value:X})")
+                    },
+                    children: Vec::new(),
+                    color: None,
+                    validation_passed: None,
+                    description: String::new(),
+                });
+            }
+        }
+
+        let bits = size * 8;
+        let display = format!("0x{masked:X} ({bit_width}:{bits} bits)");
+
+        let parsed = ParsedField {
+            name: name.to_string(),
+            offset: self.current_offset,
+            size,
+            raw_bytes: raw,
+            display_value: display,
+            children,
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
+        };
+
+        self.current_offset += size;
+        Ok(vec![parsed])
+    }
+
+    fn eval_computed(
+        &mut self,
+        name: &str,
+        expression: &str,
+        display_type: &FieldType,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let value = evaluate_expression(
+            expression,
+            &self.parsed_values,
+            self.current_offset,
+            self.registry,
+        )?;
+        self.parsed_values.insert(name.to_string(), value);
+
+        let value_hex = u64::from_ne_bytes(value.to_ne_bytes());
+        let display = format!("{value} (0x{value_hex:X}) = {expression}");
+
+        Ok(vec![ParsedField {
+            name: name.to_string(),
+            offset: self.current_offset,
+            size: 0,
+            raw_bytes: Vec::new(),
+            display_value: display,
+            children: Vec::new(),
+            color: field.color.clone(),
+            validation_passed: None,
+            description: format!(
+                "{} [computed as {}]",
+                field.description,
+                super::field_type_name(display_type)
+            ),
+        }])
+    }
+
+    fn eval_endianness_switch(
+        &mut self,
+        name: &str,
+        peek_offset: usize,
+        big_value: u8,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let peek_abs = self.base_offset.saturating_add(peek_offset);
+        if peek_abs >= self.data.len() {
+            return Err(TemplateError::InsufficientData {
+                offset: peek_abs,
+                needed: 1,
+                available: self.data.len().saturating_sub(peek_abs),
+            });
+        }
+
+        let peek_byte = self.data[peek_abs];
+        self.default_endian = if peek_byte == big_value {
+            Endianness::Big
+        } else {
+            Endianness::Little
+        };
+
+        let endian_label = match self.default_endian {
+            Endianness::Little => "little",
+            Endianness::Big => "big",
+        };
+        let display = format!(
+            "{endian_label} (peek[base+{peek_offset}]=0x{peek_byte:02X}, big_value=0x{big_value:02X})"
+        );
+
+        Ok(vec![ParsedField {
+            name: name.to_string(),
+            offset: peek_abs,
+            size: 0,
+            raw_bytes: vec![peek_byte],
+            display_value: display,
+            children: Vec::new(),
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
+        }])
+    }
+}
+
+fn check_validation(validation: &FieldValidation, numeric: i64, raw: &[u8]) -> bool {
+    if let Some(expected) = validation.expected_value {
+        if numeric != expected {
+            return false;
+        }
+    }
+    if let Some(min) = validation.min_value {
+        if numeric < min {
+            return false;
+        }
+    }
+    if let Some(max) = validation.max_value {
+        if numeric > max {
+            return false;
+        }
+    }
+    if let Some(magic) = &validation.magic_bytes {
+        if raw.len() < magic.len() || &raw[..magic.len()] != magic.as_slice() {
+            return false;
+        }
+    }
+    true
+}
+
+fn evaluate_expression(
+    expr: &str,
+    values: &HashMap<String, i64>,
+    current_offset: usize,
+    registry: &TemplateRegistry,
+) -> Result<i64, TemplateError> {
+    let tokens = tokenize_expr(expr)?;
+    let mut pos = 0;
+    let result = parse_additive(&tokens, &mut pos, values, current_offset, registry, 0)?;
+    if pos != tokens.len() {
+        return Err(TemplateError::ExpressionError(format!(
+            "unexpected trailing tokens in expression: '{expr}'"
+        )));
+    }
+    Ok(result)
+}
+
+/// Resolve `sizeof(<type_name>)` to a concrete byte count.
+///
+/// Tries the built-in primitive table first (matching the names already
+/// accepted by template field types). Falls back to the supplied
+/// `TemplateRegistry`, summing the size of each field of a registered
+/// struct template. Errors with [`TemplateError::UnknownType`] when the
+/// name matches neither — replacing the previous silent zero return that
+/// allowed typos like `sizeof(uint128)` to collapse expressions to 0.
+fn resolve_sizeof(type_name: &str, registry: &TemplateRegistry) -> Result<usize, TemplateError> {
+    let primitive = match type_name {
+        "u8" | "uint8" | "int8" | "s8" | "bool" | "char" => Some(1usize),
+        "u16" | "uint16" | "int16" | "s16" => Some(2),
+        "u32" | "uint32" | "int32" | "s32" | "float" | "float32" => Some(4),
+        "u64" | "uint64" | "int64" | "s64" | "double" | "float64" => Some(8),
+        _ => None,
+    };
+    if let Some(size) = primitive {
+        return Ok(size);
+    }
+    if let Some(template) = registry.get(type_name) {
+        return struct_template_size(type_name, template);
+    }
+    Err(TemplateError::UnknownType(type_name.to_string()))
+}
+
+/// Compute the byte size of a registered struct template by summing the
+/// fixed-size cost of each field.
+///
+/// Returns `Err(TemplateError::UnknownType)` if the template contains a
+/// field whose size depends on runtime data (dynamic arrays, unions,
+/// conditionals, struct refs, computed, endianness switch). Those cases
+/// have no statically computable size and `sizeof()` cannot meaningfully
+/// stand in for them inside an arithmetic expression.
+fn struct_template_size(
+    template_name: &str,
+    template: &StructTemplate,
+) -> Result<usize, TemplateError> {
+    let mut total: usize = 0;
+    for field in &template.fields {
+        let size = field_size(&field.field_type).ok_or_else(|| {
+            TemplateError::UnknownType(format!(
+                "{template_name} (field '{}' has runtime-dependent size)",
+                field.name
+            ))
+        })?;
+        total = total
+            .checked_add(size)
+            .ok_or_else(|| TemplateError::UnknownType(template_name.to_string()))?;
+    }
+    Ok(total)
+}
+
+#[derive(Debug, Clone)]
+enum ExprToken {
+    Number(i64),
+    Ident(String),
+    Dollar,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    LParen,
+    RParen,
+    Sizeof,
+}
+
+fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, TemplateError> {
+    let mut tokens = Vec::new();
+    let chars: Vec<char> = expr.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        match chars[i] {
+            ' ' | '\t' | '\n' | '\r' => {
+                i += 1;
+            }
+            '$' => {
+                tokens.push(ExprToken::Dollar);
+                i += 1;
+            }
+            '+' => {
+                tokens.push(ExprToken::Plus);
+                i += 1;
+            }
+            '-' => {
+                tokens.push(ExprToken::Minus);
+                i += 1;
+            }
+            '*' => {
+                tokens.push(ExprToken::Star);
+                i += 1;
+            }
+            '/' => {
+                tokens.push(ExprToken::Slash);
+                i += 1;
+            }
+            '%' => {
+                tokens.push(ExprToken::Percent);
+                i += 1;
+            }
+            '(' => {
+                tokens.push(ExprToken::LParen);
+                i += 1;
+            }
+            ')' => {
+                tokens.push(ExprToken::RParen);
+                i += 1;
+            }
+            '0'..='9' => {
+                let start = i;
+                if i + 1 < chars.len()
+                    && chars[i] == '0'
+                    && (chars[i + 1] == 'x' || chars[i + 1] == 'X')
+                {
+                    i += 2;
+                    while i < chars.len() && chars[i].is_ascii_hexdigit() {
+                        i += 1;
+                    }
+                    let hex_str: String = chars[start + 2..i].iter().collect();
+                    let val = i64::from_str_radix(&hex_str, 16)
+                        .map_err(|e| TemplateError::ExpressionError(format!("bad hex: {e}")))?;
+                    tokens.push(ExprToken::Number(val));
+                } else {
+                    while i < chars.len() && chars[i].is_ascii_digit() {
+                        i += 1;
+                    }
+                    let num_str: String = chars[start..i].iter().collect();
+                    let val: i64 = num_str
+                        .parse()
+                        .map_err(|e| TemplateError::ExpressionError(format!("bad number: {e}")))?;
+                    tokens.push(ExprToken::Number(val));
+                }
+            }
+            c if c.is_ascii_alphabetic() || c == '_' => {
+                let start = i;
+                while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                    i += 1;
+                }
+                let ident: String = chars[start..i].iter().collect();
+                if ident == "sizeof" {
+                    tokens.push(ExprToken::Sizeof);
+                } else {
+                    tokens.push(ExprToken::Ident(ident));
+                }
+            }
+            c => {
+                return Err(TemplateError::ExpressionError(format!(
+                    "unexpected character '{c}'"
+                )));
+            }
+        }
+    }
+
+    Ok(tokens)
+}
+
+fn parse_additive(
+    tokens: &[ExprToken],
+    pos: &mut usize,
+    values: &HashMap<String, i64>,
+    current_offset: usize,
+    registry: &TemplateRegistry,
+    depth: usize,
+) -> Result<i64, TemplateError> {
+    let mut left = parse_multiplicative(tokens, pos, values, current_offset, registry, depth)?;
+    while *pos < tokens.len() {
+        match &tokens[*pos] {
+            ExprToken::Plus => {
+                *pos += 1;
+                let right =
+                    parse_multiplicative(tokens, pos, values, current_offset, registry, depth)?;
+                left = left.wrapping_add(right);
+            }
+            ExprToken::Minus => {
+                *pos += 1;
+                let right =
+                    parse_multiplicative(tokens, pos, values, current_offset, registry, depth)?;
+                left = left.wrapping_sub(right);
+            }
+            _ => break,
+        }
+    }
+    Ok(left)
+}
+
+fn parse_multiplicative(
+    tokens: &[ExprToken],
+    pos: &mut usize,
+    values: &HashMap<String, i64>,
+    current_offset: usize,
+    registry: &TemplateRegistry,
+    depth: usize,
+) -> Result<i64, TemplateError> {
+    let mut left = parse_unary(tokens, pos, values, current_offset, registry, depth)?;
+    while *pos < tokens.len() {
+        match &tokens[*pos] {
+            ExprToken::Star => {
+                *pos += 1;
+                let right = parse_unary(tokens, pos, values, current_offset, registry, depth)?;
+                left = left.wrapping_mul(right);
+            }
+            ExprToken::Slash => {
+                *pos += 1;
+                let right = parse_unary(tokens, pos, values, current_offset, registry, depth)?;
+                if right == 0 {
+                    return Err(TemplateError::ExpressionError(
+                        "division by zero".to_string(),
+                    ));
+                }
+                left = left.wrapping_div(right);
+            }
+            ExprToken::Percent => {
+                *pos += 1;
+                let right = parse_unary(tokens, pos, values, current_offset, registry, depth)?;
+                if right == 0 {
+                    return Err(TemplateError::ExpressionError("modulo by zero".to_string()));
+                }
+                left = left.wrapping_rem(right);
+            }
+            _ => break,
+        }
+    }
+    Ok(left)
+}
+
+fn parse_unary(
+    tokens: &[ExprToken],
+    pos: &mut usize,
+    values: &HashMap<String, i64>,
+    current_offset: usize,
+    registry: &TemplateRegistry,
+    depth: usize,
+) -> Result<i64, TemplateError> {
+    if *pos < tokens.len() {
+        if let ExprToken::Minus = &tokens[*pos] {
+            *pos += 1;
+            let val = parse_primary(tokens, pos, values, current_offset, registry, depth)?;
+            return Ok(val.wrapping_neg());
+        }
+    }
+    parse_primary(tokens, pos, values, current_offset, registry, depth)
+}
+
+fn parse_primary(
+    tokens: &[ExprToken],
+    pos: &mut usize,
+    values: &HashMap<String, i64>,
+    current_offset: usize,
+    registry: &TemplateRegistry,
+    depth: usize,
+) -> Result<i64, TemplateError> {
+    if *pos >= tokens.len() {
+        return Err(TemplateError::ExpressionError(
+            "unexpected end of expression".to_string(),
+        ));
+    }
+
+    match &tokens[*pos] {
+        ExprToken::Number(n) => {
+            let val = *n;
+            *pos += 1;
+            Ok(val)
+        }
+        ExprToken::Dollar => {
+            *pos += 1;
+            i64::try_from(current_offset)
+                .map_err(|e| TemplateError::ExpressionError(format!("offset overflow: {e}")))
+        }
+        ExprToken::Ident(name) => {
+            let val = values.get(name).copied().ok_or_else(|| {
+                TemplateError::InvalidFieldReference(format!(
+                    "field '{name}' not found in expression"
+                ))
+            })?;
+            *pos += 1;
+            Ok(val)
+        }
+        ExprToken::Sizeof => {
+            *pos += 1;
+            if *pos < tokens.len() {
+                if let ExprToken::LParen = &tokens[*pos] {
+                    *pos += 1;
+                    if *pos < tokens.len() {
+                        if let ExprToken::Ident(name) = &tokens[*pos] {
+                            let type_name = name.clone();
+                            *pos += 1;
+                            match tokens.get(*pos) {
+                                Some(ExprToken::RParen) => *pos += 1,
+                                _ => {
+                                    return Err(TemplateError::ExpressionError(
+                                        "expected closing ')' in sizeof".to_string(),
+                                    ));
+                                }
+                            }
+                            let size = resolve_sizeof(&type_name, registry)?;
+                            let size_i64 = i64::try_from(size).map_err(|e| {
+                                TemplateError::ExpressionError(format!("sizeof overflow: {e}"))
+                            })?;
+                            return Ok(size_i64);
+                        }
+                    }
+                }
+            }
+            Err(TemplateError::ExpressionError(
+                "invalid sizeof syntax".to_string(),
+            ))
+        }
+        ExprToken::LParen => {
+            if depth >= MAX_DEPTH {
+                return Err(TemplateError::ExpressionError(format!(
+                    "expression nesting exceeds max depth {MAX_DEPTH}"
+                )));
+            }
+            *pos += 1;
+            let val = parse_additive(tokens, pos, values, current_offset, registry, depth + 1)?;
+            match tokens.get(*pos) {
+                Some(ExprToken::RParen) => *pos += 1,
+                _ => {
+                    return Err(TemplateError::ExpressionError(
+                        "expected closing ')'".to_string(),
+                    ));
+                }
+            }
+            Ok(val)
+        }
+        other => Err(TemplateError::ExpressionError(format!(
+            "unexpected token: {other:?}"
+        ))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::templates::{FieldDefinition, FieldType};
+
+    fn make_registry() -> TemplateRegistry {
+        TemplateRegistry::new()
+    }
+
+    #[test]
+    fn test_basic_eval() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "a".to_string(),
+                field_type: FieldType::UInt8,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "b".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        let data = [0x42, 0x34, 0x12];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].name, "a");
+        assert_eq!(result[1].name, "b");
+    }
+
+    #[test]
+    fn test_dynamic_array() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "count".to_string(),
+                field_type: FieldType::UInt8,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "items".to_string(),
+                field_type: FieldType::DynamicArray {
+                    element_type: Box::new(FieldType::UInt8),
+                    count_field: "count".to_string(),
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        let data = [0x03, 0xAA, 0xBB, 0xCC];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[1].children.len(), 3);
+    }
+
+    #[test]
+    fn test_conditional_true() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "magic".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "cond".to_string(),
+                field_type: FieldType::Conditional {
+                    condition_field: "magic".to_string(),
+                    condition_value: 0x5A4D,
+                    condition_op: ConditionOp::Eq,
+                    fields: vec![FieldDefinition {
+                        name: "pe_field".to_string(),
+                        field_type: FieldType::UInt32,
+                        endianness: None,
+                        description: String::new(),
+                        color: None,
+                        validation: None,
+                    }],
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        let data = [0x4D, 0x5A, 0x01, 0x02, 0x03, 0x04];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[1].name, "pe_field");
+    }
+
+    #[test]
+    fn test_conditional_false() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "magic".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "cond".to_string(),
+                field_type: FieldType::Conditional {
+                    condition_field: "magic".to_string(),
+                    condition_value: 0xFFFF,
+                    condition_op: ConditionOp::Eq,
+                    fields: vec![FieldDefinition {
+                        name: "pe_field".to_string(),
+                        field_type: FieldType::UInt32,
+                        endianness: None,
+                        description: String::new(),
+                        color: None,
+                        validation: None,
+                    }],
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        let data = [0x4D, 0x5A, 0x01, 0x02, 0x03, 0x04];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    fn make_bitmask_fields(
+        condition_op: ConditionOp,
+        condition_value: i64,
+    ) -> Vec<FieldDefinition> {
+        vec![
+            FieldDefinition {
+                name: "flags".to_string(),
+                field_type: FieldType::UInt8,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "cond".to_string(),
+                field_type: FieldType::Conditional {
+                    condition_field: "flags".to_string(),
+                    condition_value,
+                    condition_op,
+                    fields: vec![FieldDefinition {
+                        name: "guarded".to_string(),
+                        field_type: FieldType::UInt8,
+                        endianness: None,
+                        description: String::new(),
+                        color: None,
+                        validation: None,
+                    }],
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ]
+    }
+
+    #[test]
+    fn test_conditional_bitand_set_emits_inner() {
+        let reg = make_registry();
+        let fields = make_bitmask_fields(ConditionOp::BitAnd, 0b0000_0100);
+        let data = [0b0000_0110, 0xAA];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[1].name, "guarded");
+    }
+
+    #[test]
+    fn test_conditional_bitand_clear_skips_inner() {
+        let reg = make_registry();
+        let fields = make_bitmask_fields(ConditionOp::BitAnd, 0b0000_0100);
+        let data = [0b0000_0010, 0xAA];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn test_conditional_bitand_zero_clear_emits_inner() {
+        let reg = make_registry();
+        let fields = make_bitmask_fields(ConditionOp::BitAndZero, 0b0000_0100);
+        let data = [0b0000_0010, 0xAA];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[1].name, "guarded");
+    }
+
+    #[test]
+    fn test_conditional_bitand_zero_set_skips_inner() {
+        let reg = make_registry();
+        let fields = make_bitmask_fields(ConditionOp::BitAndZero, 0b0000_0100);
+        let data = [0b0000_0110, 0xAA];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn test_enum_field() {
+        let reg = make_registry();
+        let fields = vec![FieldDefinition {
+            name: "file_type".to_string(),
+            field_type: FieldType::Enum {
+                backing_type: Box::new(FieldType::UInt16),
+                values: vec![
+                    ("EXEC".to_string(), 2),
+                    ("DYN".to_string(), 3),
+                    ("CORE".to_string(), 4),
+                ],
+            },
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: None,
+        }];
+        let data = [0x02, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert!(result[0].display_value.contains("EXEC"));
+    }
+
+    #[test]
+    fn test_validation_pass() {
+        let reg = make_registry();
+        let fields = vec![FieldDefinition {
+            name: "magic".to_string(),
+            field_type: FieldType::UInt16,
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: Some(FieldValidation {
+                expected_value: Some(0x5A4D),
+                min_value: None,
+                max_value: None,
+                magic_bytes: None,
+            }),
+        }];
+        let data = [0x4D, 0x5A];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result[0].validation_passed, Some(true));
+    }
+
+    #[test]
+    fn test_validation_fail() {
+        let reg = make_registry();
+        let fields = vec![FieldDefinition {
+            name: "magic".to_string(),
+            field_type: FieldType::UInt16,
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: Some(FieldValidation {
+                expected_value: Some(0x5A4D),
+                min_value: None,
+                max_value: None,
+                magic_bytes: None,
+            }),
+        }];
+        let data = [0x00, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result[0].validation_passed, Some(false));
+    }
+
+    #[test]
+    fn test_expression_eval() {
+        let reg = make_registry();
+        let mut values = HashMap::new();
+        values.insert("a".to_string(), 10);
+        values.insert("b".to_string(), 3);
+        assert_eq!(evaluate_expression("a + b", &values, 0, &reg).unwrap(), 13);
+        assert_eq!(evaluate_expression("a * b", &values, 0, &reg).unwrap(), 30);
+        assert_eq!(evaluate_expression("a - b", &values, 0, &reg).unwrap(), 7);
+        assert_eq!(
+            evaluate_expression("(a + b) * 2", &values, 0, &reg).unwrap(),
+            26
+        );
+        assert_eq!(
+            evaluate_expression("$", &values, 0x100, &reg).unwrap(),
+            0x100
+        );
+    }
+
+    #[test]
+    fn test_bool_char_padding() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "flag".to_string(),
+                field_type: FieldType::Bool,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "letter".to_string(),
+                field_type: FieldType::Char,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "pad".to_string(),
+                field_type: FieldType::Padding(2),
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        let data = [0x01, 0x41, 0x00, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result[0].display_value, "true");
+        assert!(result[1].display_value.contains("'A'"));
+        assert!(result[2].display_value.contains("padding"));
+    }
+
+    /// Audit-1 F-0005 regression: `sizeof(<unknown>)` must produce a
+    /// `TemplateError::UnknownType` rather than silently returning 0.
+    #[test]
+    fn test_sizeof_unknown_type_errors() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        let err = evaluate_expression("sizeof(uint128)", &values, 0, &reg)
+            .expect_err("sizeof of unknown type must fail");
+        match err {
+            TemplateError::UnknownType(name) => assert_eq!(name, "uint128"),
+            other => panic!("expected UnknownType, got {other:?}"),
+        }
+    }
+
+    /// Audit-1 F-0005 regression: `sizeof(<typo struct ref>)` must
+    /// produce `UnknownType` because the typo'd name is not registered.
+    #[test]
+    fn test_sizeof_typo_struct_ref_errors() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        let err = evaluate_expression("sizeof(SomeStruct)", &values, 0, &reg)
+            .expect_err("sizeof of unregistered struct must fail");
+        assert!(matches!(err, TemplateError::UnknownType(_)));
+    }
+
+    /// Audit-1 F-0005 happy-path: primitive type names continue to
+    /// resolve without registry lookup.
+    #[test]
+    fn test_sizeof_primitives_still_resolve() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        assert_eq!(
+            evaluate_expression("sizeof(u8)", &values, 0, &reg).unwrap(),
+            1
+        );
+        assert_eq!(
+            evaluate_expression("sizeof(uint16)", &values, 0, &reg).unwrap(),
+            2
+        );
+        assert_eq!(
+            evaluate_expression("sizeof(u32)", &values, 0, &reg).unwrap(),
+            4
+        );
+        assert_eq!(
+            evaluate_expression("sizeof(double)", &values, 0, &reg).unwrap(),
+            8
+        );
+    }
+
+    /// Audit-1 F-0005 happy-path: registered fixed-size struct templates
+    /// resolve via `TemplateRegistry`.
+    #[test]
+    fn test_sizeof_registered_struct_resolves() {
+        let mut reg = make_registry();
+        let template = StructTemplate {
+            name: "Header".to_string(),
+            description: String::new(),
+            fields: vec![
+                FieldDefinition {
+                    name: "magic".to_string(),
+                    field_type: FieldType::UInt32,
+                    endianness: None,
+                    description: String::new(),
+                    color: None,
+                    validation: None,
+                },
+                FieldDefinition {
+                    name: "version".to_string(),
+                    field_type: FieldType::UInt16,
+                    endianness: None,
+                    description: String::new(),
+                    color: None,
+                    validation: None,
+                },
+                FieldDefinition {
+                    name: "pad".to_string(),
+                    field_type: FieldType::Padding(2),
+                    endianness: None,
+                    description: String::new(),
+                    color: None,
+                    validation: None,
+                },
+            ],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        };
+        reg.register(template);
+        let values = HashMap::new();
+        assert_eq!(
+            evaluate_expression("sizeof(Header)", &values, 0, &reg).unwrap(),
+            8,
+        );
+    }
+
+    /// Audit-1 F-0004 regression: a `Pointer` field whose target template
+    /// errors during recursive evaluation must propagate the error rather
+    /// than swallow it via `unwrap_or_default()`.
+    #[test]
+    fn test_eval_pointer_propagates_recursive_error() {
+        let mut reg = TemplateRegistry::new();
+        let target = StructTemplate {
+            name: "Bad".to_string(),
+            description: String::new(),
+            fields: vec![FieldDefinition {
+                name: "ref_to_missing".to_string(),
+                field_type: FieldType::Computed {
+                    expression: "missing_field + 1".to_string(),
+                    display_type: Box::new(FieldType::UInt32),
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            }],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        };
+        reg.register(target);
+        let outer = vec![FieldDefinition {
+            name: "ptr".to_string(),
+            field_type: FieldType::Pointer {
+                pointer_type: Box::new(FieldType::UInt32),
+                target_template: "Bad".to_string(),
+            },
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: None,
+        }];
+        let mut data = vec![0u8; 32];
+        data[..4].copy_from_slice(&8u32.to_le_bytes());
+        let mut evaluator = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = evaluator
+            .evaluate_fields(&outer)
+            .expect_err("pointer must propagate recursive evaluation errors");
+        assert!(matches!(err, TemplateError::InvalidFieldReference(_)));
+    }
+
+    /// Gate: `DynamicArray` resolves element count from a prior field and places
+    /// each element at the exact expected offset with the correct raw bytes and
+    /// display value.
+    ///
+    /// Data mimics a minimal PE import directory table: a 2-byte entry count
+    /// (LE u16 = 3) followed by three 4-byte RVA entries (LE u32 = 1, 2, 3).
+    ///
+    /// Mutation caught (one-liner): in `eval_dynamic_array`, change
+    /// `arr_offset = self.current_offset + i * inner_size` to
+    /// `self.current_offset` — `children[1].offset` becomes 2 instead of 6.
+    #[test]
+    fn test_dynamic_array_pe_import_exact_offsets_and_count() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "import_count".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "import_entries".to_string(),
+                field_type: FieldType::DynamicArray {
+                    element_type: Box::new(FieldType::UInt32),
+                    count_field: "import_count".to_string(),
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        // import_count (LE u16) = 3, then 3 × LE u32 RVA entries
+        let data: [u8; 14] = [
+            0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+        ];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+
+        assert_eq!(result.len(), 2);
+
+        assert_eq!(result[0].name, "import_count");
+        assert_eq!(result[0].offset, 0);
+        assert_eq!(result[0].size, 2);
+        assert_eq!(result[0].raw_bytes, [0x03, 0x00]);
+        // Independent oracle: u16::from_le_bytes([0x03, 0x00]) = 3
+        assert_eq!(result[0].display_value, "3 (0x0003)");
+
+        assert_eq!(result[1].name, "import_entries");
+        assert_eq!(result[1].offset, 2);
+        assert_eq!(result[1].size, 12);
+        assert_eq!(result[1].display_value, "[3 x uint32]");
+        assert_eq!(result[1].children.len(), 3);
+
+        assert_eq!(result[1].children[0].name, "[0]");
+        assert_eq!(result[1].children[0].offset, 2);
+        assert_eq!(result[1].children[0].size, 4);
+        assert_eq!(result[1].children[0].raw_bytes, [0x01, 0x00, 0x00, 0x00]);
+        // Independent oracle: u32::from_le_bytes([0x01, 0x00, 0x00, 0x00]) = 1
+        assert_eq!(result[1].children[0].display_value, "1 (0x00000001)");
+
+        assert_eq!(result[1].children[1].name, "[1]");
+        assert_eq!(result[1].children[1].offset, 6);
+        assert_eq!(result[1].children[1].size, 4);
+        assert_eq!(result[1].children[1].raw_bytes, [0x02, 0x00, 0x00, 0x00]);
+        // Independent oracle: u32::from_le_bytes([0x02, 0x00, 0x00, 0x00]) = 2
+        assert_eq!(result[1].children[1].display_value, "2 (0x00000002)");
+
+        assert_eq!(result[1].children[2].name, "[2]");
+        assert_eq!(result[1].children[2].offset, 10);
+        assert_eq!(result[1].children[2].size, 4);
+        assert_eq!(result[1].children[2].raw_bytes, [0x03, 0x00, 0x00, 0x00]);
+        // Independent oracle: u32::from_le_bytes([0x03, 0x00, 0x00, 0x00]) = 3
+        assert_eq!(result[1].children[2].display_value, "3 (0x00000003)");
+    }
+
+    /// Gate: Conditional Eq true branch emits the correct inner field at the
+    /// exact offset with the correct size, raw bytes, and display value.
+    ///
+    /// Layout mimics the PE DOS header: `e_magic` matches MZ (0x5A4D LE), so
+    /// the conditional emits `e_lfanew` (LE u32 = 128).
+    ///
+    /// Mutation caught (one-liner): change `ConditionOp::Eq =>
+    /// actual == condition_value` to `actual != condition_value` — `result.len()`
+    /// becomes 1 and `result[1]` no longer exists.
+    #[test]
+    fn test_conditional_eq_true_emits_exact_field_offset_and_value() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "e_magic".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "pe_cond".to_string(),
+                field_type: FieldType::Conditional {
+                    condition_field: "e_magic".to_string(),
+                    condition_value: 0x5A4D,
+                    condition_op: ConditionOp::Eq,
+                    fields: vec![FieldDefinition {
+                        name: "e_lfanew".to_string(),
+                        field_type: FieldType::UInt32,
+                        endianness: None,
+                        description: String::new(),
+                        color: None,
+                        validation: None,
+                    }],
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        // e_magic = 0x5A4D (MZ LE), e_lfanew = 128 = 0x00000080 (LE)
+        let data: [u8; 6] = [0x4D, 0x5A, 0x80, 0x00, 0x00, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[1].name, "e_lfanew");
+        assert_eq!(result[1].offset, 2);
+        assert_eq!(result[1].size, 4);
+        assert_eq!(result[1].raw_bytes, [0x80, 0x00, 0x00, 0x00]);
+        // Independent oracle: u32::from_le_bytes([0x80, 0x00, 0x00, 0x00]) = 128
+        assert_eq!(result[1].display_value, "128 (0x00000080)");
+    }
+
+    /// Gate: Conditional Eq false branch emits zero inner fields, leaving only
+    /// the predicate field in the result.
+    ///
+    /// Mutation caught (one-liner): change `if condition_met {` to `if true {`
+    /// — `result.len()` becomes 2 instead of 1.
+    #[test]
+    fn test_conditional_eq_false_produces_no_extra_fields() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "e_magic".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "pe_cond".to_string(),
+                field_type: FieldType::Conditional {
+                    condition_field: "e_magic".to_string(),
+                    condition_value: 0x5A4D,
+                    condition_op: ConditionOp::Eq,
+                    fields: vec![FieldDefinition {
+                        name: "e_lfanew".to_string(),
+                        field_type: FieldType::UInt32,
+                        endianness: None,
+                        description: String::new(),
+                        color: None,
+                        validation: None,
+                    }],
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        // e_magic = 0 (not MZ) — condition is false
+        let data: [u8; 6] = [0x00, 0x00, 0x80, 0x00, 0x00, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "e_magic");
+        assert_eq!(result[0].offset, 0);
+        assert_eq!(result[0].size, 2);
+        // Independent oracle: u16::from_le_bytes([0x00, 0x00]) = 0
+        assert_eq!(result[0].display_value, "0 (0x0000)");
+    }
+
+    /// Gate: `StructRef` evaluates the referenced template starting at the
+    /// current offset and produces children with exact offsets, sizes, raw
+    /// bytes, and display values matching the binary content.
+    ///
+    /// Data layout: prefix byte (0xAA) at offset 0, then a `PE_MZ_Fields`
+    /// struct (`e_magic` u16 + `e_cblp` u16 = 4 bytes) starting at offset 1.
+    ///
+    /// Mutation caught (one-liner): in `eval_struct_ref`, change
+    /// `size = end_offset - start_offset` to `end_offset - start_offset + 1`
+    /// — `result[1].size` becomes 5 instead of 4.
+    #[test]
+    fn test_struct_ref_resolves_nested_dos_header_layout_and_values() {
+        let mut reg = TemplateRegistry::new();
+        reg.register(StructTemplate {
+            name: "PE_MZ_Fields".to_string(),
+            description: String::new(),
+            fields: vec![
+                FieldDefinition {
+                    name: "e_magic".to_string(),
+                    field_type: FieldType::UInt16,
+                    endianness: None,
+                    description: String::new(),
+                    color: None,
+                    validation: None,
+                },
+                FieldDefinition {
+                    name: "e_cblp".to_string(),
+                    field_type: FieldType::UInt16,
+                    endianness: None,
+                    description: String::new(),
+                    color: None,
+                    validation: None,
+                },
+            ],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        });
+
+        let fields = vec![
+            FieldDefinition {
+                name: "prefix".to_string(),
+                field_type: FieldType::UInt8,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "dos".to_string(),
+                field_type: FieldType::StructRef("PE_MZ_Fields".to_string()),
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        // prefix=0xAA, then PE_MZ_Fields: e_magic=0x5A4D (MZ LE), e_cblp=2 (LE)
+        let data: [u8; 5] = [0xAA, 0x4D, 0x5A, 0x02, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+
+        assert_eq!(result.len(), 2);
+
+        assert_eq!(result[0].name, "prefix");
+        assert_eq!(result[0].offset, 0);
+        assert_eq!(result[0].size, 1);
+        assert_eq!(result[0].raw_bytes, [0xAA]);
+
+        assert_eq!(result[1].name, "dos");
+        assert_eq!(result[1].offset, 1);
+        // Independent oracle: sizeof(PE_MZ_Fields) = 2 + 2 = 4
+        assert_eq!(result[1].size, 4);
+        assert_eq!(result[1].display_value, "struct PE_MZ_Fields");
+        assert_eq!(result[1].children.len(), 2);
+
+        assert_eq!(result[1].children[0].name, "e_magic");
+        assert_eq!(result[1].children[0].offset, 1);
+        assert_eq!(result[1].children[0].size, 2);
+        assert_eq!(result[1].children[0].raw_bytes, [0x4D, 0x5A]);
+        // Independent oracle: u16::from_le_bytes([0x4D, 0x5A]) = 0x5A4D = 23117
+        assert_eq!(result[1].children[0].display_value, "23117 (0x5A4D)");
+
+        assert_eq!(result[1].children[1].name, "e_cblp");
+        assert_eq!(result[1].children[1].offset, 3);
+        assert_eq!(result[1].children[1].size, 2);
+        assert_eq!(result[1].children[1].raw_bytes, [0x02, 0x00]);
+        // Independent oracle: u16::from_le_bytes([0x02, 0x00]) = 2
+        assert_eq!(result[1].children[1].display_value, "2 (0x0002)");
+    }
+
+    /// Gate: Pointer field reads the pointer value from the buffer and evaluates
+    /// the target template at the dereferenced offset, placing children at the
+    /// exact target location with the correct raw bytes and display values.
+    ///
+    /// Layout: 2-byte pointer (LE u16 = 4) at offset 0, two padding bytes at
+    /// offsets 2–3, and the 2-byte target value (0xABCD LE) at offset 4.
+    /// Mimics a PE import name RVA pointer.
+    ///
+    /// Mutation caught (one-liner): remove `self.current_offset = ptr_value;`
+    /// in `eval_pointer` — `children[0].offset` becomes 0 instead of 4.
+    #[test]
+    fn test_pointer_dereferences_to_exact_target_offset_and_value() {
+        let mut reg = TemplateRegistry::new();
+        reg.register(StructTemplate {
+            name: "PE_Name_RVA".to_string(),
+            description: String::new(),
+            fields: vec![FieldDefinition {
+                name: "value".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            }],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        });
+
+        let fields = vec![FieldDefinition {
+            name: "name_ptr".to_string(),
+            field_type: FieldType::Pointer {
+                pointer_type: Box::new(FieldType::UInt16),
+                target_template: "PE_Name_RVA".to_string(),
+            },
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: None,
+        }];
+
+        // ptr value (LE u16 = 4) at [0..2], padding at [2..4], target (0xABCD LE) at [4..6]
+        let data: [u8; 6] = [0x04, 0x00, 0x00, 0x00, 0xCD, 0xAB];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "name_ptr");
+        assert_eq!(result[0].offset, 0);
+        assert_eq!(result[0].size, 2);
+        assert_eq!(result[0].raw_bytes, [0x04, 0x00]);
+        // Independent oracle: ptr_value = u16::from_le_bytes([0x04, 0x00]) = 4
+        assert_eq!(result[0].display_value, "-> 0x4 (PE_Name_RVA)");
+        assert_eq!(result[0].children.len(), 1);
+
+        assert_eq!(result[0].children[0].name, "value");
+        // Target is at offset 4, not at offset 0 of the pointer field
+        assert_eq!(result[0].children[0].offset, 4);
+        assert_eq!(result[0].children[0].size, 2);
+        assert_eq!(result[0].children[0].raw_bytes, [0xCD, 0xAB]);
+        // Independent oracle: u16::from_le_bytes([0xCD, 0xAB]) = 0xABCD = 43981
+        assert_eq!(result[0].children[0].display_value, "43981 (0xABCD)");
+    }
+
+    fn fld(name: &str, ft: FieldType) -> FieldDefinition {
+        FieldDefinition {
+            name: name.to_string(),
+            field_type: ft,
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: None,
+        }
+    }
+
+    #[test]
+    fn test_eval_union_tracks_max_size_and_children() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "u",
+            FieldType::Union {
+                variants: vec![
+                    fld("as_u8", FieldType::UInt8),
+                    fld("as_u32", FieldType::UInt32),
+                ],
+            },
+        )];
+        let data = [0x11u8, 0x22, 0x33, 0x44, 0x55];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].size, 4, "max variant size (u32) wins");
+        assert_eq!(result[0].raw_bytes, [0x11, 0x22, 0x33, 0x44]);
+        assert_eq!(result[0].display_value, "union<2 variants>");
+        assert_eq!(result[0].children.len(), 2);
+        assert_eq!(result[0].children[0].name, "as_u8");
+        assert_eq!(result[0].children[0].offset, 0);
+        assert_eq!(result[0].children[1].name, "as_u32");
+        assert_eq!(result[0].children[1].offset, 0);
+    }
+
+    #[test]
+    fn test_eval_bitfield_flags_set_and_clear() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "flags",
+            FieldType::Bitfield {
+                bit_width: 8,
+                backing_type: Box::new(FieldType::UInt8),
+                flags: Some(vec![
+                    ("bit0".to_string(), 0x01),
+                    ("bit1".to_string(), 0x02),
+                    ("bit2".to_string(), 0x04),
+                ]),
+            },
+        )];
+        let data = [0x05u8];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result[0].display_value, "0x5 (8:8 bits)");
+        assert_eq!(result[0].children.len(), 3);
+        assert_eq!(result[0].children[0].display_value, "SET (0x1)");
+        assert_eq!(result[0].children[1].display_value, "CLEAR (0x2)");
+        assert_eq!(result[0].children[2].display_value, "SET (0x4)");
+    }
+
+    #[test]
+    fn test_eval_bitfield_width_64_full_mask() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "wide",
+            FieldType::Bitfield {
+                bit_width: 64,
+                backing_type: Box::new(FieldType::UInt64),
+                flags: None,
+            },
+        )];
+        let data = [0xFFu8; 8];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result[0].display_value, "0xFFFFFFFFFFFFFFFF (64:64 bits)");
+    }
+
+    #[test]
+    fn test_eval_bitfield_insufficient_data() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "wide",
+            FieldType::Bitfield {
+                bit_width: 8,
+                backing_type: Box::new(FieldType::UInt32),
+                flags: None,
+            },
+        )];
+        let data = [0x01u8, 0x02];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval.evaluate_fields(&fields).unwrap_err();
+        assert!(
+            matches!(err, TemplateError::InsufficientData { .. }),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_eval_endianness_switch_big_and_little() {
+        let reg = make_registry();
+        let big_fields = vec![fld(
+            "es",
+            FieldType::EndiannessSwitch {
+                peek_offset: 0,
+                big_value: 0xAB,
+            },
+        )];
+        let data_big = [0xABu8, 0x00];
+        let mut eval = TemplateEvaluator::new(&data_big, 0, Endianness::Little, &reg);
+        let r = eval.evaluate_fields(&big_fields).unwrap();
+        assert!(
+            r[0].display_value.starts_with("big"),
+            "got {}",
+            r[0].display_value
+        );
+
+        let data_little = [0x01u8, 0x00];
+        let mut eval2 = TemplateEvaluator::new(&data_little, 0, Endianness::Little, &reg);
+        let r2 = eval2.evaluate_fields(&big_fields).unwrap();
+        assert!(
+            r2[0].display_value.starts_with("little"),
+            "got {}",
+            r2[0].display_value
+        );
+    }
+
+    #[test]
+    fn test_eval_endianness_switch_peek_out_of_bounds() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "es",
+            FieldType::EndiannessSwitch {
+                peek_offset: 100,
+                big_value: 0xAB,
+            },
+        )];
+        let data = [0x01u8];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval.evaluate_fields(&fields).unwrap_err();
+        assert!(
+            matches!(err, TemplateError::InsufficientData { .. }),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_eval_array_children_fixed_array() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "arr",
+            FieldType::Array {
+                element_type: Box::new(FieldType::UInt8),
+                count: 3,
+            },
+        )];
+        let data = [0x0Au8, 0x0B, 0x0C];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result[0].size, 3);
+        assert_eq!(result[0].children.len(), 3);
+        assert_eq!(result[0].children[0].offset, 0);
+        assert_eq!(result[0].children[1].offset, 1);
+        assert_eq!(result[0].children[2].offset, 2);
+        assert_eq!(result[0].children[2].raw_bytes, [0x0C]);
+        assert_eq!(result[0].children[0].display_value, "10 (0x0A)");
+    }
+
+    #[test]
+    fn test_eval_enum_unknown_fallback() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "e",
+            FieldType::Enum {
+                backing_type: Box::new(FieldType::UInt8),
+                values: vec![("A".to_string(), 1), ("B".to_string(), 2)],
+            },
+        )];
+        let data = [0x63u8]; // 99, not in the value table
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result[0].display_value, "unknown (99, 0x63)");
+    }
+
+    #[test]
+    fn test_eval_enum_insufficient_data() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "e",
+            FieldType::Enum {
+                backing_type: Box::new(FieldType::UInt32),
+                values: vec![],
+            },
+        )];
+        let data = [0x01u8, 0x02];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval.evaluate_fields(&fields).unwrap_err();
+        assert!(
+            matches!(err, TemplateError::InsufficientData { .. }),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_eval_enum_validation_branch() {
+        let reg = make_registry();
+        let mut f = fld(
+            "e",
+            FieldType::Enum {
+                backing_type: Box::new(FieldType::UInt8),
+                values: vec![("A".to_string(), 1)],
+            },
+        );
+        f.validation = Some(FieldValidation {
+            expected_value: Some(1),
+            min_value: None,
+            max_value: None,
+            magic_bytes: None,
+        });
+        let data = [0x01u8];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&[f]).unwrap();
+        assert_eq!(result[0].validation_passed, Some(true));
+    }
+
+    #[test]
+    fn test_eval_computed_success_constant_expression() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "c",
+            FieldType::Computed {
+                expression: "2 + 3".to_string(),
+                display_type: Box::new(FieldType::UInt32),
+            },
+        )];
+        let data = [0u8; 4];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result[0].size, 0);
+        assert_eq!(result[0].display_value, "5 (0x5) = 2 + 3");
+    }
+
+    #[test]
+    fn test_eval_dynamic_array_missing_count_field() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "items",
+            FieldType::DynamicArray {
+                element_type: Box::new(FieldType::UInt8),
+                count_field: "absent".to_string(),
+            },
+        )];
+        let data = [0x01u8, 0x02];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval.evaluate_fields(&fields).unwrap_err();
+        assert!(
+            matches!(err, TemplateError::InvalidFieldReference(_)),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_eval_dynamic_array_insufficient_data() {
+        let reg = make_registry();
+        let fields = vec![
+            fld("count", FieldType::UInt8),
+            fld(
+                "items",
+                FieldType::DynamicArray {
+                    element_type: Box::new(FieldType::UInt32),
+                    count_field: "count".to_string(),
+                },
+            ),
+        ];
+        // count = 10 u32 elements = 40 bytes, but only 3 remain
+        let data = [0x0Au8, 0x00, 0x00, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval.evaluate_fields(&fields).unwrap_err();
+        assert!(
+            matches!(err, TemplateError::InsufficientData { .. }),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_eval_conditional_missing_condition_field() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "cond",
+            FieldType::Conditional {
+                condition_field: "absent".to_string(),
+                condition_value: 0,
+                condition_op: ConditionOp::Eq,
+                fields: vec![],
+            },
+        )];
+        let data = [0x00u8];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval.evaluate_fields(&fields).unwrap_err();
+        assert!(
+            matches!(err, TemplateError::InvalidFieldReference(_)),
+            "got {err:?}"
+        );
+    }
+
+    fn conditional_emits_inner(op: ConditionOp, cond_value: i64, flag_byte: u8) -> usize {
+        let reg = make_registry();
+        let fields = make_bitmask_fields(op, cond_value);
+        let data = [flag_byte, 0xAA];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        eval.evaluate_fields(&fields).unwrap().len()
+    }
+
+    #[test]
+    fn test_eval_conditional_relational_ops() {
+        // Ne: 0x10 != 0xFF -> emits inner (len 2)
+        assert_eq!(conditional_emits_inner(ConditionOp::Ne, 0xFF, 0x10), 2);
+        // Gt: 0x10 > 0x05 -> emits
+        assert_eq!(conditional_emits_inner(ConditionOp::Gt, 0x05, 0x10), 2);
+        // Lt: 0x05 < 0x10 -> emits
+        assert_eq!(conditional_emits_inner(ConditionOp::Lt, 0x10, 0x05), 2);
+        // Ge: 0x10 >= 0x10 -> emits
+        assert_eq!(conditional_emits_inner(ConditionOp::Ge, 0x10, 0x10), 2);
+        // Le: 0x05 <= 0x10 -> emits
+        assert_eq!(conditional_emits_inner(ConditionOp::Le, 0x10, 0x05), 2);
+        // And their false arms:
+        assert_eq!(conditional_emits_inner(ConditionOp::Ne, 0x10, 0x10), 1);
+        assert_eq!(conditional_emits_inner(ConditionOp::Gt, 0x10, 0x05), 1);
+        assert_eq!(conditional_emits_inner(ConditionOp::Lt, 0x05, 0x10), 1);
+        assert_eq!(conditional_emits_inner(ConditionOp::Ge, 0x10, 0x05), 1);
+        assert_eq!(conditional_emits_inner(ConditionOp::Le, 0x05, 0x10), 1);
+    }
+
+    #[test]
+    fn test_eval_struct_ref_not_found() {
+        let reg = make_registry();
+        let fields = vec![fld("s", FieldType::StructRef("NoSuchStruct".to_string()))];
+        let data = [0u8; 8];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval.evaluate_fields(&fields).unwrap_err();
+        assert!(
+            matches!(&err, TemplateError::NotFound(n) if n == "NoSuchStruct"),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_eval_struct_ref_circular_reference() {
+        let mut reg = TemplateRegistry::new();
+        reg.register(StructTemplate {
+            name: "Rec".to_string(),
+            description: String::new(),
+            fields: vec![fld("self_ref", FieldType::StructRef("Rec".to_string()))],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        });
+        let fields = vec![fld("root", FieldType::StructRef("Rec".to_string()))];
+        let data = [0u8; 8];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval.evaluate_fields(&fields).unwrap_err();
+        assert!(
+            matches!(err, TemplateError::CircularReference(_)),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_eval_pointer_insufficient_data() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "p",
+            FieldType::Pointer {
+                pointer_type: Box::new(FieldType::UInt32),
+                target_template: "whatever".to_string(),
+            },
+        )];
+        let data = [0x01u8, 0x02];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval.evaluate_fields(&fields).unwrap_err();
+        assert!(
+            matches!(err, TemplateError::InsufficientData { .. }),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_check_validation_min_max_magic() {
+        // min_value
+        let min_v = FieldValidation {
+            expected_value: None,
+            min_value: Some(10),
+            max_value: None,
+            magic_bytes: None,
+        };
+        assert!(!check_validation(&min_v, 5, &[]));
+        assert!(check_validation(&min_v, 15, &[]));
+        // max_value
+        let max_v = FieldValidation {
+            expected_value: None,
+            min_value: None,
+            max_value: Some(5),
+            magic_bytes: None,
+        };
+        assert!(!check_validation(&max_v, 10, &[]));
+        assert!(check_validation(&max_v, 3, &[]));
+        // magic_bytes: match, mismatch, and short-raw
+        let magic = FieldValidation {
+            expected_value: None,
+            min_value: None,
+            max_value: None,
+            magic_bytes: Some(vec![0xAA, 0xBB]),
+        };
+        assert!(check_validation(&magic, 0, &[0xAA, 0xBB, 0xCC]));
+        assert!(!check_validation(&magic, 0, &[0xAA, 0xFF]));
+        let long_magic = FieldValidation {
+            expected_value: None,
+            min_value: None,
+            max_value: None,
+            magic_bytes: Some(vec![0xAA, 0xBB, 0xCC, 0xDD]),
+        };
+        assert!(!check_validation(&long_magic, 0, &[0xAA, 0xBB]));
+    }
+
+    #[test]
+    fn test_expression_div_mod_and_zero_errors() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        assert_eq!(evaluate_expression("20 / 4", &values, 0, &reg).unwrap(), 5);
+        assert_eq!(evaluate_expression("20 % 6", &values, 0, &reg).unwrap(), 2);
+        let div0 = evaluate_expression("5 / 0", &values, 0, &reg).unwrap_err();
+        assert!(
+            matches!(&div0, TemplateError::ExpressionError(m) if m.contains("division by zero"))
+        );
+        let mod0 = evaluate_expression("5 % 0", &values, 0, &reg).unwrap_err();
+        assert!(matches!(&mod0, TemplateError::ExpressionError(m) if m.contains("modulo by zero")));
+    }
+
+    #[test]
+    fn test_expression_unary_minus_and_hex() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        assert_eq!(evaluate_expression("-5", &values, 0, &reg).unwrap(), -5);
+        assert_eq!(evaluate_expression("-5 + 3", &values, 0, &reg).unwrap(), -2);
+        assert_eq!(evaluate_expression("0x10", &values, 0, &reg).unwrap(), 16);
+        assert_eq!(
+            evaluate_expression("0xFF + 1", &values, 0, &reg).unwrap(),
+            256
+        );
+    }
+
+    #[test]
+    fn test_expression_error_paths() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        // bad hex literal
+        assert!(matches!(
+            evaluate_expression("0x", &values, 0, &reg).unwrap_err(),
+            TemplateError::ExpressionError(m) if m.contains("bad hex")
+        ));
+        // bad (overflowing) decimal literal
+        assert!(matches!(
+            evaluate_expression("99999999999999999999999999", &values, 0, &reg).unwrap_err(),
+            TemplateError::ExpressionError(m) if m.contains("bad number")
+        ));
+        // unexpected character
+        assert!(matches!(
+            evaluate_expression("3 @ 4", &values, 0, &reg).unwrap_err(),
+            TemplateError::ExpressionError(m) if m.contains("unexpected character")
+        ));
+        // unexpected token at primary position
+        assert!(matches!(
+            evaluate_expression(")", &values, 0, &reg).unwrap_err(),
+            TemplateError::ExpressionError(m) if m.contains("unexpected token")
+        ));
+        // unexpected end of expression
+        assert!(matches!(
+            evaluate_expression("5 +", &values, 0, &reg).unwrap_err(),
+            TemplateError::ExpressionError(m) if m.contains("unexpected end")
+        ));
+        // invalid sizeof syntax (no parenthesised type)
+        assert!(matches!(
+            evaluate_expression("sizeof 5", &values, 0, &reg).unwrap_err(),
+            TemplateError::ExpressionError(m) if m.contains("invalid sizeof syntax")
+        ));
+    }
+
+    #[test]
+    fn test_expression_dollar_offset_overflow() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        let err = evaluate_expression("$", &values, usize::MAX, &reg).unwrap_err();
+        assert!(matches!(&err, TemplateError::ExpressionError(m) if m.contains("offset overflow")));
+    }
+
+    #[test]
+    fn test_sizeof_runtime_dependent_field_errors() {
+        let mut reg = make_registry();
+        reg.register(StructTemplate {
+            name: "HasDyn".to_string(),
+            description: String::new(),
+            fields: vec![fld(
+                "items",
+                FieldType::DynamicArray {
+                    element_type: Box::new(FieldType::UInt8),
+                    count_field: "n".to_string(),
+                },
+            )],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        });
+        let values = HashMap::new();
+        let err = evaluate_expression("sizeof(HasDyn)", &values, 0, &reg).unwrap_err();
+        assert!(
+            matches!(&err, TemplateError::UnknownType(m) if m.contains("runtime-dependent")),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_sizeof_zero_padding_field_resolves() {
+        let mut reg = make_registry();
+        reg.register(StructTemplate {
+            name: "WithZeroPad".to_string(),
+            description: String::new(),
+            fields: vec![
+                fld("pad", FieldType::Padding(0)),
+                fld("v", FieldType::UInt32),
+            ],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        });
+        let values = HashMap::new();
+        // Padding(0) is a legitimate zero-size type -> total = 0 + 4 = 4.
+        assert_eq!(
+            evaluate_expression("sizeof(WithZeroPad)", &values, 0, &reg).unwrap(),
+            4
+        );
+    }
+
+    #[test]
+    fn test_sizeof_struct_size_overflow_errors() {
+        let mut reg = make_registry();
+        reg.register(StructTemplate {
+            name: "Huge".to_string(),
+            description: String::new(),
+            fields: vec![
+                fld("a", FieldType::Bytes(usize::MAX)),
+                fld("b", FieldType::Bytes(usize::MAX)),
+            ],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        });
+        let values = HashMap::new();
+        let err = evaluate_expression("sizeof(Huge)", &values, 0, &reg).unwrap_err();
+        assert!(
+            matches!(&err, TemplateError::UnknownType(n) if n == "Huge"),
+            "got {err:?}"
+        );
+    }
+
+    /// Audit F-0007 regression: nested-parenthesis expressions within the
+    /// established `MAX_DEPTH` limit must still evaluate normally.
+    #[test]
+    fn test_expression_nested_parens_within_limit_succeeds() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        let nested = format!("{}42{}", "(".repeat(10), ")".repeat(10));
+        assert_eq!(evaluate_expression(&nested, &values, 0, &reg).unwrap(), 42);
+    }
+
+    /// Audit F-0007 regression: an expression whose parenthesis nesting
+    /// exceeds `MAX_DEPTH` must be rejected by a bounded depth guard rather
+    /// than recursing without limit (which, for pathological inputs, is an
+    /// unrecoverable stack overflow rather than a catchable error).
+    #[test]
+    fn test_expression_deep_nested_parens_rejected_not_unbounded() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        let nested = format!("{}1{}", "(".repeat(500), ")".repeat(500));
+        let err = evaluate_expression(&nested, &values, 0, &reg).expect_err(
+            "expression nesting far beyond MAX_DEPTH must be rejected by a depth guard",
+        );
+        assert!(
+            matches!(&err, TemplateError::ExpressionError(m) if m.contains("depth")),
+            "got {err:?}"
+        );
+    }
+
+    /// Audit F-0024 regression: any unconsumed trailing tokens after a
+    /// syntactically valid sub-expression must be a hard error instead of
+    /// being silently discarded.
+    #[test]
+    fn test_expression_trailing_tokens_rejected() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        let err = evaluate_expression("5 + 3 3", &values, 0, &reg)
+            .expect_err("trailing tokens after a complete expression must error");
+        assert!(
+            matches!(&err, TemplateError::ExpressionError(m) if m.contains("trailing")),
+            "got {err:?}"
+        );
+
+        let err2 = evaluate_expression("sizeof(u8) extra_garbage", &values, 0, &reg)
+            .expect_err("trailing garbage after sizeof(...) must error");
+        assert!(
+            matches!(err2, TemplateError::ExpressionError(_)),
+            "got {err2:?}"
+        );
+
+        let err3 = evaluate_expression("$ + 4 )", &values, 0x10, &reg)
+            .expect_err("a stray trailing ')' must error, not be silently ignored");
+        assert!(
+            matches!(err3, TemplateError::ExpressionError(_)),
+            "got {err3:?}"
+        );
+    }
+
+    /// Audit F-0024 regression: an unbalanced open parenthesis with no
+    /// matching close must error rather than silently returning the
+    /// sub-expression's value.
+    #[test]
+    fn test_expression_unbalanced_open_paren_rejected() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        let err = evaluate_expression("(5 + 3", &values, 0, &reg)
+            .expect_err("missing closing ')' must error");
+        assert!(
+            matches!(&err, TemplateError::ExpressionError(m) if m.contains("closing")),
+            "got {err:?}"
+        );
+    }
+
+    /// Audit F-0052 regression: unary negation of `i64::MIN` must wrap
+    /// (matching every other arithmetic op in this module) instead of
+    /// panicking with "attempt to negate with overflow" under overflow
+    /// checks (the default for `cargo test`/dev builds).
+    #[test]
+    fn test_expression_unary_neg_i64_min_wraps_not_panics() {
+        let reg = make_registry();
+        let mut values = HashMap::new();
+        values.insert("m".to_string(), i64::MIN);
+        let result = evaluate_expression("-m", &values, 0, &reg).unwrap();
+        assert_eq!(result, i64::MIN);
+    }
+
+    /// Audit F-0008 regression: an `Array` element type with no static size
+    /// (e.g. a `StructRef`) must error at evaluation time instead of
+    /// silently sizing the whole array field to 0 and leaving every later
+    /// sibling field to be read from the wrong (unadvanced) offset.
+    #[test]
+    fn test_array_of_unsized_element_rejected_not_offset_corrupting() {
+        let mut reg = TemplateRegistry::new();
+        reg.register(StructTemplate {
+            name: "Elem".to_string(),
+            description: String::new(),
+            fields: vec![fld("v", FieldType::UInt8)],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        });
+        let fields = vec![
+            fld(
+                "sections",
+                FieldType::Array {
+                    element_type: Box::new(FieldType::StructRef("Elem".to_string())),
+                    count: 3,
+                },
+            ),
+            fld("after", FieldType::UInt8),
+        ];
+        let data = [0xAAu8, 0xBB, 0xCC, 0xDD];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval
+            .evaluate_fields(&fields)
+            .expect_err("Array of an unsized element type must error, not silently size to 0");
+        assert!(
+            matches!(err, TemplateError::UnsizedFieldType(_)),
+            "got {err:?}"
+        );
+    }
+
+    /// Audit F-0023 regression: `DynamicArray` with a composite (unsized)
+    /// element type must error instead of letting `field_size` collapse to
+    /// 0, which used to defeat the `InsufficientData` guard entirely
+    /// regardless of how large the attacker-influenced `count` is.
+    #[test]
+    fn test_eval_dynamic_array_composite_element_type_rejected() {
+        let reg = make_registry();
+        let fields = vec![
+            fld("count", FieldType::UInt32),
+            fld(
+                "items",
+                FieldType::DynamicArray {
+                    element_type: Box::new(FieldType::Union { variants: vec![] }),
+                    count_field: "count".to_string(),
+                },
+            ),
+        ];
+        let mut data = vec![0u8; 4];
+        data[..4].copy_from_slice(&1000u32.to_le_bytes());
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval.evaluate_fields(&fields).expect_err(
+            "DynamicArray with a zero-sized composite element_type must error, not build \
+             `count` empty ParsedField entries unbounded by data length",
+        );
+        assert!(
+            matches!(err, TemplateError::UnsizedFieldType(_)),
+            "got {err:?}"
+        );
+    }
+
+    /// Audit F-0051 regression: a fixed `Array` whose element type is
+    /// legitimately zero-sized (e.g. `Padding(0)`) must not expand a large
+    /// `count` into that many per-element children — the per-element
+    /// data-length break condition never scales with `i` when the element
+    /// size is 0, so it must not attempt the full walk at all.
+    #[test]
+    fn test_eval_array_children_zero_size_element_no_unbounded_loop() {
+        let reg = make_registry();
+        let fields = vec![fld(
+            "arr",
+            FieldType::Array {
+                element_type: Box::new(FieldType::Padding(0)),
+                count: 10_000,
+            },
+        )];
+        let data = [0u8; 4];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(
+            result[0].children.len(),
+            0,
+            "zero-sized array elements must not be expanded into per-element children"
+        );
+    }
+
+    /// Audit F-0054 regression: a `Float32` field referenced as a
+    /// `DynamicArray` `count_field` must drive the count from its real
+    /// (truncated) value, not silently evaluate as 0 via the old
+    /// `read_numeric_value` fallback.
+    #[test]
+    fn test_dynamic_array_count_field_reads_float32_value_correctly() {
+        let reg = make_registry();
+        let fields = vec![
+            fld("count_f", FieldType::Float32),
+            fld(
+                "items",
+                FieldType::DynamicArray {
+                    element_type: Box::new(FieldType::UInt8),
+                    count_field: "count_f".to_string(),
+                },
+            ),
+        ];
+        let mut data = 2.0f32.to_le_bytes().to_vec();
+        data.extend_from_slice(&[0xAA, 0xBB]);
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(
+            result[1].children.len(),
+            2,
+            "Float32 count_field must be read as its real truncated value (2), not silently 0"
+        );
+    }
+
+    /// Audit F-0075 regression: a cyclic pointer chain must surface
+    /// `TemplateError::CircularReference` once `MAX_DEPTH` is exceeded,
+    /// exactly like `eval_struct_ref` already does, instead of silently
+    /// truncating to an empty `children` list indistinguishable from a
+    /// plain out-of-range pointer.
+    #[test]
+    fn test_eval_pointer_depth_exceeded_errors_like_struct_ref() {
+        let mut reg = TemplateRegistry::new();
+        reg.register(StructTemplate {
+            name: "SelfPtr".to_string(),
+            description: String::new(),
+            fields: vec![fld(
+                "next",
+                FieldType::Pointer {
+                    pointer_type: Box::new(FieldType::UInt32),
+                    target_template: "SelfPtr".to_string(),
+                },
+            )],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        });
+        // Pointer value 0 always dereferences back to the start of this same
+        // 4-byte buffer, forming an unbounded cycle without the depth guard.
+        let data = [0u8; 4];
+        let outer = vec![fld(
+            "root",
+            FieldType::Pointer {
+                pointer_type: Box::new(FieldType::UInt32),
+                target_template: "SelfPtr".to_string(),
+            },
+        )];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval.evaluate_fields(&outer).expect_err(
+            "a cyclic pointer chain must error at MAX_DEPTH instead of silently truncating",
+        );
+        assert!(
+            matches!(err, TemplateError::CircularReference(_)),
+            "got {err:?}"
+        );
+    }
+}

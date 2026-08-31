@@ -1,0 +1,11 @@
+{
+  "name": "intellicrack",
+  "version": "0.1.0a1",
+  "license": "GPL-3.0-or-later",
+  "private": true,
+  "description": "Intellicrack binary analysis platform",
+  "dependencies": {
+    "jsonlint": "^1.6.3",
+    "markdownlint-cli2": "^0.23.2"
+  }
+}

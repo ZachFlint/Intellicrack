@@ -1,0 +1,21 @@
+{
+  "name": "GPTQ Fast Inference",
+  "description": "Fast inference on limited GPU memory using 4-bit quantization",
+  "provider": "gptq",
+  "model_name": "TheBloke/Llama-2-7B-Chat-GPTQ",
+  "model_path": "/models/Llama-2-7B-Chat-GPTQ",
+  "context_length": 4096,
+  "temperature": 0.5,
+  "max_tokens": 2048,
+  "tools_enabled": true,
+  "custom_params": {
+    "device": "cuda",
+    "use_triton": true,
+    "group_size": 128,
+    "desc_act": false,
+    "bits": 4,
+    "max_memory": {
+      "0": "6GB"
+    }
+  }
+}

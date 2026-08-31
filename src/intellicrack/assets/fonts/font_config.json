@@ -1,0 +1,50 @@
+{
+  "monospace_fonts": {
+    "primary": [
+      "JetBrains Mono",
+      "JetBrainsMono-Regular"
+    ],
+    "fallback": [
+      "Consolas",
+      "Source Code Pro",
+      "Courier New",
+      "Courier",
+      "DejaVu Sans Mono",
+      "Liberation Mono",
+      "Monaco",
+      "Menlo",
+      "Ubuntu Mono",
+      "Lucida Console",
+      "monospace"
+    ]
+  },
+  "ui_fonts": {
+    "primary": [
+      "Segoe UI",
+      "Roboto",
+      "Arial"
+    ],
+    "fallback": [
+      "Helvetica Neue",
+      "Helvetica",
+      "Ubuntu",
+      "Cantarell",
+      "DejaVu Sans",
+      "Liberation Sans",
+      "sans-serif"
+    ]
+  },
+  "font_sizes": {
+    "ui_default": 10,
+    "ui_small": 9,
+    "ui_large": 12,
+    "code_default": 10,
+    "code_small": 9,
+    "code_large": 11,
+    "hex_view": 11
+  },
+  "available_fonts": [
+    "JetBrainsMono-Regular.ttf",
+    "JetBrainsMono-Bold.ttf"
+  ]
+}

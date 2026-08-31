@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+"""Verify that no test files use mocks or fake data.
+
+This script enforces the REAL DATA ONLY testing principle.
+"""
+
+import argparse
+import os
+import re
+import sys
+from pathlib import Path
+
+
+# Patterns that indicate mock usage
+MOCK_PATTERNS = [
+    # Direct mock imports
+    r"from\s+unittest\.mock\s+import",
+    r"from\s+mock\s+import",
+    r"import\s+unittest\.mock",
+    r"import\s+mock",
+    # Mock creation
+    r"Mock\s*\(",
+    r"MagicMock\s*\(",
+    r"PropertyMock\s*\(",
+    r"AsyncMock\s*\(",
+    r"(?<!\w)patch\s*\(",
+    r"@patch\b",
+    # Mock configuration
+    r"return_value\s*=",
+    r"side_effect\s*=",
+    r"\.assert_called",
+    r"\.assert_not_called",
+    r"\.assert_any_call",
+    r"\.call_count",
+    # Fake data indicators
+    r"fake_[a-zA-Z_]+\s*=",
+    r"dummy_[a-zA-Z_]+\s*=",
+    r"mock_[a-zA-Z_]+\s*=",
+    r"placeholder_[a-zA-Z_]+\s*=",
+    # Common test doubles
+    r"class\s+Fake[A-Z]",
+    r"class\s+Mock[A-Z]",
+    r"class\s+Stub[A-Z]",
+    r"class\s+Dummy[A-Z]",
+    # Hardcoded test data
+    r'["\']test123["\']',
+    r'["\']example\.com["\']',
+    r'["\']foo@bar\.com["\']',
+    r'["\']placeholder["\']',
+    r'["\']todo["\']',
+    r'["\']fixme["\']',
+]
+
+# Files to exclude from checking
+EXCLUDE_FILES = [
+    "conftest.py",
+    "__init__.py",
+    "base_test.py",
+    "verify_no_mocks.py",
+]
+
+# Directories to exclude
+EXCLUDE_DIRS = [
+    "__pycache__",
+    ".pytest_cache",
+    ".claude",
+    ".pixi",
+    ".git",
+    "node_modules",
+    "vendor",
+    "target",
+    "build",
+    "dist",
+    "legacy_tests",
+]
+
+
+def find_mock_usage(file_path: Path) -> list[tuple[int, str, str]]:
+    """Find all mock usage in a file.
+
+    Args:
+        file_path: Path to the Python file to scan.
+
+    Returns:
+        list[tuple[int, str, str]]: List of (line_number, line_content, pattern_matched).
+    """
+    violations: list[tuple[int, str, str]] = []
+
+    try:
+        lines = file_path.read_text(encoding="utf-8").splitlines(keepends=True)
+    except (OSError, UnicodeDecodeError) as e:
+        print(f"Error reading {file_path}: {e}")
+        return violations
+
+    lowered_path = str(file_path).lower()
+    is_validation_script = any(marker in lowered_path for marker in ("validation", "check", "verify"))
+
+    for line_num, line in enumerate(lines, 1):
+        if line.strip().startswith("#") and any(x in line.lower() for x in ["pattern", "avoid", "check", "detect"]):
+            continue
+
+        if is_validation_script and any(x in line for x in ["in line", "not in", "check", "detect", "validate"]):
+            continue
+
+        for pattern in MOCK_PATTERNS:
+            if re.search(pattern, line, re.IGNORECASE):
+                violations.append((line_num, line.strip(), pattern))
+                break
+
+    return violations
+
+
+def scan_test_directory(test_dir: Path) -> dict[str, list[tuple[int, str, str]]]:
+    """Scan entire test directory for mock usage.
+
+    Args:
+        test_dir: Root directory to scan recursively.
+
+    Returns:
+        dict[str, list[tuple[int, str, str]]]: Mapping of file paths to violation tuples.
+    """
+    all_violations: dict[str, list[tuple[int, str, str]]] = {}
+
+    for root, dirs, files in os.walk(test_dir):
+        dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
+
+        for file in files:
+            if not file.endswith(".py"):
+                continue
+
+            if file in EXCLUDE_FILES:
+                continue
+
+            file_path = Path(root) / file
+            if violations := find_mock_usage(file_path):
+                all_violations[str(file_path)] = violations
+
+    return all_violations
+
+
+def classify_severity(_pattern: str, line: str, _file_path: str) -> str:
+    """Classify violation severity.
+
+    Args:
+        _pattern: The regex pattern that matched (reserved for future severity weighting).
+        line: The source line containing the violation.
+        _file_path: Path to the file containing the violation (reserved for future per-file rules).
+
+    Returns:
+        Severity level string: CRITICAL, HIGH, MEDIUM, or LOW.
+    """
+    critical_patterns = ["from unittest.mock import", "from mock import", "import unittest.mock", "import mock"]
+
+    high_patterns = ["Mock(", "MagicMock(", "patch(", "@patch", ".assert_called"]
+
+    if any(p in line for p in critical_patterns):
+        return "CRITICAL"
+    if any(p in line for p in high_patterns):
+        return "HIGH"
+    if "test123" in line or "placeholder" in line:
+        return "MEDIUM"
+    return "LOW"
+
+
+def print_report(violations: dict[str, list[tuple[int, str, str]]], *, summary_only: bool = False) -> int:
+    """Print violation report and return exit code.
+
+    Args:
+        violations: Mapping of file paths to lists of (line_num, line_content, pattern) tuples.
+        summary_only: If True, only print summary without detailed violations.
+
+    Returns:
+        Exit code: 0 for clean/low, 1 for high, 2 for critical violations.
+    """
+    if not violations:
+        print("OK SUCCESS: No mock usage found in tests!")
+        print("All tests appear to use REAL data as required.")
+        return 0
+
+    severity_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    critical_files: list[str] = []
+
+    for file_path, file_violations in violations.items():
+        has_critical = False
+        for _line_num, line, pattern in file_violations:
+            severity = classify_severity(pattern, line, file_path)
+            severity_counts[severity] += 1
+            if severity == "CRITICAL":
+                has_critical = True
+
+        if has_critical:
+            critical_files.append(file_path)
+
+    print("FAIL MOCK USAGE VIOLATIONS DETECTED")
+    print("=" * 80)
+    print(f"CRITICAL: {severity_counts['CRITICAL']} (Mock framework imports)")
+    print(f"HIGH:     {severity_counts['HIGH']} (Mock objects/assertions)")
+    print(f"MEDIUM:   {severity_counts['MEDIUM']} (Test data violations)")
+    print(f"LOW:      {severity_counts['LOW']} (Other patterns)")
+    print(f"\nTotal files affected: {len(violations)}")
+    print("=" * 80)
+
+    if critical_files and not summary_only:
+        print("\nCRITICAL VIOLATIONS (Mock framework usage):")
+        for file_path in critical_files[:10]:
+            file_violations = violations[file_path]
+            print(f"\n  {file_path}")
+            critical_lines = [
+                (num, line, pat) for num, line, pat in file_violations if classify_severity(pat, line, file_path) == "CRITICAL"
+            ]
+            for line_num, line, _pattern in critical_lines[:3]:
+                print(f"   Line {line_num}: {line}")
+
+    print("\nWARNING  REMEDIATION REQUIRED:")
+    print("1. Replace unittest.mock imports with real test data")
+    print("2. Use fixtures from tests/fixtures/ directory")
+    print("3. Implement real API responses for network tests")
+    print("4. Use actual binary samples for exploitation tests")
+
+    if severity_counts["CRITICAL"] > 0:
+        return 2
+    if severity_counts["HIGH"] > 0:
+        return 1
+    return 0
+
+
+def main() -> int:
+    """Main entry point.
+
+    Returns:
+        Exit code indicating scan results.
+    """
+    parser = argparse.ArgumentParser(description="Verify that tests use real data instead of mocks")
+    parser.add_argument("--summary", "-s", action="store_true", help="Show only summary, not detailed violations")
+    parser.add_argument("--ci", action="store_true", help="CI mode: exit with code 2 for critical, 1 for high violations")
+    parser.add_argument("--test-dir", type=Path, help="Override test directory path (default: tests/ + src/)")
+
+    args = parser.parse_args()
+
+    if args.test_dir:
+        scan_dirs = [args.test_dir]
+    else:
+        project_root = Path(__file__).parent.parent
+        scan_dirs = [project_root / "tests", project_root / "src"]
+
+    all_violations: dict[str, list[tuple[int, str, str]]] = {}
+    for scan_dir in scan_dirs:
+        if not scan_dir.exists():
+            print(f"Warning: Directory not found at {scan_dir}, skipping")
+            continue
+
+        print(f" Scanning {scan_dir} for mock usage...")
+        violations = scan_test_directory(scan_dir)
+        all_violations.update(violations)
+
+    if not args.summary:
+        print()
+
+    if args.ci:
+        return print_report(all_violations, summary_only=True)
+    return print_report(all_violations, summary_only=args.summary)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

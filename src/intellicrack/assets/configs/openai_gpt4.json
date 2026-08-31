@@ -1,0 +1,16 @@
+{
+  "name": "OpenAI GPT-4 (Recommended)",
+  "description": "Fast, reliable script generation and analysis using OpenAI's GPT-4",
+  "provider": "openai",
+  "model_name": "gpt-4-turbo",
+  "api_key": "YOUR_OPENAI_API_KEY",
+  "context_length": 128000,
+  "temperature": 0.7,
+  "max_tokens": 4096,
+  "tools_enabled": true,
+  "custom_params": {
+    "top_p": 0.95,
+    "frequency_penalty": 0.0,
+    "presence_penalty": 0.0
+  }
+}

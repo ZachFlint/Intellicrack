@@ -1,0 +1,79 @@
+[general]
+tools_directory = "D:/Intellicrack/tools"
+logs_directory = "D:/Intellicrack/logs"
+data_directory = "D:/Intellicrack/data"
+default_provider = "anthropic"
+confirmation_level = "destructive"
+
+[providers.anthropic]
+enabled = true
+timeout_seconds = 120
+max_retries = 3
+
+[providers.openai]
+enabled = true
+timeout_seconds = 120
+max_retries = 3
+
+[providers.google]
+enabled = true
+timeout_seconds = 120
+max_retries = 3
+
+[providers.ollama]
+enabled = true
+api_base = "http://localhost:11434"
+timeout_seconds = 300
+max_retries = 3
+
+[providers.openrouter]
+enabled = true
+api_base = "https://openrouter.ai/api/v1"
+timeout_seconds = 120
+max_retries = 3
+
+[tools.ghidra]
+enabled = true
+auto_install = true
+startup_timeout_seconds = 120
+
+[tools.x64dbg]
+enabled = true
+auto_install = true
+startup_timeout_seconds = 30
+
+[tools.frida]
+enabled = true
+auto_install = true
+startup_timeout_seconds = 10
+
+[tools.cutter]
+enabled = true
+auto_install = true
+startup_timeout_seconds = 10
+
+[sandbox]
+enabled = true
+timeout_seconds = 300
+memory_limit_mb = 2048
+network_enabled = false
+
+[ui]
+theme = "dark"
+font_family = "JetBrains Mono"
+font_size = 11
+show_tool_calls = true
+
+[session]
+auto_save = true
+save_interval_seconds = 300
+retention_days = 7
+
+[log]
+level = "INFO"
+file_enabled = true
+console_enabled = true
+max_file_size_mb = 10
+backup_count = 5
+retention_days = 14
+json_file = true

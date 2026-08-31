@@ -1,0 +1,22 @@
+{
+  "name": "PyTorch Research Setup",
+  "description": "Custom security models and research applications",
+  "provider": "pytorch",
+  "model_name": "microsoft/DialoGPT-medium",
+  "model_path": "/models/security-tuned-model",
+  "context_length": 4096,
+  "temperature": 0.6,
+  "max_tokens": 2048,
+  "tools_enabled": true,
+  "custom_params": {
+    "device": "cuda",
+    "torch_dtype": "float16",
+    "load_in_8bit": true,
+    "trust_remote_code": false,
+    "use_cache": true,
+    "pad_token_id": 50256,
+    "do_sample": true,
+    "top_p": 0.92,
+    "repetition_penalty": 1.1
+  }
+}

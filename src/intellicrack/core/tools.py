@@ -1,0 +1,758 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
+"""Tool registry for managing tool bridges.
+
+This module provides a registry for tool bridges that handles
+initialization, availability checking, and tool schema generation
+for LLM function calling.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import importlib
+import inspect
+import time
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, cast
+
+from intellicrack.bridges.base import TOOL_CAPABILITY_MAP
+from intellicrack.bridges.cutter import CutterBridge
+from intellicrack.bridges.frida_bridge import FridaBridge
+from intellicrack.bridges.ghidra import GhidraBridge
+from intellicrack.bridges.hex_editor import HexEditorBridge
+from intellicrack.bridges.installer import ToolInstaller
+from intellicrack.bridges.process import ProcessBridge
+from intellicrack.bridges.sandbox_bridge import SandboxBridge
+from intellicrack.bridges.x64dbg import X64DbgBridge
+from intellicrack.core.logging import get_logger, log_tool_call
+from intellicrack.core.types import ToolDefinition, ToolError, ToolName
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from intellicrack.bridges.base import ToolBridgeBase
+    from intellicrack.core.session import Session
+
+
+_logger = get_logger(__name__)
+
+_ERR_BRIDGE_NA = "bridge not available"
+_ERR_UNKNOWN_TOOL = "unknown tool"
+_ERR_NOT_REGISTERED = "not registered"
+_ERR_UNKNOWN_FUNC = "unknown function"
+_ERR_NOT_CALLABLE = "not callable"
+_ERR_CALL_FAILED = "call failed"
+_ERR_MISSING_CAPABILITY = "missing capability"
+_ERR_INVALID_HEX_ARGUMENT = "invalid hex string argument"
+
+_BridgeMethod = Callable[..., Any]
+
+_LOCAL_INIT_TOOLS: frozenset[ToolName] = frozenset(
+    {
+        ToolName.PROCESS,
+        ToolName.FRIDA,
+        ToolName.SANDBOX,
+        ToolName.HEX_EDITOR,
+        ToolName.CUTTER,
+    },
+)
+
+
+def _is_bytes_annotation(annotation: object) -> bool:
+    """Determine whether a parameter annotation requires ``bytes``.
+
+    Matches the bare ``bytes`` annotation as well as ``bytes | None``
+    (or ``Optional[bytes]``) unions used by optional bytes parameters.
+    Annotations that also accept ``str`` (e.g. ``bytes | str``) are
+    intentionally excluded: those methods already decode hex strings
+    internally, so re-encoding them here would be redundant and would
+    discard the method's own string-handling semantics (such as
+    wildcard patterns).
+
+    Args:
+        annotation: The ``inspect.Parameter.annotation`` value to inspect.
+
+    Returns:
+        bool: True if the annotation is ``bytes`` or a union of
+        ``bytes`` with only ``None``.
+    """
+    if annotation is bytes:
+        return True
+    annotation_str = str(annotation)
+    tokens = {token.strip() for token in annotation_str.split("|")}
+    return "bytes" in tokens and tokens <= {"bytes", "None"}
+
+
+def _coerce_hex_string_arguments(method: _BridgeMethod, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Decode hex-string arguments into ``bytes`` for byte-typed parameters.
+
+    Tool definitions expose binary payloads to LLM callers as JSON
+    strings containing hex-encoded bytes (JSON has no native binary
+    type). The underlying bridge methods, however, declare those
+    parameters as ``bytes`` so GUI callers can pass real byte objects
+    directly. This inspects ``method``'s real signature and decodes any
+    argument bound to a ``bytes``-annotated parameter from a hex string
+    before dispatch, leaving all other arguments untouched.
+
+    Args:
+        method: The resolved bridge method about to be invoked.
+        arguments: Raw arguments supplied by the tool caller.
+
+    Returns:
+        dict[str, Any]: A copy of ``arguments`` with hex-string values
+        for ``bytes``-typed parameters decoded into ``bytes``.
+
+    Raises:
+        ToolError: If a value bound to a ``bytes``-typed parameter is a
+            string that is not valid hex.
+    """
+    try:
+        signature = inspect.signature(method)
+    except (TypeError, ValueError):
+        return arguments
+
+    coerced = dict(arguments)
+    for name, value in arguments.items():
+        parameter = signature.parameters.get(name)
+        if parameter is None or not isinstance(value, str):
+            continue
+        if not _is_bytes_annotation(parameter.annotation):
+            continue
+        try:
+            coerced[name] = bytes.fromhex(value.replace(" ", ""))
+        except ValueError as exc:
+            raise ToolError(_ERR_INVALID_HEX_ARGUMENT) from exc
+
+    return coerced
+
+
+@dataclass
+class ToolStatus:
+    """Status of a registered tool.
+
+    Attributes:
+        name: Identifier of the tool.
+        available: Whether the tool is available on the system.
+        connected: Whether the tool is currently connected.
+        version: Tool version if known.
+        path: Installation path if known.
+        error: Last error if any.
+    """
+
+    name: ToolName
+    available: bool
+    connected: bool
+    version: str | None = None
+    path: Path | None = None
+    error: str | None = None
+
+
+class ToolRegistry:
+    """Registry for tool bridges.
+
+    Manages initialization, availability, and provides unified access
+    to all tool bridges.
+    """
+
+    def __init__(self, tools_dir: Path) -> None:
+        """Initialize the ToolRegistry with a tools directory.
+
+        Args:
+            tools_dir: Directory for tool installations.
+        """
+        self._bridges: dict[ToolName, ToolBridgeBase] = {}
+        self._installer = ToolInstaller(tools_dir)
+        self._tools_dir = tools_dir
+        self._initialized = False
+        self._session: Session | None = None
+        _logger.debug("tool_registry_init", tools_dir=str(tools_dir))
+
+    def set_session(self, session: Session | None) -> None:
+        """Attach (or detach) the active session for every registered bridge.
+
+        Propagates the supplied session to every bridge so each bridge's
+        lifecycle transitions (connect, attach, error, detach) flow into
+        the session's ``tool_states`` registry. Newly registered bridges
+        added via :meth:`register_bridge` inherit the current session
+        automatically.
+
+        Args:
+            session: The active ``Session`` to publish state into, or
+                ``None`` to detach all bridges from any previously
+                attached session.
+        """
+        self._session = session
+        for bridge in self._bridges.values():
+            bridge.set_session(session)
+        _logger.debug(
+            "tool_registry_session_set",
+            attached=session is not None,
+            bridge_count=len(self._bridges),
+        )
+
+    @property
+    def tools_directory(self) -> Path:
+        """The tools directory.
+
+        Returns:
+            Path: Path to tools directory.
+        """
+        return self._tools_dir
+
+    def _instantiate_bridge(
+        self,
+        *,
+        tool_name: ToolName,
+        module_path: str,
+        class_name: str,
+    ) -> None:
+        """Import and instantiate a bridge class, registering it in the registry.
+
+        Any exception raised while importing the module, resolving the class,
+        instantiating it, or wiring the session propagates so the caller can
+        decide how to log and recover.
+
+        Args:
+            tool_name: Registry key for the bridge.
+            module_path: Dotted module path containing the bridge class.
+            class_name: Bridge class name within ``module_path``.
+        """
+        mod = importlib.import_module(module_path)
+        cls = getattr(mod, class_name)
+        bridge_instance = cls()
+        self._bridges[tool_name] = bridge_instance
+        if self._session is not None:
+            bridge_instance.set_session(self._session)
+
+    async def initialize(self) -> None:
+        """Initialize all tool bridges.
+
+        Creates bridge instances for all supported tools.
+        """
+        _logger.debug("tool_registry_initialize_entry", already_initialized=self._initialized)
+        if self._initialized:
+            _logger.debug("tool_registry_initialize_early_return", reason="already_initialized")
+            return
+
+        bridge_specs: list[tuple[ToolName, str, str]] = [
+            (ToolName.PROCESS, "intellicrack.bridges.process", "ProcessBridge"),
+            (ToolName.FRIDA, "intellicrack.bridges.frida_bridge", "FridaBridge"),
+            (ToolName.GHIDRA, "intellicrack.bridges.ghidra", "GhidraBridge"),
+            (ToolName.CUTTER, "intellicrack.bridges.cutter", "CutterBridge"),
+            (ToolName.X64DBG, "intellicrack.bridges.x64dbg", "X64DbgBridge"),
+            (ToolName.SANDBOX, "intellicrack.bridges.sandbox_bridge", "SandboxBridge"),
+            (ToolName.HEX_EDITOR, "intellicrack.bridges.hex_editor", "HexEditorBridge"),
+        ]
+        for tool_name, module_path, class_name in bridge_specs:
+            try:
+                self._instantiate_bridge(tool_name=tool_name, module_path=module_path, class_name=class_name)
+            except Exception:
+                _logger.exception("bridge_import_failed", bridge=tool_name.value)
+        _logger.debug(
+            "bridges_instantiated",
+            bridge_names=[n.value for n in self._bridges],
+        )
+
+        for tool_name in _LOCAL_INIT_TOOLS:
+            if tool_name in self._bridges:
+                try:
+                    await self._bridges[tool_name].initialize()
+                except Exception:
+                    _logger.exception("bridge_init_failed", bridge=tool_name.value)
+
+        _logger.info("tool_registry_initialized", bridge_count=len(self._bridges))
+        self._initialized = True
+
+    async def _initialize_tool_bridge(
+        self,
+        *,
+        name: ToolName,
+        bridge: ToolBridgeBase,
+        port: int | None,
+    ) -> None:
+        """Ensure the tool's binary is available and initialize its bridge.
+
+        Propagates ``OSError`` from the installer when the tool cannot be
+        located or staged, ``RuntimeError`` when bridge initialization reports
+        a runtime failure, and ``ToolError`` when the bridge rejects the
+        initialization request.
+
+        Args:
+            name: Tool identifier; used to choose Ghidra-specific wiring.
+            bridge: The bridge instance previously registered for ``name``.
+            port: Network port forwarded to the Ghidra bridge when set.
+        """
+        tool_path = await self._installer.ensure_tool(name)
+        if name == ToolName.GHIDRA and port is not None:
+            ghidra = cast("GhidraBridge", bridge)
+            ghidra.set_port(port)
+            await ghidra.initialize(tool_path)
+        else:
+            await bridge.initialize(tool_path)
+        _logger.info("tool_initialized", tool_name=name.value, tool_path=str(tool_path))
+
+    async def initialize_tool(
+        self,
+        name: ToolName,
+        port: int | None = None,
+    ) -> bool:
+        """Initialize a specific tool.
+
+        Finds or installs the tool and initializes its bridge.
+
+        Args:
+            name: Tool to initialize.
+            port: Network port for bridge communication if applicable.
+
+        Returns:
+            bool: True if initialization succeeded.
+        """
+        if name not in self._bridges:
+            _logger.warning("unknown_tool", tool_name=name)
+            return False
+
+        bridge = self._bridges[name]
+
+        if name in _LOCAL_INIT_TOOLS:
+            if not await bridge.is_available():
+                await bridge.initialize()
+            return await bridge.is_available()
+
+        success = False
+        try:
+            await self._initialize_tool_bridge(name=name, bridge=bridge, port=port)
+            success = True
+        except (OSError, RuntimeError, ToolError) as exc:
+            _logger.warning("tool_initialization_failed", tool_name=name.value, error=str(exc))
+
+        return success
+
+    async def shutdown(self) -> None:
+        """Shutdown all tool bridges.
+
+        Clears ``self._bridges`` after every bridge has been shut down so a
+        subsequent call to :meth:`initialize` rebuilds the registry from
+        scratch instead of reusing closed bridge instances. Without this,
+        callers observing ``_bridges`` after shutdown would see references to
+        bridges whose underlying tool processes have been terminated.
+        """
+        bridge_count = len(self._bridges)
+        for name, bridge in self._bridges.items():
+            try:
+                await bridge.shutdown()
+                _logger.info("bridge_shutdown", bridge_name=name.value)
+            except (OSError, RuntimeError, ToolError) as e:
+                _logger.warning("bridge_shutdown_error", bridge_name=name.value, error=str(e))
+
+        self._bridges.clear()
+        self._initialized = False
+        _logger.info("tool_registry_shutdown", bridge_count=bridge_count)
+
+    def get(self, name: ToolName) -> ToolBridgeBase | None:
+        """Get a tool bridge by name.
+
+        Args:
+            name: Tool name.
+
+        Returns:
+            ToolBridgeBase | None: Tool bridge or None if not registered.
+        """
+        bridge = self._bridges.get(name)
+        if bridge is not None:
+            _logger.debug("bridge_cache_hit", tool_name=name.value)
+        else:
+            _logger.debug("bridge_cache_miss", tool_name=name.value)
+        return bridge
+
+    def register_bridge(self, name: ToolName, bridge: ToolBridgeBase) -> None:
+        """Register or replace a tool bridge.
+
+        Allows callers to plug in a pre-built bridge supplied by an embedding
+        application or a test harness without going through :meth:`initialize`.
+        Replaces any existing bridge registered under the same name and logs
+        the swap so the change is auditable.
+
+        Args:
+            name: Tool name to register the bridge under.
+            bridge: Bridge instance to register.
+        """
+        previous = self._bridges.get(name)
+        self._bridges[name] = bridge
+        if self._session is not None:
+            bridge.set_session(self._session)
+        _logger.info(
+            "bridge_registered",
+            tool_name=name.value,
+            replaced_existing=previous is not None,
+        )
+
+    def get_process_bridge(self) -> ProcessBridge:
+        """Get the process control bridge.
+
+        Returns:
+            ProcessBridge: ProcessBridge instance.
+
+        Raises:
+            ToolError: If bridge not available.
+        """
+        bridge = self._bridges.get(ToolName.PROCESS)
+        if bridge is None or not isinstance(bridge, ProcessBridge):
+            raise ToolError(_ERR_BRIDGE_NA)
+        _logger.debug("get_process_bridge_success", bridge_type=type(bridge).__name__)
+        return bridge
+
+    def get_frida_bridge(self) -> FridaBridge:
+        """Get the Frida instrumentation bridge.
+
+        Returns:
+            FridaBridge: FridaBridge instance.
+
+        Raises:
+            ToolError: If bridge not available.
+        """
+        bridge = self._bridges.get(ToolName.FRIDA)
+        if bridge is None or not isinstance(bridge, FridaBridge):
+            raise ToolError(_ERR_BRIDGE_NA)
+        _logger.debug("get_frida_bridge_success", bridge_type=type(bridge).__name__)
+        return bridge
+
+    def get_ghidra_bridge(self) -> GhidraBridge:
+        """Get the Ghidra analysis bridge.
+
+        Returns:
+            GhidraBridge: GhidraBridge instance.
+
+        Raises:
+            ToolError: If bridge not available.
+        """
+        bridge = self._bridges.get(ToolName.GHIDRA)
+        if bridge is None or not isinstance(bridge, GhidraBridge):
+            raise ToolError(_ERR_BRIDGE_NA)
+        _logger.debug("get_ghidra_bridge_success", bridge_type=type(bridge).__name__)
+        return bridge
+
+    def get_cutter_bridge(self) -> CutterBridge:
+        """Get the Cutter/Rizin analysis bridge.
+
+        Returns:
+            CutterBridge: CutterBridge instance.
+
+        Raises:
+            ToolError: If bridge not available.
+        """
+        bridge = self._bridges.get(ToolName.CUTTER)
+        if bridge is None or not isinstance(bridge, CutterBridge):
+            raise ToolError(_ERR_BRIDGE_NA)
+        _logger.debug("get_cutter_bridge_success", bridge_type=type(bridge).__name__)
+        return bridge
+
+    def get_x64dbg_bridge(self) -> X64DbgBridge:
+        """Get the x64dbg debugger bridge.
+
+        Returns:
+            X64DbgBridge: X64DbgBridge instance.
+
+        Raises:
+            ToolError: If bridge not available.
+        """
+        bridge = self._bridges.get(ToolName.X64DBG)
+        if bridge is None or not isinstance(bridge, X64DbgBridge):
+            raise ToolError(_ERR_BRIDGE_NA)
+        _logger.debug("get_x64dbg_bridge_success", bridge_type=type(bridge).__name__)
+        return bridge
+
+    def get_sandbox_bridge(self) -> SandboxBridge:
+        """Get the sandbox bridge.
+
+        Returns:
+            SandboxBridge: SandboxBridge instance.
+
+        Raises:
+            ToolError: If bridge not available.
+        """
+        bridge = self._bridges.get(ToolName.SANDBOX)
+        if bridge is None or not isinstance(bridge, SandboxBridge):
+            raise ToolError(_ERR_BRIDGE_NA)
+        _logger.debug("get_sandbox_bridge_success", bridge_type=type(bridge).__name__)
+        return bridge
+
+    def get_hex_editor_bridge(self) -> HexEditorBridge:
+        """Get the hex editor bridge.
+
+        Returns:
+            HexEditorBridge: HexEditorBridge instance.
+
+        Raises:
+            ToolError: If bridge not available.
+        """
+        bridge = self._bridges.get(ToolName.HEX_EDITOR)
+        if bridge is None or not isinstance(bridge, HexEditorBridge):
+            raise ToolError(_ERR_BRIDGE_NA)
+        _logger.debug("get_hex_editor_bridge_success", bridge_type=type(bridge).__name__)
+        return bridge
+
+    async def _build_tool_status(
+        self,
+        *,
+        name: ToolName,
+        bridge: ToolBridgeBase,
+    ) -> ToolStatus:
+        """Probe a bridge and assemble its :class:`ToolStatus` snapshot.
+
+        Propagates ``OSError``, ``RuntimeError``, or :class:`ToolError` from
+        the availability probe so the caller can convert those failures into
+        a :class:`ToolStatus` with the error captured.
+
+        Args:
+            name: Tool name being queried.
+            bridge: The bridge instance registered for ``name``.
+
+        Returns:
+            ToolStatus: Status snapshot including availability, connection
+            state, resolved path (for installable tools), and detected version.
+        """
+        available = await bridge.is_available()
+        state = bridge.state
+
+        version = None
+        path = None
+
+        if name not in _LOCAL_INIT_TOOLS:
+            try:
+                path = await self._installer.find_tool(name)
+                if path is not None:
+                    version = await self._installer.get_version(name, path)
+            except (OSError, RuntimeError, ToolError) as e:
+                _logger.exception(
+                    "tool_path_version_lookup_failed",
+                    tool_name=name.value,
+                    error_str=str(e),
+                )
+
+        return ToolStatus(
+            name=name,
+            available=available,
+            connected=state.connected,
+            version=str(version) if version is not None else None,
+            path=path,
+            error=state.last_error,
+        )
+
+    async def get_status(self, name: ToolName) -> ToolStatus:
+        """Get status of a tool.
+
+        Args:
+            name: Tool name.
+
+        Returns:
+            ToolStatus: ToolStatus instance.
+        """
+        _logger.debug("get_status_entry", tool_name=name.value)
+        bridge = self._bridges.get(name)
+        if bridge is None:
+            _logger.debug("get_status_not_registered", tool_name=name.value)
+            return ToolStatus(
+                name=name,
+                available=False,
+                connected=False,
+                error="Tool not registered",
+            )
+
+        try:
+            return await self._build_tool_status(name=name, bridge=bridge)
+
+        except (OSError, RuntimeError, ToolError) as e:
+            _logger.warning("tool_status_check_failed", tool_name=name.value, error=str(e))
+            return ToolStatus(
+                name=name,
+                available=False,
+                connected=False,
+                error=str(e),
+            )
+
+    async def get_all_status(self) -> list[ToolStatus]:
+        """Get status of all tools.
+
+        Returns:
+            list[ToolStatus]: List of ToolStatus instances.
+        """
+        _logger.debug("get_all_status_entry", bridge_count=len(self._bridges))
+        tasks = [self.get_status(name) for name in self._bridges]
+        results: list[ToolStatus] = list(await asyncio.gather(*tasks))
+        _logger.debug("get_all_status_complete", status_count=len(results))
+        return results
+
+    def get_tool_definitions(self) -> list[ToolDefinition]:
+        """Get tool definitions for LLM function calling.
+
+        Returns:
+            list[ToolDefinition]: List of ToolDefinition instances.
+        """
+        _logger.debug("get_tool_definitions_entry", bridge_count=len(self._bridges))
+        definitions: list[ToolDefinition] = []
+
+        for bridge in self._bridges.values():
+            try:
+                definitions.append(bridge.tool_definition)
+            except (AttributeError, RuntimeError, ToolError) as e:
+                _logger.warning("tool_definition_retrieval_failed", error=str(e))
+
+        function_count = sum(len(definition.functions) for definition in definitions)
+        _logger.debug(
+            "get_tool_definitions_complete",
+            definition_count=len(definitions),
+            function_count=function_count,
+        )
+        return definitions
+
+    def get_available_tools(self) -> list[ToolName]:
+        """Get list of available tools.
+
+        Returns:
+            list[ToolName]: List of available tool names.
+        """
+        tools = list(self._bridges.keys())
+        _logger.debug(
+            "get_available_tools",
+            tool_count=len(tools),
+            tool_names=[t.value for t in tools],
+        )
+        return tools
+
+    async def execute_tool_call(
+        self,
+        tool_name: str,
+        function_name: str,
+        arguments: dict[str, Any],
+    ) -> object:
+        """Execute a tool function call.
+
+        Args:
+            tool_name: Name of the tool (e.g., "ghidra", "frida").
+            function_name: Function to call (e.g., "decompile", "hook_function").
+            arguments: Function arguments.
+
+        Returns:
+            object: Result of the function call.
+
+        Raises:
+            ToolError: If execution fails.
+        """
+        _logger.debug(
+            "execute_tool_call_entry",
+            tool_name=tool_name,
+            function_name=function_name,
+        )
+        try:
+            tool_enum = ToolName(tool_name.lower())
+        except ValueError:
+            _logger.exception("execute_tool_call_invalid_name", tool_name=tool_name)
+            raise ToolError(_ERR_UNKNOWN_TOOL) from None
+
+        _logger.debug("execute_tool_call_resolved", tool_enum=tool_enum.value)
+        bridge = self._bridges.get(tool_enum)
+        if bridge is None:
+            _logger.debug("execute_tool_call_not_registered", tool_name=tool_enum.value)
+            raise ToolError(_ERR_NOT_REGISTERED)
+
+        attr_name = function_name.split(".", maxsplit=1)[-1] if "." in function_name else function_name
+        method = getattr(bridge, attr_name, None)
+        if method is None:
+            _logger.debug(
+                "execute_tool_call_unknown_func",
+                tool_name=tool_enum.value,
+                function_name=function_name,
+                attr_name=attr_name,
+            )
+            raise ToolError(_ERR_UNKNOWN_FUNC)
+
+        if not callable(method):
+            _logger.debug(
+                "execute_tool_call_not_callable",
+                tool_name=tool_enum.value,
+                function_name=function_name,
+            )
+            raise ToolError(_ERR_NOT_CALLABLE)
+
+        caps = getattr(bridge, "capabilities", None)
+        required_capability = TOOL_CAPABILITY_MAP.get(function_name) or TOOL_CAPABILITY_MAP.get(attr_name)
+        if caps is not None and required_capability is not None:
+            has_cap = caps.has_capability(required_capability)
+            _logger.debug(
+                "execute_tool_call_capability_check",
+                tool_name=tool_enum.value,
+                function_name=function_name,
+                capability=required_capability,
+                has_capability=has_cap,
+            )
+            if not has_cap:
+                _logger.warning(
+                    "execute_tool_call_missing_capability",
+                    tool_name=tool_enum.value,
+                    function_name=function_name,
+                    capability=required_capability,
+                )
+                missing_message = f"{_ERR_MISSING_CAPABILITY}: {tool_enum.value} lacks supports_{required_capability}"
+                raise ToolError(missing_message)
+
+        dispatch_arguments = _coerce_hex_string_arguments(method, arguments)
+
+        start = time.monotonic()
+        result: object = None
+        success = True
+        try:
+            if inspect.iscoroutinefunction(method):
+                result = await method(**dispatch_arguments)
+            else:
+                result = await asyncio.to_thread(method, **dispatch_arguments)
+        except (OSError, RuntimeError, ValueError, TypeError, ToolError, KeyError, AttributeError) as e:
+            success = False
+            _logger.warning("tool_call_failed", tool_name=tool_name, function_name=function_name, error=str(e))
+            msg = f"{_ERR_CALL_FAILED}: {e}"
+            raise ToolError(msg) from e
+        finally:
+            elapsed_ms = (time.monotonic() - start) * 1000
+            log_tool_call(
+                tool_name=tool_name,
+                function_name=function_name,
+                arguments=arguments,
+                duration_ms=elapsed_ms,
+                success=success,
+            )
+
+        if success:
+            state = getattr(bridge, "state", None)
+            if state is not None and hasattr(state, "clear_error"):
+                state.clear_error()
+
+        return result
+
+    async def ensure_tool_ready(self, name: ToolName) -> bool:
+        """Ensure a tool is ready for use.
+
+        Initializes the tool if not already initialized.
+
+        Args:
+            name: Tool name.
+
+        Returns:
+            bool: True if tool is ready.
+        """
+        _logger.debug("ensure_tool_ready_entry", tool_name=name.value)
+        bridge = self._bridges.get(name)
+        if bridge is None:
+            _logger.debug("ensure_tool_ready_not_found", tool_name=name.value)
+            return False
+
+        if await bridge.is_available():
+            _logger.debug("ensure_tool_ready_already_available", tool_name=name.value)
+            return True
+
+        _logger.debug("ensure_tool_ready_initializing", tool_name=name.value)
+        return await self.initialize_tool(name)

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "intellicrack-agents",
+  "version": "1.0.0",
+  "description": "Workspace-scoped Intellicrack agents."
+}

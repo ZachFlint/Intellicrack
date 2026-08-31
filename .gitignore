@@ -1,0 +1,549 @@
+# Intellicrack .gitignore
+# Comprehensive ignore file for the Intellicrack project
+
+# ==============================================================================
+# PYTHON
+# ==============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+# Exception for Windows application manifest required for build
+!intellicrack-launcher/intellicrack.exe.manifest
+*.spec
+# Exceptions for tracked PyInstaller specs: build inputs, not artifacts.
+!/src/hexbench/hexbench.spec
+!/packaging/launcher/launcher.spec
+!/packaging/launcher/hexbench_launcher.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+coverage_report.txt
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django/Flask stuff
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+instance/
+.webassets-cache
+
+# Scrapy stuff
+.scrapy
+
+# PyBuilder
+.pybuilder/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+.pdm-python
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ==============================================================================
+# VIRTUAL ENVIRONMENTS (ALL VARIATIONS)
+# ==============================================================================
+venv*/
+.venv/
+.venv*/
+virtualenv/
+virtualenv*/
+env/
+.env/
+ENV/
+pythonenv*/
+pyenv*/
+.pyenv*/
+*_venv/
+*_env/
+.conda/
+conda-env/
+
+# ==============================================================================
+# UV PACKAGE MANAGER
+# ==============================================================================
+.uv/
+uv-cache/
+
+# ==============================================================================
+# INTELLICRACK SPECIFIC
+# ==============================================================================
+# Project-local runtime config
+.intellicrack/
+
+# Generated files
+*.patched
+*.backup
+*.generated.py
+*.generated.js
+
+# ML Models and artifacts
+*.bin
+*.onnx
+*.gguf
+*.safetensors
+*.pth
+*.h5
+*.joblib
+*.pkl
+*.pickle
+
+# Capture files
+*.pcap
+*.pcapng
+*.cap
+
+# Signature files
+*.signature
+*.yara
+*.rules
+
+# ==============================================================================
+# LOGS AND OUTPUT FILES
+# ==============================================================================
+*.log
+logs/
+output/
+*.log.*
+
+# ==============================================================================
+# SECURITY AND SECRETS
+# ==============================================================================
+# API keys and secrets
+*.key
+*.pem
+*.crt
+*.pfx
+*.api_key
+api_keys.txt
+secrets/
+credentials/
+!src/intellicrack/credentials/
+.secrets/
+
+# Environment files
+.env
+.env.*
+!.env.example
+*.env
+
+# ==============================================================================
+# AI/LLM TOOLS AND CONFIGS
+# ==============================================================================
+# Claude and AI assistants
+ClaudeCode.ps1
+claude*.ps1
+Claude*.ps1
+*claude*.ps1
+
+# Other AI tools
+gemini*.ps1
+Gemini*.ps1
+*gemini*.ps1
+codex*.ps1
+Codex*.ps1
+*codex*.ps1
+GeminiCLI.ps1
+Codex.ps1
+QWEN.ps1
+
+# GitHub Copilot config
+.github/copilot-instructions.md
+
+# AI cache and configs
+.llm_cache/
+llm_configs/
+conversation_history/
+.serena/
+.zen*/
+.zen_venv/
+.mcp.json
+
+# AI configuration files
+gemini_cli_config.json
+GEMINI.md
+QWEN.md
+
+# ==============================================================================
+# EDITORS AND IDEs
+# ==============================================================================
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-*
+
+# Other editors
+*.swp
+*.swo
+.project
+.pydevproject
+.settings/
+*.iml
+
+# ==============================================================================
+# OPERATING SYSTEMS
+# ==============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+Icon[!a-zA-Z0-9_-]
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+.nfs*
+
+# ==============================================================================
+# LINTING AND FORMATTING
+# ==============================================================================
+# Ruff
+.ruff_cache/
+ruff.toml
+
+# Complexipy
+.complexipy_cache/
+
+# Pylint
+.pylint.d/
+.pylintrc
+
+# Flake8
+.flake8_cache/
+.flake8
+
+# mypy
+mypy.ini
+
+# ==============================================================================
+# TOOLS AND BINARIES
+# ==============================================================================
+# Ghidra installation
+tools/ghidra/
+tools/ghidra_*.zip
+tools/ghidra_temp/
+# radare2 installation
+tools/radare2/
+tools/radare2*.zip
+tools/radare2_temp/
+# QEMU installation
+tools/qemu/
+tools/qemu-w64-setup-*.exe
+*.dll
+*.exe
+!tools/AdobeInjector/AdobeInjector.exe
+!tools/AdobeInjector/wintrust.dll
+*.ini
+Qt*.dll
+vcruntime*.dll
+# Vendored ETW assemblies the in-guest monitors load; see vendor/traceevent/PROVENANCE.md
+!vendor/traceevent/**/*.dll
+
+# Java tools
+*.jar
+
+# ==============================================================================
+# PACKAGE MANAGERS AND DEPENDENCIES
+# ==============================================================================
+# Node.js / Yarn
+node_modules/
+package-lock.json
+yarn.lock
+.yarn/
+
+# UV package manager
+uv.lock
+
+# ==============================================================================
+# TEMPORARY AND CACHE FILES
+# ==============================================================================
+temp/
+temp_venv/
+cache/
+.cache/
+
+# Backup files
+backups/
+backup/
+*.backup/
+
+# Archive files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# ==============================================================================
+# PROFILING AND PERFORMANCE
+# ==============================================================================
+*.prof
+*.lprof
+.benchmarks/
+
+# ==============================================================================
+# DATABASE FILES
+# ==============================================================================
+*.db
+*.sqlite
+*.sqlite3
+
+# ==============================================================================
+# SPECIFIC FILES TO IGNORE
+# ==============================================================================
+# Screenshots and images (except documentation)
+*.png
+*.jpg
+*.jpeg
+*.gif
+!src/intellicrack/assets/**/*.png
+!src/intellicrack/assets/**/*.jpg
+!src/intellicrack/assets/**/*.jpeg
+!src/intellicrack/assets/**/*.gif
+!packaging/wizard/**/*.png
+
+# Root-level Screenshots directory (ad-hoc captures, shortcuts, not part of the project)
+/Screenshots/
+
+# Docker and containerization
+.docker/
+docker-compose.override.yml
+
+# Git artifacts
+*.orig
+*.rej
+
+# JSON results and reports
+*_integration_test_report*.json
+*_scan_results*.json
+
+# ==============================================================================
+# ROOT DIRECTORY FILES
+# ==============================================================================
+# Exclude PowerShell scripts in root
+/*.ps1
+
+# Exclude batch files except essential ones
+/*.bat
+!REMOVE_NUL.cmd
+
+# Lock files
+*.lock
+!requirements.lock
+!pixi.lock
+!**/Cargo.lock
+
+# Linting and testing reports
+reports/
+bandit-report.json
+rollout-*.json
+.aider*
+
+# Host-native pass Microsoft symbol cache (_NT_SYMBOL_PATH)
+.symbols/
+
+# ==============================================================================
+# LARGE FILES
+# ==============================================================================
+# Large memory dumps
+*.dump
+*.mem
+
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+# ==============================================================================
+# RUST BUILD ARTIFACTS
+# ==============================================================================
+intellicrack-launcher/target/
+target/
+
+# ==============================================================================
+# X64DBG PLUGIN BUILD OUTPUT
+# ==============================================================================
+# CMake/MSBuild build trees and compiled binaries for the x64dbg bridge
+# plugin. These are regenerable build output produced from the committed
+# C++ source and SDK; CI builds them from source so they are never tracked.
+src/x64dbg-plugin/build/
+src/x64dbg-plugin/build_*/
+src/x64dbg-plugin/bin/
+tools/x64dbg/release/x64/plugins/intellicrack_bridge_x64.dp64
+tools/x64dbg/release/x32/plugins/intellicrack_bridge_x32.dp32
+
+# ==============================================================================
+# REMOVED TEMPLATE DIRECTORIES - DO NOT RECREATE
+# ==============================================================================
+# These directories were removed as part of template cleanup
+# Templates were constraining AI functionality - removed in favor of dynamic generation
+intellicrack/ai/templates/
+intellicrack/utils/templates/
+
+.gemini/
+gha-creds-*.json
+
+# Claude Code /batch worktrees (ephemeral, never tracked)
+.claude/worktrees/
+
+# Personal CLI launcher (per-user shortcut + tool launcher config, not part of the project)
+/CLI Launcher.lnk
+/CLI Coding/
+
+# Shortcut created by `just build-hexbench` (absolute path, machine-specific)
+/Hexbench.lnk
+
+# Auto-regenerated knowledge-graph artifacts (never tracked)
+IntellicrackKnowledgeGraph.html
+scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot
+scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml
+
+# Auto-regenerated project structure artifacts (never tracked)
+IntellicrackStructure.hta
+IntellicrackStructure.txt
+# Docker sandbox test artifacts (regenerated on every run, never tracked)
+reports/tests/
+
+# Intel oneAPI installer debris (must never be staged into the repo root)
+/basekit*
+/intel_page.html
+/intel.oneapi.*.dot
+/intel.sessionmanifest.*.json
+
+# Personal Antigravity CLI cache (per-user, not part of the project)
+/.antigravitycli/
+
+# Manual ad-hoc git worktrees parked under the repo root (never tracked)
+/worktrees/
+
+# Codex configuration and workspace (never tracked)
+.codex/
+
+# Background-terminal capture logs (runtime scratch, never tracked)
+terminals/
+
+# MCP server tool-definition schema dumps (regenerable cache, never tracked)
+mcps/
+
+# Local prompt scratch (orchestration prompts, never tracked)
+prompts/
+
+# Audit workspace (agent reports, remediation trackers, scratch JSON - local only)
+/audit/
+
+# Ad-hoc captured diff fragments (regenerable scratch, never tracked)
+/diff_ghidra.txt
+
+# Runtime data directory (caches, databases, user scripts)
+/data/
+
+prompts.md

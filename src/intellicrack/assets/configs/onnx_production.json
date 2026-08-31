@@ -1,0 +1,25 @@
+{
+  "name": "ONNX Production",
+  "description": "Optimized inference for production deployment",
+  "provider": "onnx",
+  "model_name": "security-analyzer-onnx",
+  "model_path": "/models/security_model.onnx",
+  "context_length": 2048,
+  "temperature": 0.4,
+  "max_tokens": 1024,
+  "tools_enabled": true,
+  "custom_params": {
+    "providers": [
+      "CUDAExecutionProvider",
+      "CPUExecutionProvider"
+    ],
+    "provider_options": {
+      "CUDAExecutionProvider": {
+        "device_id": 0,
+        "arena_extend_strategy": "kNextPowerOfTwo"
+      }
+    },
+    "optimize": true,
+    "graph_optimization_level": "all"
+  }
+}

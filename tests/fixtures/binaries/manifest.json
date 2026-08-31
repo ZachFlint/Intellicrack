@@ -1,0 +1,18 @@
+{
+  "fixtures": [
+    {
+      "filename": "true_x86_64",
+      "format": "ELF",
+      "arch": "x86-64",
+      "sha256": "4b5a5694e3c0e8b1d58fc52ac6ef076e55e72c2f53195243ac86d5ff517cc2f6",
+      "source": "Copied from /bin/true of the local Ubuntu WSL distribution (GNU coreutils, dynamically linked PIE ELF, stripped). Authentic compiled binary."
+    },
+    {
+      "filename": "macho_osx_x64_ls",
+      "format": "Mach-O",
+      "arch": "x86-64",
+      "sha256": "bb38e04ca01881df5e6b92e2231f3173ee6d610b32af3068e8fe6b001c51a10f",
+      "source": "Downloaded from the JonathanSalwan/binary-samples test corpus (MachO-OSX-x64-ls), a well-known authentic binary-analysis sample suite. Git blob SHA d80548dd6a9f42d894b0ea0a6acebabd59104aed verified bit-identical to upstream. Real compiled macOS x86_64 'ls' executable (MH_MAGIC_64)."
+    }
+  ]
+}

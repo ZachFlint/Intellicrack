@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="soGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF5722;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D84315;stop-opacity:1" />
+    </linearGradient>
+    <filter id="soShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#BF360C" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- SO file icon base -->
+  <rect x="4" y="2" width="14" height="20" rx="2"
+        fill="url(#soGradient)" stroke="#BF360C" stroke-width="0.8" filter="url(#soShadowFilter)"/>
+
+  <!-- File corner fold -->
+  <polygon points="15,2 18,5 15,5" fill="#F4511E"/>
+  <path d="M15 2 L15 5 L18 5" stroke="#FF8A65" stroke-width="0.5"/>
+
+  <!-- SO text label -->
+  <text x="11" y="10" font-family="monospace" font-size="4" text-anchor="middle" fill="#FFFFFF" font-weight="bold">SO</text>
+
+  <!-- Shared object symbols -->
+  <rect x="6" y="12" width="3" height="2" rx="0.5" fill="#FFC107"/>
+  <text x="7.5" y="13.5" font-family="monospace" font-size="1.8" text-anchor="middle" fill="#E65100">lib</text>
+
+  <rect x="10.5" y="12" width="3" height="2" rx="0.5" fill="#FF9800"/>
+  <text x="12" y="13.5" font-family="monospace" font-size="1.8" text-anchor="middle" fill="#FFFFFF">so</text>
+
+  <rect x="15" y="12" width="2" height="2" rx="0.5" fill="#FF8F00"/>
+  <text x="16" y="13.5" font-family="monospace" font-size="1.8" text-anchor="middle" fill="#FFFFFF">1</text>
+
+  <!-- Linux/Unix symbol -->
+  <circle cx="19" cy="15" r="2.5" fill="#4CAF50" opacity="0.8"/>
+  <path d="M18 14 L18 16 L20 16 M18 15 L19.5 15" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round"/>
+
+  <!-- ELF format indicators -->
+  <text x="6.5" y="7" font-family="monospace" font-size="2" fill="#FFFFFF" opacity="0.7">ELF</text>
+  <text x="13.5" y="7" font-family="monospace" font-size="2" fill="#FFFFFF" opacity="0.7">64</text>
+
+  <!-- Shared linkage arrows -->
+  <path d="M7.5 15 L7.5 17" stroke="#FFFFFF" stroke-width="1.2" marker-end="url(#soArrow)"/>
+  <path d="M12 15 L12 17" stroke="#FFFFFF" stroke-width="1.2" marker-end="url(#soArrow)"/>
+  <path d="M16 15 L16 17" stroke="#FFFFFF" stroke-width="1.2" marker-end="url(#soArrow)"/>
+
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="soArrow" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
+      <polygon points="0,0 4,2 0,4" fill="#FFFFFF"/>
+    </marker>
+  </defs>
+
+  <!-- Runtime loading indicator -->
+  <rect x="6" y="18" width="10" height="2" rx="1" fill="#E64A19"/>
+  <text x="11" y="19.5" font-family="monospace" font-size="2" text-anchor="middle" fill="#FFFFFF">SHARED</text>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="8" cy="5" rx="3" ry="1.5" fill="#FFFFFF" opacity="0.2"/>
+</svg>

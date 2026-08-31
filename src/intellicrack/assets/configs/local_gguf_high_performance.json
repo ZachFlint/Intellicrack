@@ -1,0 +1,19 @@
+{
+  "name": "Local GGUF High Performance",
+  "description": "Maximum local performance with GPU acceleration",
+  "provider": "local_gguf",
+  "model_name": "CodeLlama-7B-Instruct-Q4_K_M.gguf",
+  "model_path": "/models/CodeLlama-7B-Instruct-Q4_K_M.gguf",
+  "context_length": 8192,
+  "temperature": 0.4,
+  "max_tokens": 4096,
+  "tools_enabled": true,
+  "custom_params": {
+    "n_gpu_layers": 35,
+    "n_ctx": 8192,
+    "n_batch": 512,
+    "n_threads": 8,
+    "rope_freq_base": 10000.0,
+    "rope_freq_scale": 1.0
+  }
+}

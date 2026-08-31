@@ -1,0 +1,16 @@
+{
+  "name": "Ollama CodeLlama (Local)",
+  "description": "Privacy-focused local code analysis with easy setup",
+  "provider": "ollama",
+  "model_name": "codellama:7b-instruct",
+  "api_base": "http://localhost:11434",
+  "context_length": 4096,
+  "temperature": 0.3,
+  "max_tokens": 2048,
+  "tools_enabled": true,
+  "custom_params": {
+    "top_p": 0.9,
+    "repeat_penalty": 1.1,
+    "num_predict": 2048
+  }
+}

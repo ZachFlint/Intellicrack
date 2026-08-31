@@ -1,0 +1,48 @@
+---
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -modernize-use-trailing-return-type,
+  -modernize-avoid-c-arrays,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-braces-around-statements,
+  -readability-named-parameter
+
+# This is a raw C-ABI plugin boundary (x64dbg plugin SDK callbacks, Win32
+# HANDLE/pipe I/O). The disabled cppcoreguidelines-pro-bounds-*,
+# -pro-type-vararg and -pro-type-reinterpret-cast checks would otherwise flag
+# every buffer read/write loop, every snprintf-based JSON event formatter,
+# and every HANDLE/LPARAM pointer cast, which are the correct, idiomatic way
+# to interoperate with the SDK and WinAPI here. avoid-c-arrays and
+# avoid-magic-numbers/identifier-length are disabled as low-signal noise for
+# this file's buffer-size/timeout literals and short stream/index names.
+# readability-implicit-bool-conversion is disabled because Win32's
+# HANDLE/HWND/BOOL-as-bool idiom (`if (hwnd)`, `if (!result)`) is pervasive
+# and intentional. readability-braces-around-statements and
+# readability-named-parameter are disabled because single-statement
+# early-return guards (`if (!x) return;`) and unnamed SDK callback
+# parameters are this codebase's established, intentional style.
+WarningsAsErrors: ''
+HeaderFilterRegex: '^.*[/\\]src[/\\]x64dbg-plugin[/\\][A-Za-z_]+\.h$'
+FormatStyle: file
+CheckOptions:
+  - key: readability-function-cognitive-complexity.Threshold
+    value: '50'
+  - key: bugprone-easily-swappable-parameters.MinimumLength
+    value: '3'

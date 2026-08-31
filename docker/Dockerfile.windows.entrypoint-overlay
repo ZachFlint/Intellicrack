@@ -1,0 +1,12 @@
+#
+# Overlay image that swaps just the entrypoint script onto an existing
+# intellicrack-sandbox image. Use this to iterate on docker/entrypoint.ps1
+# without re-running the expensive pixi install layer.
+#
+# Build: docker build --file docker/Dockerfile.windows.entrypoint-overlay --isolation process -t intellicrack-sandbox:latest .
+#
+FROM intellicrack-sandbox:latest
+
+COPY docker/entrypoint.ps1 C:/app/docker/entrypoint.ps1
+
+LABEL intellicrack-sandbox=1

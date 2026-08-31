@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="keyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F57F17;stop-opacity:1" />
+    </linearGradient>
+    <filter id="keyShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#E65100" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Key head (circular part) -->
+  <circle cx="7" cy="12" r="4.5" fill="url(#keyGradient)" stroke="#E65100" stroke-width="0.8" filter="url(#keyShadowFilter)"/>
+  <circle cx="7" cy="12" r="2" fill="none" stroke="#3E2723" stroke-width="1.2"/>
+
+  <!-- Key shaft -->
+  <rect x="11" y="10.5" width="9" height="3" rx="1.5" fill="url(#keyGradient)" stroke="#E65100" stroke-width="0.5"/>
+
+  <!-- Key teeth -->
+  <rect x="18" y="11.5" width="2" height="1" fill="url(#keyGradient)"/>
+  <rect x="16" y="10.5" width="1.5" height="1" fill="url(#keyGradient)"/>
+  <rect x="20" y="12.5" width="1.5" height="1" fill="url(#keyGradient)"/>
+  <rect x="17.5" y="13" width="1" height="1" fill="url(#keyGradient)"/>
+
+  <!-- Key bow details -->
+  <circle cx="7" cy="12" r="3" fill="none" stroke="#FF8F00" stroke-width="0.5" opacity="0.8"/>
+  <circle cx="7" cy="12" r="1" fill="#3E2723"/>
+
+  <!-- Decorative elements on key head -->
+  <circle cx="5.5" cy="10.5" r="0.5" fill="#FF8F00"/>
+  <circle cx="8.5" cy="10.5" r="0.5" fill="#FF8F00"/>
+  <circle cx="8.5" cy="13.5" r="0.5" fill="#FF8F00"/>
+  <circle cx="5.5" cy="13.5" r="0.5" fill="#FF8F00"/>
+
+  <!-- Shaft groove -->
+  <rect x="11.5" y="11.8" width="8" height="0.4" rx="0.2" fill="#FF8F00" opacity="0.7"/>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="6" cy="9" rx="2" ry="1.5" fill="#FFFFFF" opacity="0.3"/>
+</svg>

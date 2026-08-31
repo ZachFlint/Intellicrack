@@ -1,0 +1,23 @@
+# Ignore all directories by default
+*/
+
+# But don't ignore these specific directories
+!intellicrack/
+!tests/
+!tools/
+!scripts/
+!intellicrack-launcher/
+
+# Ignore all files in root
+/*
+
+# But don't ignore these patterns
+!*.md
+!*.txt
+!*.toml
+!*.json
+!*.yaml
+!*.py
+!.rooignore
+!.gitignore
+!justfile

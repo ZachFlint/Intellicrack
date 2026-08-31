@@ -1,0 +1,21 @@
+{
+  "globs": ["**/*.md"],
+  "ignores": [
+    "node_modules/**",
+    ".venv*/**",
+    ".pixi/**",
+    ".claude/**",
+    ".github/**",
+    ".serena/**",
+    "build/**",
+    "dist/**",
+    "tools/**",
+    "vendor/**",
+    "audit/**",
+    "CHANGELOG.md",
+    "prompts.md",
+    "skylos_true_positives.md",
+    "GEMINI.md",
+    "QWEN.md"
+  ]
+}

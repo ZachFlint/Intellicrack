@@ -1,0 +1,348 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+"""Audit4 C10 regression tests for hex editor scripting (F-0020, F-0021).
+
+Covers:
+
+- F-0020: ``_DocAPI.search_text`` must use the encoding passed to
+  ``_DocAPI.__init__`` rather than the hard-coded ``"utf-8"`` literal.
+  When the panel's encoding combo selects ``"latin-1"``, a call to
+  ``doc.search_text('café')`` must encode the search term using latin-1.
+
+- F-0021: ``execute_script`` must capture output from ``print()`` calls
+  regardless of whether ``file=`` is passed.  The captured output must
+  appear in the ``"output"`` key of the returned dict; no exception should
+  be raised and the call must not crash when ``file=`` is set to an
+  arbitrary object.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+import pytest
+
+import intellicrack.ui.panels.hex_editor.scripting as _scripting_module
+from intellicrack.ui.panels.hex_editor.scripting import execute_script
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+_DocAPI = getattr(_scripting_module, "_DocAPI")
+_ReadOnlyDocAPI = getattr(_scripting_module, "_ReadOnlyDocAPI")
+
+
+class _RecordingDoc:
+    """Minimal document stub that records ``search_text`` call arguments."""
+
+    def __init__(self) -> None:
+        """Initialise the recording stub with empty call history."""
+        self.search_text_calls: list[dict[str, Any]] = []
+
+    def length(self) -> int:
+        """Return zero as the stub document length.
+
+        Returns:
+            int: Always zero.
+        """
+        return 0
+
+    def read(self, offset: int, length: int) -> bytes:
+        """Return empty bytes from the stub document.
+
+        Args:
+            offset: Ignored start offset.
+            length: Ignored byte count.
+
+        Returns:
+            bytes: Always empty bytes.
+        """
+        _ = (offset, length)
+        return b""
+
+    def write_bytes(self, offset: int, data: bytes) -> None:
+        """No-op stub write.
+
+        Args:
+            offset: Ignored.
+            data: Ignored.
+        """
+        _ = (self, offset, data)
+
+    def insert_bytes(self, offset: int, data: bytes) -> None:
+        """No-op stub insert.
+
+        Args:
+            offset: Ignored.
+            data: Ignored.
+        """
+        _ = (self, offset, data)
+
+    def delete_bytes(self, offset: int, length: int) -> None:
+        """No-op stub delete.
+
+        Args:
+            offset: Ignored.
+            length: Ignored.
+        """
+        _ = (self, offset, length)
+
+    def search_hex(self, pattern: str, max_results: int) -> list[tuple[int, int]]:
+        """Return empty results from stub hex search.
+
+        Args:
+            pattern: Ignored.
+            max_results: Ignored.
+
+        Returns:
+            list[tuple[int, int]]: Always empty.
+        """
+        _ = (self, pattern, max_results)
+        return []
+
+    def search_text(
+        self,
+        text: str,
+        encoding: str,
+        *,
+        case_sensitive: bool,
+        max_results: int,
+    ) -> list[tuple[int, int]]:
+        """Record the call arguments and return empty results.
+
+        Args:
+            text: Search text.
+            encoding: Character encoding supplied by the caller.
+            case_sensitive: Case-sensitivity flag.
+            max_results: Maximum result count.
+
+        Returns:
+            list[tuple[int, int]]: Always empty.
+        """
+        self.search_text_calls.append(
+            {
+                "text": text,
+                "encoding": encoding,
+                "case_sensitive": case_sensitive,
+                "max_results": max_results,
+            },
+        )
+        return []
+
+    def add_bookmark(self, offset: int, length: int, label: str, color: str) -> int:
+        """No-op stub bookmark; returns zero.
+
+        Args:
+            offset: Ignored.
+            length: Ignored.
+            label: Ignored.
+            color: Ignored.
+
+        Returns:
+            int: Always zero.
+        """
+        _ = (self, offset, length, label, color)
+        return 0
+
+
+def _encoding_provider(name: str) -> Callable[[], str | None]:
+    """Build a panel-encoding provider callable returning a fixed codec name.
+
+    Mirrors how :class:`ScriptingMixin` supplies the panel's selected encoding
+    to ``_DocAPI`` via the ``encoding_provider`` callback rather than a static
+    string, so the test exercises the real production resolution path.
+
+    Args:
+        name: Codec name the provider should report on each call.
+
+    Returns:
+        Callable[[], str | None]: Zero-argument callable returning ``name``.
+    """
+
+    def _provider() -> str | None:
+        """Return the fixed codec name.
+
+        Returns:
+            str | None: The configured codec name.
+        """
+        return name
+
+    return _provider
+
+
+class TestF0020SearchTextEncoding:
+    """F-0020: ``_DocAPI.search_text`` must honour the encoding from the panel combo."""
+
+    @staticmethod
+    def test_default_encoding_is_utf8() -> None:
+        """When no encoding is specified, ``search_text`` passes ``'utf-8'`` to the doc."""
+        doc = _RecordingDoc()
+        api = _DocAPI(doc, None, None)
+        api.search_text("hello")
+        assert len(doc.search_text_calls) == 1
+        assert doc.search_text_calls[0]["encoding"] == "utf-8"
+
+    @staticmethod
+    def test_latin1_encoding_is_forwarded() -> None:
+        """When ``encoding='latin1'`` is set, ``search_text`` must pass it through."""
+        doc = _RecordingDoc()
+        api = _DocAPI(doc, None, None, _encoding_provider("latin1"))
+        api.search_text("café")
+        assert len(doc.search_text_calls) == 1
+        assert doc.search_text_calls[0]["encoding"] == "latin1"
+
+    @staticmethod
+    def test_latin1_encoding_not_utf8() -> None:
+        """With latin-1 encoding, the forwarded encoding must be exactly ``'latin1'``.
+
+        Falsifiability: changing ``_resolve_search_encoding`` to always return
+        ``"ascii"`` (or any codec other than ``"latin1"``) makes this assertion
+        fail because ``"ascii" != "latin1"``.  The negative-only predecessor
+        ``!= "utf-8"`` would still pass under that mutation.
+        """
+        doc = _RecordingDoc()
+        api = _DocAPI(doc, None, None, _encoding_provider("latin1"))
+        api.search_text("café")
+        assert doc.search_text_calls[0]["encoding"] == "latin1"
+
+    @staticmethod
+    def test_custom_encoding_cp1252_forwarded() -> None:
+        """Any encoding name passed to ``_DocAPI`` must reach ``search_text``."""
+        doc = _RecordingDoc()
+        api = _DocAPI(doc, None, None, _encoding_provider("cp1252"))
+        api.search_text("test")
+        assert doc.search_text_calls[0]["encoding"] == "cp1252"
+
+    @staticmethod
+    def test_readonly_proxy_delegates_search_text() -> None:
+        """``_ReadOnlyDocAPI.search_text`` must delegate to the inner API preserving encoding."""
+        doc = _RecordingDoc()
+        base = _DocAPI(doc, None, None, _encoding_provider("latin1"))
+        ro = _ReadOnlyDocAPI(base)
+        ro.search_text("café")
+        assert len(doc.search_text_calls) == 1
+        assert doc.search_text_calls[0]["encoding"] == "latin1"
+
+    @staticmethod
+    def test_max_results_forwarded() -> None:
+        """``max_results`` supplied to the public API must reach the document."""
+        doc = _RecordingDoc()
+        api = _DocAPI(doc, None, None, _encoding_provider("utf-8"))
+        api.search_text("x", max_results=42)
+        assert doc.search_text_calls[0]["max_results"] == 42
+
+
+class TestF0021PrintCapture:
+    """F-0021: ``execute_script`` must capture ``print()`` output regardless of ``file=``."""
+
+    @staticmethod
+    def _make_doc_api() -> object:
+        """Build a read-only doc API backed by a recording stub.
+
+        Returns:
+            object: Read-only proxy around a recording document stub.
+        """
+        return _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
+
+    @pytest.mark.parametrize(
+        ("script", "expected_output"),
+        [
+            ('print("hello")', "hello\n"),
+            ("x = 1\nprint(x)", "1\n"),
+        ],
+    )
+    def test_print_output_captured(self, script: str, expected_output: str) -> None:
+        r"""Output from ``print()`` with no ``file=`` must match an independent oracle.
+
+        The oracle is derived from Python language semantics: ``print("hello")``
+        writes ``"hello\n"`` to stdout, and ``print(1)`` writes ``"1\n"``.
+        These expected values are independent of ``execute_script``'s
+        implementation.
+
+        Falsifiability: changing ``_safe_print`` to prepend a ``"PREFIX"`` to
+        every line (e.g. ``text = "PREFIX" + text``) produces ``"PREFIXhello\n"``
+        and ``"PREFIX1\n"``, both of which differ from the exact expected
+        strings ``"hello\n"`` and ``"1\n"``, causing the assertion to fail.
+
+        Args:
+            script: Python source with a ``print()`` call.
+            expected_output: Exact stdout string expected from the script.
+        """
+        api = _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
+        result = execute_script(script, api)
+        assert result["error"] is None
+        assert result["output"] == expected_output
+
+    @staticmethod
+    def test_print_hello_appears_in_output() -> None:
+        r"""``print('hello')`` must produce exactly ``'hello\n'`` in ``output``.
+
+        The oracle is Python's ``print`` semantics: a single string argument with
+        the default ``end`` writes the string followed by one newline. Asserting
+        exact equality (not substring containment) makes the gate fail under any
+        decoration/prefix mutation in ``_safe_print``.
+        """
+        result = execute_script('print("hello")', _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None)))
+        assert result["error"] is None
+        assert result["output"] == "hello\n"
+
+    @staticmethod
+    def test_print_with_file_none_does_not_lose_output() -> None:
+        r"""``print('captured', file=None)`` must capture exactly ``'captured\n'``.
+
+        ``file=None`` is documented to fall back to ``sys.stdout``; the captured
+        buffer must therefore equal ``'captured\n'`` exactly, proving the output
+        is neither lost nor decorated.
+        """
+        doc_api = _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
+        result = execute_script('print("captured", file=None)', doc_api)
+        assert result["error"] is None
+        assert result["output"] == "captured\n"
+
+    @staticmethod
+    def test_print_with_none_file_kwarg_captures_output() -> None:
+        r"""``print('hello', file=None)`` must capture exactly ``'hello\n'``.
+
+        The ``file=None`` keyword resolves to ``sys.stdout``, so the captured
+        output must equal ``'hello\n'`` exactly.
+        """
+        doc_api = _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
+        result = execute_script('print("hello", file=None)', doc_api)
+        assert result["error"] is None
+        assert result["output"] == "hello\n"
+
+    @staticmethod
+    def test_print_with_flush_true_captures_output() -> None:
+        r"""``print('world', flush=True)`` must capture exactly ``'world\n'``.
+
+        ``flush=True`` affects buffering only, not content, so the captured
+        output must equal ``'world\n'`` exactly.
+        """
+        doc_api = _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
+        result = execute_script('print("world", flush=True)', doc_api)
+        assert result["error"] is None
+        assert result["output"] == "world\n"
+
+    @staticmethod
+    def test_print_sep_and_end_honoured() -> None:
+        """``print`` sep/end keyword args must work correctly."""
+        doc_api = _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
+        result = execute_script('print("a", "b", sep="-", end="!")', doc_api)
+        assert result["error"] is None
+        assert "a-b!" in result["output"]
+
+    @staticmethod
+    def test_multiple_print_calls_all_captured() -> None:
+        """Multiple ``print()`` calls must all appear concatenated in ``output``."""
+        doc_api = _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
+        script = 'print("line1")\nprint("line2")\nprint("line3")'
+        result = execute_script(script, doc_api)
+        assert result["error"] is None
+        output = result["output"]
+        assert "line1" in output
+        assert "line2" in output
+        assert "line3" in output

@@ -1,0 +1,87 @@
+# EditorConfig for Intellicrack
+# https://editorconfig.org
+
+# Top-most EditorConfig file
+root = true
+
+# Default settings for all files
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Python files
+[*.py]
+indent_size = 4
+max_line_length = 140
+
+# YAML files
+[*.{yml,yaml}]
+indent_size = 2
+
+# JSON files
+[*.json]
+indent_size = 2
+
+# JavaScript files (Frida scripts)
+[*.js]
+indent_size = 2
+
+# Java files (Ghidra scripts)
+[*.java]
+indent_size = 4
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = 80
+
+# Vendored submodules - never reformat upstream files
+[vendor/**]
+trim_trailing_whitespace = false
+insert_final_newline = false
+max_line_length = off
+
+# Makefiles
+[Makefile]
+indent_style = tab
+
+# Batch files
+[*.{bat,cmd}]
+end_of_line = crlf
+indent_size = 2
+
+# Shell scripts
+[*.sh]
+indent_size = 2
+
+# Configuration files
+[*.{ini,cfg,conf}]
+indent_size = 4
+
+# Git files
+[.git*]
+indent_size = 4
+
+# Docker files
+[Dockerfile*]
+indent_size = 2
+
+# Requirements files
+[requirements*.txt]
+indent_size = 0
+
+# License files
+[LICENSE*]
+insert_final_newline = false
+
+# HTML/CSS files
+[*.{html,css}]
+indent_size = 2
+
+# XML files
+[*.xml]
+indent_size = 2

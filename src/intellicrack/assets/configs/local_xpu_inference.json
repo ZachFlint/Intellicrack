@@ -1,0 +1,100 @@
+{
+  "provider": "local_transformers",
+  "description": "Intel Arc B580 XPU accelerated local inference configuration",
+  "device": {
+    "type": "auto",
+    "prefer_xpu": true,
+    "device_index": 0
+  },
+  "model": {
+    "default_model": "microsoft/Phi-3-mini-4k-instruct",
+    "dtype": "auto",
+    "trust_remote_code": false,
+    "use_flash_attention": false
+  },
+  "memory": {
+    "cache_size_gb": 10,
+    "max_model_memory_gb": 11,
+    "vram_overhead_gb": 1
+  },
+  "inference": {
+    "max_new_tokens": 2048,
+    "default_temperature": 0.7,
+    "top_p": 0.95,
+    "repetition_penalty": 1.1
+  },
+  "recommended_models": [
+    {
+      "id": "microsoft/Phi-3-mini-4k-instruct",
+      "description": "3.8B parameter model, excellent for general tasks",
+      "recommended_dtype": "float16",
+      "estimated_memory_gb": 7.6,
+      "context_window": 4096,
+      "supports_tools": true
+    },
+    {
+      "id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "description": "1.1B parameter model, very fast inference",
+      "recommended_dtype": "float16",
+      "estimated_memory_gb": 2.2,
+      "context_window": 2048,
+      "supports_tools": false
+    },
+    {
+      "id": "Qwen/Qwen2.5-1.5B-Instruct",
+      "description": "1.5B parameter model, good balance of speed and quality",
+      "recommended_dtype": "float16",
+      "estimated_memory_gb": 3.0,
+      "context_window": 32768,
+      "supports_tools": true
+    },
+    {
+      "id": "Qwen/Qwen2.5-3B-Instruct",
+      "description": "3B parameter model, higher quality responses",
+      "recommended_dtype": "float16",
+      "estimated_memory_gb": 6.0,
+      "context_window": 32768,
+      "supports_tools": true
+    },
+    {
+      "id": "meta-llama/Llama-3.2-1B-Instruct",
+      "description": "1B parameter Llama 3.2 model",
+      "recommended_dtype": "float16",
+      "estimated_memory_gb": 2.0,
+      "context_window": 8192,
+      "supports_tools": true
+    },
+    {
+      "id": "meta-llama/Llama-3.2-3B-Instruct",
+      "description": "3B parameter Llama 3.2 model",
+      "recommended_dtype": "float16",
+      "estimated_memory_gb": 6.0,
+      "context_window": 8192,
+      "supports_tools": true
+    },
+    {
+      "id": "mistralai/Mistral-7B-Instruct-v0.3",
+      "description": "7B parameter Mistral, requires INT8 quantization",
+      "recommended_dtype": "int8",
+      "estimated_memory_gb": 7.0,
+      "context_window": 32768,
+      "supports_tools": true
+    }
+  ],
+  "xpu_settings": {
+    "target_hardware": "Intel Arc B580",
+    "vram_gb": 12,
+    "supports_fp16": true,
+    "supports_bf16": true,
+    "supports_int8": true,
+    "supports_fp64": false,
+    "pytorch_version": "2.5+",
+    "ipex_required": false
+  },
+  "fallback": {
+    "enable_cpu_fallback": true,
+    "retry_on_oom": true,
+    "max_retries": 1,
+    "log_warnings": true
+  }
+}

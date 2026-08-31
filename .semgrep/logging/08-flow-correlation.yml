@@ -1,0 +1,275 @@
+rules:
+  - id: intellicrack-logging-h1-async-def-zero-logs
+    message: >-
+      `async def` function in a runtime/integration layer (bridges/providers/core/sandbox) contains zero log calls. Async functions cross event-loop task boundaries; without log telemetry their execution becomes impossible to correlate. Emit at least an entry log and an exit/error log.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern: |
+          async def $FN(...):
+              $S1
+              $S2
+              $S3
+              ...
+      - pattern-not: |
+          async def $FN(...):
+              ...
+              $L.$LVL(...)
+              ...
+  - id: intellicrack-logging-h2-session-create-without-log
+    message: >-
+      Creating a new Session / SessionManager / SessionContext without an adjacent log is a lost correlation anchor - every downstream log in this session will be un-pinned to the session creation event. Emit `_logger.info("session_created", session_id=session.id, ...)`.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $S = Session(...)
+          - pattern: $S = SessionManager(...)
+          - pattern: $S = SessionContext(...)
+          - pattern: $S = $SM.create_session(...)
+          - pattern: $S = $SM.new_session(...)
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.$LVL(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.$LVL(...)
+              ...
+  - id: intellicrack-logging-h3-state-assignment-without-log
+    message: >-
+      A state-tracking attribute (`self._state`, `self._status`, `self._phase`, `self.state`, `self.status`, `self.phase`, `self._active`, `self._connected`, `self._attached`) is being reassigned without an adjacent log. State transitions must be logged so the full lifecycle can be reconstructed from the log stream.
+    severity: INFO
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: self._state = $V
+          - pattern: self._status = $V
+          - pattern: self._phase = $V
+          - pattern: self.state = $V
+          - pattern: self.status = $V
+          - pattern: self.phase = $V
+          - pattern: self._active = $V
+          - pattern: self._connected = $V
+          - pattern: self._attached = $V
+          - pattern: self._running = $V
+      - pattern-not-inside: |
+          def $FN(self, ...):
+              ...
+              self._logger.$LVL(...)
+              ...
+      - pattern-not-inside: |
+          def $FN(self, ...):
+              ...
+              _logger.$LVL(...)
+              ...
+      - pattern-not-inside: |
+          def __init__(self, ...):
+              ...
+  - id: intellicrack-logging-h4-retry-loop-no-log
+    message: >-
+      Retry loop variable (`attempt`, `attempts`, `retry`, `retries`, `tries`, `iteration`) but no log call inside the loop body. Each retry attempt must be recorded with the attempt number and the error that triggered the retry so backoff effectiveness can be analysed.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              for $V in range($N):
+                  ...
+          - pattern: |
+              for $V in range($A, $N):
+                  ...
+      - metavariable-regex:
+          metavariable: $V
+          regex: '^(attempt|attempts|retry|retries|tries|iteration|try_num|attempt_num)$'
+      - pattern-not: |
+          for $V in range(...):
+              ...
+              $L.$LVL(...)
+              ...
+  - id: intellicrack-logging-h5-init-without-completion-log
+    message: >-
+      A `__init__` that performs non-trivial work (acquires connections, loads resources, spawns threads) exits without a completion log. Without it, the rest of the object's life cannot be traced back to its construction site. Emit `self._logger.info("bridge_initialized", <config kwargs>)` at the end of `__init__`.
+    severity: INFO
+    languages: [python]
+    patterns:
+      - pattern: |
+          class $C(...):
+              ...
+              def __init__(self, ...):
+                  $S1
+                  $S2
+                  $S3
+                  $S4
+                  $S5
+                  ...
+      - pattern-not: |
+          class $C(...):
+              ...
+              def __init__(self, ...):
+                  ...
+                  self._logger.$LVL(...)
+                  ...
+      - pattern-not: |
+          class $C(...):
+              ...
+              def __init__(self, ...):
+                  ...
+                  _logger.$LVL(...)
+                  ...
+      - pattern-not-inside: |
+          class $C(QWidget):
+              ...
+      - pattern-not-inside: |
+          class $C(QDialog):
+              ...
+      - pattern-not-inside: |
+          class $C(QMainWindow):
+              ...
+      - pattern-not-inside: |
+          class $C(QFrame):
+              ...
+      - pattern-not-inside: |
+          class $C(QObject):
+              ...
+      - pattern-not-inside: |
+          class $C(QThread):
+              ...
+      - pattern-not-inside: |
+          class $C(QAbstractItemModel):
+              ...
+      - pattern-not-inside: |
+          class $C(QAbstractTableModel):
+              ...
+      - pattern-not-inside: |
+          class $C(QAbstractListModel):
+              ...
+      - pattern-not-inside: |
+          class $C(QStyledItemDelegate):
+              ...
+      - pattern-not-inside: |
+          class $C(QSyntaxHighlighter):
+              ...
+      - pattern-not-inside: |
+          class $C(QPlainTextEdit):
+              ...
+      - pattern-not-inside: |
+          class $C(QTextEdit):
+              ...
+      - pattern-not-inside: |
+          class $C(QTreeWidget):
+              ...
+      - pattern-not-inside: |
+          class $C(QTableWidget):
+              ...
+      - pattern-not-inside: |
+          class $C(QListWidget):
+              ...
+      - pattern-not-inside: |
+          class $C(QGraphicsItem):
+              ...
+      - pattern-not-inside: |
+          class $C(QRunnable):
+              ...
+      - pattern-not-inside: |
+          class $C(NamedTuple):
+              ...
+      - pattern-not-inside: |
+          class $C(QSpinBox):
+              ...
+      - pattern-not-inside: |
+          class $C(QLineEdit):
+              ...
+      - pattern-not-inside: |
+          class $C(QComboBox):
+              ...
+      - pattern-not-inside: |
+          class $C(QPushButton):
+              ...
+      - pattern-not-inside: |
+          class $C(QProgressBar):
+              ...
+      - pattern-not-inside: |
+          class $C(QLabel):
+              ...
+      - pattern-not-inside: |
+          class $C(QCheckBox):
+              ...
+      - pattern-not-inside: |
+          class $C(QMenu):
+              ...
+      - pattern-not-inside: |
+          class $C(QAction):
+              ...
+      - pattern-not-inside: |
+          class $C(QSplitter):
+              ...
+      - pattern-not-inside: |
+          class $C(QTabWidget):
+              ...
+      - pattern-not-inside: |
+          class $C(QTabBar):
+              ...
+      - pattern-not-inside: |
+          class $C(QScrollArea):
+              ...
+      - pattern-not-inside: |
+          class $C(QStackedWidget):
+              ...
+      - pattern-not-inside: |
+          class $C(QGraphicsView):
+              ...
+      - pattern-not-inside: |
+          class $C(QGraphicsScene):
+              ...
+      - pattern-not-inside: |
+          class $C(QToolBar):
+              ...
+      - pattern-not-inside: |
+          class $C(QStatusBar):
+              ...
+      - pattern-not-inside: |
+          class $C(QDockWidget):
+              ...
+      - pattern-not-inside: |
+          class $C(QGroupBox):
+              ...
+      - pattern-not-inside: |
+          class $C(QFileDialog):
+              ...
+      - pattern-not-inside: |
+          class $C(QInputDialog):
+              ...
+      - pattern-not-inside: |
+          class $C(QMessageBox):
+              ...
+      - pattern-not-inside: |
+          class $C(QWizardPage):
+              ...
+      - pattern-not-inside: |
+          class $C(QWizard):
+              ...
+      - pattern-not-inside: |
+          class $C(QDialogButtonBox):
+              ...
+      - pattern-not-inside: |
+          @dataclass
+          class $C:
+              ...
+      - pattern-not-inside: |
+          @dataclass(...)
+          class $C:
+              ...
+      - pattern-not-inside: |
+          @dataclasses.dataclass
+          class $C:
+              ...
+      - pattern-not-inside: |
+          @dataclasses.dataclass(...)
+          class $C:
+              ...
+      - metavariable-regex:
+          metavariable: $C
+          regex: '^(?!.*(Widget|Dialog|Panel|Item|Delegate|Model|Layout|Highlighter|Event|Signal|Snapshot|Descriptor|Wrapper|Tuple|NamedTuple)$).*$'

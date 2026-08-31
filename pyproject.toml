@@ -1,0 +1,1239 @@
+[project]
+name = "intellicrack"
+version = "0.1.0a1"
+description = "Intellicrack: AI-powered reverse engineering orchestration platform"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "GPL-3.0-or-later"
+authors = [{ name = "Zachary Flint", email = "zach.flint2@gmail.com" }]
+keywords = [
+  "ai-orchestration",
+  "binary-analysis",
+  "cutter",
+  "frida",
+  "ghidra",
+  "reverse-engineering",
+  "rizin",
+  "security-research",
+  "x64dbg",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Environment :: X11 Applications :: Qt",
+  "Framework :: Pytest",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: Science/Research",
+  "Natural Language :: English",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Security",
+  "Topic :: Security :: Cryptography",
+  "Topic :: Software Development :: Debuggers",
+  "Topic :: Software Development :: Disassemblers",
+  "Typing :: Typed",
+]
+urls."Bug Tracker" = "https://github.com/zacharyflint/intellicrack/issues"
+urls.Documentation = "https://intellicrack.readthedocs.io"
+urls.Homepage = "https://github.com/zacharyflint/intellicrack"
+urls."Source Code" = "https://github.com/zacharyflint/intellicrack"
+scripts.intellicrack = "intellicrack.main:main"
+gui-scripts.intellicrack-gui = "intellicrack.main:main"
+dependencies = [
+  "anthropic>=1.2.0,<2",
+  "capstone>=5.0.9,<6",
+  "cryptography>=50.0.1,<51",
+  "frida>=17.17.0,<18",
+  "google-genai>=2.20.0,<3",
+  "httpx>=0.28.1,<0.29",
+  "huggingface-hub>=1.29.0,<2",
+  "jpype1>=1.7.1,<2",
+  "keyring>=25.7.0,<26",
+  "keystone-engine>=0.9.2,<0.10",
+  "lief>=1.0.0,<2",
+  "openai>=3.6.0,<4",
+  "pefile>=2024.8.26,<2025",
+  "psutil>=7.2.2,<8",
+  "pyghidra>=2.2.1,<3",
+  "PyQt6>=6.11.0,<7",
+  "pyyaml",
+  "r2pipe>=1.9.8,<2",
+  "rzpipe>=0.6.2,<0.7",
+  "setuptools",
+  "structlog>=26.1.0,<27",
+  "tiktoken>=0.14.0,<0.15",
+  "xxhash>=4.0.1,<5",
+  "yara-python>=4.5.4,<5",
+]
+optional-dependencies.dev = [
+  "astor",
+  "autopep8",
+  "bandit",
+  "basedpyright",
+  "black",
+  "blinter",
+  "build>=1.6.0,<2",
+  "bumpversion",
+  "check-wheel-contents>=0.6.3,<0.7",
+  "codespell",
+  "commitizen",
+  "dead",
+  "deadcode",
+  "deptry",
+  "detect-secrets",
+  "docformatter>=1.7.8,<2",
+  "flake8",
+  "flake8-pyproject",
+  "interrogate",
+  "isort",
+  "jsonlint",
+  "mccabe",
+  "monkeytype",
+  "mypy",
+  "mypy-extensions",
+  "nodeenv",
+  "pip-audit",
+  "pipdeptree",
+  "poetry",
+  "pre-commit",
+  "pre-commit-hooks",
+  "pyannotate",
+  "pyclean>=3.7.0,<4",
+  "pycodestyle",
+  "pydoclint",
+  "pydocstyle",
+  "pygount",
+  "pyinstaller>=6.22.2,<7",
+  "pylint",
+  "pyproject-fmt>=2.28.2,<3",
+  "pyroma",
+  "pyupgrade",
+  "radon",
+  "rope",
+  "ruff",
+  "sourcery",
+  "twine",
+  "ty",
+  "types-pyyaml",
+  "types-requests",
+  "uncalled",
+  "validate-pyproject",
+  "skylos",
+  "validate-pyproject-schema-store",
+  "vermin>=1.8.0,<2",
+  "vulture",
+  "wemake-python-styleguide",
+  "wily>=1.12.2,<2",
+  "xenon",
+  "yamllint",
+  "yapf",
+]
+optional-dependencies.docs = [
+  "mkdocs-material",
+  "myst-parser",
+  "pdoc3",
+  "pymdown-extensions",
+  "sphinx",
+  "sphinx-autobuild",
+  "sphinx-autodoc-typehints",
+  "sphinx-copybutton",
+  "sphinx-rtd-theme",
+  "sphinx-tabs",
+  "sphinxcontrib-mermaid",
+]
+optional-dependencies.ml = [
+  "accelerate",
+  "bitsandbytes",
+  "safetensors",
+  "sentencepiece",
+  "torch",
+  "transformers",
+]
+optional-dependencies.profile = [
+  "ipdb",
+  "line-profiler",
+  "memory-profiler",
+  "py-spy",
+  "pycallgraph2",
+  "pyinstrument",
+  "scalene",
+  "snakeviz",
+]
+optional-dependencies.test = [
+  "coverage",
+  "faker",
+  "freezegun",
+  "hypothesis",
+  "nox",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-benchmark",
+  "pytest-cov",
+  "pytest-deadfixtures",
+  "pytest-env",
+  "pytest-html",
+  "pytest-instafail",
+  "pytest-mock",
+  "pytest-qt",
+  "pytest-randomly",
+  "pytest-sugar",
+  "pytest-timeout",
+  "pytest-xdist",
+  "responses",
+  "tox",
+]
+
+[dependency-groups]
+dev = [
+  "astor",
+  "autopep8",
+  "bandit",
+  "basedpyright",
+  "black",
+  "blinter",
+  "build",
+  "bumpversion",
+  "check-wheel-contents",
+  "codespell",
+  "commitizen",
+  "dead",
+  "deadcode",
+  "deptry",
+  "detect-secrets",
+  "docformatter",
+  "flake8",
+  "flake8-pyproject",
+  "interrogate",
+  "isort",
+  "jsonlint",
+  "mccabe",
+  "monkeytype",
+  "mypy",
+  "mypy-extensions",
+  "nodeenv",
+  "pip-audit",
+  "pipdeptree",
+  "poetry",
+  "pre-commit",
+  "pre-commit-hooks",
+  "pyannotate",
+  "pyclean",
+  "pycodestyle",
+  "pydoclint",
+  "pydocstyle",
+  "pygount",
+  "pyinstaller",
+  "pylint",
+  "pyproject-fmt",
+  "pyroma",
+  "pyupgrade",
+  "radon",
+  "rope",
+  "ruff",
+  "skylos",
+  "sourcery",
+  "twine",
+  "ty",
+  "types-pyyaml",
+  "types-requests",
+  "uncalled",
+  "validate-pyproject",
+  "validate-pyproject-schema-store",
+  "vermin",
+  "vulture",
+  "wemake-python-styleguide",
+  "wily",
+  "xenon",
+  "yamllint",
+  "yapf",
+]
+docs = [
+  "mkdocs-material",
+  "myst-parser",
+  "pdoc3",
+  "pymdown-extensions",
+  "sphinx",
+  "sphinx-autobuild",
+  "sphinx-autodoc-typehints",
+  "sphinx-copybutton",
+  "sphinx-rtd-theme",
+  "sphinx-tabs",
+  "sphinxcontrib-mermaid",
+]
+profile = [
+  "ipdb",
+  "line-profiler",
+  "memory-profiler",
+  "py-spy",
+  "pycallgraph2",
+  "pyinstrument",
+  "scalene",
+  "snakeviz",
+]
+test = [
+  "coverage",
+  "faker",
+  "freezegun",
+  "hypothesis",
+  "nox",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-benchmark",
+  "pytest-cov",
+  "pytest-deadfixtures",
+  "pytest-env",
+  "pytest-html",
+  "pytest-instafail",
+  "pytest-mock",
+  "pytest-qt",
+  "pytest-randomly",
+  "pytest-sugar",
+  "pytest-timeout",
+  "pytest-xdist",
+  "responses",
+  "tox",
+]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.bandit]
+exclude_dirs = [
+  "tests",
+  "docs",
+  "tools",
+  ".git",
+  ".github",
+  ".pixi",
+  "node_modules",
+  "vendor",
+  "CLI Coding",
+  "Screenshots",
+]
+# B405: xml.etree usage is restricted to write-side construction via
+# ``intellicrack.core.xml_gen``. That module never parses untrusted input;
+# untrusted XML parsing must go through ``defusedxml``. ``defusedxml`` does
+# not provide a hardened replacement for write-side ElementTree, so the
+# stdlib import is the correct API and this project-wide skip is the
+# documented, source-clean alternative to inline ``# nosec`` annotations.
+skips = ["B405"]
+
+[tool.black]
+line-length = 140
+target-version = ["py313"]
+include = "\\.pyi?$"
+extend-exclude = '''/(
+  \.git
+  | \.github
+  | \.pixi
+  | \.mypy_cache
+  | \.pytest_cache
+  | \.ruff_cache
+  | \.vscode
+  | \.idea
+  | \.claude
+  | \.semgrep
+  | \.serena
+  | build
+  | dist
+  | tools
+  | docs
+  | node_modules
+  | vendor
+  | CLI\ Coding
+  | Screenshots
+)/
+'''
+
+[tool.codespell]
+skip = """\
+  .git,.github,.pixi,.claude,.serena,build,dist,tools,vendor,target,node_modules,CLI \
+  Coding,Screenshots,typings,stubs,*.lock,reports,*.egg-info,*.hta,*.hpp,*.graphml\
+  """
+ignore-words-list = "lief,crossreference,thirdparty,nd,lod,connin,regist"
+count = true
+
+[tool.coverage]
+run.branch = true
+run.omit = [
+  "*/.git/*",
+  "*/.pixi/*",
+  "*/__pycache__/*",
+  "*/CLI Coding/*",
+  "*/docs/*",
+  "*/node_modules/*",
+  "*/Screenshots/*",
+  "*/tests/*",
+  "*/tools/*",
+  "*/vendor/*",
+]
+run.source = ["src/intellicrack"]
+report.exclude_lines = [
+  "@(abc\\.)?abstractmethod",
+  "def __repr__",
+  "if __name__ == .__main__.:",
+  "pragma: no cover",
+  "raise AssertionError",
+  "raise NotImplementedError",
+]
+report.fail_under = 80
+report.precision = 2
+report.show_missing = true
+report.skip_covered = false
+report.sort = "Cover"
+html.directory = "coverage_html_report"
+html.title = "Intellicrack Coverage Report"
+
+[tool.deadcode]
+exclude = [
+  "tests",
+  "tools",
+  "docs",
+  ".git",
+  ".pixi",
+  "node_modules",
+  "vendor",
+  "CLI Coding",
+  "Screenshots"
+]
+ignore-names = [
+  "argtypes",
+  "restype",
+  "supports_*",
+  "test_*",
+  "setUp",
+  "tearDown",
+  "setUpClass",
+  "tearDownClass",
+  "paintEvent",
+  "mouseMoveEvent",
+  "mouseReleaseEvent",
+  "keyReleaseEvent",
+  "wheelEvent",
+  "contextMenuEvent",
+  "highlightBlock",
+  "sizeHint",
+  "do_GET",
+  "log_request",
+  "row_factory",
+  "allow_reuse_address",
+  "propagate",
+  "__getattr__",
+  "_fields_",
+  "_asm_highlighter",
+  "_c_highlighter",
+  "_cutter_bridge",
+  "_ghidra_bridge",
+  "_decompile_btn",
+  "_graph_btn",
+  "_refresh_devices_btn",
+  "_find_next_btn",
+  "_find_prev_btn",
+  "_undo_btn",
+  "_redo_btn",
+  "matched_bytes",
+  "selection",
+  "rflags",
+  "thinking_content",
+  "signature",
+  "classification_block_size",
+  "is_const",
+  "started_at",
+  "environment_variables",
+  "loaded_families",
+  "code_font_family",
+  "ui_font_family",
+  "current_theme",
+  "OAuthFlowType",
+  "authorize_google",
+  "get_process_bridge",
+  "get_sandbox_bridge",
+  "add_highlight_rule",
+  "remove_highlight_rule",
+  "list_hexpat_patterns",
+  "clear_selection",
+  "filter",
+  "needs_refresh",
+  "display_type",
+  "has_code",
+  "is_executable",
+  "is_readable",
+  "is_writable",
+  "hex_state_available",
+  "transform_pipeline_available",
+  "DISPLAY_MODES",
+  "ASYNC_SUBPROCESS",
+  "AUTHORIZATION_CODE",
+  "DEFAULT_CODE_FONT",
+  "WIN_PAGE_EXECUTE_READWRITE",
+  "MAX_LOCAL_VARS",
+  "use_flash_attention",
+  "quantization_config",
+  "_config_dir",
+  "preview",
+  "connect_hex_widget_to_tools",
+  "execute_pattern_bytes",
+  "load_template",
+]
+ignore-definitions-if-decorated-with = [
+  "abstractmethod",
+  "abc.abstractmethod",
+  "property",
+  "staticmethod",
+  "classmethod",
+  "override",
+]
+ignore-definitions-if-inherits-from = [
+  "ToolBridgeBase",
+  "StaticAnalysisBridge",
+  "DynamicAnalysisBridge",
+  "BinaryOperationsBridge",
+  "DebuggerBridge",
+  "InstrumentationBridge",
+  "LLMProviderBase",
+  "SandboxBase",
+  "HexDocumentState",
+  "QWidget",
+  "QDialog",
+  "QMainWindow",
+  "QSyntaxHighlighter",
+  "Protocol",
+  "TypedDict",
+  "ABC",
+  "abc.ABC",
+]
+ignore-names-if-inherits-from = [
+  "ToolBridgeBase",
+  "StaticAnalysisBridge",
+  "DynamicAnalysisBridge",
+  "BinaryOperationsBridge",
+  "DebuggerBridge",
+  "InstrumentationBridge",
+  "LLMProviderBase",
+  "SandboxBase",
+  "HexDocumentState",
+  "QWidget",
+  "QDialog",
+  "QMainWindow",
+  "QSyntaxHighlighter",
+  "Protocol",
+  "TypedDict",
+  "ABC",
+  "abc.ABC",
+]
+
+[tool.deptry]
+known_first_party = ["intellicrack"]
+optional_dependencies_dev_groups = ["dev", "test", "docs", "profile"]
+extend_exclude = [
+  "tests",
+  "docs",
+  "tools",
+  "scripts",
+  "vendor",
+  ".git",
+  ".github",
+  ".pixi",
+  ".claude",
+  ".semgrep",
+  "build",
+  "dist",
+  "docker",
+  "node_modules",
+  "CLI Coding",
+  "Screenshots",
+  "typings",
+  "stubs",
+]
+per_rule_ignores = { DEP002 = [
+  "accelerate",
+  "bitsandbytes",
+  "sentencepiece",
+  "safetensors",
+  "ghidra-bridge",
+  "tomli-w",
+], DEP003 = [
+  "intellicrack_hexcore",
+] }
+package_module_name_map.keystone-engine = ["keystone"]
+package_module_name_map.google-genai = ["google"]
+package_module_name_map.ghidra-bridge = ["ghidra_bridge"]
+package_module_name_map.jpype1 = ["jpype"]
+package_module_name_map.tomli-w = ["tomli_w"]
+
+[tool.docformatter]
+wrap-summaries = 140
+wrap-descriptions = 140
+pre-summary-newline = false
+close-quotes-on-newline = true
+recursive = true
+exclude = [
+  ".git",
+  ".pixi",
+  "build",
+  "dist",
+  "node_modules",
+  "tools",
+  "vendor",
+  "typings",
+  "stubs",
+]
+
+[tool.flake8]
+max-line-length = 140
+exclude = [
+  ".git",
+  ".github",
+  ".pixi",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".vscode",
+  ".idea",
+  ".claude",
+  ".semgrep",
+  ".serena",
+  "build",
+  "dist",
+  "tools",
+  "docs",
+  "node_modules",
+  "notebooks",
+  "vendor",
+  "CLI Coding",
+  "Screenshots",
+  "typings",
+  "stubs",
+]
+extend-ignore = [
+  "E203",
+  "W503",
+  "WPS110",
+  "WPS111",
+  "WPS114",
+  "WPS115",
+  "WPS122",
+  "WPS201",
+  "WPS202",
+  "WPS204",
+  "WPS210",
+  "WPS213",
+  "WPS214",
+  "WPS220",
+  "WPS221",
+  "WPS226",
+  "WPS229",
+  "WPS231",
+  "WPS232",
+  "WPS235",
+  "WPS237",
+  "WPS238",
+  "WPS300",
+  "WPS301",
+  "WPS332",
+  "WPS336",
+  "WPS338",
+  "WPS339",
+  "WPS356",
+  "WPS358",
+  "WPS407",
+  "WPS410",
+  "WPS412",
+  "WPS420",
+  "WPS430",
+  "WPS432",
+  "WPS462",
+  "WPS476",
+  "WPS501",
+  "WPS504",
+  "WPS505",
+  "WPS529",
+  "WPS602",
+  "WPS615",
+]
+per-file-ignores = ["tests/*:S101,S102,S404"]
+
+[tool.hatch]
+build.targets.wheel.packages = ["src/intellicrack"]
+
+[tool.interrogate]
+ignore-init-module = false
+ignore-magic = false
+ignore-semiprivate = false
+ignore-private = false
+ignore-property-decorators = false
+ignore-module = false
+ignore-nested-functions = false
+ignore-nested-classes = false
+fail-under = 0
+style = "google"
+verbose = 2
+exclude = [
+  "tests",
+  "docs",
+  "tools",
+  ".git",
+  ".github",
+  ".pixi",
+  "build",
+  "dist",
+  "node_modules",
+  "vendor",
+  "CLI Coding",
+  "Screenshots",
+  "typings",
+  "stubs",
+]
+
+[tool.mypy]
+python_version = "3.13"
+mypy_path = [".", "stubs"]
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+ignore_missing_imports = true
+follow_imports = "silent"
+strict = true
+exclude = [
+  "^tools/",
+  "^build/",
+  "^dist/",
+  "^\\.git/",
+  "^\\.github/",
+  "^\\.pixi/",
+  "^docs/",
+  "^\\.mypy_cache/",
+  "^\\.pytest_cache/",
+  "^\\.ruff_cache/",
+  "^\\.claude/",
+  "^\\.serena/",
+  "^\\.idea/",
+  "^\\.vscode/",
+  "^node_modules/",
+  "^vendor/",
+  "^CLI Coding/",
+  "^Screenshots/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+  "frida.*",
+  "r2pipe.*",
+  "rzpipe.*",
+  "ghidra_bridge.*",
+  "pefile.*",
+  "lief.*",
+  "transformers.*",
+  "accelerate.*",
+  "bitsandbytes.*",
+]
+follow_imports = "skip"
+
+[tool.pixi]
+# The default feature holds ONLY what the shipped application needs at runtime.
+# Build, dev, test, docs, profile and tooling packages live in the named features
+# below, so the `runtime` environment (default feature only) is a slim, ship-ready
+# tree while the `default` environment composes every feature for development.
+dependencies.python = "3.13.*"
+dependencies.setuptools = ">=84.0.0,<85"
+dependencies.capstone = ">=5.0.9,<6"
+dependencies.pygments = ">=2.21.0,<3"
+dependencies.pyyaml = ">=6.0.3,<7"
+# Runtime PyPI dependencies (version-bounded).
+pypi-dependencies.pip = ">=26.2.1, <27"
+pypi-dependencies.wheel = ">=0.48.0, <0.49"
+pypi-dependencies.PyQt6 = ">=6.11.0, <7"
+pypi-dependencies.pywebview = ">=6.2.1, <7"
+pypi-dependencies.pefile = ">=2024.8.26, <2025"
+pypi-dependencies.lief = ">=1.0.0, <2"
+pypi-dependencies.capstone = "*"
+pypi-dependencies.keystone-engine = ">=0.9.2, <0.10"
+pypi-dependencies.frida = ">=17.17.0, <18"
+pypi-dependencies.frida-tools = ">=14.10.4, <15"
+pypi-dependencies.r2pipe = ">=1.9.8, <2"
+pypi-dependencies.rzpipe = ">=0.6.2, <0.7"
+pypi-dependencies.ghidra-bridge = ">=1.0.0, <2"
+pypi-dependencies.anthropic = ">=1.2.0, <2"
+pypi-dependencies.openai = ">=3.6.0, <4"
+pypi-dependencies.tiktoken = ">=0.14.0, <0.15"
+pypi-dependencies.google-genai = ">=2.20.0, <3"
+pypi-dependencies.httpx = ">=0.28.1, <0.29"
+pypi-dependencies.structlog = ">=26.1.0, <27"
+pypi-dependencies.pydantic = ">=2.13.5, <3"
+pypi-dependencies.tomli-w = ">=1.2.0, <2"
+pypi-dependencies.xxhash = ">=4.0.1, <5"
+# Declared explicitly so the runtime environment cannot lose them to a re-solve:
+# each is imported by the shipped app (keyring -> credentials/store.py,
+# cryptography -> ui/panels/vnc_widget.py, psutil -> core/process_manager.py,
+# yara-python -> core/yara_scanner.py, huggingface-hub -> providers/huggingface.py)
+# or loaded by the shipped interpreter (pyghidra/jpype1 -> bridges/ghidra.py runs
+# `python -m pyghidra.ghidra_launch` against this very runtime).
+pypi-dependencies.cryptography = ">=50.0.1, <51"
+pypi-dependencies.huggingface-hub = ">=1.29.0, <2"
+pypi-dependencies.jpype1 = ">=1.7.1, <2"
+pypi-dependencies.keyring = ">=25.7.0, <26"
+pypi-dependencies.psutil = ">=7.2.2, <8"
+pypi-dependencies.pyghidra = ">=2.2.1, <3"
+pypi-dependencies.yara-python = ">=4.5.4, <5"
+# Transitive / environment packages (kept bounded; runtime-side).
+pypi-dependencies.networkx = ">=3.6.1, <4"
+pypi-dependencies.anyio = ">=4.14.2, <5"
+pypi-dependencies.markdown-it-py = ">=4.2.0, <5"
+pypi-dependencies.rich = ">=15.0.0, <16"
+pypi-dependencies.python-dotenv = ">=1.2.3, <2"
+pypi-dependencies.aiofiles = ">=25.1.0, <26"
+pypi-dependencies.aiosqlite = ">=0.22.1, <0.23"
+pypi-dependencies.mcp = ">=2.1.1, <3"
+pypi-dependencies.ollama = ">=0.6.2, <0.7"
+pypi-dependencies.cxxfilt = ">=0.3.0, <0.4"
+pypi-dependencies.dulwich = ">=1.2.14, <2"
+pypi-dependencies.msgpack = ">=1.2.2, <2"
+pypi-dependencies.python-multipart = ">=0.0.32, <0.0.33"
+pypi-dependencies.starlette = ">=1.6.0, <2"
+pypi-dependencies.tornado = ">=6.5.8, <7"
+pypi-dependencies.pydantic-settings = ">=2.15.0, <3"
+# ML runtime stack.
+pypi-dependencies.torch = "*"
+pypi-dependencies.transformers = ">=5.16.1, <6"
+pypi-dependencies.accelerate = ">=1.14.0, <2"
+pypi-dependencies.bitsandbytes = ">=0.50.2, <0.51"
+pypi-dependencies.sentencepiece = ">=0.2.2, <0.3"
+pypi-dependencies.safetensors = ">=0.8.0, <0.9"
+pypi-options.extra-index-urls = ["https://download.pytorch.org/whl/xpu"]
+pypi-options.index-strategy = "unsafe-best-match"
+tasks.dev = "python -m intellicrack"
+tasks.gui = "python -m intellicrack.ui.app"
+tasks.test = "just test"
+tasks.lint = "just lint"
+tasks.format = "just ruff-fmt"
+tasks.typecheck = "just basedpyright"
+tasks.fix-pyqt6-stubs = "python scripts/fix_pyqt6_stubs.py"
+tasks.pyright = "basedpyright"
+workspace.name = "Intellicrack"
+workspace.version = "0.1.0a1"
+workspace.description = "Intellicrack: AI-powered reverse engineering orchestration platform"
+workspace.authors = ["Zachary Flint <zach.flint2@gmail.com>"]
+workspace.channels = ["conda-forge"]
+workspace.platforms = ["win-64"]
+workspace.preview = ["pixi-build"]
+
+# Build toolchain: compiles hexcore and freezes the launchers during staging.
+# Never part of the runtime environment, so none of it ships in the installer.
+[tool.pixi.feature.build.dependencies]
+rust = ">=1.98.0,<1.99"
+rust-src = ">=1.98.0,<2"
+clang-tools = ">=23.1.0,<24"
+cppcheck = ">=2.21.0,<3"
+cmake = ">=4.4.3,<5"
+cmake-format = ">=0.6.13,<0.7"
+ninja = ">=1.13.2,<2"
+
+[tool.pixi.feature.build.pypi-dependencies]
+maturin = ">=1.15.0, <2"
+build = ">=1.6.0, <2"
+pyclean = ">=3.7.0, <4"
+pyinstaller = ">=6.22.2, <7"
+
+# Developer CLI tooling (conda).
+[tool.pixi.feature.tooling.dependencies]
+git = ">=2.55.0,<3"
+just = ">=1.58.0,<2"
+shellcheck = ">=0.11.0,<0.12"
+nodejs = ">=26.6.0,<26.7"
+yarn = ">=4.18.0,<5"
+tombi = ">=1.5.0,<2"
+git-cliff = ">=2.13.1,<3"
+yamlfmt = ">=0.21.0,<0.22"
+pixi-pycharm = ">=0.0.12,<0.0.13"
+
+# Lint / type / format / dead-code / release tooling plus the editable install.
+[tool.pixi.feature.dev.pypi-dependencies]
+intellicrack = { path = ".", editable = true, extras = ["dev", "test", "docs", "profile", "ml"] }
+validate-pyproject = ">=0.26, <0.27"
+validate-pyproject-schema-store = ">=2026.8.29, <2027"
+types-requests = ">=2.33.0.20260712, <3"
+types-pyyaml = ">=6.0.12.20260815, <7"
+mypy = ">=2.3.1, <3"
+black = ">=26.5.1, <27"
+pylint = ">=4.0.8, <5"
+autopep8 = ">=2.3.2, <3"
+flake8 = ">=7.3.0, <8"
+ruff = ">=0.16.5, <0.17"
+isort = ">=9.0.1, <10"
+pycodestyle = ">=2.14.0, <3"
+bandit = ">=1.9.4, <2"
+blinter = ">=1.1.19, <2"
+vulture = ">=2.16, <3"
+pyupgrade = ">=3.21.2, <4"
+pydocstyle = ">=6.3.0, <7"
+sourcery = ">=1.45.0, <2"
+wemake-python-styleguide = ">=1.8.0, <2"
+pydoclint = ">=0.9.1, <0.10"
+pyroma = ">=5.0.1, <6"
+mypy-extensions = ">=1.1.0, <2"
+dead = ">=2.1.0, <3"
+skylos = ">=4.32.0, <5"
+uncalled = ">=0.1.8, <0.2"
+deadcode = ">=2.4.1, <3"
+pygount = ">=3.2.0, <4"
+basedpyright = ">=1.39.10, <2"
+monkeytype = ">=23.3.0, <24"
+ty = ">=0.0.75, <0.0.76"
+mccabe = ">=0.7.0, <0.8"
+xenon = ">=0.9.3, <0.10"
+yamllint = ">=1.38.0, <2"
+jsonlint = ">=0.1, <0.2"
+radon = ">=6.0.1, <7"
+pre-commit = ">=4.6.2, <5"
+commitizen = ">=4.18.0, <5"
+bumpversion = ">=0.6.0, <0.7"
+pipdeptree = ">=4.2.2, <5"
+rope = ">=1.14.0, <2"
+astor = ">=0.8.1, <0.9"
+yapf = ">=0.43.0, <0.44"
+pip-audit = ">=2.10.1, <3"
+nodeenv = ">=1.10.0, <2"
+twine = ">=7.0.0, <8"
+hatchling = ">=1.32.0, <2"
+poetry = ">=2.4.1, <3"
+pre-commit-hooks = ">=6.0.0, <7"
+interrogate = ">=1.7.0, <2"
+deptry = ">=0.25.1, <0.26"
+codespell = ">=2.4.3, <3"
+detect-secrets = ">=1.5.0, <2"
+pyannotate = ">=1.2.0, <2"
+flake8-pyproject = ">=1.2.4, <2"
+
+# Test runners and fixtures.
+[tool.pixi.feature.test.pypi-dependencies]
+pytest = ">=9.1.1, <10"
+pytest-deadfixtures = ">=3.1.0, <4"
+pytest-cov = ">=7.1.0, <8"
+pytest-mock = ">=3.15.1, <4"
+pytest-asyncio = ">=1.4.0, <2"
+pytest-xdist = ">=3.8.0, <4"
+pytest-timeout = ">=2.4.0, <3"
+pytest-qt = ">=4.5.0, <5"
+pytest-benchmark = ">=5.3.0, <6"
+pytest-html = ">=4.2.0, <5"
+pytest-randomly = ">=4.1.0, <5"
+pytest-sugar = ">=1.1.1, <2"
+pytest-env = ">=1.7.0, <2"
+pytest-instafail = ">=0.5.0, <0.6"
+hypothesis = ">=6.165.10, <7"
+tox = ">=4.61.1, <5"
+nox = ">=2026.8.17, <2027"
+coverage = ">=7.16.0, <8"
+freezegun = ">=1.5.5, <2"
+responses = ">=0.26.3, <0.27"
+faker = ">=40.37.0, <41"
+
+# Documentation build.
+[tool.pixi.feature.docs.pypi-dependencies]
+sphinx = ">=9.1.0, <10"
+sphinx-rtd-theme = ">=3.1.0, <4"
+sphinx-autodoc-typehints = ">=3.13.4, <4"
+sphinx-copybutton = ">=0.5.2, <0.6"
+sphinx-tabs = ">=3.5.0, <4"
+sphinxcontrib-mermaid = ">=2.1.0, <3"
+sphinx-autobuild = ">=2025.8.25, <2026"
+pdoc3 = ">=0.11.6, <0.12"
+mkdocs-material = ">=9.7.7, <10"
+pymdown-extensions = ">=11.0.2, <12"
+myst-parser = ">=5.1.0, <6"
+
+# Profilers and interactive debuggers.
+[tool.pixi.feature.profile.pypi-dependencies]
+ipdb = ">=0.13.13, <0.14"
+line-profiler = ">=5.0.2, <6"
+memory-profiler = ">=0.61.0, <0.62"
+py-spy = ">=0.4.2, <0.5"
+snakeviz = ">=2.2.2, <3"
+pyinstrument = ">=5.1.3, <6"
+scalene = ">=2.3.0, <3"
+pycallgraph2 = ">=1.1.3, <2"
+
+[tool.pixi.environments]
+default = { features = ["build", "tooling", "dev", "test", "docs", "profile"], solve-group = "ic" }
+runtime = { features = [], solve-group = "ic" }
+
+[tool.pydoclint]
+style = "google"
+arg-type-hints-in-docstring = false
+check-return-types = true
+check-yield-types = true
+allow-init-docstring = true
+
+[tool.pydocstyle]
+convention = "google"
+match-dir = "(?!tests|docs|tools|build|dist|node_modules|vendor|\\.).*"
+
+[tool.pytest]
+ini_options.addopts = ["-ra", "--strict-markers"]
+ini_options.markers = [
+  "slow: Slow running tests",
+  "integration: Integration tests",
+  "unit: Unit tests",
+  "xpu: Tests requiring Intel XPU hardware",
+  "b580: Tests specific to Intel Arc B580 GPU",
+  "spawns_process: Test spawns external OS processes; runs only inside the Docker sandbox",
+  "host_native: Test needs real host capabilities (Intel XPU, local Ollama, debug symbols, raw disk, loopback TCP, or a specific elevation) absent in the sandbox; runs only in the host-native pass",
+]
+ini_options.minversion = "8.0"
+ini_options.python_classes = ["Test*"]
+ini_options.python_files = ["test_*.py", "*_test.py"]
+ini_options.python_functions = ["test_*"]
+ini_options.pythonpath = ["src"]
+ini_options.testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 140
+src = ["."]
+exclude = [
+  "*.egg-info/",
+  ".claude/",
+  ".git/",
+  ".github/",
+  ".idea/",
+  ".mypy_cache/",
+  ".pixi/",
+  ".pytest_cache/",
+  ".ruff_cache/",
+  ".semgrep/",
+  ".serena/",
+  ".venv/",
+  ".venv*/",
+  ".vscode/",
+  "__pycache__/",
+  "build/",
+  "CLI Coding/",
+  "dist/",
+  "docs/",
+  "notebooks/",
+  "node_modules/",
+  "Screenshots/",
+  "stubs/",
+  "tools/",
+  "typings/",
+  "vendor/",
+  "vulture_whitelist.py",
+]
+force-exclude = true
+preview = true
+format.indent-style = "space"
+format.quote-style = "double"
+format.line-ending = "cr-lf"
+format.skip-magic-trailing-comma = false
+format.docstring-code-format = true
+lint.select = [
+  "A",  # flake8-builtins
+  "ANN",  # flake8-annotations
+  "ARG",  # flake8-unused-arguments
+  "ASYNC",  # flake8-async
+  "B",  # flake8-bugbear
+  "BLE",  # flake8-blind-except
+  "C4",  # flake8-comprehensions
+  "C90",  # mccabe complexity
+  "COM",  # flake8-commas
+  "CPY",  # flake8-copyright
+  "D",  # pydocstyle
+  "DOC",  # pydoclint
+  "DTZ",  # flake8-datetimez
+  "E",  # pycodestyle errors
+  "EM",  # flake8-errmsg
+  "ERA",  # eradicate (commented-out code)
+  "F",  # pyflakes
+  "FBT",  # flake8-boolean-trap
+  "FIX",  # flake8-fixme (TODO/FIXME)
+  "FLY",  # flynt (f-string conversion)
+  "FURB",  # refurb (code modernization)
+  "G",  # flake8-logging-format
+  "I",  # isort
+  "ICN",  # flake8-import-conventions
+  "ISC",  # flake8-implicit-str-concat
+  "LOG",  # flake8-logging
+  "N",  # pep8-naming
+  "PERF",  # perflint
+  "PGH",  # pygrep-hooks
+  "PIE",  # flake8-pie
+  "PL",  # pylint
+  "PT",  # flake8-pytest-style
+  "PTH",  # flake8-use-pathlib
+  "PYI",  # flake8-pyi (stub files)
+  "Q",  # flake8-quotes
+  "RET",  # flake8-return
+  "RSE",  # flake8-raise
+  "RUF",  # ruff-specific
+  "S",  # bandit security
+  "SIM",  # flake8-simplify
+  "SLF",  # flake8-self
+  "T10",  # flake8-debugger
+  "T20",  # flake8-print
+  "TC",  # flake8-type-checking
+  "TID",  # flake8-tidy-imports
+  "TRY",  # tryceratops
+  "UP",  # pyupgrade
+  "W",  # pycodestyle warnings
+]
+lint.ignore = [
+  "docstring-extraneous-returns",  # conflicts with pydoclint DOC201/DOC203 for abstract-style methods that always raise but declare a non-None return type honored by subclasses
+  "docstring-extraneous-exception",  # conflicts with pydoclint DOC501/DOC503 for re-raised exceptions caught in except blocks
+  "line-too-long",
+  "too-many-return-statements",
+  "too-many-branches",
+  "too-many-arguments",
+  "too-many-statements",
+  "too-many-nested-blocks",
+  "noqa-comments",  # opinionated preview-only stylistic rule (`# noqa` vs `# ruff: ignore`); the codebase deliberately uses `# noqa` for native-API-mirror method names, lazy/platform-gated imports, and post-``importorskip`` imports -- its own docs invite disabling when noqa is preferred
+  "suspicious-xml-etree-import",  # project-wide: write-side xml.etree usage is centralized in ``intellicrack.core.xml_gen``; parsing of untrusted XML uses ``defusedxml`` elsewhere -- see ``[tool.bandit] skips`` for the matching rationale
+]
+lint.per-file-ignores.".claude/**" = ["suspicious-subprocess-import"]
+lint.per-file-ignores."docker/**" = ["invalid-module-name", "suspicious-subprocess-import", "subprocess-without-shell-equals-true", "start-process-with-partial-path", "print"]
+lint.per-file-ignores."packaging/**" = ["invalid-module-name", "suspicious-subprocess-import", "subprocess-without-shell-equals-true", "start-process-with-partial-path", "print"]
+lint.per-file-ignores."scripts/**" = ["invalid-module-name", "suspicious-subprocess-import", "subprocess-without-shell-equals-true", "start-process-with-partial-path", "print"]
+lint.per-file-ignores."src/intellicrack/bridges/win32_types.py" = ["invalid-class-name"]
+lint.per-file-ignores."src/intellicrack/bridges/process.py" = ["invalid-class-name"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/evaluator.py" = [
+  "complex-structure",
+  "too-many-locals",
+  "magic-value-comparison",
+  "raise-vanilla-args",
+]
+lint.per-file-ignores."src/intellicrack/core/hexpat/interpreter.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/lexer.py" = ["complex-structure"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/parser.py" = ["complex-structure", "too-many-locals"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/preprocessor.py" = ["too-many-locals"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/stdlib.py" = ["magic-value-comparison", "raise-vanilla-args"]
+lint.per-file-ignores."src/intellicrack/core/orchestrator.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/core/tools.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/main.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/ui/app.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/ui/panels/frida_panel.py" = ["too-many-locals"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_disassembly.py" = ["too-many-locals"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_search.py" = ["too-many-locals"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_widgets.py" = ["invalid-function-name"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/panel.py" = ["too-many-locals"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor_panel.py" = [
+  "invalid-function-name",
+  "too-many-locals",
+  "hashlib-insecure-hash-function",
+]
+lint.per-file-ignores."tests/**" = [
+  "get-attr-with-constant",
+  "set-attr-with-constant",
+  "import-private-name",
+  "magic-value-comparison",
+  "no-self-use",
+  "assert",
+  "exec-builtin",
+  "hardcoded-password-string",
+  "hardcoded-password-func-arg",
+  "hardcoded-password-default",
+  "suspicious-subprocess-import",
+  "subprocess-without-shell-equals-true",
+  "private-member-access",
+  "runtime-cast-value",
+]
+lint.fixable = ["ALL"]
+lint.unfixable = ["builtin-open", "implicit-return", "implicit-optional", "unsorted-dunder-all", "relative-imports", "error-instead-of-exception"]
+lint.dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+lint.isort.combine-as-imports = true
+lint.isort.force-wrap-aliases = true
+lint.isort.known-first-party = ["intellicrack"]
+lint.isort.lines-after-imports = 2
+lint.mccabe.max-complexity = 30
+lint.pydocstyle.convention = "google"
+lint.pylint.max-args = 20
+lint.pylint.max-branches = 25
+lint.pylint.max-public-methods = 50
+lint.pylint.max-statements = 100
+
+[tool.tombi.files]
+include = ["**/*.toml"]
+exclude = [
+  ".pixi/**",
+  ".claude/**",
+  "node_modules/**",
+  "build/**",
+  "dist/**",
+  "tools/**",
+  "vendor/**",
+  ".venv*/**",
+  ".pytest_cache/**",
+  "target/**",
+]
+
+[tool.tombi.format.rules]
+line-width = 100
+
+[tool.tombi.lint.rules]
+dotted-keys-out-of-order = "error"
+key-empty = "error"
+tables-out-of-order = "error"
+
+[tool.tombi.extensions."tombi-toml/cargo"]
+enabled = true
+
+# git-cliff configuration lives in cliff.toml at project root.
+# Do NOT add [tool.git-cliff.*] here: configparser-based tools
+# (radon/xenon and similar) read the entire [tool] table and choke on
+# the '%' characters in Tera template strings.
+
+[tool.tombi.extensions."tombi-toml/pyproject"]
+enabled = true
+
+[tool.ty.src]
+exclude = ["notebooks/", "vendor/"]
+
+[tool.vulture]
+min_confidence = 80
+ignore_decorators = [
+  "@abstractmethod",
+  "@abc.abstractmethod",
+  "@property",
+  "@*.setter",
+  "@staticmethod",
+  "@classmethod",
+  "@override",
+]
+ignore_names = [
+  "argtypes",
+  "restype",
+  "supports_*",
+  "visit_*",
+  "do_*",
+  "test_*",
+  "setUp",
+  "tearDown",
+  "setUpClass",
+  "tearDownClass",
+]
+exclude = [
+  ".git/",
+  ".github/",
+  ".pixi/",
+  "build/",
+  "dist/",
+  "tools/",
+  "docs/",
+  "node_modules/",
+  "vendor/",
+  "CLI Coding/",
+  "Screenshots/",
+  "typings/",
+  "stubs/",
+]

@@ -1,0 +1,262 @@
+name: CI
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+jobs:
+  setup:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.5
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: |
+          pixi install
+        timeout-minutes: 15
+      - name: Generate requirements.txt for Dependabot
+        shell: pwsh
+        run: |
+          pixi list --frozen --json | ConvertFrom-Json | Where-Object { $_.kind -eq 'pypi' } | Sort-Object name | ForEach-Object {
+            if ($_.version) {
+              "$($_.name)==$($_.version)"
+            } else {
+              $_.name
+            }
+          } | Out-File -FilePath requirements.txt -Encoding utf8
+        timeout-minutes: 5
+  python-lint:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.5
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Lint with ruff
+        run: |
+          pixi run ruff check src/ tests/ --output-format=github
+          pixi run ruff format src/ tests/
+  python-security:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.5
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Security scan with bandit
+        run: pixi run bandit -r src/intellicrack/ -f json -o bandit-report.json || true
+      - name: Print security results
+        if: always()
+        shell: python
+        run: |
+          import json
+          import pathlib
+          report = pathlib.Path("bandit-report.json")
+          if report.exists():
+              data = json.loads(report.read_text())
+              results = data.get("results", [])
+              print(f"Security Issues: {len(results)}")
+              for r in results:
+                  sev = r.get("issue_severity", "?")
+                  conf = r.get("issue_confidence", "?")
+                  text = r.get("issue_text", "")
+                  fname = r.get("filename", "")
+                  line = r.get("line_number", 0)
+                  print(f"  [{sev}/{conf}] {fname}:{line} - {text}")
+          else:
+              print("No bandit report found")
+      - name: Upload bandit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: bandit-report
+          path: bandit-report.json
+  python-typecheck:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.5
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Install package in editable mode
+        run: pixi run pip install -e .
+      - name: Fix PyQt6 stubs
+        run: pixi run python scripts/fix_pyqt6_stubs.py
+      - name: Type check with basedpyright
+        run: |
+          pixi run basedpyright src/
+  python-mock-verify:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.5
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Verify No Mock Usage (Production-Ready Enforcement)
+        run: |
+          pixi run python scripts/verify_no_mocks.py --ci
+  python-test:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.5
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Install package in editable mode
+        run: pixi run pip install -e .
+      - name: Build and install native hexcore module
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pixi run maturin build --release --manifest-path src/intellicrack-hexcore/Cargo.toml --out target/wheels
+          if ($LASTEXITCODE -ne 0) { throw 'maturin build failed' }
+          $wheel = Get-ChildItem target/wheels/intellicrack_hexcore-*.whl | Select-Object -First 1
+          if (-not $wheel) { throw 'intellicrack_hexcore wheel not produced' }
+          pixi run pip install --no-deps --force-reinstall $wheel.FullName
+          if ($LASTEXITCODE -ne 0) { throw 'intellicrack_hexcore wheel install failed' }
+          pixi run python -c "import intellicrack_hexcore"
+          if ($LASTEXITCODE -ne 0) { throw 'intellicrack_hexcore import verification failed' }
+        timeout-minutes: 20
+      - name: Build x64dbg bridge plugins for deployment tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cmake -S src/x64dbg-plugin -B src/x64dbg-plugin/build_x64 -A x64 -DBUILD_X64=ON
+          if ($LASTEXITCODE -ne 0) { throw 'x64 CMake configure failed' }
+          cmake --build src/x64dbg-plugin/build_x64 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x64 plugin build failed' }
+          cmake -S src/x64dbg-plugin -B src/x64dbg-plugin/build_x86 -A Win32 -DBUILD_X64=OFF
+          if ($LASTEXITCODE -ne 0) { throw 'x32 CMake configure failed' }
+          cmake --build src/x64dbg-plugin/build_x86 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x32 plugin build failed' }
+          $x64 = 'src/x64dbg-plugin/bin/intellicrack_bridge_x64.dp64'
+          $x32 = 'src/x64dbg-plugin/bin/intellicrack_bridge_x32.dp32'
+          foreach ($p in @($x64, $x32)) {
+            if (-not (Test-Path $p)) { throw "expected plugin binary missing: $p" }
+            if ((Get-Item $p).Length -eq 0) { throw "plugin binary is empty: $p" }
+            Write-Host "built $p ($((Get-Item $p).Length) bytes)"
+          }
+        timeout-minutes: 20
+      - name: Test with pytest
+        run: |
+          pixi run pytest tests/ -v --cov=src/intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
+        env:
+          PYTHONDONTWRITEBYTECODE: 1
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: |
+            test-results.xml
+            htmlcov/
+            coverage.xml
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v6
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-windows-py3.12
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  x64dbg-plugin-build:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Build x64 bridge plugin
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cmake -S src/x64dbg-plugin -B src/x64dbg-plugin/build_x64 -A x64 -DBUILD_X64=ON
+          if ($LASTEXITCODE -ne 0) { throw 'x64 CMake configure failed' }
+          cmake --build src/x64dbg-plugin/build_x64 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x64 plugin build failed' }
+          cmake --install src/x64dbg-plugin/build_x64 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x64 plugin install failed' }
+        timeout-minutes: 15
+      - name: Build x32 bridge plugin
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cmake -S src/x64dbg-plugin -B src/x64dbg-plugin/build_x86 -A Win32 -DBUILD_X64=OFF
+          if ($LASTEXITCODE -ne 0) { throw 'x32 CMake configure failed' }
+          cmake --build src/x64dbg-plugin/build_x86 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x32 plugin build failed' }
+          cmake --install src/x64dbg-plugin/build_x86 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x32 plugin install failed' }
+        timeout-minutes: 15
+      - name: Verify plugin artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $x64 = 'tools/x64dbg/release/x64/plugins/intellicrack_bridge_x64.dp64'
+          $x32 = 'tools/x64dbg/release/x32/plugins/intellicrack_bridge_x32.dp32'
+          foreach ($p in @($x64, $x32)) {
+            if (-not (Test-Path $p)) { throw "expected plugin artifact missing: $p" }
+            if ((Get-Item $p).Length -eq 0) { throw "plugin artifact is empty: $p" }
+            Write-Host "built $p ($((Get-Item $p).Length) bytes)"
+          }
+      - name: Upload plugin artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: x64dbg-bridge-plugins
+          path: |
+            tools/x64dbg/release/x64/plugins/intellicrack_bridge_x64.dp64
+            tools/x64dbg/release/x32/plugins/intellicrack_bridge_x32.dp32

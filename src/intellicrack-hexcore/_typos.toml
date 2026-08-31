@@ -1,0 +1,16 @@
+[files]
+extend-exclude = ["target/", "Cargo.lock"]
+
+[default]
+locale = "en-us"
+
+[default.extend-words]
+# Binary analysis domain terms that are not misspellings
+ba = "ba"
+nd = "nd"
+fo = "fo"
+iy = "iy"
+ue = "ue"
+hsi = "hsi"
+ser = "ser"
+crate = "crate"

@@ -1,0 +1,15 @@
+{
+  "name": "Anthropic Claude-3 Sonnet",
+  "description": "Advanced reasoning and research-grade binary analysis",
+  "provider": "anthropic",
+  "model_name": "claude-3-sonnet-20240229",
+  "api_key": "YOUR_ANTHROPIC_API_KEY",
+  "context_length": 200000,
+  "temperature": 0.7,
+  "max_tokens": 4096,
+  "tools_enabled": true,
+  "custom_params": {
+    "top_p": 0.9,
+    "top_k": 40
+  }
+}
