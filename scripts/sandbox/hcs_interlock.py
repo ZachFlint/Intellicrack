@@ -33,7 +33,6 @@ started beside a live engine.
 from __future__ import annotations
 
 import enum
-import os
 import shutil
 import subprocess
 import time
@@ -138,7 +137,7 @@ def named_pipe_names() -> tuple[str, ...]:
         empty on a platform without named pipes or when the root cannot be read.
     """
     try:
-        return tuple(os.listdir(_NAMED_PIPE_ROOT))
+        return tuple(entry.name for entry in Path(_NAMED_PIPE_ROOT).iterdir())
     except OSError:
         return ()
 
