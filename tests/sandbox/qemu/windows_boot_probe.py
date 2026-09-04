@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import shutil
 import socket
 import subprocess
 import time
@@ -29,10 +28,12 @@ from typing import TYPE_CHECKING, Final
 
 from intellicrack.sandbox.base import SandboxConfig
 from intellicrack.sandbox.qemu import AcceleratorType, GuestOS, QEMUConfig, QEMUSandbox
+from scripts.sandbox.hcs_interlock import docker_windows_engine_running, running_container_ids
 from scripts.sandbox.provision_windows_guest import ProvisioningError, probe_iso_structure
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 
@@ -51,7 +52,6 @@ SCRATCH_DISK_SIZE: Final[str] = "64M"
 _QEMU_IMG_STEM: Final[str] = "qemu-img"
 _ISO_SUFFIX: Final[str] = ".iso"
 _QEMU_IMG_TIMEOUT_SECONDS: Final[float] = 60.0
-_DOCKER_QUERY_TIMEOUT_SECONDS: Final[float] = 30.0
 
 _CDROM_DRIVE_ID: Final[str] = "icboot"
 _CDROM_BUS: Final[str] = "ide.0"
@@ -204,35 +204,44 @@ def windows_install_media() -> Path | None:
     return None
 
 
-def running_container_ids() -> tuple[str, ...]:
-    """Return the ids of containers currently running on the Docker engine.
+def docker_engine_refusal_reason(
+    *,
+    engine_running: Callable[[], bool] = docker_windows_engine_running,
+    containers: Callable[[], tuple[str, ...]] = running_container_ids,
+) -> str:
+    """Explain why a WHPX virtual machine must not start here, or return empty.
 
-    Windows containers and WHPX virtual machines share the Host Compute
-    Service. Starting a VM while a Windows container is live has bugchecked
-    this host before, so the boot gates refuse to run in that state instead of
-    risking it. A missing or unreachable Docker CLI means nothing is running as
-    far as this check is concerned.
+    The Docker Windows engine and a WHPX virtual machine share the Host Compute
+    Service, and starting one beside the other wedges the engine and has
+    bugchecked this host. The *engine* is the hazard, not merely a running
+    container: Docker Desktop holds the Host Compute Service with its Windows
+    engine and utility VM for as long as it runs. ``just test`` runs the
+    container leg immediately before the host-native pass, so by the time these
+    gates look the container has exited while the engine is still up -- the
+    state a container-only check waved through and this one refuses.
+
+    The container count is queried only once the engine is already known to be
+    running, so a clear host never pays for a ``docker ps`` and a wedged engine
+    is never asked a question before the refusal is decided.
+
+    Args:
+        engine_running: Reports whether a Docker engine holds the Host Compute
+            Service; injectable so the refusal can be gated without a host.
+        containers: Lists running container ids for the message detail;
+            injectable alongside ``engine_running``.
 
     Returns:
-        tuple[str, ...]: Ids of running containers, empty when there are none
-        or when Docker cannot be queried.
+        str: The reason a virtual machine must not start, or an empty string
+        when the Host Compute Service is clear.
     """
-    docker = shutil.which("docker")
-    if docker is None:
-        return ()
-    try:
-        completed = subprocess.run(
-            [docker, "ps", "--quiet"],
-            capture_output=True,
-            text=True,
-            timeout=_DOCKER_QUERY_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return ()
-    if completed.returncode != 0:
-        return ()
-    return tuple(line.strip() for line in completed.stdout.splitlines() if line.strip())
+    if not engine_running():
+        return ""
+    running = containers()
+    detail = f"{len(running)} container(s) running" if running else "no container running"
+    return (
+        f"the Docker Windows engine holds the Host Compute Service ({detail}); a WHPX virtual machine "
+        "started beside it wedges the engine and can bugcheck the host"
+    )
 
 
 def make_scratch_disk(qemu_path: Path, destination: Path) -> Path:
@@ -608,7 +617,7 @@ def resolve_whpx_qemu_path() -> tuple[Path | None, str]:
     accelerator = asyncio.run(sandbox.detect_accelerator())
     if accelerator != AcceleratorType.WHPX:
         return None, f"host accelerator is {accelerator.value}; these gates cover WHPX-specific defects"
-    running = running_container_ids()
-    if running:
-        return None, f"{len(running)} Docker container(s) running; Windows containers and WHPX share the Host Compute Service"
+    refusal = docker_engine_refusal_reason()
+    if refusal:
+        return None, refusal
     return qemu_path, ""
