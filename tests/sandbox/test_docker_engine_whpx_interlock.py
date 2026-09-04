@@ -31,6 +31,7 @@ name, exactly as the container-side interlock gates its own.
 from __future__ import annotations
 
 import ast
+import importlib.util
 import inspect
 import os
 import shutil
@@ -41,7 +42,6 @@ from typing import TYPE_CHECKING, Final
 import pytest
 
 from intellicrack.core.subprocess_compat import DEVNULL, PIPE, Popen
-from scripts.host_native_tests import run as host_native_run
 from scripts.sandbox.hcs_interlock import (
     DOCKER_WINDOWS_ENGINE_PIPE,
     DockerEngineState,
@@ -59,6 +59,10 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
+_HOST_NATIVE_MODULE: Final[str] = "scripts.host_native_tests"
+_HOST_NATIVE_ENTRY: Final[str] = "run"
+_QUIESCE_CALL: Final[str] = "_quiesce_docker_for_vm_gates"
+
 _ENGINE_PROCESS_NAME: Final[str] = "dockerd.exe"
 _PROCESS_KILL_GRACE_SEC: Final[float] = 5.0
 
@@ -73,6 +77,49 @@ _WINDOWS_ONLY = pytest.mark.skipif(
     sys.platform != "win32",
     reason="the Docker engine process enumerator inspects Windows process names",
 )
+
+
+def _module_source(module_name: str) -> str:
+    """Read a module's source text without importing it.
+
+    Importing ``scripts.host_native_tests`` merely to parse it would pull in
+    torch and an HTTP client, and the container this runs in has no hardware
+    for torch to find. This gate only reads text, so ``find_spec`` locates the
+    file through the same import machinery pytest uses, executing none of it.
+
+    Args:
+        module_name: Dotted name of the module to read.
+
+    Returns:
+        str: The module's source text.
+    """
+    spec = importlib.util.find_spec(module_name)
+    assert spec is not None, f"{module_name} is not importable from the test environment"
+    origin = spec.origin
+    assert origin is not None, f"{module_name} resolves to no file on disk"
+    return Path(origin).read_text(encoding="utf-8")
+
+
+def _ordered_calls_in(source: str, function_name: str) -> list[str]:
+    """List, in source order, the names one function in ``source`` calls.
+
+    Args:
+        source: Source text of the module holding the function.
+        function_name: Name of the function to read.
+
+    Returns:
+        list[str]: Called names in source order; empty when the function is not
+        defined exactly once in the module.
+    """
+    defined = [node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.FunctionDef) and node.name == function_name]
+    if len(defined) != 1:
+        return []
+    calls = [node for node in ast.walk(defined[0]) if isinstance(node, ast.Call)]
+    return [
+        node.func.id if isinstance(node.func, ast.Name) else node.func.attr
+        for node in sorted(calls, key=lambda node: (node.lineno, node.col_offset))
+        if isinstance(node.func, ast.Name | ast.Attribute)
+    ]
 
 
 def _no_containers() -> tuple[str, ...]:
@@ -500,21 +547,16 @@ def test_the_host_native_pass_quiesces_docker_before_it_runs_pytest() -> None:
     leave the WHPX gates to race it, so ordering is asserted as well as
     presence, read from the runner's own syntax tree.
     """
-    calls = [node for node in ast.walk(ast.parse(inspect.getsource(host_native_run))) if isinstance(node, ast.Call)]
-    ordered = [
-        node.func.id if isinstance(node.func, ast.Name) else node.func.attr
-        for node in sorted(calls, key=lambda node: (node.lineno, node.col_offset))
-        if isinstance(node.func, ast.Name | ast.Attribute)
-    ]
+    ordered = _ordered_calls_in(_module_source(_HOST_NATIVE_MODULE), _HOST_NATIVE_ENTRY)
 
-    quiesce = "_quiesce_docker_for_vm_gates"
-    assert quiesce in ordered, (
-        f"the host-native pass never calls {quiesce}, so it starts WHPX virtual machines while the "
+    assert ordered, f"{_HOST_NATIVE_MODULE}.{_HOST_NATIVE_ENTRY} could not be read, so its wiring is unproven"
+    assert _QUIESCE_CALL in ordered, (
+        f"the host-native pass never calls {_QUIESCE_CALL}, so it starts WHPX virtual machines while the "
         f"Docker Windows engine still holds the Host Compute Service; calls={ordered!r}"
     )
     assert "run" in ordered, f"the host-native pass no longer launches pytest through subprocess.run; calls={ordered!r}"
-    assert ordered.index(quiesce) < ordered.index("run"), (
-        f"{quiesce} must run before pytest is launched, or the WHPX gates race the engine shutdown; order={ordered!r}"
+    assert ordered.index(_QUIESCE_CALL) < ordered.index("run"), (
+        f"{_QUIESCE_CALL} must run before pytest is launched, or the WHPX gates race the engine shutdown; order={ordered!r}"
     )
 
 
