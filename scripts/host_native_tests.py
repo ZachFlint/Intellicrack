@@ -37,6 +37,11 @@ import httpx
 from intellicrack.core.elevation import is_elevated
 from intellicrack.core.logging import get_logger
 from intellicrack.providers.xpu_utils import is_xpu_available
+from scripts.sandbox.hcs_interlock import (
+    DockerEngineState,
+    ensure_docker_engine_quiesced,
+    quiesce_notice,
+)
 
 
 _LOGGER = get_logger("scripts.host_native")
@@ -401,8 +406,40 @@ def elevation_skip_notice(*, elevated: bool) -> str:
     )
 
 
-def _log_capabilities() -> None:
-    """Log which host capabilities are present, so skips are explainable."""
+def _quiesce_docker_for_vm_gates(*, elevated: bool) -> DockerEngineState:
+    """Clear the Docker engine off the Host Compute Service before the VM gates.
+
+    The host-native pass boots real WHPX virtual machines, and ``just test``
+    invokes it immediately after the container leg, which leaves Docker's
+    Windows engine live on the Host Compute Service. Starting a virtual machine
+    in that state wedges the engine -- recovery needs Docker Desktop relaunched
+    elevated -- and has bugchecked this host, so the engine is shut down first.
+
+    A blocked outcome is reported, not raised: the rest of the host-native pass
+    has nothing to do with the hypervisor and still runs, while the WHPX gates
+    refuse themselves through
+    :func:`tests.sandbox.qemu.windows_boot_probe.docker_engine_refusal_reason`.
+
+    Args:
+        elevated: Whether this process already holds an elevated token. It is
+            never used to request one: a test run must raise no UAC prompt.
+
+    Returns:
+        DockerEngineState: The resulting state of the Host Compute Service.
+    """
+    state = ensure_docker_engine_quiesced(elevated=elevated)
+    print(quiesce_notice(state), file=sys.stderr, flush=True)
+    _LOGGER.info("host_native_docker_interlock", state=state.value, host_is_clear=state.host_is_clear)
+    return state
+
+
+def _log_capabilities(docker_state: DockerEngineState) -> None:
+    """Log which host capabilities are present, so skips are explainable.
+
+    Args:
+        docker_state: Outcome of the Host Compute Service interlock, which
+            decides whether the WHPX virtual machine gates can run at all.
+    """
     installed = _installed_ollama_models()
     _LOGGER.info(
         "host_native_capabilities",
@@ -412,6 +449,8 @@ def _log_capabilities() -> None:
         ollama=_ollama_reachable(),
         ollama_models=len(installed),
         ollama_local_models=sum(1 for name in installed if _is_local_model_name(name)),
+        docker_engine=docker_state.value,
+        hcs_clear=docker_state.host_is_clear,
     )
 
 
@@ -425,11 +464,18 @@ def run(repo_root: Path, extra_args: list[str] | None = None) -> int:
     Returns:
         int: The pytest process exit code (non-zero on any failure).
     """
-    print(elevation_skip_notice(elevated=is_elevated()), file=sys.stderr, flush=True)
+    elevated = is_elevated()
+    print(elevation_skip_notice(elevated=elevated), file=sys.stderr, flush=True)
+    # Before anything else, and before any test can reach a hypervisor: this
+    # pass boots real WHPX virtual machines, and ``just test`` runs it directly
+    # after the container leg, which leaves the Docker Windows engine live on
+    # the Host Compute Service. Clearing the engine first is what keeps the two
+    # from colliding; a host that will not clear leaves the VM gates to skip.
+    docker_state = _quiesce_docker_for_vm_gates(elevated=elevated)
     env = dict(os.environ)
     _configure_environment(env, repo_root)
     server = _provision_ollama()
-    _log_capabilities()
+    _log_capabilities(docker_state)
     argv = [sys.executable, "-m", "pytest", *build_pytest_argv(repo_root), *(extra_args or [])]
     _LOGGER.info("host_native_pytest_start", argv=argv[2:])
     try:
