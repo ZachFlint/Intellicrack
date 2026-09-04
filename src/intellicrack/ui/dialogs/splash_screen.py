@@ -361,6 +361,7 @@ class SplashScreen(QSplashScreen):
         self._overlay.setVisible(False)
 
         self.progress_updated.connect(self._on_progress_updated)
+        self.messageChanged.connect(self._on_message_changed)
 
         _logger.info(
             "splash_screen_initialized",
@@ -540,7 +541,11 @@ class SplashScreen(QSplashScreen):
     def _setup_overlay(self) -> None:
         """Set up the progress bar and status label overlay widgets.
 
-        These widgets are hidden but retained for backward compatibility with code that accesses them directly.
+        The overlay starts hidden and is revealed by :meth:`set_progress` once
+        the first progress update arrives, so the animated progress bar is
+        actually visible to the user while initialization runs. The status
+        and version labels it also hosts are retained for backward
+        compatibility with code that accesses them directly.
         """
         self._overlay = QWidget(self)
         self._overlay.setStyleSheet("background: transparent;")
@@ -705,6 +710,8 @@ class SplashScreen(QSplashScreen):
         if message:
             self._status_message = message
 
+        self._overlay.setVisible(True)
+
         self._update_stage_states(self.progress_value)
 
         if self.progress_animation is not None:
@@ -737,6 +744,22 @@ class SplashScreen(QSplashScreen):
             message: Status message.
         """
         self.set_progress(value, message)
+
+    def _on_message_changed(self, message: str) -> None:
+        """Keep the custom-painted status text in sync with the base splash message.
+
+        Connected to :attr:`QSplashScreen.messageChanged`, which Qt emits from
+        every call to :meth:`showMessage`/:meth:`clearMessage`, including
+        calls made directly rather than through :meth:`set_progress`. Without
+        this, :meth:`_draw_status_and_version` would keep painting a stale
+        ``self._status_message`` and the base class never paints its own
+        message because :meth:`paintEvent` does not call ``drawContents``.
+
+        Args:
+            message: The new splash message, as reported by Qt.
+        """
+        self._status_message = message
+        self.update()
 
     def _paint_splash(self, painter: QPainter) -> None:
         """Draw all splash screen layers using the provided ``painter``.

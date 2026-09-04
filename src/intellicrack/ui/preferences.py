@@ -230,6 +230,8 @@ class AppearanceSettingsWidget(QWidget):
         self._theme_combo = QComboBox()
         self._theme_combo.addItem("Dark", "dark")
         self._theme_combo.addItem("Light", "light")
+        self._theme_combo.addItem("Dark 2", "dark2")
+        self._theme_combo.addItem("Light 2", "light2")
         self._theme_combo.addItem("System", "system")
         theme_layout.addRow("Theme:", self._theme_combo)
 

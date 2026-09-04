@@ -778,14 +778,39 @@ Write-Success 'tool subset staged'
 
 # ---------------------------------------------------------------------------
 # Step 8: Ghidra tree.
+#
+# The bridge drives Ghidra through the CPython (PyGhidra/jfx_bridge) server,
+# not the legacy Jython interpreter, so Ghidra/Features/Jython must never
+# reach the shipped installer: a live Jython extension beside PyGhidra
+# reintroduces the S19-D11 script-manager outage. Excluding it from the
+# mirror is the fix; the post-copy assertion below is what makes the fix
+# durable -- a re-stage that forgets the exclusion (or mirrors from a source
+# tree where Jython was never disabled) fails the build instead of silently
+# shipping it.
 # ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 8/14: staging Ghidra...'
 $GhidraSrc = Join-Path $RepoRoot 'tools\ghidra'
 Assert-Source -Path (Join-Path $GhidraSrc 'support\analyzeHeadless.bat') -What 'Ghidra tree'
 $GhidraDest = Join-Path $Stage 'app\tools\ghidra'
-Invoke-Robocopy -Source $GhidraSrc -Destination $GhidraDest
+$GhidraJythonSrc = Join-Path $GhidraSrc 'Ghidra\Features\Jython'
+Invoke-Robocopy -Source $GhidraSrc -Destination $GhidraDest -ExcludeDirs @($GhidraJythonSrc)
 Assert-Produced -Path (Join-Path $GhidraDest 'support\analyzeHeadless.bat') -What 'staged analyzeHeadless.bat'
-Write-Success 'Ghidra staged'
+
+$GhidraJythonDest = Join-Path $GhidraDest 'Ghidra\Features\Jython'
+if (Test-Path -LiteralPath $GhidraJythonDest) {
+    throw ("Staged Ghidra tree still carries Ghidra/Features/Jython ($GhidraJythonDest): the bridge uses the " +
+        'CPython (PyGhidra/jfx_bridge) server and a live Jython extension reintroduces the S19-D11 outage. ' +
+        'The Invoke-Robocopy exclusion above must keep this directory out of the stage.')
+}
+$GhidraJythonJars = @(Get-ChildItem -LiteralPath $GhidraDest -Recurse -Force -Filter '*.jar' -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -replace '\\', '/' -match '(?i)/Ghidra/Features/Jython/lib/' })
+if ($GhidraJythonJars.Count -gt 0) {
+    $jarNames = ($GhidraJythonJars | ForEach-Object { $_.Name }) -join ', '
+    throw ("Staged Ghidra tree carries $($GhidraJythonJars.Count) Jython extension jar(s) under " +
+        "Ghidra/Features/Jython/lib ($jarNames): the bridge uses the CPython (PyGhidra/jfx_bridge) server and a " +
+        'live Jython extension reintroduces the S19-D11 outage. It must be excluded from the staged Ghidra tree.')
+}
+Write-Success 'Ghidra staged (Jython extension excluded)'
 
 # ---------------------------------------------------------------------------
 # Step 9: bundled Temurin JDK 21 under the Ghidra tree.

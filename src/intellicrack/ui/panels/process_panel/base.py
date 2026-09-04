@@ -13,7 +13,8 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Final, cast, override
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QEvent, pyqtSignal
+from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -44,11 +45,33 @@ _logger = get_logger(__name__)
 
 _MARGIN: Final[int] = 4
 _SPACING: Final[int] = 4
-_STATUS_HEIGHT: Final[int] = 24
 _SHUTDOWN_TIMEOUT_S: Final[float] = 10.0
+# Derived from the status bar's own contents margins (0 px top/bottom) plus
+# breathing room around the label text, mirroring the styled QLineEdit's
+# vertical padding in theme_manager.py (D42).
+_STATUS_BAR_VERTICAL_PADDING: Final[int] = 12
 
 _HINT_NO_BRIDGE: Final[str] = "Process bridge unavailable\nConnect a process bridge to use this tab"
 _HINT_ATTACH_FIRST: Final[str] = "Attach to a process first\nSelect a process on the Processes tab and click Attach to enable this tab"
+
+
+def _compute_status_bar_height(widget: QWidget) -> int:
+    """Derive the persistent status bar height from font metrics.
+
+    Combines ``widget``'s current font metrics with a fixed vertical
+    padding so the status labels are never clipped at larger fonts or
+    DPI/accessibility scaling, instead of a hardcoded fixed height
+    (D42).
+
+    Args:
+        widget: The widget whose font metrics anchor the computation
+            (the status bar frame itself).
+
+    Returns:
+        int: The status bar height, in pixels, that fits the label text
+        without clipping.
+    """
+    return QFontMetrics(widget.font()).height() + _STATUS_BAR_VERTICAL_PADDING
 
 
 class _PanelState(enum.Enum):
@@ -90,6 +113,7 @@ class ProcessPanel(AnalysisPanelBase):
         self._attach_gated_tabs: list[QWidget] = []
         self._attach_overlays: list[AttachHintOverlay] = []
         self._hint_overlays: list[AttachHintOverlay] = []
+        self._status_bar: QFrame | None = None
         super().__init__(parent)
         self._privileges_changed_signal.connect(self._on_privileges_changed)
 
@@ -128,6 +152,17 @@ class ProcessPanel(AnalysisPanelBase):
             int | None: Selected PID or None.
         """
         return self._process_tab.get_selected_pid()
+
+    @override
+    def changeEvent(self, a0: QEvent | None) -> None:
+        """Re-derive the status bar height when the panel's font changes.
+
+        Args:
+            a0: The change event.
+        """
+        super().changeEvent(a0)
+        if a0 is not None and a0.type() == QEvent.Type.FontChange and self._status_bar is not None:
+            self._status_bar.setFixedHeight(_compute_status_bar_height(self._status_bar))
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
@@ -204,8 +239,8 @@ class ProcessPanel(AnalysisPanelBase):
             QFrame: Status bar frame.
         """
         bar = QFrame()
-        bar.setFixedHeight(_STATUS_HEIGHT)
         bar.setObjectName("status_bar")
+        bar.setFixedHeight(_compute_status_bar_height(bar))
         bar_layout = QHBoxLayout(bar)
         bar_layout.setContentsMargins(_MARGIN, 0, _MARGIN, 0)
         bar_layout.setSpacing(12)

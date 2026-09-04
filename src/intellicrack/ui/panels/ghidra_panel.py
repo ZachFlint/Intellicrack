@@ -32,6 +32,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QSplitter,
     QTableWidget,
@@ -598,8 +599,15 @@ class GhidraPanel(AnalysisPanelBase):
     def _create_memory_tab(self) -> QWidget:
         """Create the Memory tab.
 
+        The memory map table, read/write-bytes forms, block operations, and
+        overlay controls stack to a combined minimum height that exceeds the
+        docked pane, so the container is hosted in a vertically scrolling
+        :class:`QScrollArea` to keep every section legible and reachable
+        instead of overdrawing its neighbours.
+
         Returns:
-            QWidget: Widget with memory map, read/write controls, and create block form.
+            QWidget: Scroll area hosting the memory map, read/write controls,
+            block operations, and overlay form.
         """
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -690,7 +698,10 @@ class GhidraPanel(AnalysisPanelBase):
         overlay_row.addWidget(self._create_overlay_btn)
         layout.addLayout(overlay_row)
 
-        return container
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(container)
+        return scroll
 
     def _build_memory_block_ops_rows(self, layout: QVBoxLayout) -> None:
         """Build the Remove/Split/Join memory block form rows.

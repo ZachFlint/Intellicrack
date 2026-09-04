@@ -63,7 +63,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_logged, worker_is_running
 from intellicrack.ui.panels.hex_editor_widget import HighlightRule
 
 
@@ -297,7 +297,7 @@ class HighlightingMixin:
             return
 
         existing_worker = getattr(self, "_pattern_rule_worker", None)
-        if existing_worker is not None and existing_worker.isRunning():
+        if worker_is_running(existing_worker):
             return
 
         self._pending_pattern_add_bridge = bridge
@@ -621,7 +621,7 @@ class HighlightingMixin:
             return
 
         existing_worker = getattr(self, "_pattern_refresh_worker", None)
-        if existing_worker is not None and existing_worker.isRunning():
+        if worker_is_running(existing_worker):
             self._pattern_refresh_pending = True
             return
 

@@ -2743,6 +2743,51 @@ class _X64DbgBridgeBase(DebuggerBridge):
             else:
                 _logger.debug("step_waiter_dequeue_noop", waiter=id(waiter))
 
+    async def _raise_if_process_exited(self, command: str) -> None:
+        """Probe the tracked debugger process and raise if it has exited.
+
+        Every public RPC method routes through :meth:`_send_pipe_command`,
+        so calling this first here gives every operation - including
+        :meth:`set_breakpoint`, :meth:`remove_breakpoint`, and
+        :meth:`set_breakpoint_on_api`, which issue their writes entirely
+        through this method - the same session-liveness probe (D19). A
+        process that has already exited can never again satisfy a pipe
+        reconnect (the plugin's single named-pipe server instance died
+        with it), so this raises immediately with an actionable message
+        instead of letting the caller discover the same fact several
+        seconds later via a generic pipe-connect timeout. The dead pipe
+        client, if any, is torn down so it is not reused.
+
+        Args:
+            command: Command name the caller was about to issue, included
+                in the raised error for diagnostics.
+
+        Raises:
+            ToolError: If the tracked process has exited.
+        """
+        if self._process is None:
+            return
+        try:
+            exit_code = self._process.poll()
+        except OSError as exc:
+            _logger.warning("x64dbg_process_liveness_probe_failed", command=command, error=str(exc))
+            return
+        if exit_code is None:
+            return
+
+        pid = self._process.pid
+        _logger.warning("x64dbg_process_exited_mid_session", pid=pid, exit_code=exit_code, command=command)
+        await self._close_connection()
+        msg = (
+            f"x64dbg process (pid={pid}) has exited (code={exit_code}); the debug session is lost. "
+            "Call load() or attach() again to start a new session."
+        )
+        raise ToolError(
+            msg,
+            tool_name="x64dbg",
+            details={"x64dbg_error_code": _X64DBG_ERR_PIPE_DISCONNECTED, "command": command},
+        )
+
     async def _send_pipe_command(
         self,
         command: str,
@@ -2768,6 +2813,8 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 tool_name="x64dbg",
                 details={"x64dbg_error_code": _X64DBG_ERR_PLUGIN_UNAVAILABLE, "command": command},
             )
+
+        await self._raise_if_process_exited(command)
 
         if self._pipe_client is None or not self._pipe_client.is_connected:
             _logger.info("x64dbg_pipe_reconnecting", command=command)
@@ -2957,12 +3004,25 @@ class _X64DbgBridgeBase(DebuggerBridge):
     async def load(self, path: Path, args: str | None = None) -> None:
         """Load an executable into x64dbg.
 
+        Probes the tracked debugger process for liveness before reusing
+        it: a process that crashed or was killed since the previous
+        session is torn down and replaced with a fresh
+        :meth:`_start_debugger` launch rather than being reused as if it
+        were still connected (D19). After ``InitDebug`` is issued, the
+        pipe is re-checked with a cheap handle-liveness probe
+        (:attr:`plugin_status`'s ``pipe_connected``) before the load is
+        reported as successful, so a session that died mid-``load`` -
+        for example because ``reg_get $pid`` never observed a positive
+        pid and :meth:`_await_debuggee_pid` gave up - raises instead of
+        silently marking the bridge connected on a dead pipe.
+
         Args:
             path: Path to executable.
             args: Optional command line arguments.
 
         Raises:
-            ToolError: If load fails.
+            ToolError: If load fails, or if the bridge pipe is not
+                genuinely connected once ``InitDebug`` has been issued.
         """
         if not await asyncio.to_thread(path.exists):
             msg = f"File not found: {path}"
@@ -2974,6 +3034,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
         is_64bit = self._detect_architecture(path)
 
+        await self._recover_dead_debugger_process()
         if self._process is None:
             await self._start_debugger(is_64bit=is_64bit)
 
@@ -2987,6 +3048,17 @@ class _X64DbgBridgeBase(DebuggerBridge):
         if pid_val is not None:
             self._register_attached_pid(pid_val)
 
+        if not bool(self.plugin_status.get("pipe_connected")):
+            diag = str(self.plugin_status.get("diagnostic", ""))
+            msg = "x64dbg session lost during load(): the bridge pipe is not connected after InitDebug"
+            if diag:
+                msg = f"{msg}. {diag}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_PIPE_DISCONNECTED, "command": "InitDebug"},
+            )
+
         self._state.connected = True
         self._state.tool_running = True
         self._state.binary_loaded = True
@@ -2994,6 +3066,54 @@ class _X64DbgBridgeBase(DebuggerBridge):
         self._publish_tool_state()
 
         _logger.info("x64dbg_binary_loaded", path=path.name)
+
+    async def _recover_dead_debugger_process(self) -> bool:
+        """Tear down a tracked debugger process that has already exited.
+
+        ``self._process`` can outlive the real OS process it wraps when
+        x64dbg crashes or is killed out-of-band between bridge calls.
+        Left unchecked, :meth:`load` would see a non-``None``
+        ``self._process``, skip :meth:`_start_debugger` entirely, and
+        try to reuse a named pipe whose single server instance no
+        longer exists - reporting success once ``InitDebug`` is queued
+        even though nothing is listening (D19). This probes the tracked
+        process's exit status via :meth:`DesktopProcess.poll` and, when
+        it has exited, closes the stale pipe client and process handle
+        so the caller relaunches a fresh instance.
+
+        Returns:
+            bool: True when a dead process was found and cleaned up
+            (the caller must relaunch via :meth:`_start_debugger`);
+            False when ``self._process`` is already ``None`` or is
+            still genuinely running.
+        """
+        if self._process is None:
+            return False
+        try:
+            exit_code = self._process.poll()
+        except OSError as exc:
+            _logger.warning("x64dbg_process_liveness_probe_failed", error=str(exc))
+            return False
+        if exit_code is None:
+            return False
+
+        _logger.warning(
+            "x64dbg_process_exited_stale_session",
+            pid=self._process.pid,
+            exit_code=exit_code,
+        )
+        await self._close_connection()
+        try:
+            self._process.close()
+        except OSError as exc:
+            _logger.warning("x64dbg_dead_process_close_failed", pid=self._process.pid, error=str(exc))
+        self._process = None
+        self._release_process_handles()
+        self._attached_pid = None
+        self._state.connected = False
+        self._state.tool_running = False
+        self._publish_tool_state()
+        return True
 
     @staticmethod
     def _detect_architecture(path: Path) -> bool:
@@ -3075,7 +3195,9 @@ class _X64DbgBridgeBase(DebuggerBridge):
         Raises:
             ToolError: If the target process architecture cannot be
                 determined (non-Windows host, ``OpenProcess`` denied,
-                ``IsWow64Process`` failed, etc.).
+                ``IsWow64Process`` failed, etc.), or if the bridge pipe
+                is not genuinely connected once the attach command has
+                been issued.
         """
         _logger.info("x64dbg_attaching", pid=pid)
         self._release_process_handles()
@@ -3088,10 +3210,23 @@ class _X64DbgBridgeBase(DebuggerBridge):
             )
             raise ToolError(msg, tool_name="x64dbg")
 
+        await self._recover_dead_debugger_process()
         if self._process is None:
             await self._start_debugger(is_64bit=is_64)
 
         await self._send_command(f"attach {pid}")
+
+        if not bool(self.plugin_status.get("pipe_connected")):
+            diag = str(self.plugin_status.get("diagnostic", ""))
+            msg = f"x64dbg session lost during attach(): the bridge pipe is not connected after issuing attach {pid}"
+            if diag:
+                msg = f"{msg}. {diag}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_PIPE_DISCONNECTED, "command": "attach"},
+            )
+
         self._register_attached_pid(pid)
 
         self._state.connected = True
@@ -3575,47 +3710,51 @@ class _X64DbgBridgeBase(DebuggerBridge):
             list[BreakpointInfo]: List of breakpoints from both local tracking and x64dbg.
 
         Raises:
-            ToolError: If the plugin reports a non-recoverable error.
+            ToolError: If the pipe/session is dead or the plugin reports
+                a non-recoverable error. A dead session must never be
+                masked by silently returning the local breakpoint cache
+                (D19) - only a genuinely recoverable failure (an older
+                plugin build missing ``bp_list``) falls back to the
+                locally tracked breakpoints.
         """
         _logger.debug("get_breakpoints_started")
         with self._state_lock:
             merged = dict(self._breakpoints)
 
-        if self._pipe_client is not None and self._pipe_client.is_connected:
-            try:
-                result = await self._send_pipe_command("bp_list")
-            except ToolError as exc:
-                if not self._is_recoverable_pipe_error(exc):
-                    raise
-                _logger.warning("bp_list_pipe_unavailable", error=str(exc))
-            else:
-                if isinstance(result, list):
-                    for bp_data in result:
-                        if _is_str_obj_dict(bp_data):
-                            addr = _coerce_address(bp_data.get("address"))
-                            if addr is None or addr in merged:
-                                continue
-                            raw_type = bp_data.get("type")
-                            bp_type_str = raw_type if isinstance(raw_type, str) else "software"
-                            raw_enabled = bp_data.get("enabled")
-                            raw_hits = bp_data.get("hitCount", bp_data.get("hit_count"))
-                            raw_cond = bp_data.get("breakCondition", bp_data.get("condition"))
-                            bp_type_val: Literal["software", "hardware", "memory"]
-                            if bp_type_str == "hardware":
-                                bp_type_val = "hardware"
-                            elif bp_type_str == "memory":
-                                bp_type_val = "memory"
-                            else:
-                                bp_type_val = "software"
-                            cond_value: str | None = raw_cond if isinstance(raw_cond, str) and raw_cond else None
-                            merged[addr] = BreakpointInfo(
-                                id=addr,
-                                address=addr,
-                                bp_type=bp_type_val,
-                                enabled=raw_enabled if isinstance(raw_enabled, bool) else True,
-                                hit_count=raw_hits if isinstance(raw_hits, int) else 0,
-                                condition=cond_value,
-                            )
+        try:
+            result = await self._send_pipe_command("bp_list")
+        except ToolError as exc:
+            if not self._is_recoverable_pipe_error(exc):
+                raise
+            _logger.warning("bp_list_pipe_unavailable", error=str(exc))
+        else:
+            if isinstance(result, list):
+                for bp_data in result:
+                    if _is_str_obj_dict(bp_data):
+                        addr = _coerce_address(bp_data.get("address"))
+                        if addr is None or addr in merged:
+                            continue
+                        raw_type = bp_data.get("type")
+                        bp_type_str = raw_type if isinstance(raw_type, str) else "software"
+                        raw_enabled = bp_data.get("enabled")
+                        raw_hits = bp_data.get("hitCount", bp_data.get("hit_count"))
+                        raw_cond = bp_data.get("breakCondition", bp_data.get("condition"))
+                        bp_type_val: Literal["software", "hardware", "memory"]
+                        if bp_type_str == "hardware":
+                            bp_type_val = "hardware"
+                        elif bp_type_str == "memory":
+                            bp_type_val = "memory"
+                        else:
+                            bp_type_val = "software"
+                        cond_value: str | None = raw_cond if isinstance(raw_cond, str) and raw_cond else None
+                        merged[addr] = BreakpointInfo(
+                            id=addr,
+                            address=addr,
+                            bp_type=bp_type_val,
+                            enabled=raw_enabled if isinstance(raw_enabled, bool) else True,
+                            hit_count=raw_hits if isinstance(raw_hits, int) else 0,
+                            condition=cond_value,
+                        )
 
         result_list = list(merged.values())
         _logger.debug("get_breakpoints_completed", count=len(result_list))
@@ -3705,41 +3844,46 @@ class _X64DbgBridgeBase(DebuggerBridge):
             list[WatchpointInfo]: List of watchpoints from both local tracking and x64dbg.
 
         Raises:
-            ToolError: If the plugin reports a non-recoverable error.
+            ToolError: If the pipe/session is dead or the plugin reports
+                a non-recoverable error. A dead session must never be
+                masked by silently returning the local watchpoint cache
+                (D19) - only a genuinely recoverable failure (an older
+                plugin build missing ``bp_list``) falls back to the
+                locally tracked watchpoints.
         """
         _logger.debug("get_watchpoints_started")
         with self._state_lock:
             merged = dict(self._watchpoints)
 
-        if self._pipe_client is not None and self._pipe_client.is_connected:
-            try:
-                result = await self._send_pipe_command("bp_list")
-            except ToolError as exc:
-                if not self._is_recoverable_pipe_error(exc):
-                    raise
-                _logger.warning("wp_list_pipe_unavailable", error=str(exc))
-                result = None
-            if isinstance(result, list):
-                for wp_data in result:
-                    if _is_str_obj_dict(wp_data) and wp_data.get("type") == "hardware":
-                        wp_addr = _coerce_address(wp_data.get("address")) or 0
-                        existing = any(w.address == wp_addr for w in merged.values())
-                        if not existing:
-                            with self._state_lock:
-                                wp_id = self._next_wp_id
-                                self._next_wp_id += 1
-                            raw_size = wp_data.get("size")
-                            raw_wp_type = wp_data.get("access", wp_data.get("watch_type"))
-                            raw_wp_enabled = wp_data.get("enabled")
-                            raw_wp_hits = wp_data.get("hitCount", wp_data.get("hit_count"))
-                            merged[wp_id] = WatchpointInfo(
-                                id=wp_id,
-                                address=wp_addr,
-                                size=raw_size if isinstance(raw_size, int) else 1,
-                                watch_type=raw_wp_type if isinstance(raw_wp_type, str) else "write",
-                                enabled=raw_wp_enabled if isinstance(raw_wp_enabled, bool) else True,
-                                hit_count=raw_wp_hits if isinstance(raw_wp_hits, int) else 0,
-                            )
+        result: PipeCommandResult = None
+        try:
+            result = await self._send_pipe_command("bp_list")
+        except ToolError as exc:
+            if not self._is_recoverable_pipe_error(exc):
+                raise
+            _logger.warning("wp_list_pipe_unavailable", error=str(exc))
+
+        if isinstance(result, list):
+            for wp_data in result:
+                if _is_str_obj_dict(wp_data) and wp_data.get("type") == "hardware":
+                    wp_addr = _coerce_address(wp_data.get("address")) or 0
+                    existing = any(w.address == wp_addr for w in merged.values())
+                    if not existing:
+                        with self._state_lock:
+                            wp_id = self._next_wp_id
+                            self._next_wp_id += 1
+                        raw_size = wp_data.get("size")
+                        raw_wp_type = wp_data.get("access", wp_data.get("watch_type"))
+                        raw_wp_enabled = wp_data.get("enabled")
+                        raw_wp_hits = wp_data.get("hitCount", wp_data.get("hit_count"))
+                        merged[wp_id] = WatchpointInfo(
+                            id=wp_id,
+                            address=wp_addr,
+                            size=raw_size if isinstance(raw_size, int) else 1,
+                            watch_type=raw_wp_type if isinstance(raw_wp_type, str) else "write",
+                            enabled=raw_wp_enabled if isinstance(raw_wp_enabled, bool) else True,
+                            hit_count=raw_wp_hits if isinstance(raw_wp_hits, int) else 0,
+                        )
 
         wp_list = list(merged.values())
         _logger.debug("get_watchpoints_completed", count=len(wp_list))

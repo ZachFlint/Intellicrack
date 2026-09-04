@@ -27,7 +27,11 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.yara_scanner import YaraScanner
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import (
+    GenericCallableWorker,
+    run_bridge_coroutine_logged,
+    worker_is_running,
+)
 
 
 if TYPE_CHECKING:
@@ -591,7 +595,7 @@ class SignaturesMixin:
         if self.document is None or not self._sig_db_path:
             return
 
-        if self._sig_worker is not None and self._sig_worker.isRunning():
+        if worker_is_running(self._sig_worker):
             return
 
         type_idx = self._sig_db_type_combo.currentIndex() if self._sig_db_type_combo else 0

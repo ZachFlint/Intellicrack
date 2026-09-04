@@ -29,7 +29,11 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_warning
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import (
+    GenericCallableWorker,
+    run_bridge_coroutine_logged,
+    worker_is_running,
+)
 from intellicrack.ui.panels.hex_editor.base import (
     MAX_SEARCH_RESULTS,
     VSPLIT_HSPLIT_IDX,
@@ -457,7 +461,7 @@ class SearchMixin:
             self._on_numeric_search()
             return
 
-        if self._search_worker is not None and self._search_worker.isRunning():
+        if worker_is_running(self._search_worker):
             return
 
         encoding = self._selected_search_encoding()
@@ -807,7 +811,7 @@ class SearchMixin:
         if document is None or self._numeric_value_input is None:
             return
 
-        if self._numeric_search_worker is not None and self._numeric_search_worker.isRunning():
+        if worker_is_running(self._numeric_search_worker):
             return
 
         value_text = self._numeric_value_input.text().strip()

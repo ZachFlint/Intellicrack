@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import ctypes
 import importlib
 import sys
 import time
@@ -20,7 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, Protocol, cast
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QPainter, QPixmap
+from PyQt6.QtGui import QColor, QGuiApplication, QPainter, QPixmap
 from PyQt6.QtWidgets import QApplication, QSplashScreen
 
 from intellicrack._metadata import __version__
@@ -81,6 +82,10 @@ _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _EARLY_SPLASH_WIDTH: Final[int] = 600
 _EARLY_SPLASH_HEIGHT: Final[int] = 400
 _EARLY_SPLASH_ASSET: Final[str] = "splash.png"
+# DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, per the Windows SDK's winuser.h.
+# Declared numerically because the constant is only exposed to C/C++ headers,
+# not to ctypes.
+_DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2: Final[int] = -4
 _APP_VERSION: str = __version__
 _VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
@@ -417,13 +422,14 @@ def _compute_early_dpi_scale(app: QApplication) -> float:
 
 
 def _build_early_splash_pixmap(splash_asset: Path, width: int, height: int) -> QPixmap:
-    """Compose the early splash pixmap from ``splash.png`` over a solid background.
+    """Compose the early splash pixmap from ``splash.png`` filling the frame edge-to-edge.
 
-    The full splash image is loaded and scaled (preserving aspect ratio) to fit
-    inside ``width`` x ``height``, then centered on a background filled with
-    :data:`_EARLY_SPLASH_BG`. When the asset is missing or fails to decode, the
-    solid-colour background is returned unchanged so the early splash still
-    appears.
+    The full splash image is loaded and scaled up (preserving aspect ratio) to
+    *cover* ``width`` x ``height`` entirely, then center-cropped to exactly
+    that size, so the art reaches every edge instead of leaving pillarbox or
+    letterbox bars around a smaller, aspect-fit copy (D27). When the asset is
+    missing or fails to decode, a background filled with :data:`_EARLY_SPLASH_BG`
+    is returned instead so the early splash still appears.
 
     Args:
         splash_asset: Path to the splash image asset on disk.
@@ -446,19 +452,62 @@ def _build_early_splash_pixmap(splash_asset: Path, width: int, height: int) -> Q
     scaled = source.scaled(
         width,
         height,
-        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.AspectRatioMode.KeepAspectRatioByExpanding,
         Qt.TransformationMode.SmoothTransformation,
     )
 
     painter = QPainter(pixmap)
     try:
-        offset_x = (width - scaled.width()) // 2
-        offset_y = (height - scaled.height()) // 2
-        painter.drawPixmap(offset_x, offset_y, scaled)
+        crop_x = (scaled.width() - width) // 2
+        crop_y = (scaled.height() - height) // 2
+        painter.drawPixmap(0, 0, scaled, crop_x, crop_y, width, height)
     finally:
         painter.end()
 
     return pixmap
+
+
+def _ensure_per_monitor_dpi_awareness() -> None:
+    """Declare per-monitor-v2 DPI awareness before any window is created.
+
+    Qt's Windows platform plugin requests per-monitor-v2 awareness on its own
+    during ``QApplication`` construction unless the process has already
+    declared an awareness context (for example via an application manifest
+    embedded by the installer), in which case Qt honours that declaration
+    instead. Setting the context explicitly here -- before any window or
+    device context exists, which is the only point Windows accepts it --
+    guarantees the per-monitor-v2 behaviour this application needs (D28)
+    regardless of what any bundling manifest declares.
+
+    A no-op on non-Windows platforms, on Windows versions older than the
+    Creators Update (which lack ``SetProcessDpiAwarenessContext``), and when
+    the process has already set an incompatible awareness context.
+    """
+    if sys.platform != "win32":
+        return
+    windll = getattr(ctypes, "windll", None)
+    if windll is None:
+        _logger.debug("per_monitor_dpi_awareness_unavailable", reason="no_windll")
+        return
+    try:
+        user32 = windll.user32
+    except OSError:
+        _logger.debug("per_monitor_dpi_awareness_unavailable", reason="user32_load_failed", exc_info=True)
+        return
+    set_context = getattr(user32, "SetProcessDpiAwarenessContext", None)
+    if set_context is None:
+        _logger.debug("per_monitor_dpi_awareness_unavailable", reason="api_missing")
+        return
+    set_context.restype = ctypes.c_int
+    set_context.argtypes = [ctypes.c_void_p]
+    context = ctypes.c_void_p(_DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)
+    try:
+        succeeded = set_context(context)
+    except OSError:
+        _logger.debug("per_monitor_dpi_awareness_call_failed", exc_info=True)
+        return
+    if not succeeded:
+        _logger.debug("per_monitor_dpi_awareness_rejected")
 
 
 def _show_early_splash_impl() -> tuple[QApplication, QSplashScreen]:
@@ -476,7 +525,8 @@ def _show_early_splash_impl() -> tuple[QApplication, QSplashScreen]:
         splash screen, both already displayed.
     """
     if QApplication.instance() is None:
-        QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+        _ensure_per_monitor_dpi_awareness()
+        QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
 
     app = QApplication(sys.argv)
