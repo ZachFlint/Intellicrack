@@ -138,9 +138,7 @@ class TestMemoryTabIsScrollable:
         )
         vbar = scroll.verticalScrollBar()
         assert vbar is not None
-        assert vbar.maximum() > 0, (
-            "vertical scrollbar is inactive at a viewport below the content floor -- overflow is not scrollable"
-        )
+        assert vbar.maximum() > 0, "vertical scrollbar is inactive at a viewport below the content floor -- overflow is not scrollable"
 
     @staticmethod
     def test_sections_do_not_overlap_at_short_viewport(panel: GhidraPanel) -> None:

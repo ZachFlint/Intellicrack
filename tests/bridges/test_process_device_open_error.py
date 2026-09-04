@@ -106,9 +106,7 @@ async def test_device_open_physical_drive_reports_access_denied(bridge: ProcessB
         f"{_WIN32_ERROR_FILE_NOT_FOUND}=FILE_NOT_FOUND depending on environment), "
         f"got {error.error_code!r} (message={error.message!r})"
     )
-    assert str(error.error_code) in error.message, (
-        f"ToolError message must contain the Win32 error number, got {error.message!r}"
-    )
+    assert str(error.error_code) in error.message, f"ToolError message must contain the Win32 error number, got {error.message!r}"
     if error.error_code == _WIN32_ERROR_FILE_NOT_FOUND:
         pytest.skip(
             "PhysicalDrive0 is not exposed as a device object in this execution "
@@ -137,13 +135,11 @@ async def test_device_open_nonexistent_path_reports_file_not_found(bridge: Proce
 
     error = exc_info.value
     assert error.error_code == _WIN32_ERROR_FILE_NOT_FOUND, (
-        f"expected error_code={_WIN32_ERROR_FILE_NOT_FOUND}, got {error.error_code!r} "
-        f"(message={error.message!r})"
+        f"expected error_code={_WIN32_ERROR_FILE_NOT_FOUND}, got {error.error_code!r} (message={error.message!r})"
     )
     assert str(_WIN32_ERROR_FILE_NOT_FOUND) in error.message, (
         f"ToolError message must contain the Win32 error number, got {error.message!r}"
     )
     assert error.message.startswith("Device open failed (Win32 error 2)"), (
-        "message must lead with the capitalized, formatted failure text "
-        f"'Device open failed (Win32 error 2)', got {error.message!r}"
+        f"message must lead with the capitalized, formatted failure text 'Device open failed (Win32 error 2)', got {error.message!r}"
     )

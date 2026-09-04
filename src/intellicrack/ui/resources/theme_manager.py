@@ -97,17 +97,12 @@ class _ThemeNotifier(QObject):
 class _LazyChromeRepolishFilter(QObject):
     """Repolishes a hidden chrome widget the next time it becomes visible.
 
-    ``ThemeManager._repolish_chrome`` only unpolishes/repolishes chrome that
-    is visible at the moment a theme is applied. A widget that was hidden at
-    that moment (an inactive tab page, a docked panel nobody has opened, a
-    detached window that is not currently shown) would otherwise keep
-    rendering with whichever theme it was last polished under until *some*
-    unrelated event happened to touch it. This filter is installed once per
-    chrome widget and, on every :attr:`~PyQt6.QtCore.QEvent.Type.Show`
-    event, asks the owning :class:`ThemeManager` to repolish the widget only
-    if it is stale relative to the most recent ``apply_theme`` call -- so a
-    widget shown and hidden repeatedly between theme changes is repolished
-    at most once per change, never once per show.
+    ``ThemeManager._repolish_chrome`` only unpolishes/repolishes chrome that is visible at the moment a theme is applied. A widget that was
+    hidden at that moment (an inactive tab page, a docked panel nobody has opened, a detached window that is not currently shown) would
+    otherwise keep rendering with whichever theme it was last polished under until *some* unrelated event happened to touch it. This filter
+    is installed once per chrome widget and, on every :attr:`~PyQt6.QtCore.QEvent.Type.Show` event, asks the owning :class:`ThemeManager` to
+    repolish the widget only if it is stale relative to the most recent ``apply_theme`` call -- so a widget shown and hidden repeatedly
+    between theme changes is repolished at most once per change, never once per show.
     """
 
     def __init__(self, theme_manager: ThemeManager, widget: QWidget) -> None:

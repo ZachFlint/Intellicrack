@@ -189,9 +189,7 @@ class TestNumericSearchNavigatesToKnownOffset:
             assert panel._search_results[0][0] == expected_offset, (
                 f"expected first match at 0x{expected_offset:X}, got 0x{panel._search_results[0][0]:X}"
             )
-            assert panel._hex_widget._cursor_offset == expected_offset, (
-                "numeric search must navigate the hex cursor to the matched offset"
-            )
+            assert panel._hex_widget._cursor_offset == expected_offset, "numeric search must navigate the hex cursor to the matched offset"
         finally:
             panel._cleanup()
 

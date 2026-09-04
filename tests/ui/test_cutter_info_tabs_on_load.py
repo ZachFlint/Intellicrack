@@ -216,8 +216,7 @@ def test_headers_tab_populates_after_load_without_analyze(
         tabs.setCurrentIndex(tabs.indexOf(headers_table))
 
         assert headers_table.rowCount() == len(expected), (
-            f"Headers tab shows {headers_table.rowCount()} rows but the real "
-            f"ihj-backed get_headers() call returned {len(expected)} fields"
+            f"Headers tab shows {headers_table.rowCount()} rows but the real ihj-backed get_headers() call returned {len(expected)} fields"
         )
         for row, field in enumerate(expected):
             name_item = headers_table.item(row, 0)

@@ -132,8 +132,7 @@ class TestAnalyzeTimeout:
         except ToolError as exc:
             elapsed = time.monotonic() - start
             pytest.fail(
-                f"analyze(level='normal') raised ToolError after {elapsed:.1f}s "
-                f"analyzing {target.name}: {exc}",
+                f"analyze(level='normal') raised ToolError after {elapsed:.1f}s analyzing {target.name}: {exc}",
             )
 
         functions = await analysis_bridge.get_functions()
@@ -171,7 +170,6 @@ def test_analysis_timeout_scheme_exceeds_default_command_timeout() -> None:
     assert analysis_timeouts
     for level, timeout in analysis_timeouts.items():
         assert timeout > default_command_timeout * 10, (
-            f"analysis timeout for level {level!r} ({timeout}s) is not comfortably "
-            f"above the {default_command_timeout}s command default"
+            f"analysis timeout for level {level!r} ({timeout}s) is not comfortably above the {default_command_timeout}s command default"
         )
     assert analysis_timeouts["normal"] == default_analysis_timeout

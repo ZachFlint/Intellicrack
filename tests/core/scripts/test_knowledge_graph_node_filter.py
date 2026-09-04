@@ -45,12 +45,7 @@ def _load_kg_module() -> ModuleType:
         RuntimeError: If the module spec cannot be created or executed.
 
     """
-    script_path = (
-        Path(__file__).resolve().parents[3]
-        / "scripts"
-        / "knowledge-graph"
-        / "visualize_architecture.py"
-    )
+    script_path = Path(__file__).resolve().parents[3] / "scripts" / "knowledge-graph" / "visualize_architecture.py"
     spec = importlib.util.spec_from_file_location("kg_visualize_architecture", script_path)
     if spec is None or spec.loader is None:
         msg = f"Could not load spec for {script_path}"
@@ -195,11 +190,7 @@ def test_no_intellicrack_node_is_typeless(
         generated_nodes: Node records embedded in the generated HTML.
 
     """
-    internal = [
-        n
-        for n in generated_nodes
-        if str(n["id"]).startswith("intellicrack.") and n["type"] != "external"
-    ]
+    internal = [n for n in generated_nodes if str(n["id"]).startswith("intellicrack.") and n["type"] != "external"]
     assert internal, "no internal intellicrack nodes were emitted"
     typeless = [str(n["id"]) for n in internal if n["type"] == "unknown"]
     assert not typeless, f"typeless internal nodes leaked into output: {typeless}"

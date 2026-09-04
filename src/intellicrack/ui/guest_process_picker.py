@@ -65,12 +65,9 @@ class GuestProcessRow(TypedDict):
 class GuestProcessPickerDialog(QDialog):
     """Modal dialog that lets the user pick a live guest process by PID.
 
-    Displays the enumerated guest processes in a sortable, filterable table
-    and returns the chosen PID via :meth:`selected_pid`. Selecting a row
-    enables OK; double-clicking a row accepts immediately. Cancelling, or
-    closing the dialog without a selection, leaves :meth:`selected_pid`
-    returning ``None`` so the caller can distinguish "no target chosen" from
-    a genuine PID.
+    Displays the enumerated guest processes in a sortable, filterable table and returns the chosen PID via :meth:`selected_pid`. Selecting a
+    row enables OK; double-clicking a row accepts immediately. Cancelling, or closing the dialog without a selection, leaves
+    :meth:`selected_pid` returning ``None`` so the caller can distinguish "no target chosen" from a genuine PID.
     """
 
     def __init__(

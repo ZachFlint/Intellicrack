@@ -2533,6 +2533,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         Raises:
             ToolError: If connection fails.
         """
+
         async with self._pipe_connect_lock:
             if self._pipe_client is not None and self._pipe_client.is_connected:
                 return

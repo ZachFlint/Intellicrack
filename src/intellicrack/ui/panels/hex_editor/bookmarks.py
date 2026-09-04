@@ -189,8 +189,7 @@ class BookmarksMixin:
     def _persist_bookmarks_sidecar(self) -> None:
         """Write the current document's bookmarks to its JSON sidecar file.
 
-        No-op when there is no open document or its source file path is
-        unknown (e.g. a document that was never saved to disk).
+        No-op when there is no open document or its source file path is unknown (e.g. a document that was never saved to disk).
         """
         if self.document is None or self.file_path is None:
             return
@@ -205,10 +204,8 @@ class BookmarksMixin:
     def _load_bookmarks_sidecar(self) -> None:
         """Restore bookmarks for the just-opened document from its JSON sidecar file.
 
-        Called once per :meth:`load_file` after the hexcore document is
-        opened and :attr:`file_path` is set, so bookmarks created in a
-        previous session on the same file survive a reload. No-op when
-        there is no open document, no known file path, or no sidecar file
+        Called once per :meth:`load_file` after the hexcore document is opened and :attr:`file_path` is set, so bookmarks created in a
+        previous session on the same file survive a reload. No-op when there is no open document, no known file path, or no sidecar file
         exists yet for it.
         """
         if self.document is None or self.file_path is None:
