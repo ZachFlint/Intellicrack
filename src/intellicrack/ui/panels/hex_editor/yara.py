@@ -26,6 +26,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_warning
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor.base import YARA_MATCH_DISPLAY_BYTES
+from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
@@ -112,9 +113,7 @@ class YaraMixin:
         layout.addLayout(file_row)
 
         self._yara_inline_editor = QPlainTextEdit()
-        yara_font = self._yara_inline_editor.font()
-        yara_font.setFamily("Consolas")
-        yara_font.setPointSize(9)
+        yara_font = FontManager.get_instance().get_code_font(9)
         self._yara_inline_editor.setFont(yara_font)
         self._yara_inline_editor.setToolTip("Enter inline YARA rule source. If empty, compiled rule files are used instead.")
         self._yara_inline_editor.setMaximumHeight(140)

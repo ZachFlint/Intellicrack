@@ -52,6 +52,7 @@ _logger = get_logger(__name__)
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
 _ADDR_INPUT_MAX_WIDTH: Final[int] = 160
+_POST_MESSAGE_INPUT_MAX_HEIGHT: Final[int] = 80
 _RESULT_GROUP_SPACING: Final[int] = 12
 _RESULT_LABEL_PADDING: Final[int] = 8
 _RESULT_VALUE_SAMPLE: Final[str] = "0xFFFFFFFFFFFFFFFF"
@@ -1307,7 +1308,7 @@ class ScriptMessagingControls(QWidget):
         message_row.addWidget(QLabel("Message (JSON):"))
         self._post_message_input = QPlainTextEdit()
         self._post_message_input.setPlaceholderText('{"type": "config", "value": 1}')
-        self._post_message_input.setMaximumHeight(_ADDR_INPUT_MAX_WIDTH // 2)
+        self._post_message_input.setMaximumHeight(_POST_MESSAGE_INPUT_MAX_HEIGHT)
         message_row.addWidget(self._post_message_input)
         self._post_message_btn = QPushButton("Post Message")
         self._post_message_btn.setObjectName("tool_button")

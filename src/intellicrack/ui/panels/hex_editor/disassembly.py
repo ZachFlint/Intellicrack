@@ -26,6 +26,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_warning
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor.base import DEFAULT_DISASM_COUNT, MAX_INSN_BYTES
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
@@ -121,9 +122,7 @@ class DisassemblyMixin:
         self._disasm_table.setSelectionBehavior(self._disasm_table.SelectionBehavior.SelectRows)
         self._disasm_table.setEditTriggers(self._disasm_table.EditTrigger.NoEditTriggers)
         self._disasm_table.setAlternatingRowColors(True)
-        table_font = self._disasm_table.font()
-        table_font.setFamily("Consolas")
-        table_font.setPointSize(9)
+        table_font = FontManager.get_instance().get_code_font(9)
         self._disasm_table.setFont(table_font)
         h_header = self._disasm_table.horizontalHeader()
         if h_header is not None:

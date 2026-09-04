@@ -33,7 +33,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, worker_is_running
 from intellicrack.ui.panels.hex_editor.base import (
     BYTE_VALUES_COUNT,
     ENTROPY_HIGH_THRESHOLD,
@@ -519,7 +519,7 @@ class CustomCrcDialog(QDialog):
             self._result_label.setToolTip(error_text)
             return
 
-        if self._worker is not None and self._worker.isRunning():
+        if worker_is_running(self._worker):
             return
 
         self._result_label.setText("Computing\u2026")

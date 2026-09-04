@@ -940,6 +940,44 @@ class TestDeployPluginAggregation:
         assert path_requires_admin(tmp_path) is False
 
     @staticmethod
+    def test_path_requires_admin_quiet_for_user_dir(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """path_requires_admin emits no WARNING for an ordinary user path (log hygiene).
+
+        The negative classification must be reached with an ``is_relative_to``
+        containment test, not a ``relative_to`` probe whose ``ValueError`` was
+        caught and logged as ``path_requires_admin_prefix_check_failed`` once per
+        Program Files candidate the path was not under. Any user path outside the
+        Program Files roots is the common case, so it must be silent.
+
+        Args:
+            tmp_path: Pytest user-writable directory (never under Program Files).
+            monkeypatch: Fixture used to record the module logger's warning calls.
+        """
+        if sys.platform != "win32":
+            pytest.skip("Windows-only admin heuristic")
+
+        mod_logger: structlog.stdlib.BoundLogger = getattr(installer_mod, "_logger")
+        recorded: list[str] = []
+        original_warning = mod_logger.warning
+
+        def _record(event: str, *args: object, **kw: object) -> object:
+            recorded.append(event)
+            return original_warning(event, *args, **kw)
+
+        monkeypatch.setattr(mod_logger, "warning", _record)
+
+        result = path_requires_admin(tmp_path)
+
+        assert result is False
+        assert recorded == [], (
+            "path_requires_admin must not emit warnings for a user-writable path; "
+            f"got {recorded} (regression: path_requires_admin_prefix_check_failed noise)"
+        )
+
+    @staticmethod
     def test_deploy_returns_failure_when_one_arch_failed_other_uptodate(
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,

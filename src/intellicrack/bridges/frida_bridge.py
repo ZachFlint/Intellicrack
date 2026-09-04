@@ -3946,7 +3946,13 @@ class _FridaBridgeBase(InstrumentationBridge):
             list[FridaProcessEntry]: List of process entries with pid and name.
 
         Raises:
-            ToolError: If the bridge is not initialised or device is not available.
+            ToolError: If the bridge is not initialised, the device is not
+                available, or enumeration itself fails - for example a
+                remote device whose ``frida-server`` is not running
+                (``frida.ServerNotRunningError``) or an unreachable
+                transport (``frida.TransportError``). Both are expected,
+                non-fatal conditions reported through this error rather than
+                propagating out of the caller's worker thread.
         """
         _logger.debug("frida_enumerate_processes_started")
         device = self._device
@@ -3957,7 +3963,20 @@ class _FridaBridgeBase(InstrumentationBridge):
                 details={"reason": "bridge not initialised; call initialize() first"},
             )
 
-        processes = await asyncio.to_thread(device.enumerate_processes)
+        try:
+            processes = await asyncio.to_thread(device.enumerate_processes)
+        except (frida.ServerNotRunningError, frida.TransportError, frida.InvalidOperationError, OSError) as e:
+            _logger.warning(
+                "frida_enumerate_processes_failed",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+            self.state.last_error = str(e)
+            self._publish_tool_state()
+            raise ToolError(
+                _ERR_ENUMERATE_FAILED,
+                details=self._frida_error_details(e),
+            ) from e
         _logger.debug("processes_enumerated", count=len(processes))
         return [FridaProcessEntry(pid=proc.pid, name=proc.name) for proc in processes]
 
@@ -4853,9 +4872,17 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
         """Resolve a :class:`frida.core.Device` for ``device_type``.
 
         Args:
-            device_type: One of ``"local"``, ``"usb"``, or ``"remote"``.
-            host: Remote host address. Required when ``device_type`` is
-                ``"remote"`` and ignored otherwise.
+            device_type: One of ``"local"``, ``"usb"``, ``"remote"``, or
+                ``"enumerated"``.
+            host: For ``"remote"``, the ``host[:port]`` of a *new* remote
+                endpoint to add via
+                :meth:`frida.core.DeviceManager.add_remote_device`. For
+                ``"enumerated"``, the ``id`` of a device already returned by
+                :meth:`enumerate_devices`, resolved by identity through
+                :func:`frida.get_device` instead of being treated as a
+                hostname to DNS-resolve - required because enumerated ids such
+                as the local socket provider's ``"socket"`` are not
+                resolvable hostnames. Ignored for ``"local"``/``"usb"``.
 
         Returns:
             frida.core.Device: The resolved Frida device handle.
@@ -4864,6 +4891,9 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             return await asyncio.to_thread(frida.get_local_device)
         if device_type == "usb":
             return await asyncio.to_thread(frida.get_usb_device)
+        if device_type == "enumerated":
+            device_id: str = host if host is not None else ""
+            return await asyncio.to_thread(frida.get_device, device_id)
         manager = frida.get_device_manager()
         remote_host: str = host if host is not None else ""
         return await asyncio.to_thread(manager.add_remote_device, remote_host)
@@ -4876,8 +4906,13 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
         """Switch to a different Frida device.
 
         Args:
-            device_type: Device type ('local', 'usb', or 'remote').
-            host: Remote host address (required for 'remote' type).
+            device_type: Device type (``'local'``, ``'usb'``, ``'remote'``, or
+                ``'enumerated'``). ``'remote'`` adds a brand-new remote
+                endpoint by ``host[:port]``; ``'enumerated'`` reconnects to a
+                device already reported by :meth:`enumerate_devices`, looked
+                up by its own id rather than by hostname.
+            host: Remote ``host[:port]`` (required for ``'remote'``) or the
+                enumerated device's ``id`` (required for ``'enumerated'``).
 
         Returns:
             FridaDeviceInfo: Information about the connected device.
@@ -4891,10 +4926,13 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             except ToolError:
                 _logger.exception("session_release_before_device_switch_failed")
 
-        if device_type == "remote" and host is None:
+        if device_type == "remote" and not host:
             raise ToolError(_ERR_DEVICE_FAILED, details={"reason": "host required for remote device"})
 
-        if device_type not in {"local", "usb", "remote"}:
+        if device_type == "enumerated" and not host:
+            raise ToolError(_ERR_DEVICE_FAILED, details={"reason": "device id required for enumerated device"})
+
+        if device_type not in {"local", "usb", "remote", "enumerated"}:
             raise ToolError(_ERR_DEVICE_FAILED, details={"reason": f"unknown device type: {device_type}"})
 
         try:

@@ -6,31 +6,25 @@
 
 Provides :class:`AttachHintOverlay`, a translucent panel shown on top of the Memory, Threads, Modules, and System tabs while the
 ProcessPanel is not attached to a target process. It replaces the previously silent disabled tabs with a clear, always-legible instruction
-telling the user to attach first.
+telling the user to attach first. The overlay and its label carry the ``attach_hint_overlay``/``attach_hint_label`` object names rather
+than a hardcoded stylesheet, so the shared application stylesheet themes them consistently in both light and dark mode.
 """
 
 from __future__ import annotations
 
-from typing import Final, override
+from typing import override
 
 from PyQt6.QtCore import QEvent, QObject, Qt
 from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 
-_OVERLAY_STYLE: Final[str] = (
-    "#attach_hint_overlay{background-color:rgba(30,30,30,0.82);}"
-    "#attach_hint_label{color:#d4d4d4;font-size:13px;font-weight:600;"
-    "padding:16px 24px;border:1px solid #3e3e42;border-radius:6px;"
-    "background-color:rgba(45,45,48,0.95);}"
-)
-
-
 class AttachHintOverlay(QWidget):
     """Translucent overlay directing the user to attach to a process.
 
-    The overlay is parented to a detail tab and, when shown, covers the entire tab area with a centered message. Its stylesheet fixes the
-    foreground and background colors so the text stays fully legible even while the parent tab is disabled. Geometry is kept in sync with
-    the parent via an installed event filter so the overlay always fills the tab.
+    The overlay is parented to a detail tab and, when shown, covers the entire tab area with a centered message. Its object name and its
+    label's object name (``attach_hint_overlay``/``attach_hint_label``) are matched by rules in the shared application stylesheet, which
+    keeps the text legible against either theme's background instead of a hardcoded dark color baked into this widget. Geometry is kept in
+    sync with the parent via an installed event filter so the overlay always fills the tab.
     """
 
     def __init__(self, parent: QWidget, message: str) -> None:
@@ -43,7 +37,6 @@ class AttachHintOverlay(QWidget):
         super().__init__(parent)
         self.setObjectName("attach_hint_overlay")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, on=True)
-        self.setStyleSheet(_OVERLAY_STYLE)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

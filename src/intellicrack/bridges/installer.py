@@ -2553,11 +2553,12 @@ def _path_requires_admin(target: Path) -> bool:
     ]
     for prefix in candidates:
         try:
-            resolved.relative_to(Path(prefix).resolve())
-        except (OSError, ValueError) as exc:
-            _logger.warning("path_requires_admin_prefix_check_failed", prefix=prefix, error=str(exc))
+            prefix_resolved = Path(prefix).resolve()
+        except OSError as exc:
+            _logger.warning("path_requires_admin_prefix_resolve_failed", prefix=prefix, error=str(exc))
             continue
-        return True
+        if resolved.is_relative_to(prefix_resolved):
+            return True
     return False
 
 

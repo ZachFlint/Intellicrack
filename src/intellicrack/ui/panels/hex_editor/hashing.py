@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_warning
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, discard_worker, worker_is_running
 from intellicrack.ui.panels.hex_editor.widgets import CustomCrcDialog
 
 
@@ -218,11 +218,10 @@ class HashingMixin:
             GenericCallableWorker | None: The newly started worker, or ``None``
                 when ``existing`` is still running and no new worker was started.
         """
-        if existing is not None and existing.isRunning():
+        if worker_is_running(existing):
             _logger.warning("hex_editor_hash_worker_skipped")
             return None
-        if existing is not None:
-            existing.deleteLater()
+        discard_worker(existing)
 
         parent = self if isinstance(self, QWidget) else None
         worker = GenericCallableWorker(func, *args, parent=parent)
