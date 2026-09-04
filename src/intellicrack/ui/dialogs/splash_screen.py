@@ -541,10 +541,8 @@ class SplashScreen(QSplashScreen):
     def _setup_overlay(self) -> None:
         """Set up the progress bar and status label overlay widgets.
 
-        The overlay starts hidden and is revealed by :meth:`set_progress` once
-        the first progress update arrives, so the animated progress bar is
-        actually visible to the user while initialization runs. The status
-        and version labels it also hosts are retained for backward
+        The overlay starts hidden and is revealed by :meth:`set_progress` once the first progress update arrives, so the animated progress
+        bar is actually visible to the user while initialization runs. The status and version labels it also hosts are retained for backward
         compatibility with code that accesses them directly.
         """
         self._overlay = QWidget(self)

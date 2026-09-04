@@ -88,8 +88,7 @@ def _fully_visible_within_scroll_ancestors(widget: QWidget) -> tuple[bool, str]:
                 viewport_rect = _global_rect(viewport)
                 contained = viewport_rect.contains(widget_rect)
                 diagnostics.append(
-                    f"scroll_area={ancestor.objectName() or type(ancestor).__name__} "
-                    f"viewport_rect={viewport_rect} contained={contained}",
+                    f"scroll_area={ancestor.objectName() or type(ancestor).__name__} viewport_rect={viewport_rect} contained={contained}",
                 )
                 if not contained:
                     ok = False

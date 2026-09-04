@@ -82,7 +82,6 @@ out of ``BridgeCallWorker.run`` and terminate the worker thread without emitting
 the process panel's "Refreshing..." button) stuck indefinitely with no result and no surfaced error.
 """
 
-
 class _LoopState:
     """Module-level mutable state for the persistent event loop."""
 

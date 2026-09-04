@@ -1620,6 +1620,7 @@ class ToolInstaller:
             temp_path: Destination path on disk for the downloaded bytes.
             filename: Display name used in progress and completion logs.
         """
+
         async with client.stream("GET", url) as response:
             response.raise_for_status()
             total = int(response.headers.get("content-length", 0))

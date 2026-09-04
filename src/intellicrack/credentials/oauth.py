@@ -811,6 +811,7 @@ class OAuthManager:
             OAuthCallbackError: If state is invalid, expired, or PKCE
                 verifier is missing when required by the flow.
         """
+
         async with self._lock:
             oauth_state = self._pending_states.pop(state, None)
 
@@ -1030,6 +1031,7 @@ class OAuthManager:
         Returns:
             OAuthToken | None: OAuthToken or None if not found.
         """
+
         async with self._token_cache_lock:
             cached = self._token_cache.get(provider)
         if cached is not None:

@@ -110,8 +110,7 @@ class TestStatusBarHeightDerivedFromFontMetrics:
                 f"may have been hardcoded again instead of derived from QFontMetrics"
             )
             assert bar.height() > metrics_height, (
-                f"status bar height {bar.height()}px leaves no chrome/headroom above the "
-                f"font's line height {metrics_height}px"
+                f"status bar height {bar.height()}px leaves no chrome/headroom above the font's line height {metrics_height}px"
             )
         finally:
             if built_panel is not None:
@@ -132,9 +131,7 @@ class TestStatusBarHeightDerivedFromFontMetrics:
         bar = panel._status_bar
         assert bar is not None, "ProcessPanel did not build a status bar"
         metrics_height = QFontMetrics(bar.font()).height()
-        assert bar.height() >= metrics_height, (
-            f"status bar height {bar.height()}px clips its own font's line height {metrics_height}px"
-        )
+        assert bar.height() >= metrics_height, f"status bar height {bar.height()}px clips its own font's line height {metrics_height}px"
 
 
 class TestAttachHintOverlayIsThemedNotHardcoded:

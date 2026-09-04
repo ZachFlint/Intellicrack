@@ -214,9 +214,7 @@ class TestDockedSplitterStaysUsable:
         """
         tool_panel = window.tool_panel
         tool_panel.add_hex_editor_tab()
-        hex_index = next(
-            i for i in range(tool_panel.tab_widget.count()) if tool_panel.tab_widget.tabText(i) == "Hex Editor"
-        )
+        hex_index = next(i for i in range(tool_panel.tab_widget.count()) if tool_panel.tab_widget.tabText(i) == "Hex Editor")
         tool_panel.tab_widget.setCurrentIndex(hex_index)
         qapp.processEvents()
 
@@ -225,9 +223,7 @@ class TestDockedSplitterStaysUsable:
 
         splitter = tool_panel.main_splitter
         sizes_before = splitter.sizes()
-        assert sum(sizes_before) <= splitter.width(), (
-            f"splitter sizes {sizes_before} sum past its own width {splitter.width()}"
-        )
+        assert sum(sizes_before) <= splitter.width(), f"splitter sizes {sizes_before} sum past its own width {splitter.width()}"
 
         requested = [max(1, sizes_before[0] - 100), sizes_before[1] + 100]
         splitter.setSizes(requested)
@@ -283,12 +279,7 @@ class TestEarlySplashFillsFrame:
             Returns:
                 bool: True if every sampled row at ``x`` equals ``background``.
             """
-            return all(
-                image.pixelColor(x, y) == background
-                for y in range(0, _SPLASH_HEIGHT, _SPLASH_ROW_STRIDE)
-            )
+            return all(image.pixelColor(x, y) == background for y in range(0, _SPLASH_HEIGHT, _SPLASH_ROW_STRIDE))
 
         assert not _column_is_uniform_background(0), "left edge column is solid background -- image is pillarboxed"
-        assert not _column_is_uniform_background(_SPLASH_WIDTH - 1), (
-            "right edge column is solid background -- image is pillarboxed"
-        )
+        assert not _column_is_uniform_background(_SPLASH_WIDTH - 1), "right edge column is solid background -- image is pillarboxed"

@@ -63,7 +63,6 @@ returns. A pattern that genuinely takes longer simply outlives this short join a
 delivering its result via the worker's queued signals whenever the GUI event loop next pumps.
 """
 
-
 def _get_default_pattern_field_color() -> str:
     """Return a theme-appropriate highlight color for pattern editor fields.
 

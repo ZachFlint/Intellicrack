@@ -56,14 +56,94 @@ _MEMORY_BLOCK_COUNT = 8
 # per block. C1 owns ghidra.py; this fixture is a standalone stand-in so the
 # panel test needs no live bridge.
 _MEMORY_BLOCKS: list[dict[str, object]] = [
-    {"name": ".text", "start": 0x140001000, "end": 0x140010FFF, "size": 0x10000, "read": True, "write": False, "execute": True, "initialized": True, "volatile": False},
-    {"name": ".rdata", "start": 0x140011000, "end": 0x140018FFF, "size": 0x8000, "read": True, "write": False, "execute": False, "initialized": True, "volatile": False},
-    {"name": ".data", "start": 0x140019000, "end": 0x14001CFFF, "size": 0x4000, "read": True, "write": True, "execute": False, "initialized": True, "volatile": False},
-    {"name": ".pdata", "start": 0x14001D000, "end": 0x14001DFFF, "size": 0x1000, "read": True, "write": False, "execute": False, "initialized": True, "volatile": False},
-    {"name": ".idata", "start": 0x14001E000, "end": 0x14001FFFF, "size": 0x2000, "read": True, "write": False, "execute": False, "initialized": True, "volatile": False},
-    {"name": ".rsrc", "start": 0x140020000, "end": 0x140025FFF, "size": 0x6000, "read": True, "write": False, "execute": False, "initialized": True, "volatile": False},
-    {"name": ".reloc", "start": 0x140026000, "end": 0x140027FFF, "size": 0x2000, "read": True, "write": False, "execute": False, "initialized": True, "volatile": False},
-    {"name": ".bss", "start": 0x140028000, "end": 0x14002FFFF, "size": 0x8000, "read": True, "write": True, "execute": False, "initialized": False, "volatile": False},
+    {
+        "name": ".text",
+        "start": 0x140001000,
+        "end": 0x140010FFF,
+        "size": 0x10000,
+        "read": True,
+        "write": False,
+        "execute": True,
+        "initialized": True,
+        "volatile": False,
+    },
+    {
+        "name": ".rdata",
+        "start": 0x140011000,
+        "end": 0x140018FFF,
+        "size": 0x8000,
+        "read": True,
+        "write": False,
+        "execute": False,
+        "initialized": True,
+        "volatile": False,
+    },
+    {
+        "name": ".data",
+        "start": 0x140019000,
+        "end": 0x14001CFFF,
+        "size": 0x4000,
+        "read": True,
+        "write": True,
+        "execute": False,
+        "initialized": True,
+        "volatile": False,
+    },
+    {
+        "name": ".pdata",
+        "start": 0x14001D000,
+        "end": 0x14001DFFF,
+        "size": 0x1000,
+        "read": True,
+        "write": False,
+        "execute": False,
+        "initialized": True,
+        "volatile": False,
+    },
+    {
+        "name": ".idata",
+        "start": 0x14001E000,
+        "end": 0x14001FFFF,
+        "size": 0x2000,
+        "read": True,
+        "write": False,
+        "execute": False,
+        "initialized": True,
+        "volatile": False,
+    },
+    {
+        "name": ".rsrc",
+        "start": 0x140020000,
+        "end": 0x140025FFF,
+        "size": 0x6000,
+        "read": True,
+        "write": False,
+        "execute": False,
+        "initialized": True,
+        "volatile": False,
+    },
+    {
+        "name": ".reloc",
+        "start": 0x140026000,
+        "end": 0x140027FFF,
+        "size": 0x2000,
+        "read": True,
+        "write": False,
+        "execute": False,
+        "initialized": True,
+        "volatile": False,
+    },
+    {
+        "name": ".bss",
+        "start": 0x140028000,
+        "end": 0x14002FFFF,
+        "size": 0x8000,
+        "read": True,
+        "write": True,
+        "execute": False,
+        "initialized": False,
+        "volatile": False,
+    },
 ]
 
 
@@ -120,8 +200,7 @@ class TestD12MemoryMapTableRendersAllBlocks:
         panel._apply_memory_map(_MEMORY_BLOCKS)
 
         assert panel._memory_table.rowCount() == _MEMORY_BLOCK_COUNT, (
-            f"expected {_MEMORY_BLOCK_COUNT} memory-map rows (one per returned block), "
-            f"got {panel._memory_table.rowCount()}"
+            f"expected {_MEMORY_BLOCK_COUNT} memory-map rows (one per returned block), got {panel._memory_table.rowCount()}"
         )
 
         first_name_item = panel._memory_table.item(0, 0)
@@ -198,12 +277,9 @@ class TestD39ResultTablesAreNotFixedHeight:
 
         min_needed = _rows_worth_of_height(table, visible_rows)
         assert table.minimumHeight() >= min_needed, (
-            f"{attr}.minimumHeight()={table.minimumHeight()} cannot fit {visible_rows} rows "
-            f"(needs >= {min_needed})"
+            f"{attr}.minimumHeight()={table.minimumHeight()} cannot fit {visible_rows} rows (needs >= {min_needed})"
         )
-        assert table.maximumHeight() >= 1000, (
-            f"{attr}.maximumHeight()={table.maximumHeight()} looks pinned to a tiny fixed value"
-        )
+        assert table.maximumHeight() >= 1000, f"{attr}.maximumHeight()={table.maximumHeight()} looks pinned to a tiny fixed value"
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -232,8 +308,7 @@ class TestD39ResultTablesAreNotFixedHeight:
             "a setFixedHeight regression clamps minimum == maximum"
         )
         assert edit.minimumHeight() != edit.maximumHeight(), (
-            f"{attr} has minimumHeight() == maximumHeight() == {edit.minimumHeight()}, "
-            "which is exactly what setFixedHeight produces"
+            f"{attr} has minimumHeight() == maximumHeight() == {edit.minimumHeight()}, which is exactly what setFixedHeight produces"
         )
 
     @staticmethod
@@ -245,9 +320,7 @@ class TestD39ResultTablesAreNotFixedHeight:
         """
         source_path = Path(str(ghidra_panel_module.__file__))
         source_text = source_path.read_text(encoding="utf-8")
-        assert "setFixedHeight" not in source_text, (
-            "ghidra_panel.py still contains a setFixedHeight(...) call on a result widget"
-        )
+        assert "setFixedHeight" not in source_text, "ghidra_panel.py still contains a setFixedHeight(...) call on a result widget"
 
 
 class TestD41WidthsUseNamedPixelConstantsNotSplitRatios:

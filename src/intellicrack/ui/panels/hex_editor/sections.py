@@ -42,7 +42,6 @@ _FORMAT_TO_TEMPLATE: Final[dict[str, tuple[str, str]]] = {
 }
 """Map :func:`detect_format` results to ``(display_name, template_id)`` for the templates panel."""
 
-
 @runtime_checkable
 class _StringsSource(Protocol):
     """Subset of the hexcore ``HexDocument`` API required by ``execute_strings_extraction``."""

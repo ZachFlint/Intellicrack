@@ -155,7 +155,9 @@ def test_bit_toggle_label_matches_document_and_fits_button(qapp: QApplication) -
     expected_bit = bool(document.get_bit(0, bit_index))
     assert expected_bit is True, "toggling an initially-clear bit via click() must set it"
     expected_text = "1" if expected_bit else "0"
-    assert btn.text() == expected_text, f"button text must mirror the document's authoritative bit value; got {btn.text()!r}, expected {expected_text!r}"
+    assert btn.text() == expected_text, (
+        f"button text must mirror the document's authoritative bit value; got {btn.text()!r}, expected {expected_text!r}"
+    )
 
     content_width = _bit_button_content_width(btn)
     label_width = btn.fontMetrics().horizontalAdvance(btn.text())
