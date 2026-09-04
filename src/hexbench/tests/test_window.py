@@ -27,6 +27,8 @@ import unittest
 import unittest.mock
 from typing import TYPE_CHECKING, Final
 
+from PyInstaller.utils.hooks import collect_submodules
+
 from hexbench import window as window_module
 from hexbench.__main__ import SHELL_BROWSER, SHELL_NONE, SHELL_WINDOW, ServerStop, build_argument_parser, resolve_shell
 from hexbench.tests._support import Assertions
@@ -41,6 +43,7 @@ from hexbench.window import (
     WebviewWindow,
     desktop_size,
     fit_to_desktop,
+    frozen_toolkit_submodule,
     load_toolkit,
     run_window,
 )
@@ -384,6 +387,66 @@ class WindowCloseTests(Assertions, unittest.TestCase):
         stopper.attach_window(window)
         stopper()
         self.truthy(window.destroyed, "a window attached after an earlier windowless stop")
+
+
+class FrozenToolkitCollectionTests(Assertions, unittest.TestCase):
+    """Checking the freezer's toolkit walk against the toolkit actually installed.
+
+    The build description collects the toolkit's submodules so the freezer
+    carries in an import it cannot see. The toolkit ships one backend per
+    operating system, and walking the foreign ones imports toolkits a Windows
+    build does not have, which is what made ``just build-hexbench`` print a
+    collection warning. These tests drive the real collection over the installed
+    toolkit rather than restating the predicate's rules, so they fail if the
+    filter stops excluding a foreign backend or if a Windows backend is lost.
+    """
+
+    def test_the_excluded_backend_cannot_import_here(self) -> None:
+        """The thing the filter guards against must be real, or the guard is theatre.
+
+        The Android backend the filter drops imports a module that exists only
+        in a python-for-android build, so importing it here fails -- which is
+        why walking it printed a warning. If this stops raising, pywebview no
+        longer ships an unimportable backend and the filter guards nothing, a
+        change worth failing a gate to notice.
+        """
+        self.raises(
+            ImportError,
+            "importing the Android backend on a Windows build",
+            lambda: importlib.import_module(f"{TOOLKIT_MODULE}.platforms.android"),
+        )
+
+    def test_the_filtered_walk_imports_no_foreign_backend(self) -> None:
+        """The filtered walk must complete without importing a backend for another OS.
+
+        ``on_error='raise'`` turns the import the unfiltered walk fails on into a
+        failure here, so a predicate that let a foreign backend through would
+        raise -- the build's warning turned into a gate. The result must also
+        still carry the Windows backend, or the frozen program has no window.
+        """
+        modules = collect_submodules(TOOLKIT_MODULE, filter=frozen_toolkit_submodule, on_error="raise")
+        self.contains(f"{TOOLKIT_MODULE}.platforms.winforms", modules, "the Windows toolkit backend")
+        self.contains(f"{TOOLKIT_MODULE}.platforms.edgechromium", modules, "the Windows renderer backend")
+        for backend in ("android", "cocoa", "gtk", "qt"):
+            self.falsy(
+                any(f".platforms.{backend}" in name for name in modules),
+                f"any {backend} backend module surviving the filter",
+            )
+
+    def test_the_predicate_excludes_a_backend_and_all_beneath_it(self) -> None:
+        """A backend split into submodules stays excluded whole, not just at its root.
+
+        The Android backend is a package, so were it ever reached its submodules
+        would be offered to the predicate individually; each must be rejected as
+        the package itself is, or the build carries part of a backend it excluded.
+        """
+        self.truthy(frozen_toolkit_submodule(f"{TOOLKIT_MODULE}.platforms.winforms"), "a Windows backend")
+        self.truthy(frozen_toolkit_submodule(TOOLKIT_MODULE), "the toolkit root itself")
+        self.falsy(frozen_toolkit_submodule(f"{TOOLKIT_MODULE}.platforms.android"), "the Android backend root")
+        self.falsy(
+            frozen_toolkit_submodule(f"{TOOLKIT_MODULE}.platforms.android.window"),
+            "a module beneath the Android backend",
+        )
 
 
 if __name__ == "__main__":

@@ -175,16 +175,12 @@ def make_control_row(row: QHBoxLayout) -> QScrollArea:
 class _ContentScrollArea(QScrollArea):
     """A resizable scroll area whose minimum size hint tracks its content's width, not its height.
 
-    A plain :class:`QScrollArea` reports a small, content-independent
-    minimum size hint on both axes, which is exactly what makes it absorb
-    tall content instead of clipping it (D28) -- but wrapping a panel's
-    *entire* content in one would also silence the width demand that
-    :meth:`AnalysisPanelBase._wrap_content`'s callers rely on elsewhere (a
-    docked tab's ``minimumSizeHint`` protects it from being squeezed
-    narrower than its controls can render). This subclass keeps that width
-    signal flowing through to :meth:`minimumSizeHint` while still reporting
-    a small, fixed minimum height so the panel can shrink vertically behind
-    a scrollbar instead of being pinned to the content's full height.
+    A plain :class:`QScrollArea` reports a small, content-independent minimum size hint on both axes, which is exactly what makes it absorb
+    tall content instead of clipping it (D28) -- but wrapping a panel's *entire* content in one would also silence the width demand that
+    :meth:`AnalysisPanelBase._wrap_content`'s callers rely on elsewhere (a docked tab's ``minimumSizeHint`` protects it from being squeezed
+    narrower than its controls can render). This subclass keeps that width signal flowing through to :meth:`minimumSizeHint` while still
+    reporting a small, fixed minimum height so the panel can shrink vertically behind a scrollbar instead of being pinned to the content's
+    full height.
     """
 
     @override

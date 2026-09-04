@@ -121,9 +121,7 @@ class TestStatisticsWorkerDeletedGuardOnSwitch:
             assert finished, "the statistics worker must finish within the bounded wait"
 
             _force_cpp_deletion(worker, qapp)
-            assert _wrapper_is_deleted(worker), (
-                "test precondition: the stored statistics worker wrapper must be dangling before the switch"
-            )
+            assert _wrapper_is_deleted(worker), "test precondition: the stored statistics worker wrapper must be dangling before the switch"
             assert panel._statistics_worker is worker, "the panel must still hold the dangling wrapper"
 
             panel.document.add_bookmark(0x40, 1, "OnlyInFileA", "#00FF00")

@@ -667,10 +667,8 @@ class CutterPanel(AnalysisPanelBase):
     def _on_analysis_complete(self) -> None:
         """Handle successful analysis by refreshing analysis-dependent data views.
 
-        Headers, Sections, and Imports are refreshed on binary load (see
-        :meth:`_refresh_binary_info_tabs`) since they come from the loader
-        rather than from analysis; they are intentionally not repeated here
-        to avoid a double refresh.
+        Headers, Sections, and Imports are refreshed on binary load (see :meth:`_refresh_binary_info_tabs`) since they come from the loader
+        rather than from analysis; they are intentionally not repeated here to avoid a double refresh.
         """
         self._set_status("Analysis complete")
         _logger.info("cutter_analysis_complete", bridge_type="cutter")

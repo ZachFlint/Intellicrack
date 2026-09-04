@@ -77,7 +77,6 @@ class _SetupLoggingFn(Protocol):
                 default (``Path.cwd() / "logs"``).
         """
 
-
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _EARLY_SPLASH_WIDTH: Final[int] = 600
 _EARLY_SPLASH_HEIGHT: Final[int] = 400
@@ -470,18 +469,13 @@ def _build_early_splash_pixmap(splash_asset: Path, width: int, height: int) -> Q
 def _ensure_per_monitor_dpi_awareness() -> None:
     """Declare per-monitor-v2 DPI awareness before any window is created.
 
-    Qt's Windows platform plugin requests per-monitor-v2 awareness on its own
-    during ``QApplication`` construction unless the process has already
-    declared an awareness context (for example via an application manifest
-    embedded by the installer), in which case Qt honours that declaration
-    instead. Setting the context explicitly here -- before any window or
-    device context exists, which is the only point Windows accepts it --
-    guarantees the per-monitor-v2 behaviour this application needs (D28)
-    regardless of what any bundling manifest declares.
+    Qt's Windows platform plugin requests per-monitor-v2 awareness on its own during ``QApplication`` construction unless the process has
+    already declared an awareness context (for example via an application manifest embedded by the installer), in which case Qt honours that
+    declaration instead. Setting the context explicitly here -- before any window or device context exists, which is the only point Windows
+    accepts it -- guarantees the per-monitor-v2 behaviour this application needs (D28) regardless of what any bundling manifest declares.
 
-    A no-op on non-Windows platforms, on Windows versions older than the
-    Creators Update (which lack ``SetProcessDpiAwarenessContext``), and when
-    the process has already set an incompatible awareness context.
+    A no-op on non-Windows platforms, on Windows versions older than the Creators Update (which lack ``SetProcessDpiAwarenessContext``), and
+    when the process has already set an incompatible awareness context.
     """
     if sys.platform != "win32":
         return

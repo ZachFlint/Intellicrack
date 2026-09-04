@@ -1163,6 +1163,17 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 ### Fixed
 
+- Resolve UI layout, bridge timeout, and session liveness issues (`72b0da4`)
+Hardens bridge connection lifecycles, corrects off-by-one errors in hex
+transforms, and re-derives fixed layout dimensions from font metrics and
+screen DPI across the desktop interface.
+- Cutter bridge: scale analysis and listing timeouts; reset and poison dirty r2 sessions on command timeout
+- x64dbg bridge: add process liveness probes to prevent silent failures on dead pipes and clear views on session loss
+- Process bridge: preserve real Win32 error codes in device driver operations
+- Hex editor: fix selection range off-by-one errors in arithmetic/transform operations and guard worker thread lifecycles
+- UI & Theming: dynamically compute toolbar and status bar heights, make Ghidra memory tab scrollable, and introduce dark2/light2 variants
+- Packaging: exclude Jython extension and enforce strip guard in staging script
+
 - **packaging:** Restore full runtime declaration in [project.dependencies] (`8d5a94a`)
 The runtime pixi-env-split refactor reduced [project.dependencies] to just
 pyyaml + setuptools while keeping the real runtime in the pixi pypi-dependencies
@@ -5902,16 +5913,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- Resolve UI layout, bridge timeout, and session liveness issues (``)
-Hardens bridge connection lifecycles, corrects off-by-one errors in hex
-transforms, and re-derives fixed layout dimensions from font metrics and
-screen DPI across the desktop interface.
-- Cutter bridge: scale analysis and listing timeouts; reset and poison dirty r2 sessions on command timeout
-- x64dbg bridge: add process liveness probes to prevent silent failures on dead pipes and clear views on session loss
-- Process bridge: preserve real Win32 error codes in device driver operations
-- Hex editor: fix selection range off-by-one errors in arithmetic/transform operations and guard worker thread lifecycles
-- UI & Theming: dynamically compute toolbar and status bar heights, make Ghidra memory tab scrollable, and introduce dark2/light2 variants
-- Packaging: exclude Jython extension and enforce strip guard in staging script
 
 

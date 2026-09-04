@@ -88,22 +88,14 @@ class TestD40PostMessageHeightConstant:
         module_ast = ast.parse(source)
 
         class_node = next(
-            node
-            for node in ast.walk(module_ast)
-            if isinstance(node, ast.ClassDef) and node.name == "ScriptMessagingControls"
+            node for node in ast.walk(module_ast) if isinstance(node, ast.ClassDef) and node.name == "ScriptMessagingControls"
         )
-        init_node = next(
-            node
-            for node in ast.walk(class_node)
-            if isinstance(node, ast.FunctionDef) and node.name == "__init__"
-        )
+        init_node = next(node for node in ast.walk(class_node) if isinstance(node, ast.FunctionDef) and node.name == "__init__")
 
         set_max_height_calls = [
             node
             for node in ast.walk(init_node)
-            if isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "setMaximumHeight"
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "setMaximumHeight"
         ]
         assert len(set_max_height_calls) == 1, "expected exactly one setMaximumHeight call in ScriptMessagingControls.__init__"
 
@@ -111,8 +103,6 @@ class TestD40PostMessageHeightConstant:
         assert len(call_node.args) == 1
         arg_node = call_node.args[0]
 
-        names_referenced = {
-            node.id for node in ast.walk(arg_node) if isinstance(node, ast.Name)
-        }
+        names_referenced = {node.id for node in ast.walk(arg_node) if isinstance(node, ast.Name)}
         assert names_referenced == {"_POST_MESSAGE_INPUT_MAX_HEIGHT"}
         assert "_ADDR_INPUT_MAX_WIDTH" not in names_referenced

@@ -274,7 +274,9 @@ def test_ghidra_stage_guard_raises_when_a_jython_jar_survives(tmp_path: Path) ->
         "the Ghidra stage guard did not fail the build with a surviving Jython jar in the staged tree "
         f"(exit {completed.returncode}):\n{completed.stdout}\n{completed.stderr}"
     )
-    assert "Jython" in completed.stderr, f"the guard's failure does not mention Jython, so a build failure here would be undiagnosable:\n{completed.stderr}"
+    assert "Jython" in completed.stderr, (
+        f"the guard's failure does not mention Jython, so a build failure here would be undiagnosable:\n{completed.stderr}"
+    )
 
 
 def test_ghidra_stage_guard_is_silent_on_a_clean_tree(tmp_path: Path) -> None:

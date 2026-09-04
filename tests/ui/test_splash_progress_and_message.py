@@ -119,9 +119,7 @@ class TestOverlayVisibleDuringProgress:
 
         assert splash.progress_animation is not None
         splash.progress_animation.setCurrentTime(splash.progress_animation.duration())
-        assert splash.progress_bar.value() == _PROGRESS_TARGET, (
-            f"progress bar value did not advance: {splash.progress_bar.value()}"
-        )
+        assert splash.progress_bar.value() == _PROGRESS_TARGET, f"progress bar value did not advance: {splash.progress_bar.value()}"
         splash.close()
 
 
@@ -147,9 +145,7 @@ class TestDirectShowMessageIsPainted:
 
         splash.showMessage(_DIRECT_MESSAGE)
 
-        assert splash._status_message == _DIRECT_MESSAGE, (
-            "showMessage() must update the painted status text (D46)"
-        )
+        assert splash._status_message == _DIRECT_MESSAGE, "showMessage() must update the painted status text (D46)"
         splash.close()
 
     @staticmethod
@@ -180,9 +176,7 @@ class TestDirectShowMessageIsPainted:
 
         painted = _count_non_background(direct_image)
         assert painted > 0, "no non-background pixels painted in the message region"
-        assert direct_image != baseline_image, (
-            "showMessage() text was not reflected in the painted output (D46)"
-        )
+        assert direct_image != baseline_image, "showMessage() text was not reflected in the painted output (D46)"
 
         baseline_splash.close()
         direct_splash.close()
@@ -209,9 +203,7 @@ class TestDirectShowMessageIsPainted:
         direct_splash.showMessage(_DIRECT_MESSAGE)
         direct_grab = direct_splash.grab().toImage()
 
-        assert direct_grab != baseline_grab, (
-            "full-widget grab() did not change after a direct showMessage() call (D46)"
-        )
+        assert direct_grab != baseline_grab, "full-widget grab() did not change after a direct showMessage() call (D46)"
 
         baseline_splash.close()
         direct_splash.close()

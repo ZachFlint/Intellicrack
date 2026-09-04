@@ -163,6 +163,5 @@ def test_metadata_listing_timeout_exceeds_command_default() -> None:
     default_command_timeout: float = getattr(cutter_mod, "_R2_COMMAND_TIMEOUT")
 
     assert listing_timeout > default_command_timeout * 5, (
-        f"metadata-listing timeout ({listing_timeout}s) is not comfortably above "
-        f"the {default_command_timeout}s command default"
+        f"metadata-listing timeout ({listing_timeout}s) is not comfortably above the {default_command_timeout}s command default"
     )
