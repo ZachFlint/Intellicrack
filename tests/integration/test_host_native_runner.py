@@ -12,6 +12,9 @@ raising in the container (where the daemon/hardware are genuinely absent).
 
 from __future__ import annotations
 
+import os
+import tempfile
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -47,6 +50,62 @@ def test_build_pytest_argv_selects_host_native_and_writes_junit() -> None:
     assert argv[argv.index("-m") + 1] == "host_native"
     junit_args = [arg for arg in argv if arg.startswith("--junitxml=")]
     assert junit_args == [f"--junitxml={repo / 'reports' / 'tests' / 'junit_host_native.xml'}"]
+
+
+def test_build_pytest_argv_pins_unique_basetemp_off_the_shared_user_base() -> None:
+    """The argv pins a per-run ``--basetemp`` so a poisoned shared base cannot fail teardown.
+
+    Without an explicit basetemp, pytest walks the shared ``pytest-of-<user>`` base
+    at session finish; a SYSTEM-owned directory or ``pytest-current`` symlink left by
+    a prior elevated run makes ``pytest_sessionfinish`` raise ``PermissionError`` and
+    the whole pass exit non-zero even when every test passed. Dropping the
+    ``--basetemp`` argument, aiming it at the shared base, or using a constant
+    (non-unique) path each reddens an assertion here.
+    """
+    repo = Path("D:/example-repo")
+    basetemp_args = [arg for arg in build_pytest_argv(repo) if arg.startswith("--basetemp=")]
+    assert len(basetemp_args) == 1, "host-native argv must pin exactly one --basetemp"
+    basetemp = Path(basetemp_args[0].split("=", 1)[1])
+    assert basetemp.parent.name == "intellicrack-host-native"
+    assert str(basetemp).startswith(str(Path(tempfile.gettempdir())))
+    assert "pytest-of-" not in str(basetemp).replace("\\", "/")
+    second = next(arg for arg in build_pytest_argv(repo) if arg.startswith("--basetemp="))
+    assert second != basetemp_args[0], "each run must receive a distinct basetemp"
+
+
+def test_prepare_host_native_tmp_parent_prunes_aged_runs_but_keeps_recent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Aged prior-run trees are removed while a recent tree and the parent survive.
+
+    The parent must exist for pytest to create its per-run directory, and old runs
+    must be pruned so the parent does not grow without bound. This drives the real
+    function against real directories: an aged tree is removed, a recent one is kept,
+    and the parent is created. A no-op prune (aged tree survives) or an
+    age-blind prune (recent tree deleted) reddens an assertion here.
+
+    Args:
+        tmp_path: Pytest-provided directory used as the basetemp parent root.
+        monkeypatch: Fixture used to point the runner at the temporary parent.
+    """
+    parent = tmp_path / "intellicrack-host-native"
+    monkeypatch.setattr(host_native_tests, "_HOST_NATIVE_TMP_PARENT", parent)
+    monkeypatch.setattr(host_native_tests, "_HOST_NATIVE_TMP_MAX_AGE_S", 3600.0)
+    aged = parent / "run-1-1"
+    fresh = parent / "run-2-2"
+    parent.mkdir()
+    aged.mkdir()
+    (aged / "leftover.txt").write_text("x", encoding="utf-8")
+    fresh.mkdir()
+    stale = time.time() - 7200.0
+    os.utime(aged, (stale, stale))
+
+    host_native_tests.prepare_host_native_tmp_parent()
+
+    assert not aged.exists(), "a run tree older than the max age must be pruned"
+    assert fresh.exists(), "a recent run tree must be kept"
+    assert parent.is_dir(), "the basetemp parent must exist after preparation"
 
 
 def test_configure_environment_flips_sandbox_to_host_native(tmp_path: Path) -> None:

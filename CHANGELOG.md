@@ -9,6 +9,37 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **installer:** Log a per-step completion line with exit code and duration (`811f6ae`)
+Reviewing a build log showed each step's `--- header ---` but no outcome on
+success -- only a failure wrote an exit line, so `grep exit build.log` came back
+empty on a clean build and per-step wall-time had to be read from each sub-tool's
+own text. Invoke-LoggedStep now times the step and writes a uniform
+`--- <what> : done in <n>s (exit <code>) ---` line after the output, greppable on
+both success and failure, and returns that same code to the caller unchanged.
+Test executes the real Invoke-LoggedStep against a child that exits 7: the log
+must carry the child's output followed by a completion line with (exit 7) and a
+numeric duration, and the function must return 7. Removing the completion line or
+hardcoding the code reddens it. Registered in the host-native pass (pwsh).
+
+- **installer:** Log the full build pipeline and close a registry drift (`136785e`)
+build-installer now runs through scripts/build-installer.ps1, which drives
+staging, the staged-tree verification and iscc as one pipeline and streams
+every step's combined stdout/stderr to logs/installer/build.log (a single
+rolling file, replaced each run) as well as the console. The console keeps its
+ANSI colour; the file copy is stripped so it stays readable in an editor. This
+makes a build reconstructable after the terminal is cleared.
+The justfile recipe delegates to the script instead of inlining the steps, so
+the log cannot be bypassed by a recipe edit.
+tests/packaging/test_build_installer_logging.py adds six falsifiable gates that
+execute the script's real Write-LogLine / Write-Both / Split-CommandArgument
+functions (lifted verbatim) and assert the ANSI strip, the append accumulation,
+the empty-argument guard, stderr capture, the log path, and the recipe wiring.
+Separately, the host-native registry referenced
+test_every_staged_file_is_packaged_by_the_iss, a gate that was never written --
+a drift that reddened the registry resolver. Implemented it: the reverse of the
+existing source-exists gate (unpackaged_staged_files flags any staged file that
+no [Files] Source packages), with a falsifiability proof.
+
 - **packaging,sandbox:** Relocate user state and add guest process picker (`dca310a`)
 Relocate user-writable configuration, credentials, and state under `%LOCALAPPDATA%` to prevent permission issues in read-only installation directories, and add guest process enumeration to the Windows Sandbox backend for targeted memory dumping.
 - Redirect config, logs, data, and `.env` resolution to per-user state directory
@@ -1119,6 +1150,48 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **sandbox:** Quiesce the Docker engine before the host-native WHPX gates (`34ca26d`)
+Windows containers, WHPX virtual machines and Windows Sandbox sessions all run
+on the Host Compute Service. The container side of that interlock was built in
+472533c6 - a container will not start while a virtual machine holds the host -
+but the mirror image was only ever half-built, and launching the test sandbox
+has been wedging Docker ever since.
+The WHPX boot gates asked "docker ps" whether a container was running. The
+collision is with the engine, not its containers: Docker Desktop holds the Host
+Compute Service with its Windows engine and utility VM for as long as it runs,
+busy or idle. "just test" runs the container leg and then the host-native pass,
+so by the time the gates looked, the container had exited while the engine was
+still up - zero containers, engine live, gate open, and a virtual machine
+booted straight into it. That is the state that leaves Docker unresponsive
+until Docker Desktop is relaunched as administrator, and on 2026-08-02 it
+bugchecked the host outright. The "quiesce Docker before WHPX" step this was
+supposed to have had never existed in the tree at all.
+scripts/sandbox/hcs_interlock.py detects the engine itself - its named pipe, or
+the backend processes that cover the window where the pipe is absent because
+the engine is still starting or already tearing down - and clears it off the
+Host Compute Service before the host-native pass launches pytest. Clearing it
+is Docker Desktop's own unelevated quit. When that leaves the engine up, only
+stopping the engine service shifts it and that needs an elevated token, which
+is why an administrator relaunch has been the recovery; the interlock uses a
+token the caller already holds and never asks for one, because a test run must
+raise no UAC prompt. An engine that will not clear leaves the host BLOCKED and
+the WHPX gates skip, which is the safe outcome. Docker stays down afterwards
+and the next container leg starts it again, so recovery needs no manual step.
+A running container is waited out, never shut down. Sibling sessions share this
+host and queue through the admission gate, so a busy engine is doing somebody's
+work; taking it down would destroy their run to make room for these gates. The
+wait is bounded, and a container that outlasts it costs this run its virtual
+machine gates rather than costing the sibling their container.
+Gate tests/sandbox/test_docker_engine_whpx_interlock.py (20) pins the state
+that wedged Docker: engine up, no container, refusal required - the case the
+container count waved through. The probes are injected because they describe
+the host; the logic deciding what to do about it is the production code under
+test, and the process enumerator is gated against a genuine running process
+carrying an engine's name, as the container-side interlock gates its own.
+Controls cover the reverse of every assertion, an unelevated run is pinned to
+never reach the service stop, and the wiring is read out of the callers' own
+syntax trees since neither path can be exercised from inside the container.
 
 - **packaging:** Harden installer scripts and enforce runtime deps (`4eea4e7`)
 Expand declared runtime dependencies in `pyproject.toml` and refine the
@@ -5758,3 +5831,11 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+- **tests:** Isolate host-native pytest basetemp and force ansi rendering (``)
+Pin an explicit, run-unique `--basetemp` for host-native test executions to avoid `PermissionError` during session finish when previous elevated runs leave SYSTEM-owned artifacts in the shared user base directory.
+* Isolate host-native basetemp under a dedicated temp path and prune runs older than six hours
+* Add integration tests verifying unique basetemp generation and age-based directory pruning
+* Force `$PSStyle.OutputRendering = 'Ansi'` in installer logging test to avoid environment-dependent ANSI stripping
+
+
