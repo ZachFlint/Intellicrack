@@ -28,6 +28,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import cast
@@ -145,6 +146,8 @@ _OLLAMA_SERVE_TIMEOUT_S: float = 45.0
 _OLLAMA_POLL_INTERVAL_S: float = 1.0
 _OLLAMA_PULL_TIMEOUT_S: float = 900.0
 _PYTEST_TIMEOUT_S: float = 3600.0
+_HOST_NATIVE_TMP_PARENT: Path = Path(tempfile.gettempdir()) / "intellicrack-host-native"
+_HOST_NATIVE_TMP_MAX_AGE_S: float = 6.0 * 60.0 * 60.0
 
 _SANDBOX_ENV_VAR: str = "INTELLICRACK_SANDBOXED"
 _ALLOW_HOST_PROCESS_TESTS_ENV: str = "INTELLICRACK_ALLOW_HOST_PROCESS_TESTS"
@@ -377,7 +380,58 @@ def build_pytest_argv(repo_root: Path) -> list[str]:
         "-ra",
         "--strict-markers",
         f"--junitxml={junit}",
+        f"--basetemp={new_host_native_basetemp()}",
     ]
+
+
+def new_host_native_basetemp() -> Path:
+    """Return a unique, repo-external basetemp for one host-native pytest run.
+
+    Without an explicit ``--basetemp`` pytest defaults to the shared
+    ``<temp>/pytest-of-<user>`` base and, at session finish, walks that base to
+    rotate old numbered directories and to stat its ``pytest-current`` symlink.
+    When an *elevated* host-native run (raw physical disk, ETW realtime tracing)
+    has previously created SYSTEM-owned directories or a symlink there, the next
+    *non-elevated* run cannot stat them: pytest raises ``PermissionError`` out of
+    ``pytest_sessionfinish`` and the whole pass exits non-zero even though every
+    test passed. Handing pytest an explicit basetemp makes it skip that
+    shared-base rotation entirely (see ``_pytest.tmpdir.getbasetemp``), so a
+    poisoned shared base can no longer fail an otherwise-green run.
+
+    The name is unique per run (process id plus nanosecond clock) so a prior
+    elevated run's SYSTEM-owned tree is never the directory pytest tries to remove
+    at startup, and it sits under the system temp root rather than the repository
+    so booting the WHPX virtual machines adds no write load to the project drive.
+
+    Returns:
+        Path: This run's basetemp directory (created by pytest, not here).
+    """
+    return _HOST_NATIVE_TMP_PARENT / f"run-{os.getpid()}-{time.time_ns()}"
+
+
+def prepare_host_native_tmp_parent() -> None:
+    """Create the basetemp parent and best-effort prune aged prior run trees.
+
+    Each run writes under a unique child of ``_HOST_NATIVE_TMP_PARENT`` and never
+    removes its own tree, so the parent would grow without bound unless old runs
+    are pruned. Trees whose modification time is older than
+    ``_HOST_NATIVE_TMP_MAX_AGE_S`` are removed; a tree left SYSTEM-owned by a prior
+    elevated run raises ``PermissionError`` under a non-elevated token, which is
+    logged and skipped rather than aborting the pass -- exactly the failure this
+    whole mechanism exists to avoid. The parent must exist before pytest creates
+    the per-run directory beneath it.
+    """
+    _HOST_NATIVE_TMP_PARENT.mkdir(parents=True, exist_ok=True)
+    cutoff = time.time() - _HOST_NATIVE_TMP_MAX_AGE_S
+    for child in _HOST_NATIVE_TMP_PARENT.iterdir():
+        try:
+            recent = child.stat().st_mtime >= cutoff
+        except OSError as exc:
+            _LOGGER.debug("host_native_tmp_stat_failed", path=str(child), error=str(exc))
+            continue
+        if recent:
+            continue
+        shutil.rmtree(child, ignore_errors=True)
 
 
 def elevation_skip_notice(*, elevated: bool) -> str:
@@ -476,6 +530,7 @@ def run(repo_root: Path, extra_args: list[str] | None = None) -> int:
     _configure_environment(env, repo_root)
     server = _provision_ollama()
     _log_capabilities(docker_state)
+    prepare_host_native_tmp_parent()
     argv = [sys.executable, "-m", "pytest", *build_pytest_argv(repo_root), *(extra_args or [])]
     _LOGGER.info("host_native_pytest_start", argv=argv[2:])
     try:
