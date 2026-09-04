@@ -594,7 +594,25 @@ class CutterPanel(AnalysisPanelBase):
         _logger.info("cutter_binary_loaded", path=binary_path.name)
         self._esil_tab.reset_esil_state()
         self._load_btn.setEnabled(True)
+        self._refresh_binary_info_tabs()
         self._on_analyze()
+
+    def _refresh_binary_info_tabs(self) -> None:
+        """Refresh the tabs whose data comes straight from the binary loader.
+
+        Headers (``iHj``), Sections (``iSj``), and Imports (``iij``) are all
+        populated by Rizin's loader when a binary is opened and do not
+        require an analysis pass. They are refreshed here, on binary load,
+        so they are populated immediately regardless of whether -- or when
+        -- analysis subsequently completes. ``_on_analysis_complete`` does
+        not repeat these three refreshes, so a load followed by an analysis
+        run refreshes each of them exactly once.
+        """
+        if self._bridge is None:
+            return
+        self._refresh_imports()
+        self._refresh_sections()
+        self._headers_tab.refresh(self._bridge, self._run_async)
 
     def _on_binary_load_error(self, binary_path: Path, exc: object) -> None:
         """Handle binary load failure.
@@ -647,14 +665,18 @@ class CutterPanel(AnalysisPanelBase):
         )
 
     def _on_analysis_complete(self) -> None:
-        """Handle successful analysis by refreshing all data views."""
+        """Handle successful analysis by refreshing analysis-dependent data views.
+
+        Headers, Sections, and Imports are refreshed on binary load (see
+        :meth:`_refresh_binary_info_tabs`) since they come from the loader
+        rather than from analysis; they are intentionally not repeated here
+        to avoid a double refresh.
+        """
         self._set_status("Analysis complete")
         _logger.info("cutter_analysis_complete", bridge_type="cutter")
         self._analyze_btn.setEnabled(True)
         self._on_refresh_functions()
-        self._refresh_imports()
         self._refresh_exports()
-        self._refresh_sections()
         self._refresh_new_tabs()
 
     def _on_analysis_error(self, exc: object) -> None:
@@ -1261,14 +1283,17 @@ class CutterPanel(AnalysisPanelBase):
         self._console_run_btn.setEnabled(True)
 
     def _refresh_new_tabs(self) -> None:
-        """Refresh all new data tabs after analysis completes."""
+        """Refresh all new data tabs after analysis completes.
+
+        Headers is refreshed separately, on binary load, since it is
+        analysis-independent -- see :meth:`_refresh_binary_info_tabs`.
+        """
         if self._bridge is None:
             return
         run_fn = self._run_async
         self._all_strings_tab.refresh(self._bridge, run_fn)
         self._symbols_tab.refresh(self._bridge, run_fn)
         self._libraries_tab.refresh(self._bridge, run_fn)
-        self._headers_tab.refresh(self._bridge, run_fn)
         self._relocations_tab.refresh(self._bridge, run_fn)
         self._resources_tab.refresh(self._bridge, run_fn)
         self._segments_tab.refresh(self._bridge, run_fn)

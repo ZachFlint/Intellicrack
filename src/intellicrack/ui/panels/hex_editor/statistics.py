@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, cast
 from PyQt6.QtWidgets import QLabel, QTreeWidget, QTreeWidgetItem, QWidget
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, discard_worker, worker_is_running
 from intellicrack.ui.panels.hex_editor.base import (
     BYTE_TYPE_DIST_MIN_LEN,
     BYTE_VALUES_COUNT,
@@ -229,12 +229,11 @@ class StatisticsMixin:
             return
 
         worker_attr: GenericCallableWorker | None = getattr(self, "_statistics_worker", None)
-        if worker_attr is not None and worker_attr.isRunning():
+        if worker_is_running(worker_attr):
             _logger.warning("statistics_update_skipped", reason="worker active")
             return
 
-        if worker_attr is not None:
-            worker_attr.deleteLater()
+        discard_worker(worker_attr)
 
         if self._statistics_tree is not None:
             self._statistics_tree.clear()
@@ -456,12 +455,11 @@ class StatisticsMixin:
             return
 
         worker_attr: GenericCallableWorker | None = getattr(self, "_digram_worker", None)
-        if worker_attr is not None and worker_attr.isRunning():
+        if worker_is_running(worker_attr):
             _logger.warning("digram_matrix_update_skipped", reason="worker active")
             return
 
-        if worker_attr is not None:
-            worker_attr.deleteLater()
+        discard_worker(worker_attr)
 
         parent_obj: QWidget | None = self if isinstance(self, QWidget) else None
         worker = GenericCallableWorker(

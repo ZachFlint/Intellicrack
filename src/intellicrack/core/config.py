@@ -279,7 +279,7 @@ class UIConfig:
     """User interface configuration.
 
     Attributes:
-        theme: UI theme name ("dark", "light", or "system").
+        theme: UI theme name ("dark", "light", "dark2", "light2", or "system").
         font_family: Font family for code display.
         font_size: Font size in points.
         show_tool_calls: Whether to show tool calls in chat.

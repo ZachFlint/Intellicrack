@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.hexpat.completer import HexPatCompleter
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import HexPatSyntaxHighlighter
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, worker_is_running
 from intellicrack.ui.panels.hex_editor.base import (
     SPLITTER_MAIN_RATIO,
     SPLITTER_PATTERN_RATIO,
@@ -464,7 +464,7 @@ class PatternEditorMixin:
             return
 
         active_worker = getattr(self, "_pattern_apply_worker", None)
-        if active_worker is not None and active_worker.isRunning():
+        if worker_is_running(active_worker):
             _logger.warning("pattern_interpreter_apply_skipped", reason="worker active")
             return
 

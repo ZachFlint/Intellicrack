@@ -9,6 +9,49 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **ui:** Add dark2/light2 theme assets required by the S19 four-theme gates (`90183f9`)
+Commit 091e5e65 landed theme_manager.py's dark2/light2 support and the
+four-theme parity gates (test_theme_stylesheet_rules, test_session_tag_theme,
+test_input_field_vertical_clipping) that parametrize over all four concrete
+themes and read each theme's stylesheet via get_stylesheet -> read_text.
+dark2_theme.qss and light2_theme.qss were left untracked, so a fresh checkout
+of that commit would raise FileNotFoundError for the dark2/light2 cases.
+Add the two full-parity stylesheets (identical structure to dark/light, each
+carrying the same R02/R03 min-height floor, D29 #tool_button, and
+QComboBox#toolbar_combo rules) so the committed four-theme code and gates are
+self-consistent.
+
+- **installer:** Log a per-step completion line with exit code and duration (`811f6ae`)
+Reviewing a build log showed each step's `--- header ---` but no outcome on
+success -- only a failure wrote an exit line, so `grep exit build.log` came back
+empty on a clean build and per-step wall-time had to be read from each sub-tool's
+own text. Invoke-LoggedStep now times the step and writes a uniform
+`--- <what> : done in <n>s (exit <code>) ---` line after the output, greppable on
+both success and failure, and returns that same code to the caller unchanged.
+Test executes the real Invoke-LoggedStep against a child that exits 7: the log
+must carry the child's output followed by a completion line with (exit 7) and a
+numeric duration, and the function must return 7. Removing the completion line or
+hardcoding the code reddens it. Registered in the host-native pass (pwsh).
+
+- **installer:** Log the full build pipeline and close a registry drift (`136785e`)
+build-installer now runs through scripts/build-installer.ps1, which drives
+staging, the staged-tree verification and iscc as one pipeline and streams
+every step's combined stdout/stderr to logs/installer/build.log (a single
+rolling file, replaced each run) as well as the console. The console keeps its
+ANSI colour; the file copy is stripped so it stays readable in an editor. This
+makes a build reconstructable after the terminal is cleared.
+The justfile recipe delegates to the script instead of inlining the steps, so
+the log cannot be bypassed by a recipe edit.
+tests/packaging/test_build_installer_logging.py adds six falsifiable gates that
+execute the script's real Write-LogLine / Write-Both / Split-CommandArgument
+functions (lifted verbatim) and assert the ANSI strip, the append accumulation,
+the empty-argument guard, stderr capture, the log path, and the recipe wiring.
+Separately, the host-native registry referenced
+test_every_staged_file_is_packaged_by_the_iss, a gate that was never written --
+a drift that reddened the registry resolver. Implemented it: the reverse of the
+existing source-exists gate (unpackaged_staged_files flags any staged file that
+no [Files] Source packages), with a falsifiability proof.
+
 - **packaging,sandbox:** Relocate user state and add guest process picker (`dca310a`)
 Relocate user-writable configuration, credentials, and state under `%LOCALAPPDATA%` to prevent permission issues in read-only installation directories, and add guest process enumeration to the Windows Sandbox backend for targeted memory dumping.
 - Redirect config, logs, data, and `.env` resolution to per-user state directory
@@ -1119,6 +1162,107 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **packaging:** Restore full runtime declaration in [project.dependencies] (`8d5a94a`)
+The runtime pixi-env-split refactor reduced [project.dependencies] to just
+pyyaml + setuptools while keeping the real runtime in the pixi pypi-dependencies
+tables. But the installer stager and packaging/ml_split.py trust
+[project.dependencies] to enumerate the shipped runtime: with it gutted, the
+project metadata under-declared its own runtime and ml_split relocated
+foundational packages (setuptools) into the ML overlay because they were no
+longer reachable from the core closure.
+Restore the 22 dropped runtime distributions, adopting the refactor's deliberate
+bound bumps (anthropic>=1.2.0, openai>=3.6.0, google-genai>=2.20.0,
+cryptography>=50.0.1, huggingface-hub>=1.29.0) and keeping the rest at their
+existing bounds. pyyaml/setuptools left as the refactor set them.
+Verified against the synced default env: every module-level third-party import
+in src/intellicrack resolves to a declared distribution (zero undeclared),
+all _ADDED_RUNTIME_DISTS are declared, and ml_split keeps setuptools in the core
+closure with no foundational packaging leaking into ml_overlay -- the three
+tests/packaging/test_project_runtime_dependencies.py gates.
+
+- **ui:** Guard hex strings worker probe against deleted C++ object (`b41886d`)
+HexEditorPanel._load_file_impl re-invokes SectionsMixin._populate_strings
+on every file load, which probes the previously stored _strings_worker
+with isRunning() before superseding it. A GenericCallableWorker wires
+finished -> deleteLater, so once a prior scan finishes and the event loop
+processes the deferred delete, the panel keeps only a dangling sip wrapper
+in _strings_worker (the finished handler never nulls it). Probing that
+wrapper raised RuntimeError instead of returning False, crashing the next
+load_file on rapid successive loads.
+Guard the isRunning()/requestInterruption() probe with try/except
+RuntimeError, mirroring the existing defensive probe in
+HexEditorPanel._stop_pending_workers. Add a falsifiable headless-Qt gate
+that loads a real System32 PE, drives the worker to the deleted-C++ state,
+and asserts a second _populate_strings neither raises nor reuses the dead
+worker.
+
+- **bridges:** Clear code units before write_bytes patches into disassembled code (`fa2bd18`)
+D13's write_bytes gate (tests/bridges/test_ghidra_cpython_migration.py::
+test_write_bytes_round_trips_at_scratch_address) failed against a real
+Ghidra program with
+"ghidra.program.model.mem.MemoryAccessException: Memory change conflicts
+with instruction at ...". Memory.setBytes refuses to write over bytes
+Ghidra has already disassembled into an instruction -- which is the
+common case for any interesting patch target (a jump, a license check),
+not an edge case. write_bytes now clears the listing's code units across
+the write range before setBytes, matching how Ghidra's own "Patch
+Instruction"/"Clear Code Bytes" actions handle an in-place binary patch.
+Verified with the real headless Ghidra bridge against the S19 target:
+tests/bridges/test_ghidra_cpython_migration.py -- 7 passed.
+
+- **ui,bridges:** Close out S19 RE-LIVE R01/R04-R07 and D-finding back-fills (`091e5e6`)
+Fixes the last open S19 RE-LIVE regression (R01: numeric/pattern search
+panes could be drag-collapsed to 0px past their minimumSizeHint despite
+QSplitter.setCollapsible(False)); the gate now drives a real
+QSplitter.moveSplitter handle-drag instead of asserting a post-setVisible
+height that Qt already supplies with or without the fix.
+Also lands the remaining live-verified fixes and their falsifiable gates
+from the same audit pass:
+- R04: apply_theme's repolish sweep is scoped to visible top-level chrome
+with a generation-stamped lazy repolish for hidden tabs, replacing an
+allWidgets() sweep that froze the UI for ~10s.
+- R05: chat composer placeholder wraps across the viewport via a custom
+paintEvent instead of Qt's single-line hard-clipped QTextEdit placeholder.
+- R06: provider-settings action buttons are sized to their own sizeHint
+and the left panel's minimum width covers the widest button row.
+- R07: hex Inspector Bit Editor lays out its 8 toggles in a 2x4 grid
+instead of a single row that overflowed the side pane's minimum width.
+- Ghidra data-tabs bottom bar gets scroll buttons, no-elide, and a
+nonzero minimum height instead of overflowing silently.
+- D12-D15: Ghidra CPython/jpype migration follow-through for
+read/write/masked-search bytes and set/create data type (no more
+Jython-only jarray/DataTypeParser calls), with a host-native test
+driving a real headless Ghidra bridge and independent pefile/API
+readbacks.
+- D02/D03/D07/D24/D25: hex editor left-panel width cap tracks splitter
+resize, search field width fits a representative query, bookmark
+double-click navigates, and bookmarks persist/reset correctly across
+file reloads.
+- D21: Frida run-button tooltip explains why it is disabled while a
+persistent script is loaded.
+- D29/D32/D35/D36: theme QSS monospace fallback, single tool_button rule,
+no dead property selectors, and px-only font-size units, gated across
+all four theme files.
+- D33: theme fallback stylesheet loader reads the packaged QSS asset
+instead of a frozen string copy, so a live edit is reflected.
+- D34: session tag chips resolve colors from ThemeManager and repaint on
+theme_changed instead of baking in palette() roles.
+base_panel.py's compute_toolbar_height/compute_control_min_height helpers
+(and their AnalysisPanelBase toolbar/content-scroll wiring) are included
+here because the already-committed R02/R03 fix in app.py imports them;
+they were missing from that commit and left it unimportable in isolation.
+
+- **ui:** Commit R02/R03 input-field clipping fixes and extend gate to four themes (`2c372ee`)
+R02 centers the editable toolbar Model combo's text by sharing a derived
+min-height with the static Provider combo and letting the inner QLineEdit
+fill the combo. R03 replaces every hardcoded toolbar/dock 32-40px fixed
+height with compute_toolbar_height() (font-metric driven) across the main
+window, panel dock, and all five Process-panel sub-tabs, and adds a QSS
+QLineEdit min-height floor so any remaining short container still clears
+the field's glyph height.
+Extends the falsifiable gate to run both parametrized cases (QSS floor,
+editable combo centering) across all four bundled themes instead of two.
 
 - **packaging:** Harden installer scripts and enforce runtime deps (`4eea4e7`)
 Expand declared runtime dependencies in `pyproject.toml` and refine the
@@ -5758,3 +5902,16 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+- Resolve UI layout, bridge timeout, and session liveness issues (``)
+Hardens bridge connection lifecycles, corrects off-by-one errors in hex
+transforms, and re-derives fixed layout dimensions from font metrics and
+screen DPI across the desktop interface.
+- Cutter bridge: scale analysis and listing timeouts; reset and poison dirty r2 sessions on command timeout
+- x64dbg bridge: add process liveness probes to prevent silent failures on dead pipes and clear views on session loss
+- Process bridge: preserve real Win32 error codes in device driver operations
+- Hex editor: fix selection range off-by-one errors in arithmetic/transform operations and guard worker thread lifecycles
+- UI & Theming: dynamically compute toolbar and status bar heights, make Ghidra memory tab scrollable, and introduce dark2/light2 variants
+- Packaging: exclude Jython extension and enforce strip guard in staging script
+
+
