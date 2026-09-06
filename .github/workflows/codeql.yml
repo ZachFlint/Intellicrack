@@ -66,7 +66,6 @@ jobs:
         # Add any setup steps before running the `github/codeql-action/init` action.
 
         # Initializes the CodeQL tools for scanning.
-
         #   uses: actions/setup-example@v1
         # - name: Setup runtime (example)
         # or others). This is typically only required for manual builds.

@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.base_panel import compute_toolbar_height
 from intellicrack.ui.panels.qt_compat import set_header_labels
 
 
@@ -40,7 +41,6 @@ _logger = get_logger(__name__)
 
 _MARGIN: Final[int] = 0
 _SPACING: Final[int] = 4
-_TOOLBAR_HEIGHT: Final[int] = 32
 
 
 class ModulesTab(QWidget):
@@ -112,7 +112,7 @@ class ModulesTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         refresh_btn = QPushButton("Refresh")
         refresh_btn.setObjectName("tool_button")
@@ -181,7 +181,7 @@ class ModulesTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         toolbar.addWidget(QLabel("DLL Path:"))
         self._inject_path = QLineEdit()
@@ -223,7 +223,7 @@ class ModulesTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         enum_btn = QPushButton("Enumerate Handles")
         enum_btn.setObjectName("tool_button")
@@ -262,7 +262,7 @@ class ModulesTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         enum_btn = QPushButton("Enumerate Heaps")
         enum_btn.setObjectName("tool_button")
@@ -292,7 +292,7 @@ class ModulesTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         com_btn = QPushButton("Inspect COM")
         com_btn.setObjectName("tool_button")

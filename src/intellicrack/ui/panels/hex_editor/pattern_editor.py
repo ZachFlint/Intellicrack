@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.hexpat.completer import HexPatCompleter
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import HexPatSyntaxHighlighter
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, worker_is_running
 from intellicrack.ui.panels.hex_editor.base import (
     SPLITTER_MAIN_RATIO,
     SPLITTER_PATTERN_RATIO,
@@ -62,7 +62,6 @@ background thread's startup. When the join succeeds the worker's already-queued 
 returns. A pattern that genuinely takes longer simply outlives this short join and keeps running fully asynchronously exactly as before,
 delivering its result via the worker's queued signals whenever the GUI event loop next pumps.
 """
-
 
 def _get_default_pattern_field_color() -> str:
     """Return a theme-appropriate highlight color for pattern editor fields.
@@ -464,7 +463,7 @@ class PatternEditorMixin:
             return
 
         active_worker = getattr(self, "_pattern_apply_worker", None)
-        if active_worker is not None and active_worker.isRunning():
+        if worker_is_running(active_worker):
             _logger.warning("pattern_interpreter_apply_skipped", reason="worker active")
             return
 

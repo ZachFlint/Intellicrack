@@ -12,7 +12,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final, override
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QPainter, QPalette, QTextLayout, QTextOption
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -34,7 +35,7 @@ from intellicrack.ui.resources.font_manager import FontManager
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from PyQt6.QtGui import QKeyEvent, QResizeEvent
+    from PyQt6.QtGui import QFocusEvent, QKeyEvent, QPaintEvent, QResizeEvent
 
 _logger = get_logger(__name__)
 
@@ -51,6 +52,7 @@ _HEADER_HEIGHT: Final[int] = 40
 _HEADER_MARGIN_H: Final[int] = 12
 _MSG_AREA_MARGIN: Final[int] = 12
 _MAX_RESULT_DISPLAY_LEN = 200
+_CHAT_INPUT_PLACEHOLDER: Final[str] = "Type a message... (Enter to send, Shift+Enter for newline)"
 
 
 class _MarkdownView(QTextBrowser):
@@ -303,12 +305,26 @@ class _ChatTextEdit(QTextEdit):
     composed message is sent, while Shift+Enter inserts a newline for composing
     multi-line messages.
 
+    Qt's built-in ``QTextEdit`` placeholder is drawn as a single hard-clipped
+    line, which truncates a long hint instead of wrapping it. This widget
+    paints its own placeholder, word-wrapped to the viewport width, so the
+    full hint stays visible when the widget is narrow.
+
     Attributes:
         submitted: Qt signal emitted when the user presses Enter without the
             Shift modifier.
     """
 
     submitted = pyqtSignal()
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the chat text edit.
+
+        Args:
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        self.textChanged.connect(self._refresh_placeholder)
 
     @override
     def keyPressEvent(self, e: QKeyEvent | None) -> None:
@@ -329,6 +345,117 @@ class _ChatTextEdit(QTextEdit):
             return
 
         super().keyPressEvent(e)
+
+    @override
+    def focusInEvent(self, e: QFocusEvent | None) -> None:
+        """Hide the custom placeholder once the widget gains focus.
+
+        Args:
+            e: The incoming focus event, or ``None`` if Qt delivered no event.
+        """
+        super().focusInEvent(e)
+        self._refresh_placeholder()
+
+    @override
+    def focusOutEvent(self, e: QFocusEvent | None) -> None:
+        """Show the custom placeholder again once the widget loses focus.
+
+        Args:
+            e: The incoming focus event, or ``None`` if Qt delivered no event.
+        """
+        super().focusOutEvent(e)
+        self._refresh_placeholder()
+
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        """Re-lay-out the wrapped placeholder for the new viewport width.
+
+        Args:
+            a0: The incoming resize event, or ``None`` if Qt delivered no event.
+        """
+        super().resizeEvent(a0)
+        self._refresh_placeholder()
+
+    @override
+    def paintEvent(self, e: QPaintEvent | None) -> None:
+        """Paint the text edit, then the word-wrapped placeholder if applicable.
+
+        The placeholder is drawn only while the document is empty and the
+        widget does not have focus, matching when Qt would normally show its
+        own (single-line, hard-clipped) placeholder text.
+
+        Args:
+            e: The incoming paint event, or ``None`` if Qt delivered no event.
+        """
+        super().paintEvent(e)
+        if not self._should_show_placeholder():
+            return
+
+        viewport = self.viewport()
+        if viewport is None:
+            return
+
+        layout, bounding_rect = self.placeholder_layout()
+        painter = QPainter(viewport)
+        try:
+            painter.setFont(self.font())
+            painter.setPen(self.palette().color(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text))
+            layout.draw(painter, QPointF(bounding_rect.x(), bounding_rect.y()))
+        finally:
+            painter.end()
+
+    def _should_show_placeholder(self) -> bool:
+        """Report whether the custom placeholder should currently be drawn.
+
+        Returns:
+            bool: ``True`` when the document is empty and the widget is unfocused.
+        """
+        document = self.document()
+        is_empty = document is None or document.isEmpty()
+        return is_empty and not self.hasFocus()
+
+    def placeholder_layout(self) -> tuple[QTextLayout, QRectF]:
+        """Build a word-wrapped layout of the placeholder hint for the current viewport width.
+
+        Each line is wrapped no wider than the viewport (minus the document's
+        own margin on each side), matching how the visible text area wraps
+        typed content.
+
+        Returns:
+            tuple[QTextLayout, QRectF]: The positioned layout and the bounding
+            rectangle, in viewport coordinates, that its wrapped lines occupy.
+        """
+        document = self.document()
+        margin = document.documentMargin() if document is not None else 0.0
+        viewport = self.viewport()
+        viewport_width = float(viewport.width()) if viewport is not None else 0.0
+        available_width = max(viewport_width - (2 * margin), 1.0)
+
+        layout = QTextLayout(_CHAT_INPUT_PLACEHOLDER, self.font())
+        text_option = QTextOption()
+        text_option.setWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
+        layout.setTextOption(text_option)
+        layout.beginLayout()
+        y = 0.0
+        max_line_width = 0.0
+        while True:
+            line = layout.createLine()
+            if not line.isValid():
+                break
+            line.setLineWidth(available_width)
+            line.setPosition(QPointF(0.0, y))
+            y += line.height()
+            max_line_width = max(max_line_width, line.naturalTextWidth())
+        layout.endLayout()
+
+        bounding_rect = QRectF(margin, margin, max_line_width, y)
+        return layout, bounding_rect
+
+    def _refresh_placeholder(self) -> None:
+        """Repaint the viewport so the custom placeholder appears or disappears."""
+        viewport = self.viewport()
+        if viewport is not None:
+            viewport.update()
 
 
 class ChatInput(QFrame):
@@ -362,7 +489,7 @@ class ChatInput(QFrame):
         self._text_edit.setObjectName("chat_input_textedit")
         self._text_edit.setFont(FontManager.get_instance().get_ui_font(10))
         self._text_edit.setMaximumHeight(_INPUT_MAX_HEIGHT)
-        self._text_edit.setPlaceholderText("Type a message... (Enter to send, Shift+Enter for newline)")
+        self._text_edit.setToolTip(_CHAT_INPUT_PLACEHOLDER)
         self._text_edit.submitted.connect(self._on_send)
         layout.addWidget(self._text_edit)
 

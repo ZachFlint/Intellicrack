@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast, override
 
 from PyQt6.QtCore import QByteArray, QObject, QSettings, QSignalBlocker, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QScreen, QShowEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -81,6 +81,7 @@ from intellicrack.ui.panels.async_bridge import (
     run_bridge_coroutine_async,
     run_bridge_coroutine_logged,
 )
+from intellicrack.ui.panels.base_panel import compute_control_min_height, compute_toolbar_height
 from intellicrack.ui.provider_config import ModelRefreshWorker, ModelSelectionDialog, ProviderConfigDialog
 from intellicrack.ui.resources import FontManager, IconManager, ThemeManager
 from intellicrack.ui.sandbox_config import SandboxConfigDialog, SandboxMonitorWidget
@@ -221,6 +222,7 @@ class MainWindow(QMainWindow):
         self.sandbox_manager = SandboxManager()
         self.model_refresh_worker: ModelRefreshWorker | None = None
         self._shutting_down: bool = False
+        self._screen_watcher_connected: bool = False
 
         self.current_binary: Path | None = None
         self._script_manager: object | None = None
@@ -386,6 +388,48 @@ class MainWindow(QMainWindow):
             _logger.debug("screen_geometry_unavailable_using_default", reason="geometry_none")
             return None
         return geometry
+
+    @override
+    def showEvent(self, a0: QShowEvent | None) -> None:
+        """Wire up the per-monitor screen-change watcher on first show.
+
+        The window has no native ``QWindow`` handle until it is shown for the
+        first time, so the ``screenChanged`` connection (D28) is deferred to
+        here and made exactly once, guarded by :attr:`_screen_watcher_connected`.
+
+        Args:
+            a0: The show event.
+        """
+        super().showEvent(a0)
+        if self._screen_watcher_connected:
+            return
+        window = self.windowHandle()
+        if window is not None:
+            window.screenChanged.connect(self._on_screen_changed)
+            self._screen_watcher_connected = True
+
+    def _on_screen_changed(self, _screen: QScreen | None) -> None:
+        """Re-derive DPI-sensitive metrics and force a relayout after a monitor move.
+
+        Moving the window to a monitor with a different scale factor can leave
+        toolbar heights sized for the previous font metrics and child widgets
+        laid out for the previous geometry until something forces Qt to
+        recompute them (D28). Re-deriving the main toolbar height and
+        reactivating the central widget's layout keeps buttons legible and the
+        central widget filling the window on the new monitor.
+
+        Args:
+            _screen: The screen the window moved to. Unused: the new metrics
+                are read directly from the window's own, now-updated, state.
+        """
+        self._toolbar.setFixedHeight(compute_toolbar_height(self))
+        central = self.centralWidget()
+        if central is not None:
+            central_layout = central.layout()
+            if central_layout is not None:
+                central_layout.activate()
+        self.tool_panel.updateGeometry()
+        _logger.debug("screen_changed_relayout_applied")
 
     def _save_window_state(self) -> None:
         """Persist window geometry, splitter sizes, tab state, and detached panels to QSettings."""
@@ -907,7 +951,8 @@ class MainWindow(QMainWindow):
         """Set up the toolbar."""
         toolbar = OverflowToolBar("Main Toolbar")
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(40)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
+        self._toolbar = toolbar
         self.addToolBar(toolbar)
 
         load_btn = QPushButton("Load Binary")
@@ -923,6 +968,7 @@ class MainWindow(QMainWindow):
 
         self._provider_combo = QComboBox()
         self._provider_combo.setMinimumWidth(150)
+        self._provider_combo.setMinimumHeight(compute_control_min_height(self))
         self._provider_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._provider_combo.setObjectName("toolbar_combo")
         for provider in ProviderName:
@@ -936,6 +982,7 @@ class MainWindow(QMainWindow):
 
         self.model_combo = QComboBox()
         self.model_combo.setMinimumWidth(250)
+        self.model_combo.setMinimumHeight(compute_control_min_height(self))
         self.model_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.model_combo.setObjectName("toolbar_combo")
         self.model_combo.setEditable(True)

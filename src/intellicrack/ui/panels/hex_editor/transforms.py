@@ -38,6 +38,7 @@ from intellicrack.ui.panels.hex_editor.base import (
     PRINTABLE_MIN,
     get_all_transform_nodes_fn,
 )
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
@@ -311,10 +312,7 @@ class TransformsMixin:
         """
         self._transform_preview_pane = QPlainTextEdit()
         self._transform_preview_pane.setReadOnly(True)
-        preview_font = self._transform_preview_pane.font()
-        preview_font.setFamily("Consolas")
-        preview_font.setPointSize(9)
-        self._transform_preview_pane.setFont(preview_font)
+        self._transform_preview_pane.setFont(FontManager.get_instance().get_code_font(9))
         self._transform_preview_pane.setMaximumHeight(_PREVIEW_MAX_HEIGHT)
         return self._transform_preview_pane
 
@@ -614,7 +612,7 @@ class TransformsMixin:
             sel_end: int = getattr(self._hex_widget, "_selection_end", -1)
             if sel_start >= 0 and sel_end >= 0 and sel_end > sel_start:
                 cursor_offset = sel_start
-                apply_len = sel_end - sel_start
+                apply_len = sel_end - sel_start + 1
 
         try:
             doc_len: int = self.document.length()
@@ -766,7 +764,7 @@ class TransformsMixin:
             sel_end: int = getattr(self._hex_widget, "_selection_end", -1)
             if sel_start >= 0 and sel_end >= 0 and sel_end > sel_start:
                 cursor_offset = sel_start
-                apply_len = sel_end - sel_start
+                apply_len = sel_end - sel_start + 1
         return cursor_offset, apply_len
 
     def _read_pipeline_input(self, cursor_offset: int, apply_len: int) -> tuple[bytes, int] | None:
@@ -993,7 +991,7 @@ class TransformsMixin:
 
         sel_start: int = getattr(self, "_selection_start", -1)
         sel_end: int = getattr(self, "_selection_end", -1)
-        if sel_start < 0 or sel_end < 0 or sel_end <= sel_start:
+        if sel_start < 0 or sel_end < 0 or sel_end < sel_start:
             parent = self if isinstance(self, QWidget) else None
             QMessageBox.information(parent, "Arithmetic", "Select a region first.")
             return
@@ -1022,12 +1020,11 @@ class TransformsMixin:
         count = count_spin.value() if count_spin else 1
 
         bridge = self._bridge
-        bridge_end = sel_end - 1
         parent = self if isinstance(self, QWidget) else None
 
         async def _apply_chain() -> None:
             """Synchronise the bridge selection, then apply the arithmetic transform in order."""
-            await bridge.select_range(sel_start, bridge_end)
+            await bridge.select_range(sel_start, sel_end)
             await bridge.apply_arithmetic_to_selection(op_short, key_hex=key_hex, count=count)
 
         run_bridge_coroutine_logged(
@@ -1040,7 +1037,7 @@ class TransformsMixin:
             level="info",
             operation=op_short,
             selection_start=sel_start,
-            selection_end=bridge_end,
+            selection_end=sel_end,
         )
 
     def _on_arithmetic_applied(self, result: object) -> None:
@@ -1094,7 +1091,7 @@ class _BlockFillDialog(QDialog):
         cursor = int(getattr(hex_widget, "_cursor_offset", 0)) if hex_widget else 0
         sel_start = int(getattr(hex_widget, "_selection_start", -1)) if hex_widget else -1
         sel_end = int(getattr(hex_widget, "_selection_end", -1)) if hex_widget else -1
-        default_len = max(sel_end - sel_start, 1) if sel_start >= 0 and sel_end > sel_start else 16
+        default_len = max(sel_end - sel_start + 1, 1) if sel_start >= 0 and sel_end > sel_start else 16
 
         self._offset_edit = QLineEdit(f"0x{cursor:X}")
         form.addRow("Offset (hex):", self._offset_edit)

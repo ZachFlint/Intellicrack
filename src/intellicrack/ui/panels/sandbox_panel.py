@@ -1824,13 +1824,10 @@ class SandboxPanel(AnalysisPanelBase):
     def _on_memory_dump(self) -> None:
         """Dump guest memory from the sandbox.
 
-        Windows Sandbox targets a specific guest process, so on that backend
-        this first enumerates the live guest processes and lets the user
-        pick one via :class:`GuestProcessPickerDialog` before dispatching
-        the dump; ``SandboxBridge.memory_dump`` otherwise rejects the call
-        outright for a missing ``target_pid`` (S17-D10b / audit7 F-0021).
-        QEMU dumps the whole guest and needs no PID, so that path dispatches
-        directly, unchanged from before this picker existed.
+        Windows Sandbox targets a specific guest process, so on that backend this first enumerates the live guest processes and lets the
+        user pick one via :class:`GuestProcessPickerDialog` before dispatching the dump; ``SandboxBridge.memory_dump`` otherwise rejects the
+        call outright for a missing ``target_pid`` (S17-D10b / audit7 F-0021). QEMU dumps the whole guest and needs no PID, so that path
+        dispatches directly, unchanged from before this picker existed.
         """
         if self._bridge is None or self.sandbox_id is None:
             return
@@ -1869,10 +1866,8 @@ class SandboxPanel(AnalysisPanelBase):
     def _start_windows_memory_dump(self) -> None:
         """Enumerate guest processes so the user can pick a memory-dump target.
 
-        Windows Sandbox's ``MiniDumpWriteDump`` implementation requires a
-        specific guest PID. This dispatches
-        :meth:`SandboxBridge.list_guest_processes` and, on success, opens
-        the process picker so the user can choose one.
+        Windows Sandbox's ``MiniDumpWriteDump`` implementation requires a specific guest PID. This dispatches
+        :meth:`SandboxBridge.list_guest_processes` and, on success, opens the process picker so the user can choose one.
         """
         if self._bridge is None or self.sandbox_id is None:
             return

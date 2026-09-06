@@ -33,14 +33,14 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, worker_is_running
+from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger(__name__)
 
 
-_FONT_FAMILY: Final[str] = "Consolas"
 _FONT_SIZE: Final[int] = 10
 _OUTPUT_FONT_SIZE: Final[int] = 9
 _OUTPUT_MAX_HEIGHT: Final[int] = 200
@@ -1281,7 +1281,7 @@ class ScriptingMixin:
         layout.setSpacing(4)
 
         self._script_editor = QPlainTextEdit()
-        editor_font = QFont(_FONT_FAMILY, _FONT_SIZE)
+        editor_font = FontManager.get_instance().get_code_font(_FONT_SIZE)
         self._script_editor.setFont(editor_font)
         self._script_editor.setTabStopDistance(
             self._script_editor.fontMetrics().horizontalAdvance(" ") * 4,
@@ -1312,7 +1312,7 @@ class ScriptingMixin:
 
         self._script_output = QPlainTextEdit()
         self._script_output.setReadOnly(True)
-        out_font = QFont(_FONT_FAMILY, _OUTPUT_FONT_SIZE)
+        out_font = FontManager.get_instance().get_code_font(_OUTPUT_FONT_SIZE)
         self._script_output.setFont(out_font)
         self._script_output.setMaximumHeight(_OUTPUT_MAX_HEIGHT)
         layout.addWidget(self._script_output)
@@ -1334,7 +1334,7 @@ class ScriptingMixin:
         if not source.strip():
             return
 
-        if self._script_worker is not None and self._script_worker.isRunning():
+        if worker_is_running(self._script_worker):
             return
 
         fp = str(self.file_path) if self.file_path else None

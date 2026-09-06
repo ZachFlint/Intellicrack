@@ -178,7 +178,6 @@ Callers that need a different convention (for example ``"x64"`` instead
 of ``"x86_64"``) translate the helper's output at the call site.
 """
 
-
 def pe_machine_to_arch(machine: int) -> tuple[str, bool]:
     """Translate an ``IMAGE_FILE_MACHINE_*`` value to an architecture tuple.
 

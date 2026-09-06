@@ -35,7 +35,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
-from intellicrack.ui.panels.base_panel import make_scrollable
+from intellicrack.ui.panels.base_panel import compute_toolbar_height, make_scrollable
 
 
 if TYPE_CHECKING:
@@ -47,7 +47,6 @@ _logger = get_logger(__name__)
 _MARGIN: Final[int] = 0
 _NOT_ATTACHED_MSG: Final[str] = "Not attached to any process"
 _SPACING: Final[int] = 4
-_TOOLBAR_HEIGHT: Final[int] = 32
 
 
 class SystemTab(QWidget):
@@ -175,7 +174,7 @@ class SystemTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         query_btn = QPushButton("Query Privileges")
         query_btn.setObjectName("tool_button")
@@ -232,7 +231,7 @@ class SystemTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         enum_btn = QPushButton("Enumerate Windows")
         enum_btn.setObjectName("tool_button")
@@ -264,7 +263,7 @@ class SystemTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         enum_btn = QPushButton("Enumerate Services")
         enum_btn.setObjectName("tool_button")
@@ -307,7 +306,7 @@ class SystemTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         peb_btn = QPushButton("Read PEB")
         peb_btn.setObjectName("tool_button")
@@ -352,7 +351,7 @@ class SystemTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         toolbar.addWidget(QLabel("Pipe:"))
         self._pipe_name = QLineEdit()
@@ -382,7 +381,7 @@ class SystemTab(QWidget):
 
         io_toolbar = QToolBar()
         io_toolbar.setMovable(False)
-        io_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        io_toolbar.setFixedHeight(compute_toolbar_height(self))
 
         io_toolbar.addWidget(QLabel("Read Size:"))
         self._pipe_read_size = QSpinBox()
@@ -426,7 +425,7 @@ class SystemTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         query_btn = QPushButton("Query Mitigations")
         query_btn.setObjectName("tool_button")
@@ -501,7 +500,7 @@ class SystemTab(QWidget):
 
         reg_toolbar = QToolBar()
         reg_toolbar.setMovable(False)
-        reg_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        reg_toolbar.setFixedHeight(compute_toolbar_height(self))
 
         reg_toolbar.addWidget(QLabel("Key:"))
         self._reg_key = QLineEdit()
@@ -533,7 +532,7 @@ class SystemTab(QWidget):
 
         typed_toolbar = QToolBar()
         typed_toolbar.setMovable(False)
-        typed_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        typed_toolbar.setFixedHeight(compute_toolbar_height(self))
 
         typed_toolbar.addWidget(QLabel("Hive:"))
         self._reg_hive = QComboBox()
@@ -582,7 +581,7 @@ class SystemTab(QWidget):
 
         res_toolbar = QToolBar()
         res_toolbar.setMovable(False)
-        res_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        res_toolbar.setFixedHeight(compute_toolbar_height(self))
 
         gui_btn = QPushButton("Get GUI Resources")
         gui_btn.setObjectName("tool_button")
@@ -615,7 +614,7 @@ class SystemTab(QWidget):
 
         raw_toolbar = QToolBar()
         raw_toolbar.setMovable(False)
-        raw_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        raw_toolbar.setFixedHeight(compute_toolbar_height(self))
 
         raw_toolbar.addWidget(QLabel("Info Class:"))
         self._raw_class = QSpinBox()
@@ -655,7 +654,7 @@ class SystemTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         toolbar.addWidget(QLabel("PID Filter:"))
         self._handles_pid = QLineEdit()
@@ -703,7 +702,7 @@ class SystemTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         enum_btn = QPushButton("Enumerate")
         enum_btn.setObjectName("tool_button")
@@ -753,7 +752,7 @@ class SystemTab(QWidget):
 
         open_toolbar = QToolBar()
         open_toolbar.setMovable(False)
-        open_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        open_toolbar.setFixedHeight(compute_toolbar_height(self))
         open_toolbar.addWidget(QLabel("Device Path:"))
         self._device_path = QLineEdit()
         self._device_path.setMinimumWidth(220)
@@ -780,7 +779,7 @@ class SystemTab(QWidget):
 
         ioctl_toolbar = QToolBar()
         ioctl_toolbar.setMovable(False)
-        ioctl_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        ioctl_toolbar.setFixedHeight(compute_toolbar_height(self))
         ioctl_toolbar.addWidget(QLabel("IOCTL:"))
         self._ioctl_code = QLineEdit()
         self._ioctl_code.setMaximumWidth(140)
@@ -827,7 +826,7 @@ class SystemTab(QWidget):
 
         create_toolbar = QToolBar()
         create_toolbar.setMovable(False)
-        create_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        create_toolbar.setFixedHeight(compute_toolbar_height(self))
         create_toolbar.addWidget(QLabel("Size:"))
         self._section_size = QSpinBox()
         self._section_size.setRange(1, 0x10000000)
@@ -854,7 +853,7 @@ class SystemTab(QWidget):
 
         map_toolbar = QToolBar()
         map_toolbar.setMovable(False)
-        map_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        map_toolbar.setFixedHeight(compute_toolbar_height(self))
         map_toolbar.addWidget(QLabel("Map Size:"))
         self._map_size = QSpinBox()
         self._map_size.setRange(1, 0x10000000)

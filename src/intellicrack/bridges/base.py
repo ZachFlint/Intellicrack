@@ -172,7 +172,6 @@ mapping lives in ``bridges.base`` so that bridge implementations and the registr
 ``intellicrack.core.tools`` imports it from here.
 """
 
-
 @dataclass
 class DisassemblyLine:
     """Single line of disassembly output.

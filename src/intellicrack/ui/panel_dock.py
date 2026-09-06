@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.base_panel import compute_toolbar_height
 
 
 if TYPE_CHECKING:
@@ -29,7 +30,6 @@ if TYPE_CHECKING:
 
 _logger = get_logger(__name__)
 
-_TOOLBAR_HEIGHT: Final[int] = 32
 _DEFAULT_DOCK_WIDTH: Final[int] = 800
 _DEFAULT_DOCK_HEIGHT: Final[int] = 600
 
@@ -72,7 +72,7 @@ class DetachedPanelWindow(QMainWindow):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
         self.addToolBar(toolbar)
 
         redock_btn = QPushButton("Re-dock")

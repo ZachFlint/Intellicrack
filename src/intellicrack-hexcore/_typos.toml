@@ -14,3 +14,5 @@ ue = "ue"
 hsi = "hsi"
 ser = "ser"
 crate = "crate"
+# ELF relocation-with-addend section entries (Elf32_Rela / Elf64_Rela)
+rela = "rela"

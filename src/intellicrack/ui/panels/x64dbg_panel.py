@@ -58,6 +58,8 @@ from intellicrack.ui.win32_embed import GW_OWNER, MAX_TITLE_LEN, embed_window, f
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from intellicrack.bridges.x64dbg import BreakpointType, MemoryProtection, X64DbgBridge
     from intellicrack.core.types import ModuleInfo
 
@@ -67,8 +69,14 @@ _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
 _TOP_SPLIT_LEFT: Final[int] = 500
 _TOP_SPLIT_RIGHT: Final[int] = 400
-_MAIN_SPLIT_TOP: Final[int] = 450
-_MAIN_SPLIT_BOTTOM: Final[int] = 250
+# The bottom tabbed section (Breakpoints/Memory/Console/...) hosts a
+# labelled toolbar row plus a table and needs a materially larger share
+# than the disassembly/inspect pane above it to keep its Add-Breakpoint
+# row inside the viewport at normal window sizes (D09) - so it gets the
+# larger of the two default splitter shares, not the smaller one the
+# previous 450/250 split gave it.
+_MAIN_SPLIT_TOP: Final[int] = 320
+_MAIN_SPLIT_BOTTOM: Final[int] = 360
 _ADDR_INPUT_MAX_WIDTH: Final[int] = 160
 _SIZE_INPUT_MAX_WIDTH: Final[int] = 80
 
@@ -128,6 +136,12 @@ _EMBED_MAX_RETRIES: Final[int] = 20
 _CLEANUP_STOP_TIMEOUT_S: Final[float] = 5.0
 _MIN_PANE_WIDTH: Final[int] = 150
 _MIN_PANE_HEIGHT: Final[int] = 80
+# Sane floor for the bottom tabbed section: tall enough that its tab bar,
+# a labelled toolbar row (address/type/condition inputs plus buttons), and
+# a couple of table rows all stay inside the viewport without scrolling
+# (D09) - the generic _MIN_PANE_HEIGHT (80px) is too small to guarantee
+# that and let the splitter squeeze the Add-Breakpoint row out of view.
+_MIN_BOTTOM_TABS_HEIGHT: Final[int] = 220
 
 _IS_WIN32: Final[bool] = sys.platform == "win32"
 
@@ -461,14 +475,29 @@ class X64DbgPanel(AnalysisPanelBase):
         top_splitter.addWidget(disasm_section)
         top_splitter.addWidget(inspect_tabs)
         top_splitter.setSizes([_TOP_SPLIT_LEFT, _TOP_SPLIT_RIGHT])
+        top_splitter.setMinimumHeight(_MIN_PANE_HEIGHT)
         main_splitter.addWidget(top_splitter)
 
         bottom_tabs = self._create_bottom_tabs()
-        bottom_tabs.setMinimumHeight(_MIN_PANE_HEIGHT)
+        bottom_tabs.setMinimumHeight(_MIN_BOTTOM_TABS_HEIGHT)
         main_splitter.addWidget(bottom_tabs)
         main_splitter.setSizes([_MAIN_SPLIT_TOP, _MAIN_SPLIT_BOTTOM])
+        main_splitter.setStretchFactor(0, 1)
+        main_splitter.setStretchFactor(1, 2)
 
-        self._content_scroll_area = self._make_scrollable(main_splitter, min_height=_MAIN_SPLIT_TOP + _MAIN_SPLIT_BOTTOM)
+        # The splitter's real per-pane minimums (top + bottom) - not the
+        # larger "comfortable default" split sizes above - bound how far
+        # the draggable splitter lets this area shrink. Forcing the outer
+        # scroll viewport down to the comfortable sizes (D09's regression)
+        # pushed the bottom tabs, and its Add-Breakpoint row, below the
+        # visible window at normal sizes; this floor keeps both panes'
+        # essential controls in view while still growing to fill more
+        # room, and only a genuinely undersized window falls back to the
+        # scrollbar this area is wrapped in.
+        self._content_scroll_area = self._make_scrollable(
+            main_splitter,
+            min_height=_MIN_PANE_HEIGHT + _MIN_BOTTOM_TABS_HEIGHT,
+        )
         native_layout.addWidget(self._content_scroll_area)
         self._main_tabs.addTab(native_container, self.tr("Analysis"))
 
@@ -2408,6 +2437,36 @@ class X64DbgPanel(AnalysisPanelBase):
         self._refresh_watchpoints()
         self._refresh_memmap()
 
+    def _on_view_refresh_failed(self, exc: object, *, event: str, clear_view: Callable[[], None]) -> None:
+        """Handle a failed Registers/Breakpoints/Stack refresh from the bridge.
+
+        A refresh failure that leaves the bridge's named pipe disconnected
+        means the x64dbg session has died (D19): the underlying view would
+        otherwise keep showing whatever values it last held, letting the
+        operator mistake a dead debugger for a live one. When the bridge
+        confirms the pipe is down, the stale view is cleared and a "Session
+        lost" status carrying the actionable pipe error is shown. A refresh
+        failure that leaves the pipe connected (a transient, unrelated
+        error) only logs, preserving the existing view.
+
+        Args:
+            exc: The exception raised by the failed bridge call.
+            event: Structured log event name for the failure.
+            clear_view: Zero-argument callback that clears the stale view.
+        """
+        _logger.warning(event, error=str(exc))
+        if self._bridge is None:
+            return
+        status = self._bridge.plugin_status
+        if bool(status.get("pipe_connected", True)):
+            return
+        clear_view()
+        diagnostic = str(status.get("diagnostic", ""))
+        message = f"Session lost: {exc}"
+        if diagnostic:
+            message = f"{message} ({diagnostic})"
+        self._set_status(message)
+
     def _refresh_registers(self) -> None:
         """Refresh the register table from bridge."""
         if self._bridge is None:
@@ -2416,11 +2475,20 @@ class X64DbgPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             self._bridge.get_registers(),
             on_success=self._apply_registers,
-            on_error=lambda _: _logger.warning("x64dbg_refresh_registers_failed"),
+            on_error=lambda exc: self._on_view_refresh_failed(
+                exc,
+                event="x64dbg_refresh_registers_failed",
+                clear_view=self._clear_registers_view,
+            ),
             parent=self,
             event="x64dbg_get_registers",
             logger=_logger,
         )
+
+    def _clear_registers_view(self) -> None:
+        """Clear the register table, used when a dead session is detected."""
+        with QSignalBlocker(self._reg_table):
+            self._reg_table.setRowCount(0)
 
     def _apply_registers(self, result: object) -> None:
         """Apply register data to the table.
@@ -2520,7 +2588,11 @@ class X64DbgPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             self._bridge.get_breakpoints(),
             on_success=self._apply_breakpoints,
-            on_error=lambda _: _logger.warning("x64dbg_refresh_breakpoints_failed"),
+            on_error=lambda exc: self._on_view_refresh_failed(
+                exc,
+                event="x64dbg_refresh_breakpoints_failed",
+                clear_view=lambda: self._bp_table.setRowCount(0),
+            ),
             parent=self,
             event="x64dbg_get_breakpoints",
             logger=_logger,
@@ -2552,7 +2624,11 @@ class X64DbgPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             self._bridge.get_stack_trace(),
             on_success=self._apply_stack,
-            on_error=lambda _: _logger.warning("x64dbg_refresh_stack_failed"),
+            on_error=lambda exc: self._on_view_refresh_failed(
+                exc,
+                event="x64dbg_refresh_stack_failed",
+                clear_view=lambda: self._stack_table.setRowCount(0),
+            ),
             parent=self,
             event="x64dbg_get_stack_trace",
             logger=_logger,
