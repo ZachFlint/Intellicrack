@@ -34,6 +34,11 @@
 
 namespace {
 
+// Number of debug-event broadcasts dropped because composing or sending them
+// threw (see the on_* firewalls). Kept as a diagnostic so a swallowed failure
+// is counted rather than silently ignored.
+std::atomic<unsigned long long> g_dropped_event_count{0};
+
 std::string escape_json_path(const char* s) {
     std::ostringstream ss;
     if (!s) return "unknown";
@@ -192,46 +197,73 @@ void on_debug_event(int event_type, void* event_data) {
     (void)event_data;
 }
 
+// Every on_* broadcaster runs on an x64dbg debug-event callback thread across
+// a C-ABI boundary. Composing the JSON (std::ostringstream / std::string) or
+// constructing the std::string argument to broadcast_event can throw
+// std::bad_alloc; an exception unwinding into x64dbg's C callback terminates
+// the whole process. Each body is therefore wrapped so a broadcast failure is
+// dropped rather than propagated — losing one event is always preferable to
+// crashing the debugger.
+
 void on_breakpoint_hit(uint64_t address) {
     if (!g_state.pipe_server_running) return;
 
-    char event_json[256];
-    snprintf(event_json, sizeof(event_json),
-        R"({"type":"event","event":"breakpoint","address":"0x%llX"})",
-        static_cast<unsigned long long>(address));
-    g_pipe_server.broadcast_event(event_json);
+    try {
+        char event_json[256];
+        snprintf(event_json, sizeof(event_json), R"({"type":"event","event":"breakpoint","address":"0x%llX"})",
+                 static_cast<unsigned long long>(address));
+        g_pipe_server.broadcast_event(event_json);
+    } catch (...) {
+        // A broadcast failure (e.g. std::bad_alloc) must not unwind into
+        // x64dbg's C-ABI debug-event callback; dropping the event is safe.
+        g_dropped_event_count.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 void on_exception(uint32_t exception_code, uint64_t exception_address) {
     if (!g_state.pipe_server_running) return;
 
-    char event_json[256];
-    snprintf(event_json, sizeof(event_json),
-        R"({"type":"event","event":"exception","code":"0x%X","address":"0x%llX"})",
-        exception_code, static_cast<unsigned long long>(exception_address));
-    g_pipe_server.broadcast_event(event_json);
+    try {
+        char event_json[256];
+        snprintf(event_json, sizeof(event_json),
+                 R"({"type":"event","event":"exception","code":"0x%X","address":"0x%llX"})", exception_code,
+                 static_cast<unsigned long long>(exception_address));
+        g_pipe_server.broadcast_event(event_json);
+    } catch (...) {
+        // A broadcast failure (e.g. std::bad_alloc) must not unwind into
+        // x64dbg's C-ABI debug-event callback; dropping the event is safe.
+        g_dropped_event_count.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 void on_dll_load(const char* dll_name, uint64_t base_address) {
     if (!g_state.pipe_server_running) return;
 
-    std::ostringstream ss;
-    ss << R"({"type":"event","event":"dll_load","name":")"
-       << escape_json_path(dll_name)
-       << R"(","base":"0x)" << std::hex << std::uppercase << base_address
-       << R"("})";
-    g_pipe_server.broadcast_event(ss.str());
+    try {
+        std::ostringstream ss;
+        ss << R"({"type":"event","event":"dll_load","name":")" << escape_json_path(dll_name) << R"(","base":"0x)"
+           << std::hex << std::uppercase << base_address << R"("})";
+        g_pipe_server.broadcast_event(ss.str());
+    } catch (...) {
+        // A broadcast failure (e.g. std::bad_alloc) must not unwind into
+        // x64dbg's C-ABI debug-event callback; dropping the event is safe.
+        g_dropped_event_count.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 void on_dll_unload(const char* dll_name, uint64_t base_address) {
     if (!g_state.pipe_server_running) return;
 
-    std::ostringstream ss;
-    ss << R"({"type":"event","event":"dll_unload","name":")"
-       << escape_json_path(dll_name)
-       << R"(","base":"0x)" << std::hex << std::uppercase << base_address
-       << R"("})";
-    g_pipe_server.broadcast_event(ss.str());
+    try {
+        std::ostringstream ss;
+        ss << R"({"type":"event","event":"dll_unload","name":")" << escape_json_path(dll_name) << R"(","base":"0x)"
+           << std::hex << std::uppercase << base_address << R"("})";
+        g_pipe_server.broadcast_event(ss.str());
+    } catch (...) {
+        // A broadcast failure (e.g. std::bad_alloc) must not unwind into
+        // x64dbg's C-ABI debug-event callback; dropping the event is safe.
+        g_dropped_event_count.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 void on_process_start(const char* exe_path, uint32_t pid) {
@@ -240,11 +272,16 @@ void on_process_start(const char* exe_path, uint32_t pid) {
     g_state.debugging = true;
     g_state.paused = true;
 
-    std::ostringstream ss;
-    ss << R"({"type":"event","event":"process_start","path":")"
-       << escape_json_path(exe_path)
-       << R"(","pid":)" << pid << '}';
-    g_pipe_server.broadcast_event(ss.str());
+    try {
+        std::ostringstream ss;
+        ss << R"({"type":"event","event":"process_start","path":")" << escape_json_path(exe_path) << R"(","pid":)"
+           << pid << '}';
+        g_pipe_server.broadcast_event(ss.str());
+    } catch (...) {
+        // A broadcast failure (e.g. std::bad_alloc) must not unwind into
+        // x64dbg's C-ABI debug-event callback; dropping the event is safe.
+        g_dropped_event_count.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 void on_process_exit(uint32_t exit_code) {
@@ -253,11 +290,16 @@ void on_process_exit(uint32_t exit_code) {
     g_state.debugging = false;
     g_state.paused = false;
 
-    char event_json[128];
-    snprintf(event_json, sizeof(event_json),
-        R"({"type":"event","event":"process_exit","exit_code":%u})",
-        exit_code);
-    g_pipe_server.broadcast_event(event_json);
+    try {
+        char event_json[128];
+        snprintf(event_json, sizeof(event_json), R"({"type":"event","event":"process_exit","exit_code":%u})",
+                 exit_code);
+        g_pipe_server.broadcast_event(event_json);
+    } catch (...) {
+        // A broadcast failure (e.g. std::bad_alloc) must not unwind into
+        // x64dbg's C-ABI debug-event callback; dropping the event is safe.
+        g_dropped_event_count.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 void on_paused(uint64_t address) {
@@ -269,17 +311,28 @@ void on_paused(uint64_t address) {
     // F-0004).
     if (!g_state.pipe_server_running) return;
 
-    char event_json[256];
-    snprintf(event_json, sizeof(event_json),
-        R"({"type":"event","event":"paused","address":"0x%llX"})",
-        static_cast<unsigned long long>(address));
-    g_pipe_server.broadcast_event(event_json);
+    try {
+        char event_json[256];
+        snprintf(event_json, sizeof(event_json), R"({"type":"event","event":"paused","address":"0x%llX"})",
+                 static_cast<unsigned long long>(address));
+        g_pipe_server.broadcast_event(event_json);
+    } catch (...) {
+        // A broadcast failure (e.g. std::bad_alloc) must not unwind into
+        // x64dbg's C-ABI debug-event callback; dropping the event is safe.
+        g_dropped_event_count.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 void on_resumed() {
     if (!g_state.pipe_server_running) return;
 
-    g_pipe_server.broadcast_event(R"({"type":"event","event":"resumed"})");
+    try {
+        g_pipe_server.broadcast_event(R"({"type":"event","event":"resumed"})");
+    } catch (...) {
+        // A broadcast failure (e.g. std::bad_alloc) must not unwind into
+        // x64dbg's C-ABI debug-event callback; dropping the event is safe.
+        g_dropped_event_count.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 }

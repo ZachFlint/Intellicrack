@@ -29,6 +29,12 @@ fn encode_var_int(mut val: u64) -> Vec<u8> {
 }
 
 fn decode_var_int(data: &[u8], pos: &mut usize) -> io::Result<u64> {
+    let overflow = || {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "variable-length integer overflow",
+        )
+    };
     let mut result: u64 = 0;
     let mut shift: u32 = 0;
     loop {
@@ -40,18 +46,18 @@ fn decode_var_int(data: &[u8], pos: &mut usize) -> io::Result<u64> {
         }
         let byte = data[*pos];
         *pos += 1;
-        result += u64::from(byte & 0x7F) << shift;
+        let addend = u64::from(byte & 0x7F)
+            .checked_shl(shift)
+            .ok_or_else(overflow)?;
+        result = result.checked_add(addend).ok_or_else(overflow)?;
         if byte & 0x80 != 0 {
             return Ok(result);
         }
         shift += 7;
-        result += 1u64 << shift;
         if shift > 63 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "variable-length integer overflow",
-            ));
+            return Err(overflow());
         }
+        result = result.checked_add(1u64 << shift).ok_or_else(overflow)?;
     }
 }
 
@@ -798,6 +804,43 @@ mod tests {
             assert_eq!(val, decoded);
             assert_eq!(pos, encoded.len());
         }
+    }
+
+    /// F-0076 regression: `decode_var_int` shifted `1u64 << shift` *before*
+    /// its `shift > 63` guard, so a malformed varint made of continuation
+    /// bytes (high bit clear) drove `shift` to 70 and panicked with "attempt
+    /// to shift left with overflow" — a panic across the FFI boundary aborts
+    /// the host. Every byte < 0x80 is a continuation byte, so twelve `0x00`
+    /// bytes never terminate and must surface a typed `InvalidData` error.
+    ///
+    /// Mutation caught: reverting to `result += 1u64 << shift;` before the
+    /// guard makes this input panic instead of returning `Err`, so the
+    /// `is_err()` assertion is never reached.
+    #[test]
+    fn test_decode_var_int_malformed_overlong_is_error_not_panic() {
+        let malformed = [0x00u8; 12];
+        let mut pos = 0;
+        let result = decode_var_int(&malformed, &mut pos);
+        assert!(
+            result.is_err(),
+            "an over-long varint must return an error, never panic"
+        );
+        assert_eq!(
+            result.unwrap_err().kind(),
+            io::ErrorKind::InvalidData,
+            "over-long varint must map to InvalidData"
+        );
+    }
+
+    /// F-0076 companion: the fix must not reject a legitimate maximal varint.
+    /// `u64::MAX` encodes to a terminated 10-byte sequence and must still
+    /// round-trip exactly.
+    #[test]
+    fn test_decode_var_int_max_u64_still_roundtrips() {
+        let encoded = encode_var_int(u64::MAX);
+        let mut pos = 0;
+        assert_eq!(decode_var_int(&encoded, &mut pos).unwrap(), u64::MAX);
+        assert_eq!(pos, encoded.len());
     }
 
     #[test]
