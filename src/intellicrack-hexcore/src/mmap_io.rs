@@ -47,6 +47,12 @@ impl MmapDocument {
             });
         }
 
+        // SAFETY: `Mmap::map` is unsound only if the mapped file is mutated
+        // through another handle while mapped. The mapping is exposed solely as
+        // `&[u8]` (never aliased into `&mut [u8]`), and edits go to the piece
+        // table's separate add-buffer rather than through the map; `save`
+        // writes a fresh temp file and remaps the result rather than writing
+        // back through this view, so the bytes under the slice never change.
         let mmap = Arc::new(unsafe { Mmap::map(&file)? });
         let piece_table = PieceTable::from_mmap(Arc::clone(&mmap));
 
@@ -162,6 +168,11 @@ impl MmapDocument {
         self.piece_table = PieceTable::new(&data);
 
         if let Ok(f) = fs::File::open(&path) {
+            // SAFETY: same contract as `open` — the freshly written target is
+            // mapped read-only and exposed only as `&[u8]`, never aliased into
+            // `&mut [u8]`. The write above finished and synced before this
+            // remap, and later edits go to the add-buffer, so the mapped bytes
+            // stay stable for the life of the mapping.
             if let Ok(m) = unsafe { Mmap::map(&f) } {
                 let mmap = Arc::new(m);
                 self.piece_table = PieceTable::from_mmap(Arc::clone(&mmap));

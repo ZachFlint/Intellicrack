@@ -112,6 +112,12 @@ pub struct ProcessDataSource {
     writable: bool,
 }
 
+// SAFETY: the only non-`Send` field is `handle`, a Win32 process `HANDLE`
+// (an opaque kernel-object handle, not a thread-affine resource). Windows
+// process handles may be used and closed from any thread, and this struct
+// never hands out or aliases the raw handle — every use is behind `&self`/
+// `&mut self` inside the guarded Win32 calls below, and `Drop` closes it
+// exactly once. Sending the owner between threads is therefore sound.
 #[cfg(windows)]
 unsafe impl Send for ProcessDataSource {}
 
@@ -137,6 +143,10 @@ impl ProcessDataSource {
         } else {
             PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION
         };
+        // SAFETY: `OpenProcess` is a pure Win32 call taking a copied access
+        // mask, `BOOL` inherit flag, and `pid` by value; it borrows no Rust
+        // memory. It returns a null handle on failure, which is checked
+        // immediately below before the handle is stored or used.
         let handle = unsafe { OpenProcess(access, 0, pid) };
         if handle.is_null() {
             return Err(DataSourceError::ProcessError(format!(
@@ -162,7 +172,16 @@ impl ProcessDataSource {
         let mut regions = Vec::new();
         let mut address: usize = 0;
         loop {
+            // SAFETY: `MEMORY_BASIC_INFORMATION` is a plain C struct of
+            // integer/pointer fields, so an all-zero bit pattern is a valid
+            // initialized value; `VirtualQueryEx` overwrites it before it is
+            // read.
             let mut mbi = unsafe { std::mem::zeroed::<MEMORY_BASIC_INFORMATION>() };
+            // SAFETY: `self.handle` is a live process handle opened with
+            // `PROCESS_QUERY_INFORMATION`; `&raw mut mbi` points at the stack
+            // slot just zero-initialized and the passed size is exactly that
+            // struct's size, so the kernel writes only within it. The return
+            // value (0 on failure/end-of-walk) is checked before `mbi` is read.
             let result = unsafe {
                 VirtualQueryEx(
                     self.handle,
@@ -207,6 +226,11 @@ impl DataSource for ProcessDataSource {
         let addr = self.base_address + offset;
         let mut buffer = vec![0u8; length];
         let mut bytes_read: usize = 0;
+        // SAFETY: `self.handle` is a live process handle opened with
+        // `PROCESS_VM_READ`; `buffer` is a freshly allocated `Vec<u8>` of
+        // exactly `length` bytes, so the kernel writes at most `length` bytes
+        // into memory this call owns; `&raw mut bytes_read` points at a local.
+        // A zero (`FALSE`) return is checked before `bytes_read` is trusted.
         let result = unsafe {
             ReadProcessMemory(
                 self.handle,
@@ -243,6 +267,11 @@ impl DataSource for ProcessDataSource {
         }
         let addr = self.base_address + offset;
         let mut bytes_written: usize = 0;
+        // SAFETY: `self.handle` is a live process handle opened with
+        // `PROCESS_VM_WRITE | PROCESS_VM_OPERATION`; `data` is a Rust slice and
+        // `data.len()` bytes are read from it (read-only source); the kernel
+        // reads at most that many bytes. `&raw mut bytes_written` points at a
+        // local. A zero (`FALSE`) return is surfaced as an error below.
         let result = unsafe {
             WriteProcessMemory(
                 self.handle,
@@ -277,6 +306,10 @@ impl DataSource for ProcessDataSource {
 impl Drop for ProcessDataSource {
     fn drop(&mut self) {
         if !self.handle.is_null() {
+            // SAFETY: `self.handle` was returned by `OpenProcess`, is non-null
+            // (checked), and is owned solely by this struct — it is never
+            // aliased or closed elsewhere, so closing it exactly once here on
+            // the single drop is sound.
             unsafe {
                 windows_sys::Win32::Foundation::CloseHandle(self.handle);
             }

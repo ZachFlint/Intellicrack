@@ -9,6 +9,18 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **ui:** Add dark2/light2 theme assets required by the S19 four-theme gates (`90183f9`)
+Commit 091e5e65 landed theme_manager.py's dark2/light2 support and the
+four-theme parity gates (test_theme_stylesheet_rules, test_session_tag_theme,
+test_input_field_vertical_clipping) that parametrize over all four concrete
+themes and read each theme's stylesheet via get_stylesheet -> read_text.
+dark2_theme.qss and light2_theme.qss were left untracked, so a fresh checkout
+of that commit would raise FileNotFoundError for the dark2/light2 cases.
+Add the two full-parity stylesheets (identical structure to dark/light, each
+carrying the same R02/R03 min-height floor, D29 #tool_button, and
+QComboBox#toolbar_combo rules) so the committed four-theme code and gates are
+self-consistent.
+
 - **installer:** Log a per-step completion line with exit code and duration (`811f6ae`)
 Reviewing a build log showed each step's `--- header ---` but no outcome on
 success -- only a failure wrote an exit line, so `grep exit build.log` came back
@@ -1192,6 +1204,117 @@ carrying an engine's name, as the container-side interlock gates its own.
 Controls cover the reverse of every assertion, an unelevated run is pinned to
 never reach the service stop, and the wiring is read out of the callers' own
 syntax trees since neither path can be exercised from inside the container.
+- Resolve UI layout, bridge timeout, and session liveness issues (`72b0da4`)
+Hardens bridge connection lifecycles, corrects off-by-one errors in hex
+transforms, and re-derives fixed layout dimensions from font metrics and
+screen DPI across the desktop interface.
+- Cutter bridge: scale analysis and listing timeouts; reset and poison dirty r2 sessions on command timeout
+- x64dbg bridge: add process liveness probes to prevent silent failures on dead pipes and clear views on session loss
+- Process bridge: preserve real Win32 error codes in device driver operations
+- Hex editor: fix selection range off-by-one errors in arithmetic/transform operations and guard worker thread lifecycles
+- UI & Theming: dynamically compute toolbar and status bar heights, make Ghidra memory tab scrollable, and introduce dark2/light2 variants
+- Packaging: exclude Jython extension and enforce strip guard in staging script
+
+- **packaging:** Restore full runtime declaration in [project.dependencies] (`8d5a94a`)
+The runtime pixi-env-split refactor reduced [project.dependencies] to just
+pyyaml + setuptools while keeping the real runtime in the pixi pypi-dependencies
+tables. But the installer stager and packaging/ml_split.py trust
+[project.dependencies] to enumerate the shipped runtime: with it gutted, the
+project metadata under-declared its own runtime and ml_split relocated
+foundational packages (setuptools) into the ML overlay because they were no
+longer reachable from the core closure.
+Restore the 22 dropped runtime distributions, adopting the refactor's deliberate
+bound bumps (anthropic>=1.2.0, openai>=3.6.0, google-genai>=2.20.0,
+cryptography>=50.0.1, huggingface-hub>=1.29.0) and keeping the rest at their
+existing bounds. pyyaml/setuptools left as the refactor set them.
+Verified against the synced default env: every module-level third-party import
+in src/intellicrack resolves to a declared distribution (zero undeclared),
+all _ADDED_RUNTIME_DISTS are declared, and ml_split keeps setuptools in the core
+closure with no foundational packaging leaking into ml_overlay -- the three
+tests/packaging/test_project_runtime_dependencies.py gates.
+
+- **ui:** Guard hex strings worker probe against deleted C++ object (`b41886d`)
+HexEditorPanel._load_file_impl re-invokes SectionsMixin._populate_strings
+on every file load, which probes the previously stored _strings_worker
+with isRunning() before superseding it. A GenericCallableWorker wires
+finished -> deleteLater, so once a prior scan finishes and the event loop
+processes the deferred delete, the panel keeps only a dangling sip wrapper
+in _strings_worker (the finished handler never nulls it). Probing that
+wrapper raised RuntimeError instead of returning False, crashing the next
+load_file on rapid successive loads.
+Guard the isRunning()/requestInterruption() probe with try/except
+RuntimeError, mirroring the existing defensive probe in
+HexEditorPanel._stop_pending_workers. Add a falsifiable headless-Qt gate
+that loads a real System32 PE, drives the worker to the deleted-C++ state,
+and asserts a second _populate_strings neither raises nor reuses the dead
+worker.
+
+- **bridges:** Clear code units before write_bytes patches into disassembled code (`fa2bd18`)
+D13's write_bytes gate (tests/bridges/test_ghidra_cpython_migration.py::
+test_write_bytes_round_trips_at_scratch_address) failed against a real
+Ghidra program with
+"ghidra.program.model.mem.MemoryAccessException: Memory change conflicts
+with instruction at ...". Memory.setBytes refuses to write over bytes
+Ghidra has already disassembled into an instruction -- which is the
+common case for any interesting patch target (a jump, a license check),
+not an edge case. write_bytes now clears the listing's code units across
+the write range before setBytes, matching how Ghidra's own "Patch
+Instruction"/"Clear Code Bytes" actions handle an in-place binary patch.
+Verified with the real headless Ghidra bridge against the S19 target:
+tests/bridges/test_ghidra_cpython_migration.py -- 7 passed.
+
+- **ui,bridges:** Close out S19 RE-LIVE R01/R04-R07 and D-finding back-fills (`091e5e6`)
+Fixes the last open S19 RE-LIVE regression (R01: numeric/pattern search
+panes could be drag-collapsed to 0px past their minimumSizeHint despite
+QSplitter.setCollapsible(False)); the gate now drives a real
+QSplitter.moveSplitter handle-drag instead of asserting a post-setVisible
+height that Qt already supplies with or without the fix.
+Also lands the remaining live-verified fixes and their falsifiable gates
+from the same audit pass:
+- R04: apply_theme's repolish sweep is scoped to visible top-level chrome
+with a generation-stamped lazy repolish for hidden tabs, replacing an
+allWidgets() sweep that froze the UI for ~10s.
+- R05: chat composer placeholder wraps across the viewport via a custom
+paintEvent instead of Qt's single-line hard-clipped QTextEdit placeholder.
+- R06: provider-settings action buttons are sized to their own sizeHint
+and the left panel's minimum width covers the widest button row.
+- R07: hex Inspector Bit Editor lays out its 8 toggles in a 2x4 grid
+instead of a single row that overflowed the side pane's minimum width.
+- Ghidra data-tabs bottom bar gets scroll buttons, no-elide, and a
+nonzero minimum height instead of overflowing silently.
+- D12-D15: Ghidra CPython/jpype migration follow-through for
+read/write/masked-search bytes and set/create data type (no more
+Jython-only jarray/DataTypeParser calls), with a host-native test
+driving a real headless Ghidra bridge and independent pefile/API
+readbacks.
+- D02/D03/D07/D24/D25: hex editor left-panel width cap tracks splitter
+resize, search field width fits a representative query, bookmark
+double-click navigates, and bookmarks persist/reset correctly across
+file reloads.
+- D21: Frida run-button tooltip explains why it is disabled while a
+persistent script is loaded.
+- D29/D32/D35/D36: theme QSS monospace fallback, single tool_button rule,
+no dead property selectors, and px-only font-size units, gated across
+all four theme files.
+- D33: theme fallback stylesheet loader reads the packaged QSS asset
+instead of a frozen string copy, so a live edit is reflected.
+- D34: session tag chips resolve colors from ThemeManager and repaint on
+theme_changed instead of baking in palette() roles.
+base_panel.py's compute_toolbar_height/compute_control_min_height helpers
+(and their AnalysisPanelBase toolbar/content-scroll wiring) are included
+here because the already-committed R02/R03 fix in app.py imports them;
+they were missing from that commit and left it unimportable in isolation.
+
+- **ui:** Commit R02/R03 input-field clipping fixes and extend gate to four themes (`2c372ee`)
+R02 centers the editable toolbar Model combo's text by sharing a derived
+min-height with the static Provider combo and letting the inner QLineEdit
+fill the combo. R03 replaces every hardcoded toolbar/dock 32-40px fixed
+height with compute_toolbar_height() (font-metric driven) across the main
+window, panel dock, and all five Process-panel sub-tabs, and adds a QSS
+QLineEdit min-height floor so any remaining short container still clears
+the field's glyph height.
+Extends the falsifiable gate to run both parametrized cases (QSS floor,
+editable combo centering) across all four bundled themes instead of two.
 
 - **packaging:** Harden installer scripts and enforce runtime deps (`4eea4e7`)
 Expand declared runtime dependencies in `pyproject.toml` and refine the
@@ -5837,5 +5960,23 @@ Pin an explicit, run-unique `--basetemp` for host-native test executions to avoi
 * Isolate host-native basetemp under a dedicated temp path and prune runs older than six hours
 * Add integration tests verifying unique basetemp generation and age-based directory pruning
 * Force `$PSStyle.OutputRendering = 'Ansi'` in installer logging test to avoid environment-dependent ANSI stripping
+- Harden IPC pipe security and prevent arithmetic overflow panics (``)
+Harden the x64dbg IPC pipe against unauthorized access and command
+injection, guard C-ABI thread boundaries against unwinding exceptions,
+and replace unchecked arithmetic across the Rust core with overflow-safe
+equivalents.
+- Add strict DACL (owner + SYSTEM), first-instance enforcement, and
+remote rejection to the x64dbg named pipe server.
+- Drain cancelled overlapped I/O on timeout/stop to avoid use-after-free
+of stack-allocated OVERLAPPED structures.
+- Add exception firewalls across x64dbg C-ABI boundaries (event callbacks
+and command handler dispatch) and avoid std::stoul panics.
+- Validate address tokens and switch assembly to AssembleMemEx to prevent
+debugger command injection.
+- Implement real watch enumeration via DbgGetWatchList and add bounds-safe
+PE header reading.
+- Fix arithmetic overflows in Rust varint decoding, PE checksum folding,
+and VA/file-offset translation.
+- Adopt slice::as_chunks in search and transform routines.
 
 

@@ -21,6 +21,7 @@
 #include <pluginsdk/_scriptapi_misc.h>
 #include <pluginsdk/_scriptapi_label.h>
 #include <pluginsdk/_scriptapi_comment.h>
+#include <pluginsdk/_scriptapi_assembler.h>
 #include <pluginsdk/bridgemain.h>
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -184,6 +185,72 @@ std::string to_lower(const std::string& text) {
     return lowered;
 }
 
+// Validate that a wire-supplied address token is exactly what the Python
+// bridge emits for an address: hex(address), i.e. an optional "0x" prefix
+// followed by 1..16 hexadecimal digits. Rejecting anything else keeps command
+// metacharacters (',', ';', '"', whitespace) out of the strings interpolated
+// into DbgCmdExec command lines, so a crafted "address" can neither inject nor
+// corrupt a debugger command, and the length bound guarantees a fixed snprintf
+// buffer can never truncate a command mid-argument.
+bool valid_hex_address(const std::string& token) {
+    size_t i = 0;
+    if (token.size() >= 2 && token[0] == '0' && (token[1] == 'x' || token[1] == 'X')) {
+        i = 2;
+    }
+    if (i >= token.size() || token.size() - i > 16) {
+        return false;
+    }
+    for (; i < token.size(); i++) {
+        if (!std::isxdigit(static_cast<unsigned char>(token[i]))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Read a little-endian uint32 from a byte buffer at a bounds-checked offset.
+// PE headers pulled from target memory are attacker-influenced, so an
+// out-of-range offset yields 0 rather than reading past the buffer, and the
+// memcpy avoids the undefined behaviour of dereferencing a misaligned
+// reinterpret_cast into a packed header.
+uint32_t read_u32_le(const uint8_t* buf, size_t buf_len, size_t off) {
+    uint32_t value = 0;
+    if (off + sizeof(value) <= buf_len) {
+        std::memcpy(&value, buf + off, sizeof(value));
+    }
+    return value;
+}
+
+uint16_t read_u16_le(const uint8_t* buf, size_t buf_len, size_t off) {
+    uint16_t value = 0;
+    if (off + sizeof(value) <= buf_len) {
+        std::memcpy(&value, buf + off, sizeof(value));
+    }
+    return value;
+}
+
+// Extract the "address" string value using the legacy positional scan, but
+// bounds-check every index so a malformed params object produces a clean
+// failure instead of a std::out_of_range from substr(npos), then validate the
+// token with valid_hex_address before it can reach DbgCmdExec.
+bool extract_address_token(const std::string& params, std::string& out) {
+    size_t key = params.find("\"address\"");
+    if (key == std::string::npos) {
+        return false;
+    }
+    size_t start = params.find('"', key + 9);
+    if (start == std::string::npos) {
+        return false;
+    }
+    start++;
+    size_t end = params.find('"', start);
+    if (end == std::string::npos) {
+        return false;
+    }
+    out = params.substr(start, end - start);
+    return valid_hex_address(out);
+}
+
 }  // namespace
 
 CommandHandler g_command_handler;
@@ -260,7 +327,22 @@ PipeResponse CommandHandler::handle_command(const PipeMessage& msg) {
 
     auto it = m_commands.find(msg.command);
     if (it != m_commands.end()) {
-        return it->second(msg);
+        // Exception firewall. Handlers run on the pipe server thread, whose
+        // proc is a DWORD WINAPI C-ABI boundary: a C++ exception unwinding out
+        // of it terminates the whole x64dbg process. Several handlers still
+        // call throwing std::sto*/substr on untrusted wire data, so any escape
+        // is converted here into a typed error response instead of a crash.
+        try {
+            return it->second(msg);
+        } catch (const std::exception& ex) {
+            response.success = false;
+            response.error = std::string("Handler exception: ") + ex.what();
+            return response;
+        } catch (...) {
+            response.success = false;
+            response.error = "Handler exception: unknown";
+            return response;
+        }
     }
 
     response.error = "Unknown command: " + msg.command;
@@ -363,24 +445,12 @@ PipeResponse CommandHandler::cmd_run_to(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t addr_pos = msg.params.find("\"address\"");
-    if (addr_pos == std::string::npos) {
+    std::string addr_str;
+    if (!extract_address_token(msg.params, addr_str)) {
         response.success = false;
-        response.error = "Missing 'address' parameter";
+        response.error = "Missing or invalid 'address' parameter";
         return response;
     }
-
-    size_t start = msg.params.find('"', addr_pos + 9);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-
-    if (start == std::string::npos || end == std::string::npos) {
-        response.success = false;
-        response.error = "Invalid 'address' parameter";
-        return response;
-    }
-
-    std::string addr_str = msg.params.substr(start, end - start);
     uint64_t address = parse_address(addr_str);
 
     char cmd[64];
@@ -397,24 +467,12 @@ PipeResponse CommandHandler::cmd_bp_set(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t addr_pos = msg.params.find("\"address\"");
-    if (addr_pos == std::string::npos) {
+    std::string addr_str;
+    if (!extract_address_token(msg.params, addr_str)) {
         response.success = false;
-        response.error = "Missing 'address' parameter";
+        response.error = "Missing or invalid 'address' parameter";
         return response;
     }
-
-    size_t start = msg.params.find('"', addr_pos + 9);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-
-    if (start == std::string::npos || end == std::string::npos) {
-        response.success = false;
-        response.error = "Invalid 'address' parameter";
-        return response;
-    }
-
-    std::string addr_str = msg.params.substr(start, end - start);
     uint64_t address = parse_address(addr_str);
 
     std::string bp_type = "software";
@@ -469,24 +527,12 @@ PipeResponse CommandHandler::cmd_bp_remove(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t addr_pos = msg.params.find("\"address\"");
-    if (addr_pos == std::string::npos) {
+    std::string addr_str;
+    if (!extract_address_token(msg.params, addr_str)) {
         response.success = false;
-        response.error = "Missing 'address' parameter";
+        response.error = "Missing or invalid 'address' parameter";
         return response;
     }
-
-    size_t start = msg.params.find('"', addr_pos + 9);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-
-    if (start == std::string::npos || end == std::string::npos) {
-        response.success = false;
-        response.error = "Invalid 'address' parameter";
-        return response;
-    }
-
-    std::string addr_str = msg.params.substr(start, end - start);
 
     char cmd[64];
     snprintf(cmd, sizeof(cmd), "bc %s", addr_str.c_str());
@@ -548,18 +594,12 @@ PipeResponse CommandHandler::cmd_bp_enable(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t addr_pos = msg.params.find("\"address\"");
-    if (addr_pos == std::string::npos) {
+    std::string addr_str;
+    if (!extract_address_token(msg.params, addr_str)) {
         response.success = false;
-        response.error = "Missing 'address' parameter";
+        response.error = "Missing or invalid 'address' parameter";
         return response;
     }
-
-    size_t start = msg.params.find('"', addr_pos + 9);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-
-    std::string addr_str = msg.params.substr(start, end - start);
 
     char cmd[64];
     snprintf(cmd, sizeof(cmd), "be %s", addr_str.c_str());
@@ -574,18 +614,12 @@ PipeResponse CommandHandler::cmd_bp_disable(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t addr_pos = msg.params.find("\"address\"");
-    if (addr_pos == std::string::npos) {
+    std::string addr_str;
+    if (!extract_address_token(msg.params, addr_str)) {
         response.success = false;
-        response.error = "Missing 'address' parameter";
+        response.error = "Missing or invalid 'address' parameter";
         return response;
     }
-
-    size_t start = msg.params.find('"', addr_pos + 9);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-
-    std::string addr_str = msg.params.substr(start, end - start);
 
     char cmd[64];
     snprintf(cmd, sizeof(cmd), "bd %s", addr_str.c_str());
@@ -600,39 +634,38 @@ PipeResponse CommandHandler::cmd_wp_set(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t addr_pos = msg.params.find("\"address\"");
     size_t size_pos = msg.params.find("\"size\"");
     size_t type_pos = msg.params.find("\"access\"");
 
-    if (addr_pos == std::string::npos) {
+    std::string addr_str;
+    if (!extract_address_token(msg.params, addr_str)) {
         response.success = false;
-        response.error = "Missing 'address' parameter";
+        response.error = "Missing or invalid 'address' parameter";
         return response;
     }
 
-    size_t start = msg.params.find('"', addr_pos + 9);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-    std::string addr_str = msg.params.substr(start, end - start);
-
     std::string wp_type = "rw";
     if (type_pos != std::string::npos) {
-        start = msg.params.find('"', type_pos + 8);
-        if (start != std::string::npos) start++;
-        end = msg.params.find('"', start);
-        if (end != std::string::npos) {
-            wp_type = msg.params.substr(start, end - start);
+        size_t ts = msg.params.find('"', type_pos + 8);
+        if (ts != std::string::npos) {
+            ts++;
+            size_t te = msg.params.find('"', ts);
+            if (te != std::string::npos) {
+                wp_type = msg.params.substr(ts, te - ts);
+            }
         }
     }
 
     int size = 4;
     if (size_pos != std::string::npos) {
-        start = size_pos + 6;
-        while (start < msg.params.length() && !isdigit(msg.params[start])) start++;
-        end = start;
-        while (end < msg.params.length() && isdigit(msg.params[end])) end++;
-        if (end > start) {
-            size = std::stoi(msg.params.substr(start, end - start));
+        size_t ss = size_pos + 6;
+        while (ss < msg.params.length() && !isdigit(msg.params[ss]))
+            ss++;
+        size_t se = ss;
+        while (se < msg.params.length() && isdigit(msg.params[se]))
+            se++;
+        if (se > ss) {
+            size = std::stoi(msg.params.substr(ss, se - ss));
         }
     }
 
@@ -655,17 +688,12 @@ PipeResponse CommandHandler::cmd_wp_remove(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t addr_pos = msg.params.find("\"address\"");
-    if (addr_pos == std::string::npos) {
+    std::string addr_str;
+    if (!extract_address_token(msg.params, addr_str)) {
         response.success = false;
-        response.error = "Missing 'address' parameter";
+        response.error = "Missing or invalid 'address' parameter";
         return response;
     }
-
-    size_t start = msg.params.find('"', addr_pos + 9);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-    std::string addr_str = msg.params.substr(start, end - start);
 
     char cmd[64];
     snprintf(cmd, sizeof(cmd), "bphwc %s", addr_str.c_str());
@@ -713,7 +741,7 @@ PipeResponse CommandHandler::cmd_reg_all(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    REGDUMP_AVX512 regdump;
+    REGDUMP_AVX512 regdump = {};
     if (!DbgGetRegDumpEx(&regdump, sizeof(regdump))) {
         response.success = false;
         response.error = "Failed to get register dump";
@@ -788,28 +816,42 @@ PipeResponse CommandHandler::cmd_reg_set(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t name_pos = msg.params.find("\"register\"");
-    size_t value_pos = msg.params.find("\"value\"");
-
-    if (name_pos == std::string::npos || value_pos == std::string::npos) {
+    // Register name: a bare mnemonic. Validate it as an alphanumeric token so
+    // no metacharacter can escape into the `mov` command line built below.
+    std::string reg_name;
+    if (!extract_json_string(msg.params, "register", reg_name) || reg_name.empty()) {
         response.success = false;
-        response.error = "Missing 'register' or 'value' parameter";
+        response.error = "Missing or invalid 'register' parameter";
+        return response;
+    }
+    bool reg_name_invalid =
+        std::ranges::any_of(reg_name, [](char c) { return !std::isalnum(static_cast<unsigned char>(c)); });
+    if (reg_name_invalid) {
+        response.success = false;
+        response.error = "Invalid 'register' parameter";
         return response;
     }
 
-    size_t start = msg.params.find('"', name_pos + 10);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-    std::string reg_name = msg.params.substr(start, end - start);
-
-    start = msg.params.find('"', value_pos + 7);
-    if (start != std::string::npos) start++;
-    end = msg.params.find('"', start);
-    std::string value_str = msg.params.substr(start, end - start);
+    // Value: the bridge sends a bare integer; accept a quoted 0x-hex form too.
+    // Either way it is reduced to a numeric value and re-emitted as a canonical
+    // hex literal, so the operand is always digits and cannot inject commands.
+    uint64_t value = 0;
+    if (!extract_json_uint(msg.params, "value", value)) {
+        std::string value_raw;
+        if (extract_json_string(msg.params, "value", value_raw) && !value_raw.empty()) {
+            value = parse_address(value_raw);
+        } else {
+            response.success = false;
+            response.error = "Missing or invalid 'value' parameter";
+            return response;
+        }
+    }
 
     char cmd[128];
-    snprintf(cmd, sizeof(cmd), "mov %s, %s", reg_name.c_str(), value_str.c_str());
-    bool result = DbgCmdExec(cmd);
+    snprintf(cmd, sizeof(cmd), "mov %s, 0x%llX", reg_name.c_str(), static_cast<unsigned long long>(value));
+    // DbgCmdExecDirect runs synchronously and reports whether the assignment
+    // actually executed, rather than merely whether the command line parsed.
+    bool result = DbgCmdExecDirect(cmd);
 
     response.success = result;
     response.result = result ? "true" : "false";
@@ -1208,49 +1250,53 @@ PipeResponse CommandHandler::cmd_assemble(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t addr_pos = msg.params.find("\"address\"");
-    size_t instr_pos = msg.params.find("\"instruction\"");
-
-    if (addr_pos == std::string::npos || instr_pos == std::string::npos) {
+    std::string addr_str;
+    if (!extract_address_token(msg.params, addr_str)) {
         response.success = false;
-        response.error = "Missing 'address' or 'instruction' parameter";
+        response.error = "Missing or invalid 'address' parameter";
+        return response;
+    }
+    uint64_t address = parse_address(addr_str);
+
+    std::string instruction;
+    if (!extract_json_string(msg.params, "instruction", instruction) || instruction.empty()) {
+        response.success = false;
+        response.error = "Missing or invalid 'instruction' parameter";
         return response;
     }
 
-    size_t start = msg.params.find('"', addr_pos + 9);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-    std::string addr_str = msg.params.substr(start, end - start);
+    // Assemble through the script API rather than interpolating the untrusted
+    // instruction text into an `asm addr, "text"` command line (where an
+    // embedded quote would break the quoting and inject a debugger command).
+    // AssembleMemEx patches the target directly and returns the real
+    // assembler success plus an error string on failure.
+    int written = 0;
+    char error[MAX_ERROR_SIZE] = {};
+    bool result =
+        Script::Assembler::AssembleMemEx(static_cast<duint>(address), instruction.c_str(), &written, error, false);
 
-    start = msg.params.find('"', instr_pos + 13);
-    if (start != std::string::npos) start++;
-    end = msg.params.find('"', start);
-    std::string instruction = msg.params.substr(start, end - start);
-
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd), "asm %s, \"%s\"", addr_str.c_str(), instruction.c_str());
-    bool result = DbgCmdExec(cmd);
-
-    response.success = result;
-    response.result = result ? "true" : "false";
+    if (result) {
+        response.success = true;
+        response.result = "true";
+    } else {
+        response.success = false;
+        response.error = std::string("Assemble failed: ") + (error[0] ? error : "unknown");
+    }
     return response;
 }
 
 PipeResponse CommandHandler::cmd_goto(const PipeMessage& msg) {
+    // Navigation only: moves x64dbg's disassembly view to the address. No data
+    // is expected back beyond acceptance of the command.
     PipeResponse response;
     response.id = msg.id;
 
-    size_t addr_pos = msg.params.find("\"address\"");
-    if (addr_pos == std::string::npos) {
+    std::string addr_str;
+    if (!extract_address_token(msg.params, addr_str)) {
         response.success = false;
-        response.error = "Missing 'address' parameter";
+        response.error = "Missing or invalid 'address' parameter";
         return response;
     }
-
-    size_t start = msg.params.find('"', addr_pos + 9);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-    std::string addr_str = msg.params.substr(start, end - start);
 
     char cmd[64];
     snprintf(cmd, sizeof(cmd), "disasm %s", addr_str.c_str());
@@ -1460,20 +1506,20 @@ PipeResponse CommandHandler::cmd_eval(const PipeMessage& msg) {
 }
 
 PipeResponse CommandHandler::cmd_ref_search(const PipeMessage& msg) {
+    // Fire-and-forget: `reffind` runs an asynchronous reference scan whose
+    // matches populate x64dbg's own References view. There is no script API to
+    // pull those results back over the pipe, so the response reports only that
+    // the scan command was accepted, not a result set. The handler is named for
+    // the action it triggers, not for data it returns.
     PipeResponse response;
     response.id = msg.id;
 
-    size_t addr_pos = msg.params.find("\"address\"");
-    if (addr_pos == std::string::npos) {
+    std::string addr_str;
+    if (!extract_address_token(msg.params, addr_str)) {
         response.success = false;
-        response.error = "Missing 'address' parameter";
+        response.error = "Missing or invalid 'address' parameter";
         return response;
     }
-
-    size_t start = msg.params.find('"', addr_pos + 9);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-    std::string addr_str = msg.params.substr(start, end - start);
 
     char cmd[128];
     snprintf(cmd, sizeof(cmd), "reffind %s", addr_str.c_str());
@@ -1808,7 +1854,7 @@ PipeResponse CommandHandler::cmd_pe_directories(const PipeMessage& msg) {
         return response;
     }
 
-    uint32_t pe_offset = *reinterpret_cast<uint32_t*>(dos_hdr + 0x3C);
+    uint32_t pe_offset = read_u32_le(dos_hdr, sizeof(dos_hdr), 0x3C);
     uint8_t pe_hdr[512];
     if (!DbgMemRead(base + pe_offset, pe_hdr, 512)) {
         response.success = false;
@@ -1816,11 +1862,11 @@ PipeResponse CommandHandler::cmd_pe_directories(const PipeMessage& msg) {
         return response;
     }
 
-    uint16_t machine = *reinterpret_cast<uint16_t*>(pe_hdr + 4);
+    uint16_t machine = read_u16_le(pe_hdr, sizeof(pe_hdr), 4);
     bool is_pe64 = (machine == 0x8664);
     int dir_offset = 24 + (is_pe64 ? 112 : 96);
-    int num_dirs = *reinterpret_cast<uint32_t*>(pe_hdr + 24 + (is_pe64 ? 108 : 92));
-    if (num_dirs > 16) num_dirs = 16;
+    size_t num_dirs_offset = is_pe64 ? 132 : 116;  // 24 + optional-header NumberOfRvaAndSizes offset
+    int num_dirs = std::clamp(static_cast<int>(read_u32_le(pe_hdr, sizeof(pe_hdr), num_dirs_offset)), 0, 16);
 
     const char* dir_names[] = {
         "Export", "Import", "Resource", "Exception", "Security",
@@ -1833,8 +1879,8 @@ PipeResponse CommandHandler::cmd_pe_directories(const PipeMessage& msg) {
     for (int i = 0; i < num_dirs; i++) {
         int entry_offset = dir_offset + i * 8;
         if (entry_offset + 8 > 512) break;
-        uint32_t rva = *reinterpret_cast<uint32_t*>(pe_hdr + entry_offset);
-        uint32_t size = *reinterpret_cast<uint32_t*>(pe_hdr + entry_offset + 4);
+        uint32_t rva = read_u32_le(pe_hdr, sizeof(pe_hdr), static_cast<size_t>(entry_offset));
+        uint32_t size = read_u32_le(pe_hdr, sizeof(pe_hdr), static_cast<size_t>(entry_offset) + 4);
 
         if (i > 0) ss << ",";
         ss << "{\"index\":" << i << ","
@@ -1903,8 +1949,37 @@ PipeResponse CommandHandler::cmd_watch_remove(const PipeMessage& msg) {
 PipeResponse CommandHandler::cmd_watch_list(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
+
+    // Enumerate the real watch table rather than returning a canned empty list.
+    // A false return means the watch subsystem has nothing to report (no
+    // debuggee), which is a legitimate empty list, not an error.
+    ListInfo watch_list = {};
+    if (!DbgGetWatchList(&watch_list)) {
+        response.success = true;
+        response.result = "[]";
+        return response;
+    }
+
+    auto* watches = static_cast<WATCHINFO*>(watch_list.data);
+
+    std::ostringstream ss;
+    ss << "[";
+    for (int i = 0; watches && i < watch_list.count; i++) {
+        if (i > 0) ss << ",";
+        ss << "{\"id\":" << watches[i].id << ","
+           << "\"name\":\"" << escape_json(watches[i].WatchName) << "\","
+           << "\"expression\":\"" << escape_json(watches[i].Expression) << "\","
+           << "\"value\":\"" << format_address(watches[i].value) << "\","
+           << "\"triggered\":" << (watches[i].watchdogTriggered ? "true" : "false") << "}";
+    }
+    ss << "]";
+
+    if (watch_list.data) {
+        BridgeFree(watch_list.data);
+    }
+
     response.success = true;
-    response.result = "[]";
+    response.result = ss.str();
     return response;
 }
 
@@ -2010,6 +2085,9 @@ PipeResponse CommandHandler::cmd_trace_record_set(const PipeMessage& msg) {
 }
 
 PipeResponse CommandHandler::cmd_plugin_list(const PipeMessage& msg) {
+    // Fire-and-forget: `pluglist` writes the loaded-plugin roster to x64dbg's
+    // own log. The SDK exposes no enumeration of loaded plugins to marshal back
+    // over the pipe, so the response reports only that the command was accepted.
     PipeResponse response;
     response.id = msg.id;
 

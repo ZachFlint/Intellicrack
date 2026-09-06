@@ -30,12 +30,14 @@ __all__ = [
     "BridgeCallWorker",
     "GenericCallableWorker",
     "cancel_pending_main_loop_tasks",
+    "discard_worker",
     "drain_bridge_workers",
     "drain_bridge_workers_for",
     "run_bridge_coroutine",
     "run_bridge_coroutine_async",
     "run_bridge_coroutine_logged",
     "shutdown_bridge_loop",
+    "worker_is_running",
 ]
 
 
@@ -79,7 +81,6 @@ Extends ``WORKER_DEFAULT_EXCEPTIONS`` with the Intellicrack domain hierarchy (``
 out of ``BridgeCallWorker.run`` and terminate the worker thread without emitting ``call_finished`` or ``call_error``, leaving callers (e.g.
 the process panel's "Refreshing..." button) stuck indefinitely with no result and no surfaced error.
 """
-
 
 class _LoopState:
     """Module-level mutable state for the persistent event loop."""
@@ -392,6 +393,54 @@ class GenericCallableWorker(_RetainedWorker):
             self.call_error.emit(exc)
             return
         self.call_finished.emit(result)
+
+
+def worker_is_running(worker: QThread | None) -> bool:
+    """Safely report whether ``worker`` is a live thread still executing.
+
+    A :class:`GenericCallableWorker` (and :class:`BridgeCallWorker`) wires
+    ``finished -> deleteLater``, so once it has finished, its underlying C++
+    object may already be destroyed while a Python reference lingers. Probing
+    ``isRunning`` on that dangling sip wrapper raises ``RuntimeError``. Re-arm
+    guards only need to know whether a *genuinely in-flight* worker exists
+    before starting a replacement, so both ``None`` and a deleted wrapper are
+    reported as "not running" instead of crashing the caller.
+
+    Args:
+        worker: The worker thread to probe, or ``None``.
+
+    Returns:
+        bool: ``True`` only when ``worker`` is a live thread that reports itself
+            as still running; ``False`` when it is ``None`` or its underlying
+            C++ object has already been destroyed.
+    """
+    if worker is None:
+        return False
+    try:
+        return worker.isRunning()
+    except RuntimeError:
+        return False
+
+
+def discard_worker(worker: QThread | None) -> None:
+    """Safely schedule a finished ``worker`` for deletion.
+
+    Counterpart to :func:`worker_is_running` for the re-arm sites that eagerly
+    ``deleteLater`` the previous (finished) worker before starting a new one.
+    A worker whose ``finished -> deleteLater`` has already destroyed its C++
+    object raises ``RuntimeError`` when ``deleteLater`` is called again; that is
+    the desired end state (the object is already gone), so it is swallowed at
+    debug level rather than propagated.
+
+    Args:
+        worker: The worker thread to discard, or ``None``.
+    """
+    if worker is None:
+        return
+    try:
+        worker.deleteLater()
+    except RuntimeError:
+        _logger.debug("worker_discard_wrapper_already_deleted")
 
 
 # The two overloads carry no docstring of their own: they are signature

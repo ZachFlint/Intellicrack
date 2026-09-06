@@ -21,13 +21,17 @@
 #     any superseded .pyd the build system left behind.
 #   * The window toolkit. hexbench.window imports it through importlib so that
 #     the modes opening no window still work without it, and an import the
-#     analysis cannot see is an import it cannot follow.
+#     analysis cannot see is an import it cannot follow. Its submodules are
+#     walked so they come too, but the backends for other operating systems are
+#     filtered out first: collecting them imports toolkits this build will never
+#     have, which prints a warning for each and freezes in dead code.
 #
 # The console is kept and hidden early rather than dropped. A windowed build
 # leaves sys.stderr as None, which turns every diagnostic this program writes
 # into an AttributeError; keeping it means a session started from a terminal
 # still reports, while one started from Explorer shows no console window.
 
+import sys
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_submodules
@@ -37,14 +41,22 @@ import intellicrack_hexcore
 
 PACKAGE_ROOT = Path(SPECPATH)
 SOURCE_ROOT = PACKAGE_ROOT.parent
+
+if str(SOURCE_ROOT) not in sys.path:
+    sys.path.insert(0, str(SOURCE_ROOT))
+
+from hexbench.window import TOOLKIT_MODULE, frozen_toolkit_submodule
+
 ENGINE_ROOT = Path(intellicrack_hexcore.__file__).parent
 ENGINE_FILES = ("__init__.pyi", "py.typed")
-TOOLKIT = "webview"
 
 datas = [(str(PACKAGE_ROOT / "static"), "hexbench/static")]
 datas += [(str(ENGINE_ROOT / name), "intellicrack_hexcore") for name in ENGINE_FILES]
 
-hiddenimports = [TOOLKIT, *collect_submodules(TOOLKIT)]
+hiddenimports = [
+    TOOLKIT_MODULE,
+    *collect_submodules(TOOLKIT_MODULE, filter=frozen_toolkit_submodule),
+]
 
 analysis = Analysis(
     [str(PACKAGE_ROOT / "launch.py")],

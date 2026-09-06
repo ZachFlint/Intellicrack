@@ -24,9 +24,9 @@ import inspect
 import sys
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, override, runtime_checkable
 
-from PyQt6.QtCore import QPoint, Qt, pyqtBoundSignal, pyqtSignal
+from PyQt6.QtCore import QEvent, QObject, QPoint, Qt, pyqtBoundSignal, pyqtSignal
 from PyQt6.QtGui import QSyntaxHighlighter, QTextCursor
 from PyQt6.QtWidgets import (
     QFrame,
@@ -384,6 +384,9 @@ _HEADER_MARGIN_H: Final[int] = 8
 _MAIN_HEADER_MARGIN_H: Final[int] = 12
 _LEFT_MIN_WIDTH: Final[int] = 240
 _RIGHT_MIN_WIDTH: Final[int] = 120
+# Space reserved beyond the right column's own minimum when capping the left
+# column's floor, so the splitter handle always has room left to move (D02).
+_SPLITTER_HANDLE_SLACK: Final[int] = 24
 _DEFAULT_SPLIT_LEFT: Final[int] = 600
 _DEFAULT_SPLIT_RIGHT: Final[int] = 200
 _CODE_SPLIT_LEFT: Final[int] = 400
@@ -943,6 +946,7 @@ class _ToolOutputPanelBase(QFrame):
 
         self.main_splitter.addWidget(self.right_panel)
         self.main_splitter.setSizes([_DEFAULT_SPLIT_LEFT, _DEFAULT_SPLIT_RIGHT])
+        self.main_splitter.installEventFilter(self)
 
         layout.addWidget(self.main_splitter)
 
@@ -961,10 +965,45 @@ class _ToolOutputPanelBase(QFrame):
         hint is what actually stops the splitter from squeezing that tab's
         content narrower than it can render (N2), while still allowing a
         smaller floor for lightweight tabs.
+
+        Pinning the floor to the tab's raw ``minimumSizeHint`` unconditionally
+        would combine with :attr:`right_panel`'s own minimum to exceed the
+        splitter's available width, leaving every handle immovable and the
+        right panel spilling off-screen (D02). So the natural floor is capped
+        to whatever the splitter's *current* width leaves over for the right
+        column plus a handle-movement slack, once that width is known (it is
+        zero before the splitter is first laid out, in which case the natural
+        floor is used uncapped).
         """
         current = self.tab_widget.currentWidget()
-        floor = _LEFT_MIN_WIDTH if current is None else max(_LEFT_MIN_WIDTH, current.minimumSizeHint().width())
+        natural = _LEFT_MIN_WIDTH if current is None else max(_LEFT_MIN_WIDTH, current.minimumSizeHint().width())
+        splitter_width = self.main_splitter.width()
+        if splitter_width > 0:
+            cap = splitter_width - self.right_panel.minimumWidth() - _SPLITTER_HANDLE_SLACK
+            floor = min(natural, max(_LEFT_MIN_WIDTH, cap))
+        else:
+            floor = natural
         self.left_panel.setMinimumWidth(floor)
+
+    @override
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
+        """Re-cap the left column's minimum width whenever the main splitter resizes.
+
+        :meth:`_sync_left_panel_min_width` only runs on tab switches, but the
+        cap it computes depends on the splitter's current width (D02); without
+        this, resizing the window after switching tabs would leave the floor
+        capped to a stale width instead of the new one.
+
+        Args:
+            a0: The watched object (expected to be :attr:`main_splitter`).
+            a1: The event being filtered.
+
+        Returns:
+            bool: False always, so the event continues to be processed normally.
+        """
+        if a0 is self.main_splitter and a1 is not None and a1.type() == QEvent.Type.Resize:
+            self._sync_left_panel_min_width()
+        return False
 
     def _on_function_selected(self, name: str, address: int) -> None:
         """Handle function selection in the list.

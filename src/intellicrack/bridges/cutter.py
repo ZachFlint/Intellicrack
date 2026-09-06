@@ -87,6 +87,7 @@ _ERR_TOOL_NOT_AVAILABLE = "cutter not available"
 _ERR_DECOMPILE_NA = "decompilation not available"
 _ERR_ASSEMBLE_FAILED = "failed to assemble instruction"
 _ERR_CMD_TIMEOUT = "cutter command timed out"
+_ERR_SESSION_RESET = "analysis session was reset after a command timeout; reload the binary to continue"
 _RELOC_RVA_MASK = 0x7FFFFFFF
 _ERR_INVALID_R2_INPUT = "input contains rizin command-control characters"
 _ERR_JSON_PARSE_FAILED = "failed to parse rizin JSON output"
@@ -99,6 +100,13 @@ _BITS_64 = 64
 _R2_COMMAND_TIMEOUT: float = 5.0
 R2_COMMAND_TIMEOUT: float = _R2_COMMAND_TIMEOUT
 _PDG_DECOMPILE_TIMEOUT: float = 30.0
+_METADATA_LISTING_TIMEOUT: float = 60.0
+_ANALYSIS_TIMEOUT: Final[dict[str, float]] = {
+    "quick": 120.0,
+    "normal": 600.0,
+    "deep": 1200.0,
+}
+_DEFAULT_ANALYSIS_TIMEOUT: Final[float] = _ANALYSIS_TIMEOUT["normal"]
 
 _RZ_64BIT_ARCHES: frozenset[str] = frozenset(
     {
@@ -1396,6 +1404,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
                     command=command,
                     timeout=effective_timeout,
                 )
+                await self._discard_r2_session_locked(command=command)
                 msg = f"{_ERR_CMD_TIMEOUT} after {effective_timeout}s: {command}"
                 raise ToolError(msg) from None
             except (OSError, RuntimeError, ValueError) as e:
@@ -1404,11 +1413,63 @@ class _CutterBridgeBase(StaticAnalysisBridge):
                 raise ToolError(msg) from e
         return "" if result is None else result
 
-    async def _cmd_json(self, command: str) -> list[dict[str, Any]]:
+    async def _discard_r2_session_locked(self, *, command: str) -> None:
+        """Tear down the analysis session after a command timeout.
+
+        Must be called while holding :attr:`_r2_lock`. A timed-out
+        :meth:`_r2_cmd` leaves its :func:`asyncio.to_thread` worker still
+        running the blocking ``cmd`` call: ``asyncio`` cannot cancel the
+        underlying OS thread, so that worker keeps reading and writing the
+        single analysis pipe after the lock is released and corrupts the
+        NUL-terminated framing of every command that follows (the observed
+        cascade of downstream timeouts and unrecoverable-JSON parse failures).
+        This method poisons the session so no later command can reuse the
+        dirty pipe: it clears the connection slot, terminates the rizin child
+        process by PID (closing its handles, which unblocks the orphaned
+        worker's read so the thread exits), and resets the per-session
+        debug/attach state. Every subsequent command then fails fast with
+        :data:`_ERR_NO_BINARY` until the caller reloads the binary. The child
+        is killed by PID rather than through ``self._r2.quit()`` precisely
+        because the orphaned worker still owns the pipe object: issuing pipe
+        I/O from here would race it, whereas killing the process only closes
+        the shared handles.
+
+        Args:
+            command: The command whose timeout triggered the teardown,
+                recorded for diagnostics.
+        """
+        pid = self._r2_pid
+        self.r2 = None
+        self._r2_pid = None
+        if pid is not None:
+            try:
+                process_manager = ProcessManager.get_instance()
+                await asyncio.to_thread(process_manager.terminate_external_pid, pid, force=True)
+            except (OSError, RuntimeError, ValueError) as exc:
+                _logger.warning("r2_timeout_child_kill_failed", pid=pid, error=str(exc))
+        self._debug_mode = False
+        self._attached_pid = None
+        self._breakpoints.clear()
+        self._threads.clear()
+        self._current_thread_id = None
+        self.state.connected = False
+        self.state.tool_running = False
+        self.state.process_attached = False
+        self.state.target_pid = None
+        self._publish_tool_state()
+        _logger.warning("r2_session_discarded_after_timeout", command=command, killed_pid=pid)
+
+    async def _cmd_json(self, command: str, *, command_timeout: float | None = None) -> list[dict[str, Any]]:
         """Execute command and parse JSON output.
 
         Args:
             command: Command to execute.
+            command_timeout: Optional per-command timeout override in
+                seconds, forwarded to :meth:`_r2_cmd`. Defaults to
+                :data:`R2_COMMAND_TIMEOUT` when omitted; whole-binary
+                listing scans (ROP gadgets, vtables, syscalls, types)
+                pass :data:`_METADATA_LISTING_TIMEOUT` because they
+                routinely need more than the bare command default.
 
         Returns:
             list[dict[str, Any]]: Parsed JSON as list of dicts. An empty
@@ -1425,7 +1486,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
             _logger.warning("cmd_json_without_binary", command=command)
             raise ToolError(_ERR_NO_BINARY)
 
-        result = await self._r2_cmd(command)
+        result = await self._r2_cmd(command, command_timeout=command_timeout)
 
         if not result or not result.strip():
             return []
@@ -1822,6 +1883,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         Returns:
             BinaryInfo: Populated descriptor of the loaded binary.
         """
+
         async with self._r2_lock:
             await self._close_existing_r2()
 
@@ -1872,6 +1934,14 @@ class CutterAnalysisMixin(_CutterBridgeBase):
     async def analyze(self, level: str = "normal") -> None:
         """Run analysis on the loaded binary.
 
+        Full-binary analysis (``aa``/``aaa``/``aaaa``) routinely runs for
+        minutes on real-world targets, far past the module-default
+        :data:`R2_COMMAND_TIMEOUT` used for ordinary rizin commands. The
+        command is therefore dispatched with an explicit, level-scaled
+        ``command_timeout`` drawn from :data:`_ANALYSIS_TIMEOUT` -- the same
+        pattern ``decompile`` uses for its own long-running ``pdg`` command
+        -- so a legitimately slow analysis pass is not mistaken for a hang.
+
         Args:
             level: Analysis level (quick, normal, deep).
 
@@ -1888,9 +1958,10 @@ class CutterAnalysisMixin(_CutterBridgeBase):
             "deep": "aaaa",
         }
         cmd = cmd_map.get(level, "aaa")
+        analysis_timeout = _ANALYSIS_TIMEOUT.get(level, _DEFAULT_ANALYSIS_TIMEOUT)
 
-        _logger.info("analysis_starting", level=level)
-        await self._r2_cmd(cmd)
+        _logger.info("analysis_starting", level=level, timeout=analysis_timeout)
+        await self._r2_cmd(cmd, command_timeout=analysis_timeout)
         self._analyzed = True
         _logger.info("analysis_complete", bridge="cutter", level=level)
 
@@ -3130,9 +3201,9 @@ class CutterRopMixin(CutterMetadataMixin):
             raise ToolError(_ERR_NO_BINARY)
 
         cmd = f"/Rj {pattern}" if pattern else "/Rj"
-        gadgets = await self._cmd_json(cmd)
+        gadgets = await self._cmd_json(cmd, command_timeout=_METADATA_LISTING_TIMEOUT)
         if not gadgets and not self._rop_gadgets_primed:
-            gadgets = await self._cmd_json(cmd)
+            gadgets = await self._cmd_json(cmd, command_timeout=_METADATA_LISTING_TIMEOUT)
         self._rop_gadgets_primed = True
 
         result: list[GadgetInfo] = []
@@ -3180,7 +3251,7 @@ class CutterRopMixin(CutterMetadataMixin):
             _logger.warning("get_vtables_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
-        vtables = await self._cmd_json("avj")
+        vtables = await self._cmd_json("avj", command_timeout=_METADATA_LISTING_TIMEOUT)
         result: list[VtableInfo] = [
             VtableInfo(
                 address=_get_int(v, "offset"),
@@ -3205,7 +3276,7 @@ class CutterRopMixin(CutterMetadataMixin):
             _logger.warning("get_syscalls_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
-        result = await self._cmd_json("asj")
+        result = await self._cmd_json("asj", command_timeout=_METADATA_LISTING_TIMEOUT)
         _logger.debug("syscalls_queried", result_count=len(result))
         return result
 
@@ -3414,7 +3485,7 @@ class CutterTypesMixin(CutterAnnotationMixin):
             _logger.warning("get_types_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
-        result = await self._cmd_json("tj")
+        result = await self._cmd_json("tj", command_timeout=_METADATA_LISTING_TIMEOUT)
         _logger.debug("types_queried", result_count=len(result))
         return result
 
@@ -3431,7 +3502,7 @@ class CutterTypesMixin(CutterAnnotationMixin):
             _logger.warning("get_structs_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
-        result = await self._cmd_json("tsj")
+        result = await self._cmd_json("tsj", command_timeout=_METADATA_LISTING_TIMEOUT)
         _logger.debug("structs_queried", result_count=len(result))
         return result
 

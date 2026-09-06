@@ -2,7 +2,7 @@
 # Configure shell for Windows
 
 set unstable := true
-set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set windows-shell := ["pwsh.exe", "-NoLogo", "-NoProfile", "-Command"]
 
 pixi := "pixi run"
 src := "src/intellicrack"

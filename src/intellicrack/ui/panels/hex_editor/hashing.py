@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_warning
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, discard_worker, worker_is_running
 from intellicrack.ui.panels.hex_editor.widgets import CustomCrcDialog
 
 
@@ -44,7 +44,6 @@ this budget, so joining briefly lets the caller observe the finished write and t
 GUI thread's event loop happens to process the worker's queued completion signal. Genuinely large images simply time out this short join and
 continue asynchronously exactly as before.
 """
-
 
 def _format_hash_result(document: object, algo: str) -> str:
     """Compute the document hash and format it for display.
@@ -218,11 +217,10 @@ class HashingMixin:
             GenericCallableWorker | None: The newly started worker, or ``None``
                 when ``existing`` is still running and no new worker was started.
         """
-        if existing is not None and existing.isRunning():
+        if worker_is_running(existing):
             _logger.warning("hex_editor_hash_worker_skipped")
             return None
-        if existing is not None:
-            existing.deleteLater()
+        discard_worker(existing)
 
         parent = self if isinstance(self, QWidget) else None
         worker = GenericCallableWorker(func, *args, parent=parent)

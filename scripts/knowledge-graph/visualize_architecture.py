@@ -425,7 +425,7 @@ class KnowledgeGraphGenerator:
 
     def _get_module_name(self, path: Path) -> str:
         try:
-            rel_path = path.relative_to(self.repo_root)
+            rel_path = path.relative_to(self.root_dir)
             return str(rel_path.with_suffix("")).replace(os.sep, ".")
         except ValueError:
             return path.stem

@@ -46,6 +46,8 @@ from intellicrack.core.config import get_config_dir
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import BinaryInfo, Message
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.resources.font_manager import FontManager
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger(__name__)
@@ -278,6 +280,7 @@ class TagChipsWidget(QWidget):
         self._chip_buttons: dict[str, QPushButton] = {}
         self._setup_ui()
         self.refresh()
+        ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
 
     def _setup_ui(self) -> None:
         """Construct the chip flow area and the inline add-tag editor."""
@@ -345,6 +348,59 @@ class TagChipsWidget(QWidget):
         self._add_btn.setEnabled(self._session is not None)
         self._tag_input.setEnabled(self._session is not None)
 
+    @staticmethod
+    def _chip_stylesheet() -> str:
+        """Build the tag-chip stylesheet for the application's current theme.
+
+        Sources its colors from :meth:`ThemeManager.get_analysis_colors`
+        instead of Qt palette-role functions (``palette(mid)``,
+        ``palette(button)``, ``palette(highlight)``), which resolve against
+        the widget's native ``QPalette`` rather than the dark/light QSS
+        theme Intellicrack actually renders with, so a chip styled from them
+        stays visually frozen across a theme switch. Every existing chip is
+        restyled with this same object-name-scoped QSS text from
+        :meth:`_on_theme_changed` whenever :attr:`ThemeManager.theme_changed`
+        fires, so chips track the live theme instead of only the theme that
+        was active when they were created.
+
+        Returns:
+            str: Qt stylesheet text scoped to the ``tagChip`` object name.
+        """
+        colors = ThemeManager.get_instance().get_analysis_colors()
+        surface = colors["surface"].name()
+        border = colors["border"].name()
+        foreground = colors["foreground"].name()
+        accent = colors["accent"].name()
+        return (
+            "QPushButton#tagChip { "
+            "padding: 2px 8px; "
+            f"border: 1px solid {border}; "
+            "border-radius: 10px; "
+            f"background: {surface}; "
+            f"color: {foreground}; "
+            "}"
+            f"QPushButton#tagChip:hover {{ background: {accent}; color: #ffffff; }}"
+        )
+
+    def _on_theme_changed(self, resolved_theme: str) -> None:
+        """Recolor every existing tag chip after the application theme changes.
+
+        Connected to :attr:`ThemeManager.theme_changed` in :meth:`__init__`.
+        Chip buttons are styled once, in :meth:`_add_chip`, and are never
+        otherwise revisited, so without this hook a chip created under one
+        theme keeps its original colors after the app switches to the other.
+
+        Args:
+            resolved_theme: The concrete theme now active ("dark" or
+                "light"). Unused: the new stylesheet is rebuilt from
+                :class:`ThemeManager`'s current state regardless of which
+                theme name triggered the signal.
+        """
+        _ = resolved_theme
+        stylesheet = self._chip_stylesheet()
+        for chip_btn in self._chip_buttons.values():
+            chip_btn.setStyleSheet(stylesheet)
+
     def _add_chip(self, tag: str) -> None:
         """Create and insert a chip button for ``tag``.
 
@@ -360,15 +416,7 @@ class TagChipsWidget(QWidget):
         chip.setProperty("tag", tag)
         chip.setCursor(Qt.CursorShape.PointingHandCursor)
         chip.setToolTip(f"Remove tag '{tag}'")
-        chip.setStyleSheet(
-            "QPushButton#tagChip { "
-            "padding: 2px 8px; "
-            "border: 1px solid palette(mid); "
-            "border-radius: 10px; "
-            "background: palette(button); "
-            "}"
-            "QPushButton#tagChip:hover { background: palette(highlight); color: palette(highlighted-text); }",
-        )
+        chip.setStyleSheet(self._chip_stylesheet())
         bound_tag: str = tag
 
         def _on_clicked(_state: int = 0, t: str = bound_tag) -> None:
@@ -755,7 +803,7 @@ class SessionManagerDialog(QDialog):
         layout = QVBoxLayout()
         self._preview_text = QTextEdit()
         self._preview_text.setReadOnly(True)
-        self._preview_text.setStyleSheet("font-family: 'Consolas', 'Courier New', monospace; font-size: 10px;")
+        self._preview_text.setFont(FontManager.get_instance().get_code_font(9))
         layout.addWidget(self._preview_text)
         group.setLayout(layout)
         return group

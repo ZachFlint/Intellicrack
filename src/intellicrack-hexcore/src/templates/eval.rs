@@ -2378,7 +2378,7 @@ mod tests {
             evaluate_expression("5 +", &values, 0, &reg).unwrap_err(),
             TemplateError::ExpressionError(m) if m.contains("unexpected end")
         ));
-        // invalid sizeof syntax (no parenthesised type)
+        // invalid sizeof syntax (no parenthesized type)
         assert!(matches!(
             evaluate_expression("sizeof 5", &values, 0, &reg).unwrap_err(),
             TemplateError::ExpressionError(m) if m.contains("invalid sizeof syntax")
