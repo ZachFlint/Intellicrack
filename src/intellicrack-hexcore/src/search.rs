@@ -356,8 +356,10 @@ fn window_matches_ci(window: &[u8], needle_lower: &str, encoding: &str) -> bool 
                 return false;
             }
             let units: Vec<u16> = window
-                .chunks_exact(2)
-                .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|c| u16::from_le_bytes(*c))
                 .collect();
             match String::from_utf16(&units) {
                 Ok(s) => s,
@@ -369,8 +371,10 @@ fn window_matches_ci(window: &[u8], needle_lower: &str, encoding: &str) -> bool 
                 return false;
             }
             let units: Vec<u16> = window
-                .chunks_exact(2)
-                .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|c| u16::from_be_bytes(*c))
                 .collect();
             match String::from_utf16(&units) {
                 Ok(s) => s,

@@ -55,7 +55,7 @@ target_include_directories(
 
 target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(${TARGET_NAME} PRIVATE ${X64DBG_LIB_PATH} ${X64DBG_BRIDGE_LIB})
+target_link_libraries(${TARGET_NAME} PRIVATE ${X64DBG_LIB_PATH} ${X64DBG_BRIDGE_LIB} advapi32)
 
 target_compile_definitions(
     ${TARGET_NAME} PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS

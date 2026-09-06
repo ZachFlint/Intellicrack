@@ -468,15 +468,23 @@ pub struct PeChecksumResult {
     pub valid: bool,
 }
 
+/// Fold the 32-bit-masked file length into the accumulated PE checksum.
+///
+/// The Windows PE checksum ends by adding the file size to the folded word
+/// sum. Windows keeps the running value in a 32-bit register, so this final
+/// addition wraps rather than trapping; a multi-gigabyte file whose masked
+/// length approaches `u32::MAX` would otherwise overflow a checked `+` and
+/// panic across the FFI boundary. `wrapping_add` reproduces the Windows DWORD
+/// semantics exactly and is a no-op for every file below 4 GiB.
+fn add_masked_length(checksum: u32, data_len: usize) -> u32 {
+    let masked_len = u32::try_from(data_len & 0xFFFF_FFFF).expect("length masked to u32 range");
+    checksum.wrapping_add(masked_len)
+}
+
 /// Compute the PE file checksum using the standard Windows algorithm.
 ///
 /// Sums all 16-bit words with carry folding, skipping the `CheckSum` field,
 /// then adds the file length.
-///
-/// # Panics
-///
-/// Panics are unreachable in practice; the file length is masked to 32 bits
-/// before conversion.
 #[must_use]
 pub fn compute_pe_checksum(data: &[u8], checksum_offset: usize) -> u32 {
     let mut checksum: u32 = 0;
@@ -501,8 +509,7 @@ pub fn compute_pe_checksum(data: &[u8], checksum_offset: usize) -> u32 {
     }
 
     checksum = (checksum & 0xFFFF) + (checksum >> 16);
-    let masked_len = data.len() & 0xFFFF_FFFF;
-    checksum + u32::try_from(masked_len).expect("length masked to u32 range")
+    add_masked_length(checksum, data.len())
 }
 
 /// Verify the PE checksum of a binary file.
@@ -969,6 +976,25 @@ mod tests {
         assert_eq!(bad.calculated, calc);
         assert_eq!(bad.stored, calc.wrapping_add(1));
         assert!(!bad.valid);
+    }
+
+    /// F-0079 regression: the PE checksum ends by adding the file length to the
+    /// folded word sum. That add used a checked `+`, so a file whose
+    /// 32-bit-masked length approaches `u32::MAX` (a ~4 GiB PE, which this
+    /// engine's large-file path can materialize) overflowed `u32` and panicked
+    /// across the FFI boundary. Windows keeps the value in a DWORD and lets it
+    /// wrap; `add_masked_length` must do the same. Exercised on the extracted
+    /// finalizer so the case is reachable without a 4 GiB allocation.
+    ///
+    /// Mutation caught: reverting to `checksum + (masked_len)` overflow-panics
+    /// on these values under the debug overflow checks `cargo test` uses, so
+    /// the equality assertion is never reached.
+    #[test]
+    fn test_pe_checksum_length_add_wraps_instead_of_panicking() {
+        // 0x0001_0000 + 0xFFFF_FFFF == 0x1_0000_FFFF, truncated to 0x0000_FFFF.
+        assert_eq!(add_masked_length(0x0001_0000, 0xFFFF_FFFF), 0x0000_FFFF);
+        // Below 4 GiB the add cannot overflow: behavior is a plain sum.
+        assert_eq!(add_masked_length(0x0000_1234, 0x0000_1000), 0x0000_2234);
     }
 
     const STREAMING_ALGORITHMS: &[&str] = &[

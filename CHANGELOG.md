@@ -5914,4 +5914,23 @@ Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
 
+- Harden IPC pipe security and prevent arithmetic overflow panics (``)
+Harden the x64dbg IPC pipe against unauthorized access and command
+injection, guard C-ABI thread boundaries against unwinding exceptions,
+and replace unchecked arithmetic across the Rust core with overflow-safe
+equivalents.
+- Add strict DACL (owner + SYSTEM), first-instance enforcement, and
+remote rejection to the x64dbg named pipe server.
+- Drain cancelled overlapped I/O on timeout/stop to avoid use-after-free
+of stack-allocated OVERLAPPED structures.
+- Add exception firewalls across x64dbg C-ABI boundaries (event callbacks
+and command handler dispatch) and avoid std::stoul panics.
+- Validate address tokens and switch assembly to AssembleMemEx to prevent
+debugger command injection.
+- Implement real watch enumeration via DbgGetWatchList and add bounds-safe
+PE header reading.
+- Fix arithmetic overflows in Rust varint decoding, PE checksum folding,
+and VA/file-offset translation.
+- Adopt slice::as_chunks in search and transform routines.
+
 

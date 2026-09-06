@@ -270,21 +270,21 @@ fn apply_byte_transform(name: &str, data: &[u8]) -> Result<Vec<u8>, TransformErr
         }
         "byte_swap_16" => {
             let mut result = data.to_vec();
-            for chunk in result.chunks_exact_mut(2) {
+            for chunk in result.as_chunks_mut::<2>().0 {
                 chunk.swap(0, 1);
             }
             Ok(result)
         }
         "byte_swap_32" => {
             let mut result = data.to_vec();
-            for chunk in result.chunks_exact_mut(4) {
+            for chunk in result.as_chunks_mut::<4>().0 {
                 chunk.reverse();
             }
             Ok(result)
         }
         "byte_swap_64" => {
             let mut result = data.to_vec();
-            for chunk in result.chunks_exact_mut(8) {
+            for chunk in result.as_chunks_mut::<8>().0 {
                 chunk.reverse();
             }
             Ok(result)
@@ -427,9 +427,9 @@ fn run_aes_ecb<C>(cipher: &C, blocks: &mut [u8], encrypt: bool)
 where
     C: BlockCipherEncrypt + BlockCipherDecrypt,
 {
-    for chunk in blocks.chunks_exact_mut(16) {
-        let block = <&mut aes::cipher::Block<C>>::try_from(chunk)
-            .expect("chunks_exact_mut(16) yields exact-size AES blocks");
+    for chunk in blocks.as_chunks_mut::<16>().0 {
+        let block = <&mut aes::cipher::Block<C>>::try_from(chunk.as_mut_slice())
+            .expect("as_chunks_mut::<16> yields exact-size AES blocks");
         if encrypt {
             cipher.encrypt_block(block);
         } else {
