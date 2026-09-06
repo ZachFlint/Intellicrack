@@ -28,6 +28,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import cast
@@ -37,6 +38,11 @@ import httpx
 from intellicrack.core.elevation import is_elevated
 from intellicrack.core.logging import get_logger
 from intellicrack.providers.xpu_utils import is_xpu_available
+from scripts.sandbox.hcs_interlock import (
+    DockerEngineState,
+    ensure_docker_engine_quiesced,
+    quiesce_notice,
+)
 
 
 _LOGGER = get_logger("scripts.host_native")
@@ -140,6 +146,8 @@ _OLLAMA_SERVE_TIMEOUT_S: float = 45.0
 _OLLAMA_POLL_INTERVAL_S: float = 1.0
 _OLLAMA_PULL_TIMEOUT_S: float = 900.0
 _PYTEST_TIMEOUT_S: float = 3600.0
+_HOST_NATIVE_TMP_PARENT: Path = Path(tempfile.gettempdir()) / "intellicrack-host-native"
+_HOST_NATIVE_TMP_MAX_AGE_S: float = 6.0 * 60.0 * 60.0
 
 _SANDBOX_ENV_VAR: str = "INTELLICRACK_SANDBOXED"
 _ALLOW_HOST_PROCESS_TESTS_ENV: str = "INTELLICRACK_ALLOW_HOST_PROCESS_TESTS"
@@ -372,7 +380,58 @@ def build_pytest_argv(repo_root: Path) -> list[str]:
         "-ra",
         "--strict-markers",
         f"--junitxml={junit}",
+        f"--basetemp={new_host_native_basetemp()}",
     ]
+
+
+def new_host_native_basetemp() -> Path:
+    """Return a unique, repo-external basetemp for one host-native pytest run.
+
+    Without an explicit ``--basetemp`` pytest defaults to the shared
+    ``<temp>/pytest-of-<user>`` base and, at session finish, walks that base to
+    rotate old numbered directories and to stat its ``pytest-current`` symlink.
+    When an *elevated* host-native run (raw physical disk, ETW realtime tracing)
+    has previously created SYSTEM-owned directories or a symlink there, the next
+    *non-elevated* run cannot stat them: pytest raises ``PermissionError`` out of
+    ``pytest_sessionfinish`` and the whole pass exits non-zero even though every
+    test passed. Handing pytest an explicit basetemp makes it skip that
+    shared-base rotation entirely (see ``_pytest.tmpdir.getbasetemp``), so a
+    poisoned shared base can no longer fail an otherwise-green run.
+
+    The name is unique per run (process id plus nanosecond clock) so a prior
+    elevated run's SYSTEM-owned tree is never the directory pytest tries to remove
+    at startup, and it sits under the system temp root rather than the repository
+    so booting the WHPX virtual machines adds no write load to the project drive.
+
+    Returns:
+        Path: This run's basetemp directory (created by pytest, not here).
+    """
+    return _HOST_NATIVE_TMP_PARENT / f"run-{os.getpid()}-{time.time_ns()}"
+
+
+def prepare_host_native_tmp_parent() -> None:
+    """Create the basetemp parent and best-effort prune aged prior run trees.
+
+    Each run writes under a unique child of ``_HOST_NATIVE_TMP_PARENT`` and never
+    removes its own tree, so the parent would grow without bound unless old runs
+    are pruned. Trees whose modification time is older than
+    ``_HOST_NATIVE_TMP_MAX_AGE_S`` are removed; a tree left SYSTEM-owned by a prior
+    elevated run raises ``PermissionError`` under a non-elevated token, which is
+    logged and skipped rather than aborting the pass -- exactly the failure this
+    whole mechanism exists to avoid. The parent must exist before pytest creates
+    the per-run directory beneath it.
+    """
+    _HOST_NATIVE_TMP_PARENT.mkdir(parents=True, exist_ok=True)
+    cutoff = time.time() - _HOST_NATIVE_TMP_MAX_AGE_S
+    for child in _HOST_NATIVE_TMP_PARENT.iterdir():
+        try:
+            recent = child.stat().st_mtime >= cutoff
+        except OSError as exc:
+            _LOGGER.debug("host_native_tmp_stat_failed", path=str(child), error=str(exc))
+            continue
+        if recent:
+            continue
+        shutil.rmtree(child, ignore_errors=True)
 
 
 def elevation_skip_notice(*, elevated: bool) -> str:
@@ -401,8 +460,40 @@ def elevation_skip_notice(*, elevated: bool) -> str:
     )
 
 
-def _log_capabilities() -> None:
-    """Log which host capabilities are present, so skips are explainable."""
+def _quiesce_docker_for_vm_gates(*, elevated: bool) -> DockerEngineState:
+    """Clear the Docker engine off the Host Compute Service before the VM gates.
+
+    The host-native pass boots real WHPX virtual machines, and ``just test``
+    invokes it immediately after the container leg, which leaves Docker's
+    Windows engine live on the Host Compute Service. Starting a virtual machine
+    in that state wedges the engine -- recovery needs Docker Desktop relaunched
+    elevated -- and has bugchecked this host, so the engine is shut down first.
+
+    A blocked outcome is reported, not raised: the rest of the host-native pass
+    has nothing to do with the hypervisor and still runs, while the WHPX gates
+    refuse themselves through
+    :func:`tests.sandbox.qemu.windows_boot_probe.docker_engine_refusal_reason`.
+
+    Args:
+        elevated: Whether this process already holds an elevated token. It is
+            never used to request one: a test run must raise no UAC prompt.
+
+    Returns:
+        DockerEngineState: The resulting state of the Host Compute Service.
+    """
+    state = ensure_docker_engine_quiesced(elevated=elevated)
+    print(quiesce_notice(state), file=sys.stderr, flush=True)
+    _LOGGER.info("host_native_docker_interlock", state=state.value, host_is_clear=state.host_is_clear)
+    return state
+
+
+def _log_capabilities(docker_state: DockerEngineState) -> None:
+    """Log which host capabilities are present, so skips are explainable.
+
+    Args:
+        docker_state: Outcome of the Host Compute Service interlock, which
+            decides whether the WHPX virtual machine gates can run at all.
+    """
     installed = _installed_ollama_models()
     _LOGGER.info(
         "host_native_capabilities",
@@ -412,6 +503,8 @@ def _log_capabilities() -> None:
         ollama=_ollama_reachable(),
         ollama_models=len(installed),
         ollama_local_models=sum(1 for name in installed if _is_local_model_name(name)),
+        docker_engine=docker_state.value,
+        hcs_clear=docker_state.host_is_clear,
     )
 
 
@@ -425,11 +518,19 @@ def run(repo_root: Path, extra_args: list[str] | None = None) -> int:
     Returns:
         int: The pytest process exit code (non-zero on any failure).
     """
-    print(elevation_skip_notice(elevated=is_elevated()), file=sys.stderr, flush=True)
+    elevated = is_elevated()
+    print(elevation_skip_notice(elevated=elevated), file=sys.stderr, flush=True)
+    # Before anything else, and before any test can reach a hypervisor: this
+    # pass boots real WHPX virtual machines, and ``just test`` runs it directly
+    # after the container leg, which leaves the Docker Windows engine live on
+    # the Host Compute Service. Clearing the engine first is what keeps the two
+    # from colliding; a host that will not clear leaves the VM gates to skip.
+    docker_state = _quiesce_docker_for_vm_gates(elevated=elevated)
     env = dict(os.environ)
     _configure_environment(env, repo_root)
     server = _provision_ollama()
-    _log_capabilities()
+    _log_capabilities(docker_state)
+    prepare_host_native_tmp_parent()
     argv = [sys.executable, "-m", "pytest", *build_pytest_argv(repo_root), *(extra_args or [])]
     _LOGGER.info("host_native_pytest_start", argv=argv[2:])
     try:
