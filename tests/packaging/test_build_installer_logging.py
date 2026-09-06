@@ -118,7 +118,13 @@ def test_build_log_strips_ansi_but_keeps_console_colour(tmp_path: Path) -> None:
     a real CSI colour sequence. The console copy must still contain the escape
     (so the terminal renders colour) while the file copy must not (so the log is
     readable in an editor). Dropping the ``-replace $AnsiPattern`` reddens the
-    file assertion.
+    file assertion; stripping the console path too reddens the console assertion.
+
+    The probe forces ``$PSStyle.OutputRendering = 'Ansi'`` so the console-colour
+    premise holds regardless of the outer environment. Otherwise an inherited
+    ``NO_COLOR`` (honoured per no-color.org) or a redirected-pipe default would
+    make ``pwsh`` strip the escape from every ``Write-Host`` line, failing the
+    console assertion for an environmental reason rather than a product defect.
 
     Args:
         tmp_path: Pytest-provided per-test temporary directory.
@@ -128,6 +134,7 @@ def test_build_log_strips_ansi_but_keeps_console_colour(tmp_path: Path) -> None:
         (
             "Set-StrictMode -Version Latest",
             "$ErrorActionPreference = 'Stop'",
+            "$PSStyle.OutputRendering = 'Ansi'",
             _ansi_pattern(),
             f"$LogPath = '{log}'",
             "Set-Content -LiteralPath $LogPath -Value '' -Encoding utf8 -NoNewline",
