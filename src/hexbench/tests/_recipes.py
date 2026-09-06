@@ -799,6 +799,10 @@ _RECIPES: Final[Mapping[str, Recipe]] = MappingProxyType({
     "byte_type_distribution": _constant(Target.SAMPLE),
     "can_redo": _constant(Target.SAMPLE),
     "can_undo": _constant(Target.SAMPLE),
+    "close": _noted(
+        Target.SAMPLE,
+        "Releases the backing file so its path can be rewritten; the document stays describable and a second close is idempotent.",
+    ),
     "compute_hash": _constant(Target.SAMPLE, algorithm=HASH_ALGORITHM),
     "compute_hash_custom_crc": _noted(
         Target.SAMPLE,
