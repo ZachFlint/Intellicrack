@@ -307,6 +307,7 @@ _ERR_INVALID_IPS: Final[str] = "invalid IPS patch header"
 _READ_BYTES_MAX_LENGTH: Final[int] = 1 << 20
 _AI_CONTEXT_BOOKMARK_LIMIT: Final[int] = 64
 _SEARCH_RESULTS_UNLIMITED: Final[int] = (1 << 31) - 1
+_BOOKMARK_SIDECAR_SUFFIX: Final[str] = ".icbm.json"
 
 _COPY_AS_FORMATS: Final[frozenset[str]] = frozenset(
     {
@@ -7591,6 +7592,79 @@ class HexEditorPatternMixin(HexEditorTemplateMixin):
         ]
 
 
+def bookmark_sidecar_path(target_path: Path) -> Path:
+    """Compute the per-file bookmark sidecar path for ``target_path``.
+
+    Args:
+        target_path: Path to the binary file whose bookmarks are persisted.
+
+    Returns:
+        Path: Sidecar path formed by appending ``.icbm.json`` to the
+            target file's full name (e.g. ``notepad.exe.icbm.json``),
+            stored alongside the target file.
+    """
+    return target_path.with_name(target_path.name + _BOOKMARK_SIDECAR_SUFFIX)
+
+
+def read_bookmark_sidecar(target_path: Path) -> list[dict[str, Any]]:
+    """Read persisted bookmarks for ``target_path`` from its JSON sidecar.
+
+    Args:
+        target_path: Path to the binary file whose bookmarks were persisted.
+
+    Returns:
+        list[dict[str, Any]]: Bookmark dicts with ``offset``, ``length``,
+            ``label``, and ``color`` keys. Empty list when no sidecar
+            exists or it could not be parsed into valid bookmark entries.
+    """
+    sidecar = bookmark_sidecar_path(target_path)
+    try:
+        raw = sidecar.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        _logger.warning("bookmark_sidecar_parse_failed", path=str(sidecar))
+        return []
+    if not isinstance(data, list):
+        _logger.warning("bookmark_sidecar_not_a_list", path=str(sidecar))
+        return []
+
+    entries: list[dict[str, Any]] = []
+    for entry in cast("list[object]", data):
+        if not isinstance(entry, dict):
+            continue
+        entry_map = cast("dict[str, Any]", entry)
+        try:
+            entries.append(
+                {
+                    "offset": int(cast("int", entry_map["offset"])),
+                    "length": int(cast("int", entry_map["length"])),
+                    "label": str(entry_map["label"]),
+                    "color": str(entry_map["color"]),
+                },
+            )
+        except (KeyError, TypeError, ValueError):
+            _logger.warning("bookmark_sidecar_entry_invalid", path=str(sidecar))
+    return entries
+
+
+def write_bookmark_sidecar(target_path: Path, bookmarks: list[dict[str, Any]]) -> None:
+    """Persist ``bookmarks`` for ``target_path`` to its JSON sidecar.
+
+    Args:
+        target_path: Path to the binary file whose bookmarks are persisted.
+        bookmarks: Bookmark dicts with ``offset``, ``length``, ``label``,
+            and ``color`` keys.
+    """
+    sidecar = bookmark_sidecar_path(target_path)
+    try:
+        sidecar.write_text(json.dumps(bookmarks, indent=2), encoding="utf-8")
+    except OSError:
+        _logger.warning("bookmark_sidecar_write_failed", path=str(sidecar))
+
+
 class HexEditorBookmarkMixin(HexEditorPatternMixin):
     """Bookmark and highlight rule management."""
 
@@ -7622,6 +7696,8 @@ class HexEditorBookmarkMixin(HexEditorPatternMixin):
 
         idx: int = self.document.add_bookmark(offset, length, label, color)
         _logger.debug("bookmark_added", offset=hex(offset), label=label, index=idx)
+        if self._state.target_path is not None:
+            write_bookmark_sidecar(self._state.target_path, await self.list_bookmarks())
         return idx
 
     async def remove_bookmark(self, index: int) -> bool:
@@ -7643,6 +7719,8 @@ class HexEditorBookmarkMixin(HexEditorPatternMixin):
 
         removed: bool = self.document.remove_bookmark(index)
         _logger.info("bookmark_removed", index=index, success=removed)
+        if removed and self._state.target_path is not None:
+            write_bookmark_sidecar(self._state.target_path, await self.list_bookmarks())
         return removed
 
     async def list_bookmarks(self) -> list[dict[str, Any]]:

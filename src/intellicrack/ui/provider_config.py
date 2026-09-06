@@ -166,6 +166,53 @@ def _get_source_colors() -> dict[str, QColor]:
     }
 
 
+def _restyle(widget: QWidget) -> None:
+    """Force a QSS re-evaluation after a dynamic property change.
+
+    Args:
+        widget: The widget whose style should be refreshed.
+    """
+    s = widget.style()
+    if s is not None:
+        s.unpolish(widget)
+        s.polish(widget)
+
+
+def _size_button_to_content(button: QPushButton) -> None:
+    """Give a button a minimum width equal to its own size hint.
+
+    Without this, a button packed two-per-row into a narrow column can be
+    squeezed below the width its label needs, and Qt centre-clips the text
+    instead of growing the column.
+
+    Args:
+        button: The push button to floor at its natural width.
+    """
+    button.setMinimumWidth(button.sizeHint().width())
+
+
+def _row_content_width(row: QHBoxLayout) -> int:
+    """Compute the width a row of buttons needs to show every label uncut.
+
+    Args:
+        row: The horizontal layout whose button items should be measured.
+
+    Returns:
+        int: The sum of each button's size-hint width plus the spacing
+        between them and the row's own left/right content margins.
+    """
+    widths = [
+        widget.sizeHint().width()
+        for i in range(row.count())
+        if (item := row.itemAt(i)) is not None and (widget := item.widget()) is not None
+    ]
+    if not widths:
+        return 0
+    margins = row.contentsMargins()
+    spacing = row.spacing() * (len(widths) - 1)
+    return sum(widths) + spacing + margins.left() + margins.right()
+
+
 if TYPE_CHECKING:
     from intellicrack.core.types import ModelInfo
     from intellicrack.providers.base import LLMProviderBase
@@ -1582,6 +1629,23 @@ class ProviderConfigDialog(QDialog):
         oauth_layout.addWidget(self._revoke_btn)
         left_layout.addLayout(oauth_layout)
 
+        action_buttons = (
+            self._set_active_btn,
+            self._refresh_status_btn,
+            self._refresh_creds_btn,
+            self._migrate_creds_btn,
+            self._create_env_btn,
+            self._discover_models_btn,
+            self._oauth_btn,
+            self._revoke_btn,
+        )
+        for action_btn in action_buttons:
+            _size_button_to_content(action_btn)
+
+        action_rows = (action_layout, cred_layout, advanced_layout, oauth_layout)
+        widest_row_width = max(_row_content_width(row) for row in action_rows)
+        left_panel.setMinimumWidth(max(_LIST_MIN_WIDTH, widest_row_width))
+
         self._settings_stack = QStackedWidget()
 
         splitter.addWidget(left_panel)
@@ -2803,6 +2867,7 @@ class ProviderSettingsWidget(QFrame):
         if check_windows_requirements is None:
             warnings_label.setText("Requirements check not available")
             warnings_label.setProperty("status", "idle")
+            _restyle(warnings_label)
             return
 
         try:
@@ -2811,14 +2876,17 @@ class ProviderSettingsWidget(QFrame):
             _logger.debug("requirements_check_failed", exc_info=True)
             warnings_label.setText("Failed to check requirements")
             warnings_label.setProperty("status", "error")
+            _restyle(warnings_label)
             return
 
         if all_met and not warnings:
             warnings_label.setText("All system requirements met")
             warnings_label.setProperty("status", "success")
+            _restyle(warnings_label)
         else:
             warnings_label.setText("\n".join(warnings))
             warnings_label.setProperty("status", "warning")
+            _restyle(warnings_label)
 
     def _on_show_device_info(self) -> None:
         """Handle show device info button click."""

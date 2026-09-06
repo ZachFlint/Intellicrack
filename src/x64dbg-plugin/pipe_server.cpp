@@ -4,11 +4,79 @@
  */
 
 #include "pipe_server.h"
+#include <sddl.h>
 #include <cstring>
 #include <cstdio>
 #include <sstream>
+#include <vector>
 
 namespace intellicrack {
+
+namespace {
+
+/**
+ * @brief Build a security descriptor granting pipe access to the current user
+ *        and Local System only.
+ *
+ * The pipe drives full write access to the debuggee, so its DACL must not be
+ * the permissive default that CreateNamedPipe applies when no
+ * SECURITY_ATTRIBUTES is supplied. This queries the current process token for
+ * the owning user's SID and constructs an SDDL descriptor granting GENERIC_ALL
+ * to that SID and to Local System (SY), with a protected DACL so no inherited
+ * ACE can widen it.
+ *
+ * @param out_sd Receives a LocalAlloc'd security descriptor on success; the
+ *               caller must LocalFree it once the pipe has been created.
+ * @return true and a valid descriptor on success; false (with @p out_sd left
+ *         null) when the token or SID could not be resolved, in which case the
+ *         caller should still apply the first-instance/reject-remote flags.
+ */
+bool build_pipe_security_descriptor(PSECURITY_DESCRIPTOR& out_sd) {
+    out_sd = nullptr;
+
+    HANDLE token = nullptr;
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+        return false;
+    }
+
+    DWORD needed = 0;
+    GetTokenInformation(token, TokenUser, nullptr, 0, &needed);
+    if (needed == 0) {
+        CloseHandle(token);
+        return false;
+    }
+
+    std::vector<char> buffer(needed);
+    if (!GetTokenInformation(token, TokenUser, buffer.data(), needed, &needed)) {
+        CloseHandle(token);
+        return false;
+    }
+    CloseHandle(token);
+
+    auto* token_user = reinterpret_cast<TOKEN_USER*>(buffer.data());
+    LPSTR sid_str = nullptr;
+    if (!ConvertSidToStringSidA(token_user->User.Sid, &sid_str)) {
+        return false;
+    }
+
+    // D:P               protected DACL (no inheritance widens it)
+    // (A;;GA;;;<user>)  GENERIC_ALL for the owning user
+    // (A;;GA;;;SY)      GENERIC_ALL for Local System
+    std::string sddl = "D:P(A;;GA;;;";
+    sddl += sid_str;
+    sddl += ")(A;;GA;;;SY)";
+    LocalFree(sid_str);
+
+    PSECURITY_DESCRIPTOR sd = nullptr;
+    if (!ConvertStringSecurityDescriptorToSecurityDescriptorA(sddl.c_str(), SDDL_REVISION_1, &sd, nullptr)) {
+        return false;
+    }
+
+    out_sd = sd;
+    return true;
+}
+
+}  // namespace
 
 PipeServer g_pipe_server;
 
@@ -121,16 +189,31 @@ void PipeServer::server_loop() {
 bool PipeServer::create_pipe_instance() {
     std::lock_guard<std::mutex> lock(m_pipe_mutex);
 
-    m_pipe_handle = CreateNamedPipeA(
-        PIPE_NAME,
-        PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
-        PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-        1,
-        PIPE_BUFFER_SIZE,
-        PIPE_BUFFER_SIZE,
-        0,
-        nullptr
-    );
+    // Restrict the endpoint before it exists. The name is a fixed, well-known
+    // constant that any local process could otherwise pre-create (squatting on
+    // the target-control channel) or connect to (driving writes into the
+    // debuggee). FILE_FLAG_FIRST_PIPE_INSTANCE makes creation fail if the name
+    // is already taken, PIPE_REJECT_REMOTE_CLIENTS refuses over-the-network
+    // clients, and the DACL confines connections to the current user and Local
+    // System.
+    PSECURITY_DESCRIPTOR security_descriptor = nullptr;
+    SECURITY_ATTRIBUTES security_attributes = {};
+    LPSECURITY_ATTRIBUTES security_attributes_ptr = nullptr;
+    if (build_pipe_security_descriptor(security_descriptor)) {
+        security_attributes.nLength = sizeof(security_attributes);
+        security_attributes.lpSecurityDescriptor = security_descriptor;
+        security_attributes.bInheritHandle = FALSE;
+        security_attributes_ptr = &security_attributes;
+    }
+
+    m_pipe_handle =
+        CreateNamedPipeA(PIPE_NAME, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE,
+                         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS, 1,
+                         PIPE_BUFFER_SIZE, PIPE_BUFFER_SIZE, 0, security_attributes_ptr);
+
+    if (security_descriptor) {
+        LocalFree(security_descriptor);
+    }
 
     return m_pipe_handle != INVALID_HANDLE_VALUE;
 }
@@ -149,13 +232,20 @@ bool PipeServer::wait_for_client() {
             HANDLE wait_handles[2] = { overlapped.hEvent, m_stop_event };
             DWORD wait_result = WaitForMultipleObjects(2, wait_handles, FALSE, INFINITE);
 
-            CloseHandle(overlapped.hEvent);
-
-            if (wait_result == WAIT_OBJECT_0 + 1) {
+            if (wait_result != WAIT_OBJECT_0) {
+                // Stop signalled (or the wait failed) while the connect was
+                // still pending: cancel and drain it before the stack
+                // OVERLAPPED/event are destroyed, so a late connect completion
+                // cannot reference freed memory.
+                CancelIo(m_pipe_handle);
+                DWORD drained = 0;
+                GetOverlappedResult(m_pipe_handle, &overlapped, &drained, TRUE);
+                CloseHandle(overlapped.hEvent);
                 return false;
             }
 
-            return wait_result == WAIT_OBJECT_0;
+            CloseHandle(overlapped.hEvent);
+            return true;
         } else if (error == ERROR_PIPE_CONNECTED) {
             CloseHandle(overlapped.hEvent);
             return true;
@@ -265,7 +355,11 @@ bool PipeServer::write_data_locked(const char* data, uint32_t length) {
                 return bytes_written == length;
             }
 
+            // Timeout or stop: cancel and drain the pending write before the
+            // stack OVERLAPPED/event are destroyed, so the kernel is finished
+            // with them before they leave scope (see read_data).
             CancelIo(m_pipe_handle);
+            GetOverlappedResult(m_pipe_handle, &overlapped, &bytes_written, TRUE);
             CloseHandle(overlapped.hEvent);
             return false;
         }
@@ -310,7 +404,16 @@ bool PipeServer::read_data(char* buffer, uint32_t length, DWORD timeout_ms) {
                 DWORD wait_result = WaitForMultipleObjects(2, wait_handles, FALSE, timeout_ms);
 
                 if (wait_result != WAIT_OBJECT_0) {
+                    // Cancel the pending read and drain its completion before
+                    // the stack OVERLAPPED and its event go out of scope. A
+                    // bare CancelIo only *requests* cancellation; the kernel
+                    // may still be writing into buffer/overlapped when this
+                    // frame returns. GetOverlappedResult(..., TRUE) blocks
+                    // until the I/O has truly finished (with or without the
+                    // cancel), so a late completion cannot touch freed memory.
                     CancelIo(m_pipe_handle);
+                    DWORD drained = 0;
+                    GetOverlappedResult(m_pipe_handle, &overlapped, &drained, TRUE);
                     CloseHandle(overlapped.hEvent);
                     return false;
                 }
@@ -456,10 +559,21 @@ bool PipeServer::parse_message(const std::string& json, PipeMessage& msg) {
         size_t end = pos;
         while (end < json.length() && json[end] >= '0' && json[end] <= '9') end++;
 
-        if (end > pos) {
-            return static_cast<uint32_t>(std::stoul(json.substr(pos, end - pos)));
+        // Accumulate manually and saturate at UINT32_MAX rather than calling
+        // std::stoul, which throws std::out_of_range on an over-long run of
+        // digits (e.g. a 20-digit "id"). This runs on the "id" of *every*
+        // inbound frame, before any handler and outside the dispatch
+        // exception firewall, so a throw here would unwind straight out of
+        // the server thread proc and terminate the x64dbg process.
+        uint64_t value = 0;
+        for (size_t i = pos; i < end; i++) {
+            value = (value * 10) + static_cast<uint64_t>(json[i] - '0');
+            if (value > 0xFFFFFFFFULL) {
+                value = 0xFFFFFFFFULL;
+                break;
+            }
         }
-        return 0;
+        return static_cast<uint32_t>(value);
     };
 
     auto find_object = [&json](const char* key) -> std::string {

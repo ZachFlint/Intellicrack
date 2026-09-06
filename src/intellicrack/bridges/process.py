@@ -211,11 +211,12 @@ _ERR_CONTEXT_GET_FAILED = "GetThreadContext failed"
 _ERR_CONTEXT_SET_FAILED = "SetThreadContext failed"
 _ERR_SCM_OPEN_FAILED = "service control manager open failed"
 _ERR_PIPE_CONNECT_FAILED = "pipe connect failed"
-_ERR_DEVICE_OPEN_FAILED = "device open failed"
+_ERR_DEVICE_OPEN_FAILED = "Device open failed"
 _ERR_IOCTL_FAILED = "DeviceIoControl failed"
 _ERR_PIPE_CLOSE_FAILED = "pipe close failed"
 _ERR_DEVICE_CLOSE_FAILED = "device close failed"
 _ERR_INVALID_HEX = "input_data is not a valid hex string"
+_WIN32_ERROR_ACCESS_DENIED = 5
 
 _MAX_MEMORY_ADDRESS = 0x7FFFFFFFFFFF
 _WILDCARD_PATTERNS = {"??", "?"}
@@ -8742,6 +8743,26 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
     # Driver communication
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _describe_win32_device_error(failure_message: str, last_error: int) -> str:
+        """Build a ``ToolError`` message that names the real Win32 error code.
+
+        Args:
+            failure_message: Base failure description (e.g.
+                :data:`_ERR_DEVICE_OPEN_FAILED`).
+            last_error: The Win32 error code reported by ``GetLastError``
+                immediately after the failing call.
+
+        Returns:
+            str: ``"<failure_message> (Win32 error <last_error>)"``, with
+                an appended hint to retry from an elevated process when
+                ``last_error`` is ``ERROR_ACCESS_DENIED`` (5).
+        """
+        message = f"{failure_message} (Win32 error {last_error})"
+        if last_error == _WIN32_ERROR_ACCESS_DENIED:
+            message += ": access is denied. Retry from an elevated (Administrator) process."
+        return message
+
     async def device_open(self, device_path: str) -> int:
         r"""Open a device driver path for IOCTL communication.
 
@@ -8752,7 +8773,9 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
             int: Device handle value.
 
         Raises:
-            ToolError: If open fails.
+            ToolError: If open fails. The message and ``error_code``
+                carry the real Win32 error reported by ``GetLastError``
+                immediately after the failing ``CreateFileW`` call.
         """
         _logger.debug("process_device_open_started", device_path=device_path)
         if self._kernel32 is None:
@@ -8760,6 +8783,8 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
             raise ToolError(_ERR_KERNEL32_NA)
 
         self._kernel32.CreateFileW.restype = wintypes.HANDLE
+        self._kernel32.GetLastError.argtypes = []
+        self._kernel32.GetLastError.restype = wintypes.DWORD
         handle: int = self._kernel32.CreateFileW(
             device_path,
             0xC0000000,
@@ -8771,8 +8796,16 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         )
 
         if handle in {INVALID_HANDLE_VALUE, 0}:
-            _logger.error("device_open_failed", device_path=device_path)
-            raise ToolError(_ERR_DEVICE_OPEN_FAILED)
+            last_error: int = int(self._kernel32.GetLastError())
+            _logger.error(
+                "device_open_failed",
+                device_path=device_path,
+                last_error=last_error,
+            )
+            raise ToolError(
+                self._describe_win32_device_error(_ERR_DEVICE_OPEN_FAILED, last_error),
+                error_code=last_error,
+            )
 
         self._device_handles[handle] = device_path
         _logger.info("device_opened", device_path=device_path, handle=handle)
@@ -8799,7 +8832,10 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
 
         Raises:
             ValueError: If input_data is not a valid hex string.
-            ToolError: If kernel32 is unavailable or IOCTL fails.
+            ToolError: If kernel32 is unavailable or IOCTL fails. The
+                message and ``error_code`` carry the real Win32 error
+                reported by ``GetLastError`` immediately after the
+                failing ``DeviceIoControl`` call.
         """
         _logger.info(
             "process_device_ioctl_started",
@@ -8824,6 +8860,8 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         input_buf: bytes | None = input_bytes
         input_len: int = len(input_bytes) if input_bytes is not None else 0
 
+        self._kernel32.GetLastError.argtypes = []
+        self._kernel32.GetLastError.restype = wintypes.DWORD
         if not self._kernel32.DeviceIoControl(
             handle,
             ioctl_code,
@@ -8834,8 +8872,17 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
             ctypes.byref(bytes_returned),
             None,
         ):
-            _logger.error("device_ioctl_failed", handle=handle, ioctl_code=hex(ioctl_code))
-            raise ToolError(_ERR_IOCTL_FAILED)
+            last_error: int = int(self._kernel32.GetLastError())
+            _logger.error(
+                "device_ioctl_failed",
+                handle=handle,
+                ioctl_code=hex(ioctl_code),
+                last_error=last_error,
+            )
+            raise ToolError(
+                self._describe_win32_device_error(_ERR_IOCTL_FAILED, last_error),
+                error_code=last_error,
+            )
 
         return output_buffer.raw[: bytes_returned.value].hex()
 
@@ -8850,15 +8897,24 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
 
         Raises:
             ToolError: If kernel32 is unavailable or CloseHandle fails.
+                The message and ``error_code`` carry the real Win32
+                error reported by ``GetLastError`` immediately after
+                the failing ``CloseHandle`` call.
         """
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="device_close")
             raise ToolError(_ERR_KERNEL32_NA)
         self._kernel32.CloseHandle.restype = wintypes.BOOL
+        self._kernel32.GetLastError.argtypes = []
+        self._kernel32.GetLastError.restype = wintypes.DWORD
         result: int = self._kernel32.CloseHandle(handle)
         if not result:
-            _logger.error("device_close_failed", handle=handle)
-            raise ToolError(_ERR_DEVICE_CLOSE_FAILED)
+            last_error: int = int(self._kernel32.GetLastError())
+            _logger.error("device_close_failed", handle=handle, last_error=last_error)
+            raise ToolError(
+                self._describe_win32_device_error(_ERR_DEVICE_CLOSE_FAILED, last_error),
+                error_code=last_error,
+            )
         self._device_handles.pop(handle, None)
         return True
 

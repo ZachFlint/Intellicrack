@@ -57,7 +57,7 @@ impl Bookmark {
     }
 }
 
-/// Everything one open document owns, with no synchronisation of its own.
+/// Everything one open document owns, with no synchronization of its own.
 ///
 /// Only [`HexDocument`] may hold one of these, and only behind its lock, so the
 /// methods here are free to take `&mut self` exactly as they did when this was
@@ -79,8 +79,8 @@ pub struct DocumentState {
 /// Before that change, the 28 mutating methods forced `PyO3` to take a `RefCell`
 /// borrow for the duration of the call, and because the long analyses hold that
 /// borrow across `Python::detach`, any second thread touching the same document
-/// got `RuntimeError: Already borrowed`. Callers worked around it by serialising
-/// every call behind a lock of their own, which also serialised the read-only
+/// got `RuntimeError: Already borrowed`. Callers worked around it by serializing
+/// every call behind a lock of their own, which also serialized the read-only
 /// analyses that could safely have run together.
 ///
 /// # Locking
@@ -1175,8 +1175,13 @@ impl DocumentState {
 
     fn file_offset_to_va(&self, offset: usize) -> Option<u64> {
         for &(file_off, va, length) in &self.va_mappings {
-            if offset >= file_off && offset < file_off + length {
-                return Some(va + (offset - file_off) as u64);
+            // Compare via subtraction (never `file_off + length`, which wraps
+            // when a caller registered a mapping near `usize::MAX`), and add
+            // the delta with a checked add so a VA past `u64::MAX` yields
+            // `None` instead of wrapping.
+            if offset >= file_off && offset - file_off < length {
+                let delta = u64::try_from(offset - file_off).ok()?;
+                return va.checked_add(delta);
             }
         }
         None
@@ -1184,10 +1189,13 @@ impl DocumentState {
 
     fn va_to_file_offset(&self, va: u64) -> Option<usize> {
         for &(file_off, base_va, length) in &self.va_mappings {
-            let end_va = base_va + length as u64;
-            if va >= base_va && va < end_va {
+            // Compare via subtraction (never `base_va + length`, which wraps
+            // when a caller registered a mapping near `u64::MAX`), and add the
+            // delta with a checked add so a file offset past `usize::MAX`
+            // yields `None` instead of wrapping.
+            if va >= base_va && va - base_va < length as u64 {
                 let delta = usize::try_from(va - base_va).ok()?;
-                return Some(file_off + delta);
+                return file_off.checked_add(delta);
             }
         }
         None
@@ -1301,6 +1309,10 @@ impl DocumentState {
             return encoder(&[], &target)
                 .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()));
         }
+        // SAFETY: the source file is mapped read-only and its bytes are used
+        // only as the `&[u8]` slice handed to `encoder`; the mapping is never
+        // aliased into a `&mut [u8]` and is dropped when this function returns,
+        // so no writer can change the bytes under the slice during the encode.
         let mmap = unsafe { memmap2::Mmap::map(&file) }
             .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
         encoder(&mmap[..], &target)
@@ -2067,5 +2079,56 @@ mod tests {
              applied, not the total record count parsed from the file"
         );
         assert_eq!(doc.read(0, 1).unwrap(), vec![0x58]);
+    }
+
+    /// F-0077 regression: `file_offset_to_va` computed `file_off + length`
+    /// while evaluating the range test. `add_va_mapping` takes caller-supplied
+    /// values with no bounds check, so a mapping at `usize::MAX` made that sum
+    /// wrap — panicking in a debug build (arithmetic overflow) and, worse,
+    /// silently matching the wrong offsets in release. The lookup must instead
+    /// resolve via subtraction and never panic.
+    ///
+    /// Mutation caught: reverting to `offset < file_off + length` panics on
+    /// this input under the debug overflow checks `cargo test` runs with, so
+    /// the `is_none()` assertion is never reached.
+    #[test]
+    fn test_file_offset_to_va_rejects_wrapping_mapping_without_panic() {
+        let mut doc = DocumentState::open_bytes(b"ABCD");
+        doc.add_va_mapping(usize::MAX, 0x1000, 1);
+        // The only offset that satisfies `offset >= usize::MAX` is `usize::MAX`
+        // itself; the old `file_off + length` sum overflowed while testing it.
+        // It is genuinely the first byte of this one-byte mapping, so it
+        // resolves to the base VA — the fix must return that, not panic.
+        assert_eq!(doc.file_offset_to_va(usize::MAX), Some(0x1000));
+
+        // A well-formed mapping still resolves exactly.
+        let mut ok = DocumentState::open_bytes(b"ABCD");
+        ok.add_va_mapping(0, 0x40_0000, 4);
+        assert_eq!(ok.file_offset_to_va(2), Some(0x40_0002));
+    }
+
+    /// F-0078 regression: `va_to_file_offset` computed `base_va + length`
+    /// unconditionally at the top of the loop, so a mapping whose
+    /// `virtual_address` sat near `u64::MAX` overflowed that sum for *every*
+    /// lookup — a debug-build panic, a release-build wrong answer. The lookup
+    /// must resolve via subtraction and a checked file-offset add.
+    ///
+    /// Mutation caught: reverting to `let end_va = base_va + length as u64;`
+    /// panics on this input under debug overflow checks, so the assertions are
+    /// never reached.
+    #[test]
+    fn test_va_to_file_offset_rejects_wrapping_mapping_without_panic() {
+        let mut doc = DocumentState::open_bytes(b"ABCD");
+        doc.add_va_mapping(0, u64::MAX, 4);
+        // Any lookup used to overflow `base_va + length`; a VA below base_va
+        // must simply miss.
+        assert_eq!(doc.va_to_file_offset(0), None);
+        // The top-of-range VA is in-range and resolves to its file offset.
+        assert_eq!(doc.va_to_file_offset(u64::MAX), Some(0));
+
+        // A well-formed mapping still resolves exactly.
+        let mut ok = DocumentState::open_bytes(b"ABCD");
+        ok.add_va_mapping(0x10, 0x40_0000, 4);
+        assert_eq!(ok.va_to_file_offset(0x40_0002), Some(0x12));
     }
 }

@@ -27,7 +27,7 @@ from typing import Final
 
 import hexbench
 from hexbench.dependencies import Dependency, declared_distributions, imported_names, scan, source_files, third_party
-from hexbench.tests._support import Assertions
+from hexbench.tests._support import Assertions, scratch_directory
 from hexbench.window import TOOLKIT_MODULE
 
 
@@ -38,6 +38,35 @@ _ENGINE: Final = "intellicrack-hexcore"
 _FREEZER: Final = "pyinstaller"
 _TOOLKIT_DISTRIBUTION: Final = "pywebview"
 _SPEC_NAME: Final = "hexbench.spec"
+_MANIFEST_NAME: Final = "pyproject.toml"
+
+_SYNTHETIC_MANIFEST: Final = """
+[tool.pixi]
+dependencies.python = "3.13.*"
+dependencies.conda-only-name = "*"
+pypi-dependencies.top-level-name = ">=1, <2"
+
+[tool.pixi.feature.build.pypi-dependencies]
+Feature_Only_Name = ">=6, <7"
+
+[tool.pixi.feature.test.dependencies]
+feature-conda-name = "*"
+"""
+
+
+def _declared_in(body: str) -> set[str]:
+    """Read the declarations out of a manifest written for one test.
+
+    Args:
+        body: The manifest text to write and then scan.
+
+    Returns:
+        set[str]: The distributions the scanner reports as declared.
+    """
+    with scratch_directory() as directory:
+        manifest = directory / _MANIFEST_NAME
+        manifest.write_text(body, encoding="utf-8")
+        return declared_distributions(manifest)
 
 
 def _find(dependencies: tuple[Dependency, ...], distribution: str) -> Dependency | None:
@@ -142,6 +171,26 @@ class SourceReadingTests(Assertions, unittest.TestCase):
         declared = declared_distributions(_MANIFEST)
         self.contains(_TOOLKIT_DISTRIBUTION, sorted(declared), "the distributions the manifest declares")
         self.contains(_FREEZER, sorted(declared), "the distributions the manifest declares")
+
+
+class ManifestReadingTests(Assertions, unittest.TestCase):
+    """Every table pixi resolves from an index counts as a declaration."""
+
+    declared = _declared_in(_SYNTHETIC_MANIFEST)
+
+    def test_a_top_level_declaration_is_read(self) -> None:
+        """The table outside any feature is still read."""
+        self.contains("top-level-name", sorted(self.declared), "the declarations found in the manifest")
+
+    def test_a_feature_declaration_is_read(self) -> None:
+        """A name declared only under a feature is not reported as a gap."""
+        self.contains("feature-only-name", sorted(self.declared), "the declarations found in the manifest")
+
+    def test_conda_dependencies_are_not_declarations(self) -> None:
+        """Only the index tables count, so conda packages stay out."""
+        for name in ("conda-only-name", "feature-conda-name"):
+            with self.subTest(distribution=name):
+                self.absent(name, sorted(self.declared), "the declarations found in the manifest")
 
 
 if __name__ == "__main__":

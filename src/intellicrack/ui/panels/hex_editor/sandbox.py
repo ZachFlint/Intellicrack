@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
@@ -115,9 +116,7 @@ class SandboxMixin:
 
         self._sandbox_output = QPlainTextEdit()
         self._sandbox_output.setReadOnly(True)
-        out_font = self._sandbox_output.font()
-        out_font.setFamily("Consolas")
-        out_font.setPointSize(9)
+        out_font = FontManager.get_instance().get_code_font(9)
         self._sandbox_output.setFont(out_font)
         layout.addWidget(self._sandbox_output)
 

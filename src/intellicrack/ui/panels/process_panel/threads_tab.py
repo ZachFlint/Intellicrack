@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.base_panel import compute_toolbar_height
 
 
 if TYPE_CHECKING:
@@ -39,7 +40,6 @@ _logger = get_logger(__name__)
 
 _MARGIN: Final[int] = 0
 _SPACING: Final[int] = 4
-_TOOLBAR_HEIGHT: Final[int] = 32
 _AUTO_REFRESH_INTERVAL_MS: Final[int] = 3000
 _SEH_COLUMN_COUNT: Final[int] = 6
 _SEH_NO_HANDLERS_NOTE: Final[str] = (
@@ -158,7 +158,7 @@ class ThreadsTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         refresh_btn = QPushButton("Refresh")
         refresh_btn.setObjectName("tool_button")
@@ -233,7 +233,7 @@ class ThreadsTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         toolbar.addWidget(QLabel("Thread:"))
         self._reg_combo = QComboBox()
@@ -277,7 +277,7 @@ class ThreadsTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         toolbar.addWidget(QLabel("Thread:"))
         self._stack_combo = QComboBox()
@@ -314,7 +314,7 @@ class ThreadsTab(QWidget):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
 
         toolbar.addWidget(QLabel("Thread:"))
         self._seh_combo = QComboBox()
@@ -351,7 +351,7 @@ class ThreadsTab(QWidget):
 
         fiber_toolbar = QToolBar()
         fiber_toolbar.setMovable(False)
-        fiber_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        fiber_toolbar.setFixedHeight(compute_toolbar_height(self))
 
         fiber_toolbar.addWidget(QLabel("Thread:"))
         self._fiber_combo = QComboBox()
@@ -374,7 +374,7 @@ class ThreadsTab(QWidget):
 
         tls_toolbar = QToolBar()
         tls_toolbar.setMovable(False)
-        tls_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        tls_toolbar.setFixedHeight(compute_toolbar_height(self))
 
         tls_toolbar.addWidget(QLabel("Thread:"))
         self._tls_thread_combo = QComboBox()

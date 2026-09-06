@@ -52,11 +52,21 @@ __all__ = [
     "WebviewWindow",
     "desktop_size",
     "fit_to_desktop",
+    "frozen_toolkit_submodule",
     "load_toolkit",
     "run_window",
 ]
 
 TOOLKIT_MODULE: Final = "webview"
+
+_FOREIGN_PLATFORMS: Final = frozenset(
+    {
+        f"{TOOLKIT_MODULE}.platforms.android",
+        f"{TOOLKIT_MODULE}.platforms.cocoa",
+        f"{TOOLKIT_MODULE}.platforms.gtk",
+        f"{TOOLKIT_MODULE}.platforms.qt",
+    },
+)
 
 DEFAULT_TITLE: Final = "Hexbench"
 DEFAULT_WIDTH: Final = 1700
@@ -138,6 +148,32 @@ def load_toolkit() -> Webview:
         editor uses.
     """
     return cast("Webview", importlib.import_module(TOOLKIT_MODULE))
+
+
+def frozen_toolkit_submodule(name: str) -> bool:
+    """Decide whether a toolkit submodule belongs in the Windows frozen build.
+
+    The build description collects the toolkit's submodules so the freezer,
+    which cannot see the ``importlib`` import in :func:`load_toolkit`, carries
+    them in. The toolkit ships one backend package per operating system, and
+    collecting the foreign ones imports them: the Android backend imports a
+    module that exists only in a python-for-android build and the desktop
+    backends for other systems import their own missing toolkits, so a Windows
+    build that walks them prints an import warning for each. This predicate
+    filters those backends out of the walk before it reaches the import, which
+    both removes the warnings and keeps the frozen program from carrying code
+    for systems it will never run on. It matches the backend packages exactly
+    and every module beneath them, so a backend split into submodules stays
+    excluded whole.
+
+    Args:
+        name: Fully qualified name of a toolkit submodule, such as
+            ``webview.platforms.winforms``.
+
+    Returns:
+        bool: Whether the submodule should be collected into the build.
+    """
+    return name not in _FOREIGN_PLATFORMS and not any(name.startswith(f"{platform}.") for platform in _FOREIGN_PLATFORMS)
 
 
 def desktop_size() -> tuple[int, int] | None:

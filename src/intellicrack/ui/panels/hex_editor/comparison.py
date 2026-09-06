@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine, worker_is_running
 
 
 _logger = get_logger(__name__)
@@ -226,7 +226,7 @@ class ComparisonMixin:
         if not compare_path:
             return
 
-        if self._diff_worker is not None and self._diff_worker.isRunning():
+        if worker_is_running(self._diff_worker):
             return
 
         self._cleanup_diff_temp()

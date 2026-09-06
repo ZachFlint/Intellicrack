@@ -10,10 +10,10 @@ Provides common layout scaffolding, toolbar construction, async bridge integrati
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, NamedTuple
+from typing import TYPE_CHECKING, Final, NamedTuple, override
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QAction
+from PyQt6.QtCore import QEvent, QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QAction, QFontMetrics
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -44,11 +44,59 @@ _logger = get_logger(__name__)
 
 _BASE_MARGIN: Final[int] = 4
 _BASE_SPACING: Final[int] = 4
-_TOOLBAR_HEIGHT: Final[int] = 32
 _MIN_PANEL_WIDTH: Final[int] = 200
 _MIN_PANEL_HEIGHT: Final[int] = 150
 _CONTROL_SCROLL_MIN_HEIGHT: Final[int] = 88
 _CONTROL_ROW_SCROLLBAR_ALLOWANCE: Final[int] = 16
+
+# Derived from the styled QPushButton/QToolBar rules in theme_manager.py:
+# QPushButton { padding: 6px 16px; min-height: 24px; } and
+# QToolBar { padding: 4px; }. A fixed toolbar height smaller than this clips
+# the bottom of every styled button placed in it (D38/D08/D03).
+_BUTTON_MIN_CONTENT_HEIGHT: Final[int] = 24
+_BUTTON_VERTICAL_PADDING: Final[int] = 12
+_TOOLBAR_CHROME_PADDING: Final[int] = 8
+# Derived from the styled QLineEdit rule: QLineEdit { padding: 6px 8px; }.
+_LINE_EDIT_VERTICAL_PADDING: Final[int] = 12
+
+
+def compute_toolbar_height(widget: QWidget) -> int:
+    """Derive the toolbar height needed so styled buttons are not clipped.
+
+    Combines ``widget``'s current font metrics (so larger fonts or DPI/
+    accessibility scaling grow the toolbar) with the styled QPushButton's
+    minimum content height and vertical padding, plus the toolbar's own
+    chrome padding, all pulled from the shared stylesheet rules in
+    :mod:`intellicrack.ui.resources.theme_manager` rather than a
+    hardcoded magic number. Shared by :class:`AnalysisPanelBase` and
+    :class:`intellicrack.ui.app.MainWindow` so both toolbars use one
+    derivation (D38/D08/D03).
+
+    Args:
+        widget: The widget whose font metrics anchor the computation
+            (typically the toolbar's owning panel or window).
+
+    Returns:
+        int: The toolbar height, in pixels, that fits a styled button
+        without clipping its bottom edge.
+    """
+    content_height = max(QFontMetrics(widget.font()).height(), _BUTTON_MIN_CONTENT_HEIGHT)
+    return content_height + _BUTTON_VERTICAL_PADDING + _TOOLBAR_CHROME_PADDING
+
+
+def compute_control_min_height(widget: QWidget) -> int:
+    """Derive the minimum height for a toolbar line edit so glyphs are not clipped.
+
+    Args:
+        widget: The widget whose font metrics anchor the computation
+            (typically the toolbar hosting the line edit).
+
+    Returns:
+        int: The minimum line-edit height, in pixels, that fits its text
+        and the styled QLineEdit's vertical padding without clipping.
+    """
+    content_height = max(QFontMetrics(widget.font()).height(), _BUTTON_MIN_CONTENT_HEIGHT)
+    return content_height + _LINE_EDIT_VERTICAL_PADDING
 
 
 def make_scrollable(
@@ -124,6 +172,31 @@ def make_control_row(row: QHBoxLayout) -> QScrollArea:
     return scroll
 
 
+class _ContentScrollArea(QScrollArea):
+    """A resizable scroll area whose minimum size hint tracks its content's width, not its height.
+
+    A plain :class:`QScrollArea` reports a small, content-independent minimum size hint on both axes, which is exactly what makes it absorb
+    tall content instead of clipping it (D28) -- but wrapping a panel's *entire* content in one would also silence the width demand that
+    :meth:`AnalysisPanelBase._wrap_content`'s callers rely on elsewhere (a docked tab's ``minimumSizeHint`` protects it from being squeezed
+    narrower than its controls can render). This subclass keeps that width signal flowing through to :meth:`minimumSizeHint` while still
+    reporting a small, fixed minimum height so the panel can shrink vertically behind a scrollbar instead of being pinned to the content's
+    full height.
+    """
+
+    @override
+    def minimumSizeHint(self) -> QSize:
+        """Report the wrapped content's minimum width with a small fixed height.
+
+        Returns:
+            QSize: ``(content.minimumSizeHint().width(), _CONTROL_SCROLL_MIN_HEIGHT)``,
+            or the base class's hint when no content widget is set.
+        """
+        content = self.widget()
+        if content is None:
+            return super().minimumSizeHint()
+        return QSize(content.minimumSizeHint().width(), _CONTROL_SCROLL_MIN_HEIGHT)
+
+
 class ToolMenuEntry(NamedTuple):
     """A single entry in a grouped toolbar dropdown menu.
 
@@ -166,6 +239,7 @@ class AnalysisPanelBase(QWidget):
         """
         super().__init__(parent)
         self.status_label: QLabel | None = None
+        self._toolbar: QToolBar | None = None
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -175,7 +249,37 @@ class AnalysisPanelBase(QWidget):
         layout.setContentsMargins(_BASE_MARGIN, _BASE_MARGIN, _BASE_MARGIN, _BASE_MARGIN)
         layout.setSpacing(_BASE_SPACING)
         layout.addWidget(self._build_toolbar())
-        layout.addWidget(self._create_content())
+        layout.addWidget(self._wrap_content(self._create_content()))
+
+    @staticmethod
+    def _wrap_content(content: QWidget) -> QScrollArea:
+        """Wrap the panel's content widget in a vertically scrollable viewport.
+
+        A docked analysis tab's content is often taller than the primary
+        monitor's usable height (dense forms, stacked control clusters,
+        multi-row tables). Hosting it in a resizable scroll area means the
+        content still fills the available space exactly as before when
+        there is room, and only grows a scrollbar -- instead of clipping --
+        when the panel is shorter than the content needs (D28). Uses
+        :class:`_ContentScrollArea` rather than a plain ``QScrollArea`` so the
+        panel's own ``minimumSizeHint`` keeps reporting ``content``'s real
+        minimum width -- the signal :meth:`_sync_left_panel_min_width` in
+        ``intellicrack.ui.tools`` relies on to keep a docked tab from being
+        squeezed narrower than its controls can render (D02).
+
+        Args:
+            content: The content widget returned by ``_create_content``.
+
+        Returns:
+            QScrollArea: A frameless, resizable scroll area wrapping ``content``.
+        """
+        scroll = _ContentScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setWidget(content)
+        return scroll
 
     def _build_toolbar(self) -> QToolBar:
         """Create and configure the panel toolbar.
@@ -184,15 +288,31 @@ class AnalysisPanelBase(QWidget):
         show every control, the clipped buttons remain reachable through a
         populated overflow popup instead of Qt's built-in popup, which renders
         empty for the button widgets these panels add via ``addWidget``.
+        The height is derived from font metrics via :func:`compute_toolbar_height`
+        rather than a fixed constant, so styled buttons are never clipped
+        (D38/D08/D03), and is re-derived in :meth:`changeEvent` when the
+        panel's font changes.
 
         Returns:
             QToolBar: Toolbar populated by ``_populate_toolbar``.
         """
         toolbar = OverflowToolBar("Panel Tools", self)
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        toolbar.setFixedHeight(compute_toolbar_height(self))
+        self._toolbar = toolbar
         self._populate_toolbar(toolbar)
         return toolbar
+
+    @override
+    def changeEvent(self, a0: QEvent | None) -> None:
+        """Re-derive the toolbar height when the panel's font changes.
+
+        Args:
+            a0: The change event.
+        """
+        super().changeEvent(a0)
+        if a0 is not None and a0.type() == QEvent.Type.FontChange and self._toolbar is not None:
+            self._toolbar.setFixedHeight(compute_toolbar_height(self))
 
     def _populate_toolbar(self, _toolbar: QToolBar) -> None:
         """Add panel-specific controls to the toolbar.
@@ -334,6 +454,7 @@ class AnalysisPanelBase(QWidget):
         line_edit = QLineEdit()
         line_edit.setPlaceholderText(hint_text)
         line_edit.setMaximumWidth(max_width)
+        line_edit.setMinimumHeight(compute_control_min_height(toolbar))
         toolbar.addWidget(line_edit)
         return line_edit
 

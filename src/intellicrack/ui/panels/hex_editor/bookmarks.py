@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QColorDialog, QInputDialog, QTreeWidget, QTreeWidgetItem, QWidget
 
+from intellicrack.bridges.hex_editor import read_bookmark_sidecar, write_bookmark_sidecar
 from intellicrack.core.logging import get_logger
 
 
@@ -18,6 +19,9 @@ _logger = get_logger(__name__)
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
     from intellicrack.bridges.hex_state import HexDocumentState
     from intellicrack.core.types import BookmarkLike
 
@@ -30,6 +34,8 @@ class BookmarksMixin:
     _hex_widget: Any | None
     _bookmarks_tree: QTreeWidget | None
     state_holder: HexDocumentState | None
+    file_path: Path | None
+    goto_offset: Callable[[int, int], None]
 
     def _notify_state_data_modified(self, offset: int, length: int, *, source: str) -> None:
         """Publish bookmark-affected byte extents through ``HexDocumentState``.
@@ -90,6 +96,7 @@ class BookmarksMixin:
         _logger.info("bookmark_added", offset=cursor_offset, bookmark_name=name, color=color.name())
 
         self._notify_state_data_modified(cursor_offset, 1, source="hex-editor.bookmarks.add")
+        self._persist_bookmarks_sidecar()
         self._refresh_bookmarks()
 
     def _on_remove_bookmark(self) -> None:
@@ -125,6 +132,7 @@ class BookmarksMixin:
             _logger.info("bookmark_removed", index=index, offset=bm_offset, length=bm_length)
 
             self._notify_state_data_modified(bm_offset, bm_length, source="hex-editor.bookmarks.remove")
+            self._persist_bookmarks_sidecar()
             self._refresh_bookmarks()
 
     def _refresh_bookmarks(self) -> None:
@@ -146,3 +154,67 @@ class BookmarksMixin:
             item = QTreeWidgetItem([offset_str, length_str, label])
             self._bookmarks_tree.addTopLevelItem(item)
         _logger.debug("bookmarks_refreshed", count=len(bookmarks))
+
+    def _on_bookmark_double_clicked(self, item: QTreeWidgetItem, column: int) -> None:
+        """Navigate to the bookmark's offset when its row is double-clicked.
+
+        Mirrors :meth:`intellicrack.ui.panels.hex_editor.sections.SectionsMixin._on_string_double_clicked`:
+        reads the offset (and, when present, the byte-length) encoded in the
+        row and moves the hex cursor/selection there.
+
+        Args:
+            item: The double-clicked tree item.
+            column: The clicked column index (unused; the offset and length
+                columns are read directly regardless of which column was
+                clicked).
+        """
+        _ = column
+        offset_text = item.text(0)
+        try:
+            offset = int(offset_text, 16)
+        except ValueError:
+            _logger.warning("hex_editor_bookmark_invalid_offset", input_text=offset_text)
+            return
+
+        length_text = item.text(1)
+        try:
+            length = int(length_text)
+        except ValueError:
+            length = 0
+
+        goto_fn = getattr(self, "goto_offset", None)
+        if callable(goto_fn):
+            goto_fn(offset, length)
+
+    def _persist_bookmarks_sidecar(self) -> None:
+        """Write the current document's bookmarks to its JSON sidecar file.
+
+        No-op when there is no open document or its source file path is unknown (e.g. a document that was never saved to disk).
+        """
+        if self.document is None or self.file_path is None:
+            return
+        try:
+            bookmarks: list[BookmarkLike] = self.document.get_bookmarks()
+        except (RuntimeError, OSError):
+            _logger.exception("bookmark_list_failed", context="persist_bookmarks_sidecar")
+            return
+        entries = [{"offset": bm.offset, "length": bm.length, "label": bm.label, "color": bm.color} for bm in bookmarks]
+        write_bookmark_sidecar(self.file_path, entries)
+
+    def _load_bookmarks_sidecar(self) -> None:
+        """Restore bookmarks for the just-opened document from its JSON sidecar file.
+
+        Called once per :meth:`load_file` after the hexcore document is opened and :attr:`file_path` is set, so bookmarks created in a
+        previous session on the same file survive a reload. No-op when there is no open document, no known file path, or no sidecar file
+        exists yet for it.
+        """
+        if self.document is None or self.file_path is None:
+            return
+        entries = read_bookmark_sidecar(self.file_path)
+        for entry in entries:
+            try:
+                self.document.add_bookmark(entry["offset"], entry["length"], entry["label"], entry["color"])
+            except (RuntimeError, OSError, ValueError, IndexError, TypeError):
+                _logger.exception("bookmark_sidecar_restore_entry_failed", entry=entry)
+        if entries:
+            _logger.debug("bookmarks_restored_from_sidecar", count=len(entries), path=str(self.file_path))

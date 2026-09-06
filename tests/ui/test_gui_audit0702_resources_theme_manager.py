@@ -5,23 +5,34 @@
 """Regression gate for the GUI audit finding in ``theme_manager``.
 
 * ``M37``: ``LIGHT_THEME_FALLBACK`` must carry the same widget-rule selectors
-  as ``DARK_THEME_FALLBACK`` -- in particular ``QLabel[heading="true"]`` and
-  ``QLabel[subheading="true"]``, plus the ``QScrollArea``, ``QTreeWidget``/
-  ``QTreeView``, ``QRadioButton``, ``QSpinBox``/``QDoubleSpinBox``,
-  ``QSlider`` and ``QFrame[frameShape]`` base rules -- so that a widget
-  styled through the fallback sheet (used when the bundled ``.qss`` file for
-  the active theme is missing or unreadable) renders identically under light
-  and dark. Tests drive real ``QLabel`` widgets through the real style engine
-  (dynamic-property selectors, font resolution, palette colour resolution)
-  rather than only inspecting the stylesheet text, and one test drives the
-  real :class:`ThemeManager` routing logic that selects the fallback when a
-  theme's ``.qss`` file is missing.
+  as ``DARK_THEME_FALLBACK`` -- in particular ``QLabel[heading="true"]``,
+  plus the ``QScrollArea``, ``QTreeWidget``/``QTreeView``, ``QRadioButton``,
+  ``QSpinBox``/``QDoubleSpinBox``, ``QSlider`` and ``QFrame[frameShape]``
+  base rules -- so that a widget styled through the fallback sheet (used
+  when the bundled ``.qss`` file for the active theme is missing or
+  unreadable) renders identically under light and dark. Tests drive real
+  ``QLabel`` widgets through the real style engine (dynamic-property
+  selectors, font resolution) rather than only inspecting the stylesheet
+  text, and one test drives the real :class:`ThemeManager` routing logic
+  that selects the fallback when a theme's ``.qss`` file is missing.
+
+* ``D33``: the fallback rewrite that made ``.qss`` the single source of
+  truth for ``DARK_THEME_FALLBACK`` / ``LIGHT_THEME_FALLBACK`` replaced the
+  independently hand-authored fallback text with the live contents of
+  ``dark_theme.qss`` / ``light_theme.qss``. Two assumptions that only ever
+  held for the old, hand-authored text no longer apply and are removed here:
+  a ``QLabel[subheading="true"]`` rule that was never part of the shipped
+  ``.qss`` assets, and a points-based (``pointSizeF``) heading size -- the
+  real ``.qss`` sets ``font-size: 16px``, which Qt resolves as a pixel size
+  rather than a point size. See
+  ``tests/ui/test_theme_manager_d33_fallback_drift.py`` for the drift gate
+  covering that rewrite.
 """
 
 from __future__ import annotations
 
-import pytest
-from PyQt6.QtGui import QPalette
+from typing import TYPE_CHECKING
+
 from PyQt6.QtWidgets import QApplication, QLabel
 
 from intellicrack.ui.resources.theme_manager import (
@@ -33,6 +44,10 @@ from intellicrack.ui.resources.theme_manager import (
 )
 
 
+if TYPE_CHECKING:
+    import pytest
+
+
 _PARITY_SELECTORS: list[str] = [
     "QScrollArea {",
     "QTreeWidget, QTreeView {",
@@ -42,19 +57,15 @@ _PARITY_SELECTORS: list[str] = [
     "QSlider::groove:horizontal {",
     'QFrame[frameShape="4"], QFrame[frameShape="5"] {',
     'QLabel[heading="true"] {',
-    'QLabel[subheading="true"] {',
 ]
 
-_HEADING_POINT_SIZE: float = 12.0
-_SUBHEADING_POINT_SIZE: float = 10.0
-_SUBHEADING_COLOR_NAME: str = "#5a6370"
+_HEADING_PIXEL_SIZE: int = 16
 
 
 def _repolished_label(
     stylesheet: str,
     *,
     heading: bool = False,
-    subheading: bool = False,
 ) -> QLabel:
     """Build a real ``QLabel`` styled by ``stylesheet`` with dynamic properties applied.
 
@@ -69,18 +80,13 @@ def _repolished_label(
         stylesheet: The QSS text to apply to the label.
         heading: When True, sets the ``heading`` dynamic property to
             ``"true"`` before polishing.
-        subheading: When True, sets the ``subheading`` dynamic property to
-            ``"true"`` before polishing.
 
     Returns:
-        QLabel: A polished label whose font and palette reflect the resolved
-        style.
+        QLabel: A polished label whose font reflects the resolved style.
     """
     label = QLabel("Sample")
     if heading:
         label.setProperty("heading", "true")
-    if subheading:
-        label.setProperty("subheading", "true")
     label.setStyleSheet(stylesheet)
     style = label.style()
     assert style is not None
@@ -94,12 +100,12 @@ def test_m37_light_fallback_has_selector_parity_with_dark_fallback() -> None:
     """M37: LIGHT_THEME_FALLBACK defines every selector DARK_THEME_FALLBACK defines.
 
     Before the fix, ``LIGHT_THEME_FALLBACK``'s ``/* Label */`` block and the
-    rest of the sheet were missing ``QLabel[heading="true"]``,
-    ``QLabel[subheading="true"]``, and complete ``QScrollArea``,
-    ``QTreeWidget``/``QTreeView``, ``QRadioButton``, ``QSpinBox``/
-    ``QDoubleSpinBox``, ``QSlider`` and ``QFrame[frameShape]`` base rules
-    that ``DARK_THEME_FALLBACK`` has -- only leftover ``:disabled``/``:focus``
-    pseudo-state rules survived for some of them, with no base style.
+    rest of the sheet were missing ``QLabel[heading="true"]``, and complete
+    ``QScrollArea``, ``QTreeWidget``/``QTreeView``, ``QRadioButton``,
+    ``QSpinBox``/``QDoubleSpinBox``, ``QSlider`` and ``QFrame[frameShape]``
+    base rules that ``DARK_THEME_FALLBACK`` has -- only leftover
+    ``:disabled``/``:focus`` pseudo-state rules survived for some of them,
+    with no base style.
     """
     for selector in _PARITY_SELECTORS:
         assert selector in DARK_THEME_FALLBACK, f"test fixture selector {selector!r} unexpectedly absent from DARK_THEME_FALLBACK"
@@ -108,10 +114,10 @@ def test_m37_light_fallback_has_selector_parity_with_dark_fallback() -> None:
     assert not missing, f"LIGHT_THEME_FALLBACK is missing selectors present in DARK_THEME_FALLBACK: {missing}"
 
 
-def test_m37_heading_label_renders_bold_twelve_point_under_light_fallback(
+def test_m37_heading_label_renders_bold_sixteen_pixel_under_light_fallback(
     qapp: QApplication,
 ) -> None:
-    """M37: a real QLabel with ``heading=true`` resolves bold 12pt text under the light fallback.
+    """M37: a real QLabel with ``heading=true`` resolves bold 16px text under the light fallback.
 
     Args:
         qapp: Shared offscreen QApplication fixture required to construct
@@ -123,33 +129,8 @@ def test_m37_heading_label_renders_bold_twelve_point_under_light_fallback(
 
     assert plain_label.font().bold() is False, "sanity check: a label without the heading property must not be bold"
     assert heading_label.font().bold() is True, "QLabel[heading='true'] must resolve to bold text under the light fallback"
-    assert heading_label.font().pointSizeF() == pytest.approx(_HEADING_POINT_SIZE), (
-        f"QLabel[heading='true'] must resolve to {_HEADING_POINT_SIZE}pt under the light "
-        f"fallback, got {heading_label.font().pointSizeF()}pt"
-    )
-
-
-def test_m37_subheading_label_renders_muted_ten_point_under_light_fallback(
-    qapp: QApplication,
-) -> None:
-    """M37: a real QLabel with ``subheading=true`` resolves muted 10pt text under the light fallback.
-
-    Args:
-        qapp: Shared offscreen QApplication fixture required to construct
-            widgets.
-    """
-    _ = qapp
-    subheading_label = _repolished_label(LIGHT_THEME_FALLBACK, subheading=True)
-
-    assert subheading_label.font().pointSizeF() == pytest.approx(_SUBHEADING_POINT_SIZE), (
-        f"QLabel[subheading='true'] must resolve to {_SUBHEADING_POINT_SIZE}pt under the "
-        f"light fallback, got {subheading_label.font().pointSizeF()}pt"
-    )
-
-    resolved_color = subheading_label.palette().color(QPalette.ColorRole.WindowText)
-    assert resolved_color.name() == _SUBHEADING_COLOR_NAME, (
-        f"QLabel[subheading='true'] must resolve the muted colour {_SUBHEADING_COLOR_NAME} "
-        f"under the light fallback, got {resolved_color.name()}"
+    assert heading_label.font().pixelSize() == _HEADING_PIXEL_SIZE, (
+        f"QLabel[heading='true'] must resolve to {_HEADING_PIXEL_SIZE}px under the light fallback, got {heading_label.font().pixelSize()}px"
     )
 
 

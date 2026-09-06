@@ -50,6 +50,7 @@ from intellicrack.ui.log_viewer._proxy import LogFilterProxyModel, level_name_to
 from intellicrack.ui.log_viewer._record import LogRecordDict, record_to_json_text
 from intellicrack.ui.log_viewer._tail_reader import LogFileTailReader
 from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
@@ -208,7 +209,7 @@ class LogRecordDetailsDialog(QDialog):
 
         self._text.setReadOnly(True)
         self._text.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
-        mono = QFont("Consolas")
+        mono = QFont(FontManager.get_instance().code_font_family)
         mono.setStyleHint(QFont.StyleHint.Monospace)
         self._text.setFont(mono)
         self._text.setPlainText(record_to_json_text(self.record))

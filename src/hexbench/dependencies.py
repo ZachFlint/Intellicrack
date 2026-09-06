@@ -48,6 +48,7 @@ _PACKAGE_NAME: Final = "hexbench"
 _PIXI_TABLE: Final = "pixi"
 _TOOL_TABLE: Final = "tool"
 _PYPI_KEY: Final = "pypi-dependencies"
+_FEATURE_TABLE: Final = "feature"
 _UNKNOWN_VERSION: Final = "unknown"
 _EXPECTED_ARGUMENTS: Final = 2
 
@@ -142,6 +143,12 @@ def _table(source: dict[str, object], key: str) -> dict[str, object]:
 def declared_distributions(manifest: Path) -> set[str]:
     """Read the distributions the environment manifest resolves from an index.
 
+    Pixi splits its index dependencies across the top-level table and one table
+    per named feature, and an environment is composed from several of those
+    features, so a distribution is declared if any of the tables carries it.
+    Reading the top-level table alone reports everything a feature declares --
+    the freezer among them -- as a gap a fresh install would be missing.
+
     Args:
         manifest: Path to ``pyproject.toml``.
 
@@ -149,8 +156,10 @@ def declared_distributions(manifest: Path) -> set[str]:
         set[str]: Declared distribution names, normalised for comparison.
     """
     document: dict[str, object] = tomllib.loads(manifest.read_text(encoding="utf-8"))
-    declared = _table(_table(_table(document, _TOOL_TABLE), _PIXI_TABLE), _PYPI_KEY)
-    return {_normalise(name) for name in declared}
+    pixi = _table(_table(document, _TOOL_TABLE), _PIXI_TABLE)
+    features = _table(pixi, _FEATURE_TABLE)
+    tables = [_table(pixi, _PYPI_KEY), *(_table(_table(features, name), _PYPI_KEY) for name in features)]
+    return {_normalise(name) for table in tables for name in table}
 
 
 def _normalise(name: str) -> str:
