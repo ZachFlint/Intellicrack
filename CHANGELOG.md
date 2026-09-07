@@ -1094,6 +1094,15 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 
 ### Documentation
 
+- Generate API autosummaries and purge external tools (`f9c0f18`)
+Update Sphinx configuration and autosummary templates to document
+internal modules and suppress warnings during framework dunder probes.
+Purge bundled third-party binaries and tooling scripts from the repository.
+- Add autosummary RST stubs across bridges, core, providers, sandbox, and UI
+- Suppress lazy resolve warning logs on private and dunder attribute lookups
+- Fix docstring markup in hexpat standard library builtins
+- Remove AdobeInjector, IDMActivator, and WindowsPatch tools
+
 - **readme:** Reframe scope around reverse engineering and binary analysis (`d7ef0dd`)
 Broaden overview, capabilities list, UI panel description, and disclaimer
 to present Intellicrack as a general-purpose RE/binary-analysis workspace
@@ -1163,47 +1172,25 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 ### Fixed
 
-- **sandbox:** Quiesce the Docker engine before the host-native WHPX gates (`34ca26d`)
-Windows containers, WHPX virtual machines and Windows Sandbox sessions all run
-on the Host Compute Service. The container side of that interlock was built in
-472533c6 - a container will not start while a virtual machine holds the host -
-but the mirror image was only ever half-built, and launching the test sandbox
-has been wedging Docker ever since.
-The WHPX boot gates asked "docker ps" whether a container was running. The
-collision is with the engine, not its containers: Docker Desktop holds the Host
-Compute Service with its Windows engine and utility VM for as long as it runs,
-busy or idle. "just test" runs the container leg and then the host-native pass,
-so by the time the gates looked, the container had exited while the engine was
-still up - zero containers, engine live, gate open, and a virtual machine
-booted straight into it. That is the state that leaves Docker unresponsive
-until Docker Desktop is relaunched as administrator, and on 2026-08-02 it
-bugchecked the host outright. The "quiesce Docker before WHPX" step this was
-supposed to have had never existed in the tree at all.
-scripts/sandbox/hcs_interlock.py detects the engine itself - its named pipe, or
-the backend processes that cover the window where the pipe is absent because
-the engine is still starting or already tearing down - and clears it off the
-Host Compute Service before the host-native pass launches pytest. Clearing it
-is Docker Desktop's own unelevated quit. When that leaves the engine up, only
-stopping the engine service shifts it and that needs an elevated token, which
-is why an administrator relaunch has been the recovery; the interlock uses a
-token the caller already holds and never asks for one, because a test run must
-raise no UAC prompt. An engine that will not clear leaves the host BLOCKED and
-the WHPX gates skip, which is the safe outcome. Docker stays down afterwards
-and the next container leg starts it again, so recovery needs no manual step.
-A running container is waited out, never shut down. Sibling sessions share this
-host and queue through the admission gate, so a busy engine is doing somebody's
-work; taking it down would destroy their run to make room for these gates. The
-wait is bounded, and a container that outlasts it costs this run its virtual
-machine gates rather than costing the sibling their container.
-Gate tests/sandbox/test_docker_engine_whpx_interlock.py (20) pins the state
-that wedged Docker: engine up, no container, refusal required - the case the
-container count waved through. The probes are injected because they describe
-the host; the logic deciding what to do about it is the production code under
-test, and the process enumerator is gated against a genuine running process
-carrying an engine's name, as the container-side interlock gates its own.
-Controls cover the reverse of every assertion, an unelevated run is pinned to
-never reach the service stop, and the wiring is read out of the callers' own
-syntax trees since neither path can be exercised from inside the container.
+- Harden IPC pipe security and prevent arithmetic overflow panics (`c6b8146`)
+Harden the x64dbg IPC pipe against unauthorized access and command
+injection, guard C-ABI thread boundaries against unwinding exceptions,
+and replace unchecked arithmetic across the Rust core with overflow-safe
+equivalents.
+- Add strict DACL (owner + SYSTEM), first-instance enforcement, and
+remote rejection to the x64dbg named pipe server.
+- Drain cancelled overlapped I/O on timeout/stop to avoid use-after-free
+of stack-allocated OVERLAPPED structures.
+- Add exception firewalls across x64dbg C-ABI boundaries (event callbacks
+and command handler dispatch) and avoid std::stoul panics.
+- Validate address tokens and switch assembly to AssembleMemEx to prevent
+debugger command injection.
+- Implement real watch enumeration via DbgGetWatchList and add bounds-safe
+PE header reading.
+- Fix arithmetic overflows in Rust varint decoding, PE checksum folding,
+and VA/file-offset translation.
+- Adopt slice::as_chunks in search and transform routines.
+
 - Resolve UI layout, bridge timeout, and session liveness issues (`72b0da4`)
 Hardens bridge connection lifecycles, corrects off-by-one errors in hex
 transforms, and re-derives fixed layout dimensions from font metrics and
@@ -1315,6 +1302,54 @@ QLineEdit min-height floor so any remaining short container still clears
 the field's glyph height.
 Extends the falsifiable gate to run both parametrized cases (QSS floor,
 editable combo centering) across all four bundled themes instead of two.
+
+- **tests:** Isolate host-native pytest basetemp and force ansi rendering (`40317b0`)
+Pin an explicit, run-unique `--basetemp` for host-native test executions to avoid `PermissionError` during session finish when previous elevated runs leave SYSTEM-owned artifacts in the shared user base directory.
+* Isolate host-native basetemp under a dedicated temp path and prune runs older than six hours
+* Add integration tests verifying unique basetemp generation and age-based directory pruning
+* Force `$PSStyle.OutputRendering = 'Ansi'` in installer logging test to avoid environment-dependent ANSI stripping
+
+- **sandbox:** Quiesce the Docker engine before the host-native WHPX gates (`34ca26d`)
+Windows containers, WHPX virtual machines and Windows Sandbox sessions all run
+on the Host Compute Service. The container side of that interlock was built in
+472533c6 - a container will not start while a virtual machine holds the host -
+but the mirror image was only ever half-built, and launching the test sandbox
+has been wedging Docker ever since.
+The WHPX boot gates asked "docker ps" whether a container was running. The
+collision is with the engine, not its containers: Docker Desktop holds the Host
+Compute Service with its Windows engine and utility VM for as long as it runs,
+busy or idle. "just test" runs the container leg and then the host-native pass,
+so by the time the gates looked, the container had exited while the engine was
+still up - zero containers, engine live, gate open, and a virtual machine
+booted straight into it. That is the state that leaves Docker unresponsive
+until Docker Desktop is relaunched as administrator, and on 2026-08-02 it
+bugchecked the host outright. The "quiesce Docker before WHPX" step this was
+supposed to have had never existed in the tree at all.
+scripts/sandbox/hcs_interlock.py detects the engine itself - its named pipe, or
+the backend processes that cover the window where the pipe is absent because
+the engine is still starting or already tearing down - and clears it off the
+Host Compute Service before the host-native pass launches pytest. Clearing it
+is Docker Desktop's own unelevated quit. When that leaves the engine up, only
+stopping the engine service shifts it and that needs an elevated token, which
+is why an administrator relaunch has been the recovery; the interlock uses a
+token the caller already holds and never asks for one, because a test run must
+raise no UAC prompt. An engine that will not clear leaves the host BLOCKED and
+the WHPX gates skip, which is the safe outcome. Docker stays down afterwards
+and the next container leg starts it again, so recovery needs no manual step.
+A running container is waited out, never shut down. Sibling sessions share this
+host and queue through the admission gate, so a busy engine is doing somebody's
+work; taking it down would destroy their run to make room for these gates. The
+wait is bounded, and a container that outlasts it costs this run its virtual
+machine gates rather than costing the sibling their container.
+Gate tests/sandbox/test_docker_engine_whpx_interlock.py (20) pins the state
+that wedged Docker: engine up, no container, refusal required - the case the
+container count waved through. The probes are injected because they describe
+the host; the logic deciding what to do about it is the production code under
+test, and the process enumerator is gated against a genuine running process
+carrying an engine's name, as the container-side interlock gates its own.
+Controls cover the reverse of every assertion, an unelevated run is pinned to
+never reach the service stop, and the wiring is read out of the callers' own
+syntax trees since neither path can be exercised from inside the container.
 
 - **packaging:** Harden installer scripts and enforce runtime deps (`4eea4e7`)
 Expand declared runtime dependencies in `pyproject.toml` and refine the
@@ -5954,29 +5989,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- **tests:** Isolate host-native pytest basetemp and force ansi rendering (``)
-Pin an explicit, run-unique `--basetemp` for host-native test executions to avoid `PermissionError` during session finish when previous elevated runs leave SYSTEM-owned artifacts in the shared user base directory.
-* Isolate host-native basetemp under a dedicated temp path and prune runs older than six hours
-* Add integration tests verifying unique basetemp generation and age-based directory pruning
-* Force `$PSStyle.OutputRendering = 'Ansi'` in installer logging test to avoid environment-dependent ANSI stripping
-- Harden IPC pipe security and prevent arithmetic overflow panics (``)
-Harden the x64dbg IPC pipe against unauthorized access and command
-injection, guard C-ABI thread boundaries against unwinding exceptions,
-and replace unchecked arithmetic across the Rust core with overflow-safe
-equivalents.
-- Add strict DACL (owner + SYSTEM), first-instance enforcement, and
-remote rejection to the x64dbg named pipe server.
-- Drain cancelled overlapped I/O on timeout/stop to avoid use-after-free
-of stack-allocated OVERLAPPED structures.
-- Add exception firewalls across x64dbg C-ABI boundaries (event callbacks
-and command handler dispatch) and avoid std::stoul panics.
-- Validate address tokens and switch assembly to AssembleMemEx to prevent
-debugger command injection.
-- Implement real watch enumeration via DbgGetWatchList and add bounds-safe
-PE header reading.
-- Fix arithmetic overflows in Rust varint decoding, PE checksum folding,
-and VA/file-offset translation.
-- Adopt slice::as_chunks in search and transform routines.
 
 

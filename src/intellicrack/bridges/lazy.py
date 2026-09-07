@@ -58,7 +58,8 @@ def resolve(name: str, package_globals: dict[str, object]) -> type[ToolBridgeBas
     """
     if name not in LAZY_EXPORTS:
         msg = f"module 'intellicrack.bridges' has no attribute {name!r}"
-        _logger.warning("lazy_resolve_unknown_attribute", attribute_name=name)
+        if not name.startswith("_"):
+            _logger.warning("lazy_resolve_unknown_attribute", attribute_name=name)
         raise AttributeError(msg)
     module_path, attr_name = LAZY_EXPORTS[name]
     module = importlib.import_module(module_path)

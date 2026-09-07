@@ -202,10 +202,10 @@ class _ReflectionProvider:
 
 
 class BuiltinFunctions:
-    """Implements the builtin:: namespace functions in Python.
+    """Implements the ``builtin::`` namespace functions in Python.
 
     Registered into the evaluator's global scope so that the real
-    std/*.pat library files can call them transparently.
+    ``std/*.pat`` library files can call them transparently.
     """
 
     def __init__(
