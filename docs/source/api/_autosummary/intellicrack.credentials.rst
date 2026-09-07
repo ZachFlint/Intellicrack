@@ -1,8 +1,16 @@
 intellicrack.credentials
 ========================
 
+
 .. automodule:: intellicrack.credentials
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :inherited-members:
+   :no-index:
+
+.. rubric:: Submodules
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   env_loader
+   oauth
+   store
