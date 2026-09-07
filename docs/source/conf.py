@@ -1,10 +1,16 @@
 """Sphinx configuration for Intellicrack documentation."""
 from __future__ import annotations
 
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
+from sphinx.application import Sphinx
+
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "src"))
@@ -31,10 +37,8 @@ extensions = [
 ]
 
 autodoc_mock_imports = [
-    "PyQt6",
     "PyQt5",
     "PySide6",
-    "qdarkstyle",
     "frida",
     "pefile",
     "lief",
@@ -57,6 +61,10 @@ autodoc_mock_imports = [
     "accelerate",
     "bitsandbytes",
     "llama_cpp",
+    "openai",
+    "anthropic",
+    "google",
+    "huggingface_hub",
     "ghidra_bridge",
     "r2pipe",
     "inotify",
@@ -173,3 +181,49 @@ myst_enable_extensions = [
 todo_include_todos = True
 add_module_names = False
 python_use_unqualified_type_names = True
+
+
+def _skip_qt_signals(
+    app: Sphinx,
+    what: str,
+    name: str,
+    obj: object,
+    skip: bool,
+    options: Any,
+) -> bool:
+    """Skip PyQt/PySide signal members during autodoc member collection.
+
+    The auto-generated ``__doc__`` of a bound or unbound Qt signal contains
+    unbalanced reStructuredText inline markup (for example ``*args``), which
+    docutils reports as ``Inline emphasis start-string without end-string``.
+    Signals carry no meaningful API documentation, so they are omitted.
+
+    Args:
+        app: The Sphinx application object.
+        what: The type of object the parent docstring belongs to.
+        name: The fully qualified name of the member being considered.
+        obj: The member object itself.
+        skip: Whether autodoc would skip the member by default.
+        options: The options given to the parent autodoc directive.
+
+    Returns:
+        bool: ``True`` to omit the member; otherwise autodoc's default
+        ``skip`` decision.
+    """
+    if type(obj).__name__ in {"pyqtSignal", "pyqtBoundSignal", "Signal", "SignalInstance"}:
+        return True
+    return skip
+
+
+def setup(app: Sphinx) -> dict[str, bool]:
+    """Register documentation build hooks for the Intellicrack docs.
+
+    Args:
+        app: The Sphinx application object.
+
+    Returns:
+        dict[str, bool]: Extension metadata declaring parallel read and write
+        safety for the connected hooks.
+    """
+    app.connect("autodoc-skip-member", _skip_qt_signals)
+    return {"parallel_read_safe": True, "parallel_write_safe": True}

@@ -335,6 +335,35 @@ def test_f0004_bridges_unknown_attribute_raises() -> None:
     assert bridges_pkg.__name__ == "intellicrack.bridges"
 
 
+def test_f0004_bridges_public_unknown_attribute_warns() -> None:
+    """A genuine public typo still emits the ``lazy_resolve_unknown_attribute`` warning."""
+    scratch_globals: dict[str, object] = {}
+    with structlog.testing.capture_logs() as captured:
+        with pytest.raises(AttributeError, match="NotARealBridge"):
+            resolve_lazy("NotARealBridge", scratch_globals)
+    events = [entry["event"] for entry in captured]
+    assert "lazy_resolve_unknown_attribute" in events
+
+
+def test_f0004_bridges_dunder_probe_is_silent() -> None:
+    """Framework dunder probes (e.g. Sphinx ``__sphinx_mock__``) must raise without logging.
+
+    Sphinx's autodoc mock machinery probes every object for ``__sphinx_mock__``
+    and other dunder attributes. Routing those through the package
+    ``__getattr__`` must not emit warning noise, while still raising
+    ``AttributeError`` so the probe resolves normally.
+    """
+    scratch_globals: dict[str, object] = {}
+    for probe in ("__sphinx_mock__", "__wrapped__", "_private_probe"):
+        with structlog.testing.capture_logs() as captured:
+            with pytest.raises(AttributeError, match=probe):
+                resolve_lazy(probe, scratch_globals)
+        events = [entry["event"] for entry in captured]
+        assert "lazy_resolve_unknown_attribute" not in events, (
+            f"probe {probe!r} logged unexpected warning noise: {events}"
+        )
+
+
 # ---------------------------------------------------------------------------
 # F-0005: protection_to_string contract drift -> TypedDict redesign.
 # ---------------------------------------------------------------------------

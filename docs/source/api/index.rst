@@ -1,56 +1,58 @@
 API Reference
 =============
 
-This section contains the complete API reference for Intellicrack.
+This section contains the complete API reference for Intellicrack. Every
+package, module, class, and function below is generated directly from the
+source tree, so the reference always reflects the current implementation.
 
 .. autosummary::
    :toctree: _autosummary
-   :template: custom-module-template.rst
    :recursive:
 
    intellicrack
 
-Module Index
-------------
+Subsystem Overview
+------------------
 
-Core Modules
-~~~~~~~~~~~~
+The generated tree above documents every module. The summaries below orient
+you to the major subsystems before you drill into their pages.
 
-.. autosummary::
-   :toctree: _autosummary
-   :recursive:
-
-   intellicrack.core
-
-Bridge Integrations
+Core Orchestration
 ~~~~~~~~~~~~~~~~~~~
 
-The ``intellicrack.bridges`` module provides external tool integrations:
+The ``intellicrack.core`` package holds session management, the tool
+orchestrator, process management, configuration, and shared type definitions
+that tie the platform together.
+
+Bridge Integrations
+~~~~~~~~~~~~~~~~~~~~
+
+The ``intellicrack.bridges`` package provides external tool integrations:
 
 * **GhidraBridge** - Ghidra headless analysis and decompilation
 * **CutterBridge** - Cutter/rizin binary analysis
 * **FridaBridge** - Dynamic instrumentation via Frida
 * **X64DbgBridge** - x64dbg debugger integration
-* **BinaryOperationsBridge** - Generic binary operations (PE/ELF/Mach-O)
+* **HexEditorBridge** - Hex editor / hexcore operations
 * **ProcessBridge** - Windows process manipulation
 
 AI Providers
 ~~~~~~~~~~~~
 
-The ``intellicrack.providers`` module contains LLM integrations:
+The ``intellicrack.providers`` package contains LLM integrations:
 
 * **AnthropicProvider** - Claude API integration
 * **OpenAIProvider** - GPT API integration
 * **GoogleProvider** - Gemini API integration
 * **OllamaProvider** - Local Ollama models
 * **OpenRouterProvider** - OpenRouter API aggregator
-* **HuggingFaceProvider** - Transformers integration
+* **HuggingFaceProvider** - HuggingFace Inference integration
 * **GrokProvider** - xAI Grok integration
 
 Sandbox Environment
 ~~~~~~~~~~~~~~~~~~~
 
-The ``intellicrack.sandbox`` module provides isolated execution:
+The ``intellicrack.sandbox`` package provides isolated execution:
 
 * **WindowsSandbox** - Windows Sandbox integration
 * **QEMUSandbox** - QEMU VM sandbox for cross-platform analysis
@@ -61,16 +63,13 @@ The ``intellicrack.sandbox`` module provides isolated execution:
 Credentials Management
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. autosummary::
-   :toctree: _autosummary
-   :recursive:
-
-   intellicrack.credentials
+The ``intellicrack.credentials`` package handles API key storage, environment
+loading, and OAuth flows for the connected providers.
 
 User Interface
 ~~~~~~~~~~~~~~
 
-The ``intellicrack.ui`` module contains PyQt6 GUI components:
+The ``intellicrack.ui`` package contains PyQt6 GUI components:
 
 * **MainWindow** - Primary application window
 * **ChatPanel** - AI chat interface
