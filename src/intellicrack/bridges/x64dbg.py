@@ -2343,6 +2343,125 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="Dict with success status",
                 ),
                 ToolFunction(
+                    name="x64dbg.trace_into_beyond_coverage",
+                    description=(
+                        "Trace into (StepInto) until execution leaves the armed trace-record coverage, "
+                        "condition evaluates non-zero, or max_steps is reached"
+                    ),
+                    parameters=[
+                        ToolParameter(
+                            name="condition",
+                            type="string",
+                            description=(
+                                "Optional break condition expression evaluated in addition to the "
+                                "coverage-boundary stop; tracing stops once this evaluates to a value "
+                                "other than 0. When omitted, an always-false '0' expression is sent"
+                            ),
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="max_steps",
+                            type="integer",
+                            description="Maximum number of steps to trace before the debugger gives up",
+                            required=False,
+                            default=50000,
+                        ),
+                    ],
+                    returns="Dict with success, max_steps, verified",
+                ),
+                ToolFunction(
+                    name="x64dbg.trace_over_beyond_coverage",
+                    description=(
+                        "Trace over (StepOver) until execution leaves the armed trace-record coverage, "
+                        "condition evaluates non-zero, or max_steps is reached"
+                    ),
+                    parameters=[
+                        ToolParameter(
+                            name="condition",
+                            type="string",
+                            description=(
+                                "Optional break condition expression evaluated in addition to the "
+                                "coverage-boundary stop; tracing stops once this evaluates to a value "
+                                "other than 0. When omitted, an always-false '0' expression is sent"
+                            ),
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="max_steps",
+                            type="integer",
+                            description="Maximum number of steps to trace before the debugger gives up",
+                            required=False,
+                            default=50000,
+                        ),
+                    ],
+                    returns="Dict with success, max_steps, verified",
+                ),
+                ToolFunction(
+                    name="x64dbg.trace_into_within_coverage",
+                    description=(
+                        "Trace into (StepInto) until execution re-enters the armed trace-record coverage "
+                        "(native TraceIntoIntoTraceCoverage), condition evaluates non-zero, or max_steps is reached"
+                    ),
+                    parameters=[
+                        ToolParameter(
+                            name="condition",
+                            type="string",
+                            description=(
+                                "Optional break condition expression evaluated in addition to the "
+                                "coverage-boundary stop; tracing stops once this evaluates to a value "
+                                "other than 0. When omitted, an always-false '0' expression is sent"
+                            ),
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="max_steps",
+                            type="integer",
+                            description="Maximum number of steps to trace before the debugger gives up",
+                            required=False,
+                            default=50000,
+                        ),
+                    ],
+                    returns="Dict with success, max_steps, verified",
+                ),
+                ToolFunction(
+                    name="x64dbg.trace_over_within_coverage",
+                    description=(
+                        "Trace over (StepOver) until execution re-enters the armed trace-record coverage "
+                        "(native TraceOverIntoTraceCoverage), condition evaluates non-zero, or max_steps is reached"
+                    ),
+                    parameters=[
+                        ToolParameter(
+                            name="condition",
+                            type="string",
+                            description=(
+                                "Optional break condition expression evaluated in addition to the "
+                                "coverage-boundary stop; tracing stops once this evaluates to a value "
+                                "other than 0. When omitted, an always-false '0' expression is sent"
+                            ),
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="max_steps",
+                            type="integer",
+                            description="Maximum number of steps to trace before the debugger gives up",
+                            required=False,
+                            default=50000,
+                        ),
+                    ],
+                    returns="Dict with success, max_steps, verified",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_trace_log_file",
+                    description=(
+                        "Redirect trace-log output to a file (cleared when the trace starts); has no "
+                        "effect until trace log text is also set via trace_start's log_text"
+                    ),
+                    parameters=[
+                        ToolParameter(name="path", type="string", description="Destination file path", required=True),
+                    ],
+                    returns="Dict with success and path",
+                ),
+                ToolFunction(
                     name="x64dbg.set_trace_record",
                     description="Arm trace-record collection on the page holding an address (required before hit counts are recorded)",
                     parameters=[
@@ -10340,9 +10459,249 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
     YARA scanning, x64dbg script lifecycle, plugin load/unload/list,
     anti-debug detection and patching, OEP import reconstruction, status
     inspection, GUI navigation, TLS callback inspection, raw resource
-    enumeration, handle enumeration and close, and the Windows token
-    privilege query/adjust helpers.
+    enumeration, handle enumeration and close, the Windows token
+    privilege query/adjust helpers, and the trace-record coverage-boundary
+    and trace-log-file variants (hosted here rather than on
+    :class:`_X64DbgTraceMixin`, which already sits at this file's
+    too-many-public-methods cap).
     """
+
+    async def trace_into_beyond_coverage(self, condition: str | None = None, max_steps: int = 50000) -> dict[str, Any]:
+        """Trace into by ``StepInto`` until execution leaves the armed trace-record coverage.
+
+        Queues ``TraceIntoBeyondTraceCoverage`` ("Perform StepInto until
+        the program reaches somewhere outside the trace coverage") and
+        confirms it settled via :meth:`_await_run_completion`, the same
+        paused-event/status race :meth:`trace_into` uses so a trace that
+        completes within a single poll interval is still observed
+        (S20-D03).
+
+        Per x64dbg's documented ``TraceIntoBeyondTraceCoverage``/``tibt``
+        syntax, both ``arg1`` (the break condition) and ``arg2`` (the step
+        budget) are optional, with ``arg2`` defaulting to 50000 when
+        omitted; unlike ``TraceIntoConditional``, the condition here is a
+        genuine early exit layered on top of the coverage-boundary stop,
+        not the trace's sole terminating condition. An omitted
+        ``condition`` is still sent as the literal always-false expression
+        ``0`` (the same sentinel :meth:`trace_into` sends) so the
+        generated command keeps a stable, two-argument shape.
+
+        This command is only meaningful once a trace-record type has been
+        armed for the relevant pages via :meth:`set_trace_record`; without
+        that, "trace coverage" is trivially empty and this behaves exactly
+        like :meth:`trace_into`. This method does not arm recording on the
+        caller's behalf - :meth:`set_trace_record` mutates page-wide state
+        the caller may not want touched, so it is never called implicitly.
+
+        Args:
+            condition: Optional break condition expression; tracing stops
+                as soon as it evaluates to a value other than 0, in
+                addition to the coverage-boundary stop. When omitted, the
+                always-false expression ``0`` is sent so the coverage
+                boundary is the only stop condition.
+            max_steps: Maximum number of steps to trace before the
+                debugger gives up, independent of ``condition``.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``max_steps``, and
+            ``verified``. ``verified`` is ``True`` when the trace was
+            confirmed to have run (via the paused event or a ``status``
+            poll); ``False`` only when the plugin lacks ``status``.
+
+        Raises:
+            ToolError: If neither the paused event nor ``status`` ever
+                showed the debugger leaving its paused state within the
+                verification window.
+        """
+        _logger.debug("x64dbg_command_queued", command="trace_into_beyond_coverage", max_steps=max_steps)
+        cmd = f'TraceIntoBeyondTraceCoverage "{condition}", {max_steps}' if condition else f"TraceIntoBeyondTraceCoverage 0, {max_steps}"
+        observed, rpc_available = await self._await_run_completion(cmd, expected_running=True)
+        if not rpc_available:
+            return {"success": True, "max_steps": max_steps, "verified": False}
+        if observed is False:
+            msg = f"trace_into_beyond_coverage verification failed: debugger never entered running state after TraceIntoBeyondTraceCoverage within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "max_steps": max_steps,
+                    "expected_running": True,
+                    "observed_running": False,
+                },
+            )
+        return {"success": True, "max_steps": max_steps, "verified": True}
+
+    async def trace_over_beyond_coverage(self, condition: str | None = None, max_steps: int = 50000) -> dict[str, Any]:
+        """Trace over by ``StepOver`` until execution leaves the armed trace-record coverage.
+
+        Queues ``TraceOverBeyondTraceCoverage`` (the ``StepOver`` variant
+        of :meth:`trace_into_beyond_coverage`) and confirms it settled via
+        :meth:`_await_run_completion`. See
+        :meth:`trace_into_beyond_coverage` for the full argument-shape and
+        trace-record-arming rationale shared by both.
+
+        Args:
+            condition: Optional break condition expression; tracing stops
+                as soon as it evaluates to a value other than 0, in
+                addition to the coverage-boundary stop. When omitted, the
+                always-false expression ``0`` is sent so the coverage
+                boundary is the only stop condition.
+            max_steps: Maximum number of steps to trace before the
+                debugger gives up, independent of ``condition``.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``max_steps``, and
+            ``verified``. ``verified`` is ``True`` when the trace was
+            confirmed to have run (via the paused event or a ``status``
+            poll); ``False`` only when the plugin lacks ``status``.
+
+        Raises:
+            ToolError: If neither the paused event nor ``status`` ever
+                showed the debugger leaving its paused state within the
+                verification window.
+        """
+        _logger.debug("x64dbg_command_queued", command="trace_over_beyond_coverage", max_steps=max_steps)
+        cmd = f'TraceOverBeyondTraceCoverage "{condition}", {max_steps}' if condition else f"TraceOverBeyondTraceCoverage 0, {max_steps}"
+        observed, rpc_available = await self._await_run_completion(cmd, expected_running=True)
+        if not rpc_available:
+            return {"success": True, "max_steps": max_steps, "verified": False}
+        if observed is False:
+            msg = f"trace_over_beyond_coverage verification failed: debugger never entered running state after TraceOverBeyondTraceCoverage within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "max_steps": max_steps,
+                    "expected_running": True,
+                    "observed_running": False,
+                },
+            )
+        return {"success": True, "max_steps": max_steps, "verified": True}
+
+    async def trace_into_within_coverage(self, condition: str | None = None, max_steps: int = 50000) -> dict[str, Any]:
+        """Trace into by ``StepInto`` until execution re-enters the armed trace-record coverage.
+
+        Queues the native ``TraceIntoIntoTraceCoverage`` command (named
+        ``trace_into_within_coverage`` here - "within" reads unambiguously
+        where x64dbg's own name repeats "Into" for both the stepping mode
+        and the coverage direction) and confirms it settled via
+        :meth:`_await_run_completion`. This is the inverse target of
+        :meth:`trace_into_beyond_coverage`: it stops once execution
+        reaches code already inside the armed coverage region rather than
+        outside it. See :meth:`trace_into_beyond_coverage` for the full
+        argument-shape and trace-record-arming rationale shared by both.
+
+        Args:
+            condition: Optional break condition expression; tracing stops
+                as soon as it evaluates to a value other than 0, in
+                addition to the coverage-boundary stop. When omitted, the
+                always-false expression ``0`` is sent so the coverage
+                boundary is the only stop condition.
+            max_steps: Maximum number of steps to trace before the
+                debugger gives up, independent of ``condition``.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``max_steps``, and
+            ``verified``. ``verified`` is ``True`` when the trace was
+            confirmed to have run (via the paused event or a ``status``
+            poll); ``False`` only when the plugin lacks ``status``.
+
+        Raises:
+            ToolError: If neither the paused event nor ``status`` ever
+                showed the debugger leaving its paused state within the
+                verification window.
+        """
+        _logger.debug("x64dbg_command_queued", command="trace_into_within_coverage", max_steps=max_steps)
+        cmd = f'TraceIntoIntoTraceCoverage "{condition}", {max_steps}' if condition else f"TraceIntoIntoTraceCoverage 0, {max_steps}"
+        observed, rpc_available = await self._await_run_completion(cmd, expected_running=True)
+        if not rpc_available:
+            return {"success": True, "max_steps": max_steps, "verified": False}
+        if observed is False:
+            msg = f"trace_into_within_coverage verification failed: debugger never entered running state after TraceIntoIntoTraceCoverage within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "max_steps": max_steps,
+                    "expected_running": True,
+                    "observed_running": False,
+                },
+            )
+        return {"success": True, "max_steps": max_steps, "verified": True}
+
+    async def trace_over_within_coverage(self, condition: str | None = None, max_steps: int = 50000) -> dict[str, Any]:
+        """Trace over by ``StepOver`` until execution re-enters the armed trace-record coverage.
+
+        Queues the native ``TraceOverIntoTraceCoverage`` command (the
+        ``StepOver`` variant of :meth:`trace_into_within_coverage`) and
+        confirms it settled via :meth:`_await_run_completion`. See
+        :meth:`trace_into_beyond_coverage` for the full argument-shape and
+        trace-record-arming rationale shared by the whole family.
+
+        Args:
+            condition: Optional break condition expression; tracing stops
+                as soon as it evaluates to a value other than 0, in
+                addition to the coverage-boundary stop. When omitted, the
+                always-false expression ``0`` is sent so the coverage
+                boundary is the only stop condition.
+            max_steps: Maximum number of steps to trace before the
+                debugger gives up, independent of ``condition``.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``max_steps``, and
+            ``verified``. ``verified`` is ``True`` when the trace was
+            confirmed to have run (via the paused event or a ``status``
+            poll); ``False`` only when the plugin lacks ``status``.
+
+        Raises:
+            ToolError: If neither the paused event nor ``status`` ever
+                showed the debugger leaving its paused state within the
+                verification window.
+        """
+        _logger.debug("x64dbg_command_queued", command="trace_over_within_coverage", max_steps=max_steps)
+        cmd = f'TraceOverIntoTraceCoverage "{condition}", {max_steps}' if condition else f"TraceOverIntoTraceCoverage 0, {max_steps}"
+        observed, rpc_available = await self._await_run_completion(cmd, expected_running=True)
+        if not rpc_available:
+            return {"success": True, "max_steps": max_steps, "verified": False}
+        if observed is False:
+            msg = f"trace_over_within_coverage verification failed: debugger never entered running state after TraceOverIntoTraceCoverage within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "max_steps": max_steps,
+                    "expected_running": True,
+                    "observed_running": False,
+                },
+            )
+        return {"success": True, "max_steps": max_steps, "verified": True}
+
+    async def set_trace_log_file(self, path: str) -> dict[str, Any]:
+        """Redirect trace-log output to a file.
+
+        Sends ``TraceSetLogFile``/``SetTraceLogFile``, which x64dbg
+        documents as clearing and overwriting ``path`` the moment a trace
+        starts, and as having no effect at all unless log text has
+        already been set via ``TraceSetLog`` (reachable through
+        :meth:`trace_start`'s ``log_text`` parameter). This method does
+        not call :meth:`trace_start` on the caller's behalf; the caller
+        must sequence a ``log_text``-bearing :meth:`trace_start` for this
+        redirection to take effect. No "get trace log file" command
+        exists, so there is no readback to verify the change against.
+
+        Args:
+            path: Destination file path for trace-log output.
+
+        Returns:
+            dict[str, Any]: Dict with ``success`` and ``path``.
+        """
+        _logger.debug("x64dbg_command_queued", command="set_trace_log_file", path=path)
+        await self._send_command(f'TraceSetLogFile "{path}"')
+        return {"success": True, "path": path}
 
     async def analyze_entropy(self, address: int, size: int, block_size: int = 256) -> list[dict[str, Any]]:
         """Analyze Shannon entropy of a memory region.
