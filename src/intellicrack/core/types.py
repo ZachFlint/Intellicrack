@@ -923,6 +923,36 @@ class ModuleInfo:
 
 
 @dataclass
+class ModuleSectionInfo:
+    """A module's binary section (Module.enumerateSections).
+
+    Attributes:
+        id: Section index/segment/name identifier, exactly as Frida formats it.
+        name: Section name.
+        address: Absolute address of the section.
+        size: Size in bytes.
+    """
+
+    id: str
+    name: str
+    address: int
+    size: int
+
+
+@dataclass
+class ModuleDependencyInfo:
+    """A module's shared-library dependency (Module.enumerateDependencies).
+
+    Attributes:
+        name: Dependency module name.
+        type: One of 'regular', 'weak', 'reexport', 'upward'.
+    """
+
+    name: str
+    type: str
+
+
+@dataclass
 class ProcessInfo:
     """Running process information.
 
