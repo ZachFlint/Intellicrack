@@ -1016,6 +1016,74 @@ class TestEsilStepUntil:
 
 
 @pytest.mark.usefixtures("qapp")
+class TestAddEsilWatchpoint:
+    """L1/L2/L3 gate: ESIL watchpoints on register/memory access (rizin 'de') must be real and reachable.
+
+    Falsified by: swapping the argument order in the issued command turns
+    ``test_issues_de_with_correct_argument_order``/
+    ``test_add_watchpoint_button_calls_de_with_correct_order`` red immediately (the exact-string
+    assertion no longer matches). Removing the ``validate_r2_argument(expression, ...)`` call turns
+    ``test_rejects_command_injection_in_expression`` red (no exception raised).
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_de_with_correct_argument_order(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``add_esil_watchpoint`` must issue rizin's 'de <perm> <kind> <expression>' in that exact order.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        result = await bridge_with_recorder.add_esil_watchpoint("w", "mem", "0x601000")
+        assert "de w mem 0x601000" in recorder.commands
+        assert result is True
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_rejects_command_injection_in_expression(bridge_with_recorder: CutterBridge) -> None:
+        """``add_esil_watchpoint`` must reject an ``expression`` containing rizin command-control characters.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+        """
+        with pytest.raises(ToolError):
+            await bridge_with_recorder.add_esil_watchpoint("r", "reg", "eax; wx 9090")
+
+    @staticmethod
+    def test_add_watchpoint_button_calls_de_with_correct_order(qapp: QApplication) -> None:
+        """Clicking "Add Watchpoint" must issue rizin's 'de <perm> <kind> <expr>' in that exact order.
+
+        Falsifiable: if ``_on_add_watchpoint`` never called
+        ``self._bridge.add_esil_watchpoint(perm, kind, expression)``, 'de w mem 0x601000'
+        would never appear in the recorder. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.add_esil_watchpoint(perm, kind, expression), ...)``
+        call in ``ESILConsoleTab._on_add_watchpoint`` (``cutter_tabs.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({"aeim": "", "de w mem 0x601000": ""})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        tab = ESILConsoleTab()
+        tab.refresh(bridge, _no_op_run_async)
+        assert _pump_until(qapp, lambda: "aeim" in recorder.commands)
+        perm_combo = priv(tab, "_watch_perm_combo", QComboBox)
+        kind_combo = priv(tab, "_watch_kind_combo", QComboBox)
+        expr_input = priv(tab, "_watch_expr_input", QLineEdit)
+        on_add_watchpoint = cast(Callable[[], None], getattr(tab, "_on_add_watchpoint"))
+        perm_combo.setCurrentText("w")
+        kind_combo.setCurrentText("mem")
+        expr_input.setText("0x601000")
+
+        on_add_watchpoint()
+
+        assert _pump_until(qapp, lambda: "de w mem 0x601000" in recorder.commands)
+        assert "de w mem 0x601000" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
 class TestFlagsTabAddAndResolveL3:
     """L3 gate: rows 42/43 (add flag / resolve flag) -- must invoke the real bridge methods."""
 

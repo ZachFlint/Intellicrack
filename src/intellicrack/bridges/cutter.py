@@ -952,6 +952,40 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Success status",
         ),
         _tf(
+            "remove_flag",
+            "Remove a named flag",
+            [
+                _tp("name", "string", "Flag name to remove"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "rename_flag",
+            "Rename an existing flag",
+            [
+                _tp("old_name", "string", "Current flag name"),
+                _tp("new_name", "string", "New flag name"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "add_flagspace",
+            "Create (or select, if it already exists) a flagspace namespace for organizing flags",
+            [
+                _tp("name", "string", "Flagspace name"),
+            ],
+            "Success status",
+        ),
+        _tf("list_flagspaces", "List all flagspaces with their flag counts", [], "List of flagspace dictionaries"),
+        _tf(
+            "remove_flagspace",
+            "Remove a flagspace namespace",
+            [
+                _tp("name", "string", "Flagspace name to remove"),
+            ],
+            "Success status",
+        ),
+        _tf(
             "resolve_flag",
             "Resolve a flag name from an address",
             [
@@ -1030,6 +1064,16 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Set the ESIL program counter",
             [
                 _tp("address", "integer", "Address to set the PC to"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "add_esil_watchpoint",
+            "Add an ESIL watchpoint that halts emulation on register/memory access (rizin 'de')",
+            [
+                _tp("perm", "string", "Access permission to watch for", enum=["r", "w", "rw"]),
+                _tp("kind", "string", "Watchpoint kind", enum=["reg", "mem"]),
+                _tp("expression", "string", "Register name or memory-address expression to watch"),
             ],
             "Success status",
         ),
@@ -3719,6 +3763,109 @@ class CutterAnnotationMixin(CutterRopMixin):
         _logger.info("flag_added", flag_name=name, address=hex(address))
         return True
 
+    async def remove_flag(self, name: str) -> bool:
+        """Remove a named flag.
+
+        Args:
+            name: Flag name to remove.
+
+        Returns:
+            bool: True if the flag was removed.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("remove_flag_without_binary", flag_name=name)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(name, field="remove_flag name")
+        await self._r2_cmd(f"f- {name}")
+        _logger.info("flag_removed", flag_name=name)
+        return True
+
+    async def rename_flag(self, old_name: str, new_name: str) -> bool:
+        """Rename an existing flag.
+
+        Args:
+            old_name: Current flag name.
+            new_name: New flag name.
+
+        Returns:
+            bool: True if the flag was renamed.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("rename_flag_without_binary", old_name=old_name, new_name=new_name)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(old_name, field="rename_flag old_name")
+        validate_r2_argument(new_name, field="rename_flag new_name")
+        await self._r2_cmd(f"fr {old_name} {new_name}")
+        _logger.info("flag_renamed", old_name=old_name, new_name=new_name)
+        return True
+
+    async def add_flagspace(self, name: str) -> bool:
+        """Create (or select, if it already exists) a flagspace namespace for organizing flags.
+
+        Args:
+            name: Flagspace name.
+
+        Returns:
+            bool: True if the flagspace was created/selected.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("add_flagspace_without_binary", flagspace_name=name)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(name, field="add_flagspace name")
+        await self._r2_cmd(f"fs {name}")
+        _logger.info("flagspace_added", flagspace_name=name)
+        return True
+
+    async def list_flagspaces(self) -> list[dict[str, Any]]:
+        """List all flagspaces with their flag counts.
+
+        Returns:
+            list[dict[str, Any]]: List of flagspace dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("list_flagspaces_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("fslj")
+        _logger.debug("flagspaces_queried", result_count=len(result))
+        return result
+
+    async def remove_flagspace(self, name: str) -> bool:
+        """Remove a flagspace namespace.
+
+        Args:
+            name: Flagspace name to remove.
+
+        Returns:
+            bool: True if the flagspace was removed.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("remove_flagspace_without_binary", flagspace_name=name)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(name, field="remove_flagspace name")
+        await self._r2_cmd(f"fs- {name}")
+        _logger.info("flagspace_removed", flagspace_name=name)
+        return True
+
     async def resolve_flag(self, address: int) -> str | None:
         """Resolve a flag name from an address.
 
@@ -4075,6 +4222,31 @@ class CutterEsilMixin(CutterTypesMixin):
 
         await self._r2_cmd(f"aepc {address}")
         _logger.debug("esil_pc_set", address=hex(address))
+        return True
+
+    async def add_esil_watchpoint(self, perm: str, kind: Literal["reg", "mem"], expression: str) -> bool:
+        """Add an ESIL watchpoint that halts emulation on register/memory access.
+
+        Args:
+            perm: Access permission to watch for (e.g. ``"r"``, ``"w"``, ``"rw"``).
+            kind: Watchpoint kind, either ``"reg"`` (register) or ``"mem"`` (memory address).
+            expression: Register name or memory-address expression to watch.
+
+        Returns:
+            bool: True if the watchpoint was added.
+
+        Raises:
+            ToolError: If no binary is loaded, or if ``perm``/``expression`` contain rizin
+                command-control characters.
+        """
+        if self._r2 is None:
+            _logger.warning("add_esil_watchpoint_without_binary", perm=perm, kind=kind, expression=expression)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(perm, field="add_esil_watchpoint perm")
+        validate_r2_argument(expression, field="add_esil_watchpoint expression")
+        await self._r2_cmd(f"de {perm} {kind} {expression}")
+        _logger.info("esil_watchpoint_added", perm=perm, kind=kind, expression=expression)
         return True
 
 
