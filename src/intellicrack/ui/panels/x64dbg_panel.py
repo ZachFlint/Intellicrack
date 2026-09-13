@@ -1304,6 +1304,10 @@ class X64DbgPanel(AnalysisPanelBase):
         self._lbl_refresh_btn.setObjectName("tool_button")
         self._lbl_refresh_btn.clicked.connect(self._on_refresh_labels)
         lbl_toolbar.addWidget(self._lbl_refresh_btn)
+        self._lbl_delete_btn = QPushButton(self.tr("Delete"))
+        self._lbl_delete_btn.setObjectName("tool_button")
+        self._lbl_delete_btn.clicked.connect(self._on_delete_label)
+        lbl_toolbar.addWidget(self._lbl_delete_btn)
         lbl_toolbar.addStretch()
         lbl_layout.addWidget(self._make_control_row(lbl_toolbar))
         self._lbl_table = QTableWidget(0, len(_ANNOT_COLUMNS))
@@ -3976,6 +3980,34 @@ class X64DbgPanel(AnalysisPanelBase):
         address = cast("int", addr_item.data(Qt.ItemDataRole.UserRole))
         self._lbl_addr_input.setText(f"0x{address:X}")
         self._lbl_text_input.setText(text_item.text())
+
+    def _on_delete_label(self) -> None:
+        """Delete the label at the selected row's address."""
+        if self._bridge is None:
+            return
+        row = self._lbl_table.currentRow()
+        if row < 0:
+            return
+        addr_item = self._lbl_table.item(row, 0)
+        if addr_item is None:
+            return
+        address = cast("int", addr_item.data(Qt.ItemDataRole.UserRole))
+        self._lbl_delete_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.delete_label(address),
+            on_success=lambda _: self._on_delete_label_success(),
+            on_error=lambda e: self._on_generic_error("Delete Label", e, self._lbl_delete_btn),
+            parent=self,
+            event="x64dbg_delete_label",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+        )
+
+    def _on_delete_label_success(self) -> None:
+        """Handle successful label deletion by re-enabling the button and refreshing the table."""
+        self._lbl_delete_btn.setEnabled(True)
+        self._on_refresh_labels()
 
     def _on_set_comment_btn(self) -> None:
         """Set a comment at the specified address."""
