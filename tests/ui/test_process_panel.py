@@ -451,6 +451,7 @@ _CANONICAL_PROCESS_FUNCTION_NAMES: frozenset[str] = frozenset({
     "process.read_peb",
     "process.read_teb",
     "process.get_heaps",
+    "process.enumerate_heaps",
     "process.get_thread_context",
     "process.set_thread_context",
     "process.stack_walk",
@@ -509,7 +510,7 @@ class TestToolDefinition:
     """
 
     def test_tool_definition_exact_function_set(self) -> None:
-        """Verify the tool definition exposes exactly the canonical set of 66 process functions.
+        """Verify the tool definition exposes exactly the canonical set of 67 process functions.
 
         Asserts the full set of declared function names matches the independently
         enumerated canonical set. A stub that declares fewer, more, or differently-named
@@ -580,7 +581,7 @@ class TestToolDefinition:
         test uses the production dispatch rule (split suffix) to locate the exact
         method the orchestrator will call, then compares sorted parameter names from
         the tool definition against sorted parameter names in that method's Python
-        signature for every one of the 66 functions.
+        signature for every one of the 67 functions.
         """
         b = ProcessBridge()
         for func in b.tool_definition.functions:

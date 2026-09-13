@@ -114,6 +114,15 @@ class _PlaceholderProcess:
     proceed to the pipe layer without actually spawning x64dbg.exe.
     """
 
+    def poll(self) -> int | None:
+        """Report process status the way :class:`subprocess.Popen.poll` does.
+
+        Returns:
+            int | None: Always ``None``, indicating this stand-in debugger
+            process is still running.
+        """
+        return None
+
 
 def _install_fake_pipe(
     bridge: X64DbgBridge,
@@ -916,6 +925,12 @@ class TestConfigureBreakpoint:
         def responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
             if command == "exec":
                 return {"id": 1, "success": True, "result": ""}
+            if command == "bp_list":
+                return {
+                    "id": 1,
+                    "success": True,
+                    "result": [{"address": hex(_BP_ADDR), "breakCondition": _CONDITION_EXPR}],
+                }
             msg = f"unexpected command: {command}"
             raise AssertionError(msg)
 

@@ -46,6 +46,8 @@ _ADDR_INPUT_MAX_WIDTH: Final[int] = 160
 
 _MODINFO_IMPORT_COLUMNS: Final[list[str]] = ["Name", "Ordinal", "IAT RVA", "IAT VA"]
 _MODINFO_PEDIR_COLUMNS: Final[list[str]] = ["Index", "Name", "RVA", "Size"]
+_MODINFO_RESOURCE_COLUMNS: Final[list[str]] = ["Type", "Id", "Name", "Language", "RVA", "Size", "Code Page"]
+_MODINFO_TLS_COLUMNS: Final[list[str]] = ["Index", "Address"]
 _WATCH_COLUMNS: Final[list[str]] = ["Index", "Expression", "Value"]
 _XREF_COLUMNS: Final[list[str]] = ["#", "Reference"]
 _HANDLE_COLUMNS: Final[list[str]] = ["Handle", "Object", "Granted Access", "Type Index", "Attributes"]
@@ -124,11 +126,25 @@ class X64DbgAdvancedTab(QWidget):
         self._modinfo_pedirs_btn.setObjectName("tool_button")
         self._modinfo_pedirs_btn.clicked.connect(self._on_get_pe_directories)
         toolbar.addWidget(self._modinfo_pedirs_btn)
+        self._modinfo_resources_btn = QPushButton(self.tr("Resources"))
+        self._modinfo_resources_btn.setObjectName("tool_button")
+        self._modinfo_resources_btn.clicked.connect(self._on_get_resources)
+        toolbar.addWidget(self._modinfo_resources_btn)
+        self._modinfo_tls_btn = QPushButton(self.tr("TLS Callbacks"))
+        self._modinfo_tls_btn.setObjectName("tool_button")
+        self._modinfo_tls_btn.clicked.connect(self._on_get_tls_callbacks)
+        toolbar.addWidget(self._modinfo_tls_btn)
+        self._modinfo_tls_break_btn = QPushButton(self.tr("Break on TLS CBs"))
+        self._modinfo_tls_break_btn.setObjectName("tool_button")
+        self._modinfo_tls_break_btn.clicked.connect(self._on_break_on_tls_callbacks)
+        toolbar.addWidget(self._modinfo_tls_break_btn)
         toolbar.addStretch()
         layout.addLayout(toolbar)
 
         self._modinfo_entry_label = QLabel(self.tr("Entry point: --"))
         layout.addWidget(self._modinfo_entry_label)
+        self._modinfo_status_label = QLabel("")
+        layout.addWidget(self._modinfo_status_label)
 
         self._modinfo_table = QTableWidget(0, len(_MODINFO_IMPORT_COLUMNS))
         self._modinfo_table.setHorizontalHeaderLabels(_MODINFO_IMPORT_COLUMNS)
@@ -190,6 +206,8 @@ class X64DbgAdvancedTab(QWidget):
             result: Import dict list from the bridge.
         """
         self._modinfo_imports_btn.setEnabled(True)
+        self._modinfo_table.setColumnCount(len(_MODINFO_IMPORT_COLUMNS))
+        self._modinfo_table.setHorizontalHeaderLabels(_MODINFO_IMPORT_COLUMNS)
         raw_imports: list[object] = [*result] if isinstance(result, list) else []
         imports: list[dict[str, object]] = [cast("dict[str, object]", entry) for entry in raw_imports if isinstance(entry, dict)]
         self._modinfo_table.setRowCount(0)
@@ -263,6 +281,8 @@ class X64DbgAdvancedTab(QWidget):
             result: Directory-entry dict list from the bridge.
         """
         self._modinfo_pedirs_btn.setEnabled(True)
+        self._modinfo_table.setColumnCount(len(_MODINFO_PEDIR_COLUMNS))
+        self._modinfo_table.setHorizontalHeaderLabels(_MODINFO_PEDIR_COLUMNS)
         raw_dirs: list[object] = [*result] if isinstance(result, list) else []
         directories: list[dict[str, object]] = [cast("dict[str, object]", entry) for entry in raw_dirs if isinstance(entry, dict)]
         self._modinfo_table.setRowCount(0)
@@ -277,6 +297,128 @@ class X64DbgAdvancedTab(QWidget):
             self._modinfo_table.setItem(row, 2, QTableWidgetItem(str(entry.get("rva", ""))))
             self._modinfo_table.setItem(row, 3, QTableWidgetItem(str(entry.get("size", ""))))
 
+    def _on_get_resources(self) -> None:
+        """Fetch and display the PE resource entries of the specified module."""
+        if self._bridge is None:
+            return
+        module_name = self._modinfo_module_name()
+        if module_name is None:
+            return
+        self._modinfo_table.setColumnCount(len(_MODINFO_RESOURCE_COLUMNS))
+        self._modinfo_table.setHorizontalHeaderLabels(_MODINFO_RESOURCE_COLUMNS)
+        self._apply_modinfo_resize_modes(name_column=2)
+        self._modinfo_resources_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.get_resources(module_name),
+            on_success=self._apply_resources,
+            on_error=lambda e: self._on_modinfo_error("resources", e),
+            parent=self,
+            event="x64dbg_get_resources",
+            logger=_logger,
+            module=module_name,
+        )
+
+    def _apply_resources(self, result: object) -> None:
+        """Populate the module-info table with PE resource leaf entries.
+
+        Args:
+            result: Resource leaf dict list from the bridge.
+        """
+        self._modinfo_resources_btn.setEnabled(True)
+        self._modinfo_table.setColumnCount(len(_MODINFO_RESOURCE_COLUMNS))
+        self._modinfo_table.setHorizontalHeaderLabels(_MODINFO_RESOURCE_COLUMNS)
+        raw_resources: list[object] = [*result] if isinstance(result, list) else []
+        resources: list[dict[str, object]] = [cast("dict[str, object]", entry) for entry in raw_resources if isinstance(entry, dict)]
+        self._modinfo_table.setRowCount(0)
+        for entry in resources:
+            row = self._modinfo_table.rowCount()
+            self._modinfo_table.insertRow(row)
+            self._modinfo_table.setItem(row, 0, QTableWidgetItem(str(entry.get("type_name", ""))))
+            self._modinfo_table.setItem(row, 1, QTableWidgetItem(str(entry.get("id", ""))))
+            name = str(entry.get("name", "") or "")
+            name_item = QTableWidgetItem(name)
+            name_item.setToolTip(name)
+            self._modinfo_table.setItem(row, 2, name_item)
+            self._modinfo_table.setItem(row, 3, QTableWidgetItem(str(entry.get("language", ""))))
+            self._modinfo_table.setItem(row, 4, QTableWidgetItem(str(entry.get("rva", ""))))
+            self._modinfo_table.setItem(row, 5, QTableWidgetItem(str(entry.get("size", ""))))
+            self._modinfo_table.setItem(row, 6, QTableWidgetItem(str(entry.get("code_page", ""))))
+        self._modinfo_status_label.setText(self.tr("{0} resource(s) found").format(len(resources)))
+
+    def _on_get_tls_callbacks(self) -> None:
+        """Fetch and display the TLS callback addresses of the specified module."""
+        if self._bridge is None:
+            return
+        module_name = self._modinfo_module_name()
+        if module_name is None:
+            return
+        self._modinfo_table.setColumnCount(len(_MODINFO_TLS_COLUMNS))
+        self._modinfo_table.setHorizontalHeaderLabels(_MODINFO_TLS_COLUMNS)
+        self._apply_modinfo_resize_modes(name_column=1)
+        self._modinfo_tls_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.get_tls_callbacks(module_name),
+            on_success=self._apply_tls_callbacks,
+            on_error=lambda e: self._on_modinfo_error("tls_callbacks", e),
+            parent=self,
+            event="x64dbg_get_tls_callbacks",
+            logger=_logger,
+            module=module_name,
+        )
+
+    def _apply_tls_callbacks(self, result: object) -> None:
+        """Populate the module-info table with TLS callback addresses.
+
+        Args:
+            result: TLS callback dict list from the bridge.
+        """
+        self._modinfo_tls_btn.setEnabled(True)
+        self._modinfo_table.setColumnCount(len(_MODINFO_TLS_COLUMNS))
+        self._modinfo_table.setHorizontalHeaderLabels(_MODINFO_TLS_COLUMNS)
+        raw_callbacks: list[object] = [*result] if isinstance(result, list) else []
+        callbacks: list[dict[str, object]] = [cast("dict[str, object]", entry) for entry in raw_callbacks if isinstance(entry, dict)]
+        self._modinfo_table.setRowCount(0)
+        for entry in callbacks:
+            row = self._modinfo_table.rowCount()
+            self._modinfo_table.insertRow(row)
+            self._modinfo_table.setItem(row, 0, QTableWidgetItem(str(entry.get("index", ""))))
+            self._modinfo_table.setItem(row, 1, QTableWidgetItem(str(entry.get("address", ""))))
+        self._modinfo_status_label.setText(self.tr("{0} TLS callback(s) found").format(len(callbacks)))
+
+    def _on_break_on_tls_callbacks(self) -> None:
+        """Set breakpoints on every TLS callback of the specified module."""
+        if self._bridge is None:
+            return
+        module_name = self._modinfo_module_name()
+        if module_name is None:
+            return
+        self._modinfo_tls_break_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.break_on_tls_callbacks(module_name),
+            on_success=self._apply_tls_break_result,
+            on_error=lambda e: self._on_modinfo_error("break_on_tls_callbacks", e),
+            parent=self,
+            event="x64dbg_break_on_tls_callbacks",
+            logger=_logger,
+            level="info",
+            module=module_name,
+        )
+
+    def _apply_tls_break_result(self, result: object) -> None:
+        """Report how many TLS-callback breakpoints were set.
+
+        Args:
+            result: Success/count dict from the bridge.
+        """
+        self._modinfo_tls_break_btn.setEnabled(True)
+        count = 0
+        if isinstance(result, dict):
+            entry: dict[str, object] = cast("dict[str, object]", result)
+            raw_count = entry.get("breakpoints_set")
+            if isinstance(raw_count, int):
+                count = raw_count
+        self._modinfo_status_label.setText(self.tr("Set breakpoints on {0} TLS callback(s)").format(count))
+
     def _on_modinfo_error(self, operation: str, exc: object) -> None:
         """Handle a module-info operation failure.
 
@@ -287,6 +429,9 @@ class X64DbgAdvancedTab(QWidget):
         self._modinfo_imports_btn.setEnabled(True)
         self._modinfo_entry_btn.setEnabled(True)
         self._modinfo_pedirs_btn.setEnabled(True)
+        self._modinfo_resources_btn.setEnabled(True)
+        self._modinfo_tls_btn.setEnabled(True)
+        self._modinfo_tls_break_btn.setEnabled(True)
         _logger.warning("x64dbg_modinfo_operation_failed", operation=operation, error=str(exc))
         QMessageBox.warning(self, self.tr("Module Info Error"), str(exc))
 

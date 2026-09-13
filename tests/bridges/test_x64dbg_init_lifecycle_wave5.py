@@ -96,6 +96,15 @@ class _PlaceholderProcess:
     ``_process is None`` to reach the pipe layer without spawning x64dbg.exe.
     """
 
+    def poll(self) -> int | None:
+        """Report process status the way :class:`subprocess.Popen.poll` does.
+
+        Returns:
+            int | None: Always ``None``, indicating this stand-in debugger
+            process is still running.
+        """
+        return None
+
     pid: int = 0
 
 

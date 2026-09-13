@@ -33,6 +33,7 @@ from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
 from intellicrack.ui.panels.process_panel.modules_tab import ModulesTab
 from intellicrack.ui.panels.process_panel.process_tab import ProcessTab
 from intellicrack.ui.panels.process_panel.system_tab import SystemTab
+from intellicrack.ui.panels.process_panel.tab_overflow import install_tab_overflow
 from intellicrack.ui.panels.process_panel.threads_tab import ThreadsTab
 
 
@@ -207,6 +208,7 @@ class ProcessPanel(AnalysisPanelBase):
         self._threads_tab.attach_system_tab(self._system_tab)
 
         self._tab_widget.currentChanged.connect(self._on_tab_widget_changed)
+        install_tab_overflow(self._tab_widget)
 
         self._detail_tabs = [
             self._memory_tab,

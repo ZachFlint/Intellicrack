@@ -281,8 +281,8 @@ class TestExportPatchesDrivesExportPatchesBridgeCall:
     deterministic path (the same accepted pattern used in
     ``tests/test_audit4/c13_hex_patches_route/test_patches_bridge_route.py``);
     everything downstream of the dialog -- button click, bridge dispatch,
-    ``savedata`` command framing, and console rendering -- is real
-    production code.
+    ``get_patches``/``savedata`` command framing, output-file
+    verification, and console rendering -- is real production code.
     """
 
     @staticmethod
@@ -292,14 +292,28 @@ class TestExportPatchesDrivesExportPatchesBridgeCall:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Clicking Export must issue ``savedata "<path>"`` and log the exact export path.
+        """Clicking Export must issue the real 3-argument ``savedata`` command and log the exact export path.
+
+        ``X64DbgBridge.export_patches`` first calls ``get_patches()`` to
+        find the span of applied patches, then issues ``savedata
+        "<path>", <address>, <size>`` covering the smallest contiguous
+        region spanning every patch, and finally polls the output path
+        until it is observed on disk at the expected size. The responder
+        mirrors that contract: it answers ``patch_list`` with a realistic
+        two-patch set and, on the exact matching ``savedata`` command,
+        writes a file of the expected size so the bridge's
+        write-verification succeeds.
 
         Falsifiable: if ``_on_export_patches`` called a different bridge
         method, or built the export path differently, the recorded
-        ``exec`` command would not match ``export_path`` exactly. Broken
-        production line: ``self._bridge.export_patches(path)`` in
-        ``_on_export_patches`` and ``await self._send_command(f'savedata
-        "{path}"')`` in ``X64DbgBridge.export_patches``.
+        ``exec`` command would not match ``expected_command`` exactly and
+        the responder's assertion raises; if the button never dispatched
+        ``export_patches`` at all, the exported-path text never appears
+        and the final assertion fails. Broken production line:
+        ``self._bridge.export_patches(path)`` in ``_on_export_patches``
+        and ``await self._send_command(f'savedata "{path}",
+        {hex(start_address)}, {hex(size)}')`` in
+        ``X64DbgBridge.export_patches``.
 
         Args:
             wired_panel: Panel/bridge pair fixture.
@@ -310,6 +324,8 @@ class TestExportPatchesDrivesExportPatchesBridgeCall:
         """
         panel, bridge = wired_panel
         export_path = tmp_path / "patches.1337"
+        expected_size = _PATCH_ADDR_2 - _PATCH_ADDR_1 + 1
+        expected_command = f'savedata "{export_path!s}", {hex(_PATCH_ADDR_1)}, {hex(expected_size)}'
 
         def _fake_save_dialog(*_args: object, **_kwargs: object) -> tuple[str, str]:
             return (str(export_path), "Patch Files (*.1337)")
@@ -317,9 +333,17 @@ class TestExportPatchesDrivesExportPatchesBridgeCall:
         monkeypatch.setattr(QFileDialog, "getSaveFileName", _fake_save_dialog)
 
         def responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
+            if command == "patch_list":
+                return ok(
+                    [
+                        {"address": hex(_PATCH_ADDR_1), "oldByte": "90", "newByte": "CC"},
+                        {"address": hex(_PATCH_ADDR_2), "oldByte": "EB", "newByte": "90"},
+                    ],
+                )
             if command == "exec":
                 assert params is not None
-                assert params.get("command") == f'savedata "{export_path!s}"'
+                assert params.get("command") == expected_command
+                export_path.write_bytes(bytes(expected_size))
                 return ok("")
             if command in _RESIDUAL_REFRESH_RPCS:
                 return _residual_response(command)
@@ -333,9 +357,10 @@ class TestExportPatchesDrivesExportPatchesBridgeCall:
 
         try:
             patch_export_btn.click()
-            pump_until(qapp, lambda: any(cmd == "exec" for cmd, _ in fake.sent))
             pump_until(qapp, lambda: "Patches exported" in console_output.toPlainText())
 
             assert f"Patches exported to {export_path!s}" in console_output.toPlainText()
+            assert ("exec", {"command": expected_command}) in fake.sent
+            assert export_path.read_bytes() == bytes(expected_size)
         finally:
             panel.deleteLater()

@@ -26,8 +26,8 @@ from cryptography.hazmat.primitives.ciphers import Cipher
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.ciphers.modes import ECB
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QImage, QKeyEvent, QMouseEvent, QPainter, QPaintEvent
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtGui import QCloseEvent, QColor, QImage, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QResizeEvent
+from PyQt6.QtWidgets import QPushButton, QTabWidget, QVBoxLayout, QWidget
 
 from intellicrack.bridges.named_pipe_client import NamedPipeClient
 from intellicrack.core.logging import get_logger
@@ -118,6 +118,13 @@ _REPAINT_INTERVAL_MS: Final[int] = 50
 _PUMP_IDLE_SLEEP_S: Final[float] = 0.01
 _DEFAULT_CONNECT_TIMEOUT: Final[float] = 10.0
 _MESSAGE_READ_TIMEOUT: Final[float] = 0.1
+# Once a message's type byte has actually arrived, the rest of it is expected
+# within this window. This is a genuine-stall guard, not a poll interval: it
+# only ever starts counting after real data has been seen, so it is sized to
+# comfortably cover a large non-incremental framebuffer update rather than a
+# single protocol message.
+_MESSAGE_BODY_READ_TIMEOUT: Final[float] = 30.0
+_POPOUT_BUTTON_MARGIN: Final[int] = 6
 _TIGHT_AVAILABLE: Final[bool] = find_spec("PIL") is not None
 _PIXEL_FORMAT_32BIT: Final[bytes] = struct.pack(
     "!BBBBHHHBBBxxx",
@@ -135,6 +142,15 @@ _PIXEL_FORMAT_32BIT: Final[bytes] = struct.pack(
 _CLIENT_MSG_SET_PIXEL_FORMAT: Final[int] = 0
 _CLIENT_MSG_FRAMEBUFFER_UPDATE_REQUEST: Final[int] = 3
 _SET_PIXEL_FORMAT_MESSAGE: Final[bytes] = struct.pack("!Bxxx", _CLIENT_MSG_SET_PIXEL_FORMAT) + _PIXEL_FORMAT_32BIT
+
+
+class _NoMessagePendingError(Exception):
+    """Raised internally when a poll for a new server message finds nothing waiting.
+
+    Distinguishes the read loop's normal "nothing to read yet" outcome -
+    expected continuously while the guest console is idle - from a genuine
+    mid-message stall, so only the latter is ever logged as a timeout warning.
+    """
 
 
 class _ConnectOptions(TypedDict, total=False):
@@ -534,25 +550,17 @@ class RFBClient:
         self._writer.write(msg)
         await self._writer.drain()
 
-    async def _dispatch_server_message(self, reader: asyncio.StreamReader) -> bool:
-        """Read one server message and dispatch it to the right handler.
+    async def _read_message_body(self, reader: asyncio.StreamReader, msg_type: int) -> bool:
+        """Read and consume the body of a server message whose type is already known.
 
         Args:
             reader: Active stream reader for the connected VNC socket.
+            msg_type: The message-type byte already read from ``reader``.
 
         Returns:
             bool: ``True`` when the message was handled (or silently consumed),
-            ``False`` for unrecognised or zero-length message types.
+            ``False`` for an unrecognised message type.
         """
-        msg_type_data = await asyncio.wait_for(
-            reader.readexactly(1),
-            timeout=_MESSAGE_READ_TIMEOUT,
-        )
-        if not msg_type_data:
-            return False
-
-        msg_type = msg_type_data[0]
-
         if msg_type == _MSG_FRAMEBUFFER_UPDATE:
             await self._handle_framebuffer_update()
             return True
@@ -576,23 +584,64 @@ class RFBClient:
 
         return False
 
+    async def _dispatch_server_message(self, reader: asyncio.StreamReader) -> bool:
+        """Read one server message and dispatch it to the right handler.
+
+        The initial poll for a message type byte is timed separately from the
+        rest of the message: that first read is expected to time out
+        continuously while the console is idle, which is normal and not a
+        stall, whereas a timeout while reading the body of a message that has
+        already started is a genuine protocol stall.
+
+        Args:
+            reader: Active stream reader for the connected VNC socket.
+
+        Returns:
+            bool: ``True`` when the message was handled (or silently consumed),
+            ``False`` for unrecognised or zero-length message types.
+
+        Raises:
+            _NoMessagePendingError: If no message type byte arrived within
+                :data:`_MESSAGE_READ_TIMEOUT`.
+        """
+        try:
+            msg_type_data = await asyncio.wait_for(
+                reader.readexactly(1),
+                timeout=_MESSAGE_READ_TIMEOUT,
+            )
+        except TimeoutError:
+            raise _NoMessagePendingError from None
+
+        if not msg_type_data:
+            return False
+
+        return await asyncio.wait_for(
+            self._read_message_body(reader, msg_type_data[0]),
+            timeout=_MESSAGE_BODY_READ_TIMEOUT,
+        )
+
     async def handle_server_message(self) -> bool:
         """Read and process one server message.
 
         Returns:
-            bool: True if a message was handled, False on connection loss or timeout.
+            bool: True if a message was handled, False when none was pending,
+            the connection was lost, or a genuine mid-message stall was
+            detected.
         """
         if self._reader is None or not self._connected:
             return False
 
         try:
             return await self._dispatch_server_message(self._reader)
+        except _NoMessagePendingError:
+            return False
         except asyncio.IncompleteReadError:
             _logger.warning("vnc_message_incomplete")
             self._connected = False
             return False
         except TimeoutError:
-            _logger.warning("vnc_message_timeout")
+            _logger.warning("vnc_message_stalled", timeout_seconds=_MESSAGE_BODY_READ_TIMEOUT)
+            self._connected = False
             return False
         except (OSError, struct.error):
             _logger.exception("vnc_message_error", connected=self._connected)
@@ -1764,6 +1813,33 @@ def qt_key_to_x11(key: int, text: str) -> int:
     return _qt_key_to_x11(key, text)
 
 
+class _VNCPopoutWindow(QWidget):
+    """Top-level window that temporarily hosts a popped-out :class:`VNCWidget`.
+
+    The pop-out reparents the *same* live widget instance into this window
+    rather than constructing a second one, so the socket connection,
+    framebuffer pump task, and repaint timer all keep running unmodified -
+    the guest display never stops receiving frames while popped out, and
+    nothing has to reconnect when it re-docks.
+
+    Attributes:
+        closed: Signal emitted just before the window closes, so the owner
+            can re-dock the hosted widget before this window is destroyed.
+    """
+
+    closed: pyqtSignal = pyqtSignal()
+
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
+        """Emit :attr:`closed` before the popout window closes.
+
+        Args:
+            a0: The close event.
+        """
+        self.closed.emit()
+        super().closeEvent(a0)
+
+
 class VNCWidget(QWidget):
     """Qt widget that displays a VNC remote framebuffer.
 
@@ -1771,6 +1847,12 @@ class VNCWidget(QWidget):
     mouse and keyboard events. Server message pumping runs as a long-lived
     task on the shared bridge event loop so the Qt main thread is never
     blocked on network I/O.
+
+    A framebuffer scaled into a small docked tab is often too small to read
+    or drive, so the widget also offers a self-contained pop-out: its own
+    "Pop Out" button reparents it into a resizable, maximized top-level
+    window, and closing that window re-docks it exactly where it came from.
+    See :meth:`configure_dock_host`, :meth:`popout`, and :meth:`redock`.
 
     Attributes:
         connection_status_changed: Signal emitted with boolean indicating VNC connection state.
@@ -1794,12 +1876,105 @@ class VNCWidget(QWidget):
         self._pump_loop: asyncio.AbstractEventLoop | None = None
         self._pump_task_ref: asyncio.Task[None] | None = None
         self._pending_connect: tuple[str, int] = ("", 0)
+        self._dock_tab_widget: QTabWidget | None = None
+        self._dock_tab_label: str = "VM Display"
+        self._dock_tab_index: int = -1
+        self._popout_window: _VNCPopoutWindow | None = None
         _ = self.framebuffer_updated.connect(self.update)
         _ = self._connect_finished.connect(self._on_connect_finished)
         _ = ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMinimumSize(320, 240)
+
+        self._popout_btn = QPushButton("Pop Out", self)
+        self._popout_btn.setObjectName("vnc_popout_button")
+        self._popout_btn.setToolTip("Open the VM display in its own resizable window")
+        self._popout_btn.clicked.connect(self._on_popout_button_clicked)
+        self._popout_btn.adjustSize()
+        self._reposition_popout_button()
+
+    def configure_dock_host(self, tab_widget: QTabWidget, tab_label: str) -> None:
+        """Remember where this widget should re-dock after a pop-out.
+
+        Args:
+            tab_widget: The tab widget this widget is normally a page of.
+            tab_label: Tab label to restore when re-docking.
+        """
+        self._dock_tab_widget = tab_widget
+        self._dock_tab_label = tab_label
+
+    def popout(self) -> None:
+        """Move this widget into its own resizable, maximized top-level window.
+
+        A no-op when already popped out (the existing window is simply
+        raised and activated instead of a second one being created).
+        """
+        if self._popout_window is not None:
+            self._popout_window.raise_()
+            self._popout_window.activateWindow()
+            return
+
+        tab_widget = self._dock_tab_widget
+        if tab_widget is not None:
+            self._dock_tab_index = tab_widget.indexOf(self)
+
+        window = _VNCPopoutWindow()
+        window.setWindowTitle(self._dock_tab_label)
+        layout = QVBoxLayout(window)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self)
+        window.closed.connect(self.redock)
+        self._popout_window = window
+        self._popout_btn.setText("Re-dock")
+        window.showMaximized()
+        _logger.info("vnc_widget_popped_out")
+
+    def redock(self) -> None:
+        """Move this widget back into its configured host tab widget.
+
+        A no-op when not currently popped out, so it is safe to call from
+        both the popout window's close event and a direct "Re-dock" click.
+        """
+        window = self._popout_window
+        if window is None:
+            return
+        self._popout_window = None
+        self._popout_btn.setText("Pop Out")
+
+        tab_widget = self._dock_tab_widget
+        if tab_widget is not None:
+            index = self._dock_tab_index if 0 <= self._dock_tab_index <= tab_widget.count() else tab_widget.count()
+            tab_widget.insertTab(index, self, self._dock_tab_label)
+            tab_widget.setCurrentWidget(self)
+        else:
+            self.setParent(None)
+            self.show()
+
+        window.deleteLater()
+        _logger.info("vnc_widget_redocked")
+
+    def _on_popout_button_clicked(self) -> None:
+        """Toggle between the popped-out and docked state from the widget's own button."""
+        if self._popout_window is None:
+            self.popout()
+        else:
+            self.redock()
+
+    def _reposition_popout_button(self) -> None:
+        """Keep the pop-out button pinned to the top-right corner of the widget."""
+        margin = _POPOUT_BUTTON_MARGIN
+        self._popout_btn.move(max(self.width() - self._popout_btn.width() - margin, margin), margin)
+
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        """Keep the pop-out button pinned to the top-right corner on resize.
+
+        Args:
+            a0: The resize event.
+        """
+        super().resizeEvent(a0)
+        self._reposition_popout_button()
 
     def connect_to_server(
         self,

@@ -10,7 +10,7 @@ This module provides a manager for creating, tracking, and coordinating multiple
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import MISSING, dataclass, field, fields, replace
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal, assert_never
 from uuid import uuid4
@@ -168,6 +168,55 @@ class SandboxManager:
         """
         return self._availability_cache
 
+    def _resolve_config(self, config: SandboxConfig | None) -> SandboxConfig:
+        """Merge a per-call configuration override onto the manager's stored defaults.
+
+        A per-call ``config`` is layered over :attr:`_default_config` field by
+        field instead of replacing it outright. This matters because callers
+        such as :class:`~intellicrack.bridges.sandbox_bridge.SandboxBridge`
+        always construct a fully-populated :class:`SandboxConfig`, so a naive
+        ``config or self._default_config`` resolution picks ``config``
+        unconditionally (a dataclass instance is always truthy) and the
+        application-level defaults configured through the sandbox settings
+        dialog - the telemetry-block and shared-folder overrides among them -
+        are silently discarded for every call.
+
+        A field on ``config`` is treated as an explicit override when its
+        value differs from that field's declared :class:`SandboxConfig`
+        default; a value that matches the class default is treated as not
+        specified by this particular call and :attr:`_default_config` fills
+        it in instead. This is deliberately not a truthiness check: an
+        explicitly-set falsy value that differs from the class default (for
+        example ``block_telemetry=False``, whose class default is ``True``)
+        is a genuine override and always wins, exactly like any other
+        explicitly-set value.
+
+        Args:
+            config: Per-call configuration override, or ``None`` to use the
+                stored defaults unchanged.
+
+        Returns:
+            SandboxConfig: The effective configuration for this sandbox:
+            fields ``config`` overrides layered onto :attr:`_default_config`.
+        """
+        if config is None:
+            return self._default_config
+
+        overrides: dict[str, object] = {}
+        for config_field in fields(SandboxConfig):
+            value = getattr(config, config_field.name)
+            if config_field.default is not MISSING:
+                class_default = config_field.default
+            elif config_field.default_factory is not MISSING:
+                class_default = config_field.default_factory()
+            else:
+                overrides[config_field.name] = value
+                continue
+            if value != class_default:
+                overrides[config_field.name] = value
+
+        return replace(self._default_config, **overrides)
+
     def _build_sandbox(
         self,
         sandbox_type: SandboxType,
@@ -183,14 +232,17 @@ class SandboxManager:
         Args:
             sandbox_type: The sandbox type to construct.
             config: Generic sandbox configuration handed to the backend. When
-                omitted the manager's default configuration is used.
+                omitted the manager's default configuration is used; when
+                given, its explicitly-overridden fields (see
+                :meth:`_resolve_config`) win and the rest come from the
+                manager's stored defaults.
             qemu_config: QEMU-specific configuration. Consumed only by the QEMU
                 backend; the Windows backend takes no such settings.
 
         Returns:
             SandboxBase: A freshly constructed, unstarted backend instance.
         """
-        effective_config = config or self._default_config
+        effective_config = self._resolve_config(config)
         if sandbox_type == "windows":
             return WindowsSandbox(effective_config)
         if sandbox_type == "qemu":

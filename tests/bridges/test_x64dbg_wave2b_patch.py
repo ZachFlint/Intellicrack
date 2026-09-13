@@ -39,6 +39,7 @@ from intellicrack.core.types import RegisterState, ToolError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
 
 _PATCH_ADDR: Final[int] = 0x401500
@@ -47,7 +48,6 @@ _NOP_FILL_SIZE: Final[int] = 8
 _TARGET_PID: Final[int] = 9999
 _OEP: Final[int] = 0x401000
 _OUTPUT_PATH: Final[str] = "C:\\dump\\target_fixed.exe"
-_EXPORT_PATH: Final[str] = "C:\\patches\\export.txt"
 _MODULE_NAME: Final[str] = "target.dll"
 _PEB_ADDR_HEX: Final[str] = "0x7ffe0000"
 _PEB_BEING_DEBUGGED: Final[int] = 1
@@ -117,6 +117,15 @@ class _PlaceholderProcess:
     before routing through the pipe.  This sentinel satisfies that check
     without spawning a real x64dbg process.
     """
+
+    def poll(self) -> int | None:
+        """Report process status the way :class:`subprocess.Popen.poll` does.
+
+        Returns:
+            int | None: Always ``None``, indicating this stand-in debugger
+            process is still running.
+        """
+        return None
 
 
 def _install_fake_pipe(
@@ -578,62 +587,133 @@ class TestRestorePatch:
 
 @pytest.mark.asyncio
 class TestExportPatches:
-    """Gate: ``export_patches`` routes through ``exec`` with a quoted path.
+    """Gate: ``export_patches`` dumps the patched span and verifies the file.
 
-    Falsifiable mutation caught: if ``export_patches`` sent ``savedata path``
-    without quotes, or used a different command name, the exact-command
-    assertion fails while the baseline had zero coverage.
+    x64dbg's ``savedata`` takes three comma-separated arguments -
+    filename, address and size - and dumps a single contiguous region,
+    so ``export_patches`` derives the smallest span covering every
+    patched byte reported by ``patch_list``, dumps exactly that span,
+    then polls the output file until it is freshly written at the
+    expected size.
+
+    Falsifiable mutations caught: emitting a bare ``savedata "<path>"``
+    (the old framing, which x64dbg rejects for missing arguments),
+    swapping the address and size arguments, deriving the span from the
+    wrong bound, or reporting success without the file ever appearing.
     """
 
-    async def test_sends_savedata_command_with_quoted_path(
+    async def test_dumps_the_patched_span_and_reports_the_written_file(
         self,
         bridge: X64DbgBridge,
+        tmp_path: Path,
     ) -> None:
-        """``exec`` is sent with ``savedata "<path>"`` including quotes.
+        """The patched span is dumped as ``savedata "<path>", <addr>, <size>``.
 
-        The oracle: the path string in ``_EXPORT_PATH`` wrapped in
-        double-quotes is the expected command text.
+        Independent oracle: two patches seven bytes apart span exactly
+        eight bytes from the lower address, so the command must carry
+        ``hex(_PATCH_ADDR)`` then ``hex(8)`` in that order. The patches
+        are supplied high-address-first so a span derived from the wrong
+        bound is caught. The fake pipe writes the file the way x64dbg
+        would, so the real on-disk verification runs end to end.
 
         Args:
             bridge: Unattached bridge fixture.
+            tmp_path: Pytest temporary directory.
         """
-        expected_cmd = f'savedata "{_EXPORT_PATH}"'
+        export_path = tmp_path / "export.bin"
+        expected_size = 8
+        high_addr = _PATCH_ADDR + expected_size - 1
+        expected_cmd = f'savedata "{export_path}", {hex(_PATCH_ADDR)}, {hex(expected_size)}'
+        canned_patches: list[dict[str, object]] = [
+            {"address": hex(high_addr), "oldByte": _PATCH_OLD_BYTE, "newByte": _PATCH_NEW_BYTE},
+            {"address": hex(_PATCH_ADDR), "oldByte": _PATCH_OLD_BYTE, "newByte": _PATCH_NEW_BYTE},
+        ]
 
         def responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
-            del params
+            if command == "patch_list":
+                return _ok(canned_patches)
             if command == "exec":
+                assert params is not None
+                assert params.get("command") == expected_cmd
+                export_path.write_bytes(bytes(expected_size))
                 return _ok()
             msg = f"unexpected command: {command}"
             raise AssertionError(msg)
 
         fake = _install_fake_pipe(bridge, responder)
-        result = await bridge.export_patches(_EXPORT_PATH)
+        result = await bridge.export_patches(str(export_path))
 
         assert ("exec", {"command": expected_cmd}) in fake.sent
         assert result["success"] is True
-        assert result["path"] == _EXPORT_PATH
+        assert result["path"] == str(export_path)
+        assert result["address"] == hex(_PATCH_ADDR)
+        assert result["size"] == expected_size
+        assert export_path.stat().st_size == expected_size
 
-    async def test_result_path_matches_input(
+    async def test_raises_when_the_dump_file_never_appears(
         self,
         bridge: X64DbgBridge,
+        tmp_path: Path,
     ) -> None:
-        """The returned ``path`` field echoes the caller-supplied path verbatim.
+        """A ``savedata`` that writes nothing must fail verification.
+
+        Falsifiable: if ``export_patches`` reported success from the RPC
+        reply alone - the behaviour before the write was verified on
+        disk - no ``ToolError`` would be raised even though nothing was
+        ever written.
 
         Args:
             bridge: Unattached bridge fixture.
+            tmp_path: Pytest temporary directory.
         """
+        export_path = tmp_path / "never_written.bin"
 
         def responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
             del params
+            if command == "patch_list":
+                return _ok([{"address": hex(_PATCH_ADDR)}])
             if command == "exec":
                 return _ok()
             msg = f"unexpected command: {command}"
             raise AssertionError(msg)
 
         _install_fake_pipe(bridge, responder)
-        result = await bridge.export_patches(_EXPORT_PATH)
+        bridge.VERIFY_TIMEOUT = 0.05
+        bridge.VERIFY_POLL_INTERVAL = 0.005
+        with pytest.raises(ToolError, match="export_patches verification failed"):
+            await bridge.export_patches(str(export_path))
 
-        assert result["path"] == _EXPORT_PATH
+        assert not export_path.exists()
+
+    async def test_raises_when_no_patches_are_applied(
+        self,
+        bridge: X64DbgBridge,
+        tmp_path: Path,
+    ) -> None:
+        """An empty patch set has no span to dump and must raise.
+
+        Falsifiable: without the empty-set guard, ``min()`` over no
+        addresses would raise ``ValueError`` instead of the documented
+        ``ToolError``, and no ``savedata`` may be issued at all.
+
+        Args:
+            bridge: Unattached bridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        export_path = tmp_path / "empty.bin"
+
+        def responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
+            del params
+            if command == "patch_list":
+                return _ok([])
+            msg = f"unexpected command: {command}"
+            raise AssertionError(msg)
+
+        fake = _install_fake_pipe(bridge, responder)
+        with pytest.raises(ToolError, match="No patches are currently applied"):
+            await bridge.export_patches(str(export_path))
+
+        assert all(name != "exec" for name, _ in fake.sent)
 
 
 @pytest.mark.asyncio

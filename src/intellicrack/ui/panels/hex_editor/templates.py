@@ -184,8 +184,8 @@ class TemplatesMixin:
             if isinstance(result, list):
                 typed_fields = cast("list[dict[str, object]]", result)
                 field_count = len(typed_fields)
-                self._populate_template_tree(typed_fields)
-                self._highlight_template_fields(typed_fields)
+                self._populate_struct_template_tree(typed_fields)
+                self._highlight_struct_template_fields(typed_fields)
 
             self._notify_state_template_registered(
                 template_name,
@@ -199,10 +199,24 @@ class TemplatesMixin:
 
             _logger.info("template_applied", template=template_name)
 
-    def _populate_template_tree(self, fields: list[dict[str, object]]) -> None:
-        """Populate the templates tree with parsed field data.
+    def _populate_struct_template_tree(self, fields: list[dict[str, object]]) -> None:
+        """Populate the templates tree with parsed struct-template field data.
 
         Supports arbitrary nesting depth by recursively building child items.
+
+        Named distinctly from ``PatternEditorMixin``'s own tree-population
+        method: both mixins are combined into ``HexEditorPanel`` and both
+        historically used the generic name ``_populate_template_tree``, so
+        Python's MRO silently resolved every call - including this mixin's
+        own ``_on_apply_template`` - to whichever mixin was listed first in
+        ``HexEditorPanel``'s base classes (``PatternEditorMixin``). That
+        mixin's field dicts carry a ``type`` key instead of
+        ``display_value``, so the struct-template Value column always
+        rendered empty (S20-D07) even though the hexcore engine and the
+        PyO3 bridge both already emit a fully populated ``display_value``
+        for every field. A unique method name removes the ambiguity: this
+        mixin's own call site now always reaches this implementation
+        regardless of base-class ordering.
 
         Args:
             fields: List of field dictionaries from the template engine.
@@ -245,10 +259,14 @@ class TemplatesMixin:
             parent_item.addChild(child_item)
             TemplatesMixin._add_field_children(child_item, child)
 
-    def _highlight_template_fields(self, fields: list[dict[str, object]]) -> None:
-        """Apply highlight overlays for template field regions.
+    def _highlight_struct_template_fields(self, fields: list[dict[str, object]]) -> None:
+        """Apply highlight overlays for struct-template field regions.
 
         Recursively collects all descendant field regions for highlighting.
+
+        Named distinctly from ``PatternEditorMixin``'s own highlighting
+        method for the same MRO-collision reason documented on
+        :meth:`_populate_struct_template_tree`.
 
         Args:
             fields: List of field dictionaries from the template engine.

@@ -40,6 +40,7 @@ import pefile
 import pytest
 
 from intellicrack.bridges.x64dbg import X64DbgBridge
+from intellicrack.core.types import ToolError
 
 
 if TYPE_CHECKING:
@@ -106,6 +107,15 @@ class _FakePipeClient:
 
 class _PlaceholderProcess:
     """Sentinel satisfying ``self._process is not None`` bridge guards."""
+
+    def poll(self) -> int | None:
+        """Report process status the way :class:`subprocess.Popen.poll` does.
+
+        Returns:
+            int | None: Always ``None``, indicating this stand-in debugger
+            process is still running.
+        """
+        return None
 
     pid: int = 0
 
@@ -275,32 +285,48 @@ class TestGetComments:
 class TestSetExceptionConfig:
     """Gate ``set_exception_config`` — exact SetExceptionBPX command string."""
 
-    async def test_ignore_maps_to_zero_in_command(self) -> None:
-        """``handling='ignore'`` maps to code ``0`` in the sent command.
+    async def test_ignore_raises_tool_error_and_sends_nothing(self) -> None:
+        """``handling='ignore'`` raises instead of sending a fabricated numeric code.
 
-        Oracle: x64dbg.py:6765 ``handling_map = {"break": 1, "ignore": 0, "log": 2}``;
-        x64dbg.py:6767 ``SetExceptionBPX {hex(code)}, {handling_code}``.
-        Mutation caught: using ``handling_map.get(handling, 0)`` instead of
-        ``get(handling, 1)`` (wrong default) or swapping break/ignore values →
-        wrong integer suffix → assertion fails.
+        ``SetExceptionBPX``'s second argument is a first/second/all
+        *chance* selector, not a break/ignore/log axis, so there is no
+        numeric value that means "ignore" - x64dbg only exposes exception
+        ignore ranges through its GUI-managed, ini-persisted filter list
+        (audit7.md T1-2). The old ``handling_map = {"break": 1,
+        "ignore": 0, "log": 2}`` mapping sent ``SetExceptionBPX
+        0xc0000005, 0``, which x64dbg would have silently reinterpreted
+        as a first-chance breakpoint instead of ever ignoring anything.
+
+        Mutation caught: reintroducing the numeric ``handling_map`` makes
+        this raise nothing and instead sends ``SetExceptionBPX
+        0xc0000005, 0``, failing both the ``pytest.raises`` and the
+        empty-``fake.sent`` assertion.
         """
         bridge = X64DbgBridge()
         fake = _install_fake_pipe(bridge, lambda _c, _p: _success())
-        result: dict[str, Any] = await bridge.set_exception_config(0xC0000005, "ignore")
 
-        assert ("exec", {"command": "SetExceptionBPX 0xc0000005, 0"}) in fake.sent
-        assert result == {"success": True, "code": "0xc0000005", "handling": "ignore"}
+        with pytest.raises(ToolError, match="no scriptable command"):
+            await bridge.set_exception_config(0xC0000005, "ignore")
 
-    async def test_break_maps_to_one_in_command(self) -> None:
-        """``handling='break'`` maps to code ``1`` in the sent command.
+        assert fake.sent == []
 
-        Oracle: x64dbg.py:6765 ``"break": 1``.
-        Mutation caught: using ``0`` for break → assertion fails.
+    async def test_break_maps_to_first_chance_in_command(self) -> None:
+        """``handling='break'`` sends the ``first``-chance selector, not a numeric code.
+
+        Oracle: ``SetExceptionBPX``'s chance argument is the string
+        ``first``/``second``/``all``, not an integer index - the old
+        ``handling_map`` mapped ``"break"`` to the integer ``1``, which
+        ``SetExceptionBPX`` does not accept as a chance selector.
+
+        Mutation caught: reverting to the numeric mapping sends
+        ``SetExceptionBPX 0x80000003, 1`` instead of ``..., first``,
+        failing the exact-string assertion.
         """
         bridge = X64DbgBridge()
         fake = _install_fake_pipe(bridge, lambda _c, _p: _success())
-        await bridge.set_exception_config(0x80000003, "break")
-        assert ("exec", {"command": "SetExceptionBPX 0x80000003, 1"}) in fake.sent
+        result: dict[str, Any] = await bridge.set_exception_config(0x80000003, "break")
+        assert ("exec", {"command": "SetExceptionBPX 0x80000003, first"}) in fake.sent
+        assert result == {"success": True, "code": "0x80000003", "handling": "break"}
 
 
 @pytest.mark.asyncio

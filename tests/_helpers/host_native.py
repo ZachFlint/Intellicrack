@@ -87,6 +87,7 @@ _STAGE_EXCLUDES: Final[str] = "tests/packaging/test_stage_excludes.py"
 _PIXI_ENVIRONMENTS: Final[str] = "tests/packaging/test_pixi_runtime_environment.py"
 _BUILD_INSTALLER_LOG: Final[str] = "tests/packaging/test_build_installer_logging.py"
 _PRECOMMIT_RUFF_PIN: Final[str] = "tests/packaging/test_precommit_ruff_pin.py"
+_SECURITY_FLOORS: Final[str] = "tests/packaging/test_security_advisory_floors.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -241,6 +242,13 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_PRECOMMIT_RUFF_PIN, "test_the_pinned_ruff_can_parse_the_project_ruff_configuration"),
         (_PRECOMMIT_RUFF_PIN, "test_the_pinned_ruff_formatter_can_parse_the_project_ruff_configuration"),
         (_PRECOMMIT_RUFF_PIN, "test_mixed_line_ending_hook_skips_every_lf_only_path"),
+        # pyproject.toml, pixi.lock and requirements.txt live at the repo root,
+        # which is not mounted into the container, so the dependency security
+        # floor gates run on the host.
+        (_SECURITY_FLOORS, "test_pyproject_declares_pyasn1_runtime_security_floor"),
+        (_SECURITY_FLOORS, "test_pyproject_declares_gitpython_dev_security_floor"),
+        (_SECURITY_FLOORS, "test_pixi_lock_resolves_patched_versions"),
+        (_SECURITY_FLOORS, "test_requirements_txt_pins_patched_versions"),
     },
 )
 

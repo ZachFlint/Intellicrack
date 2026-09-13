@@ -10,13 +10,16 @@ This module provides integration with x64dbg for dynamic analysis, debugging, an
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import functools
 import math
 import os
 import re
 import struct
 import sys
+import tempfile
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, TypeGuard, cast
@@ -368,6 +371,31 @@ TRACE_RECORD_PAGE_SIZE: Final[int] = 4096
 # record for.
 TRACE_RECORD_TYPE_UNKNOWN: Final[str] = "unknown"
 PipeCommandResult = str | int | float | bool | dict[str, object] | list[object] | None
+
+
+def _bp_command_for_type(bp_type: BreakpointType, *, software: str, hardware: str, memory: str) -> str:
+    """Select the x64dbg command name matching a breakpoint's type.
+
+    Software, hardware, and memory breakpoints are each configured
+    through their own command family (``bpcond``/``bphwcond``/
+    ``bpmcond``, ``be``/``bphe``/``bpme``, and so on) - sending the
+    software-only command against a hardware or memory breakpoint
+    silently does nothing (audit7.md T1-3).
+
+    Args:
+        bp_type: Breakpoint type the command targets.
+        software: Command name to use for a software breakpoint.
+        hardware: Command name to use for a hardware breakpoint.
+        memory: Command name to use for a memory breakpoint.
+
+    Returns:
+        str: The command name matching ``bp_type``.
+    """
+    if bp_type == "hardware":
+        return hardware
+    if bp_type == "memory":
+        return memory
+    return software
 
 
 def _is_str_obj_dict(data: object) -> TypeGuard[dict[str, object]]:
@@ -818,6 +846,13 @@ class _X64DbgBridgeBase(DebuggerBridge):
             wrappers (audit7.md F-0001).
         VERIFY_POLL_INTERVAL: Seconds between successive post-condition
             polls during a F-0001 verification wait.
+        ANIMATE_MAX_STEPS: Step budget :meth:`animate_start` gives its
+            conditional trace. x64dbg exposes animation only through the
+            GUI (Ctrl+F7/Ctrl+F8) and registers no animate console
+            command, so continuous stepping is driven by a conditional
+            trace whose break condition never trips; this bound is the
+            only thing that ends the trace if the caller never issues
+            :meth:`animate_stop`.
         STEP_TIMEOUT_SECONDS: Maximum seconds to wait for the plugin's
             paused-event reply before a step coroutine times out (the
             audit6 F-0004 bound that replaces the legacy fixed sleep).
@@ -829,6 +864,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
     RUN_TO_POLL_INTERVAL = 0.05
     VERIFY_TIMEOUT = 5.0
     VERIFY_POLL_INTERVAL = 0.05
+    ANIMATE_MAX_STEPS = 1_000_000_000
 
     def __init__(self) -> None:
         """Initialize the X64DbgBridge instance."""
@@ -1570,13 +1606,32 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 ),
                 ToolFunction(
                     name="x64dbg.trace_start",
-                    description="Start conditional trace recording in x64dbg",
+                    description=(
+                        "Start a run-trace recording session in x64dbg (see trace_into/trace_over for a "
+                        "genuinely conditional trace)"
+                    ),
                     parameters=[
-                        ToolParameter(name="address", type="integer", description="Address to start tracing at", required=False),
-                        ToolParameter(name="condition", type="string", description="Trace break condition", required=False),
-                        ToolParameter(name="log_text", type="string", description="Text to log at each traced instruction", required=False),
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description=(
+                                "Optional address folded into the generated trace file name for operator "
+                                "reference; no run-trace command accepts an address"
+                            ),
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="condition",
+                            type="string",
+                            description=(
+                                "Log condition gating log_text (TraceSetLog's second argument); requires "
+                                "log_text to also be supplied"
+                            ),
+                            required=False,
+                        ),
+                        ToolParameter(name="log_text", type="string", description="Text to log at each traced instruction via TraceSetLog", required=False),
                     ],
-                    returns="Trace start result",
+                    returns="Dict with success, trace_file, and (when log_text is supplied) log_text/log_condition",
                 ),
                 ToolFunction(
                     name="x64dbg.trace_stop",
@@ -1592,7 +1647,11 @@ class _X64DbgBridgeBase(DebuggerBridge):
                         ToolParameter(
                             name="handling",
                             type="string",
-                            description="Handling mode: break, ignore, or log",
+                            description=(
+                                "Handling mode: 'break' (stop at first chance) or 'log' (log via an "
+                                "all-chance, fast-resume exception breakpoint and continue). 'ignore' is "
+                                "not expressible through x64dbg's scripting interface and raises."
+                            ),
                             required=True,
                             enum=["break", "ignore", "log"],
                         ),
@@ -1719,11 +1778,11 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 ),
                 ToolFunction(
                     name="x64dbg.export_patches",
-                    description="Export patches to a file",
+                    description="Export all applied patches to a file as a raw memory dump spanning every patched byte",
                     parameters=[
                         ToolParameter(name="path", type="string", description="Output file path", required=True),
                     ],
-                    returns="Dict with success status and path",
+                    returns="Dict with success status, path, dump start address, and size",
                 ),
                 ToolFunction(
                     name="x64dbg.suspend_thread",
@@ -1861,19 +1920,53 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 ),
                 ToolFunction(
                     name="x64dbg.trace_into",
-                    description="Trace into with optional condition",
+                    description=(
+                        "Trace into (StepInto) until condition evaluates non-zero or max_steps is reached; "
+                        "an omitted condition traces unconditionally up to max_steps"
+                    ),
                     parameters=[
-                        ToolParameter(name="condition", type="string", description="Trace break condition expression", required=False),
-                        ToolParameter(name="max_steps", type="integer", description="Maximum number of steps", required=False),
+                        ToolParameter(
+                            name="condition",
+                            type="string",
+                            description=(
+                                "Break condition expression; tracing stops once this evaluates to a value "
+                                "other than 0. When omitted, an always-false '0' expression is sent so "
+                                "tracing runs unconditionally up to max_steps"
+                            ),
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="max_steps",
+                            type="integer",
+                            description="Maximum number of steps to trace before the debugger gives up",
+                            required=False,
+                        ),
                     ],
                     returns="Dict with success status",
                 ),
                 ToolFunction(
                     name="x64dbg.trace_over",
-                    description="Trace over with optional condition",
+                    description=(
+                        "Trace over (StepOver) until condition evaluates non-zero or max_steps is reached; "
+                        "an omitted condition traces unconditionally up to max_steps"
+                    ),
                     parameters=[
-                        ToolParameter(name="condition", type="string", description="Trace break condition expression", required=False),
-                        ToolParameter(name="max_steps", type="integer", description="Maximum number of steps", required=False),
+                        ToolParameter(
+                            name="condition",
+                            type="string",
+                            description=(
+                                "Break condition expression; tracing stops once this evaluates to a value "
+                                "other than 0. When omitted, an always-false '0' expression is sent so "
+                                "tracing runs unconditionally up to max_steps"
+                            ),
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="max_steps",
+                            type="integer",
+                            description="Maximum number of steps to trace before the debugger gives up",
+                            required=False,
+                        ),
                     ],
                     returns="Dict with success status",
                 ),
@@ -2533,7 +2626,6 @@ class _X64DbgBridgeBase(DebuggerBridge):
         Raises:
             ToolError: If connection fails.
         """
-
         async with self._pipe_connect_lock:
             if self._pipe_client is not None and self._pipe_client.is_connected:
                 return
@@ -3540,10 +3632,12 @@ class _X64DbgBridgeBase(DebuggerBridge):
             raise ToolError(msg, tool_name="x64dbg")
 
         if condition is not None:
+            condition_command = _bp_command_for_type(bp_type, software="bpcond", hardware="bphwcond", memory="bpmcond")
             await self._send_pipe_command(
                 "exec",
-                {"command": f'bpcond {hex(address)}, "{condition}"'},
+                {"command": f'{condition_command} {hex(address)}, "{condition}"'},
             )
+            await self._verify_breakpoint_condition(address, bp_type, condition)
 
         with self._state_lock:
             self._breakpoints[address] = BreakpointInfo(
@@ -3684,6 +3778,109 @@ class _X64DbgBridgeBase(DebuggerBridge):
             msg,
             tool_name="x64dbg",
             details={"x64dbg_error_code": _X64DBG_ERR_REMOTE, "address": hex(address)},
+        )
+
+    def _resolve_breakpoint_type(self, address: int) -> BreakpointType:
+        """Resolve the breakpoint type this bridge has recorded for ``address``.
+
+        Consults only the local breakpoint registry (populated by
+        :meth:`set_breakpoint`) so the address/type pair a caller
+        already established earlier in the same session is honoured
+        when a type-specific command family is chosen for
+        ``configure_breakpoint``/``enable_breakpoint``/
+        ``disable_breakpoint`` (audit7.md T1-3). A breakpoint this
+        bridge never set (for example one created directly from the
+        x64dbg GUI) is not in the registry and is treated as software,
+        matching this bridge's pre-existing behaviour for untracked
+        addresses.
+
+        Args:
+            address: Breakpoint address to classify.
+
+        Returns:
+            BreakpointType: The recorded type for ``address``, or
+            ``"software"`` when the address is not in the local
+            registry.
+        """
+        with self._state_lock:
+            known = self._breakpoints.get(address)
+        return known.bp_type if known is not None else "software"
+
+    async def _verify_breakpoint_condition(self, address: int, bp_type: BreakpointType, condition: str) -> None:
+        """Confirm via ``bp_list`` that ``condition`` was applied at ``address``.
+
+        Mirrors :meth:`_verify_breakpoint_applied` but additionally
+        checks the reported ``breakCondition`` text, so a condition
+        command that parses without taking effect (for example the
+        software-only command family sent against a hardware or memory
+        breakpoint) surfaces as an error rather than a false success
+        (audit7.md T1-3).
+
+        Args:
+            address: Breakpoint address the condition was set on.
+            bp_type: Breakpoint type the condition was set on, included
+                in the error message when verification fails.
+            condition: Condition expression that was sent to the debugger.
+
+        Raises:
+            ToolError: If ``bp_list`` succeeds but reports no entry for
+                ``address``, or reports a ``breakCondition`` that does
+                not match ``condition``.
+        """
+        try:
+            result = await self._send_pipe_command("bp_list")
+        except ToolError as exc:
+            if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
+                _logger.warning("breakpoint_condition_verification_skipped_no_bp_list", address=hex(address))
+                return
+            log_passthrough(
+                _logger,
+                "verify_breakpoint_condition_passthrough",
+                exc,
+                bridge="x64dbg",
+                address=hex(address),
+                x64dbg_error_code=_x64dbg_error_code(exc),
+            )
+            raise
+        if not isinstance(result, list):
+            msg = f"set_breakpoint condition verification: bp_list returned {type(result).__name__}, expected list"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
+                    "address": hex(address),
+                },
+            )
+        for entry in result:
+            if not _is_str_obj_dict(entry):
+                continue
+            if _coerce_address(entry.get("address")) != address:
+                continue
+            raw_cond = entry.get("breakCondition")
+            observed = raw_cond if isinstance(raw_cond, str) else ""
+            if observed == condition:
+                return
+            msg = (
+                f"set_breakpoint condition verification failed: bp_list reports breakCondition {observed!r} "
+                f"for {bp_type} breakpoint {hex(address)}, expected {condition!r}"
+            )
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "address": hex(address),
+                    "bp_type": bp_type,
+                    "expected_condition": condition,
+                    "observed_condition": observed,
+                },
+            )
+        msg = f"set_breakpoint condition verification failed: address {hex(address)} not present in bp_list after condition set"
+        raise ToolError(
+            msg,
+            tool_name="x64dbg",
+            details={"x64dbg_error_code": _X64DBG_ERR_REMOTE, "address": hex(address), "bp_type": bp_type},
         )
 
     async def remove_breakpoint(self, address: int) -> bool:
@@ -4505,17 +4702,25 @@ class _X64DbgBridgeBase(DebuggerBridge):
         return capstone_lines
 
     async def assemble_at(self, address: int, instruction: str) -> bytes:
-        """Assemble instruction at address.
+        """Assemble an instruction at an address without writing it to memory.
+
+        Preview-only: encodes ``instruction`` with Keystone as it would
+        appear at ``address`` and returns the raw bytes. This method
+        never touches process memory - :meth:`patch_instruction` is the
+        dedicated write path, issuing the plugin's ``assemble`` RPC and
+        verifying the write by polling memory back. The x64dbg panel's
+        ``_on_assemble_preview`` is this method's only GUI consumer and
+        only displays the returned bytes.
 
         Args:
-            address: Target address.
+            address: Address the instruction would be assembled at.
             instruction: Assembly instruction.
 
         Returns:
             bytes: Assembled bytes.
 
         Raises:
-            ToolError: If assembly fails.
+            ToolError: If Keystone is unavailable or assembly fails.
         """
         _logger.info("instruction_assembling", address=hex(address), instruction=instruction)
         keystone = get_keystone()
@@ -4532,9 +4737,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
             msg = f"Failed to assemble: {instruction}"
             raise ToolError(msg)
 
-        assembled = bytes(encoding)
-        await self.write_memory(address, assembled)
-        return assembled
+        return bytes(encoding)
 
     async def get_stack_trace(self) -> list[StackFrame]:
         """Get current stack trace.
@@ -5864,13 +6067,22 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
     async def run_to(self, address: int) -> dict[str, Any]:
         """Run execution until a specific address is reached.
 
-        Sends the ``runto`` console command, then polls ``reg_get rip``
-        with a bounded timeout to confirm the debugger has actually
-        reached ``address``. The previous implementation returned
-        ``{"success": True}`` immediately after queuing the command,
-        even though x64dbg's interpreter dispatches ``runto``
-        asynchronously and the IP may still be at the original site
-        (audit6.md F-0001).
+        Dispatches the plugin's ``run_to`` RPC - which arms a
+        single-shot breakpoint at ``address`` (``bp <address>, ss``) and
+        then issues ``run`` - and polls ``reg_get rip`` with a bounded
+        timeout to confirm the debugger actually reached ``address``.
+
+        This wrapper used to send a ``runto <address>`` console command
+        instead. x64dbg registers no ``runto`` command: its
+        ``registercommands()`` table carries ``run``/``go``/``r``/``g``,
+        ``erun``, ``RunToUserCode``/``rtu`` and ``RunToParty``, and the
+        string ``runto`` appears nowhere in the shipped ``x64dbg.dll``.
+        The command was therefore rejected, the instruction pointer
+        never moved, and every call failed its verification poll. The
+        implementation before that returned ``{"success": True}``
+        immediately after queuing the command, even though the debugger
+        dispatches asynchronously and the IP may still be at the
+        original site (audit6.md F-0001).
 
         Args:
             address: Target address to run to.
@@ -5888,7 +6100,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
                 configured timeout.
         """
         _logger.debug("run_to_queueing", address=hex(address))
-        await self._send_pipe_command("exec", {"command": f"runto {hex(address)}"})
+        await self._send_pipe_command("run_to", {"address": hex(address)})
         observed = await self._wait_for_instruction_pointer(
             address,
             timeout_s=self.RUN_TO_TIMEOUT,
@@ -5928,7 +6140,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         """Poll ``reg_get rip`` until the IP reaches ``target`` or timeout.
 
         Used to verify that an asynchronous control-flow command (e.g.
-        ``runto``) actually landed at the requested address before
+        the ``run_to`` RPC) actually landed at the requested address before
         reporting success. Returns ``None`` when the plugin lacks the
         ``reg_get`` RPC (older builds) so the caller can surface
         ``verified=False`` instead of synthesising an unverified
@@ -6311,6 +6523,75 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
                 return last_state, rpc_available
             await asyncio.sleep(self.VERIFY_POLL_INTERVAL)
 
+    async def _await_run_completion(
+        self,
+        command: str,
+        *,
+        expected_running: bool,
+    ) -> tuple[bool | None, bool]:
+        """Issue a stepping/animation command and verify it settled.
+
+        A short conditional trace (``TraceIntoConditional``/
+        ``TraceOverConditional``) or an animate loop that ``pause``
+        catches between micro-steps can run to completion entirely within
+        one :meth:`_wait_for_running_state` poll interval, so that poll
+        can observe only the paused state on both sides of the
+        transition and never the transient running state in between -
+        reporting "the debugger never entered the running state" even
+        though the command genuinely ran and settled (S20-D03).
+
+        The plugin already pushes an asynchronous ``paused`` event
+        whenever x64dbg suspends the debuggee for any reason, and
+        :meth:`step_into`/:meth:`step_over`/:meth:`step_out` already rely
+        on that same channel via :meth:`_register_step_waiter` instead of
+        polling, because the event is not subject to the poll's timing at
+        all - it fires the instant the plugin's own debug callback runs.
+        This method races that event against the existing
+        :meth:`_wait_for_running_state` poll: whichever settles first
+        wins, so a real x64dbg instance resolves through the event almost
+        always (fixing the race) while a plugin build too old to emit the
+        event - or a caller for whom the debugger was already in the
+        target state before this call - still falls back to the exact
+        poll-based verification this replaces.
+
+        The step waiter is registered before the command is sent (as
+        :meth:`_dispatch_step_and_await` does) so a completion that lands
+        before the first poll cannot race past it.
+
+        Args:
+            command: Console command to send (e.g.
+                ``'TraceIntoConditional "0", 50000'``, ``"pause"``).
+            expected_running: ``True`` to verify the debugger reached a
+                running state (trace/animate start), ``False`` to verify
+                it reached a paused state (animate stop).
+
+        Returns:
+            tuple[bool | None, bool]: ``(observed, rpc_available)`` with
+            the same meaning as :meth:`_wait_for_running_state`. When the
+            plugin's ``paused`` event resolves first, ``observed`` is set
+            to ``expected_running`` and ``rpc_available`` is ``True``,
+            since a direct debugger event is strictly stronger evidence
+            of completion than any ``status`` poll can provide. When the
+            poll path settles first instead, any ``ToolError`` that
+            :meth:`_wait_for_running_state` raises for a ``status``
+            failure propagates unchanged through the final
+            ``return await status_task``.
+        """
+        waiter = self._register_step_waiter()
+        await self._send_command(command)
+        status_task: asyncio.Task[tuple[bool | None, bool]] = asyncio.ensure_future(
+            self._wait_for_running_state(expected=expected_running),
+        )
+        pending: set[asyncio.Future[Any]] = {waiter, status_task}
+        done, _leftover = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        if waiter in done:
+            status_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await status_task
+            return expected_running, True
+        self._cancel_step_waiter(waiter)
+        return await status_task
+
     async def _query_script_error(self) -> bool | None:
         """Query the script-error register via the x64dbg expression evaluator.
 
@@ -6631,7 +6912,11 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
     async def enable_breakpoint(self, address: int) -> dict[str, Any]:
         """Enable a breakpoint at an address and verify the debugger applied it.
 
-        After queuing the ``be`` console command, polls ``bp_list`` and
+        Resolves the breakpoint's type via :meth:`_resolve_breakpoint_type`
+        and queues the matching enable command - ``be`` for software,
+        ``bphe`` for hardware, ``bpme`` for memory - since the software-only
+        command silently does nothing against a hardware or memory
+        breakpoint (audit7.md T1-3). Polls ``bp_list`` afterwards and
         confirms the breakpoint at ``address`` is reported with
         ``enabled=True``. The wrapper used to claim ``success: True``
         and update the local ``_breakpoints`` mirror without inspecting
@@ -6651,8 +6936,10 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
                 ``enabled=False`` (or no entry at all) at ``address``
                 after the verification window elapses.
         """
-        _logger.debug("x64dbg_command_queued", command="be", address=hex(address))
-        await self._send_pipe_command("exec", {"command": f"be {hex(address)}"})
+        bp_type = self._resolve_breakpoint_type(address)
+        enable_command = _bp_command_for_type(bp_type, software="be", hardware="bphe", memory="bpme")
+        _logger.debug("x64dbg_command_queued", command=enable_command, address=hex(address), bp_type=bp_type)
+        await self._send_pipe_command("exec", {"command": f"{enable_command} {hex(address)}"})
         observed, rpc_available = await self._wait_for_breakpoint_enabled_state(address, expected=True)
         if observed is False:
             msg = f"enable_breakpoint verification failed: bp_list reports enabled=False for {hex(address)}"
@@ -6694,7 +6981,11 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
     async def disable_breakpoint(self, address: int) -> dict[str, Any]:
         """Disable a breakpoint at an address and verify the debugger applied it.
 
-        After queuing the ``bd`` console command, polls ``bp_list`` and
+        Resolves the breakpoint's type via :meth:`_resolve_breakpoint_type`
+        and queues the matching disable command - ``bd`` for software,
+        ``bphd`` for hardware, ``bpmd`` for memory - since the software-only
+        command silently does nothing against a hardware or memory
+        breakpoint (audit7.md T1-3). Polls ``bp_list`` afterwards and
         confirms the breakpoint at ``address`` is reported with
         ``enabled=False``. The wrapper used to claim ``success: True``
         and update the local ``_breakpoints`` mirror without inspecting
@@ -6714,8 +7005,10 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
                 ``enabled=True`` (or no entry at all) at ``address``
                 after the verification window elapses.
         """
-        _logger.debug("x64dbg_command_queued", command="bd", address=hex(address))
-        await self._send_pipe_command("exec", {"command": f"bd {hex(address)}"})
+        bp_type = self._resolve_breakpoint_type(address)
+        disable_command = _bp_command_for_type(bp_type, software="bd", hardware="bphd", memory="bpmd")
+        _logger.debug("x64dbg_command_queued", command=disable_command, address=hex(address), bp_type=bp_type)
+        await self._send_pipe_command("exec", {"command": f"{disable_command} {hex(address)}"})
         observed, rpc_available = await self._wait_for_breakpoint_enabled_state(address, expected=False)
         if observed is True:
             msg = f"disable_breakpoint verification failed: bp_list reports enabled=True for {hex(address)}"
@@ -7172,29 +7465,121 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
     loops.
     """
 
+    def _default_trace_file_path(self, address: int | None) -> Path:
+        """Build a unique run-trace output path for ``StartRunTrace``.
+
+        ``StartRunTrace``'s file-name argument is required - x64dbg does
+        not default it - and it is not given a default extension
+        automatically (help.x64dbg.com StartRunTrace), so a path is
+        generated here rather than issuing an argument-less command that
+        never actually opens a trace. The path lives under the same
+        per-user temp root the other bridges already use for
+        auto-generated artifacts (mirrors ``CutterBridge``'s
+        ``rizin_projects`` convention) and is unique per call so repeated
+        ``trace_start`` invocations do not overwrite each other's
+        recordings.
+
+        Args:
+            address: Optional address to fold into the file name for
+                operator reference only; no run-trace command accepts an
+                address.
+
+        Returns:
+            Path: Absolute path ending in ``.trace64``/``.trace32``
+            matching :attr:`_is_64bit`.
+        """
+        suffix = "trace64" if self._is_64bit else "trace32"
+        stamp = time.time_ns()
+        name = f"trace_{address:08x}_{stamp}" if address is not None else f"trace_{stamp}"
+        return Path(tempfile.gettempdir()) / "intellicrack" / "x64dbg_traces" / f"{name}.{suffix}"
+
     async def trace_start(
         self,
         address: int | None = None,
         condition: str | None = None,
         log_text: str | None = None,
     ) -> dict[str, Any]:
-        """Start conditional trace recording in x64dbg.
+        """Start a run-trace recording session in x64dbg.
+
+        x64dbg exposes no ``TraceSetCondition`` command under any name or
+        alias (help.x64dbg.com tracing command index), so the previous
+        ``TraceSetCondition {addr}, {condition}`` form was never a real
+        command, and ``TraceSetLog`` never accepts an address either -
+        its only two arguments are ``[log text]`` and ``[log condition]``.
+        Both calls were additionally gated on ``address is not None``,
+        which the Trace tab's Condition/Log inputs never supply (they
+        carry no address field), so ``condition``/``log_text`` were
+        silently dropped on every GUI call and the debugger only ever
+        received a bare, argument-less ``StartRunTrace`` - itself
+        ineffective, since ``StartRunTrace``'s file-name argument is
+        required, not optional (audit7.md T1-7).
+
+        The real, documented mapping used here: when ``log_text`` is
+        supplied, ``TraceSetLog "<log_text>"[, "<condition>"]`` is issued
+        first, so ``condition`` takes effect as the *log* condition (log
+        only when it evaluates non-zero; x64dbg defaults this to
+        always-log when omitted) - the same role it has in x64dbg's own
+        Conditional Tracing feature. ``StartRunTrace`` is then issued with
+        a concrete, auto-generated trace file path (see
+        :meth:`_default_trace_file_path`); note that, per x64dbg's own
+        documentation, this alone still performs no instruction-level
+        tracing until a stepping command such as ``trace_into``/
+        ``trace_over`` - which take a genuine break condition - runs
+        afterward. A bare ``condition`` with no ``log_text`` has no real
+        command to bind to here (``TraceSetLog`` cannot set a condition
+        without also setting text, and ``StartRunTrace`` accepts no
+        condition of any kind), so that combination raises instead of
+        silently starting an unconditional trace.
 
         Args:
-            address: Address to start tracing at.
-            condition: Trace break condition expression.
-            log_text: Text to log at each traced instruction.
+            address: Optional address to associate with the trace,
+                folded only into the generated trace file name for
+                operator reference - none of ``TraceSetLog``/
+                ``StartRunTrace`` accept an address argument.
+            condition: Log condition gating ``log_text``; only takes
+                effect when ``log_text`` is also supplied.
+            log_text: Text to log at each traced instruction once a
+                stepping command runs.
 
         Returns:
-            dict[str, Any]: Dict with success status.
+            dict[str, Any]: Dict with ``success``, the ``trace_file``
+            path ``StartRunTrace`` was opened with, and, when
+            ``log_text`` was supplied, the ``log_text``/``log_condition``
+            that were applied.
+
+        Raises:
+            ToolError: If ``condition`` is supplied without ``log_text``,
+                since x64dbg has no command that binds a condition to
+                ``trace_start`` on its own.
         """
-        _logger.info("trace_start_started", address=address)
-        if address is not None and log_text is not None:
-            await self._send_pipe_command("exec", {"command": f"TraceSetLog {hex(address)}, {log_text}"})
-        if address is not None and condition is not None:
-            await self._send_pipe_command("exec", {"command": f"TraceSetCondition {hex(address)}, {condition}"})
-        await self._send_pipe_command("exec", {"command": "StartRunTrace"})
-        return {"success": True}
+        _logger.info("trace_start_started", address=address, condition=condition, log_text=log_text)
+        if condition is not None and log_text is None:
+            msg = (
+                "x64dbg has no command that applies a bare condition to trace_start - "
+                "TraceSetLog only accepts a log condition together with log text, and "
+                "StartRunTrace itself takes no condition at all; supply log_text "
+                "alongside condition, or use trace_into/trace_over for a genuine break "
+                "condition"
+            )
+            raise ToolError(msg, tool_name="x64dbg", details={"condition": condition})
+
+        if log_text is not None:
+            log_command = f'TraceSetLog "{log_text}"'
+            if condition is not None:
+                log_command += f', "{condition}"'
+            _logger.debug("x64dbg_command_queued", command="TraceSetLog", log_text=log_text, condition=condition)
+            await self._send_pipe_command("exec", {"command": log_command})
+
+        trace_file = self._default_trace_file_path(address)
+        await asyncio.to_thread(trace_file.parent.mkdir, parents=True, exist_ok=True)
+        _logger.debug("x64dbg_command_queued", command="StartRunTrace", trace_file=str(trace_file))
+        await self._send_pipe_command("exec", {"command": f'StartRunTrace "{trace_file}"'})
+
+        result: dict[str, Any] = {"success": True, "trace_file": str(trace_file)}
+        if log_text is not None:
+            result["log_text"] = log_text
+            result["log_condition"] = condition
+        return result
 
     async def trace_stop(self) -> dict[str, Any]:
         """Stop trace recording.
@@ -7209,18 +7594,61 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
     async def set_exception_config(self, code: int, handling: str) -> dict[str, Any]:
         """Configure how x64dbg handles a specific exception code.
 
+        ``SetExceptionBPX``'s second argument selects which exception
+        *chance* (first/second/all) an exception breakpoint captures -
+        it is not a break/ignore/log axis, so ``handling`` is not
+        forwarded to it as a numeric code (audit7.md T1-2). ``break``
+        and ``log`` are instead implemented as genuine exception
+        breakpoints scoped by chance: ``break`` captures first-chance
+        occurrences and stops there, while ``log`` captures every
+        chance and additionally sets a log action
+        (``SetExceptionBreakpointLog``) plus fast-resume
+        (``SetExceptionBreakpointFastResume``) so the debugger logs and
+        continues instead of stopping. ``ignore`` (silently passing the
+        exception to the application) has no scriptable equivalent -
+        x64dbg only exposes it through the GUI-managed, ini-persisted
+        exception filter/ignore-range list - so it raises instead of
+        sending a value ``SetExceptionBPX`` would misinterpret as a
+        chance selector.
+
         Args:
             code: Exception code (e.g. 0xC0000005 for access violation).
-            handling: Handling mode - 'break' (first chance break),
-                'ignore' (pass to application), or 'log' (log and continue).
+            handling: Handling mode - 'break' (stop at first chance),
+                'ignore' (pass to application; not expressible through
+                x64dbg's scripting interface), or 'log' (log via an
+                all-chance, fast-resume exception breakpoint and
+                continue without stopping).
 
         Returns:
             dict[str, Any]: Dict with code, handling, and success status.
+
+        Raises:
+            ToolError: If ``handling`` is ``'ignore'``, or any value
+                other than ``'break'``/``'ignore'``/``'log'``, since
+                x64dbg exposes no command that silently passes a
+                specific exception code to the application.
         """
-        _logger.debug("x64dbg_command_queued", command="SetExceptionBPX", code=hex(code), handling=handling)
-        handling_map = {"break": 1, "ignore": 0, "log": 2}
-        handling_code = handling_map.get(handling, 1)
-        await self._send_pipe_command("exec", {"command": f"SetExceptionBPX {hex(code)}, {handling_code}"})
+        if handling == "ignore":
+            msg = (
+                "x64dbg has no scriptable command to silently pass an exception to the application - "
+                "exception ignore ranges are only configurable through the GUI Preferences > Exceptions "
+                "dialog (persisted to x64dbg.ini), not via SetExceptionBPX or any other console command"
+            )
+            raise ToolError(msg, tool_name="x64dbg", details={"code": hex(code), "handling": handling})
+        if handling not in {"break", "log"}:
+            msg = f"Unknown exception handling mode {handling!r}; expected 'break', 'ignore', or 'log'"
+            raise ToolError(msg, tool_name="x64dbg", details={"code": hex(code), "handling": handling})
+
+        if handling == "break":
+            _logger.debug("x64dbg_command_queued", command="SetExceptionBPX", code=hex(code), handling=handling, chance="first")
+            await self._send_pipe_command("exec", {"command": f"SetExceptionBPX {hex(code)}, first"})
+        else:
+            log_text = f"Exception {hex(code)} occurred at {{cip}}"
+            _logger.debug("x64dbg_command_queued", command="SetExceptionBPX", code=hex(code), handling=handling, chance="all")
+            await self._send_pipe_command("exec", {"command": f"SetExceptionBPX {hex(code)}, all"})
+            await self._send_pipe_command("exec", {"command": f'SetExceptionBreakpointLog {hex(code)}, "{log_text}"'})
+            await self._send_pipe_command("exec", {"command": f"SetExceptionBreakpointFastResume {hex(code)}, 1"})
+
         return {"success": True, "code": hex(code), "handling": handling}
 
     async def patch_instruction(self, address: int, instruction: str) -> dict[str, Any]:
@@ -7569,37 +7997,127 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
     async def restore_patch(self, address: int) -> dict[str, Any]:
         """Restore original bytes at a patched address.
 
+        Dispatches the plugin's ``patch_restore`` RPC, which calls the
+        SDK's ``DbgFunctions()->PatchRestore``. There is deliberately no
+        console-command fallback: this wrapper used to answer a rejected
+        RPC by sending ``patchrestore <address>``, but x64dbg registers
+        no ``patchrestore`` command - the string appears nowhere in the
+        shipped ``x64dbg.dll`` - so the fallback restored nothing while
+        still reporting success. A failing RPC now reaches the caller
+        instead of being masked.
+
         Args:
             address: Address of the patch to restore.
 
         Returns:
             dict[str, Any]: Dict with success status.
-
-        Raises:
-            ToolError: If the plugin reports a non-recoverable error.
         """
         _logger.info("patch_restoring", address=hex(address))
-        try:
-            await self._send_pipe_command("patch_restore", {"address": hex(address)})
-        except ToolError as exc:
-            if not self._is_recoverable_pipe_error(exc):
-                raise
-            _logger.warning("patch_restore_pipe_unavailable_using_script", error=str(exc))
-            await self._send_command(f"patchrestore {hex(address)}")
+        await self._send_pipe_command("patch_restore", {"address": hex(address)})
         return {"success": True, "address": hex(address)}
 
     async def export_patches(self, path: str) -> dict[str, Any]:
-        """Export patches to a file.
+        """Export all applied patches to a file as a raw memory dump.
+
+        ``savedata`` requires three comma-separated arguments - filename,
+        address, and size - and dumps a single contiguous memory region;
+        it has no mode of its own for exporting a sparse patch set. This
+        method therefore derives the smallest contiguous span covering
+        every patched byte reported by :meth:`get_patches` and dumps
+        exactly that span, so the resulting file captures every applied
+        patch. ``DbgCmdExec`` queues console commands asynchronously and
+        its immediate return does not guarantee the write has completed
+        by the time it returns (see :meth:`patch_instruction`), so the
+        output file's size on disk is polled rather than trusted from
+        the RPC response alone.
 
         Args:
             path: Output file path.
 
         Returns:
-            dict[str, Any]: Dict with success status and path.
+            dict[str, Any]: Dict with ``success``, ``path``, ``address``
+            (hex string of the dumped region's start address), and
+            ``size`` (bytes written).
+
+        Raises:
+            ToolError: If no patches are currently applied, or if
+                ``path`` is not observed on disk with the expected size
+                within :attr:`VERIFY_TIMEOUT` after ``savedata`` is
+                issued.
         """
-        _logger.debug("x64dbg_command_queued", command="savedata", path=path)
-        await self._send_command(f'savedata "{path}"')
-        return {"success": True, "path": path}
+        patches = await self.get_patches()
+        addresses: list[int] = [addr for entry in patches if (addr := _coerce_address(entry.get("address"))) is not None]
+        if not addresses:
+            msg = "No patches are currently applied; nothing to export"
+            raise ToolError(msg, tool_name="x64dbg", details={"path": path})
+
+        start_address = min(addresses)
+        size = max(addresses) - start_address + 1
+
+        output_path = Path(path)
+        previous_mtime_ns: int | None = None
+        if await asyncio.to_thread(output_path.exists):
+            previous_stat = await asyncio.to_thread(output_path.stat)
+            previous_mtime_ns = previous_stat.st_mtime_ns
+
+        _logger.debug(
+            "x64dbg_command_queued",
+            command="savedata",
+            path=path,
+            address=hex(start_address),
+            size=hex(size),
+        )
+        await self._send_command(f'savedata "{path}", {hex(start_address)}, {hex(size)}')
+
+        if not await self._await_file_written(output_path, expected_size=size, previous_mtime_ns=previous_mtime_ns):
+            msg = (
+                f"export_patches verification failed: {path!r} was not written with the expected "
+                f"{size} byte(s) within {self.VERIFY_TIMEOUT}s"
+            )
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"path": path, "address": hex(start_address), "expected_size": size},
+            )
+
+        return {"success": True, "path": path, "address": hex(start_address), "size": size}
+
+    async def _await_file_written(
+        self,
+        path: Path,
+        *,
+        expected_size: int,
+        previous_mtime_ns: int | None,
+    ) -> bool:
+        """Poll until ``path`` is (re)written to exactly ``expected_size`` bytes.
+
+        Requires the file's modification time to have advanced past
+        ``previous_mtime_ns`` (or the file to not have existed
+        beforehand), so a stale file already present at the target size
+        is never mistaken for evidence that a new export succeeded.
+
+        Args:
+            path: File to poll for.
+            expected_size: Exact byte count the file must reach.
+            previous_mtime_ns: The file's modification time in
+                nanoseconds before the write was issued, or ``None``
+                when the file did not exist yet.
+
+        Returns:
+            bool: ``True`` once ``path`` is observed freshly written
+            with ``expected_size`` bytes, ``False`` if
+            :attr:`VERIFY_TIMEOUT` elapses first.
+        """
+        deadline = asyncio.get_running_loop().time() + self.VERIFY_TIMEOUT
+        while True:
+            if await asyncio.to_thread(path.exists):
+                stat_result = await asyncio.to_thread(path.stat)
+                fresh = previous_mtime_ns is None or stat_result.st_mtime_ns > previous_mtime_ns
+                if fresh and stat_result.st_size == expected_size:
+                    return True
+            if asyncio.get_running_loop().time() >= deadline:
+                return False
+            await asyncio.sleep(self.VERIFY_POLL_INTERVAL)
 
     async def suspend_thread(self, tid: int) -> dict[str, Any]:
         """Suspend a thread and verify the suspend transition was observed.
@@ -8007,6 +8525,19 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
     ) -> dict[str, Any]:
         """Configure breakpoint properties.
 
+        Resolves the breakpoint's type via :meth:`_resolve_breakpoint_type`
+        and issues each requested property through the matching command
+        family - software (``bpcond``/``SetBreakpointLog``/
+        ``SetBreakpointCommand``/``SetBreakpointFastResume``), hardware
+        (``bphwcond``/``SetHardwareBreakpointLog``/
+        ``SetHardwareBreakpointCommand``/``SetHardwareBreakpointFastResume``),
+        or memory (``bpmcond``/``SetMemoryBreakpointLog``/
+        ``SetMemoryBreakpointCommand``/``SetMemoryBreakpointFastResume``) -
+        since the software-only commands silently do nothing against a
+        hardware or memory breakpoint (audit7.md T1-3). ``condition`` is
+        additionally verified via :meth:`_verify_breakpoint_condition` so
+        a failed set surfaces as an error instead of a false success.
+
         Args:
             address: Breakpoint address.
             condition: Conditional expression.
@@ -8017,15 +8548,36 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         Returns:
             dict[str, Any]: Dict with success status and configured properties.
         """
-        _logger.debug("x64dbg_command_queued", command="configure_breakpoint", address=hex(address))
+        bp_type = self._resolve_breakpoint_type(address)
+        _logger.debug("x64dbg_command_queued", command="configure_breakpoint", address=hex(address), bp_type=bp_type)
         if condition is not None:
-            await self._send_command(f'bpcond {hex(address)}, "{condition}"')
+            condition_command = _bp_command_for_type(bp_type, software="bpcond", hardware="bphwcond", memory="bpmcond")
+            await self._send_command(f'{condition_command} {hex(address)}, "{condition}"')
+            await self._verify_breakpoint_condition(address, bp_type, condition)
         if log_text is not None:
-            await self._send_command(f'SetBreakpointLog {hex(address)}, "{log_text}"')
+            log_command = _bp_command_for_type(
+                bp_type,
+                software="SetBreakpointLog",
+                hardware="SetHardwareBreakpointLog",
+                memory="SetMemoryBreakpointLog",
+            )
+            await self._send_command(f'{log_command} {hex(address)}, "{log_text}"')
         if command is not None:
-            await self._send_command(f'SetBreakpointCommand {hex(address)}, "{command}"')
+            command_command = _bp_command_for_type(
+                bp_type,
+                software="SetBreakpointCommand",
+                hardware="SetHardwareBreakpointCommand",
+                memory="SetMemoryBreakpointCommand",
+            )
+            await self._send_command(f'{command_command} {hex(address)}, "{command}"')
         if fast_resume:
-            await self._send_command(f"SetBreakpointFastResume {hex(address)}, 1")
+            fast_resume_command = _bp_command_for_type(
+                bp_type,
+                software="SetBreakpointFastResume",
+                hardware="SetHardwareBreakpointFastResume",
+                memory="SetMemoryBreakpointFastResume",
+            )
+            await self._send_command(f"{fast_resume_command} {hex(address)}, 1")
         return {"success": True, "address": hex(address)}
 
     async def set_dll_breakpoint(self, dll_name: str, event: str = "load") -> dict[str, Any]:
@@ -8046,37 +8598,56 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         return {"success": True, "dll_name": dll_name, "event": event}
 
     async def trace_into(self, condition: str | None = None, max_steps: int = 50000) -> dict[str, Any]:
-        """Trace into with optional condition and verify the debugger started running.
+        """Trace into by ``StepInto`` until a condition trips and verify the trace actually ran.
 
-        After queuing ``TraceIntoConditional``, polls ``status`` and
-        waits for the debugger's ``is_running`` flag to flip to
-        ``True`` (paused -> running, which is what a successful trace
-        start looks like before the condition fires). The wrapper used
-        to claim ``success: True`` without inspecting the debugger
-        state at all (audit7.md F-0001).
+        Queues ``TraceIntoConditional`` and confirms it settled via
+        :meth:`_await_run_completion`, which races the plugin's ``paused``
+        event against a ``status`` poll so a trace that completes faster
+        than one poll interval is still caught (S20-D03) instead of being
+        misreported as never having started. The wrapper used to claim
+        ``success: True`` without inspecting the debugger state at all
+        (audit7.md F-0001).
+
+        Per x64dbg's documented ``TraceIntoConditional``/``ticnd`` syntax
+        (help.x64dbg.com tracing commands), ``arg1`` is the required break
+        condition - tracing stops the instant it evaluates to a value
+        other than 0 - and ``[arg2]`` is the optional step budget the
+        debugger honours regardless of the condition. This wrapper used to
+        build the command with those two positions swapped
+        (``f"TraceIntoConditional {max_steps}"`` with ``condition``
+        appended only when truthy), so ``max_steps`` was evaluated as the
+        break condition and any nonzero step budget stopped the trace
+        after a single instruction. Since the condition is mandatory and
+        stops on nonzero, an omitted ``condition`` is now sent as the
+        literal expression ``0``, the same always-false, never-trips
+        sentinel x64dbg's own Conditional Tracing feature documents as the
+        break condition's default and that :meth:`step_count` already
+        sends as its own ``TraceIntoConditional`` command's first
+        argument - so the trace genuinely runs up to ``max_steps``
+        instead of stopping immediately.
 
         Args:
-            condition: Trace break condition expression.
-            max_steps: Maximum number of steps.
+            condition: Break condition expression; tracing stops as soon
+                as it evaluates to a value other than 0. When omitted,
+                the always-false expression ``0`` is sent instead so
+                tracing is bounded only by ``max_steps``.
+            max_steps: Maximum number of steps to trace before the
+                debugger gives up, independent of ``condition``.
 
         Returns:
             dict[str, Any]: Dict with ``success``, ``max_steps``, and
-            ``verified``. ``verified`` is ``True`` when ``status``
-            reported the debugger as running (or transitioning back to
-            paused after the trace already finished); ``False`` only
-            when the plugin lacks ``status``.
+            ``verified``. ``verified`` is ``True`` when the trace was
+            confirmed to have run (via the paused event or a ``status``
+            poll); ``False`` only when the plugin lacks ``status``.
 
         Raises:
-            ToolError: If ``status`` reports the debugger never
-                started running and remained paused after the
-                verification window elapses (real trace failure).
+            ToolError: If neither the paused event nor ``status`` ever
+                showed the debugger leaving its paused state within the
+                verification window (real trace failure).
         """
         _logger.debug("x64dbg_command_queued", command="trace_into", max_steps=max_steps)
-        cmd = f"TraceIntoConditional {max_steps}"
-        if condition:
-            cmd += f', "{condition}"'
-        await self._send_command(cmd)
-        observed, rpc_available = await self._wait_for_running_state(expected=True)
+        cmd = f'TraceIntoConditional "{condition}", {max_steps}' if condition else f"TraceIntoConditional 0, {max_steps}"
+        observed, rpc_available = await self._await_run_completion(cmd, expected_running=True)
         if not rpc_available:
             return {"success": True, "max_steps": max_steps, "verified": False}
         if observed is False:
@@ -8094,34 +8665,56 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         return {"success": True, "max_steps": max_steps, "verified": True}
 
     async def trace_over(self, condition: str | None = None, max_steps: int = 50000) -> dict[str, Any]:
-        """Trace over with optional condition and verify the debugger started running.
+        """Trace over by ``StepOver`` until a condition trips and verify the trace actually ran.
 
-        After queuing ``TraceOverConditional``, polls ``status`` and
-        waits for the debugger's ``is_running`` flag to flip to
-        ``True``. The wrapper used to claim ``success: True`` without
-        inspecting the debugger state at all (audit7.md F-0001).
+        Queues ``TraceOverConditional`` and confirms it settled via
+        :meth:`_await_run_completion`, which races the plugin's ``paused``
+        event against a ``status`` poll so a trace that completes faster
+        than one poll interval is still caught (S20-D03) instead of being
+        misreported as never having started. The wrapper used to claim
+        ``success: True`` without inspecting the debugger state at all
+        (audit7.md F-0001).
+
+        Per x64dbg's documented ``TraceOverConditional``/``tocnd`` syntax
+        (help.x64dbg.com tracing commands), ``arg1`` is the required break
+        condition - tracing stops the instant it evaluates to a value
+        other than 0 - and ``[arg2]`` is the optional step budget the
+        debugger honours regardless of the condition. This wrapper used to
+        build the command with those two positions swapped
+        (``f"TraceOverConditional {max_steps}"`` with ``condition``
+        appended only when truthy), so ``max_steps`` was evaluated as the
+        break condition and any nonzero step budget stopped the trace
+        after a single instruction. Since the condition is mandatory and
+        stops on nonzero, an omitted ``condition`` is now sent as the
+        literal expression ``0``, the same always-false, never-trips
+        sentinel x64dbg's own Conditional Tracing feature documents as the
+        break condition's default and that :meth:`step_count` already
+        sends as its own ``TraceOverConditional`` command's first
+        argument - so the trace genuinely runs up to ``max_steps``
+        instead of stopping immediately.
 
         Args:
-            condition: Trace break condition expression.
-            max_steps: Maximum number of steps.
+            condition: Break condition expression; tracing stops as soon
+                as it evaluates to a value other than 0. When omitted,
+                the always-false expression ``0`` is sent instead so
+                tracing is bounded only by ``max_steps``.
+            max_steps: Maximum number of steps to trace before the
+                debugger gives up, independent of ``condition``.
 
         Returns:
             dict[str, Any]: Dict with ``success``, ``max_steps``, and
-            ``verified``. ``verified`` is ``True`` when ``status``
-            reported the debugger as running; ``False`` only when the
-            plugin lacks ``status``.
+            ``verified``. ``verified`` is ``True`` when the trace was
+            confirmed to have run (via the paused event or a ``status``
+            poll); ``False`` only when the plugin lacks ``status``.
 
         Raises:
-            ToolError: If ``status`` reports the debugger never
-                started running and remained paused after the
-                verification window elapses.
+            ToolError: If neither the paused event nor ``status`` ever
+                showed the debugger leaving its paused state within the
+                verification window.
         """
         _logger.debug("x64dbg_command_queued", command="trace_over", max_steps=max_steps)
-        cmd = f"TraceOverConditional {max_steps}"
-        if condition:
-            cmd += f', "{condition}"'
-        await self._send_command(cmd)
-        observed, rpc_available = await self._wait_for_running_state(expected=True)
+        cmd = f'TraceOverConditional "{condition}", {max_steps}' if condition else f"TraceOverConditional 0, {max_steps}"
+        observed, rpc_available = await self._await_run_completion(cmd, expected_running=True)
         if not rpc_available:
             return {"success": True, "max_steps": max_steps, "verified": False}
         if observed is False:
@@ -8269,13 +8862,33 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
     async def step_count(self, count: int, step_type: str = "into") -> dict[str, Any]:
         """Execute ``count`` steps and verify the debugger pauses again afterwards.
 
-        Sends ``tic`` (into) or ``toc`` (over) with the requested step
-        count. The console commands block the debugger until the step
-        budget is exhausted; this wrapper then waits for the debugger
-        to return to a paused state via ``status``. The previous
-        implementation returned ``success: True`` immediately and
-        offered the caller no way to distinguish "step issued" from
-        "step completed" (audit7.md F-0001).
+        Sends ``TraceIntoConditional`` (into) or ``TraceOverConditional``
+        (over) with ``arg1`` fixed to the always-false break condition
+        ``0`` and ``arg2`` set to the requested step count, so the
+        debugger traces exactly ``count`` instructions before pausing
+        rather than breaking on a live condition. Per x64dbg's documented
+        ``TraceIntoConditional``/``ticnd`` and
+        ``TraceOverConditional``/``tocnd`` syntax (help.x64dbg.com tracing
+        commands), ``arg1`` is the required break condition - tracing
+        stops the instant it evaluates to a value other than 0 - and
+        ``[arg2]`` is the step budget, the same ``condition=0, count``
+        framing :meth:`trace_into` and :meth:`trace_over` build.
+
+        This wrapper used to send ``tic 0, {count}`` / ``toc 0, {count}``,
+        but ``tic`` and ``toc`` are not registered anywhere in x64dbg as
+        command names or aliases - only ``ticnd``/``tocnd`` and the full
+        ``TraceIntoConditional``/``TraceOverConditional`` names exist - so
+        the ``exec`` RPC returned an unknown-command error and no stepping
+        ever ran. The argument order (``0`` then ``count``) was already
+        correct and is preserved; only the unrecognised command name is
+        replaced with the documented one.
+
+        The console command blocks the debugger until the step budget is
+        exhausted; this wrapper then waits for the debugger to return to a
+        paused state via ``status``. The previous implementation returned
+        ``success: True`` immediately and offered the caller no way to
+        distinguish "step issued" from "step completed" (audit7.md
+        F-0001).
 
         Args:
             count: Number of steps to execute.
@@ -8294,7 +8907,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
                 verification window elapses.
         """
         _logger.debug("x64dbg_command_queued", command="step_count", count=count, step_type=step_type)
-        cmd = f"tic 0, {count}" if step_type == "into" else f"toc 0, {count}"
+        cmd = f"TraceIntoConditional 0, {count}" if step_type == "into" else f"TraceOverConditional 0, {count}"
         await self._send_command(cmd)
         observed, rpc_available = await self._wait_for_running_state(expected=False)
         if not rpc_available:
@@ -8317,12 +8930,24 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
     async def animate_start(self, step_type: str = "into") -> dict[str, Any]:
         """Start animation (visual step execution) and verify the debugger started.
 
-        After queuing ``AnimateInto`` or ``AnimateOver``, polls
-        ``status`` and waits for the debugger's ``is_running`` flag to
-        flip to ``True`` (animation kicks the debugger into a
-        continuous step loop). The wrapper used to claim
-        ``success: True`` without observing the actual debugger state
-        (audit7.md F-0001).
+        Starts continuous stepping with a conditional trace whose break
+        condition is the always-false literal ``0`` and whose step
+        budget is :attr:`ANIMATE_MAX_STEPS` - ``TraceIntoConditional 0,
+        N`` for ``into``, ``TraceOverConditional 0, N`` for ``over`` -
+        then polls ``status`` and waits for the debugger's
+        ``is_running`` flag to flip to ``True``.
+
+        This wrapper used to queue ``AnimateInto``/``AnimateOver``.
+        x64dbg registers neither: animation is a GUI-only feature bound
+        to Ctrl+F7/Ctrl+F8, its ``registercommands()`` table carries
+        only ``AnimateWait``, and the strings ``AnimateInto`` and
+        ``AnimateOver`` appear nowhere in the shipped ``x64dbg.dll``.
+        Both were rejected as unknown commands, the debugger never
+        started running, and every call failed its verification poll. A
+        bounded conditional trace is the console-command equivalent: it
+        steps continuously until :meth:`animate_stop` pauses it. The
+        wrapper used to claim ``success: True`` without observing the
+        actual debugger state (audit7.md F-0001).
 
         Args:
             step_type: Step type ('into' or 'over').
@@ -8339,7 +8964,11 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
                 window elapses.
         """
         _logger.debug("x64dbg_command_queued", command="animate_start", step_type=step_type)
-        cmd = "AnimateInto" if step_type == "into" else "AnimateOver"
+        cmd = (
+            f"TraceIntoConditional 0, {self.ANIMATE_MAX_STEPS}"
+            if step_type == "into"
+            else f"TraceOverConditional 0, {self.ANIMATE_MAX_STEPS}"
+        )
         await self._send_command(cmd)
         observed, rpc_available = await self._wait_for_running_state(expected=True)
         if not rpc_available:
@@ -8359,31 +8988,44 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         return {"success": True, "step_type": step_type, "verified": True}
 
     async def animate_stop(self) -> dict[str, Any]:
-        """Stop animation and verify the debugger paused.
+        """Stop animation and verify the debugger reached a paused state.
 
-        After queuing ``AnimateStop``, polls ``status`` and waits for
-        the debugger's ``is_running`` flag to flip to ``False``. The
-        wrapper used to claim ``success: True`` without observing the
-        actual debugger state (audit7.md F-0001).
+        Queues ``pause`` and confirms it settled via
+        :meth:`_await_run_completion`, which races the plugin's ``paused``
+        event against a ``status`` poll: an animate loop that stops
+        between two micro-steps can settle faster than one poll interval
+        (S20-D03), and the animation may already have stopped before this
+        call ever starts polling - both are accepted as success as long
+        as either signal confirms the paused state.
+
+        This wrapper used to queue ``AnimateStop``, which x64dbg does
+        not register - the string appears nowhere in the shipped
+        ``x64dbg.dll`` - so the command was rejected, nothing was
+        stopped, and every call failed its verification poll. ``pause``
+        is x64dbg's documented stop ("Pause the debuggee or stop
+        animation if animation is in progress") and equally ends the
+        conditional trace :meth:`animate_start` issues. The wrapper used
+        to claim ``success: True`` without observing the actual debugger
+        state (audit7.md F-0001).
 
         Returns:
             dict[str, Any]: Dict with ``success`` and ``verified``.
-            ``verified`` is ``True`` when ``status`` reported the
-            debugger as paused after the stop command; ``False`` only
-            when the plugin lacks ``status``.
+            ``verified`` is ``True`` when the debugger was confirmed
+            paused (via the paused event or a ``status`` poll) after the
+            stop command; ``False`` only when the plugin lacks
+            ``status``.
 
         Raises:
-            ToolError: If ``status`` reports the debugger remained
-                running and never paused after the verification
-                window elapses.
+            ToolError: If neither the paused event nor ``status`` ever
+                showed the debugger reaching a paused state within the
+                verification window.
         """
         _logger.debug("x64dbg_command_queued", command="animate_stop")
-        await self._send_command("AnimateStop")
-        observed, rpc_available = await self._wait_for_running_state(expected=False)
+        observed, rpc_available = await self._await_run_completion("pause", expected_running=False)
         if not rpc_available:
             return {"success": True, "verified": False}
         if observed is True:
-            msg = f"animate_stop verification failed: debugger still running after AnimateStop within {self.VERIFY_TIMEOUT}s"
+            msg = f"animate_stop verification failed: debugger still running after pause within {self.VERIFY_TIMEOUT}s"
             raise ToolError(
                 msg,
                 tool_name="x64dbg",
@@ -8786,11 +9428,20 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
     async def script_abort(self) -> dict[str, Any]:
         """Abort the running script and verify the abort did not raise a script error.
 
-        After queuing ``scriptabort``, queries the
+        Dispatches the plugin's ``script_abort`` RPC, which calls the
+        bridge SDK's ``DbgScriptAbort()``, then queries the
         ``script.iserror()`` register via the expression evaluator and
-        raises ``ToolError`` when it is set. The wrapper used to claim
-        ``success: True`` without inspecting the script error register
-        (audit7.md F-0001).
+        raises ``ToolError`` when it is set.
+
+        This wrapper used to queue a ``scriptabort`` console command.
+        x64dbg registers no such command - its script section carries
+        ``scriptload``, ``scriptcmd``, ``scriptrun``, ``scriptexec`` and
+        ``scriptdll`` but no abort, and the string appears nowhere in
+        the shipped ``x64dbg.dll`` - so the command was rejected and the
+        running script was never aborted, while the follow-up
+        ``script.iserror()`` check still reported a clean abort. The
+        wrapper used to claim ``success: True`` without inspecting the
+        script error register at all (audit7.md F-0001).
 
         Returns:
             dict[str, Any]: Dict with ``success`` and ``verified``.
@@ -8803,13 +9454,13 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
                 value (the abort raised an error inside the script
                 interpreter).
         """
-        _logger.debug("x64dbg_command_queued", command="scriptabort")
-        await self._send_command("scriptabort")
+        _logger.debug("x64dbg_command_queued", command="script_abort")
+        await self._send_pipe_command("script_abort")
         error_flag = await self._query_script_error()
         if error_flag is None:
             return {"success": True, "verified": False}
         if error_flag:
-            msg = "script_abort verification failed: script.iserror() is set after scriptabort"
+            msg = "script_abort verification failed: script.iserror() is set after script_abort"
             raise ToolError(
                 msg,
                 tool_name="x64dbg",
@@ -8907,23 +9558,22 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         return {"success": True, "name": name, "verified": True}
 
     async def plugin_list(self) -> list[dict[str, Any]]:
-        """List loaded plugins.
+        """List the plugins x64dbg loaded.
+
+        Dispatches the plugin's ``plugin_list`` RPC. There is
+        deliberately no console-command fallback: this wrapper used to
+        answer a rejected RPC by sending ``pluglist``, but x64dbg
+        registers no such command - its ``registercommands()`` table
+        carries only ``plugload``, ``plugunload`` and ``plugreload``,
+        and the string appears nowhere in the shipped ``x64dbg.dll`` -
+        so the fallback reported success while returning an empty list
+        and hiding the real RPC failure.
 
         Returns:
             list[dict[str, Any]]: List of plugin info dicts.
-
-        Raises:
-            ToolError: If the plugin reports a non-recoverable error.
         """
         _logger.debug("plugins_listing")
-        try:
-            result = await self._send_pipe_command("plugin_list")
-        except ToolError as exc:
-            if not self._is_recoverable_pipe_error(exc):
-                raise
-            _logger.warning("plugin_list_pipe_unavailable_using_script", error=str(exc))
-            await self._send_command("pluglist")
-            return []
+        result = await self._send_pipe_command("plugin_list")
         if isinstance(result, list):
             return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
         return []

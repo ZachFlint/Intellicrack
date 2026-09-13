@@ -69,6 +69,7 @@ from intellicrack.ui.panels.cutter_static_extra_tab import (
     CallGraphTab,
     ClassesTab,
     DebugInfoTab,
+    FunctionDetailsTab,
     FunctionDisasmTab,
     StaticAnalysisExtrasTab,
     SyscallsTab,
@@ -405,12 +406,12 @@ class TestHexdumpWordModeL3:
 
 
 class TestStaticAnalysisExtrasTabConstruction:
-    """L3 gate: ``StaticAnalysisExtrasTab`` really wires all 8 previously-NO-CONTROL sub-tabs."""
+    """L3 gate: ``StaticAnalysisExtrasTab`` really wires all 9 previously-NO-CONTROL sub-tabs."""
 
     @staticmethod
     @pytest.mark.usefixtures("qapp")
     def test_all_seven_sub_tabs_exist_and_are_correct_types() -> None:
-        """The composite tab must contain real instances of all 8 remediated sub-tab classes.
+        """The composite tab must contain real instances of all 9 remediated sub-tab classes.
 
         Falsifiable: if any sub-tab construction were removed from
         ``StaticAnalysisExtrasTab.__init__``, the corresponding
@@ -428,8 +429,9 @@ class TestStaticAnalysisExtrasTabConstruction:
         assert isinstance(getattr(tab, "_zignatures_tab"), ZignaturesTab)
         assert isinstance(getattr(tab, "_basic_blocks_tab"), BasicBlocksTab)
         assert isinstance(getattr(tab, "_function_disasm_tab"), FunctionDisasmTab)
+        assert isinstance(getattr(tab, "_function_details_tab"), FunctionDetailsTab)
         tabs_widget = cast(QTabWidget, getattr(tab, "_tabs"))
-        assert tabs_widget.count() == 8
+        assert tabs_widget.count() == 9
 
 
 @pytest.mark.usefixtures("qapp")

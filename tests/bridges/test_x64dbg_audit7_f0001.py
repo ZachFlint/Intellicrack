@@ -94,6 +94,15 @@ class _FakePipeClient:
 class _PlaceholderProcess:
     """Sentinel stand-in used to satisfy ``self._process is not None`` checks."""
 
+    def poll(self) -> int | None:
+        """Report process status the way :class:`subprocess.Popen.poll` does.
+
+        Returns:
+            int | None: Always ``None``, indicating this stand-in debugger
+            process is still running.
+        """
+        return None
+
 
 def _install_fake_pipe(bridge: X64DbgBridge, responder: _Responder) -> _FakePipeClient:
     """Attach a fake pipe client to ``bridge`` and mark the plugin deployed.
@@ -960,8 +969,8 @@ class TestScriptWrappersVerification:
         """
 
         def responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
-            if command == "exec":
-                return {"id": 1, "success": True, "result": None}
+            if command == "script_abort":
+                return {"id": 1, "success": True, "result": True}
             if command == "eval":
                 return {"id": 1, "success": True, "result": 0}
             msg = f"unexpected command: {command}"
@@ -979,8 +988,8 @@ class TestScriptWrappersVerification:
         """
 
         def responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
-            if command == "exec":
-                return {"id": 1, "success": True, "result": None}
+            if command == "script_abort":
+                return {"id": 1, "success": True, "result": True}
             if command == "eval":
                 return {"id": 1, "success": True, "result": 1}
             msg = f"unexpected command: {command}"
@@ -1157,6 +1166,8 @@ async def test_no_wrapper_returns_bare_success_dict(bridge: X64DbgBridge) -> Non
             }
         if command == "eval":
             return {"id": 1, "success": True, "result": 0}
+        if command == "script_abort":
+            return {"id": 1, "success": True, "result": True}
         if command == "plugin_list":
             return {"id": 1, "success": True, "result": [{"name": _PLUGIN_NAME}]}
         msg = f"unexpected command: {command}"

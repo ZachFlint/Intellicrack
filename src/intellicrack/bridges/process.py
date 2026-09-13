@@ -883,6 +883,20 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         returns="List of heap dicts with id, base, flags fields",
     ),
     ToolFunction(
+        name="process.enumerate_heaps",
+        description=(
+            "Walk each heap of a process block-by-block via Heap32First/Heap32Next, returning per-block address/size/flags in "
+            "addition to per-heap id/flags. Distinct from get_heaps, which only lists heap identifiers without descending into "
+            "their blocks; use enumerate_heaps when the individual allocations inside each heap are needed. The walk is bounded "
+            "by a wall-clock budget and per-heap/per-process block caps, so a very large or actively mutating heap returns a "
+            "partial result rather than stalling."
+        ),
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="Process ID (uses current if not specified)", required=False),
+        ],
+        returns="List of heap dicts with id, flags, and blocks (list of dicts with address, size, flags) fields",
+    ),
+    ToolFunction(
         name="process.get_thread_context",
         description="Get CPU register context for a thread",
         parameters=[

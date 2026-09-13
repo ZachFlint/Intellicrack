@@ -11,9 +11,9 @@ cross-references, and a raw r2 command console -- all powered by the CutterBridg
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, override
+from typing import TYPE_CHECKING, Any, Final, cast, override
 
-from PyQt6.QtCore import QPoint, Qt, QTimer
+from PyQt6.QtCore import QPoint, QSettings, Qt, QTimer
 from PyQt6.QtGui import QAction, QClipboard
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -86,9 +86,23 @@ _FILTER_DEBOUNCE_MS: Final[int] = 250
 _OUTER_SPLIT_TOP: Final[int] = 400
 _OUTER_SPLIT_MID: Final[int] = 250
 _OUTER_SPLIT_BOT: Final[int] = 150
+_OUTER_SPLIT_PANE_COUNT: Final[int] = 3
 _INNER_SPLIT_LEFT: Final[int] = 250
 _INNER_SPLIT_RIGHT: Final[int] = 600
 _SHUTDOWN_TIMEOUT_S: Final[float] = 10.0
+
+# The sub-tab strip (Debugger/Project/Advanced Search/Static Analysis Extras/...)
+# must never be squeezed below the height its own controls need: Qt's QSplitter
+# honours a child's real minimumHeight as a hard resize floor even though it
+# ignores setSizes()/setCollapsible() bookkeeping (S20-D21), so this constant --
+# not a splitter size hint -- is what stops a MoveWindow/resize from collapsing
+# the sub-tab pane to a sliver on every subsequent layout pass.
+_DATA_TABS_MIN_HEIGHT: Final[int] = 240
+_CONSOLE_MIN_HEIGHT: Final[int] = 100
+
+_SETTINGS_ORG: Final[str] = "Intellicrack"
+_SETTINGS_APP: Final[str] = "CutterPanel"
+_SETTINGS_KEY_OUTER_SPLITTER: Final[str] = "outer_splitter_sizes"
 
 _ANALYSIS_LEVELS: Final[list[str]] = ["quick", "normal", "deep"]
 _DEFAULT_ANALYSIS_LEVEL: Final[str] = "normal"
@@ -131,6 +145,7 @@ class CutterPanel(AnalysisPanelBase):
         """
         self._bridge: CutterBridge | None = None
         self._current_binary: Path | None = None
+        self._outer_splitter: QSplitter | None = None
         super().__init__(parent)
 
     @override
@@ -186,12 +201,90 @@ class CutterPanel(AnalysisPanelBase):
         outer = QSplitter(Qt.Orientation.Vertical)
         outer.setChildrenCollapsible(False)
 
+        data_tabs = self._create_data_tabs()
+        console = self._create_console()
+        # Real minimumHeight, not a splitter size hint: a QSplitter enforces a
+        # child's minimumHeight as a hard floor across every subsequent resize,
+        # which setSizes()/setCollapsible() alone do not (S20-D21).
+        data_tabs.setMinimumHeight(_DATA_TABS_MIN_HEIGHT)
+        console.setMinimumHeight(_CONSOLE_MIN_HEIGHT)
+
         outer.addWidget(self._create_code_zone())
-        outer.addWidget(self._create_data_tabs())
-        outer.addWidget(self._create_console())
-        outer.setSizes([_OUTER_SPLIT_TOP, _OUTER_SPLIT_MID, _OUTER_SPLIT_BOT])
+        outer.addWidget(data_tabs)
+        outer.addWidget(console)
+        self._apply_outer_splitter_sizes(outer, self._load_outer_splitter_sizes())
+        outer.splitterMoved.connect(self._on_outer_splitter_moved)
+        self._outer_splitter = outer
 
         return outer
+
+    @staticmethod
+    def _apply_outer_splitter_sizes(splitter: QSplitter, sizes: list[int]) -> None:
+        """Apply pane sizes to the outer splitter with a deterministic resolution.
+
+        A ``QSplitter`` that has not yet been shown or laid out by a real
+        parent window resolves ``setSizes()`` against whatever ambient
+        size it currently happens to carry, and that ambient size can
+        differ by a couple of pixels between two otherwise identical
+        ``CutterPanel`` constructions depending on Qt/style-internal
+        caching state (font metrics, icon caches) that has nothing to do
+        with this panel's own layout -- so the same persisted pane sizes
+        could resolve to visibly different geometry across panel
+        instances (S20-D21 repair). Explicitly resizing the splitter to
+        the exact total extent the requested sizes need, before applying
+        them, removes that dependency: the splitter always has just
+        enough room for the request, so ``setSizes()`` reproduces it
+        exactly every time, independent of ambient widget/style state.
+
+        Args:
+            splitter: The outer vertical splitter to size.
+            sizes: Pane sizes, in pixels, for the code zone, data tabs,
+                and console panes respectively.
+        """
+        handle_span = splitter.handleWidth() * (splitter.count() - 1)
+        total_extent = sum(sizes) + handle_span
+        splitter.resize(max(splitter.width(), 1), total_extent)
+        splitter.setSizes(sizes)
+
+    @staticmethod
+    def _load_outer_splitter_sizes() -> list[int]:
+        """Load the outer splitter's persisted pane sizes, or the seeded defaults.
+
+        Reads back whatever :meth:`_on_outer_splitter_moved` last persisted to
+        ``QSettings`` so a user's preferred code/sub-tab/console proportions
+        survive across detach/redock and app relaunch, following the same
+        ``QSettings`` pattern :meth:`intellicrack.ui.app.MainWindow._restore_window_state`
+        uses for its own splitter. Falls back to the module-level defaults when
+        nothing was persisted yet or the stored value is malformed.
+
+        Returns:
+            list[int]: Three pane sizes, in pixels, for the code zone, data
+            tabs, and console panes respectively.
+        """
+        settings = QSettings(_SETTINGS_ORG, _SETTINGS_APP)
+        raw = settings.value(_SETTINGS_KEY_OUTER_SPLITTER)
+        if isinstance(raw, list):
+            raw_values = cast("list[object]", raw)
+            parsed_sizes: list[int] = [int(val) for val in raw_values if isinstance(val, (str, int, float))]
+            if len(parsed_sizes) == _OUTER_SPLIT_PANE_COUNT and all(size > 0 for size in parsed_sizes):
+                return parsed_sizes
+        return [_OUTER_SPLIT_TOP, _OUTER_SPLIT_MID, _OUTER_SPLIT_BOT]
+
+    def _on_outer_splitter_moved(self, _pos: int, _index: int) -> None:
+        """Persist the outer splitter's current pane sizes to ``QSettings``.
+
+        Connected to the splitter's ``splitterMoved`` signal so every manual
+        drag is remembered, seeding :meth:`_load_outer_splitter_sizes` on the
+        next construction of this panel.
+
+        Args:
+            _pos: New handle position (unused, sizes are read from the
+                splitter directly).
+            _index: Index of the moved handle (unused).
+        """
+        if self._outer_splitter is None:
+            return
+        QSettings(_SETTINGS_ORG, _SETTINGS_APP).setValue(_SETTINGS_KEY_OUTER_SPLITTER, self._outer_splitter.sizes())
 
     @override
     def _cleanup(self) -> None:

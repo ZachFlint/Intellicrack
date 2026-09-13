@@ -45,6 +45,7 @@ from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
 from intellicrack.ui.panels.frida_instrumentation_tab import (
     CancellableControls,
+    InstructionDisassembleControls,
     InterceptorLifecycleControls,
     MemoryPatchStringControls,
     ScriptMessagingControls,
@@ -68,13 +69,23 @@ _DEVICE_COMBO_MIN_WIDTH: Final[int] = 120
 _PROCESS_COL_PID: Final[int] = 0
 _PROCESS_COL_NAME: Final[int] = 1
 _PROCESS_PID_COLUMN_WIDTH: Final[int] = 70
+_APPLICATION_COL_IDENTIFIER: Final[int] = 0
+_APPLICATION_COL_NAME: Final[int] = 1
+_APPLICATION_COL_PID: Final[int] = 2
 _STALKER_TID_MAX_WIDTH: Final[int] = 100
 _TOP_SPLIT: Final[list[int]] = [200, 400, 300]
-_MAIN_SPLIT: Final[list[int]] = [400, 200]
+_MAIN_SPLIT: Final[list[int]] = [360, 240]
 _SPACING_STALKER: Final[int] = 4
 _CONSOLE_MAX_BLOCK_COUNT: Final[int] = 5000
 _CONSOLE_DRAIN_INTERVAL_MS: Final[int] = 50
 _CONSOLE_DRAIN_BATCH_SIZE: Final[int] = 200
+# Derived from the console's own font metrics so the Console Output pane
+# always shows a legible number of lines instead of being squeezed to a
+# sliver by the taller top_splitter above it (D20): a plain QPlainTextEdit
+# reports only a tiny generic minimumSizeHint, which is not a real usability
+# floor for a log view that carries script send()/log()/error output.
+_CONSOLE_MIN_VISIBLE_LINES: Final[int] = 6
+_CONSOLE_HEIGHT_PADDING: Final[int] = 16
 _RUN_SCRIPT_IDLE_TOOLTIP: Final[str] = "Run the script editor contents against the attached process"
 _RUN_SCRIPT_BLOCKED_TOOLTIP: Final[str] = "A persistent script is already loaded - stop it to run a new one"
 _CONSOLE_QUEUE_MAXLEN: Final[int] = 10000
@@ -101,6 +112,7 @@ _EXPORT_COLUMNS: Final[list[str]] = ["Name", "Address", "Ordinal"]
 _IMPORT_COLUMNS: Final[list[str]] = ["Function", "DLL", "Address"]
 _CHILD_COLUMNS: Final[list[str]] = ["PID", "Parent PID", "Origin", "Path"]
 _CRASH_COLUMNS: Final[list[str]] = ["PID", "Process", "Summary", "Time"]
+_APPLICATION_COLUMNS: Final[list[str]] = ["Identifier", "Name", "PID"]
 _NATIVE_TYPES: Final[list[str]] = ["pointer", "int", "uint", "void", "float", "double", "int32", "uint32", "int64", "uint64"]
 _CALLING_CONVENTIONS: Final[list[str]] = ["default", "sysv", "stdcall", "thiscall", "fastcall", "mscdecl", "win64"]
 _PROTECTIONS: Final[list[str]] = ["---", "r--", "rw-", "r-x", "rwx"]
@@ -207,14 +219,14 @@ class FridaPanel(AnalysisPanelBase):
         """Create the Frida instrumentation content area.
 
         Returns:
-            QWidget: Splitter with process browser, editor, hooks/threads, and console.
+            QWidget: Splitter with target browser, editor, hooks/threads, and console.
         """
         main_splitter = QSplitter(Qt.Orientation.Vertical)
         main_splitter.setChildrenCollapsible(False)
 
         top_splitter = QSplitter(Qt.Orientation.Horizontal)
         top_splitter.setChildrenCollapsible(False)
-        top_splitter.addWidget(self._create_process_browser())
+        top_splitter.addWidget(self._create_target_browser())
         top_splitter.addWidget(self._create_editor_section())
         top_splitter.addWidget(self._create_right_tabs())
         top_splitter.setSizes(_TOP_SPLIT)
@@ -233,6 +245,8 @@ class FridaPanel(AnalysisPanelBase):
         self._console.setFont(FontManager.get_instance().get_code_font(9))
         self._console.setReadOnly(True)
         set_max_block_count(self._console, _CONSOLE_MAX_BLOCK_COUNT)
+        console_min_height = QFontMetrics(self._console.font()).lineSpacing() * _CONSOLE_MIN_VISIBLE_LINES + _CONSOLE_HEIGHT_PADDING
+        self._console.setMinimumHeight(console_min_height)
         console_layout.addWidget(self._console)
         main_splitter.addWidget(console_container)
 
@@ -276,10 +290,24 @@ class FridaPanel(AnalysisPanelBase):
         self._script_editor = QPlainTextEdit()
         self._script_editor.setFont(FontManager.get_instance().get_code_font(10))
         self._script_editor.setPlainText(_DEFAULT_FRIDA_SCRIPT)
+        self._script_editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self._script_editor.setTabStopDistance(QFontMetrics(self._script_editor.font()).horizontalAdvance(" ") * 4)
         self._js_highlighter = get_highlighter_for_language("javascript", self._script_editor.document())
         editor_layout.addWidget(self._script_editor)
         return editor_container
+
+    def _create_target_browser(self) -> QWidget:
+        """Create the tabbed process/application target browser.
+
+        Returns:
+            QWidget: Tab widget holding the process browser and the
+                application browser side by side.
+        """
+        self._target_tabs = QTabWidget()
+        self._target_tabs.addTab(self._create_process_browser(), "Processes")
+        self._target_tabs.addTab(self._create_applications_browser(), "Applications")
+        self._configure_tab_overflow(self._target_tabs)
+        return self._target_tabs
 
     def _create_process_browser(self) -> QWidget:
         """Create the process browser panel.
@@ -317,6 +345,70 @@ class FridaPanel(AnalysisPanelBase):
         layout.addWidget(self._process_table)
         return container
 
+    def _create_applications_browser(self) -> QWidget:
+        """Create the installed-applications browser panel.
+
+        Lists applications known to the current device - including ones
+        that are not currently running - so an app-model target can be
+        selected the same way a running process can be, which the process
+        browser alone cannot show since it only lists live processes.
+
+        Returns:
+            QWidget: Application browser container widget.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        header = QHBoxLayout()
+        title = QLabel("Applications")
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        header.addWidget(title)
+        header.addStretch()
+
+        self._refresh_apps_btn = QPushButton("Refresh")
+        self._refresh_apps_btn.setObjectName("tool_button")
+        self._refresh_apps_btn.clicked.connect(self._on_refresh_applications)
+        header.addWidget(self._refresh_apps_btn)
+        layout.addLayout(header)
+
+        self._application_table = QTableWidget(0, len(_APPLICATION_COLUMNS))
+        self._application_table.setHorizontalHeaderLabels(_APPLICATION_COLUMNS)
+        self._application_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._application_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self._application_table.doubleClicked.connect(self._on_application_double_click)
+        app_header = self._application_table.horizontalHeader()
+        if app_header is not None:
+            app_header.setSectionResizeMode(_APPLICATION_COL_IDENTIFIER, QHeaderView.ResizeMode.Stretch)
+            app_header.setSectionResizeMode(_APPLICATION_COL_NAME, QHeaderView.ResizeMode.Stretch)
+            app_header.setSectionResizeMode(_APPLICATION_COL_PID, QHeaderView.ResizeMode.Interactive)
+            app_header.resizeSection(_APPLICATION_COL_PID, _PROCESS_PID_COLUMN_WIDTH)
+        layout.addWidget(self._application_table)
+        return container
+
+    @staticmethod
+    def _configure_tab_overflow(tabs: QTabWidget) -> None:
+        """Force a sub-tab strip to grow scroll buttons instead of eliding tab labels.
+
+        A ``QTabBar``'s elide mode and ``usesScrollButtons`` default are style-
+        dependent: under some native styles a tab strip that is narrower than
+        its tabs' combined natural width both shows the ``< >`` overflow
+        buttons *and* elides the visible labels down to unreadable fragments
+        (e.g. "Advanced" -> "Adv"), rather than keeping full labels and
+        relying solely on the scroll buttons to reach the hidden ones (D02).
+        Setting both explicitly removes that ambiguity for every sub-tab
+        strip in this panel.
+
+        Args:
+            tabs: The tab widget whose tab bar should never elide labels.
+        """
+        tab_bar = tabs.tabBar()
+        if tab_bar is None:
+            return
+        tab_bar.setElideMode(Qt.TextElideMode.ElideNone)
+        tab_bar.setUsesScrollButtons(True)
+
     def _create_right_tabs(self) -> QWidget:
         """Create the tabbed right panel with hooks, threads, and stalker.
 
@@ -324,13 +416,14 @@ class FridaPanel(AnalysisPanelBase):
             QWidget: Tab widget containing hooks, threads, and stalker tabs.
         """
         self._right_tabs = QTabWidget()
-        self._right_tabs.addTab(self._create_hooks_section(), "Hooks")
-        self._right_tabs.addTab(self._create_threads_section(), "Threads")
-        self._right_tabs.addTab(self._create_stalker_section(), "Stalker")
-        self._right_tabs.addTab(self._create_modules_section(), "Modules")
-        self._right_tabs.addTab(self._create_memory_section(), "Memory")
-        self._right_tabs.addTab(self._create_symbols_section(), "Symbols")
+        self._right_tabs.addTab(self._make_scrollable(self._create_hooks_section()), "Hooks")
+        self._right_tabs.addTab(self._make_scrollable(self._create_threads_section()), "Threads")
+        self._right_tabs.addTab(self._make_scrollable(self._create_stalker_section()), "Stalker")
+        self._right_tabs.addTab(self._make_scrollable(self._create_modules_section()), "Modules")
+        self._right_tabs.addTab(self._make_scrollable(self._create_memory_section()), "Memory")
+        self._right_tabs.addTab(self._make_scrollable(self._create_symbols_section()), "Symbols")
         self._right_tabs.addTab(self._make_scrollable(self._create_advanced_section()), "Advanced")
+        self._configure_tab_overflow(self._right_tabs)
         return self._right_tabs
 
     def _create_hooks_section(self) -> QWidget:
@@ -533,6 +626,7 @@ class FridaPanel(AnalysisPanelBase):
         self._stalker_call_probes.set_bridge(bridge)
         self._stalker_config.set_bridge(bridge)
         self._mem_patch_string.set_bridge(bridge)
+        self._instr_disasm.set_bridge(bridge)
         self._sym_lookup_extras.set_bridge(bridge)
         self._syscall_controls.set_bridge(bridge)
         self._script_messaging.set_bridge(bridge)
@@ -573,6 +667,7 @@ class FridaPanel(AnalysisPanelBase):
         elif msg_type == "error":
             desc = message.get("description", str(message))
             self._console.appendPlainText(f"[error] {desc}")
+            _logger.error("frida_script_error", description=str(desc))
         else:
             self._console.appendPlainText(f"[{msg_type}] {message}")
 
@@ -1420,6 +1515,78 @@ class FridaPanel(AnalysisPanelBase):
         self._target_input.setText(pid_text)
         self._on_attach()
 
+    def _on_refresh_applications(self) -> None:
+        """Refresh the application browser table."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+
+        self._refresh_apps_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.enumerate_applications(),
+            on_success=self._populate_application_table,
+            on_error=self._on_refresh_applications_error,
+            parent=self,
+            event="frida_enumerate_applications",
+            logger=_logger,
+        )
+
+    def _populate_application_table(self, result: object) -> None:
+        """Populate the application table from enumeration results.
+
+        Args:
+            result: List of FridaApplicationInfo objects from the bridge.
+        """
+        self._application_table.setRowCount(0)
+        if isinstance(result, list):
+            for app in cast("list[object]", result):
+                identifier = str(getattr(app, "identifier", ""))
+                name = str(getattr(app, "name", ""))
+                pid = int(getattr(app, "pid", 0))
+                row = self._application_table.rowCount()
+                self._application_table.insertRow(row)
+                self._application_table.setItem(row, _APPLICATION_COL_IDENTIFIER, QTableWidgetItem(identifier))
+                self._application_table.setItem(row, _APPLICATION_COL_NAME, QTableWidgetItem(name))
+                self._application_table.setItem(row, _APPLICATION_COL_PID, QTableWidgetItem(str(pid) if pid else ""))
+        self._refresh_apps_btn.setEnabled(True)
+
+    def _on_refresh_applications_error(self, exc: object) -> None:
+        """Handle application enumeration failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Enumerate applications failed: {exc}")
+        _logger.warning("frida_application_enum_failed", error=str(exc))
+        self._refresh_apps_btn.setEnabled(True)
+
+    def _on_application_double_click(self) -> None:
+        """Target the double-clicked application.
+
+        A running application (nonzero PID) is attached to immediately,
+        mirroring :meth:`_on_process_double_click`. An application with no
+        running instance has no process to attach to, so its identifier is
+        copied into the target field for reference instead and the console
+        explains why no attach was attempted.
+        """
+        row = self._application_table.currentRow()
+        if row < 0:
+            return
+
+        pid_item = self._application_table.item(row, _APPLICATION_COL_PID)
+        pid_text = pid_item.text().strip() if pid_item is not None else ""
+        if pid_text:
+            self._target_input.setText(pid_text)
+            self._on_attach()
+            return
+
+        identifier_item = self._application_table.item(row, _APPLICATION_COL_IDENTIFIER)
+        identifier = identifier_item.text() if identifier_item is not None else ""
+        name_item = self._application_table.item(row, _APPLICATION_COL_NAME)
+        name = name_item.text() if name_item is not None and name_item.text() else identifier
+        self._target_input.setText(identifier)
+        self._console.appendPlainText(f"[!] '{name}' is not running - launch it, then Refresh, to attach")
+
     def _on_refresh_threads(self) -> None:
         """Refresh the thread viewer table."""
         if self._bridge is None:
@@ -1926,6 +2093,7 @@ class FridaPanel(AnalysisPanelBase):
         if imp_h is not None:
             imp_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self._module_detail_tabs.addTab(self._imports_table, "Imports")
+        self._configure_tab_overflow(self._module_detail_tabs)
         layout.addWidget(self._module_detail_tabs)
 
         load_row = QHBoxLayout()
@@ -2142,6 +2310,9 @@ class FridaPanel(AnalysisPanelBase):
         mem_tabs.addTab(self._create_memory_protect_tab(), "Protect")
         self._mem_patch_string = MemoryPatchStringControls()
         mem_tabs.addTab(self._mem_patch_string, "Patch / Alloc String")
+        self._instr_disasm = InstructionDisassembleControls()
+        mem_tabs.addTab(self._instr_disasm, "Disassemble")
+        self._configure_tab_overflow(mem_tabs)
 
         layout.addWidget(mem_tabs)
         return container
@@ -2603,6 +2774,7 @@ class FridaPanel(AnalysisPanelBase):
 
         self._sym_lookup_extras = SymbolLookupControls()
         sym_tabs.addTab(self._sym_lookup_extras, "Module Symbols / Reverse Lookup")
+        self._configure_tab_overflow(sym_tabs)
 
         layout.addWidget(sym_tabs)
 

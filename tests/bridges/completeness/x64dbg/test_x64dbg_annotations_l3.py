@@ -420,7 +420,7 @@ class TestConditionalBreakpointGuiWiring:
             if command == "bp_set":
                 return ok(hex(addr))
             if command == "bp_list":
-                return ok([{"address": addr, "type": "software", "enabled": True}])
+                return ok([{"address": addr, "type": "software", "enabled": True, "breakCondition": condition_text}])
             if command == "exec":
                 return ok("")
             if command in _RESIDUAL_REFRESH_RPCS:

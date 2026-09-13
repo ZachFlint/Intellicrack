@@ -61,7 +61,7 @@ from intellicrack.core.types import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from frida.core import ScriptMessage
+    from frida import ScriptMessage
 
 _logger = get_logger(__name__)
 
@@ -586,27 +586,30 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
     ),
     ToolFunction(
         name="frida.enable_child_gating",
-        description="Enable child process gating to intercept spawned child processes",
+        description=(
+            "Enable device-wide spawn gating: every new process the device observes being spawned launches "
+            "suspended until resumed via frida.resume_child"
+        ),
         parameters=[],
         returns="Success status",
     ),
     ToolFunction(
         name="frida.disable_child_gating",
-        description="Disable child process gating",
+        description="Disable device-wide spawn gating",
         parameters=[],
         returns="Success status",
     ),
     ToolFunction(
         name="frida.get_pending_children",
-        description="Get list of child processes intercepted by child gating",
+        description="Get the processes currently suspended by device-wide spawn gating, queried directly from the device",
         parameters=[],
         returns="List of ChildProcessInfo",
     ),
     ToolFunction(
         name="frida.resume_child",
-        description="Resume a gated child process",
+        description="Resume a process suspended by device-wide spawn gating",
         parameters=[
-            ToolParameter(name="pid", type="integer", description="PID of the child process to resume", required=True),
+            ToolParameter(name="pid", type="integer", description="PID of the suspended process to resume", required=True),
         ],
         returns="Success status",
     ),
@@ -1273,9 +1276,9 @@ class _FridaBridgeBase(InstrumentationBridge):
     def __init__(self) -> None:
         """Initialize the FridaBridge instance."""
         super().__init__()
-        self._device: frida.core.Device | None = None
-        self._session: frida.core.Session | None = None
-        self._scripts: dict[str, frida.core.Script] = {}
+        self._device: frida.Device | None = None
+        self._session: frida.Session | None = None
+        self._scripts: dict[str, frida.Script] = {}
         self._hooks: dict[str, HookInfo] = {}
         self._message_handler: Callable[[dict[str, object]], None] | None = None
         self._message_handler_lock: threading.Lock = threading.Lock()
@@ -1287,6 +1290,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._child_gating_enabled: bool = False
         self._gated_children: list[ChildProcessInfo] = []
         self._gated_children_lock: threading.Lock = threading.Lock()
+        self._spawn_added_handler: Callable[[object], None] | None = None
+        self._spawn_removed_handler: Callable[[object], None] | None = None
         self._crashes: list[CrashInfo] = []
         self._crashes_lock: threading.Lock = threading.Lock()
         self._alloc_scripts: dict[int, str] = {}
@@ -1399,7 +1404,66 @@ class _FridaBridgeBase(InstrumentationBridge):
                 await asyncio.to_thread(self._device.disable_spawn_gating)
             except Exception:
                 _logger.exception("child_gating_disable_failed_during_shutdown")
+            self._detach_spawn_gating_handlers()
             self._child_gating_enabled = False
+
+    def _register_spawn_gating_handlers(
+        self,
+        device: frida.Device,
+        on_spawn_added: Callable[[object], None],
+        on_spawn_removed: Callable[[object], None],
+    ) -> None:
+        """Register and record the device's spawn-gating signal handlers.
+
+        Args:
+            device: Frida device to register the handlers on.
+            on_spawn_added: Callback for the device's ``spawn-added`` signal.
+            on_spawn_removed: Callback for the device's ``spawn-removed`` signal.
+        """
+        device.on("spawn-added", on_spawn_added)
+        self._spawn_added_handler = on_spawn_added
+        device.on("spawn-removed", on_spawn_removed)
+        self._spawn_removed_handler = on_spawn_removed
+
+    def _remove_gated_child(self, pid: int) -> None:
+        """Drop a single pending spawn from the in-memory gated-children record.
+
+        Args:
+            pid: PID of the process to remove from the tracked list.
+        """
+        with self._gated_children_lock:
+            self._gated_children = [c for c in self._gated_children if c.pid != pid]
+
+    def _clear_gated_children(self) -> None:
+        """Clear the in-memory record of gated child processes."""
+        with self._gated_children_lock:
+            self._gated_children.clear()
+
+    def _detach_spawn_gating_handlers(self) -> None:
+        """Detach and forget any registered device spawn-gating signal handlers.
+
+        Best-effort: a device that is already lost or torn down simply has
+        nothing to detach from. Safe to call whether or not gating was ever
+        successfully enabled.
+        """
+        device = self._device
+        added_handler = self._spawn_added_handler
+        removed_handler = self._spawn_removed_handler
+        if device is not None:
+            off_fn = getattr(device, "off", None)
+            if callable(off_fn):
+                if added_handler is not None:
+                    try:
+                        off_fn("spawn-added", added_handler)
+                    except Exception:
+                        _logger.exception("spawn_added_handler_detach_failed")
+                if removed_handler is not None:
+                    try:
+                        off_fn("spawn-removed", removed_handler)
+                    except Exception:
+                        _logger.exception("spawn_removed_handler_detach_failed")
+        self._spawn_added_handler = None
+        self._spawn_removed_handler = None
 
     async def _shutdown_file_monitors(self) -> None:
         """Disable any registered Frida file monitors and clear the registry."""
@@ -1474,8 +1538,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._device = None
         self._pid = None
         self._hooks = {}
-        with self._gated_children_lock:
-            self._gated_children.clear()
+        self._clear_gated_children()
         with self._crashes_lock:
             self._crashes.clear()
         with self._typescript_compiler_lock:
@@ -1558,7 +1621,7 @@ class _FridaBridgeBase(InstrumentationBridge):
                 details=self._frida_error_details(e, pid=resolved_pid),
             ) from e
 
-    def _register_session_detached_handler(self, session: frida.core.Session, pid: int) -> None:
+    def _register_session_detached_handler(self, session: frida.Session, pid: int) -> None:
         """Register Frida's async ``session.on("detached", ...)`` signal.
 
         Without this listener the bridge only learns about a torn-down
@@ -1610,7 +1673,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
     async def _perform_attach(
         self,
-        device: frida.core.Device,
+        device: frida.Device,
         pid: int,
         cancellable: frida.Cancellable | None,
     ) -> None:
@@ -1805,7 +1868,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
     async def _post_spawn_attach(
         self,
-        device: frida.core.Device,
+        device: frida.Device,
         pid: int,
         path: Path,
         args: Sequence[str] | None,
@@ -2255,7 +2318,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
     @staticmethod
     async def _scan_one_chunk(
-        script: frida.core.Script,
+        script: frida.Script,
         base: int,
         size: int,
         hex_pattern: str,
@@ -3076,7 +3139,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         message = str(exc).lower()
         return any(marker in message for marker in _ALREADY_UNLOADED_MARKERS)
 
-    async def _unload_script_handle(self, script_id: str, script: frida.core.Script) -> None:
+    async def _unload_script_handle(self, script_id: str, script: frida.Script) -> None:
         """Best-effort unload of a single Frida script handle.
 
         Skips the native ``unload()`` call entirely when Frida already
@@ -3226,7 +3289,7 @@ class _FridaBridgeBase(InstrumentationBridge):
     @staticmethod
     async def _resolve_install_address(
         *,
-        script: frida.core.Script,
+        script: frida.Script,
         messages: list[ScriptMessage],
         target: str,
         success_type: str,
@@ -4275,29 +4338,29 @@ class _FridaBridgeBase(InstrumentationBridge):
 
     @staticmethod
     def _attach_with_cancellable(
-        device: frida.core.Device,
+        device: frida.Device,
         pid: int,
         cancellable: frida.Cancellable | None,
-    ) -> frida.core.Session:
+    ) -> frida.Session:
         """Invoke ``Device.attach`` honoring an optional cancellation token.
 
         Args:
             device: Frida device to attach through.
             pid: Target process identifier.
-            cancellable: Optional cancellation token; passed as a keyword
-                argument to Frida when provided.
+            cancellable: Optional cancellation token; entered as Frida's
+                thread-local cancellable scope around the call when provided.
 
         Returns:
-            frida.core.Session: The attached Frida session.
+            frida.Session: The attached Frida session.
         """
-        attach_fn = cast("Callable[..., frida.core.Session]", device.attach)
         if cancellable is not None:
-            return attach_fn(pid, cancellable=cancellable)
-        return attach_fn(pid)
+            with cancellable:
+                return device.attach(pid)
+        return device.attach(pid)
 
     @staticmethod
     def _spawn_with_cancellable(
-        device: frida.core.Device,
+        device: frida.Device,
         program: str,
         argv: Sequence[str | bytes],
         cancellable: frida.Cancellable | None,
@@ -4308,38 +4371,38 @@ class _FridaBridgeBase(InstrumentationBridge):
             device: Frida device to spawn on.
             program: Path to the executable.
             argv: Argument vector for the spawned process.
-            cancellable: Optional cancellation token; passed as a keyword
-                argument to Frida when provided.
+            cancellable: Optional cancellation token; entered as Frida's
+                thread-local cancellable scope around the call when provided.
 
         Returns:
             int: PID of the spawned process.
         """
-        spawn_fn = cast("Callable[..., int]", device.spawn)
         if cancellable is not None:
-            return spawn_fn(program, argv=list(argv), cancellable=cancellable)
-        return spawn_fn(program, argv=list(argv))
+            with cancellable:
+                return device.spawn(program, argv=list(argv))
+        return device.spawn(program, argv=list(argv))
 
     @staticmethod
     def _create_script_with_cancellable(
-        session: frida.core.Session,
+        session: frida.Session,
         source: str,
         cancellable: frida.Cancellable | None,
-    ) -> frida.core.Script:
+    ) -> frida.Script:
         """Invoke ``Session.create_script`` honoring an optional cancellation token.
 
         Args:
             session: Frida session that will own the script.
             source: JavaScript source to compile.
-            cancellable: Optional cancellation token; passed as a keyword
-                argument to Frida when provided.
+            cancellable: Optional cancellation token; entered as Frida's
+                thread-local cancellable scope around the call when provided.
 
         Returns:
-            frida.core.Script: The created Frida script.
+            frida.Script: The created Frida script.
         """
-        create_fn = cast("Callable[..., frida.core.Script]", session.create_script)
         if cancellable is not None:
-            return create_fn(source, cancellable=cancellable)
-        return create_fn(source)
+            with cancellable:
+                return session.create_script(source)
+        return session.create_script(source)
 
     def _teardown_crash_handler(self) -> None:
         """Best-effort detach of the crash handler called from :meth:`shutdown`.
@@ -4636,84 +4699,118 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
         )
 
     async def enable_child_gating(self) -> None:
-        """Enable child process gating to intercept spawned children.
+        """Enable device-wide spawn gating so new processes launch suspended.
+
+        This is a device-wide side effect: it calls
+        :meth:`frida.Device.enable_spawn_gating`, which suspends *every*
+        process the device subsequently observes being spawned - not only
+        processes spawned through this bridge - until each one is resumed
+        via :meth:`resume_child`. Pending spawns are tracked through the
+        device's ``spawn-added`` / ``spawn-removed`` signals and can also be
+        queried directly at any time with :meth:`get_pending_children`.
 
         Raises:
-            ToolError: If child gating cannot be enabled.
+            ToolError: If spawn gating cannot be enabled.
         """
         _logger.info("frida_enable_child_gating_started")
-        if self._device is None:
+        device = self._device
+        if device is None:
             raise ToolError(_ERR_NO_DEVICE)
 
         if self._child_gating_enabled:
             return
 
-        def on_child_added(child: object) -> None:
-            """Record a newly spawned child process reported by the device.
+        def on_spawn_added(spawn: object) -> None:
+            """Record a pending spawn reported by the device.
 
-            Extracts identifying attributes from the Frida ``Child`` object,
-            appends a ``ChildProcessInfo`` record to the gated-children
-            list, and publishes a ``child_added`` dispatch message.
+            Extracts identifying attributes from the Frida ``Spawn`` object,
+            appends a ``ChildProcessInfo`` record to the gated-spawn list
+            (unless it is already tracked), and publishes a ``spawn_added``
+            dispatch message.
 
             Args:
-                child: Frida ``Child`` object describing the new process.
+                spawn: Frida ``Spawn`` object describing the pending process.
             """
-            child_pid = int(getattr(child, "pid", 0))
-            child_parent_pid = int(getattr(child, "parent_pid", 0))
+            spawn_pid = int(getattr(spawn, "pid", 0))
             info = ChildProcessInfo(
-                pid=child_pid,
-                parent_pid=child_parent_pid,
-                origin=str(getattr(child, "origin", "unknown")),
-                identifier=getattr(child, "identifier", None),
-                path=getattr(child, "path", None),
-                argv=list(getattr(child, "argv", [])),
+                pid=spawn_pid,
+                parent_pid=0,
+                origin="spawn",
+                identifier=getattr(spawn, "identifier", None),
+                path=None,
+                argv=[],
             )
-            _logger.info("child_process_added", child_pid=child_pid, parent_pid=child_parent_pid)
+            _logger.info("spawn_gating_pending_spawn_added", pid=spawn_pid)
             with self._gated_children_lock:
-                self._gated_children.append(info)
+                if not any(existing.pid == spawn_pid for existing in self._gated_children):
+                    self._gated_children.append(info)
             self._dispatch_message({
                 "type": "send",
                 "payload": {
-                    "type": "child_added",
-                    "pid": child_pid,
-                    "parent_pid": child_parent_pid,
+                    "type": "spawn_added",
+                    "pid": spawn_pid,
+                },
+            })
+
+        def on_spawn_removed(spawn: object) -> None:
+            """Drop a pending spawn once the device reports it is no longer gated.
+
+            Fires whether the spawn was removed by :meth:`resume_child`, by
+            some other Frida client acting on the same device, or because the
+            process exited while suspended, so the tracked list never goes
+            stale.
+
+            Args:
+                spawn: Frida ``Spawn`` object describing the removed process.
+            """
+            spawn_pid = int(getattr(spawn, "pid", 0))
+            self._remove_gated_child(spawn_pid)
+            _logger.info("spawn_gating_pending_spawn_removed", pid=spawn_pid)
+            self._dispatch_message({
+                "type": "send",
+                "payload": {
+                    "type": "spawn_removed",
+                    "pid": spawn_pid,
                 },
             })
 
         try:
-            self._device.on("child-added", on_child_added)
-            await asyncio.to_thread(self._device.enable_spawn_gating)
+            self._register_spawn_gating_handlers(device, on_spawn_added, on_spawn_removed)
+            await asyncio.to_thread(device.enable_spawn_gating)
             self._child_gating_enabled = True
             _logger.info("child_gating_enabled")
         except frida.NotSupportedError as e:
+            self._detach_spawn_gating_handlers()
             _logger.warning("child_gating_enable_not_supported", error=str(e))
             raise ToolError(
                 _ERR_CHILD_GATING_NOT_SUPPORTED,
                 details={"reason": _ERR_CHILD_GATING_NOT_SUPPORTED},
             ) from e
         except Exception as e:
+            self._detach_spawn_gating_handlers()
             reason = str(e) or type(e).__name__
             _logger.warning("child_gating_enable_failed", error=reason)
             raise ToolError(_ERR_CHILD_GATING_FAILED, details={"reason": reason}) from e
 
     async def disable_child_gating(self) -> None:
-        """Disable child process gating.
+        """Disable device-wide spawn gating.
 
         Raises:
-            ToolError: If child gating cannot be disabled.
+            ToolError: If spawn gating cannot be disabled.
         """
         _logger.info("frida_disable_child_gating_started")
-        if self._device is None:
+        device = self._device
+        if device is None:
             raise ToolError(_ERR_NO_DEVICE)
 
         if not self._child_gating_enabled:
             return
 
         try:
-            await asyncio.to_thread(self._device.disable_spawn_gating)
+            await asyncio.to_thread(device.disable_spawn_gating)
+            self._detach_spawn_gating_handlers()
             self._child_gating_enabled = False
-            with self._gated_children_lock:
-                self._gated_children.clear()
+            self._clear_gated_children()
             _logger.info("child_gating_disabled")
         except frida.NotSupportedError as e:
             _logger.warning("child_gating_disable_not_supported", error=str(e))
@@ -4726,32 +4823,73 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             raise ToolError(_ERR_CHILD_GATING_FAILED) from e
 
     async def get_pending_children(self) -> list[ChildProcessInfo]:
-        """Get list of child processes intercepted by child gating.
+        """Get the processes currently suspended by device-wide spawn gating.
+
+        Queries the Frida device directly via ``enumerate_pending_spawn``
+        rather than relying solely on the ``spawn-added`` / ``spawn-removed``
+        event cache, so the returned list is correct even if a device event
+        was missed (for example a spawn that arrived before the signal
+        handlers were registered). The in-memory cache used by
+        :meth:`resume_child` is resynchronized to this authoritative result.
 
         Returns:
-            list[ChildProcessInfo]: List of pending child process information.
+            list[ChildProcessInfo]: List of pending spawn information.
+
+        Raises:
+            ToolError: If no Frida device is available, spawn gating is not
+                supported on this OS, or enumeration otherwise fails.
         """
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        try:
+            pending = await asyncio.to_thread(device.enumerate_pending_spawn)
+        except frida.NotSupportedError as e:
+            _logger.warning("pending_children_query_not_supported", error=str(e))
+            raise ToolError(
+                _ERR_CHILD_GATING_NOT_SUPPORTED,
+                details={"reason": _ERR_CHILD_GATING_NOT_SUPPORTED},
+            ) from e
+        except (frida.ServerNotRunningError, frida.TransportError, frida.InvalidOperationError, OSError) as e:
+            _logger.warning("pending_children_query_failed", error=str(e))
+            raise ToolError(_ERR_CHILD_GATING_FAILED, details=self._frida_error_details(e)) from e
+
+        result = [
+            ChildProcessInfo(
+                pid=int(getattr(spawn, "pid", 0)),
+                parent_pid=0,
+                origin="spawn",
+                identifier=getattr(spawn, "identifier", None),
+                path=None,
+                argv=[],
+            )
+            for spawn in pending
+        ]
+
         with self._gated_children_lock:
-            result = list(self._gated_children)
+            self._gated_children = list(result)
+
         _logger.debug("pending_children_queried", count=len(result))
         return result
 
     async def resume_child(self, pid: int) -> None:
-        """Resume a gated child process.
+        """Resume a process suspended by device-wide spawn gating.
 
         Args:
-            pid: PID of the child process to resume.
+            pid: PID of the suspended process to resume, as reported by
+                :meth:`get_pending_children`.
 
         Raises:
             ToolError: If resume fails.
         """
-        if self._device is None:
+        device = self._device
+        if device is None:
             raise ToolError(_ERR_NO_DEVICE)
 
         try:
-            await asyncio.to_thread(self._device.resume, pid)
-            with self._gated_children_lock:
-                self._gated_children = [c for c in self._gated_children if c.pid != pid]
+            await asyncio.to_thread(device.resume, pid)
+            self._remove_gated_child(pid)
             _logger.info("child_resumed", pid=pid)
         except Exception as e:
             _logger.warning("child_resume_failed", pid=pid, error=str(e))
@@ -4868,15 +5006,15 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
         ]
 
     @staticmethod
-    async def _resolve_frida_device(device_type: str, host: str | None) -> frida.core.Device:
-        """Resolve a :class:`frida.core.Device` for ``device_type``.
+    async def _resolve_frida_device(device_type: str, host: str | None) -> frida.Device:
+        """Resolve a :class:`frida.Device` for ``device_type``.
 
         Args:
             device_type: One of ``"local"``, ``"usb"``, ``"remote"``, or
                 ``"enumerated"``.
             host: For ``"remote"``, the ``host[:port]`` of a *new* remote
                 endpoint to add via
-                :meth:`frida.core.DeviceManager.add_remote_device`. For
+                :meth:`frida.DeviceManager.add_remote_device`. For
                 ``"enumerated"``, the ``id`` of a device already returned by
                 :meth:`enumerate_devices`, resolved by identity through
                 :func:`frida.get_device` instead of being treated as a
@@ -4885,7 +5023,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
                 resolvable hostnames. Ignored for ``"local"``/``"usb"``.
 
         Returns:
-            frida.core.Device: The resolved Frida device handle.
+            frida.Device: The resolved Frida device handle.
         """
         if device_type == "local":
             return await asyncio.to_thread(frida.get_local_device)
@@ -7727,19 +7865,16 @@ class FridaBridge(_FridaBridgeAnalysisMixin):
             compiler: Frida ``Compiler`` instance to drive the build.
             entrypoint: Path to the TypeScript entrypoint file.
             project_root: Optional project root directory for imports.
-            cancellable: Optional cancellation token; passed as a keyword
-                argument to ``Compiler.build`` when provided.
+            cancellable: Optional cancellation token; entered as Frida's
+                thread-local cancellable scope around the build when provided.
 
         Returns:
             str: Compiled JavaScript source produced by the compiler.
         """
-        build_fn = cast("Callable[..., str]", compiler.build)
-        kwargs: dict[str, Any] = {}
-        if project_root is not None:
-            kwargs["project_root"] = project_root
         if cancellable is not None:
-            kwargs["cancellable"] = cancellable
-        return build_fn(entrypoint, **kwargs)
+            with cancellable:
+                return compiler.build(entrypoint, project_root=project_root)
+        return compiler.build(entrypoint, project_root=project_root)
 
     async def monitor_path(self, path: str) -> str:
         """Monitor a file path for changes on the target device.

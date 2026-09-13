@@ -40,7 +40,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_warning
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.hex_editor.base import (
     CURSOR_CONTEXT_BYTES,
@@ -79,6 +79,7 @@ from intellicrack.ui.panels.hex_editor.widgets import (
 )
 from intellicrack.ui.panels.hex_editor.yara import YaraMixin
 from intellicrack.ui.panels.hex_editor_widget import HexEditorWidget
+from intellicrack.ui.panels.process_panel.tab_overflow import install_tab_overflow
 
 
 _logger = get_logger(__name__)
@@ -205,6 +206,7 @@ class HexEditorPanel(
         self._search_status_label: QLabel | None = None
         self._selection_start: int = -1
         self._selection_end: int = -1
+        self._suppress_cursor_echo: bool = False
 
         self._pattern_frame: QFrame | None = None
         self._pattern_dsl_editor: PatternCodeEditor | None = None
@@ -335,6 +337,7 @@ class HexEditorPanel(
         toolbar.addWidget(self._encoding_combo)
 
         self._add_secondary_button(toolbar, "Send to AI", self._on_send_to_ai)
+        self._add_secondary_button(toolbar, "Full AI Context", self._on_get_ai_context)
         toolbar.addSeparator()
         self._add_secondary_button(toolbar, "Pattern Editor", self._toggle_pattern_editor)
         toolbar.addSeparator()
@@ -407,10 +410,17 @@ class HexEditorPanel(
         self._side_tabs.setMinimumWidth(_HSPLIT_SIDE_MIN_WIDTH)
         side_tab_bar = self._side_tabs.tabBar()
         if side_tab_bar is not None:
-            side_tab_bar.setElideMode(Qt.TextElideMode.ElideNone)
             side_tab_bar.setExpanding(False)
         self._side_tabs.setUsesScrollButtons(True)
         self._build_side_panels()
+        install_tab_overflow(self._side_tabs)
+        # install_tab_overflow() sets ElideRight on the tab bar; this panel's own
+        # contract is ElideNone so the 19 side-tab labels (Inspector/Bookmarks/
+        # .../VA Mapping) are never truncated, only reachable via scroll buttons
+        # or the corner jump-to-tab menu install_tab_overflow() adds -- restore
+        # it last (mirrors ghidra_panel.py's _create_data_tabs).
+        if side_tab_bar is not None:
+            side_tab_bar.setElideMode(Qt.TextElideMode.ElideNone)
         hsplit.addWidget(self._side_tabs)
 
         hsplit.setStretchFactor(0, 3)
@@ -778,7 +788,7 @@ class HexEditorPanel(
 
         try:
             doc_len = self._load_file_impl(path)
-        except OSError as exc:
+        except (OSError, RuntimeError) as exc:
             _logger.exception("file_load_failed", path=str(path))
             show_warning(self, "Load Failed", f"Failed to open file:\n{exc}")
             return False
@@ -788,7 +798,13 @@ class HexEditorPanel(
         return True
 
     def _load_file_impl(self, path: Path) -> int | None:
-        """Open ``path`` through hexcore and refresh all derived panels.
+        """Open ``path`` and refresh all derived panels.
+
+        Routes the open through the attached ``HexEditorBridge`` when one is
+        present, via :func:`run_bridge_coroutine`, so ``open_file``'s
+        previous-document release guard and state notifications actually
+        run instead of being bypassed. Falls back to opening the hexcore
+        document directly when no bridge is attached.
 
         Args:
             path: Filesystem path to load.
@@ -799,7 +815,13 @@ class HexEditorPanel(
         """
         if hexcore is None:
             return None
-        self.document = hexcore.HexDocument.open(str(path))
+
+        bridge = self._bridge
+        if bridge is not None:
+            run_bridge_coroutine(bridge.open_file(str(path)))
+            self.document = bridge.document
+        else:
+            self.document = hexcore.HexDocument.open(str(path))
         self.file_path = path
 
         if self._hex_widget is not None:
@@ -812,9 +834,6 @@ class HexEditorPanel(
         doc_len: int = self.document.length()
         if self._file_info_label is not None:
             self._file_info_label.setText(f"  {path.name} ({format_size(doc_len)})")
-
-        if self._bridge is not None:
-            self._bridge.adopt_document(self.document, path)
 
         self._populate_template_combo()
         if self._encoding_combo is not None:
@@ -834,7 +853,7 @@ class HexEditorPanel(
         if self._patches_tree is not None:
             self._patches_tree.clear()
 
-        if self.state_holder is not None:
+        if bridge is None and self.state_holder is not None:
             self.state_holder.set_document(self.document, path, source="panel")
 
         return doc_len
@@ -852,23 +871,35 @@ class HexEditorPanel(
             self.load_file(file_path_str)
 
     def _on_save(self) -> None:
-        """Save the current document."""
+        """Save the current document.
+
+        Routes the write through the attached ``HexEditorBridge`` when one
+        is present, via :func:`run_bridge_coroutine`, so the bridge's own
+        ``target_path`` bookkeeping and ``DOCUMENT_SAVED`` notification stay
+        current instead of drifting from what the GUI just wrote. Falls
+        back to saving the document directly when no bridge is attached.
+        """
         if self.document is None:
             return
         _logger.info("panel_save_started")
+        document = self.document
+        file_path = document.file_path()
+        if file_path is None:
+            self._on_save_as()
+            return
+
+        bridge = self._bridge
         try:
-            file_path = self.document.file_path()
-            if file_path is not None:
-                self.document.save(file_path)
+            if bridge is not None:
+                run_bridge_coroutine(bridge.save(file_path))
             else:
-                self._on_save_as()
-                return
-        except OSError as exc:
-            _logger.exception("panel_save_failed", file_path=str(self.document.file_path()) if self.document else None)
+                document.save(file_path)
+        except (OSError, RuntimeError) as exc:
+            _logger.exception("panel_save_failed", file_path=file_path)
             show_warning(self, "Save Failed", f"Failed to save:\n{exc}")
         else:
             self._on_data_changed()
-            if self.state_holder is not None and file_path is not None:
+            if bridge is None and self.state_holder is not None:
                 self.state_holder.notify_document_saved(str(file_path), source="panel")
             _logger.info("file_saved", path=file_path)
 
@@ -895,7 +926,12 @@ class HexEditorPanel(
         The dialog is pre-filled with a suggested ``<stem>_patched<suffix>``
         filename so the source file is never silently overwritten. Both the
         public :meth:`save_as` API and the internal Save-As toolbar action
-        share this implementation.
+        share this implementation. Routes the write through the attached
+        ``HexEditorBridge`` when one is present, via
+        :func:`run_bridge_coroutine`, so the bridge's own ``target_path``
+        bookkeeping and ``DOCUMENT_SAVED`` notification track the rename;
+        falls back to saving the document directly when no bridge is
+        attached.
 
         Returns:
             bool: True if the document was saved to the chosen path.
@@ -907,16 +943,20 @@ class HexEditorPanel(
         if not save_path:
             return False
         _logger.info("panel_save_as_started", path=save_path)
+        bridge = self._bridge
         try:
-            self.document.save(save_path)
-        except OSError as exc:
+            if bridge is not None:
+                run_bridge_coroutine(bridge.save_as(save_path))
+            else:
+                self.document.save(save_path)
+        except (OSError, RuntimeError) as exc:
             _logger.exception("panel_save_as_failed", path=save_path)
             show_warning(self, "Save Failed", f"Failed to save:\n{exc}")
             return False
         else:
             self.file_path = Path(save_path)
             self._on_data_changed()
-            if self.state_holder is not None:
+            if bridge is None and self.state_holder is not None:
                 self.state_holder.notify_document_saved(save_path, source="panel")
             _logger.info("file_saved_as", path=save_path)
             return True
@@ -991,11 +1031,29 @@ class HexEditorPanel(
     def _on_cursor_moved(self, offset: int) -> None:
         """Handle cursor movement to update side panels.
 
+        Propagates the new cursor offset to the shared state holder and
+        bridge so AI tools and CLI callers see the current GUI cursor
+        position instead of stale data, mirroring how
+        :meth:`_on_selection_changed` propagates selection changes. Skipped
+        while :attr:`_suppress_cursor_echo` is set, which
+        :meth:`_on_state_event` raises while it is itself applying a
+        bridge-originated cursor move to the widget -- without the guard,
+        the widget's own ``cursor_moved`` signal (re-emitted by
+        ``goto_offset``) would call back into this handler and publish a
+        second, redundant GUI-sourced update for a move that already came
+        from the bridge.
+
         Args:
             offset: New cursor byte offset.
         """
         self._update_data_inspector(offset)
         self._on_cursor_moved_disasm(offset)
+        if self._suppress_cursor_echo:
+            return
+        if self.state_holder is not None:
+            self.state_holder.set_cursor(offset, source="panel")
+        if self._bridge is not None:
+            self._bridge.update_cursor_from_gui(offset)
 
     def _on_data_changed(self) -> None:
         """Handle data modification events."""
@@ -1059,6 +1117,55 @@ class HexEditorPanel(
         )
         self.context_push_requested.emit(context)
 
+    def _on_get_ai_context(self) -> None:
+        """Fetch the bridge's full AI context bundle and push it to the AI chat surface.
+
+        Routes through the real ``HexEditorBridge.get_context_for_ai``
+        tool (cursor window, data inspection, selection, and bookmarks)
+        rather than the lighter ad hoc payload :meth:`_on_send_to_ai`
+        builds locally, then delivers the result through the same
+        :attr:`context_push_requested` signal already wired to the AI
+        chat surface.
+        """
+        if self.document is None:
+            return
+        bridge = self._bridge
+        if bridge is None:
+            self._warn_user(
+                "AI Bridge Unavailable",
+                "The hex editor bridge is not connected; AI context cannot be gathered.",
+            )
+            return
+        run_bridge_coroutine_logged(
+            bridge.get_context_for_ai(),
+            on_success=self._on_ai_context_ready,
+            on_error=self._on_ai_context_error,
+            parent=self,
+            event="hex_editor_get_context_for_ai",
+            logger=_logger,
+        )
+
+    def _on_ai_context_ready(self, result: object) -> None:
+        """Deliver a fetched AI context bundle to the AI chat surface.
+
+        Args:
+            result: The dict returned by ``HexEditorBridge.get_context_for_ai``.
+        """
+        if not isinstance(result, dict):
+            _logger.warning("ai_context_fetch_returned_unexpected_type", result_type=type(result).__name__)
+            return
+        context = cast("dict[str, Any]", result)
+        self.context_push_requested.emit(context)
+
+    def _on_ai_context_error(self, exc: object) -> None:
+        """Report a failed AI context fetch to the user.
+
+        Args:
+            exc: The exception raised by ``HexEditorBridge.get_context_for_ai``.
+        """
+        _logger.warning("ai_context_fetch_failed", error=str(exc))
+        self._warn_user("AI Context Failed", f"Failed to gather AI context:\n{exc}")
+
     def _on_undo(self) -> None:
         """Undo the last edit operation."""
         if self.document is not None:
@@ -1115,6 +1222,27 @@ class HexEditorPanel(
                 logger=_logger,
             )
 
+    def _document_already_matches_bridge(self) -> bool:
+        """Report whether the panel's document is already the bridge's current document.
+
+        A ``DOCUMENT_OPENED`` notification reaches this panel's own callback
+        both when some other caller opened a file through the bridge and
+        when this panel's own :meth:`_load_file_impl` just did so itself
+        (``open_file`` always publishes through the shared state holder,
+        and only echoes whose ``source_id`` equals the publisher's
+        ``source`` are filtered). ``_load_file_impl`` synchronously mirrors
+        ``bridge.document`` onto ``self.document`` before the queued
+        notification can be delivered, so identity equality at delivery
+        time means this panel is the one that performed the open and the
+        notification is a self-echo that must not trigger a second reload.
+
+        Returns:
+            bool: True when a bridge is attached and its document is
+                already the same object as the panel's.
+        """
+        bridge = self._bridge
+        return bridge is not None and self.document is bridge.document
+
     def _on_state_event(self, event_type: object, data: dict[str, Any]) -> None:
         """Apply a shared-state notification on the GUI thread.
 
@@ -1135,7 +1263,7 @@ class HexEditorPanel(
             return
         if event_type == evt.DOCUMENT_OPENED:
             file_path_str = data.get("file_path")
-            if file_path_str:
+            if file_path_str and not self._document_already_matches_bridge():
                 if self.document is not None:
                     self.document = None
                 self.load_file(file_path_str)
@@ -1144,7 +1272,11 @@ class HexEditorPanel(
             if self._hex_widget is not None:
                 goto_fn = getattr(self._hex_widget, "goto_offset", None)
                 if callable(goto_fn):
-                    goto_fn(offset)
+                    self._suppress_cursor_echo = True
+                    try:
+                        goto_fn(offset)
+                    finally:
+                        self._suppress_cursor_echo = False
             self._update_data_inspector(offset)
         elif event_type == evt.DATA_MODIFIED:
             if self._hex_widget is not None:
@@ -1173,6 +1305,24 @@ class HexEditorPanel(
             rule_id = data.get("rule_id")
             if isinstance(rule_id, str):
                 self._apply_bridge_highlight_rule_removed(rule_id)
+        elif event_type == evt.DISPLAY_MODE_CHANGED:
+            mode = data.get("mode")
+            if isinstance(mode, str) and self._hex_widget is not None:
+                set_mode_fn = getattr(self._hex_widget, "set_display_mode", None)
+                if callable(set_mode_fn):
+                    set_mode_fn(mode)
+        elif event_type == evt.ALIGNMENT_GRID_CHANGED:
+            size = data.get("size")
+            if isinstance(size, int) and self._hex_widget is not None:
+                set_align_fn = getattr(self._hex_widget, "set_alignment_grid_size", None)
+                if callable(set_align_fn):
+                    set_align_fn(size)
+        elif event_type == evt.COLOR_MODE_CHANGED:
+            mode = data.get("mode")
+            if isinstance(mode, str) and self._hex_widget is not None:
+                set_color_fn = getattr(self._hex_widget, "set_color_mode", None)
+                if callable(set_color_fn):
+                    set_color_fn(mode)
 
     def _on_selection_changed(self, start: int, end: int) -> None:
         """Handle selection range changes from the hex widget.
@@ -1280,6 +1430,10 @@ class HexEditorPanel(
     def _on_display_mode_changed(self, mode: str) -> None:
         """Handle display mode combo box changes.
 
+        Propagates the new display mode to the shared state holder and
+        bridge so AI tools and CLI callers see the mode the user actually
+        picked in the toolbar instead of stale data.
+
         Args:
             mode: Selected display mode string.
         """
@@ -1287,6 +1441,10 @@ class HexEditorPanel(
             set_mode_fn = getattr(self._hex_widget, "set_display_mode", None)
             if callable(set_mode_fn):
                 set_mode_fn(mode)
+        if self.state_holder is not None:
+            self.state_holder.notify_display_mode_changed(mode, source="panel")
+        if self._bridge is not None:
+            self._bridge.update_display_mode_from_gui(mode)
 
     def _build_export_report_menu(self) -> QMenu:
         """Build a popup menu for the Export Report button.
@@ -1407,6 +1565,10 @@ class HexEditorPanel(
     def _on_alignment_changed(self, text: str) -> None:
         """Handle alignment combo box changes.
 
+        Propagates the new alignment grid size to the shared state holder
+        and bridge so AI tools and CLI callers see the grid the user
+        actually picked in the toolbar instead of stale data.
+
         Args:
             text: Selected alignment text.
         """
@@ -1422,6 +1584,10 @@ class HexEditorPanel(
             set_align_fn = getattr(self._hex_widget, "set_alignment_grid_size", None)
             if callable(set_align_fn):
                 set_align_fn(size)
+        if self.state_holder is not None:
+            self.state_holder.notify_alignment_grid_changed(size, source="panel")
+        if self._bridge is not None:
+            self._bridge.update_alignment_grid_from_gui(size)
 
     def _on_snap_alignment(self) -> None:
         """Snap the cursor to the nearest alignment boundary."""
@@ -1439,6 +1605,10 @@ class HexEditorPanel(
     def _on_color_mode_changed(self, text: str) -> None:
         """Handle color mode combo box changes.
 
+        Propagates the new color mode to the shared state holder and
+        bridge so AI tools and CLI callers see the mode the user actually
+        picked in the toolbar instead of stale data.
+
         Args:
             text: Selected color mode text.
         """
@@ -1453,6 +1623,10 @@ class HexEditorPanel(
             set_color = getattr(self._hex_widget, "set_color_mode", None)
             if callable(set_color):
                 set_color(mode)
+        if self.state_holder is not None:
+            self.state_holder.notify_color_mode_changed(mode, source="panel")
+        if self._bridge is not None:
+            self._bridge.update_color_mode_from_gui(mode)
 
     def _refresh_bookmarks_tree(self) -> None:
         """Refresh the bookmarks tree after auto-bookmark operations."""

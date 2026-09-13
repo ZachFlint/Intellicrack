@@ -16,7 +16,7 @@ properties lookup (``get_properties``), and the bidirectional call graph
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -36,6 +36,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.base_panel import make_scrollable
 from intellicrack.ui.panels.qt_compat import set_header_labels, set_selection_mode, tree_add_child
 from intellicrack.ui.resources.font_manager import FontManager
 
@@ -49,6 +50,13 @@ _logger = get_logger(__name__)
 _EXT_REF_COLUMNS: list[str] = ["Address", "External Name", "Library", "Type"]
 _CALL_GRAPH_COLUMNS: list[str] = ["Name", "Address"]
 _PROPERTY_COLUMNS: list[str] = ["Property", "Value"]
+
+# Floor for the scroll viewport that hosts every Analysis Extras section
+# (S20-D09): each section below carries its own real minimumHeight derived
+# from its sizeHint, so this only bounds how short the visible viewport may
+# get before a scrollbar appears -- it never lets a section's own controls
+# compress below their natural size.
+_EXTRAS_SCROLL_MIN_HEIGHT: Final[int] = 200
 
 
 def _parse_address(text: str) -> int | None:
@@ -107,37 +115,60 @@ class GhidraAnalysisExtrasWidget(QWidget):
         return self._bridge
 
     def _setup_ui(self) -> None:
-        """Build every section of the Analysis Extras tab."""
-        fm = FontManager.get_instance()
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        """Build every section of the Analysis Extras tab inside a scrollable viewport.
 
-        self._build_flow_register_section(layout, fm)
-        self._build_thunk_section(layout, fm)
-        self._build_external_refs_section(layout, fm)
-        self._build_properties_section(layout, fm)
-        self._build_call_graph_section(layout, fm)
+        Each section is built as its own container with a real
+        ``minimumHeight`` derived from its own content (S20-D09), and the
+        full stack is wrapped in :func:`make_scrollable` so a short host
+        splitter pane grows a scrollbar instead of compressing every
+        section into overlapping, untypeable slivers.
+        """
+        fm = FontManager.get_instance()
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(4)
+
+        content_layout.addWidget(self._build_flow_register_section(fm))
+        content_layout.addWidget(self._build_thunk_section(fm))
+        content_layout.addWidget(self._build_external_refs_section(fm))
+        content_layout.addWidget(self._build_properties_section(fm))
+        content_layout.addWidget(self._build_call_graph_section(fm))
 
         self._status_label = QLabel("")
         self._status_label.setWordWrap(True)
-        layout.addWidget(self._status_label)
-        layout.addStretch()
+        content_layout.addWidget(self._status_label)
+        content_layout.addStretch()
+
+        outer_layout.addWidget(make_scrollable(content, min_height=_EXTRAS_SCROLL_MIN_HEIGHT))
 
     # ------------------------------------------------------------------
     # Instruction Flow / Register Value
     # ------------------------------------------------------------------
 
-    def _build_flow_register_section(self, layout: QVBoxLayout, fm: FontManager) -> None:
+    def _build_flow_register_section(self, fm: FontManager) -> QWidget:
         """Build the instruction-flow and register-value lookup section.
 
         Args:
-            layout: Parent layout to append the section to.
             fm: Shared font manager instance.
+
+        Returns:
+            QWidget: Section container with a real minimum height, derived
+            from its own content, so its address field can never be
+            compressed below a typeable size (S20-D09).
         """
+        section = QWidget()
+        section_layout = QVBoxLayout(section)
+        section_layout.setContentsMargins(0, 0, 0, 0)
+        section_layout.setSpacing(2)
+
         title = QLabel(self.tr("Instruction Flow / Register Value"))
         title.setFont(fm.get_ui_font_bold(9))
-        layout.addWidget(title)
+        section_layout.addWidget(title)
 
         row = QHBoxLayout()
         self._flow_addr_input = QLineEdit()
@@ -153,13 +184,17 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._register_btn = QPushButton(self.tr("Get Register"))
         self._register_btn.clicked.connect(self._on_get_register_value)
         row.addWidget(self._register_btn)
-        layout.addLayout(row)
+        section_layout.addLayout(row)
 
         self._flow_register_result = QPlainTextEdit()
         self._flow_register_result.setReadOnly(True)
         self._flow_register_result.setFont(fm.get_code_font(10))
         self._flow_register_result.setFixedHeight(80)
-        layout.addWidget(self._flow_register_result)
+        section_layout.addWidget(self._flow_register_result)
+
+        section.ensurePolished()
+        section.setMinimumHeight(section.sizeHint().height())
+        return section
 
     def _on_get_instruction_flow(self) -> None:
         """Query control-flow information for the instruction at the entered address."""
@@ -259,16 +294,25 @@ class GhidraAnalysisExtrasWidget(QWidget):
     # Thunk management
     # ------------------------------------------------------------------
 
-    def _build_thunk_section(self, layout: QVBoxLayout, fm: FontManager) -> None:
+    def _build_thunk_section(self, fm: FontManager) -> QWidget:
         """Build the thunk-management section.
 
         Args:
-            layout: Parent layout to append the section to.
             fm: Shared font manager instance.
+
+        Returns:
+            QWidget: Section container with a real minimum height, derived
+            from its own content, so its address fields can never be
+            compressed below a typeable size (S20-D09).
         """
+        section = QWidget()
+        section_layout = QVBoxLayout(section)
+        section_layout.setContentsMargins(0, 0, 0, 0)
+        section_layout.setSpacing(2)
+
         title = QLabel(self.tr("Thunk Management"))
         title.setFont(fm.get_ui_font_bold(9))
-        layout.addWidget(title)
+        section_layout.addWidget(title)
 
         row = QHBoxLayout()
         self._thunk_addr_input = QLineEdit()
@@ -277,7 +321,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._thunk_info_btn = QPushButton(self.tr("Get Thunk Info"))
         self._thunk_info_btn.clicked.connect(self._on_get_thunk_info)
         row.addWidget(self._thunk_info_btn)
-        layout.addLayout(row)
+        section_layout.addLayout(row)
 
         row2 = QHBoxLayout()
         self._thunk_target_input = QLineEdit()
@@ -289,13 +333,17 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._remove_thunk_btn = QPushButton(self.tr("Remove Thunk"))
         self._remove_thunk_btn.clicked.connect(self._on_remove_thunk)
         row2.addWidget(self._remove_thunk_btn)
-        layout.addLayout(row2)
+        section_layout.addLayout(row2)
 
         self._thunk_result = QPlainTextEdit()
         self._thunk_result.setReadOnly(True)
         self._thunk_result.setFont(fm.get_code_font(10))
         self._thunk_result.setFixedHeight(60)
-        layout.addWidget(self._thunk_result)
+        section_layout.addWidget(self._thunk_result)
+
+        section.ensurePolished()
+        section.setMinimumHeight(section.sizeHint().height())
+        return section
 
     def _on_get_thunk_info(self) -> None:
         """Query thunk status and resolved target for the entered function address."""
@@ -409,16 +457,25 @@ class GhidraAnalysisExtrasWidget(QWidget):
     # External References
     # ------------------------------------------------------------------
 
-    def _build_external_refs_section(self, layout: QVBoxLayout, fm: FontManager) -> None:
+    def _build_external_refs_section(self, fm: FontManager) -> QWidget:
         """Build the external-references section.
 
         Args:
-            layout: Parent layout to append the section to.
             fm: Shared font manager instance.
+
+        Returns:
+            QWidget: Section container with a real minimum height, derived
+            from its own content, so its address and name fields can never
+            be compressed below a typeable size (S20-D09).
         """
+        section = QWidget()
+        section_layout = QVBoxLayout(section)
+        section_layout.setContentsMargins(0, 0, 0, 0)
+        section_layout.setSpacing(2)
+
         title = QLabel(self.tr("External References"))
         title.setFont(fm.get_ui_font_bold(9))
-        layout.addWidget(title)
+        section_layout.addWidget(title)
 
         row = QHBoxLayout()
         self._ext_ref_addr_input = QLineEdit()
@@ -430,7 +487,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._ext_ref_remove_btn = QPushButton(self.tr("Remove All From Address"))
         self._ext_ref_remove_btn.clicked.connect(self._on_remove_external_ref)
         row.addWidget(self._ext_ref_remove_btn)
-        layout.addLayout(row)
+        section_layout.addLayout(row)
 
         add_row = QHBoxLayout()
         self._ext_ref_library_input = QLineEdit()
@@ -442,7 +499,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._ext_ref_add_btn = QPushButton(self.tr("Add External Reference"))
         self._ext_ref_add_btn.clicked.connect(self._on_add_external_ref)
         add_row.addWidget(self._ext_ref_add_btn)
-        layout.addLayout(add_row)
+        section_layout.addLayout(add_row)
 
         self._ext_refs_table = QTableWidget(0, len(_EXT_REF_COLUMNS))
         self._ext_refs_table.setHorizontalHeaderLabels(_EXT_REF_COLUMNS)
@@ -452,7 +509,11 @@ class GhidraAnalysisExtrasWidget(QWidget):
         ext_refs_header = self._ext_refs_table.horizontalHeader()
         if ext_refs_header is not None:
             ext_refs_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        layout.addWidget(self._ext_refs_table)
+        section_layout.addWidget(self._ext_refs_table)
+
+        section.ensurePolished()
+        section.setMinimumHeight(section.sizeHint().height())
+        return section
 
     def _on_refresh_external_refs(self) -> None:
         """Fetch and render external references from the entered address."""
@@ -557,16 +618,25 @@ class GhidraAnalysisExtrasWidget(QWidget):
     # Properties
     # ------------------------------------------------------------------
 
-    def _build_properties_section(self, layout: QVBoxLayout, fm: FontManager) -> None:
+    def _build_properties_section(self, fm: FontManager) -> QWidget:
         """Build the user-defined properties viewer section.
 
         Args:
-            layout: Parent layout to append the section to.
             fm: Shared font manager instance.
+
+        Returns:
+            QWidget: Section container with a real minimum height, derived
+            from its own content, so its address field can never be
+            compressed below a typeable size (S20-D09).
         """
+        section = QWidget()
+        section_layout = QVBoxLayout(section)
+        section_layout.setContentsMargins(0, 0, 0, 0)
+        section_layout.setSpacing(2)
+
         title = QLabel(self.tr("Properties"))
         title.setFont(fm.get_ui_font_bold(9))
-        layout.addWidget(title)
+        section_layout.addWidget(title)
 
         row = QHBoxLayout()
         self._props_addr_input = QLineEdit()
@@ -575,7 +645,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._props_btn = QPushButton(self.tr("Get Properties"))
         self._props_btn.clicked.connect(self._on_get_properties)
         row.addWidget(self._props_btn)
-        layout.addLayout(row)
+        section_layout.addLayout(row)
 
         self._properties_table = QTableWidget(0, len(_PROPERTY_COLUMNS))
         self._properties_table.setHorizontalHeaderLabels(_PROPERTY_COLUMNS)
@@ -585,7 +655,11 @@ class GhidraAnalysisExtrasWidget(QWidget):
         properties_header = self._properties_table.horizontalHeader()
         if properties_header is not None:
             properties_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        layout.addWidget(self._properties_table)
+        section_layout.addWidget(self._properties_table)
+
+        section.ensurePolished()
+        section.setMinimumHeight(section.sizeHint().height())
+        return section
 
     def _on_get_properties(self) -> None:
         """Fetch and render user-defined properties at the entered address."""
@@ -640,16 +714,25 @@ class GhidraAnalysisExtrasWidget(QWidget):
     # Bidirectional Call Graph
     # ------------------------------------------------------------------
 
-    def _build_call_graph_section(self, layout: QVBoxLayout, fm: FontManager) -> None:
+    def _build_call_graph_section(self, fm: FontManager) -> QWidget:
         """Build the bidirectional call-graph section.
 
         Args:
-            layout: Parent layout to append the section to.
             fm: Shared font manager instance.
+
+        Returns:
+            QWidget: Section container with a real minimum height, derived
+            from its own content, so its address field can never be
+            compressed below a typeable size (S20-D09).
         """
+        section = QWidget()
+        section_layout = QVBoxLayout(section)
+        section_layout.setContentsMargins(0, 0, 0, 0)
+        section_layout.setSpacing(2)
+
         title = QLabel(self.tr("Bidirectional Call Graph"))
         title.setFont(fm.get_ui_font_bold(9))
-        layout.addWidget(title)
+        section_layout.addWidget(title)
 
         row = QHBoxLayout()
         self._bicg_addr_input = QLineEdit()
@@ -658,13 +741,17 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._bicg_btn = QPushButton(self.tr("Build Bidirectional Graph"))
         self._bicg_btn.clicked.connect(self._on_build_bidirectional_call_graph)
         row.addWidget(self._bicg_btn)
-        layout.addLayout(row)
+        section_layout.addLayout(row)
 
         self._bicg_tree = QTreeWidget()
         set_header_labels(self._bicg_tree, _CALL_GRAPH_COLUMNS)
         set_selection_mode(self._bicg_tree, QAbstractItemView.SelectionMode.SingleSelection)
         self._bicg_tree.setFixedHeight(140)
-        layout.addWidget(self._bicg_tree)
+        section_layout.addWidget(self._bicg_tree)
+
+        section.ensurePolished()
+        section.setMinimumHeight(section.sizeHint().height())
+        return section
 
     def _on_build_bidirectional_call_graph(self) -> None:
         """Build a bidirectional (callers + callees in one payload) call graph."""

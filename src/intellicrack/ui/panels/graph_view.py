@@ -326,7 +326,13 @@ class EdgeItem(QGraphicsPathItem):
 
 
 class CFGGraphScene(QGraphicsScene):
-    """Scene that parses r2 agj output and lays out basic blocks hierarchically."""
+    """Scene that lays out basic blocks hierarchically from bridge CFG data.
+
+    Accepts two block-dict shapes interchangeably: the Cutter/Rizin ``agj``/``afbj`` shape (``offset``, ``jump``, ``fail``, ``ops``) and the
+    Ghidra ``get_basic_blocks`` shape (``start``, ``end``, ``sources``, ``destinations``, ``destination_edges``). Blocks are matched by
+    whichever of ``offset``/``start`` is present, and edges are drawn from ``jump``/``fail`` when present, otherwise from
+    ``destination_edges``/``destinations``.
+    """
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the CFGGraphScene instance.
@@ -338,10 +344,12 @@ class CFGGraphScene(QGraphicsScene):
         self.block_items: dict[int, BasicBlockItem] = {}
 
     def load_graph(self, blocks: list[dict[str, Any]]) -> None:
-        """Parse r2 agj blocks and lay them out hierarchically.
+        """Parse basic block dicts and lay them out hierarchically.
 
         Args:
-            blocks: List of basic block dicts from r2 ``agj`` output.
+            blocks: List of basic block dicts, either the Cutter/Rizin
+                ``agj``/``afbj`` shape or the Ghidra ``get_basic_blocks``
+                shape (see the class docstring for both shapes).
         """
         _logger.debug("graph_loading", block_count=len(blocks))
         self.clear()
@@ -362,14 +370,15 @@ class CFGGraphScene(QGraphicsScene):
         """Build a mapping of offsets to blocks and create scene items.
 
         Args:
-            blocks: Raw block dicts from r2 ``agj`` output.
+            blocks: Raw block dicts from either the Cutter/Rizin ``agj``/``afbj`` output (keyed by ``offset``) or Ghidra's
+                ``get_basic_blocks`` output (keyed by ``start``).
 
         Returns:
             dict[int, dict[str, Any]]: Mapping of offset to block data.
         """
         block_map: dict[int, dict[str, Any]] = {}
         for block in blocks:
-            offset = int(block.get("offset", 0))
+            offset = int(block.get("offset", block.get("start", 0)))
             block_map[offset] = block
 
         for offset, block in block_map.items():
@@ -416,7 +425,7 @@ class CFGGraphScene(QGraphicsScene):
             y_offset += max_height + _LAYER_SPACING_V
 
     def _create_edges(self, block_map: dict[int, dict[str, Any]]) -> None:
-        """Create edge items between blocks based on jump/fail targets.
+        """Create edge items between blocks based on jump/fail or destination targets.
 
         Args:
             block_map: Mapping of block address to block data.
@@ -425,38 +434,123 @@ class CFGGraphScene(QGraphicsScene):
             if offset not in self.block_items:
                 continue
             src_item = self.block_items[offset]
-            src_rect = src_item.rect()
-            src_pos = src_item.pos()
-            src_bottom = QPointF(
-                src_pos.x() + src_rect.width() / 2,
-                src_pos.y() + src_rect.height(),
-            )
+            src_bottom = self._block_bottom_center(src_item)
 
             jump_target = block.get("jump")
             fail_target = block.get("fail")
 
-            has_conditional = jump_target is not None and fail_target is not None
+            if jump_target is not None or fail_target is not None:
+                self._add_r2_style_edges(src_bottom, jump_target, fail_target)
+                continue
 
-            if jump_target is not None and int(jump_target) in self.block_items:
-                dst_item = self.block_items[int(jump_target)]
-                dst_pos = dst_item.pos()
-                dst_top = QPointF(
-                    dst_pos.x() + dst_item.rect().width() / 2,
-                    dst_pos.y(),
-                )
-                edge_type = "true" if has_conditional else "unconditional"
-                edge = EdgeItem(src_bottom, dst_top, edge_type)
-                self.addItem(edge)
+            self._add_ghidra_style_edges(src_bottom, block)
 
-            if fail_target is not None and int(fail_target) in self.block_items:
-                dst_item = self.block_items[int(fail_target)]
-                dst_pos = dst_item.pos()
-                dst_top = QPointF(
-                    dst_pos.x() + dst_item.rect().width() / 2,
-                    dst_pos.y(),
-                )
-                edge = EdgeItem(src_bottom, dst_top, "false")
-                self.addItem(edge)
+    def _add_r2_style_edges(
+        self,
+        src_bottom: QPointF,
+        jump_target: object,
+        fail_target: object,
+    ) -> None:
+        """Create edges from Cutter/r2 ``jump``/``fail`` targets.
+
+        Args:
+            src_bottom: Bottom-center scene point of the source block.
+            jump_target: The ``jump`` (taken-branch) target offset, or ``None``.
+            fail_target: The ``fail`` (fallthrough) target offset, or ``None``.
+        """
+        has_conditional = jump_target is not None and fail_target is not None
+
+        if jump_target is not None and int(cast("int", jump_target)) in self.block_items:
+            dst_item = self.block_items[int(cast("int", jump_target))]
+            edge_type = "true" if has_conditional else "unconditional"
+            self.addItem(EdgeItem(src_bottom, self._block_top_center(dst_item), edge_type))
+
+        if fail_target is not None and int(cast("int", fail_target)) in self.block_items:
+            dst_item = self.block_items[int(cast("int", fail_target))]
+            self.addItem(EdgeItem(src_bottom, self._block_top_center(dst_item), "false"))
+
+    def _add_ghidra_style_edges(self, src_bottom: QPointF, block: dict[str, Any]) -> None:
+        """Create edges from a Ghidra ``get_basic_blocks`` destination list.
+
+        Args:
+            src_bottom: Bottom-center scene point of the source block.
+            block: Block dict carrying ``destination_edges`` (preferred) or a plain ``destinations`` address list, as documented on
+                :meth:`_normalize_ghidra_edges`.
+        """
+        edges = self._normalize_ghidra_edges(block)
+        conditional_count = sum(1 for edge in edges if edge["is_conditional"])
+
+        for edge in edges:
+            dest_addr = edge["address"]
+            if dest_addr not in self.block_items:
+                continue
+            dst_item = self.block_items[dest_addr]
+            if edge["is_conditional"]:
+                edge_type = "true"
+            elif edge["is_fallthrough"] and conditional_count:
+                edge_type = "false"
+            else:
+                edge_type = "unconditional"
+            self.addItem(EdgeItem(src_bottom, self._block_top_center(dst_item), edge_type))
+
+    @staticmethod
+    def _normalize_ghidra_edges(block: dict[str, Any]) -> list[dict[str, Any]]:
+        """Normalize a Ghidra block's destination data to a common edge shape.
+
+        Args:
+            block: Block dict from :meth:`bridges.ghidra.GhidraBridge.get_basic_blocks`, carrying a ``destination_edges`` list of
+                ``{'address': int, 'is_conditional': bool, 'is_fallthrough': bool}`` dicts (preferred, carries real Ghidra flow-type
+                data), or a plain ``destinations`` address list as a fallback when flow-type data is unavailable.
+
+        Returns:
+            list[dict[str, Any]]: Normalized ``{'address': int, 'is_conditional': bool, 'is_fallthrough': bool}`` dicts.
+        """
+        edges_raw = block.get("destination_edges")
+        if isinstance(edges_raw, list) and edges_raw:
+            normalized: list[dict[str, Any]] = []
+            for raw_edge in cast("list[dict[str, Any]]", edges_raw):
+                address = raw_edge.get("address")
+                if address is None:
+                    continue
+                normalized.append({
+                    "address": int(cast("int", address)),
+                    "is_conditional": bool(raw_edge.get("is_conditional", False)),
+                    "is_fallthrough": bool(raw_edge.get("is_fallthrough", False)),
+                })
+            return normalized
+
+        dest_raw = block.get("destinations", [])
+        if not isinstance(dest_raw, list):
+            return []
+        return [{"address": int(dest), "is_conditional": False, "is_fallthrough": False} for dest in cast("list[int]", dest_raw)]
+
+    @staticmethod
+    def _block_top_center(item: BasicBlockItem) -> QPointF:
+        """Compute the top-center scene point of a block item.
+
+        Args:
+            item: The block graphics item.
+
+        Returns:
+            QPointF: The top-center point of the item in scene coordinates.
+        """
+        pos = item.pos()
+        rect = item.rect()
+        return QPointF(pos.x() + rect.width() / 2, pos.y())
+
+    @staticmethod
+    def _block_bottom_center(item: BasicBlockItem) -> QPointF:
+        """Compute the bottom-center scene point of a block item.
+
+        Args:
+            item: The block graphics item.
+
+        Returns:
+            QPointF: The bottom-center point of the item in scene coordinates.
+        """
+        pos = item.pos()
+        rect = item.rect()
+        return QPointF(pos.x() + rect.width() / 2, pos.y() + rect.height())
 
     @staticmethod
     def _compute_layers(
@@ -481,12 +575,20 @@ class CFGGraphScene(QGraphicsScene):
         for offset, block in block_map.items():
             jump_t = block.get("jump")
             fail_t = block.get("fail")
-            if jump_t is not None and int(jump_t) in all_addrs:
-                successors[offset].append(int(jump_t))
-                referenced.add(int(jump_t))
-            if fail_t is not None and int(fail_t) in all_addrs:
-                successors[offset].append(int(fail_t))
-                referenced.add(int(fail_t))
+            if jump_t is not None or fail_t is not None:
+                if jump_t is not None and int(cast("int", jump_t)) in all_addrs:
+                    successors[offset].append(int(cast("int", jump_t)))
+                    referenced.add(int(cast("int", jump_t)))
+                if fail_t is not None and int(cast("int", fail_t)) in all_addrs:
+                    successors[offset].append(int(cast("int", fail_t)))
+                    referenced.add(int(cast("int", fail_t)))
+                continue
+
+            for edge in CFGGraphScene._normalize_ghidra_edges(block):
+                dest_addr = edge["address"]
+                if dest_addr in all_addrs:
+                    successors[offset].append(dest_addr)
+                    referenced.add(dest_addr)
 
         roots = [a for a in all_addrs if a not in referenced] or [min(all_addrs)]
 

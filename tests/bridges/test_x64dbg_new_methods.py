@@ -744,11 +744,19 @@ class TestNewPipeDependentMethods:
     async def test_set_exception_config(self, bridge: X64DbgBridge) -> None:
         """Verify set_exception_config raises when pipe not connected.
 
+        Uses ``handling="break"`` rather than ``"ignore"``: ``"ignore"``
+        now raises a mode-specific ``ToolError`` before the method ever
+        touches the pipe (x64dbg has no scriptable command for it), which
+        would satisfy this same regex for an unrelated reason and no
+        longer exercise the generic disconnected-pipe contract this test
+        targets. ``"break"`` reaches ``_send_pipe_command`` and is
+        rejected there instead.
+
         Args:
             bridge: X64DbgBridge fixture.
         """
         with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
-            await bridge.set_exception_config(_TRACE_CODE, "ignore")
+            await bridge.set_exception_config(_TRACE_CODE, "break")
 
     async def test_skip_instruction(self, bridge: X64DbgBridge) -> None:
         """Verify skip_instruction raises when pipe not connected.
