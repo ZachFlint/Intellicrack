@@ -316,6 +316,10 @@ _ERR_UNSUPPORTED_DEBUG_FORMAT = "Unsupported debug info file format"
 _ERR_DEBUG_PATH_INVALID = "Debug info file path invalid"
 _ERR_DEBUG_PATH_NOT_FOUND = "Debug info file not found"
 _ERR_DEBUG_PATH_NOT_FILE = "Debug info path is not a regular file"
+_ERR_C_HEADER_IMPORT_FAILED = "C header import failed"
+_ERR_C_HEADER_PATH_INVALID = "C header file path invalid"
+_ERR_C_HEADER_PATH_NOT_FOUND = "C header file not found"
+_ERR_C_HEADER_PATH_NOT_FILE = "C header path is not a regular file"
 
 
 _XRefRefType = Literal["call", "jump", "data", "read", "write"]
@@ -413,6 +417,57 @@ def _resolve_debug_info_path(path: str) -> Path:
 
     if not normalized.is_file():
         msg = f"{_ERR_DEBUG_PATH_NOT_FILE}: {normalized}"
+        raise ToolError(msg)
+
+    return normalized
+
+
+def _resolve_c_header_path(path: str) -> Path:
+    r"""Canonicalise and validate a C header path before passing it to Ghidra.
+
+    Normalises the supplied path with ``os.path.normpath`` to collapse
+    traversal sequences such as ``..\..\Windows\System32`` lexically,
+    without opening a filesystem handle to any path component. Existence
+    and file-type are then verified with ``Path.exists()`` /
+    ``Path.is_file()``, which query filesystem metadata only and never
+    open the target for reading. This avoids ``Path.resolve(strict=True)``,
+    whose Windows implementation opens a ``CreateFileW`` handle with
+    backup semantics to canonicalise the path and can raise ``WinError 5``
+    (Access is denied) against ACL-protected files even though the file
+    itself is world-readable.
+
+    Args:
+        path: Untrusted, possibly-relative path supplied by the caller.
+
+    Returns:
+        Path: Absolute, lexically-normalised filesystem path that is
+        guaranteed to exist and to refer to a regular file at the moment
+        of the check.
+
+    Raises:
+        ToolError: If ``path`` is empty, cannot be normalised, does not
+            exist, or does not refer to a regular file.
+    """
+    if not path or not path.strip():
+        raise ToolError(_ERR_C_HEADER_PATH_INVALID)
+
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = Path.cwd() / candidate
+    normalized = Path(os.path.normpath(str(candidate)))
+
+    try:
+        exists = normalized.exists()
+    except OSError as exc:
+        msg = f"{_ERR_C_HEADER_PATH_INVALID}: {path}: {exc}"
+        raise ToolError(msg) from exc
+
+    if not exists:
+        msg = f"{_ERR_C_HEADER_PATH_NOT_FOUND}: {path}"
+        raise ToolError(msg)
+
+    if not normalized.is_file():
+        msg = f"{_ERR_C_HEADER_PATH_NOT_FILE}: {normalized}"
         raise ToolError(msg)
 
     return normalized
@@ -1560,6 +1615,37 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Recursive dict of categories, subcategories, and data types of every kind",
                 ),
                 ToolFunction(
+                    name="ghidra.import_c_header",
+                    description="Parse a C header file and add its declared types to the program's data type manager",
+                    parameters=[
+                        ToolParameter(name="header_path", type="string", description="Path to the .h file to parse", required=True),
+                        ToolParameter(
+                            name="include_paths",
+                            type="array",
+                            description="Additional include directories for the parser",
+                            required=False,
+                            items_type="string",
+                        ),
+                    ],
+                    returns="Dict with path, types_added, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.export_data_type_archive",
+                    description="Export every data type in the program's type manager to a new .gdt archive file",
+                    parameters=[
+                        ToolParameter(name="archive_path", type="string", description="Destination .gdt file path", required=True),
+                    ],
+                    returns="Dict with path, types_exported, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.import_data_type_archive",
+                    description="Import every data type from an existing .gdt archive file into the program's type manager",
+                    parameters=[
+                        ToolParameter(name="archive_path", type="string", description="Source .gdt file path", required=True),
+                    ],
+                    returns="Dict with path, types_imported, and success",
+                ),
+                ToolFunction(
                     name="ghidra.create_data",
                     description="Create a data item at an address using a named data type",
                     parameters=[
@@ -1616,6 +1702,84 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Dict with name, start, size, permissions, and success",
                 ),
                 ToolFunction(
+                    name="ghidra.create_uninitialized_block",
+                    description="Create a new uninitialized memory block (no backing byte storage)",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Block name", required=True),
+                        ToolParameter(name="start", type="integer", description="Start address", required=True),
+                        ToolParameter(name="size", type="integer", description="Block size in bytes", required=True),
+                        ToolParameter(
+                            name="overlay",
+                            type="boolean",
+                            description="Create as an overlay block",
+                            required=False,
+                            default=False,
+                        ),
+                    ],
+                    returns="Dict with name, start, size, block_type, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.create_byte_mapped_block",
+                    description="Create a byte-mapped memory block with a 1:1 byte mapping onto another address range",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Block name", required=True),
+                        ToolParameter(
+                            name="start",
+                            type="integer",
+                            description="Start address of the new block",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="mapped_address",
+                            type="integer",
+                            description="Address the block is mapped onto",
+                            required=True,
+                        ),
+                        ToolParameter(name="length", type="integer", description="Block length in bytes", required=True),
+                        ToolParameter(
+                            name="overlay",
+                            type="boolean",
+                            description="Create as an overlay block",
+                            required=False,
+                            default=False,
+                        ),
+                    ],
+                    returns="Dict with name, start, mapped_address, length, block_type, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.create_bit_mapped_block",
+                    description="Create a bit-mapped memory block, where each byte's value (0 or 1) is taken from one bit at a mapped address",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Block name", required=True),
+                        ToolParameter(
+                            name="start",
+                            type="integer",
+                            description="Start address of the new block",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="mapped_address",
+                            type="integer",
+                            description="Address the block's bits are mapped onto",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="length",
+                            type="integer",
+                            description="Block length in bytes (bits consumed from the mapped range)",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="overlay",
+                            type="boolean",
+                            description="Create as an overlay block",
+                            required=False,
+                            default=False,
+                        ),
+                    ],
+                    returns="Dict with name, start, mapped_address, length, block_type, and success",
+                ),
+                ToolFunction(
                     name="ghidra.remove_memory_block",
                     description="Remove a memory block from the program",
                     parameters=[
@@ -1636,6 +1800,33 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ),
                     ],
                     returns="Dict with name, split_address, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.move_memory_block",
+                    description="Move a memory block to a different start address",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Name of the memory block to move", required=True),
+                        ToolParameter(name="new_start", type="integer", description="New start address for the block", required=True),
+                    ],
+                    returns="Dict with name, new_start, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.rename_memory_block",
+                    description="Rename an existing memory block",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Current name of the memory block", required=True),
+                        ToolParameter(name="new_name", type="string", description="New name for the block", required=True),
+                    ],
+                    returns="Dict with name, previous_name, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.set_memory_block_comment",
+                    description="Set or replace the comment on an existing memory block",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Name of the memory block", required=True),
+                        ToolParameter(name="comment", type="string", description="Comment text to set on the block", required=True),
+                    ],
+                    returns="Dict with name, comment, and success",
                 ),
                 ToolFunction(
                     name="ghidra.join_memory_blocks",
@@ -5438,6 +5629,216 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
 
         return cast("list[dict[str, Any]]", result) if result else []
 
+    async def create_uninitialized_block(
+        self,
+        name: str,
+        start: int,
+        size: int,
+        *,
+        overlay: bool = False,
+    ) -> dict[str, Any]:
+        """Create a new uninitialized memory block with no backing byte storage.
+
+        Args:
+            name: Block name.
+            start: Start address.
+            size: Block size in bytes.
+            overlay: Create the block in a new overlay address space.
+
+        Returns:
+            dict[str, Any]: Dict with name, start, size, block_type, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the block could not be created.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("uninitialized_memory_block_creating", block_name=name, start=hex(start), size=size, overlay=overlay)
+        overlay_literal = "True" if overlay else "False"
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                addr = toAddr({start})
+                tx_id = currentProgram.startTransaction('intellicrack.create_uninitialized_block')
+                block = None
+                try:
+                    block = memory.createUninitializedBlock({json.dumps(name)}, addr, {size}, {overlay_literal})
+                finally:
+                    currentProgram.endTransaction(tx_id, block is not None)
+                {{'name': (block.getName() if block is not None else None), 'success': block is not None}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_create_uninitialized_block_failed", block_name=name, start=hex(start))
+            msg = f"Create uninitialized block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("success", False)):
+            msg = f"Create uninitialized block failed: {name!r}"
+            raise ToolError(msg)
+        return {"name": name, "start": hex(start), "size": size, "block_type": "uninitialized", "success": True}
+
+    async def create_byte_mapped_block(
+        self,
+        name: str,
+        start: int,
+        mapped_address: int,
+        length: int,
+        *,
+        overlay: bool = False,
+    ) -> dict[str, Any]:
+        """Create a byte-mapped memory block with a 1:1 mapping onto another address range.
+
+        Uses the 5-argument ``Memory.createByteMappedBlock`` convenience
+        overload, which forwards to the full 6-argument form with
+        ``byteMappingScheme=null`` -- a null scheme means a 1:1 byte
+        mapping onto ``mapped_address``.
+
+        Args:
+            name: Block name.
+            start: Start address of the new block.
+            mapped_address: Address the block is mapped onto.
+            length: Block length in bytes.
+            overlay: Create the block in a new overlay address space.
+
+        Returns:
+            dict[str, Any]: Dict with name, start, mapped_address, length,
+            block_type, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the block could not be created.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info(
+            "byte_mapped_memory_block_creating",
+            block_name=name,
+            start=hex(start),
+            mapped_address=hex(mapped_address),
+            length=length,
+            overlay=overlay,
+        )
+        overlay_literal = "True" if overlay else "False"
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                addr = toAddr({start})
+                mapped_addr = toAddr({mapped_address})
+                tx_id = currentProgram.startTransaction('intellicrack.create_byte_mapped_block')
+                block = None
+                try:
+                    block = memory.createByteMappedBlock({json.dumps(name)}, addr, mapped_addr, {length}, {overlay_literal})
+                finally:
+                    currentProgram.endTransaction(tx_id, block is not None)
+                {{'name': (block.getName() if block is not None else None), 'success': block is not None}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception(
+                "ghidra_create_byte_mapped_block_failed",
+                block_name=name,
+                start=hex(start),
+                mapped_address=hex(mapped_address),
+            )
+            msg = f"Create byte-mapped block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("success", False)):
+            msg = f"Create byte-mapped block failed: {name!r}"
+            raise ToolError(msg)
+        return {
+            "name": name,
+            "start": hex(start),
+            "mapped_address": hex(mapped_address),
+            "length": length,
+            "block_type": "byte_mapped",
+            "success": True,
+        }
+
+    async def create_bit_mapped_block(
+        self,
+        name: str,
+        start: int,
+        mapped_address: int,
+        length: int,
+        *,
+        overlay: bool = False,
+    ) -> dict[str, Any]:
+        """Create a bit-mapped memory block whose byte values come from single bits.
+
+        Each byte of the new block reads as 0 or 1, taken from one bit of
+        a byte at the corresponding offset in the mapped address range.
+
+        Args:
+            name: Block name.
+            start: Start address of the new block.
+            mapped_address: Address the block's bits are mapped onto.
+            length: Block length in bytes (bits consumed from the mapped range).
+            overlay: Create the block in a new overlay address space.
+
+        Returns:
+            dict[str, Any]: Dict with name, start, mapped_address, length,
+            block_type, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the block could not be created.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info(
+            "bit_mapped_memory_block_creating",
+            block_name=name,
+            start=hex(start),
+            mapped_address=hex(mapped_address),
+            length=length,
+            overlay=overlay,
+        )
+        overlay_literal = "True" if overlay else "False"
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                addr = toAddr({start})
+                mapped_addr = toAddr({mapped_address})
+                tx_id = currentProgram.startTransaction('intellicrack.create_bit_mapped_block')
+                block = None
+                try:
+                    block = memory.createBitMappedBlock({json.dumps(name)}, addr, mapped_addr, {length}, {overlay_literal})
+                finally:
+                    currentProgram.endTransaction(tx_id, block is not None)
+                {{'name': (block.getName() if block is not None else None), 'success': block is not None}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception(
+                "ghidra_create_bit_mapped_block_failed",
+                block_name=name,
+                start=hex(start),
+                mapped_address=hex(mapped_address),
+            )
+            msg = f"Create bit-mapped block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("success", False)):
+            msg = f"Create bit-mapped block failed: {name!r}"
+            raise ToolError(msg)
+        return {
+            "name": name,
+            "start": hex(start),
+            "mapped_address": hex(mapped_address),
+            "length": length,
+            "block_type": "bit_mapped",
+            "success": True,
+        }
+
     async def get_call_graph(self, address: int, depth: int = 2) -> dict[str, Any]:
         """Get function call graph rooted at an address in both directions.
 
@@ -7611,6 +8012,213 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             raise ToolError(msg)
         return cast("dict[str, Any]", result)
 
+    async def import_c_header(self, header_path: str, include_paths: list[str] | None = None) -> dict[str, Any]:
+        """Parse a C header file and add its declared types to the program's data type manager.
+
+        Dispatches to Ghidra's ``CParserUtils.parseHeaderFiles`` with the
+        current program's own ``DataTypeManager`` as the parse target, so
+        every type the header declares is added directly to the open
+        program instead of to a separate archive. The supplied path is
+        lexically normalised and verified to exist as a regular file
+        before any value is forwarded to Ghidra, and the parse runs
+        inside a Ghidra transaction that is rolled back if parsing
+        fails. A non-``None`` result from ``parseHeaderFiles`` does not
+        by itself mean the parse succeeded, so the returned
+        ``CParseResults`` record's own ``successful()`` accessor is
+        read explicitly rather than treating "no exception raised" as
+        success.
+
+        Args:
+            header_path: Path to the ``.h`` file to parse.
+            include_paths: Additional include directories for the parser.
+
+        Returns:
+            dict[str, Any]: Dict with path, types_added, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, ``header_path`` is
+                empty, cannot be resolved, does not exist, is not a
+                regular file, or Ghidra fails to parse the header.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        resolved_path = await asyncio.to_thread(_resolve_c_header_path, header_path)
+        canonical_path = str(resolved_path)
+        includes = include_paths or []
+        _logger.info("c_header_importing", path=canonical_path, include_paths=includes)
+        header_literal = json.dumps(canonical_path)
+        includes_literal = ", ".join(json.dumps(p) for p in includes)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.app.util.cparser.C import CParserUtils
+                from ghidra.util.task import ConsoleTaskMonitor
+                import jpype
+                from jpype import JArray, JString
+
+                dtm = currentProgram.getDataTypeManager()
+                tm = ConsoleTaskMonitor()
+                filenames = JArray(JString)([{header_literal}])
+                include_paths = JArray(JString)([{includes_literal}])
+                args = JArray(JString)([])
+                error_msg = None
+                type_count_before = dtm.getDataTypeCount(True)
+                tx_id = currentProgram.startTransaction('intellicrack.import_c_header')
+                success = False
+                try:
+                    try:
+                        results = CParserUtils.parseHeaderFiles(
+                            JArray(currentProgram.getDataTypeManager().getClass())([]),
+                            filenames, include_paths, args, dtm, tm,
+                        )
+                        success = bool(results.successful())
+                        if not success:
+                            error_msg = (results.cParseMessages() or '') + (results.cppParseMessages() or '')
+                    except Exception as _parse_exc:
+                        error_msg = str(_parse_exc)
+                finally:
+                    currentProgram.endTransaction(tx_id, success)
+                type_count_after = dtm.getDataTypeCount(True)
+                {{'success': bool(success), 'types_added': int(type_count_after - type_count_before), 'error': error_msg}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_import_c_header_failed", path=canonical_path)
+            msg = f"{_ERR_C_HEADER_IMPORT_FAILED}: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("success", False)):
+            err = info.get("error") or "unknown error"
+            msg = f"{_ERR_C_HEADER_IMPORT_FAILED}: {err}"
+            raise ToolError(msg)
+        return {
+            "path": header_path,
+            "types_added": int(info.get("types_added", 0)),
+            "success": True,
+        }
+
+    async def export_data_type_archive(self, archive_path: str) -> dict[str, Any]:
+        """Export every data type in the program's type manager to a new .gdt archive file.
+
+        Creates a new ``FileDataTypeManager`` archive and copies every
+        data type from the current program's own ``DataTypeManager``
+        into it via ``DataTypeManager.addDataType``, then saves and
+        closes the archive. The current program is never mutated by
+        this operation (only read from), so no Ghidra transaction is
+        opened against it; the archive's own internal transaction
+        handling inside ``addDataType``/``save()`` is sufficient.
+
+        Args:
+            archive_path: Destination ``.gdt`` file path.
+
+        Returns:
+            dict[str, Any]: Dict with path, types_exported, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the archive cannot
+                be created, populated, or saved.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("data_type_archive_exporting", path=archive_path)
+        archive_literal = json.dumps(archive_path)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.data import FileDataTypeManager
+                import java.io.File as _JFile
+
+                archive_file = _JFile({archive_literal})
+                file_dtm = FileDataTypeManager.createFileArchive(archive_file)
+                count = 0
+                try:
+                    src_dtm = currentProgram.getDataTypeManager()
+                    it = src_dtm.getAllDataTypes()
+                    while it.hasNext():
+                        dt = it.next()
+                        file_dtm.addDataType(dt, None)
+                        count += 1
+                    file_dtm.save()
+                finally:
+                    file_dtm.close()
+                {{'path': str(archive_file.getAbsolutePath()), 'types_exported': count}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_export_data_type_archive_failed", path=archive_path)
+            msg = f"Export data type archive failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        return {
+            "path": str(info.get("path", archive_path)),
+            "types_exported": int(info.get("types_exported", 0)),
+            "success": True,
+        }
+
+    async def import_data_type_archive(self, archive_path: str) -> dict[str, Any]:
+        """Import every data type from an existing .gdt archive file into the program's type manager.
+
+        Opens the archive read-only via
+        ``FileDataTypeManager.openFileArchive`` and copies every data
+        type it contains into the current program's own
+        ``DataTypeManager`` via ``addDataType``. The copy runs inside a
+        Ghidra transaction against the current program; the archive
+        itself is opened read-only and is never written back to.
+
+        Args:
+            archive_path: Source ``.gdt`` file path.
+
+        Returns:
+            dict[str, Any]: Dict with path, types_imported, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the archive cannot
+                be opened or read.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("data_type_archive_importing", path=archive_path)
+        archive_literal = json.dumps(archive_path)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.data import FileDataTypeManager
+                import java.io.File as _JFile
+
+                archive_file = _JFile({archive_literal})
+                file_dtm = FileDataTypeManager.openFileArchive(archive_file, False)
+                count = 0
+                tx_id = currentProgram.startTransaction('intellicrack.import_data_type_archive')
+                try:
+                    dest_dtm = currentProgram.getDataTypeManager()
+                    it = file_dtm.getAllDataTypes()
+                    while it.hasNext():
+                        dt = it.next()
+                        dest_dtm.addDataType(dt, None)
+                        count += 1
+                finally:
+                    currentProgram.endTransaction(tx_id, True)
+                    file_dtm.close()
+                {{'types_imported': count}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_import_data_type_archive_failed", path=archive_path)
+            msg = f"Import data type archive failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        return {
+            "path": archive_path,
+            "types_imported": int(info.get("types_imported", 0)),
+            "success": True,
+        }
+
     async def create_data(self, address: int, data_type: str) -> dict[str, Any]:
         """Create a data item at an address using a named data type.
 
@@ -7996,6 +8604,155 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             msg = f"Split memory block failed: {name!r} at {hex(split_address)}"
             raise ToolError(msg)
         return {"name": name, "split_address": hex(split_address), "success": True}
+
+    async def move_memory_block(self, name: str, new_start: int) -> dict[str, Any]:
+        """Move a memory block to a different start address.
+
+        Args:
+            name: Name of the memory block to move.
+            new_start: New start address for the block.
+
+        Returns:
+            dict[str, Any]: Dict with name, new_start, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, no block with
+                ``name`` exists, or the move fails (e.g. the target
+                range overlaps an existing block).
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("memory_block_moving", block_name=name, new_start=hex(new_start))
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                block = memory.getBlock({json.dumps(name)})
+                found = block is not None
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.move_memory_block')
+                try:
+                    if found:
+                        memory.moveBlock(block, toAddr({new_start}), monitor)
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'found': found, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_move_memory_block_failed", block_name=name, new_start=hex(new_start))
+            msg = f"Move memory block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found", False)):
+            msg = f"Memory block not found: {name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Move memory block failed: {name!r} to {hex(new_start)}"
+            raise ToolError(msg)
+        return {"name": name, "new_start": hex(new_start), "success": True}
+
+    async def rename_memory_block(self, name: str, new_name: str) -> dict[str, Any]:
+        """Rename an existing memory block.
+
+        Args:
+            name: Current name of the memory block.
+            new_name: New name for the block.
+
+        Returns:
+            dict[str, Any]: Dict with name, previous_name, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, no block with
+                ``name`` exists, or the rename fails (e.g. renaming an
+                overlay block without exclusive access).
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("memory_block_renaming", block_name=name, new_name=new_name)
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                block = memory.getBlock({json.dumps(name)})
+                found = block is not None
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.rename_memory_block')
+                try:
+                    if found:
+                        block.setName({json.dumps(new_name)})
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'found': found, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_rename_memory_block_failed", block_name=name, new_name=new_name)
+            msg = f"Rename memory block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found", False)):
+            msg = f"Memory block not found: {name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Rename memory block failed: {name!r} -> {new_name!r}"
+            raise ToolError(msg)
+        return {"name": new_name, "previous_name": name, "success": True}
+
+    async def set_memory_block_comment(self, name: str, comment: str) -> dict[str, Any]:
+        """Set or replace the comment on an existing memory block.
+
+        Args:
+            name: Name of the memory block.
+            comment: Comment text to set on the block.
+
+        Returns:
+            dict[str, Any]: Dict with name, comment, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, no block with
+                ``name`` exists, or setting the comment fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("memory_block_comment_setting", block_name=name)
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                block = memory.getBlock({json.dumps(name)})
+                found = block is not None
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.set_memory_block_comment')
+                try:
+                    if found:
+                        block.setComment({json.dumps(comment)})
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'found': found, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_set_memory_block_comment_failed", block_name=name)
+            msg = f"Set memory block comment failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found", False)):
+            msg = f"Memory block not found: {name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Set memory block comment failed: {name!r}"
+            raise ToolError(msg)
+        return {"name": name, "comment": comment, "success": True}
 
     async def join_memory_blocks(self, name1: str, name2: str) -> dict[str, Any]:
         """Join two contiguous memory blocks into one.

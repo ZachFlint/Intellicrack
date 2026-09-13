@@ -793,14 +793,27 @@ class GhidraPanel(AnalysisPanelBase):
         self._block_perms_input = QLineEdit()
         self._block_perms_input.setPlaceholderText("rwx")
         self._block_perms_input.setText("rwx")
+        self._block_type_combo = QComboBox()
+        self._block_type_combo.addItems(["initialized", "uninitialized", "byte_mapped", "bit_mapped"])
         self._create_block_btn = QPushButton(self.tr("Create"))
         self._create_block_btn.clicked.connect(self._on_create_memory_block)
         block_row.addWidget(self._block_name_input)
         block_row.addWidget(self._block_start_input)
         block_row.addWidget(self._block_size_spin)
         block_row.addWidget(self._block_perms_input)
+        block_row.addWidget(self._block_type_combo)
         block_row.addWidget(self._create_block_btn)
         layout.addLayout(block_row)
+
+        mapped_row = QHBoxLayout()
+        self._block_mapped_addr_label = QLabel(self.tr("Mapped address (hex):"))
+        self._block_mapped_addr_input = QLineEdit()
+        self._block_mapped_addr_input.setPlaceholderText("Mapped address (hex)")
+        mapped_row.addWidget(self._block_mapped_addr_label)
+        mapped_row.addWidget(self._block_mapped_addr_input)
+        layout.addLayout(mapped_row)
+        self._block_type_combo.currentTextChanged.connect(self._on_block_type_changed)
+        self._on_block_type_changed(self._block_type_combo.currentText())
 
         self._build_memory_block_ops_rows(layout)
 
@@ -827,7 +840,7 @@ class GhidraPanel(AnalysisPanelBase):
         Args:
             layout: Parent layout to append the form rows to.
         """
-        block_ops_label = QLabel(self.tr("Remove / Split / Join Memory Block"))
+        block_ops_label = QLabel(self.tr("Remove / Split / Join / Move Memory Block"))
         layout.addWidget(block_ops_label)
 
         remove_row = QHBoxLayout()
@@ -862,6 +875,39 @@ class GhidraPanel(AnalysisPanelBase):
         join_row.addWidget(self._block_join_name2_input)
         join_row.addWidget(self._join_blocks_btn)
         layout.addLayout(join_row)
+
+        move_row = QHBoxLayout()
+        self._block_move_name_input = QLineEdit()
+        self._block_move_name_input.setPlaceholderText("Block name to move")
+        self._block_move_start_input = QLineEdit()
+        self._block_move_start_input.setPlaceholderText("New start (hex)")
+        self._move_block_btn = QPushButton(self.tr("Move"))
+        self._move_block_btn.clicked.connect(self._on_move_memory_block)
+        move_row.addWidget(self._block_move_name_input)
+        move_row.addWidget(self._block_move_start_input)
+        move_row.addWidget(self._move_block_btn)
+        layout.addLayout(move_row)
+
+        rename_comment_label = QLabel(self.tr("Rename / Set Comment"))
+        layout.addWidget(rename_comment_label)
+
+        rename_comment_row = QHBoxLayout()
+        self._block_meta_name_input = QLineEdit()
+        self._block_meta_name_input.setPlaceholderText("Block name")
+        self._block_new_name_input = QLineEdit()
+        self._block_new_name_input.setPlaceholderText("New name")
+        self._rename_block_btn = QPushButton(self.tr("Rename"))
+        self._rename_block_btn.clicked.connect(self._on_rename_memory_block)
+        self._block_comment_input = QLineEdit()
+        self._block_comment_input.setPlaceholderText("Comment")
+        self._set_block_comment_btn = QPushButton(self.tr("Set Comment"))
+        self._set_block_comment_btn.clicked.connect(self._on_set_memory_block_comment)
+        rename_comment_row.addWidget(self._block_meta_name_input)
+        rename_comment_row.addWidget(self._block_new_name_input)
+        rename_comment_row.addWidget(self._rename_block_btn)
+        rename_comment_row.addWidget(self._block_comment_input)
+        rename_comment_row.addWidget(self._set_block_comment_btn)
+        layout.addLayout(rename_comment_row)
 
     # ------------------------------------------------------------------
     # Tab 8: Segments / Program
@@ -3608,8 +3654,25 @@ class GhidraPanel(AnalysisPanelBase):
             byte_count=len(clean_hex) // 2,
         )
 
+    def _on_block_type_changed(self, kind: str) -> None:
+        """Adjust the Create Memory Block form controls for the selected block type.
+
+        Args:
+            kind: Selected block type (initialized, uninitialized, byte_mapped, or bit_mapped).
+        """
+        needs_mapped_addr = kind in {"byte_mapped", "bit_mapped"}
+        self._block_mapped_addr_label.setVisible(needs_mapped_addr)
+        self._block_mapped_addr_input.setVisible(needs_mapped_addr)
+        self._block_perms_input.setEnabled(kind == "initialized")
+
     def _on_create_memory_block(self) -> None:
-        """Create a new memory block in the program."""
+        """Create a new memory block in the program.
+
+        Dispatches to ``create_memory_block`` for the default
+        "initialized" block type, or to ``create_uninitialized_block``,
+        ``create_byte_mapped_block``, or ``create_bit_mapped_block``
+        depending on the selected block type.
+        """
         bridge = self._require_connected()
         if bridge is None:
             return
@@ -3622,19 +3685,73 @@ class GhidraPanel(AnalysisPanelBase):
             self._set_status("Invalid start address for memory block")
             return
         size = self._block_size_spin.value()
-        perms = self._block_perms_input.text().strip()
+        block_type = self._block_type_combo.currentText()
+
+        if block_type == "initialized":
+            perms = self._block_perms_input.text().strip()
+            run_bridge_coroutine_logged(
+                bridge.create_memory_block(name, start, size, perms),
+                on_success=lambda _: self._on_refresh_memory_map(),
+                on_error=lambda e: self._set_status(f"Create memory block failed: {e}"),
+                parent=self,
+                event="ghidra_create_memory_block",
+                logger=_logger,
+                level="info",
+                name=name,
+                start=hex(start),
+                size=size,
+                permissions=perms,
+            )
+            return
+
+        if block_type == "uninitialized":
+            run_bridge_coroutine_logged(
+                bridge.create_uninitialized_block(name, start, size),
+                on_success=lambda _: self._on_refresh_memory_map(),
+                on_error=lambda e: self._set_status(f"Create uninitialized block failed: {e}"),
+                parent=self,
+                event="ghidra_create_uninitialized_block",
+                logger=_logger,
+                level="info",
+                name=name,
+                start=hex(start),
+                size=size,
+            )
+            return
+
+        mapped_address = self._parse_address(self._block_mapped_addr_input.text())
+        if mapped_address is None:
+            self._set_status("Invalid mapped address for memory block")
+            return
+
+        if block_type == "byte_mapped":
+            run_bridge_coroutine_logged(
+                bridge.create_byte_mapped_block(name, start, mapped_address, size),
+                on_success=lambda _: self._on_refresh_memory_map(),
+                on_error=lambda e: self._set_status(f"Create byte-mapped block failed: {e}"),
+                parent=self,
+                event="ghidra_create_byte_mapped_block",
+                logger=_logger,
+                level="info",
+                name=name,
+                start=hex(start),
+                mapped_address=hex(mapped_address),
+                length=size,
+            )
+            return
+
         run_bridge_coroutine_logged(
-            bridge.create_memory_block(name, start, size, perms),
+            bridge.create_bit_mapped_block(name, start, mapped_address, size),
             on_success=lambda _: self._on_refresh_memory_map(),
-            on_error=lambda e: self._set_status(f"Create memory block failed: {e}"),
+            on_error=lambda e: self._set_status(f"Create bit-mapped block failed: {e}"),
             parent=self,
-            event="ghidra_create_memory_block",
+            event="ghidra_create_bit_mapped_block",
             logger=_logger,
             level="info",
             name=name,
             start=hex(start),
-            size=size,
-            permissions=perms,
+            mapped_address=hex(mapped_address),
+            length=size,
         )
 
     def _on_remove_memory_block(self) -> None:
@@ -3680,6 +3797,77 @@ class GhidraPanel(AnalysisPanelBase):
             level="info",
             name=name,
             split_address=hex(split_address),
+        )
+
+    def _on_move_memory_block(self) -> None:
+        """Move a memory block to a different start address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._block_move_name_input.text().strip()
+        if not name:
+            self._set_status("Block name required for move")
+            return
+        new_start = self._parse_address(self._block_move_start_input.text())
+        if new_start is None:
+            self._set_status("Invalid new start address for memory block")
+            return
+        run_bridge_coroutine_logged(
+            bridge.move_memory_block(name, new_start),
+            on_success=lambda _: self._on_refresh_memory_map(),
+            on_error=lambda e: self._set_status(f"Move memory block failed: {e}"),
+            parent=self,
+            event="ghidra_move_memory_block",
+            logger=_logger,
+            level="info",
+            name=name,
+            new_start=hex(new_start),
+        )
+
+    def _on_rename_memory_block(self) -> None:
+        """Rename an existing memory block."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._block_meta_name_input.text().strip()
+        if not name:
+            self._set_status("Block name required for rename")
+            return
+        new_name = self._block_new_name_input.text().strip()
+        if not new_name:
+            self._set_status("New name required for rename")
+            return
+        run_bridge_coroutine_logged(
+            bridge.rename_memory_block(name, new_name),
+            on_success=lambda _: self._on_refresh_memory_map(),
+            on_error=lambda e: self._set_status(f"Rename memory block failed: {e}"),
+            parent=self,
+            event="ghidra_rename_memory_block",
+            logger=_logger,
+            level="info",
+            name=name,
+            new_name=new_name,
+        )
+
+    def _on_set_memory_block_comment(self) -> None:
+        """Set or replace the comment on an existing memory block."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._block_meta_name_input.text().strip()
+        if not name:
+            self._set_status("Block name required for comment")
+            return
+        comment = self._block_comment_input.text()
+        run_bridge_coroutine_logged(
+            bridge.set_memory_block_comment(name, comment),
+            on_success=lambda _: self._on_refresh_memory_map(),
+            on_error=lambda e: self._set_status(f"Set memory block comment failed: {e}"),
+            parent=self,
+            event="ghidra_set_memory_block_comment",
+            logger=_logger,
+            level="info",
+            name=name,
         )
 
     def _on_join_memory_blocks(self) -> None:
