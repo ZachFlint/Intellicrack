@@ -1949,6 +1949,59 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="Dict with success status and configured properties",
                 ),
                 ToolFunction(
+                    name="x64dbg.set_breakpoint_log_condition",
+                    description="Set the logging condition of a breakpoint, independent of its break condition",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Breakpoint address", required=True),
+                        ToolParameter(name="condition", type="string", description="Expression gating when the log fires", required=True),
+                    ],
+                    returns="Dict with success, address, log_condition, bp_type",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_breakpoint_command_condition",
+                    description="Set the condition that gates whether a breakpoint's on-hit command executes",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Breakpoint address", required=True),
+                        ToolParameter(
+                            name="condition",
+                            type="string",
+                            description="Expression gating when the on-hit command runs",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with success, address, command_condition, bp_type",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_breakpoint_singleshot",
+                    description="Set or clear a breakpoint's singleshot flag (removed automatically on first hit)",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Breakpoint address", required=True),
+                        ToolParameter(
+                            name="enabled",
+                            type="boolean",
+                            description="True to enable singleshot, False to disable",
+                            required=False,
+                            default=True,
+                        ),
+                    ],
+                    returns="Dict with success, address, singleshot, bp_type",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_breakpoint_silent",
+                    description="Set or clear a breakpoint's silent flag (suppresses the default log message; user-defined log unaffected)",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Breakpoint address", required=True),
+                        ToolParameter(
+                            name="enabled",
+                            type="boolean",
+                            description="True to enable silent mode, False to disable",
+                            required=False,
+                            default=True,
+                        ),
+                    ],
+                    returns="Dict with success, address, silent, bp_type",
+                ),
+                ToolFunction(
                     name="x64dbg.set_dll_breakpoint",
                     description="Set a breakpoint on DLL load/unload",
                     parameters=[
@@ -8717,6 +8770,131 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
             )
             await self._send_command(f"{fast_resume_command} {hex(address)}, 1")
         return {"success": True, "address": hex(address)}
+
+    async def set_breakpoint_log_condition(self, address: int, condition: str) -> dict[str, Any]:
+        """Set the logging condition of a breakpoint, independent of its break condition.
+
+        ``SetBreakpointLogCondition`` (and its hardware/memory
+        siblings) gates *whether* the breakpoint's log fires - a
+        separate property from the break condition
+        (``bpcond``/``SetBreakpointCondition``, already exposed via
+        :meth:`configure_breakpoint`) and from the log text itself
+        (``SetBreakpointLog``, exposed via :meth:`set_logging_breakpoint`/
+        :meth:`configure_breakpoint`). When no logging condition is set,
+        the log always fires when the breakpoint's own log text would;
+        otherwise it fires only when this expression evaluates true.
+        Dispatches through :func:`_bp_command_for_type` since the
+        software-only command silently does nothing against a hardware
+        or memory breakpoint (audit7.md T1-3).
+
+        Args:
+            address: Breakpoint address.
+            condition: Expression gating when the log fires.
+
+        Returns:
+            dict[str, Any]: Dict with success status, address, log_condition, and bp_type.
+        """
+        bp_type = self._resolve_breakpoint_type(address)
+        _logger.debug("x64dbg_command_queued", command="set_breakpoint_log_condition", address=hex(address), bp_type=bp_type)
+        cmd = _bp_command_for_type(
+            bp_type,
+            software="SetBreakpointLogCondition",
+            hardware="SetHardwareBreakpointLogCondition",
+            memory="SetMemoryBreakpointLogCondition",
+        )
+        await self._send_command(f'{cmd} {hex(address)}, "{condition}"')
+        return {"success": True, "address": hex(address), "log_condition": condition, "bp_type": bp_type}
+
+    async def set_breakpoint_command_condition(self, address: int, condition: str) -> dict[str, Any]:
+        """Set the condition gating whether a breakpoint's on-hit command executes.
+
+        ``SetBreakpointCommandCondition`` (and its hardware/memory
+        siblings) is separate from the on-hit command text itself
+        (``SetBreakpointCommand``, exposed via
+        :meth:`configure_breakpoint`'s ``command`` parameter) and from
+        the break condition (``bpcond``). When no command condition is
+        set, the debugger executes the on-hit command unconditionally;
+        otherwise only when this expression evaluates true. Dispatches
+        through :func:`_bp_command_for_type` since the software-only
+        command silently does nothing against a hardware or memory
+        breakpoint (audit7.md T1-3).
+
+        Args:
+            address: Breakpoint address.
+            condition: Expression gating when the on-hit command runs.
+
+        Returns:
+            dict[str, Any]: Dict with success status, address, command_condition, and bp_type.
+        """
+        bp_type = self._resolve_breakpoint_type(address)
+        _logger.debug("x64dbg_command_queued", command="set_breakpoint_command_condition", address=hex(address), bp_type=bp_type)
+        cmd = _bp_command_for_type(
+            bp_type,
+            software="SetBreakpointCommandCondition",
+            hardware="SetHardwareBreakpointCommandCondition",
+            memory="SetMemoryBreakpointCommandCondition",
+        )
+        await self._send_command(f'{cmd} {hex(address)}, "{condition}"')
+        return {"success": True, "address": hex(address), "command_condition": condition, "bp_type": bp_type}
+
+    async def set_breakpoint_singleshot(self, address: int, *, enabled: bool = True) -> dict[str, Any]:
+        """Set or clear a breakpoint's singleshot flag.
+
+        ``SetBreakpointSingleshoot`` (and its hardware/memory siblings)
+        - the extra "o" is the command's own documented spelling - marks
+        a breakpoint to be removed automatically on its first hit.
+        Dispatches through :func:`_bp_command_for_type` since the
+        software-only command silently does nothing against a hardware
+        or memory breakpoint (audit7.md T1-3). Neither flag is surfaced
+        in this bridge's ``bp_list`` parsing, so there is no readback
+        to verify against.
+
+        Args:
+            address: Breakpoint address.
+            enabled: True to enable singleshot, False to disable.
+
+        Returns:
+            dict[str, Any]: Dict with success status, address, singleshot, and bp_type.
+        """
+        bp_type = self._resolve_breakpoint_type(address)
+        _logger.debug("x64dbg_command_queued", command="set_breakpoint_singleshot", address=hex(address), bp_type=bp_type)
+        cmd = _bp_command_for_type(
+            bp_type,
+            software="SetBreakpointSingleshoot",
+            hardware="SetHardwareBreakpointSingleshoot",
+            memory="SetMemoryBreakpointSingleshoot",
+        )
+        await self._send_command(f"{cmd} {hex(address)}, {1 if enabled else 0}")
+        return {"success": True, "address": hex(address), "singleshot": enabled, "bp_type": bp_type}
+
+    async def set_breakpoint_silent(self, address: int, *, enabled: bool = True) -> dict[str, Any]:
+        """Set or clear a breakpoint's silent flag.
+
+        ``SetBreakpointSilent`` (and its hardware/memory siblings)
+        suppresses the default log message on hit without affecting a
+        user-defined log. Dispatches through :func:`_bp_command_for_type`
+        since the software-only command silently does nothing against
+        a hardware or memory breakpoint (audit7.md T1-3). Neither flag
+        is surfaced in this bridge's ``bp_list`` parsing, so there is no
+        readback to verify against.
+
+        Args:
+            address: Breakpoint address.
+            enabled: True to enable silent mode, False to disable.
+
+        Returns:
+            dict[str, Any]: Dict with success status, address, silent, and bp_type.
+        """
+        bp_type = self._resolve_breakpoint_type(address)
+        _logger.debug("x64dbg_command_queued", command="set_breakpoint_silent", address=hex(address), bp_type=bp_type)
+        cmd = _bp_command_for_type(
+            bp_type,
+            software="SetBreakpointSilent",
+            hardware="SetHardwareBreakpointSilent",
+            memory="SetMemoryBreakpointSilent",
+        )
+        await self._send_command(f"{cmd} {hex(address)}, {1 if enabled else 0}")
+        return {"success": True, "address": hex(address), "silent": enabled, "bp_type": bp_type}
 
     async def set_dll_breakpoint(self, dll_name: str, event: str = "load") -> dict[str, Any]:
         """Set a breakpoint on DLL load/unload.
