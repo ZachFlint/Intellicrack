@@ -999,6 +999,9 @@ class GhidraPanel(AnalysisPanelBase):
         self._add_cmt_btn = QPushButton(self.tr("Add Comment"))
         self._add_cmt_btn.clicked.connect(self._on_add_comment)
         cmt_btns.addWidget(self._add_cmt_btn)
+        self._remove_cmt_btn = QPushButton(self.tr("Remove Comment"))
+        self._remove_cmt_btn.clicked.connect(self._on_remove_comment)
+        cmt_btns.addWidget(self._remove_cmt_btn)
         cmt_btns.addStretch()
         layout.addLayout(cmt_btns)
 
@@ -3206,7 +3209,7 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _on_label_context_menu(self, pos: QPoint) -> None:
-        """Show a context menu with a Remove Label action for the labels table.
+        """Show a context menu with Remove Label and Promote to Primary actions.
 
         Args:
             pos: Position where the right-click occurred, in table viewport coordinates.
@@ -3218,12 +3221,36 @@ class GhidraPanel(AnalysisPanelBase):
 
         menu = QMenu(self)
         remove_action = menu.addAction(self.tr("Remove Label"))
-        if remove_action is None:
+        promote_action = menu.addAction(self.tr("Promote to Primary"))
+        if remove_action is None or promote_action is None:
             return
 
         chosen = menu.exec(self._labels_table.mapToGlobal(pos))
         if chosen is remove_action:
             self._on_remove_label()
+        elif chosen is promote_action:
+            self._on_promote_symbol_to_primary()
+
+    def _on_promote_symbol_to_primary(self) -> None:
+        """Promote the symbol selected in the labels table to primary."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        selected = self._selected_label_row()
+        if selected is None:
+            return
+        addr, name = selected
+        run_bridge_coroutine_logged(
+            bridge.promote_symbol_to_primary(addr, name),
+            on_success=lambda _: self._on_refresh_labels(),
+            on_error=lambda e: self._set_status(f"Promote symbol failed: {e}"),
+            parent=self,
+            event="ghidra_promote_symbol_to_primary",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            name=name,
+        )
 
     def _on_create_bookmark(self) -> None:
         """Create a bookmark at the specified address."""
@@ -3957,6 +3984,28 @@ class GhidraPanel(AnalysisPanelBase):
             address=hex(addr),
             comment_type=cmt_type,
             comment_length=len(cmt_text),
+        )
+
+    def _on_remove_comment(self) -> None:
+        """Clear the comment of the selected type at the specified address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._cmt_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for remove comment")
+            return
+        cmt_type = self._cmt_type_combo.currentText()
+        run_bridge_coroutine_logged(
+            bridge.remove_comment(addr, cmt_type),
+            on_success=lambda _: self._on_refresh_comments(),
+            on_error=lambda e: self._set_status(f"Remove comment failed: {e}"),
+            parent=self,
+            event="ghidra_remove_comment",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            comment_type=cmt_type,
         )
 
     def _on_refresh_comments(self) -> None:

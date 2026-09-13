@@ -135,6 +135,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
 
         content_layout.addWidget(self._build_flow_register_section(fm))
         content_layout.addWidget(self._build_thunk_section(fm))
+        content_layout.addWidget(self._build_function_tags_section(fm))
         content_layout.addWidget(self._build_external_refs_section(fm))
         content_layout.addWidget(self._build_properties_section(fm))
         content_layout.addWidget(self._build_call_graph_section(fm))
@@ -553,6 +554,206 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._remove_thunk_btn.setEnabled(True)
         self._thunk_result.setPlainText(f"Error: {exc}")
         _logger.warning("ghidra_thunk_gui_failed", error=str(exc))
+
+    # ------------------------------------------------------------------
+    # Function Tags
+    # ------------------------------------------------------------------
+
+    def _build_function_tags_section(self, fm: FontManager) -> QWidget:
+        """Build the function-tag management section.
+
+        Args:
+            fm: Shared font manager instance.
+
+        Returns:
+            QWidget: Section container with a real minimum height, derived
+            from its own content, so its name and address fields can never
+            be compressed below a typeable size (S20-D09).
+        """
+        section = QWidget()
+        section_layout = QVBoxLayout(section)
+        section_layout.setContentsMargins(0, 0, 0, 0)
+        section_layout.setSpacing(2)
+
+        title = QLabel(self.tr("Function Tags"))
+        title.setFont(fm.get_ui_font_bold(9))
+        section_layout.addWidget(title)
+
+        row = QHBoxLayout()
+        self._tag_name_input = QLineEdit()
+        self._tag_name_input.setPlaceholderText("Tag name")
+        row.addWidget(self._tag_name_input)
+        self._tag_comment_input = QLineEdit()
+        self._tag_comment_input.setPlaceholderText("Comment")
+        row.addWidget(self._tag_comment_input)
+        self._create_tag_btn = QPushButton(self.tr("Create Tag"))
+        self._create_tag_btn.clicked.connect(self._on_create_function_tag)
+        row.addWidget(self._create_tag_btn)
+        section_layout.addLayout(row)
+
+        row2 = QHBoxLayout()
+        self._tag_func_addr_input = QLineEdit()
+        self._tag_func_addr_input.setPlaceholderText("Function address (hex, optional)")
+        row2.addWidget(self._tag_func_addr_input)
+        self._get_tags_btn = QPushButton(self.tr("Get Tags"))
+        self._get_tags_btn.clicked.connect(self._on_get_function_tags)
+        row2.addWidget(self._get_tags_btn)
+        self._add_tag_btn = QPushButton(self.tr("Add Tag"))
+        self._add_tag_btn.clicked.connect(self._on_add_function_tag)
+        row2.addWidget(self._add_tag_btn)
+        self._remove_tag_btn = QPushButton(self.tr("Remove Tag"))
+        self._remove_tag_btn.clicked.connect(self._on_remove_function_tag)
+        row2.addWidget(self._remove_tag_btn)
+        section_layout.addLayout(row2)
+
+        self._function_tags_result = QPlainTextEdit()
+        self._function_tags_result.setReadOnly(True)
+        self._function_tags_result.setFont(fm.get_code_font(10))
+        self._function_tags_result.setFixedHeight(80)
+        section_layout.addWidget(self._function_tags_result)
+
+        section.ensurePolished()
+        section.setMinimumHeight(section.sizeHint().height())
+        return section
+
+    def _on_create_function_tag(self) -> None:
+        """Create a function tag named by the Tag name field in the program's tag manager."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._tag_name_input.text().strip()
+        if not name:
+            self._status_label.setText("Tag name required")
+            return
+        comment = self._tag_comment_input.text().strip()
+        self._create_tag_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            bridge.create_function_tag(name, comment),
+            on_success=self._on_function_tag_created,
+            on_error=self._on_function_tags_error,
+            parent=self,
+            event="ghidra_create_function_tag",
+            logger=_logger,
+            level="info",
+            tag_name=name,
+        )
+
+    def _on_function_tag_created(self, result: object) -> None:
+        """Re-enable the Create Tag button and render the newly created tag.
+
+        Args:
+            result: Dict with name, comment, and success from
+                ``create_function_tag``.
+        """
+        self._create_tag_btn.setEnabled(True)
+        if not isinstance(result, dict):
+            self._function_tags_result.setPlainText(str(result))
+            return
+        info = cast("dict[str, Any]", result)
+        self._function_tags_result.setPlainText(f"Created tag: {info.get('name', '')} ({info.get('comment', '')})")
+
+    def _on_get_function_tags(self) -> None:
+        """List every tag in the program, or the tags on the entered function address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr_text = self._tag_func_addr_input.text().strip()
+        address = _parse_address(addr_text) if addr_text else None
+        if addr_text and address is None:
+            self._status_label.setText("Invalid function address for get tags")
+            return
+        self._get_tags_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            bridge.get_function_tags(address),
+            on_success=self._apply_function_tags,
+            on_error=self._on_function_tags_error,
+            parent=self,
+            event="ghidra_get_function_tags",
+            logger=_logger,
+            address=hex(address) if address is not None else None,
+        )
+
+    def _apply_function_tags(self, result: object) -> None:
+        """Render the fetched function tags.
+
+        Args:
+            result: List of tag dicts with name and comment.
+        """
+        self._get_tags_btn.setEnabled(True)
+        tags = cast("list[dict[str, Any]]", result) if isinstance(result, list) else []
+        lines = [f"{tag.get('name', '')}: {tag.get('comment', '')}" for tag in tags]
+        self._function_tags_result.setPlainText("\n".join(lines) if lines else "No tags")
+
+    def _on_add_function_tag(self) -> None:
+        """Add the entered tag name to the function at the entered address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        address = _parse_address(self._tag_func_addr_input.text())
+        if address is None:
+            self._status_label.setText("Function address required to add a tag")
+            return
+        tag_name = self._tag_name_input.text().strip()
+        if not tag_name:
+            self._status_label.setText("Tag name required")
+            return
+        self._add_tag_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            bridge.set_function_tags(address, tag_name, "add"),
+            on_success=lambda _: self._on_function_tag_mutated(),
+            on_error=self._on_function_tags_error,
+            parent=self,
+            event="ghidra_add_function_tag",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            tag_name=tag_name,
+        )
+
+    def _on_remove_function_tag(self) -> None:
+        """Remove the entered tag name from the function at the entered address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        address = _parse_address(self._tag_func_addr_input.text())
+        if address is None:
+            self._status_label.setText("Function address required to remove a tag")
+            return
+        tag_name = self._tag_name_input.text().strip()
+        if not tag_name:
+            self._status_label.setText("Tag name required")
+            return
+        self._remove_tag_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            bridge.set_function_tags(address, tag_name, "remove"),
+            on_success=lambda _: self._on_function_tag_mutated(),
+            on_error=self._on_function_tags_error,
+            parent=self,
+            event="ghidra_remove_function_tag",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            tag_name=tag_name,
+        )
+
+    def _on_function_tag_mutated(self) -> None:
+        """Re-enable the Add/Remove Tag buttons and refresh the tag list."""
+        self._add_tag_btn.setEnabled(True)
+        self._remove_tag_btn.setEnabled(True)
+        self._on_get_function_tags()
+
+    def _on_function_tags_error(self, exc: object) -> None:
+        """Handle a function-tag operation failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._create_tag_btn.setEnabled(True)
+        self._get_tags_btn.setEnabled(True)
+        self._add_tag_btn.setEnabled(True)
+        self._remove_tag_btn.setEnabled(True)
+        self._function_tags_result.setPlainText(f"Error: {exc}")
+        _logger.warning("ghidra_function_tags_gui_failed", error=str(exc))
 
     # ------------------------------------------------------------------
     # External References
