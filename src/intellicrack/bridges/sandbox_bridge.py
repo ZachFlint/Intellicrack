@@ -186,6 +186,42 @@ _QEMU_CONFIG_PARAM_DESCRIPTION = (
 )
 
 
+def _parse_shared_folders(raw: list[dict[str, object]] | None) -> list[tuple[Path, str, bool]]:
+    r"""Convert caller-supplied shared-folder entries into SandboxConfig's tuple shape.
+
+    Each entry names a host directory to share in addition to the sandbox's
+    own private work share. ``guest_path`` defaults to
+    ``C:\Shared\<host folder name>`` when omitted, matching how the AI
+    tool-calling schema documents the field; the GUI toolbar never supplies
+    it and always takes this default. An entry missing a non-empty
+    ``host_path`` string is skipped rather than raising, since a caller
+    typo here should not abort sandbox creation over an optional extra.
+
+    Args:
+        raw: Caller-supplied list of ``{"host_path": str, "guest_path":
+            str (optional), "read_only": bool (optional)}`` mappings, or
+            None.
+
+    Returns:
+        list[tuple[Path, str, bool]]: Entries as
+        ``(host_path, guest_path, read_only)``, ready for
+        ``SandboxConfig.shared_folders``.
+    """
+    parsed: list[tuple[Path, str, bool]] = []
+    for entry in raw or []:
+        host_path_value = entry.get("host_path")
+        if not isinstance(host_path_value, str) or not host_path_value:
+            continue
+        host_path = Path(host_path_value)
+
+        guest_path_value = entry.get("guest_path")
+        guest_path = guest_path_value if isinstance(guest_path_value, str) and guest_path_value else f"C:\\Shared\\{host_path.name}"
+
+        read_only = bool(entry.get("read_only", False))
+        parsed.append((host_path, guest_path, read_only))
+    return parsed
+
+
 def _qemu_config_parameter() -> ToolParameter:
     """Build the shared ``qemu_config`` tool parameter.
 
@@ -484,6 +520,80 @@ class SandboxBridge(ToolBridgeBase):
                             default=2048,
                         ),
                         _qemu_config_parameter(),
+                        ToolParameter(
+                            name="clipboard_enabled",
+                            type="boolean",
+                            description="Share the host clipboard with the sandbox (Windows Sandbox ClipboardRedirection; no effect on QEMU)",
+                            required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="audio_enabled",
+                            type="boolean",
+                            description="Redirect the host's audio input into the sandbox (Windows Sandbox AudioInput; no effect on QEMU)",
+                            required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="video_enabled",
+                            type="boolean",
+                            description="Give the sandbox a virtualized GPU (Windows Sandbox vGPU; no effect on QEMU)",
+                            required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="printer_enabled",
+                            type="boolean",
+                            description="Share host printers with the sandbox (Windows Sandbox PrinterRedirection; no effect on QEMU)",
+                            required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="shared_folders",
+                            type="array",
+                            description=(
+                                "Additional host folders to share with the sandbox, beyond its private work share. Each is read-only "
+                                "by default; a writable QEMU share can abort the VM (see hazards), so leave read_only true unless the "
+                                "target genuinely needs to write back to the host."
+                            ),
+                            required=False,
+                            default=[],
+                            items_type="object",
+                            item_properties=[
+                                ToolParameter(
+                                    name="host_path",
+                                    type="string",
+                                    description="Absolute host directory to share",
+                                    required=True,
+                                ),
+                                ToolParameter(
+                                    name="guest_path",
+                                    type="string",
+                                    description="Absolute in-guest mount path (default: C:\\Shared\\<host folder name>)",
+                                    required=False,
+                                ),
+                                ToolParameter(
+                                    name="read_only",
+                                    type="boolean",
+                                    description="Whether the guest is denied write access",
+                                    required=False,
+                                    default=False,
+                                ),
+                            ],
+                        ),
+                        ToolParameter(
+                            name="startup_commands",
+                            type="array",
+                            description="Additional cmd.exe command lines to run inside the guest after the dispatcher/monitor fleet starts",
+                            required=False,
+                            default=[],
+                        ),
+                        ToolParameter(
+                            name="environment_variables",
+                            type="object",
+                            description="Environment variables to set inside the guest before startup_commands run (name to value)",
+                            required=False,
+                        ),
                     ],
                     returns="Dictionary with instance_id and status",
                 ),
@@ -544,6 +654,80 @@ class SandboxBridge(ToolBridgeBase):
                             default=2048,
                         ),
                         _qemu_config_parameter(),
+                        ToolParameter(
+                            name="clipboard_enabled",
+                            type="boolean",
+                            description="Share the host clipboard with the sandbox (Windows Sandbox ClipboardRedirection; no effect on QEMU)",
+                            required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="audio_enabled",
+                            type="boolean",
+                            description="Redirect the host's audio input into the sandbox (Windows Sandbox AudioInput; no effect on QEMU)",
+                            required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="video_enabled",
+                            type="boolean",
+                            description="Give the sandbox a virtualized GPU (Windows Sandbox vGPU; no effect on QEMU)",
+                            required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="printer_enabled",
+                            type="boolean",
+                            description="Share host printers with the sandbox (Windows Sandbox PrinterRedirection; no effect on QEMU)",
+                            required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="shared_folders",
+                            type="array",
+                            description=(
+                                "Additional host folders to share with the sandbox, beyond its private work share. Each is read-only "
+                                "by default; a writable QEMU share can abort the VM (see hazards), so leave read_only true unless the "
+                                "target genuinely needs to write back to the host."
+                            ),
+                            required=False,
+                            default=[],
+                            items_type="object",
+                            item_properties=[
+                                ToolParameter(
+                                    name="host_path",
+                                    type="string",
+                                    description="Absolute host directory to share",
+                                    required=True,
+                                ),
+                                ToolParameter(
+                                    name="guest_path",
+                                    type="string",
+                                    description="Absolute in-guest mount path (default: C:\\Shared\\<host folder name>)",
+                                    required=False,
+                                ),
+                                ToolParameter(
+                                    name="read_only",
+                                    type="boolean",
+                                    description="Whether the guest is denied write access",
+                                    required=False,
+                                    default=False,
+                                ),
+                            ],
+                        ),
+                        ToolParameter(
+                            name="startup_commands",
+                            type="array",
+                            description="Additional cmd.exe command lines to run inside the guest after the dispatcher/monitor fleet starts",
+                            required=False,
+                            default=[],
+                        ),
+                        ToolParameter(
+                            name="environment_variables",
+                            type="object",
+                            description="Environment variables to set inside the guest before startup_commands run (name to value)",
+                            required=False,
+                        ),
                     ],
                     returns="New instance_id, the previous_instance_id, type, status, and creation timestamp",
                 ),
@@ -1198,8 +1382,15 @@ class SandboxBridge(ToolBridgeBase):
         block_telemetry: bool = True,
         memory_limit_mb: int = 2048,
         qemu_config: QEMUConfig | None = None,
+        clipboard_enabled: bool = False,
+        audio_enabled: bool = False,
+        video_enabled: bool = False,
+        printer_enabled: bool = False,
+        shared_folders: list[dict[str, object]] | None = None,
+        startup_commands: list[str] | None = None,
+        environment_variables: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        """Create a new sandbox instance.
+        r"""Create a new sandbox instance.
 
         Rejects unknown ``sandbox_type`` values explicitly instead of
         silently coercing them to ``"qemu"``. The previous behaviour
@@ -1223,6 +1414,27 @@ class SandboxBridge(ToolBridgeBase):
             memory_limit_mb: Memory limit in megabytes.
             qemu_config: QEMU backend configuration forwarded to the manager.
                 Ignored for the ``"windows"`` sandbox type.
+            clipboard_enabled: Whether the host clipboard is shared with the
+                sandbox. Windows Sandbox only; no effect on QEMU.
+            audio_enabled: Whether the host's audio input is redirected into
+                the sandbox. Windows Sandbox only; no effect on QEMU.
+            video_enabled: Whether the sandbox is given a virtualized GPU.
+                Windows Sandbox only; no effect on QEMU.
+            printer_enabled: Whether host printers are shared with the
+                sandbox. Windows Sandbox only; no effect on QEMU.
+            shared_folders: Additional host folders to share with the
+                sandbox, beyond its private work share. Each mapping carries
+                ``host_path`` (required), ``guest_path`` (optional, defaults
+                to ``C:\Shared\<host folder name>``), and ``read_only``
+                (optional, defaults to False). Windows Sandbox honors
+                ``read_only=False``; on QEMU every shared folder is staged
+                read-only regardless of this flag.
+            startup_commands: Additional ``cmd.exe`` command lines to run
+                inside the guest after the dispatcher/monitor fleet starts.
+                Windows Sandbox only; no effect on QEMU.
+            environment_variables: Environment variables to set inside the
+                guest before ``startup_commands`` run. Windows Sandbox only;
+                no effect on QEMU.
 
         Returns:
             dict[str, Any]: Dictionary with instance_id and status.
@@ -1242,6 +1454,13 @@ class SandboxBridge(ToolBridgeBase):
             network_enabled=network_enabled,
             block_telemetry=block_telemetry,
             memory_limit_mb=memory_limit_mb,
+            clipboard_enabled=clipboard_enabled,
+            audio_enabled=audio_enabled,
+            video_enabled=video_enabled,
+            printer_enabled=printer_enabled,
+            shared_folders=_parse_shared_folders(shared_folders),
+            startup_commands=list(startup_commands) if startup_commands else [],
+            environment_variables=dict(environment_variables) if environment_variables else {},
         )
 
         try:
@@ -1330,8 +1549,15 @@ class SandboxBridge(ToolBridgeBase):
         block_telemetry: bool = True,
         memory_limit_mb: int = 2048,
         qemu_config: QEMUConfig | None = None,
+        clipboard_enabled: bool = False,
+        audio_enabled: bool = False,
+        video_enabled: bool = False,
+        printer_enabled: bool = False,
+        shared_folders: list[dict[str, object]] | None = None,
+        startup_commands: list[str] | None = None,
+        environment_variables: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        """Restart a sandbox instance as a single managed operation.
+        r"""Restart a sandbox instance as a single managed operation.
 
         Delegates to :meth:`SandboxManager.restart`, so the teardown and the
         recreate share the manager's failure semantics instead of being chained
@@ -1352,6 +1578,29 @@ class SandboxBridge(ToolBridgeBase):
             memory_limit_mb: Memory limit in megabytes for the replacement.
             qemu_config: QEMU backend configuration forwarded to the manager.
                 Ignored for the ``"windows"`` sandbox type.
+            clipboard_enabled: Whether the replacement shares the host
+                clipboard with the sandbox. Windows Sandbox only; no effect
+                on QEMU.
+            audio_enabled: Whether the replacement redirects the host's audio
+                input into the sandbox. Windows Sandbox only; no effect on
+                QEMU.
+            video_enabled: Whether the replacement is given a virtualized
+                GPU. Windows Sandbox only; no effect on QEMU.
+            printer_enabled: Whether the replacement shares host printers
+                with the sandbox. Windows Sandbox only; no effect on QEMU.
+            shared_folders: Additional host folders to share with the
+                replacement, beyond its private work share. Each mapping
+                carries ``host_path`` (required), ``guest_path`` (optional,
+                defaults to ``C:\Shared\<host folder name>``), and
+                ``read_only`` (optional, defaults to False). Windows Sandbox
+                honors ``read_only=False``; on QEMU every shared folder is
+                staged read-only regardless of this flag.
+            startup_commands: Additional ``cmd.exe`` command lines to run
+                inside the replacement's guest after the dispatcher/monitor
+                fleet starts. Windows Sandbox only; no effect on QEMU.
+            environment_variables: Environment variables to set inside the
+                replacement's guest before ``startup_commands`` run. Windows
+                Sandbox only; no effect on QEMU.
 
         Returns:
             dict[str, Any]: Dictionary with the new ``instance_id``, the
@@ -1369,6 +1618,13 @@ class SandboxBridge(ToolBridgeBase):
             network_enabled=network_enabled,
             block_telemetry=block_telemetry,
             memory_limit_mb=memory_limit_mb,
+            clipboard_enabled=clipboard_enabled,
+            audio_enabled=audio_enabled,
+            video_enabled=video_enabled,
+            printer_enabled=printer_enabled,
+            shared_folders=_parse_shared_folders(shared_folders),
+            startup_commands=list(startup_commands) if startup_commands else [],
+            environment_variables=dict(environment_variables) if environment_variables else {},
         )
 
         self._vnc_passwords.pop(instance_id, None)
