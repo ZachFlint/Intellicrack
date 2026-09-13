@@ -949,6 +949,18 @@ class X64DbgPanel(AnalysisPanelBase):
         self._exc_set_btn.setObjectName("tool_button")
         self._exc_set_btn.clicked.connect(self._on_set_exception_config)
         eval_row.addWidget(self._exc_set_btn)
+        self._exc_remove_btn = QPushButton(self.tr("Remove"))
+        self._exc_remove_btn.setObjectName("tool_button")
+        self._exc_remove_btn.clicked.connect(self._on_remove_exception_config)
+        eval_row.addWidget(self._exc_remove_btn)
+        self._exc_enable_btn = QPushButton(self.tr("Enable"))
+        self._exc_enable_btn.setObjectName("tool_button")
+        self._exc_enable_btn.clicked.connect(self._on_enable_exception_config)
+        eval_row.addWidget(self._exc_enable_btn)
+        self._exc_disable_btn = QPushButton(self.tr("Disable"))
+        self._exc_disable_btn.setObjectName("tool_button")
+        self._exc_disable_btn.clicked.connect(self._on_disable_exception_config)
+        eval_row.addWidget(self._exc_disable_btn)
         eval_row.addStretch()
         console_layout.addWidget(self._make_control_row(eval_row))
         return console_container
@@ -4326,6 +4338,96 @@ class X64DbgPanel(AnalysisPanelBase):
             level="info",
             exception_code=hex(code),
             handling=handling,
+        )
+
+    def _on_remove_exception_config(self) -> None:
+        """Remove an exception breakpoint by code, or all exception breakpoints if the code field is empty."""
+        if self._bridge is None:
+            return
+        code_text = self._exc_code_input.text().strip()
+        code: int | None = None
+        if code_text:
+            try:
+                code = int(code_text, 0)
+            except ValueError:
+                self._invalid_input(
+                    "x64dbg_remove_exception_config_invalid_code",
+                    input_text=code_text,
+                    console_msg=f"[!] Invalid exception code: {code_text}",
+                    logger=_logger,
+                )
+                return
+        run_bridge_coroutine_logged(
+            self._bridge.remove_exception_config(code),
+            on_success=lambda _: self._console_output.appendPlainText(
+                f"[+] Exception breakpoint(s) removed{f' ({hex(code)})' if code is not None else ' (all)'}",
+            ),
+            on_error=lambda e: self._on_generic_error("Remove Exception BP", e),
+            parent=self,
+            event="x64dbg_remove_exception_config",
+            logger=_logger,
+            level="info",
+            exception_code=hex(code) if code is not None else "all",
+        )
+
+    def _on_enable_exception_config(self) -> None:
+        """Enable an exception breakpoint by code, or all exception breakpoints if the code field is empty."""
+        if self._bridge is None:
+            return
+        code_text = self._exc_code_input.text().strip()
+        code: int | None = None
+        if code_text:
+            try:
+                code = int(code_text, 0)
+            except ValueError:
+                self._invalid_input(
+                    "x64dbg_enable_exception_config_invalid_code",
+                    input_text=code_text,
+                    console_msg=f"[!] Invalid exception code: {code_text}",
+                    logger=_logger,
+                )
+                return
+        run_bridge_coroutine_logged(
+            self._bridge.enable_exception_config(code),
+            on_success=lambda _: self._console_output.appendPlainText(
+                f"[+] Exception breakpoint(s) enabled{f' ({hex(code)})' if code is not None else ' (all)'}",
+            ),
+            on_error=lambda e: self._on_generic_error("Enable Exception BP", e),
+            parent=self,
+            event="x64dbg_enable_exception_config",
+            logger=_logger,
+            level="info",
+            exception_code=hex(code) if code is not None else "all",
+        )
+
+    def _on_disable_exception_config(self) -> None:
+        """Disable an exception breakpoint by code, or all exception breakpoints if the code field is empty."""
+        if self._bridge is None:
+            return
+        code_text = self._exc_code_input.text().strip()
+        code: int | None = None
+        if code_text:
+            try:
+                code = int(code_text, 0)
+            except ValueError:
+                self._invalid_input(
+                    "x64dbg_disable_exception_config_invalid_code",
+                    input_text=code_text,
+                    console_msg=f"[!] Invalid exception code: {code_text}",
+                    logger=_logger,
+                )
+                return
+        run_bridge_coroutine_logged(
+            self._bridge.disable_exception_config(code),
+            on_success=lambda _: self._console_output.appendPlainText(
+                f"[+] Exception breakpoint(s) disabled{f' ({hex(code)})' if code is not None else ' (all)'}",
+            ),
+            on_error=lambda e: self._on_generic_error("Disable Exception BP", e),
+            parent=self,
+            event="x64dbg_disable_exception_config",
+            logger=_logger,
+            level="info",
+            exception_code=hex(code) if code is not None else "all",
         )
 
     def _refresh_watchpoints(self) -> None:
