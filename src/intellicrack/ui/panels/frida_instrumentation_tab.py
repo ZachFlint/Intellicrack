@@ -760,6 +760,202 @@ class InstructionDisassembleControls(QWidget):
         _logger.warning("frida_disassemble_instruction_failed", error=str(exc))
 
 
+class TypedMemoryAccessControls(QWidget):
+    """Typed NativePointer read/write controls for the Memory section.
+
+    One coherent entry point for ``read_typed_value``/``write_typed_value``, with a single type-selector combo
+    (pointer/cstring/utf8/u8../s8../float/double) driving both the Read and Write actions, distinct from the
+    raw-hex Read/Write controls already present in the Memory tab.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the typed memory access controls.
+
+        Args:
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        self._bridge: FridaBridge | None = None
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        title = QLabel("Typed Read/Write")
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(title)
+
+        addr_row = QHBoxLayout()
+        addr_row.addWidget(QLabel("Address:"))
+        self._typed_addr_input = QLineEdit()
+        self._typed_addr_input.setPlaceholderText("0x401000")
+        self._typed_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        addr_row.addWidget(self._typed_addr_input)
+        addr_row.addWidget(QLabel("Type:"))
+        self._typed_type_combo = QComboBox()
+        self._typed_type_combo.addItems(
+            ["pointer", "cstring", "utf8", "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "float", "double"],
+        )
+        addr_row.addWidget(self._typed_type_combo)
+        addr_row.addStretch()
+        layout.addLayout(addr_row)
+
+        read_row = QHBoxLayout()
+        self._typed_read_btn = QPushButton("Read")
+        self._typed_read_btn.setObjectName("tool_button")
+        self._typed_read_btn.clicked.connect(self._on_read_typed_value)
+        read_row.addWidget(self._typed_read_btn)
+        read_row.addWidget(QLabel("Value:"))
+        self._typed_read_result_label = QLabel("")
+        self._typed_read_result_label.setWordWrap(True)
+        read_row.addWidget(self._typed_read_result_label)
+        read_row.addStretch()
+        layout.addLayout(read_row)
+
+        write_row = QHBoxLayout()
+        self._typed_write_value_input = QLineEdit()
+        self._typed_write_value_input.setPlaceholderText("42, 3.5, 0x1000, or text for utf8")
+        write_row.addWidget(self._typed_write_value_input)
+        self._typed_write_btn = QPushButton("Write")
+        self._typed_write_btn.setObjectName("tool_button")
+        self._typed_write_btn.clicked.connect(self._on_write_typed_value)
+        write_row.addWidget(self._typed_write_btn)
+        layout.addLayout(write_row)
+
+        self._typed_status_label = QLabel("")
+        layout.addWidget(self._typed_status_label)
+        layout.addStretch()
+
+    def set_bridge(self, bridge: FridaBridge) -> None:
+        """Set the FridaBridge instance used to service typed read/write requests.
+
+        Args:
+            bridge: The FridaBridge to use.
+        """
+        self._bridge = bridge
+
+    def _on_read_typed_value(self) -> None:
+        """Read a single typed value at the entered address via ``read_typed_value``."""
+        if self._bridge is None:
+            self._typed_status_label.setText("No bridge available")
+            _logger.warning("frida_read_typed_value_failed_no_bridge")
+            return
+        addr = _parse_hex_address(self._typed_addr_input.text())
+        if addr is None:
+            self._typed_status_label.setText("Invalid address")
+            return
+        value_type = self._typed_type_combo.currentText()
+        self._typed_read_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.read_typed_value(addr, value_type),
+            on_success=self._on_read_typed_value_done,
+            on_error=self._on_read_typed_value_error,
+            parent=self,
+            event="frida_read_typed_value",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            value_type=value_type,
+        )
+
+    def _on_read_typed_value_done(self, result: object) -> None:
+        """Render a successfully read typed value.
+
+        Args:
+            result: The decoded value returned by the bridge.
+        """
+        self._typed_read_btn.setEnabled(True)
+        self._typed_read_result_label.setText(str(result))
+        self._typed_status_label.setText("Read complete")
+        _logger.info("frida_typed_value_read_via_gui", value=str(result))
+
+    def _on_read_typed_value_error(self, exc: object) -> None:
+        """Handle a typed read failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._typed_read_btn.setEnabled(True)
+        self._typed_status_label.setText(f"Read failed: {exc}")
+        _logger.warning("frida_read_typed_value_failed", error=str(exc))
+
+    @staticmethod
+    def _parse_typed_write_text(value_type: str, raw_text: str) -> int | float | str:
+        """Parse the Write-field text into the Python type ``write_typed_value`` expects.
+
+        Args:
+            value_type: Selected NativePointer value type (never ``'cstring'``;
+                callers reject that case before parsing).
+            raw_text: Raw text entered in the Write value field.
+
+        Returns:
+            int | float | str: ``float(raw_text)`` for float/double,
+                ``raw_text`` unchanged for utf8, ``int(raw_text, 0)``
+                otherwise (pointer and every integer width). Propagates
+                ``ValueError`` from ``float()``/``int()`` when ``raw_text``
+                cannot be parsed for ``value_type``.
+        """
+        if value_type in {"float", "double"}:
+            return float(raw_text)
+        if value_type == "utf8":
+            return raw_text
+        return int(raw_text, 0)
+
+    def _on_write_typed_value(self) -> None:
+        """Write a single typed value at the entered address via ``write_typed_value``."""
+        if self._bridge is None:
+            self._typed_status_label.setText("No bridge available")
+            _logger.warning("frida_write_typed_value_failed_no_bridge")
+            return
+        addr = _parse_hex_address(self._typed_addr_input.text())
+        if addr is None:
+            self._typed_status_label.setText("Invalid address")
+            return
+        value_type = self._typed_type_combo.currentText()
+        if value_type == "cstring":
+            self._typed_status_label.setText("cstring is read-only; use utf8 to write a string")
+            return
+        raw_text = self._typed_write_value_input.text()
+        try:
+            parsed_value = self._parse_typed_write_text(value_type, raw_text)
+        except ValueError:
+            self._typed_status_label.setText(f"Invalid value for type {value_type}")
+            return
+
+        self._typed_write_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.write_typed_value(addr, value_type, parsed_value),
+            on_success=self._on_write_typed_value_done,
+            on_error=self._on_write_typed_value_error,
+            parent=self,
+            event="frida_write_typed_value",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            value_type=value_type,
+        )
+
+    def _on_write_typed_value_done(self, result: object) -> None:
+        """Report a successful typed write.
+
+        Args:
+            result: Success status returned by the bridge.
+        """
+        self._typed_write_btn.setEnabled(True)
+        self._typed_status_label.setText("Write complete" if result else "Write failed")
+        _logger.info("frida_typed_value_written_via_gui", success=bool(result))
+
+    def _on_write_typed_value_error(self, exc: object) -> None:
+        """Handle a typed write failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._typed_write_btn.setEnabled(True)
+        self._typed_status_label.setText(f"Write failed: {exc}")
+        _logger.warning("frida_write_typed_value_failed", error=str(exc))
+
+
 class SymbolLookupControls(QWidget):
     """Module-symbol dump, address-to-module, and glob function-search controls for the Symbols section.
 
