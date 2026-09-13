@@ -11,7 +11,7 @@ registers, memory read/write, memory regions, threads, and loaded modules) drive
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from PyQt6.QtCore import QSignalBlocker, Qt
 from PyQt6.QtWidgets import (
@@ -50,6 +50,7 @@ _SIZE_INPUT_MAX_WIDTH: Final[int] = 80
 _TOP_SPLIT_LEFT: Final[int] = 500
 _TOP_SPLIT_RIGHT: Final[int] = 400
 
+_ATTACHABLE_PROCESS_COLUMNS: Final[list[str]] = ["PID", "Details"]
 _REG_COLUMNS: Final[list[str]] = ["Register", "Value"]
 _BP_COLUMNS: Final[list[str]] = ["Address", "Type", "Condition", "Hits", "Enabled"]
 _MEMORY_REGION_COLUMNS: Final[list[str]] = ["Base", "Size", "Protection", "State", "Type", "Module"]
@@ -173,6 +174,18 @@ class DebuggerTab(QWidget):
         self._refresh_btn.setObjectName("secondary_button")
         self._refresh_btn.clicked.connect(self._refresh_all)
         attach_row.addWidget(self._refresh_btn)
+
+        signal_label = QLabel(self.tr("Signal:"))
+        signal_label.setFont(fm.get_ui_font(9))
+        attach_row.addWidget(signal_label)
+        self._signal_input = QLineEdit()
+        self._signal_input.setMaximumWidth(_SIZE_INPUT_MAX_WIDTH)
+        self._signal_input.setPlaceholderText("e.g. 9")
+        attach_row.addWidget(self._signal_input)
+        self._send_signal_btn = QPushButton(self.tr("Send"))
+        self._send_signal_btn.setObjectName("tool_button")
+        self._send_signal_btn.clicked.connect(self._on_send_signal)
+        attach_row.addWidget(self._send_signal_btn)
         attach_row.addStretch()
 
         self._status_label = QLabel(self.tr("Not attached"))
@@ -219,12 +232,13 @@ class DebuggerTab(QWidget):
         return container
 
     def _create_bottom_tabs(self) -> QTabWidget:
-        """Create breakpoints, memory, memory-regions, threads, backtrace, and modules sub-tabs.
+        """Create attachable-processes, breakpoints, memory, memory-regions, threads, backtrace, and modules sub-tabs.
 
         Returns:
             QTabWidget: Tab widget with the debugger detail views.
         """
         tabs = QTabWidget()
+        tabs.addTab(self._build_attachable_processes_tab(), self.tr("Attachable Processes"))
         tabs.addTab(self._build_bp_tab(), self.tr("Breakpoints"))
         tabs.addTab(self._build_memory_tab(), self.tr("Memory"))
         tabs.addTab(self._build_regions_tab(), self.tr("Memory Regions"))
@@ -232,6 +246,36 @@ class DebuggerTab(QWidget):
         tabs.addTab(self._build_backtrace_tab(), self.tr("Backtrace"))
         tabs.addTab(self._build_modules_tab(), self.tr("Modules"))
         return tabs
+
+    def _build_attachable_processes_tab(self) -> QWidget:
+        """Build the attachable-processes discovery sub-tab with a Refresh control.
+
+        Unlike every other sub-tab, this one must be usable before any process is attached, so it owns its own Refresh button rather than
+        relying on :meth:`_refresh_all`, which only runs after attach/step/continue.
+
+        Returns:
+            QWidget: Attachable-processes tab container.
+        """
+        container = QWidget()
+        vlayout = QVBoxLayout(container)
+        vlayout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        toolbar = QHBoxLayout()
+        self._discover_btn = QPushButton(self.tr("Refresh"))
+        self._discover_btn.setObjectName("secondary_button")
+        self._discover_btn.clicked.connect(self._on_discover_processes)
+        toolbar.addWidget(self._discover_btn)
+        toolbar.addStretch()
+        vlayout.addLayout(toolbar)
+        self._attachable_table = QTableWidget(0, len(_ATTACHABLE_PROCESS_COLUMNS))
+        self._attachable_table.setHorizontalHeaderLabels(_ATTACHABLE_PROCESS_COLUMNS)
+        self._attachable_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._attachable_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        attach_h = self._attachable_table.horizontalHeader()
+        if attach_h is not None:
+            attach_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._attachable_table.itemDoubleClicked.connect(self._on_attachable_process_double_clicked)
+        vlayout.addWidget(self._attachable_table)
+        return container
 
     def _build_bp_tab(self) -> QWidget:
         """Build the breakpoints sub-tab with add/remove controls.
@@ -435,6 +479,62 @@ class DebuggerTab(QWidget):
         """
         self._status_label.setText(text)
         self._status_label.setToolTip(text)
+
+    def _on_discover_processes(self) -> None:
+        """Discover OS processes attachable via the bridge, before any attach has happened."""
+        if self._bridge is None:
+            return
+        self._discover_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.list_attachable_processes(),
+            on_success=self._apply_attachable_processes,
+            on_error=self._on_discover_processes_error,
+            parent=self,
+            event="cutter_debug_list_attachable_processes",
+            logger=_logger,
+        )
+
+    def _apply_attachable_processes(self, result: object) -> None:
+        """Populate the attachable-processes table from the bridge's discovery result.
+
+        Args:
+            result: List of process dictionaries returned by the bridge.
+        """
+        self._discover_btn.setEnabled(True)
+        items: list[object] = [*result] if isinstance(result, list) else []
+        self._attachable_table.setRowCount(0)
+        for entry in items:
+            if not isinstance(entry, dict):
+                continue
+            entry_dict = cast("dict[str, Any]", entry)
+            row = self._attachable_table.rowCount()
+            self._attachable_table.insertRow(row)
+            pid_value = entry_dict.get("pid", "")
+            self._attachable_table.setItem(row, 0, QTableWidgetItem(str(pid_value)))
+            details = {k: v for k, v in entry_dict.items() if k != "pid"}
+            self._attachable_table.setItem(row, 1, QTableWidgetItem(str(details) if details else ""))
+
+    def _on_discover_processes_error(self, exc: object) -> None:
+        """Handle attachable-process discovery failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._discover_btn.setEnabled(True)
+        self._set_status(f"Process discovery failed: {exc}")
+        _logger.warning("cutter_debug_list_attachable_processes_failed", error=str(exc))
+
+    def _on_attachable_process_double_clicked(self, item: QTableWidgetItem) -> None:
+        """Fill the PID input with the double-clicked attachable-process row's PID.
+
+        Args:
+            item: The table item that was double-clicked.
+        """
+        row = item.row()
+        pid_item = self._attachable_table.item(row, 0)
+        if pid_item is None:
+            return
+        self._pid_input.setText(pid_item.text())
 
     def _on_attach(self) -> None:
         """Attach the debugger to the process identifier in the PID input."""
@@ -646,6 +746,50 @@ class DebuggerTab(QWidget):
         self._set_status(f"Continue-until failed: {exc}")
         _logger.warning("cutter_debug_continue_until_failed", error=str(exc))
         self._continue_until_btn.setEnabled(True)
+
+    def _on_send_signal(self) -> None:
+        """Send the signal number in the signal input to the attached debuggee process."""
+        if self._bridge is None:
+            return
+        signal_text = self._signal_input.text().strip()
+        try:
+            signal = int(signal_text)
+        except ValueError:
+            _logger.warning("cutter_debug_invalid_signal", input_text=signal_text)
+            self._set_status(self.tr("Invalid signal number"))
+            return
+
+        self._send_signal_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.send_signal(signal),
+            on_success=lambda _: self._on_send_signal_success(signal),
+            on_error=self._on_send_signal_error,
+            parent=self,
+            event="cutter_debug_send_signal",
+            logger=_logger,
+            level="info",
+            signal=signal,
+        )
+
+    def _on_send_signal_success(self, signal: int) -> None:
+        """Handle successful signal delivery by refreshing debugger state.
+
+        Args:
+            signal: The signal number that was sent.
+        """
+        self._set_status(f"Signal {signal} sent")
+        self._send_signal_btn.setEnabled(True)
+        self._refresh_all()
+
+    def _on_send_signal_error(self, exc: object) -> None:
+        """Handle signal-send failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._set_status(f"Send signal failed: {exc}")
+        _logger.warning("cutter_debug_send_signal_failed", error=str(exc))
+        self._send_signal_btn.setEnabled(True)
 
     def _on_register_edited(self, row: int, column: int) -> None:
         """Handle in-place register value edits by writing the new value to the debuggee.
