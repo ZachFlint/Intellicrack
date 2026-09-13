@@ -40,14 +40,14 @@ import json
 import os
 import sys
 import time
-from typing import TYPE_CHECKING, Final
+from pathlib import Path
+from typing import TYPE_CHECKING, Final, cast
 
 import pytest
 
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine, Generator
-    from pathlib import Path
+    from collections.abc import Callable, Coroutine, Generator
 
     import frida
 
@@ -55,6 +55,8 @@ if TYPE_CHECKING:
     from intellicrack.core.subprocess_compat import Popen
 
 try:
+    import frida
+
     from intellicrack.bridges.frida_bridge import FridaBridge
 
     _frida_available: bool = True
@@ -156,6 +158,14 @@ if _frida_available:
                 msg = f"cancellable {cancellable_id!r} not tracked"
                 raise AssertionError(msg)
             return cancellable
+
+        def install_fake_device(self, device: object) -> None:
+            """Replace the bridge's device handle with a test double for signal-registration gates.
+
+            Args:
+                device: Test double standing in for a real ``frida.Device``.
+            """
+            self._device = cast("frida.Device", device)
 
 
 def _run_async[T](coro: Coroutine[object, object, T]) -> T:
@@ -586,3 +596,326 @@ class TestScriptMessagingLifecycle:
         """
         result = _run_async(bridge.cancel("never-issued-token"))
         assert result is False
+
+
+_REMOVE_REMOTE_HOST: Final[str] = "127.0.0.1:59993"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestRemoveRemoteDeviceA4:
+    """Regression tests for work order 07-A4 (frida.remove_remote_device)."""
+
+    @staticmethod
+    def test_tool_def_registered(bridge: _TestableFridaBridge) -> None:
+        """``frida.remove_remote_device`` must have a real ``ToolFunction`` entry.
+
+        Falsifiable: removing the ``ToolFunction`` entry from
+        ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes this fail.
+        """
+        names = {f.name for f in bridge.tool_definition.functions}
+        assert "frida.remove_remote_device" in names
+
+    @staticmethod
+    def test_remove_remote_device_drops_it_from_the_real_device_manager(registry: ToolRegistry) -> None:
+        """``frida.remove_remote_device`` must actually remove the device from ``frida.DeviceManager``.
+
+        Falsifiable: if the tool-def entry were missing, ``execute_tool_call``
+        raises ``ToolError`` for an unknown function name before the real
+        removal call ever runs. If ``remove_remote_device`` were a stub that
+        never called ``manager.remove_remote_device``, the device would still
+        be present in ``manager.enumerate_devices()`` after the call. Broken
+        production lines: the ``frida.remove_remote_device`` ``ToolFunction``
+        registration and ``FridaBridge.remove_remote_device``'s
+        ``await asyncio.to_thread(manager.remove_remote_device, host)`` call
+        in ``frida_bridge.py``.
+
+        Frida assigns a remote device's ``id`` as ``f"socket@{host}"`` (not
+        the bare host string), confirmed by direct introspection of this
+        exact installed ``frida==17.17.0`` package against an unreachable
+        loopback endpoint - the assertions below match that real, observed
+        id format rather than an assumed one.
+        """
+        _run_async(
+            registry.execute_tool_call(
+                "frida",
+                "frida.connect_device",
+                {"device_type": "remote", "host": _REMOVE_REMOTE_HOST},
+            ),
+        )
+        manager = frida.get_device_manager()
+        expected_id = f"socket@{_REMOVE_REMOTE_HOST}"
+        assert any(d.id == expected_id for d in manager.enumerate_devices())
+
+        _run_async(
+            registry.execute_tool_call("frida", "frida.remove_remote_device", {"host": _REMOVE_REMOTE_HOST}),
+        )
+        assert not any(d.id == expected_id for d in manager.enumerate_devices())
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestDeviceChangeNotificationsA5:
+    """Regression tests for work order 07-A5 (live device-list-changed notifications)."""
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "expected_name",
+        [
+            "frida.enable_device_change_notifications",
+            "frida.disable_device_change_notifications",
+        ],
+    )
+    def test_tool_def_registered(bridge: _TestableFridaBridge, expected_name: str) -> None:
+        """Each new device-change-notification method must have a real ToolFunction entry.
+
+        Args:
+            bridge: Initialized FridaBridge fixture.
+            expected_name: Fully-qualified tool function name under test.
+        """
+        names = {f.name for f in bridge.tool_definition.functions}
+        assert expected_name in names
+
+    @staticmethod
+    def test_enable_delivers_real_changed_signal_and_disable_detaches_it(
+        registry: ToolRegistry,
+        bridge: _TestableFridaBridge,
+    ) -> None:
+        """``frida.enable_device_change_notifications`` must observe a real ``DeviceManager`` "changed" signal.
+
+        Falsifiable: if the tool-def entries were missing, ``execute_tool_call``
+        raises ``ToolError`` for an unknown function name before any
+        registration happens. If ``enable_device_change_notifications`` never
+        called ``manager.on("changed", ...)``, or registered the wrong signal
+        name, no message would ever reach ``received`` after the manager's
+        real device list changes and the first ``assert received`` fails. If
+        ``disable_device_change_notifications`` never detached the handler,
+        the final ``assert not received`` fails because the handler would
+        still fire after disable. Broken production lines:
+        ``manager.on("changed", on_devices_changed)`` in
+        ``FridaBridge.enable_device_change_notifications`` and
+        ``off_fn("changed", handler)`` in
+        ``FridaBridge._detach_device_manager_changed_handler``
+        (``frida_bridge.py``).
+        """
+        received: list[dict[str, object]] = []
+        bridge.set_message_handler(received.append)
+
+        _run_async(registry.execute_tool_call("frida", "frida.enable_device_change_notifications", {}))
+
+        manager = frida.get_device_manager()
+        manager.add_remote_device("127.0.0.1:59995")
+        try:
+            deadline = time.monotonic() + _ATTACH_WAIT_S
+            while not received and time.monotonic() < deadline:
+                time.sleep(0.05)
+            assert received, "the 'changed' signal must reach the bridge's message dispatcher"
+            assert any(
+                isinstance(m.get("payload"), dict) and cast("dict[str, object]", m["payload"]).get("type") == "device_list_changed"
+                for m in received
+            )
+        finally:
+            manager.remove_remote_device("127.0.0.1:59995")
+
+        received.clear()
+        _run_async(registry.execute_tool_call("frida", "frida.disable_device_change_notifications", {}))
+        manager.add_remote_device("127.0.0.1:59996")
+        time.sleep(0.5)
+        manager.remove_remote_device("127.0.0.1:59996")
+        assert not received, "disable must actually detach the 'changed' handler"
+
+
+class _SignalRecordingDevice:
+    """Minimal transport-boundary Device double recording real on()/off() signal registrations."""
+
+    def __init__(self) -> None:
+        """Initialize the double with an empty registration list."""
+        self.registered: list[tuple[str, Callable[..., None]]] = []
+
+    def on(self, signal: str, callback: Callable[..., None]) -> None:
+        """Record a signal registration exactly as ``frida.Device.on`` would receive it.
+
+        Args:
+            signal: Signal name the caller registered for.
+            callback: Callback the caller registered.
+        """
+        self.registered.append((signal, callback))
+
+    def off(self, signal: str, callback: Callable[..., None]) -> None:
+        """Remove a previously recorded signal registration.
+
+        Args:
+            signal: Signal name to unregister.
+            callback: Callback to unregister; must match the object
+                originally passed to :meth:`on`.
+        """
+        self.registered = [(s, cb) for s, cb in self.registered if not (s == signal and cb is callback)]
+
+    def fire(self, signal: str) -> None:
+        """Synchronously invoke every callback registered for ``signal``.
+
+        Args:
+            signal: Signal name whose registered callbacks should fire.
+        """
+        for s, cb in list(self.registered):
+            if s == signal:
+                cb()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestDeviceLostNotificationsA6:
+    """Regression tests for work order 07-A6 (device-lost notifications)."""
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "expected_name",
+        [
+            "frida.enable_device_lost_notifications",
+            "frida.disable_device_lost_notifications",
+        ],
+    )
+    def test_tool_def_registered(bridge: _TestableFridaBridge, expected_name: str) -> None:
+        """Each new device-lost-notification method must have a real ToolFunction entry.
+
+        Args:
+            bridge: Initialized FridaBridge fixture.
+            expected_name: Fully-qualified tool function name under test.
+        """
+        names = {f.name for f in bridge.tool_definition.functions}
+        assert expected_name in names
+
+    @staticmethod
+    def test_enable_registers_lost_signal_and_fire_resets_state(bridge: _TestableFridaBridge) -> None:
+        """``frida.enable_device_lost_notifications`` must register exactly one real ``"lost"`` handler.
+
+        Uses a transport-boundary ``Device`` double (the real ``"lost"``
+        signal cannot be forced on a real device without physically removing
+        hardware) that records real ``on``/``off`` calls, so every line of
+        the bridge's own registration and callback logic executes for real.
+
+        Falsifiable: if the registration used the wrong signal name (exactly
+        the class of defect this audit already found once for
+        ``"child-added"`` vs ``"spawn-added"``), ``lost_registrations`` would
+        be empty and the first ``assert len(...) == 1`` fails; firing
+        ``"lost"`` would then also no-op, failing the state-reset and
+        dispatched-message assertions. Broken production lines:
+        ``device.on("lost", on_device_lost)`` in
+        ``FridaBridge.enable_device_lost_notifications`` and
+        ``off_fn("lost", handler)`` in
+        ``FridaBridge._detach_device_lost_handler`` (``frida_bridge.py``).
+        """
+        fake_device = _SignalRecordingDevice()
+        bridge.install_fake_device(fake_device)
+        received: list[dict[str, object]] = []
+        bridge.set_message_handler(received.append)
+
+        _run_async(bridge.enable_device_lost_notifications())
+        _run_async(bridge.enable_device_lost_notifications())
+        lost_registrations = [s for s, _ in fake_device.registered if s == "lost"]
+        assert len(lost_registrations) == 1, f"must register exactly one 'lost' handler, got {lost_registrations}"
+
+        fake_device.fire("lost")
+        assert bridge.state.connected is False
+        assert any(
+            isinstance(m.get("payload"), dict) and cast("dict[str, object]", m["payload"]).get("type") == "device_lost" for m in received
+        )
+
+        _run_async(bridge.disable_device_lost_notifications())
+        assert not any(s == "lost" for s, _ in fake_device.registered)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestGetFrontmostApplicationA9:
+    """Regression tests for work order 07-A9 (frida.get_frontmost_application)."""
+
+    @staticmethod
+    def test_tool_def_registered(bridge: _TestableFridaBridge) -> None:
+        """``frida.get_frontmost_application`` must have a real ``ToolFunction`` entry.
+
+        Falsifiable: removing the ``ToolFunction`` entry from
+        ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes this fail.
+        """
+        names = {f.name for f in bridge.tool_definition.functions}
+        assert "frida.get_frontmost_application" in names
+
+    @staticmethod
+    def test_dispatchable_and_wraps_the_real_not_supported_error(registry: ToolRegistry) -> None:
+        """``frida.get_frontmost_application`` must dispatch and wrap the real Frida ``NotSupportedError``.
+
+        Falsifiable: if the tool-def entry were missing, ``execute_tool_call``
+        raises ``ToolError`` for an unknown function name before the real
+        device call ever runs. If the method body were a stub that never
+        calls ``device.get_frontmost_application``, no genuine
+        ``frida.NotSupportedError`` would ever be caught, so
+        ``ToolError.details["frida_error_type"]`` would not equal
+        ``"NotSupportedError"`` (it would either not raise at all, or raise a
+        differently-shaped error) - this is what proves the *real* Frida
+        call executed, not a mock or an early return.
+
+        ``ToolRegistry.execute_tool_call`` (``core/tools.py``, off-limits for
+        this stream to edit) re-raises any ``ToolError`` it catches as a
+        *new* ``ToolError`` with empty ``details`` - chained via
+        ``raise ToolError(msg) from e`` - so the bridge's own structured
+        ``details`` survive only on ``__cause__``, not on the outer
+        exception directly. Confirmed empirically against this exact
+        dispatch path before writing this assertion. The assertion below
+        follows that real chain rather than the bridge-internal
+        ``.details`` shortcut, which this shared dispatcher does not
+        preserve.
+        """
+        with pytest.raises(ToolError) as exc_info:
+            _run_async(registry.execute_tool_call("frida", "frida.get_frontmost_application", {}))
+        cause = exc_info.value.__cause__
+        assert isinstance(cause, ToolError), f"expected the bridge's own ToolError as __cause__, got {cause!r}"
+        assert cause.details.get("frida_error_type") == "NotSupportedError"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestSpawnEnvCwdB2:
+    """Regression tests for work order 07-B2 (frida.spawn env/cwd overrides)."""
+
+    @staticmethod
+    def test_spawn_env_and_cwd_overrides_take_effect(bridge: _TestableFridaBridge, tmp_path: Path) -> None:
+        """``frida.spawn``'s ``env``/``cwd`` kwargs must reach the real spawned process.
+
+        Falsifiable: if ``env``/``cwd`` were silently dropped (pre-fix state,
+        only ``argv`` forwarded), the batch script's ``%IC_GATE_MARKER%``
+        would expand to empty and ``%CD%`` would be the test runner's own
+        working directory instead of ``tmp_path`` - both assertions below
+        would fail. Broken production lines: the ``env=env, cwd=cwd``
+        keyword arguments forwarded to ``device.spawn`` in
+        ``FridaBridge._spawn_with_cancellable`` (``frida_bridge.py``).
+        """
+        gate_file = tmp_path / "gate_out.txt"
+        bat_path = tmp_path / "gate.bat"
+        bat_path.write_text(
+            f'@echo off\r\necho ENV=%IC_GATE_MARKER%>"{gate_file}"\r\necho CWD=%CD%>>"{gate_file}"\r\n',
+            encoding="utf-8",
+        )
+        cmd_path = Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "cmd.exe"
+
+        pid = _run_async(
+            bridge.spawn(cmd_path, ["/c", str(bat_path)], env={"IC_GATE_MARKER": "07b2-value"}, cwd=str(tmp_path)),
+        )
+        assert pid > 0
+        _run_async(bridge.resume())
+
+        deadline = time.monotonic() + _ATTACH_WAIT_S
+        while not gate_file.exists() and time.monotonic() < deadline:
+            time.sleep(0.1)
+        assert gate_file.exists(), "spawned batch script never produced output"
+
+        content = gate_file.read_text(encoding="utf-8")
+        assert "ENV=07b2-value" in content, f"env override missing from spawned process: {content!r}"
+        assert f"CWD={tmp_path}".lower() in content.lower(), f"cwd override missing from spawned process: {content!r}"
+
+    @staticmethod
+    def test_tool_def_declares_env_and_cwd_parameters(bridge: _TestableFridaBridge) -> None:
+        """The registered ``frida.spawn`` tool-def must declare ``env`` and ``cwd`` parameters.
+
+        Falsifiable: if the ``ToolParameter`` entries were never added to the
+        ``frida.spawn`` ``ToolFunction`` in ``_FRIDA_FUNCTIONS``, this fails.
+        """
+        defn = bridge.tool_definition
+        spawn_func = next(f for f in defn.functions if f.name == "frida.spawn")
+        param_names = {p.name for p in spawn_func.parameters}
+        assert "env" in param_names
+        assert "cwd" in param_names
