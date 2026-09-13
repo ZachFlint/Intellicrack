@@ -66,7 +66,7 @@ from intellicrack.ui.win32_embed import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from intellicrack.bridges.x64dbg import BreakpointType, MemoryProtection, X64DbgBridge
+    from intellicrack.bridges.x64dbg import BreakpointOpcodeType, BreakpointType, MemoryProtection, MemoryRangeAccess, X64DbgBridge
     from intellicrack.core.types import ModuleInfo
 
 _logger = get_logger(__name__)
@@ -754,6 +754,31 @@ class X64DbgPanel(AnalysisPanelBase):
         self._remove_bp_btn.setObjectName("tool_button")
         self._remove_bp_btn.clicked.connect(self._on_remove_breakpoint)
         bp_toolbar.addWidget(self._remove_bp_btn)
+        self._bp_range_size_input = QLineEdit()
+        self._bp_range_size_input.setMaximumWidth(_SIZE_INPUT_MAX_WIDTH)
+        self._bp_range_size_input.setPlaceholderText("size")
+        bp_toolbar.addWidget(self._bp_range_size_input)
+        self._bp_range_access_combo = QComboBox()
+        self._bp_range_access_combo.addItem("Read", "read")
+        self._bp_range_access_combo.addItem("Write", "write")
+        self._bp_range_access_combo.addItem("Execute", "execute")
+        self._bp_range_access_combo.addItem("All", "all")
+        bp_toolbar.addWidget(self._bp_range_access_combo)
+        self._bp_range_singleshot_check = QCheckBox(self.tr("Singleshot"))
+        bp_toolbar.addWidget(self._bp_range_singleshot_check)
+        self._add_range_bp_btn = QPushButton(self.tr("Range BP"))
+        self._add_range_bp_btn.setObjectName("tool_button")
+        self._add_range_bp_btn.clicked.connect(self._on_add_range_breakpoint)
+        bp_toolbar.addWidget(self._add_range_bp_btn)
+        self._bp_default_type_combo = QComboBox()
+        self._bp_default_type_combo.addItem("Short (CC)", "short")
+        self._bp_default_type_combo.addItem("Long (CD03)", "long")
+        self._bp_default_type_combo.addItem("UD2 (0F0B)", "ud2")
+        bp_toolbar.addWidget(self._bp_default_type_combo)
+        self._set_default_bp_type_btn = QPushButton(self.tr("Set Default Type"))
+        self._set_default_bp_type_btn.setObjectName("tool_button")
+        self._set_default_bp_type_btn.clicked.connect(self._on_set_default_breakpoint_type)
+        bp_toolbar.addWidget(self._set_default_bp_type_btn)
         bp_mod_label = QLabel(self.tr("Module:"))
         bp_mod_label.setFont(fm.get_ui_font(9))
         bp_toolbar.addWidget(bp_mod_label)
@@ -2147,6 +2172,99 @@ class X64DbgPanel(AnalysisPanelBase):
         self._console_output.appendPlainText(f"[-] Failed to set breakpoint: {exc}")
         _logger.warning("x64dbg_bp_set_failed", error=str(exc))
         self._add_bp_btn.setEnabled(True)
+
+    def _on_add_range_breakpoint(self) -> None:
+        """Add a memory-range (guard-page) breakpoint over an address span."""
+        if self._bridge is None:
+            self._console_output.appendPlainText("[!] No bridge configured")
+            return
+
+        addr_text = self._bp_addr_input.text().strip()
+        if not addr_text:
+            return
+
+        try:
+            start = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text, 0)
+        except ValueError:
+            _logger.warning("invalid_range_breakpoint_address", input_text=addr_text)
+            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            return
+
+        size_text = self._bp_range_size_input.text().strip()
+        if not size_text:
+            return
+
+        try:
+            size = int(size_text, 16) if size_text.startswith("0x") else int(size_text, 0)
+        except ValueError:
+            _logger.warning("invalid_range_breakpoint_size", input_text=size_text)
+            self._console_output.appendPlainText(f"[!] Invalid size: {size_text}")
+            return
+
+        access_data = self._bp_range_access_combo.currentData()
+        access = cast(
+            "MemoryRangeAccess",
+            access_data if access_data in {"read", "write", "execute", "all"} else "all",
+        )
+        singleshot = self._bp_range_singleshot_check.isChecked()
+        self._add_range_bp_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.set_memory_range_breakpoint(start, size, access, singleshot=singleshot),
+            on_success=lambda r: self._on_range_bp_added(start, size, r),
+            on_error=self._on_range_bp_add_error,
+            parent=self,
+            event="x64dbg_set_memory_range_breakpoint",
+            logger=_logger,
+            level="info",
+            start=hex(start),
+            size=hex(size),
+            access=access,
+            singleshot=singleshot,
+        )
+
+    def _on_range_bp_added(self, start: int, size: int, result: object) -> None:
+        """Handle successful memory-range breakpoint addition.
+
+        Args:
+            start: The range breakpoint's start address.
+            size: The range breakpoint's size in bytes.
+            result: Result dict from the bridge, containing ``verified``.
+        """
+        verified = bool(cast("dict[str, object]", result).get("verified", False)) if isinstance(result, dict) else False
+        suffix = "" if verified else " (unverified)"
+        self._console_output.appendPlainText(f"[+] Memory range breakpoint set at 0x{start:X}, size 0x{size:X}{suffix}")
+        _logger.info("x64dbg_range_bp_set", start=hex(start), size=hex(size), verified=verified)
+        self._add_range_bp_btn.setEnabled(True)
+        self._refresh_breakpoints()
+
+    def _on_range_bp_add_error(self, exc: object) -> None:
+        """Handle memory-range breakpoint addition failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Failed to set memory range breakpoint: {exc}")
+        _logger.warning("x64dbg_range_bp_set_failed", error=str(exc))
+        self._add_range_bp_btn.setEnabled(True)
+
+    def _on_set_default_breakpoint_type(self) -> None:
+        """Set the default opcode style x64dbg uses for future breakpoints."""
+        if self._bridge is None:
+            return
+        data = self._bp_default_type_combo.currentData()
+        bp_opcode_type = cast(
+            "BreakpointOpcodeType",
+            data if data in {"short", "long", "ud2"} else "short",
+        )
+        run_bridge_coroutine_logged(
+            self._bridge.set_default_breakpoint_type(bp_opcode_type),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Default breakpoint type set to {bp_opcode_type}"),
+            on_error=lambda e: self._on_generic_error("Set Default BP Type", e),
+            parent=self,
+            event="x64dbg_set_default_breakpoint_type",
+            logger=_logger,
+            level="info",
+        )
 
     def _on_remove_breakpoint(self) -> None:
         """Remove the selected breakpoint."""
