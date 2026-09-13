@@ -65,8 +65,16 @@ from intellicrack.ui.win32_embed import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Literal
 
-    from intellicrack.bridges.x64dbg import BreakpointOpcodeType, BreakpointType, MemoryProtection, MemoryRangeAccess, X64DbgBridge
+    from intellicrack.bridges.x64dbg import (
+        BreakpointOpcodeType,
+        BreakpointType,
+        MemoryProtection,
+        MemoryRangeAccess,
+        PageRights,
+        X64DbgBridge,
+    )
     from intellicrack.core.types import ModuleInfo
 
 _logger = get_logger(__name__)
@@ -368,6 +376,18 @@ class X64DbgPanel(AnalysisPanelBase):
         self._step_into_btn = self._add_tool_button(toolbar, "Step Into", self._on_step_into)
         self._step_over_btn = self._add_tool_button(toolbar, "Step Over", self._on_step_over)
         self._step_out_btn = self._add_tool_button(toolbar, "Step Out", self._on_step_out)
+        self._step_user_btn = self._add_tool_button(toolbar, "Step User", self._on_step_into_user_code)
+        self._step_system_btn = self._add_tool_button(toolbar, "Step System", self._on_step_into_system_code)
+        self._step_ext_type_combo = QComboBox()
+        self._step_ext_type_combo.addItem("Into", "into")
+        self._step_ext_type_combo.addItem("Over", "over")
+        self._step_ext_type_combo.addItem("Out", "out")
+        self._step_ext_mode_combo = QComboBox()
+        self._step_ext_mode_combo.addItem("Pass Exception", "pass")
+        self._step_ext_mode_combo.addItem("Swallow Exception", "swallow")
+        self._step_ext_btn = self._add_tool_button(toolbar, "Step Ext", self._on_step_extended)
+        toolbar.addWidget(self._step_ext_type_combo)
+        toolbar.addWidget(self._step_ext_mode_combo)
 
         toolbar.addSeparator()
         self._add_toolbar_label(toolbar, "Steps:")
@@ -402,6 +422,12 @@ class X64DbgPanel(AnalysisPanelBase):
         self._run_to_btn = self._add_tool_button(toolbar, "Go", self._on_run_to)
         self._til_ret_btn = self._add_tool_button(toolbar, "Til Ret", self._on_til_ret)
         self._skip_btn = self._add_tool_button(toolbar, "Skip", self._on_skip)
+        self._undo_btn = self._add_tool_button(toolbar, "Undo", self._on_instr_undo)
+        self._run_to_user_btn = self._add_tool_button(toolbar, "User Code", self._on_run_to_user_code)
+        self._add_toolbar_label(toolbar, "Party:")
+        self._run_to_party_input = self._add_toolbar_input(toolbar, "0", max_width=40)
+        self._run_to_party_input.setValidator(QIntValidator(0, 1, self._run_to_party_input))
+        self._run_to_party_btn = self._add_tool_button(toolbar, "Run To Party", self._on_run_to_party)
         toolbar.addSeparator()
         self._add_toolbar_label(toolbar, "IP:")
         self._set_ip_input = self._add_toolbar_input(toolbar, "0x...", max_width=120)
@@ -1351,6 +1377,29 @@ class X64DbgPanel(AnalysisPanelBase):
         self._free_btn.setObjectName("tool_button")
         self._free_btn.clicked.connect(self._on_free_memory)
         mmap_toolbar.addWidget(self._free_btn)
+        protect_addr_label = QLabel(self.tr("Protect:"))
+        protect_addr_label.setFont(fm.get_ui_font(9))
+        mmap_toolbar.addWidget(protect_addr_label)
+        self._protect_addr_input = QLineEdit()
+        self._protect_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._protect_addr_input.setValidator(hex_validator)
+        mmap_toolbar.addWidget(self._protect_addr_input)
+        self._protect_rights_combo = QComboBox()
+        self._protect_rights_combo.addItem("Execute", "execute")
+        self._protect_rights_combo.addItem("ExecuteRead", "execute_read")
+        self._protect_rights_combo.addItem("ExecuteReadWrite", "execute_readwrite")
+        self._protect_rights_combo.addItem("ExecuteWriteCopy", "execute_writecopy")
+        self._protect_rights_combo.addItem("NoAccess", "no_access")
+        self._protect_rights_combo.addItem("ReadOnly", "read_only")
+        self._protect_rights_combo.addItem("ReadWrite", "read_write")
+        self._protect_rights_combo.addItem("WriteCopy", "write_copy")
+        mmap_toolbar.addWidget(self._protect_rights_combo)
+        self._protect_guard_check = QCheckBox(self.tr("Guard"))
+        mmap_toolbar.addWidget(self._protect_guard_check)
+        self._protect_btn = QPushButton(self.tr("Set Protection"))
+        self._protect_btn.setObjectName("tool_button")
+        self._protect_btn.clicked.connect(self._on_set_memory_protection)
+        mmap_toolbar.addWidget(self._protect_btn)
         mmap_toolbar.addStretch()
         mmap_layout.addWidget(self._make_control_row(mmap_toolbar))
         self._mmap_table = QTableWidget(0, len(_MEMMAP_COLUMNS))
@@ -1976,6 +2025,98 @@ class X64DbgPanel(AnalysisPanelBase):
         self._step_into_btn.setEnabled(True)
         self._step_over_btn.setEnabled(True)
         self._step_out_btn.setEnabled(True)
+
+    def _on_step_into_user_code(self) -> None:
+        """Step into repeatedly until reaching user-module code.
+
+        Does not disable ``_step_user_btn`` before dispatch: the shared
+        ``_on_step_success``/``_on_step_error`` handlers this reuses for
+        console-message formatting only re-enable ``_step_into_btn``/
+        ``_step_over_btn``/``_step_out_btn``, so disabling a button they
+        never re-enable would leave it permanently disabled after the
+        first click.
+        """
+        if self._bridge is None:
+            return
+
+        run_bridge_coroutine_logged(
+            self._bridge.step_into_user_code(),
+            on_success=lambda r: self._on_step_success("user", r),
+            on_error=lambda e: self._on_step_error("user", e),
+            parent=self,
+            event="x64dbg_step_into_user_code",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_step_into_system_code(self) -> None:
+        """Step into repeatedly until reaching system-module code.
+
+        Does not disable ``_step_system_btn`` before dispatch, for the
+        same reason :meth:`_on_step_into_user_code` does not disable
+        ``_step_user_btn``.
+        """
+        if self._bridge is None:
+            return
+
+        run_bridge_coroutine_logged(
+            self._bridge.step_into_system_code(),
+            on_success=lambda r: self._on_step_success("system", r),
+            on_error=lambda e: self._on_step_error("system", e),
+            parent=self,
+            event="x64dbg_step_into_system_code",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_step_extended(self) -> None:
+        """Single-step using the selected direction and exception-passthrough mode."""
+        if self._bridge is None:
+            return
+
+        type_data = self._step_ext_type_combo.currentData()
+        step_type = cast(
+            "Literal['into', 'over', 'out']",
+            type_data if type_data in {"into", "over", "out"} else "into",
+        )
+        mode_data = self._step_ext_mode_combo.currentData()
+        exception_mode = cast(
+            "Literal['pass', 'swallow']",
+            mode_data if mode_data in {"pass", "swallow"} else "pass",
+        )
+        self._step_ext_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.step_extended(step_type, exception_mode, 1),
+            on_success=self._on_step_extended_success,
+            on_error=self._on_step_extended_error,
+            parent=self,
+            event="x64dbg_step_extended",
+            logger=_logger,
+            level="info",
+            step_type=step_type,
+            exception_mode=exception_mode,
+        )
+
+    def _on_step_extended_success(self, result: object) -> None:
+        """Handle a successful extended-step operation.
+
+        Args:
+            result: New instruction pointer or None.
+        """
+        if isinstance(result, int):
+            self._console_output.appendPlainText(f"[+] Step Ext -> 0x{result:X}")
+        self._step_ext_btn.setEnabled(True)
+        self._refresh_state()
+
+    def _on_step_extended_error(self, exc: object) -> None:
+        """Handle an extended-step failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Step Ext failed: {exc}")
+        _logger.warning("x64dbg_step_extended_failed", error=str(exc))
+        self._step_ext_btn.setEnabled(True)
 
     def _on_step_count(self) -> None:
         """Execute a fixed number of single steps via the Step N control."""
@@ -3112,6 +3253,102 @@ class X64DbgPanel(AnalysisPanelBase):
             self._console_output.appendPlainText(f"[+] Skipped {old_ip} -> {new_ip}")
         self._refresh_state()
 
+    def _on_instr_undo(self) -> None:
+        """Reverse the last stepped instruction."""
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.instr_undo(),
+            on_success=self._on_instr_undo_success,
+            on_error=lambda e: self._on_generic_error("Undo", e),
+            parent=self,
+            event="x64dbg_instr_undo",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_instr_undo_success(self, result: object) -> None:
+        """Handle a successful instruction undo.
+
+        Args:
+            result: Undo result dict from bridge.
+        """
+        if isinstance(result, dict):
+            r = cast("dict[str, object]", result)
+            old_ip: object = r.get("old_ip", "?")
+            new_ip: object = r.get("new_ip", "?")
+            self._console_output.appendPlainText(f"[+] Undo {old_ip} -> {new_ip}")
+        self._refresh_state()
+
+    def _on_run_to_user_code(self) -> None:
+        """Run until execution reaches user-module code."""
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.run_to_user_code(),
+            on_success=self._on_run_to_user_code_success,
+            on_error=lambda e: self._on_generic_error("Run To User Code", e),
+            parent=self,
+            event="x64dbg_run_to_user_code",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_run_to_user_code_success(self, result: object) -> None:
+        """Handle a successful Run To User Code completion.
+
+        Args:
+            result: Result dict from the bridge, containing ``reached_ip``.
+        """
+        reached_ip = "?"
+        if isinstance(result, dict):
+            r = cast("dict[str, object]", result)
+            value = r.get("reached_ip")
+            if isinstance(value, str):
+                reached_ip = value
+        self._console_output.appendPlainText(f"[+] Ran to user code, IP={reached_ip}")
+
+    def _on_run_to_party(self) -> None:
+        """Run until execution reaches a memory page owned by the entered party number."""
+        if self._bridge is None:
+            return
+        party_text = self._run_to_party_input.text().strip()
+        try:
+            party = int(party_text)
+        except ValueError:
+            self._invalid_input(
+                "x64dbg_run_to_party_invalid_party",
+                input_text=party_text,
+                console_msg=f"[!] Invalid party: {party_text}",
+                logger=_logger,
+            )
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.run_to_party(party),
+            on_success=lambda r: self._on_run_to_party_success(party, r),
+            on_error=lambda e: self._on_generic_error("Run To Party", e),
+            parent=self,
+            event="x64dbg_run_to_party",
+            logger=_logger,
+            level="info",
+            party=party,
+        )
+
+    def _on_run_to_party_success(self, party: int, result: object) -> None:
+        """Handle a successful Run To Party completion.
+
+        Args:
+            party: Party number that was run to.
+            result: Result dict from the bridge, containing ``reached_ip``.
+        """
+        reached_ip = "?"
+        if isinstance(result, dict):
+            r = cast("dict[str, object]", result)
+            value = r.get("reached_ip")
+            if isinstance(value, str):
+                reached_ip = value
+        self._console_output.appendPlainText(f"[+] Ran to party {party}, IP={reached_ip}")
+
     def _on_set_ip(self) -> None:
         """Set the instruction pointer to a specific address."""
         if self._bridge is None:
@@ -3855,6 +4092,61 @@ class X64DbgPanel(AnalysisPanelBase):
             level="info",
             address=hex(address),
         )
+
+    def _on_set_memory_protection(self) -> None:
+        """Change a memory page's protection rights using the entered address, rights, and guard flag."""
+        if self._bridge is None:
+            return
+        addr_text = self._protect_addr_input.text().strip()
+        if not addr_text:
+            return
+        try:
+            address = int(addr_text, 0)
+        except ValueError:
+            self._invalid_input(
+                "x64dbg_set_memory_protection_invalid_address",
+                input_text=addr_text,
+                console_msg=f"[!] Invalid address: {addr_text}",
+                logger=_logger,
+            )
+            return
+        rights_data = self._protect_rights_combo.currentData()
+        rights_text = rights_data if isinstance(rights_data, str) else "read_only"
+        valid_rights = {
+            "execute",
+            "execute_read",
+            "execute_readwrite",
+            "execute_writecopy",
+            "no_access",
+            "read_only",
+            "read_write",
+            "write_copy",
+        }
+        rights = cast("PageRights", rights_text if rights_text in valid_rights else "read_only")
+        guard = self._protect_guard_check.isChecked()
+        run_bridge_coroutine_logged(
+            self._bridge.set_memory_protection(address, rights, guard=guard),
+            on_success=lambda r: self._on_set_memory_protection_success(address, r),
+            on_error=lambda e: self._on_generic_error("Set Protection", e),
+            parent=self,
+            event="x64dbg_set_memory_protection",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            rights=rights,
+            guard=guard,
+        )
+
+    def _on_set_memory_protection_success(self, address: int, result: object) -> None:
+        """Report a successful protection change and refresh the memory map table.
+
+        Args:
+            address: The address whose page protection was changed.
+            result: Result dict from the bridge; unused beyond confirming success.
+        """
+        del result
+        self._console_output.appendPlainText(f"[+] Protection set at {hex(address)}")
+        self._on_refresh_memmap()
 
     def _on_refresh_patches(self) -> None:
         """Refresh the patches table from the bridge."""

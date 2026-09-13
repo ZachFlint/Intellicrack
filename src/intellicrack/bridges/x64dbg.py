@@ -354,6 +354,58 @@ BreakpointType = Literal["software", "hardware", "memory"]
 MemoryProtection = Literal["read", "write", "execute"]
 MemoryRangeAccess = Literal["read", "write", "execute", "all"]
 BreakpointOpcodeType = Literal["short", "long", "ud2"]
+PageRights = Literal[
+    "execute",
+    "execute_read",
+    "execute_readwrite",
+    "execute_writecopy",
+    "no_access",
+    "read_only",
+    "read_write",
+    "write_copy",
+]
+
+# Maps the bridge's friendly, lowercase-with-underscore PageRights value to
+# x64dbg's exact CamelCase ``setpagerights`` right name.
+_PAGE_RIGHTS_NAMES: Final[dict[str, str]] = {
+    "execute": "Execute",
+    "execute_read": "ExecuteRead",
+    "execute_readwrite": "ExecuteReadWrite",
+    "execute_writecopy": "ExecuteWriteCopy",
+    "no_access": "NoAccess",
+    "read_only": "ReadOnly",
+    "read_write": "ReadWrite",
+    "write_copy": "WriteCopy",
+}
+
+# Maps the six PageRights values representable in MemoryRegion.protection's
+# 3-character rwx string (get_memory_regions/_append_committed_region's own
+# prot_map) to the exact string set_memory_protection expects to observe
+# after a successful setpagerights call. "execute_writecopy"/"write_copy"
+# have no exact match in that 3-bit encoding and are deliberately absent -
+# set_memory_protection falls back to a changed-from-prior-value check for
+# those two instead of comparing against a string here.
+_PAGE_RIGHTS_VERIFY: Final[dict[str, str]] = {
+    "execute": "--x",
+    "execute_read": "r-x",
+    "execute_readwrite": "rwx",
+    "no_access": "---",
+    "read_only": "r--",
+    "read_write": "rw-",
+}
+
+# Maps (step_type, exception_mode) to the x64dbg console command that
+# implements it. x64dbg documents no ``seStepOut`` command - only
+# ``eStepOut`` exists for step_type="out" - so ("out", "swallow") is
+# deliberately absent; :meth:`_X64DbgAnalysisMixin.step_extended` raises
+# ``ToolError`` rather than substituting a different command for it.
+_STEP_EXTENDED_COMMANDS: Final[dict[tuple[str, str], str]] = {
+    ("into", "pass"): "eStepInto",
+    ("over", "pass"): "eStepOver",
+    ("out", "pass"): "eStepOut",
+    ("into", "swallow"): "seStepInto",
+    ("over", "swallow"): "seStepOver",
+}
 
 # x64dbg keeps execution counters per 4 KiB page, and only for pages a trace
 # record type has been set on. ``word`` counts to 16383 executions per byte,
@@ -398,6 +450,24 @@ def _bp_command_for_type(bp_type: BreakpointType, *, software: str, hardware: st
     if bp_type == "memory":
         return memory
     return software
+
+
+def _region_containing(regions: list[MemoryRegion], address: int) -> MemoryRegion | None:
+    """Find the memory region that covers ``address``.
+
+    Args:
+        regions: Regions to search, typically the list returned by
+            :meth:`_X64DbgBridgeBase.get_memory_regions`.
+        address: Address to locate within ``regions``.
+
+    Returns:
+        MemoryRegion | None: The covering region, or None if no region in
+        ``regions`` covers ``address``.
+    """
+    for region in regions:
+        if region.base_address <= address < region.base_address + region.size:
+            return region
+    return None
 
 
 def _is_str_obj_dict(data: object) -> TypeGuard[dict[str, object]]:
@@ -1177,6 +1247,51 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="New instruction pointer",
                 ),
                 ToolFunction(
+                    name="x64dbg.step_into_user_code",
+                    description="Step into repeatedly until reaching a user-module instruction",
+                    parameters=[],
+                    returns="New instruction pointer",
+                ),
+                ToolFunction(
+                    name="x64dbg.step_into_system_code",
+                    description="Step into repeatedly until reaching a system-module instruction",
+                    parameters=[],
+                    returns="New instruction pointer",
+                ),
+                ToolFunction(
+                    name="x64dbg.step_extended",
+                    description=(
+                        "Single-step with exception-passthrough control: 'pass' forwards first-chance exceptions to the "
+                        "debuggee, 'swallow' suppresses them (no swallow variant exists for step_type='out')"
+                    ),
+                    parameters=[
+                        ToolParameter(
+                            name="step_type",
+                            type="string",
+                            description="into, over, or out",
+                            required=False,
+                            default="into",
+                            enum=["into", "over", "out"],
+                        ),
+                        ToolParameter(
+                            name="exception_mode",
+                            type="string",
+                            description="pass or swallow",
+                            required=False,
+                            default="pass",
+                            enum=["pass", "swallow"],
+                        ),
+                        ToolParameter(
+                            name="count",
+                            type="integer",
+                            description="Number of steps to take",
+                            required=False,
+                            default=1,
+                        ),
+                    ],
+                    returns="New instruction pointer",
+                ),
+                ToolFunction(
                     name="x64dbg.set_breakpoint",
                     description="Set a breakpoint",
                     parameters=[
@@ -1457,6 +1572,37 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="True if freed successfully",
                 ),
                 ToolFunction(
+                    name="x64dbg.set_memory_protection",
+                    description="Change a memory page's protection rights in the debuggee",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Any address within the target page", required=True),
+                        ToolParameter(
+                            name="rights",
+                            type="string",
+                            description="New page protection",
+                            required=True,
+                            enum=[
+                                "execute",
+                                "execute_read",
+                                "execute_readwrite",
+                                "execute_writecopy",
+                                "no_access",
+                                "read_only",
+                                "read_write",
+                                "write_copy",
+                            ],
+                        ),
+                        ToolParameter(
+                            name="guard",
+                            type="boolean",
+                            description="Also set PAGE_GUARD on the page",
+                            required=False,
+                            default=False,
+                        ),
+                    ],
+                    returns="Dict with success, address, rights, guard, verified",
+                ),
+                ToolFunction(
                     name="x64dbg.assemble_at",
                     description="Assemble instruction at address",
                     parameters=[
@@ -1527,6 +1673,25 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="Execution result",
                 ),
                 ToolFunction(
+                    name="x64dbg.run_to_user_code",
+                    description="Run until execution reaches user-module code (equivalent to RunToParty 0)",
+                    parameters=[],
+                    returns="Dict with success, reached_ip, verified",
+                ),
+                ToolFunction(
+                    name="x64dbg.run_to_party",
+                    description="Run until execution reaches a memory page belonging to the given party (0=user module, 1=system module)",
+                    parameters=[
+                        ToolParameter(
+                            name="party",
+                            type="integer",
+                            description="Party number: 0 for user module, 1 for system module",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with success, party, reached_ip, verified",
+                ),
+                ToolFunction(
                     name="x64dbg.execute_til_return",
                     description="Execute until the current function returns",
                     parameters=[],
@@ -1537,6 +1702,12 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     description="Skip the current instruction by advancing the instruction pointer past it",
                     parameters=[],
                     returns="Old and new IP with skipped byte count",
+                ),
+                ToolFunction(
+                    name="x64dbg.instr_undo",
+                    description="Reverse the last stepped instruction (only valid immediately after a step; running/tracing clears this history)",
+                    parameters=[],
+                    returns="Dict with success, old_ip, new_ip",
                 ),
                 ToolFunction(
                     name="x64dbg.set_ip",
@@ -4735,6 +4906,117 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
         return bool(success)
 
+    async def set_memory_protection(self, address: int, rights: PageRights, *, guard: bool = False) -> dict[str, Any]:
+        """Change a memory page's protection rights via x64dbg's ``setpagerights``.
+
+        Sends ``setpagerights <page>, <rights>`` (x64dbg snaps ``address``
+        to its containing page's own base address) and verifies the
+        change took effect by re-walking the real process address space
+        through :meth:`get_memory_regions` - the same ``VirtualQueryEx``
+        ground truth ``get_memory_regions`` already exposes, so no new
+        WinAPI call is introduced here. Six of the eight ``PageRights``
+        values map onto an exact 3-character rwx string in
+        :class:`MemoryRegion`'s ``protection`` field (``_PAGE_RIGHTS_VERIFY``)
+        and are verified by comparing against that string directly after
+        one post-command ``get_memory_regions`` call. ``execute_writecopy``
+        and ``write_copy`` have no exact match in that 3-bit encoding, so
+        those two are instead verified by confirming the region's
+        protection string actually changed from what it was immediately
+        before this call, which requires an additional pre-command
+        snapshot only for those two values.
+
+        Args:
+            address: Any address within the target page; x64dbg snaps
+                this to the page's own base address.
+            rights: New page protection to apply.
+            guard: When True, also set PAGE_GUARD on the page by
+                prepending the native ``G`` prefix (e.g. ``GReadOnly``).
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``address``,
+            ``rights``, ``guard``, and ``verified``.
+
+        Raises:
+            ToolError: If no committed region covers ``address`` after
+                the command completes, or the observed protection does
+                not match the requested change.
+        """
+        rights_arg = _PAGE_RIGHTS_NAMES[rights]
+        if guard:
+            rights_arg = f"G{rights_arg}"
+        _logger.debug(
+            "x64dbg_command_queued",
+            command="set_memory_protection",
+            address=hex(address),
+            rights=rights,
+            guard=guard,
+        )
+
+        needs_prior_snapshot = rights in {"execute_writecopy", "write_copy"}
+        before_protection: str | None = None
+        if needs_prior_snapshot:
+            before_region = _region_containing(await self.get_memory_regions(), address)
+            before_protection = before_region.protection if before_region is not None else None
+
+        await self._send_command(f"setpagerights {hex(address)}, {rights_arg}")
+
+        after_region = _region_containing(await self.get_memory_regions(), address)
+        if after_region is None:
+            msg = f"set_memory_protection verification failed: no committed region covers {hex(address)} after setpagerights"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "address": hex(address),
+                    "rights": rights,
+                    "guard": guard,
+                },
+            )
+
+        expected_protection = _PAGE_RIGHTS_VERIFY.get(rights)
+        if expected_protection is not None:
+            verified = after_region.protection == expected_protection
+            if not verified:
+                msg = (
+                    f"set_memory_protection verification failed: region at {hex(address)} reports protection "
+                    f"{after_region.protection!r}, expected {expected_protection!r} for rights {rights!r}"
+                )
+                raise ToolError(
+                    msg,
+                    tool_name="x64dbg",
+                    details={
+                        "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                        "address": hex(address),
+                        "rights": rights,
+                        "guard": guard,
+                        "observed_protection": after_region.protection,
+                        "expected_protection": expected_protection,
+                    },
+                )
+        else:
+            verified = after_region.protection != before_protection
+            if not verified:
+                msg = (
+                    f"set_memory_protection verification failed: region at {hex(address)} still reports "
+                    f"protection {after_region.protection!r} after setpagerights for rights {rights!r}, which "
+                    "has no exact rwx-string match and is verified only by a changed-from-prior-value check"
+                )
+                raise ToolError(
+                    msg,
+                    tool_name="x64dbg",
+                    details={
+                        "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                        "address": hex(address),
+                        "rights": rights,
+                        "guard": guard,
+                        "observed_protection": after_region.protection,
+                        "prior_protection": before_protection,
+                    },
+                )
+
+        return {"success": True, "address": hex(address), "rights": rights, "guard": guard, "verified": verified}
+
     async def get_memory_regions(self) -> list[MemoryRegion]:
         """Get memory map of target process.
 
@@ -6486,6 +6768,223 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
                 return last_ip
             await asyncio.sleep(self.RUN_TO_POLL_INTERVAL)
 
+    async def run_to_user_code(self) -> dict[str, Any]:
+        """Run until execution reaches user-module code.
+
+        Queues ``RunToUserCode`` - documented as equivalent to
+        ``RunToParty 0`` - which places temporary memory (guard-page)
+        breakpoints across every user-module page rather than
+        single-stepping, and confirms it settled via
+        :meth:`_await_run_completion`, which races the plugin's ``paused``
+        event against a ``status`` poll so a run that completes faster
+        than one poll interval is still caught instead of being
+        misreported as never having started.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``reached_ip`` (hex
+            string of the instruction pointer observed once the debugger
+            paused), and ``verified``. ``verified`` is ``True`` when the
+            run was confirmed to have completed (via the paused event or
+            a ``status`` poll); ``False`` only when the plugin lacks
+            ``status``, in which case ``reached_ip`` is omitted.
+
+        Raises:
+            ToolError: If neither the paused event nor ``status`` ever
+                showed the debugger leaving its running state within the
+                verification window - this also surfaces x64dbg's own
+                documented failure when another ``RunToUserCode`` is
+                already in flight.
+        """
+        _logger.debug("x64dbg_command_queued", command="RunToUserCode")
+        observed, rpc_available = await self._await_run_completion("RunToUserCode", expected_running=True)
+        if not rpc_available:
+            return {"success": True, "verified": False}
+        if observed is False:
+            msg = f"run_to_user_code verification failed: debugger never entered running state after RunToUserCode within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "expected_running": True,
+                    "observed_running": False,
+                },
+            )
+        regs = await self.get_registers()
+        ip = regs.rip if self._is_64bit else regs.rip & DWORD_MASK
+        return {"success": True, "reached_ip": hex(ip), "verified": True}
+
+    async def run_to_party(self, party: int) -> dict[str, Any]:
+        """Run until execution reaches a memory page owned by the given party.
+
+        Queues ``RunToParty <party>``, which places temporary memory
+        breakpoints across every page matching ``party`` (``0`` selects
+        the user module, ``1`` selects system modules), and confirms it
+        settled via :meth:`_await_run_completion` exactly as
+        :meth:`run_to_user_code` does.
+
+        Args:
+            party: Party number to run to - ``0`` for the user module,
+                ``1`` for system modules.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``party``,
+            ``reached_ip`` (hex string of the instruction pointer observed
+            once the debugger paused), and ``verified``. ``verified`` is
+            ``True`` when the run was confirmed to have completed;
+            ``False`` only when the plugin lacks ``status``, in which
+            case ``reached_ip`` is omitted.
+
+        Raises:
+            ToolError: If neither the paused event nor ``status`` ever
+                showed the debugger leaving its running state within the
+                verification window.
+        """
+        _logger.debug("x64dbg_command_queued", command="RunToParty", party=party)
+        observed, rpc_available = await self._await_run_completion(f"RunToParty {party}", expected_running=True)
+        if not rpc_available:
+            return {"success": True, "party": party, "verified": False}
+        if observed is False:
+            msg = f"run_to_party verification failed: debugger never entered running state after RunToParty {party} within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "party": party,
+                    "expected_running": True,
+                    "observed_running": False,
+                },
+            )
+        regs = await self.get_registers()
+        ip = regs.rip if self._is_64bit else regs.rip & DWORD_MASK
+        return {"success": True, "party": party, "reached_ip": hex(ip), "verified": True}
+
+    async def step_into_user_code(self) -> int:
+        """Step into repeatedly until reaching a user-module instruction.
+
+        Queues ``StepUser`` (alias ``StepUserInto``) and confirms it
+        settled via :meth:`_await_run_completion`, which races the
+        plugin's ``paused`` event against a ``status`` poll so a step
+        sequence that completes faster than one poll interval is still
+        caught instead of being misreported as never having started.
+        Unlike :meth:`step_into`, which dispatches the plugin's dedicated
+        ``step_into`` pipe RPC, ``StepUser`` has no such RPC and is sent
+        as a raw console command.
+
+        Returns:
+            int: The instruction pointer once the debugger paused in
+            user-module code, masked to 32 bits when the target is not
+            64-bit.
+
+        Raises:
+            ToolError: If neither the paused event nor ``status`` ever
+                showed the debugger leaving its running state within the
+                verification window.
+        """
+        _logger.debug("x64dbg_command_queued", command="StepUser")
+        observed, rpc_available = await self._await_run_completion("StepUser", expected_running=True)
+        if rpc_available and observed is False:
+            msg = f"step_into_user_code verification failed: debugger never entered running state within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_TIMEOUT},
+            )
+        regs = await self.get_registers()
+        return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
+
+    async def step_into_system_code(self) -> int:
+        """Step into repeatedly until reaching a system-module instruction.
+
+        Queues ``StepSystem`` (alias ``StepSystemInto``) and confirms it
+        settled via :meth:`_await_run_completion`, exactly as
+        :meth:`step_into_user_code` does for ``StepUser``.
+
+        Returns:
+            int: The instruction pointer once the debugger paused in
+            system-module code, masked to 32 bits when the target is not
+            64-bit.
+
+        Raises:
+            ToolError: If neither the paused event nor ``status`` ever
+                showed the debugger leaving its running state within the
+                verification window.
+        """
+        _logger.debug("x64dbg_command_queued", command="StepSystem")
+        observed, rpc_available = await self._await_run_completion("StepSystem", expected_running=True)
+        if rpc_available and observed is False:
+            msg = f"step_into_system_code verification failed: debugger never entered running state within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_TIMEOUT},
+            )
+        regs = await self.get_registers()
+        return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
+
+    async def step_extended(
+        self,
+        step_type: Literal["into", "over", "out"] = "into",
+        exception_mode: Literal["pass", "swallow"] = "pass",
+        count: int = 1,
+    ) -> int:
+        """Single-step with exception-passthrough control.
+
+        ``exception_mode="pass"`` queues ``eStepInto``/``eStepOver``/
+        ``eStepOut``, which forward first-chance exceptions directly to
+        the debuggee instead of letting the debugger intercept them.
+        ``exception_mode="swallow"`` queues ``seStepInto``/``seStepOver``,
+        which additionally suppress exception dispatching in the
+        debuggee; x64dbg has no ``seStepOut`` command, so combining
+        ``step_type="out"`` with ``exception_mode="swallow"`` is rejected
+        rather than silently substituting a different command.
+        Settlement is confirmed via :meth:`_await_run_completion` exactly
+        as :meth:`step_into_user_code` does.
+
+        Args:
+            step_type: Step direction - ``into``, ``over``, or ``out``.
+            exception_mode: ``pass`` forwards first-chance exceptions to
+                the debuggee; ``swallow`` suppresses them (unsupported
+                for ``step_type="out"``).
+            count: Number of steps to take.
+
+        Returns:
+            int: The instruction pointer after stepping, masked to 32
+            bits when the target is not 64-bit.
+
+        Raises:
+            ToolError: If ``step_type="out"`` is combined with
+                ``exception_mode="swallow"`` (x64dbg has no ``seStepOut``
+                command), or if neither the paused event nor ``status``
+                ever showed the debugger leaving its running state within
+                the verification window.
+        """
+        cmd = _STEP_EXTENDED_COMMANDS.get((step_type, exception_mode))
+        if cmd is None:
+            msg = "x64dbg has no seStepOut command; use exception_mode='pass' for step_type='out'"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"step_type": step_type, "exception_mode": exception_mode},
+            )
+        _logger.debug("x64dbg_command_queued", command=cmd, count=count)
+        observed, rpc_available = await self._await_run_completion(f"{cmd} {count}", expected_running=True)
+        if rpc_available and observed is False:
+            msg = f"step_extended verification failed: debugger never entered running state after {cmd} within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "step_type": step_type,
+                    "exception_mode": exception_mode,
+                    "count": count,
+                },
+            )
+        regs = await self.get_registers()
+        return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
+
     async def _lookup_annotation_text(self, rpc: str, address: int) -> str | None:
         """Read the label/comment text at ``address`` via the given list RPC.
 
@@ -7024,6 +7523,35 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
             "new_ip": hex(new_ip),
             "skipped_bytes": instr_len,
         }
+
+    async def instr_undo(self) -> dict[str, Any]:
+        """Reverse the most recently stepped instruction.
+
+        Queues ``InstrUndo``, which reverts CPU/memory state
+        instantaneously while the debugger remains paused - it never
+        resumes execution, so unlike :meth:`run_to_user_code` and its
+        siblings this does not wait on :meth:`_await_run_completion`
+        (no new paused event will ever fire since the debugger never
+        left the paused state). x64dbg only keeps one instruction of
+        undo history, and clears it on any run/step-over/trace, so this
+        only succeeds immediately after a genuine single step.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``old_ip`` (hex
+            string of the instruction pointer observed before the undo),
+            and ``new_ip`` (hex string observed after). x64dbg's own
+            documented failure when no instruction has been stepped yet
+            (or the undo history was cleared by an intervening
+            run/step-over/trace) surfaces as a ``ToolError`` propagated
+            unchanged from the underlying pipe command.
+        """
+        _logger.debug("x64dbg_command_queued", command="InstrUndo")
+        regs_before = await self.get_registers()
+        old_ip = regs_before.rip if self._is_64bit else regs_before.rip & DWORD_MASK
+        await self._send_command("InstrUndo")
+        regs_after = await self.get_registers()
+        new_ip = regs_after.rip if self._is_64bit else regs_after.rip & DWORD_MASK
+        return {"success": True, "old_ip": hex(old_ip), "new_ip": hex(new_ip)}
 
     async def set_ip(self, address: int) -> dict[str, Any]:
         """Set the instruction pointer to a specific address.
