@@ -878,6 +878,144 @@ class TestESILConsoleTabEmulateAndSetPcL3:
 
 
 @pytest.mark.usefixtures("qapp")
+class TestEsilInitState:
+    """L1/L2/L3 gate: ESIL VM state initialization (rizin 'aei') is distinct from memory init (rizin 'aeim').
+
+    Falsified by: aliasing ``esil_init_state`` to issue "aeim" instead of "aei" turns both
+    assertions below red immediately, because each asserts the negative (the sibling command must
+    NOT appear) in addition to the positive.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_aei_not_aeim(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``esil_init_state`` must issue rizin's 'aei', not the memory-init 'aeim'.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        result = await bridge_with_recorder.esil_init_state()
+        assert "aei" in recorder.commands
+        assert "aeim" not in recorder.commands
+        assert result is True
+
+    @staticmethod
+    def test_init_vm_button_issues_aei(qapp: QApplication) -> None:
+        """Clicking "Init VM" must issue rizin's 'aei', distinct from "Init Mem"'s 'aeim'.
+
+        Falsifiable: if ``_on_init_state`` called ``esil_init_memory`` instead of
+        ``esil_init_state`` (or vice versa), 'aei' would never appear in the recorder while 'aeim'
+        would appear instead. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.esil_init_state(), ...)`` call in
+        ``ESILConsoleTab._on_init_state`` (``cutter_tabs.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        tab = ESILConsoleTab()
+        tab.refresh(bridge, _no_op_run_async)
+        assert _pump_until(qapp, lambda: "aeim" in recorder.commands)
+        recorder.commands.clear()
+        on_init_state = cast(Callable[[], None], getattr(tab, "_on_init_state"))
+
+        on_init_state()
+
+        assert _pump_until(qapp, lambda: "aei" in recorder.commands)
+        assert "aeim" not in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
+class TestEsilStepUntil:
+    """L1/L2/L3 gate: ESIL step-until by address (rizin 'aesu') or expression (rizin 'aesue') must be real and reachable.
+
+    Falsified by: removing the mutual-exclusion guard makes both
+    ``test_rejects_both_none``/``test_rejects_both_given`` red (no exception raised). Swapping the
+    two command strings between branches makes
+    ``test_address_mode_issues_aesu``/``test_expression_mode_issues_aesue`` red immediately.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_address_mode_issues_aesu(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``esil_step_until(address=...)`` must issue rizin's 'aesu <addr>'.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        await bridge_with_recorder.esil_step_until(address=0x401000)
+        assert "aesu 0x401000" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_expression_mode_issues_aesue(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``esil_step_until(expression=...)`` must issue rizin's 'aesue <expr>'.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        await bridge_with_recorder.esil_step_until(expression="rax,0x10,==")
+        assert "aesue rax,0x10,==" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_rejects_both_none(bridge_with_recorder: CutterBridge) -> None:
+        """``esil_step_until`` with neither ``address`` nor ``expression`` must raise ``ToolError``.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+        """
+        with pytest.raises(ToolError):
+            await bridge_with_recorder.esil_step_until()
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_rejects_both_given(bridge_with_recorder: CutterBridge) -> None:
+        """``esil_step_until`` with both ``address`` and ``expression`` must raise ``ToolError``.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+        """
+        with pytest.raises(ToolError):
+            await bridge_with_recorder.esil_step_until(address=0x401000, expression="rax,0x10,==")
+
+    @staticmethod
+    def test_step_until_address_mode_issues_aesu(qapp: QApplication) -> None:
+        """Selecting address mode and clicking "Step Until" must issue rizin's 'aesu <addr>'.
+
+        Falsifiable: if ``_on_step_until`` never called
+        ``self._bridge.esil_step_until(address=...)``, 'aesu 0x401000' would never appear in the
+        recorder. Broken production line: the ``run_bridge_coroutine_logged(coro, ...)`` call in
+        ``ESILConsoleTab._on_step_until`` (``cutter_tabs.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        tab = ESILConsoleTab()
+        tab.refresh(bridge, _no_op_run_async)
+        assert _pump_until(qapp, lambda: "aeim" in recorder.commands)
+        recorder.commands.clear()
+        mode_combo = priv(tab, "_until_mode_combo", QComboBox)
+        target_input = priv(tab, "_until_target_input", QLineEdit)
+        on_step_until = cast(Callable[[], None], getattr(tab, "_on_step_until"))
+        mode_combo.setCurrentText("address")
+        target_input.setText("0x401000")
+
+        on_step_until()
+
+        assert _pump_until(qapp, lambda: "aesu 0x401000" in recorder.commands)
+        assert "aesu 0x401000" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
 class TestFlagsTabAddAndResolveL3:
     """L3 gate: rows 42/43 (add flag / resolve flag) -- must invoke the real bridge methods."""
 
