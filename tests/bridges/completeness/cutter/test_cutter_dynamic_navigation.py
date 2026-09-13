@@ -32,6 +32,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Callable, Coroutine
+from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast
 
 import pytest
@@ -55,8 +56,6 @@ from tests.bridges.completeness.cutter.conftest import CommandRecorder, as_r2pip
 
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from PyQt6.QtWidgets import QApplication
 
 
@@ -634,24 +633,53 @@ class TestDebuggerTabRegionsThreadsModules:
         assert _item_text(modules_table, 0, 1) == f"0x{1996488704:X}"
 
 
+class _SideEffectingSaveRecorder(CommandRecorder):
+    """Command recorder that mimics rizin's real ``Ps <path>`` on-disk file-write side effect.
+
+    ``CutterBridge.save_project`` issues ``Ps <path>`` against a real rizin process and then verifies the project file actually landed on
+    disk, because rizin's ``Ps`` silently no-ops on some failure modes instead of reporting an error through its command output. The base
+    :class:`CommandRecorder` only records the command string and returns a canned response -- it never touches the filesystem -- so a save
+    driven against it alone would always fail that disk-existence check. This subclass stays faithful to the real external tool by writing
+    the target file whenever it sees a ``Ps <path>`` command, so the verification step it feeds exercises genuine on-disk behaviour instead
+    of vacuously failing or being bypassed.
+    """
+
+    def cmd(self, command: str) -> str:
+        """Record ``command``, write the real project file for ``Ps <path>``, and return the canned response.
+
+        Args:
+            command: The r2 command string issued by the bridge.
+
+        Returns:
+            str: The response produced by :meth:`CommandRecorder.cmd`.
+        """
+        response = super().cmd(command)
+        if command.startswith("Ps "):
+            Path(command.removeprefix("Ps ")).write_bytes(b"")
+        return response
+
+
 @pytest.mark.usefixtures("qapp")
 class TestProjectTabSaveOpenList:
     """L3 gate: rows 43-45 -- Save/Open/Refresh project controls."""
 
     @staticmethod
-    def test_save_button_issues_ps_command_and_refreshes_list(qapp: QApplication) -> None:
-        """Clicking Save with a project name must issue rizin's ``Ps <name>`` and then re-list projects.
+    def test_save_button_issues_ps_command_and_refreshes_list(qapp: QApplication, tmp_path: Path) -> None:
+        """Clicking Save must issue rizin's fully-qualified ``Ps <dir>/<name>.rzdb`` and then re-list real projects.
 
-        Falsifiable: if ``_on_save`` never called
-        ``self._bridge.save_project``, 'Ps license_analysis' would never be
-        recorded. Broken production line: the
-        ``run_bridge_coroutine_logged(self._bridge.save_project(name), ...)``
-        call in ``ProjectTab._on_save`` (``cutter_project_tab.py``).
+        Falsifiable: if ``_on_save`` never called ``self._bridge.save_project``, the fully-qualified ``Ps`` command below would never be
+        recorded. Broken production line: the ``run_bridge_coroutine_logged(self._bridge.save_project(name), ...)`` call in
+        ``ProjectTab._on_save`` (``cutter_project_tab.py``). This also falsifies ``CutterBridge.save_project`` itself (``cutter.py``): it
+        resolves ``dir.projects`` to a real directory and builds an explicit ``<dir>/<name>.rzdb`` path rather than the bare ``Ps <name>``
+        rizin no longer accepts, then verifies that exact file exists on disk before reporting success --
+        :class:`_SideEffectingSaveRecorder` mimics that real disk write so the verification step is genuinely exercised rather than
+        trivially satisfied by a double that never touches the filesystem.
 
         Args:
             qapp: Qt application fixture used to pump the event loop.
+            tmp_path: Pytest-managed temporary directory used as the real ``dir.projects`` rizin project storage location.
         """
-        recorder = CommandRecorder({"Ps license_analysis": "", "Pl": "license_analysis\n"})
+        recorder = _SideEffectingSaveRecorder({"e dir.projects": str(tmp_path)})
         bridge = CutterBridge()
         bridge.r2 = as_r2pipe(recorder)
 
@@ -664,9 +692,9 @@ class TestProjectTabSaveOpenList:
 
         on_save()
 
-        assert _pump_until(qapp, lambda: "Ps license_analysis" in recorder.commands)
-        assert "Ps license_analysis" in recorder.commands
-        assert _pump_until(qapp, lambda: "Pl" in recorder.commands)
+        expected_path = tmp_path / "license_analysis.rzdb"
+        assert _pump_until(qapp, lambda: f"Ps {expected_path}" in recorder.commands)
+        assert f"Ps {expected_path}" in recorder.commands
         assert _pump_until(qapp, lambda: project_list.count() > 0)
         assert _list_item_text(project_list, 0) == "license_analysis"
 
@@ -699,17 +727,21 @@ class TestProjectTabSaveOpenList:
         assert _pump_until(qapp, lambda: status_label.text() == "Opened project 'license_analysis'")
 
     @staticmethod
-    def test_refresh_lists_real_multiple_projects(qapp: QApplication) -> None:
-        """Refresh must issue rizin's ``Pl`` and split its multi-line text output into real list entries.
+    def test_refresh_lists_real_multiple_projects(qapp: QApplication, tmp_path: Path) -> None:
+        """Refresh must scan the real ``dir.projects`` directory and list every real ``.rzdb`` file found there.
 
-        Falsifiable: if ``_on_refresh`` never called
-        ``self._bridge.list_projects()`` or mis-parsed its line-based
-        output, the list widget would not contain both real project names.
+        Falsifiable: if ``CutterBridge.list_projects`` mis-scanned or mis-parsed the directory (it no longer issues rizin's withdrawn
+        ``Pl`` command at all -- only ``_list_rzdb_project_names``'s ``*.rzdb`` glob over the ``_resolve_projects_dir``-resolved directory,
+        both in ``cutter.py``), or ``ProjectTab._on_refresh`` failed to dispatch ``list_projects`` at all, the list widget would not end up
+        containing both real project names pre-created on disk below.
 
         Args:
             qapp: Qt application fixture used to pump the event loop.
+            tmp_path: Pytest-managed temporary directory used as the real ``dir.projects`` rizin project storage location.
         """
-        recorder = CommandRecorder({"Pl": "alpha_target\nbeta_target\n"})
+        (tmp_path / "alpha_target.rzdb").write_bytes(b"")
+        (tmp_path / "beta_target.rzdb").write_bytes(b"")
+        recorder = CommandRecorder({"e dir.projects": str(tmp_path)})
         bridge = CutterBridge()
         bridge.r2 = as_r2pipe(recorder)
 
@@ -722,16 +754,19 @@ class TestProjectTabSaveOpenList:
         assert names == {"alpha_target", "beta_target"}
 
     @staticmethod
-    def test_double_click_project_opens_it(qapp: QApplication) -> None:
-        """Double-clicking a listed project must open it via the real bridge call.
+    def test_double_click_project_opens_it(qapp: QApplication, tmp_path: Path) -> None:
+        """Double-clicking a real listed project must open it via rizin's ``Po <name>``.
 
-        Falsifiable: if ``_on_item_double_clicked`` never invoked
-        ``_open_project``, 'Po beta_target' would never be recorded.
+        Falsifiable: if ``_on_item_double_clicked`` never invoked ``_open_project``, 'Po beta_target' would never be recorded. The listed
+        entry itself comes from a real ``beta_target.rzdb`` file pre-created on disk below and discovered by the same directory-scan
+        ``CutterBridge.list_projects`` uses in production, not from the withdrawn ``Pl`` command the old version of this test asserted.
 
         Args:
             qapp: Qt application fixture used to pump the event loop.
+            tmp_path: Pytest-managed temporary directory used as the real ``dir.projects`` rizin project storage location.
         """
-        recorder = CommandRecorder({"Pl": "beta_target\n", "Po beta_target": ""})
+        (tmp_path / "beta_target.rzdb").write_bytes(b"")
+        recorder = CommandRecorder({"e dir.projects": str(tmp_path), "Po beta_target": ""})
         bridge = CutterBridge()
         bridge.r2 = as_r2pipe(recorder)
 
