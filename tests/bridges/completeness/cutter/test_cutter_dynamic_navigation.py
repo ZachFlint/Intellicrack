@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast
 
 import pytest
+from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import (
     QComboBox,
     QInputDialog,
@@ -46,11 +47,13 @@ from PyQt6.QtWidgets import (
     QPlainTextEdit,
     QTableWidget,
     QTableWidgetItem,
+    QTreeWidget,
 )
 
 from intellicrack.bridges.cutter import CutterBridge
 from intellicrack.core.types import ToolError
 from intellicrack.ui.panels.cutter_debugger_tab import DebuggerTab
+from intellicrack.ui.panels.cutter_panel import CutterPanel
 from intellicrack.ui.panels.cutter_project_tab import ProjectTab
 from intellicrack.ui.panels.cutter_search_tab import SearchTab
 from intellicrack.ui.panels.cutter_tabs import FlagsTab
@@ -1688,3 +1691,341 @@ class TestFlagspaceManagement:
         assert "fslj" in recorder.commands
         assert combo.itemText(0) == "sections"
         assert combo.itemText(1) == "my_space"
+
+
+@pytest.mark.usefixtures("qapp")
+class TestAddXref:
+    """L1/L2/L3 gate: manually adding a cross-reference (rizin 'axc'/'axC'/'axd') must be real and reachable.
+
+    Falsifiable: each L1 test below asserts a distinct exact command for a
+    distinct ``xref_type`` branch, so confusing ``axc``/``axC``/``axd`` with
+    one another, or dropping the mandatory seek-first step, is caught by a
+    specific assertion rather than a generic "some ax command ran" check.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_code_xref_seeks_then_issues_axc(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``add_xref`` with the default "code" type must seek to ``from_address``, then issue 'axc <to_address>'.
+
+        Args:
+            bridge_with_recorder: Real bridge wired to the recorder fixture.
+            recorder: Command recorder backing the bridge's r2 pipe.
+        """
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+        await bridge_with_recorder.add_xref(0x401000, 0x402000, "code")
+        assert recorder.commands == ["s 4198400", "axc 4202496"]
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_call_xref_issues_call_type_command(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``add_xref`` with ``xref_type="call"`` must issue the call-specific 'axC', not generic 'axc'.
+
+        Args:
+            bridge_with_recorder: Real bridge wired to the recorder fixture.
+            recorder: Command recorder backing the bridge's r2 pipe.
+        """
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+        await bridge_with_recorder.add_xref(0x401000, 0x402000, "call")
+        assert "axC 4202496" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_data_xref_issues_axd(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``add_xref`` with ``xref_type="data"`` must issue 'axd'.
+
+        Args:
+            bridge_with_recorder: Real bridge wired to the recorder fixture.
+            recorder: Command recorder backing the bridge's r2 pipe.
+        """
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+        await bridge_with_recorder.add_xref(0x401000, 0x402000, "data")
+        assert "axd 4202496" in recorder.commands
+
+    @staticmethod
+    def test_context_menu_add_call_xref_issues_call_type_command(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Triggering the XRefs context menu's "Add Call Xref..." action must issue 'axC' for the viewed address.
+
+        Drives the real ``_ctx_add_xref`` handler with ``QInputDialog.getText``
+        patched to supply a deterministic target address instead of blocking
+        on a real modal dialog.
+
+        Falsifiable: if ``_ctx_add_xref`` never called
+        ``self._bridge.add_xref(from_address, to_address, xref_type)``,
+        'axC 4202496' would never appear in the recorder. Broken production
+        line: the ``run_bridge_coroutine_logged(self._bridge.add_xref(...), ...)``
+        call in ``CutterPanel._ctx_add_xref`` (``cutter_panel.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+            monkeypatch: Pytest monkeypatch fixture used to stub the modal
+                ``QInputDialog.getText`` prompt with a deterministic response.
+        """
+        recorder = CommandRecorder({
+            "axtj @ 4198400": "[]",
+            "axfj @ 4198400": "[]",
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        asyncio.run(bridge.analyze("quick"))
+        recorder.commands.clear()
+
+        def fake_get_text(*_args: object, **_kwargs: object) -> tuple[str, bool]:
+            """Return a deterministic ("0x402000", True) response for ``QInputDialog.getText``.
+
+            Args:
+                *_args: Ignored positional arguments Qt would pass.
+                **_kwargs: Ignored keyword arguments Qt would pass.
+
+            Returns:
+                tuple[str, bool]: The scripted response.
+            """
+            return ("0x402000", True)
+
+        monkeypatch.setattr(QInputDialog, "getText", staticmethod(fake_get_text))
+
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        show_xrefs = cast(Callable[[int], None], getattr(panel, "_show_xrefs"))
+        show_xrefs(0x401000)
+        ctx_add_xref = cast(Callable[[str], None], getattr(panel, "_ctx_add_xref"))
+
+        ctx_add_xref("call")
+
+        assert _pump_until(qapp, lambda: "axC 4202496" in recorder.commands)
+        assert "axC 4202496" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
+class TestRemoveXref:
+    """L1/L2/L3 gate: removing a cross-reference (rizin 'ax-') must be real and reachable.
+
+    Falsifiable: the scoped-removal test asserts the exact two-argument
+    command string, so dropping ``from_address`` from the issued command
+    when it was supplied is caught directly rather than by a looser
+    "some ax- command ran" check.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_removes_all_xrefs_to_address(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``remove_xref`` with no ``from_address`` must issue the unscoped rizin 'ax- <to_address>'.
+
+        Args:
+            bridge_with_recorder: Real bridge wired to the recorder fixture.
+            recorder: Command recorder backing the bridge's r2 pipe.
+        """
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+        await bridge_with_recorder.remove_xref(0x402000)
+        assert "ax- 4202496" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_removes_one_scoped_xref(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``remove_xref`` with ``from_address`` must issue the scoped rizin 'ax- <to_address> <from_address>'.
+
+        Args:
+            bridge_with_recorder: Real bridge wired to the recorder fixture.
+            recorder: Command recorder backing the bridge's r2 pipe.
+        """
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+        await bridge_with_recorder.remove_xref(0x402000, from_address=0x401000)
+        assert "ax- 4202496 4198400" in recorder.commands
+
+    @staticmethod
+    def test_context_menu_remove_to_row_issues_correctly_ordered_ax_dash(qapp: QApplication) -> None:
+        """Triggering "Remove This Xref" on a "To"-direction row must issue the correctly-ordered scoped 'ax-'.
+
+        Populates the XRefs tree with a real ``_show_xrefs`` call against a
+        recorder seeded with one "To"-direction xref, then drives
+        ``_ctx_remove_xref`` with the position of that row -- exercising the
+        real direction bookkeeping rather than asserting a fixed argument
+        order.
+
+        Falsifiable: if ``_ctx_remove_xref`` swapped ``to_address``/
+        ``from_address`` for the "To" direction branch, the recorder would
+        see 'ax- 4194304 4198400' instead of the asserted 'ax- 4198400
+        4194304'. Broken production line: the
+        ``if direction == "To": to_address, from_address = current, other_address``
+        branch in ``CutterPanel._ctx_remove_xref`` (``cutter_panel.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({
+            "axtj @ 4198400": '[{"from":4194304,"type":"CALL"}]',
+            "axfj @ 4198400": "[]",
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        asyncio.run(bridge.analyze("quick"))
+
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        show_xrefs = cast(Callable[[int], None], getattr(panel, "_show_xrefs"))
+        show_xrefs(0x401000)
+        xrefs_tree = cast(QTreeWidget, getattr(panel, "_xrefs_tree"))
+        # One real "To" row plus one "(no callees)" "From" placeholder row (the
+        # seeded "axfj" response is empty), so the tree settles at exactly two entries.
+        assert _pump_until(qapp, lambda: xrefs_tree.topLevelItemCount() == 2)
+        recorder.commands.clear()
+        to_item = None
+        for row in range(xrefs_tree.topLevelItemCount()):
+            candidate = xrefs_tree.topLevelItem(row)
+            if candidate is not None and candidate.text(0) == "To":
+                to_item = candidate
+                break
+        assert to_item is not None
+        row_center = xrefs_tree.visualItemRect(to_item).center()
+        ctx_remove_xref = cast(Callable[[QPoint], None], getattr(panel, "_ctx_remove_xref"))
+
+        ctx_remove_xref(row_center)
+
+        assert _pump_until(qapp, lambda: "ax- 4198400 4194304" in recorder.commands)
+        assert "ax- 4198400 4194304" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
+class TestSeekRelative:
+    """L1/L2/L3 gate: relative seek stepping (rizin 'sd') must be real and reachable.
+
+    Falsifiable: both L1 tests assert the exact signed delta in the issued
+    command, so a sign error (e.g. always issuing a positive delta) is
+    caught directly rather than by a looser "some sd command ran" check.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_sd_with_signed_delta() -> None:
+        """``seek_relative`` with a negative delta must issue rizin's 'sd -16'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        await bridge.seek_relative(-16)
+        assert "sd -16" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_sd_with_positive_delta() -> None:
+        """``seek_relative`` with a positive delta must issue rizin's 'sd 32'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        await bridge.seek_relative(32)
+        assert "sd 32" in recorder.commands
+
+    @staticmethod
+    def test_back_button_issues_sd_with_negated_delta(qapp: QApplication) -> None:
+        """Typing "16" and clicking the back button must issue rizin's 'sd -16', negating the typed delta.
+
+        Falsifiable: if ``_do_seek_relative`` ignored the ``negate`` flag (or
+        applied it to the wrong sign), 'sd -16' would never appear in the
+        recorder -- either the unnegated 'sd 16' would appear instead, or no
+        'sd' command at all. Broken production line: the
+        ``signed_delta = -delta if negate else delta`` line in
+        ``CutterPanel._do_seek_relative`` (``cutter_panel.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        seek_delta_input = cast(QLineEdit, getattr(panel, "_seek_delta_input"))
+        seek_delta_input.setText("16")
+        on_seek_relative_back = cast(Callable[[], None], getattr(panel, "_on_seek_relative_back"))
+
+        on_seek_relative_back()
+
+        assert _pump_until(qapp, lambda: "sd -16" in recorder.commands)
+        assert "sd -16" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
+class TestSeekHistory:
+    """L1/L2/L3 gate: seek-history navigation (rizin 'sh'/'shu'/'shr') must be real and reachable.
+
+    Falsifiable: ``test_seek_undo_issues_shu`` and ``test_seek_redo_issues_shr``
+    assert direction-specific exact command strings, so swapping the two
+    (undo issuing 'shr', redo issuing 'shu') fails both immediately rather
+    than being masked by a single generic "some history command ran" check.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_seek_history_issues_sh() -> None:
+        """``seek_history`` must issue rizin's 'sh' and return its raw listing text."""
+        recorder = CommandRecorder({"sh": "0x00001100\n0x00000080\n"})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        result = await bridge.seek_history()
+        assert "sh" in recorder.commands
+        assert "0x00001100" in result
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_seek_undo_issues_shu() -> None:
+        """``seek_undo`` must issue rizin's 'shu', not the redo command 'shr'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        await bridge.seek_undo()
+        assert "shu" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_seek_redo_issues_shr() -> None:
+        """``seek_redo`` must issue rizin's 'shr', not the undo command 'shu'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        await bridge.seek_redo()
+        assert "shr" in recorder.commands
+
+    @staticmethod
+    def test_back_button_issues_shu(qapp: QApplication) -> None:
+        """Clicking the "Back" history button must issue rizin's 'shu'.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        on_seek_undo = cast(Callable[[], None], getattr(panel, "_on_seek_undo"))
+
+        on_seek_undo()
+
+        assert _pump_until(qapp, lambda: "shu" in recorder.commands)
+        assert "shu" in recorder.commands
+
+    @staticmethod
+    def test_forward_button_issues_shr(qapp: QApplication) -> None:
+        """Clicking the "Forward" history button must issue rizin's 'shr'.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        on_seek_redo = cast(Callable[[], None], getattr(panel, "_on_seek_redo"))
+
+        on_seek_redo()
+
+        assert _pump_until(qapp, lambda: "shr" in recorder.commands)
+        assert "shr" in recorder.commands

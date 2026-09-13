@@ -793,6 +793,37 @@ def _build_tool_functions() -> list[ToolFunction]:
             "List of cross-references",
         ),
         _tf(
+            "add_xref",
+            "Manually add a cross-reference from one address to another (code, call, or data)",
+            [
+                _tp("from_address", "integer", "Source address (the xref origin; rizin seeks here first)"),
+                _tp("to_address", "integer", "Target address being referenced"),
+                _tp(
+                    "xref_type",
+                    "string",
+                    "Cross-reference kind",
+                    required=False,
+                    default="code",
+                    enum=["code", "call", "data"],
+                ),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "remove_xref",
+            "Remove a cross-reference to an address, optionally scoped to one specific source address",
+            [
+                _tp("to_address", "integer", "Target address whose xref(s) should be removed"),
+                _tp(
+                    "from_address",
+                    "integer",
+                    "Optional specific source address to limit removal to; when omitted, removes every xref to to_address",
+                    required=False,
+                ),
+            ],
+            "Success status",
+        ),
+        _tf(
             "search_strings",
             "Search for strings in the binary",
             [
@@ -886,6 +917,27 @@ def _build_tool_functions() -> list[ToolFunction]:
                 _tp("address", "integer", "Target address"),
             ],
             "Output of seek command",
+        ),
+        _tf(
+            "seek_relative",
+            "Seek to an address relative to the current offset by a signed byte delta (rizin 'sd')",
+            [
+                _tp("delta", "integer", "Signed byte offset relative to the current address (e.g. -16 or 32)"),
+            ],
+            "Output of seek command",
+        ),
+        _tf("seek_history", "List the recorded seek history", [], "Raw seek-history listing text"),
+        _tf(
+            "seek_undo",
+            "Move back one entry in the seek history (undo the last seek)",
+            [],
+            "Output of the seek-undo command",
+        ),
+        _tf(
+            "seek_redo",
+            "Move forward one entry in the seek history (redo the last undo)",
+            [],
+            "Output of the seek-redo command",
         ),
         _tf(
             "get_function_address",
@@ -2716,6 +2768,77 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
         _logger.debug("xrefs_from_queried", address=hex(address), result_count=len(result))
         return result
 
+    async def add_xref(
+        self,
+        from_address: int,
+        to_address: int,
+        xref_type: Literal["code", "call", "data"] = "code",
+    ) -> bool:
+        """Manually add a cross-reference from one address to another.
+
+        Seeks to ``from_address`` first because rizin's ``axc``/``axC``/``axd`` commands each add the cross-reference from the
+        current seek rather than from an explicit source-address argument.
+
+        Args:
+            from_address: Source address; the xref origin that rizin seeks to first.
+            to_address: Target address being referenced.
+            xref_type: Cross-reference kind -- "code" for a generic code xref (rizin 'axc'), "call" for a call-type xref (rizin
+                'axC'), or "data" for a data xref (rizin 'axd').
+
+        Returns:
+            bool: True if the cross-reference was added.
+
+        Raises:
+            ToolError: If no binary is loaded or the binary has not been analyzed.
+        """
+        if self._r2 is None:
+            _logger.warning("add_xref_without_binary", from_address=hex(from_address), to_address=hex(to_address))
+            raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            _logger.warning("add_xref_without_analysis", from_address=hex(from_address), to_address=hex(to_address))
+            raise ToolError(_ERR_NOT_ANALYZED)
+
+        xref_cmd_map: dict[str, str] = {"code": "axc", "call": "axC", "data": "axd"}
+        cmd = xref_cmd_map.get(xref_type, "axc")
+        await self._r2_cmd(f"s {from_address}")
+        await self._r2_cmd(f"{cmd} {to_address}")
+        _logger.info("xref_added", from_address=hex(from_address), to_address=hex(to_address), xref_type=xref_type)
+        return True
+
+    async def remove_xref(self, to_address: int, from_address: int | None = None) -> bool:
+        """Remove a cross-reference to an address, optionally scoped to one specific source address.
+
+        Uses rizin's 'ax-' command, which deletes every recorded xref to ``to_address`` unless
+        ``from_address`` is given, in which case only the single edge from ``from_address`` to
+        ``to_address`` is removed.
+
+        Args:
+            to_address: Target address whose xref(s) should be removed.
+            from_address: Optional specific source address to limit removal to; when omitted,
+                removes every xref to ``to_address``.
+
+        Returns:
+            bool: True if the removal command was issued.
+
+        Raises:
+            ToolError: If no binary is loaded or the binary has not been analyzed.
+        """
+        if self._r2 is None:
+            _logger.warning("remove_xref_without_binary", to_address=hex(to_address))
+            raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            _logger.warning("remove_xref_without_analysis", to_address=hex(to_address))
+            raise ToolError(_ERR_NOT_ANALYZED)
+
+        cmd = f"ax- {to_address} {from_address}" if from_address is not None else f"ax- {to_address}"
+        await self._r2_cmd(cmd)
+        _logger.info(
+            "xref_removed",
+            to_address=hex(to_address),
+            from_address=hex(from_address) if from_address is not None else None,
+        )
+        return True
+
     async def search_strings(self, pattern: str) -> list[StringInfo]:
         """Search for strings matching pattern.
 
@@ -3060,6 +3183,50 @@ class CutterCommandMixin(CutterEditingMixin):
         """
         _logger.debug("seek_to_address", address=hex(address))
         return await self.execute_command(f"s {address}")
+
+    async def seek_relative(self, delta: int) -> str:
+        """Seek to an address relative to the current offset by a signed byte delta.
+
+        Uses rizin's 'sd' command, which seeks by an explicit signed delta independent of the
+        session's configured block size -- unlike 's++'/'s--', which step by blocksize (a
+        session-configured value not directly controlled by the caller) and are therefore not
+        used here; 'sd' is the deterministic, scriptable choice for a caller-specified byte offset.
+
+        Args:
+            delta: Signed byte offset relative to the current address (e.g. -16 or 32).
+
+        Returns:
+            str: Output of the seek command.
+        """
+        _logger.debug("seek_relative_requested", delta=delta)
+        return await self.execute_command(f"sd {delta}")
+
+    async def seek_history(self) -> str:
+        """List the recorded seek history.
+
+        Returns:
+            str: Raw seek-history listing text from rizin ('sh').
+        """
+        _logger.debug("seek_history_requested")
+        return await self.execute_command("sh")
+
+    async def seek_undo(self) -> str:
+        """Move back one entry in the seek history (undo the last seek).
+
+        Returns:
+            str: Output of the seek-undo command.
+        """
+        _logger.debug("seek_undo_requested")
+        return await self.execute_command("shu")
+
+    async def seek_redo(self) -> str:
+        """Move forward one entry in the seek history (redo the last undo).
+
+        Returns:
+            str: Output of the seek-redo command.
+        """
+        _logger.debug("seek_redo_requested")
+        return await self.execute_command("shr")
 
     async def get_function_graph(self, address: int) -> list[dict[str, Any]]:
         """Get function control flow graph data for graph rendering.
