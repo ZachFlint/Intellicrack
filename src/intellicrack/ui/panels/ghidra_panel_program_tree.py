@@ -38,7 +38,24 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 _TREE_COLUMNS: Final[list[str]] = ["Name", "Type", "Range"]
-_OPERATIONS: Final[list[str]] = ["create_module", "create_fragment", "move_child"]
+_OPERATIONS: Final[list[str]] = ["create_module", "create_fragment", "move_child", "delete", "rename"]
+
+
+def _parse_address(text: str) -> int | None:
+    """Parse a hex or decimal address string.
+
+    Args:
+        text: Address string, optionally prefixed with '0x'.
+
+    Returns:
+        int | None: Parsed integer address, or None on failure.
+    """
+    try:
+        stripped = text.strip()
+        return int(stripped, 16) if stripped.startswith(("0x", "0X")) else int(stripped)
+    except (ValueError, TypeError):
+        _logger.warning("ghidra_program_tree_parse_address_invalid_input", input_text=text)
+        return None
 
 
 class ProgramTreeWidget(QWidget):
@@ -83,6 +100,19 @@ class ProgramTreeWidget(QWidget):
         set_header_labels(self._tree, _TREE_COLUMNS)
         layout.addWidget(self._tree)
 
+        create_row = QHBoxLayout()
+        new_tree_label = QLabel(self.tr("New tree name:"))
+        new_tree_label.setFont(fm.get_ui_font(9))
+        create_row.addWidget(new_tree_label)
+        self._new_tree_name_input = QLineEdit()
+        self._new_tree_name_input.setPlaceholderText("Program tree name")
+        create_row.addWidget(self._new_tree_name_input)
+        self._create_tree_btn = QPushButton(self.tr("Create Tree"))
+        self._create_tree_btn.setObjectName("tool_button")
+        self._create_tree_btn.clicked.connect(self._on_create_program_tree)
+        create_row.addWidget(self._create_tree_btn)
+        layout.addLayout(create_row)
+
         edit_title = QLabel(self.tr("Edit Program Tree"))
         edit_title.setFont(fm.get_ui_font_bold(9))
         layout.addWidget(edit_title)
@@ -118,11 +148,38 @@ class ProgramTreeWidget(QWidget):
         self._child_name_input.setPlaceholderText("Module/fragment to create or move")
         edit_row2.addWidget(self._child_name_input)
 
+        new_name_label = QLabel(self.tr("New name:"))
+        new_name_label.setFont(fm.get_ui_font(9))
+        edit_row2.addWidget(new_name_label)
+        self._new_name_input = QLineEdit()
+        self._new_name_input.setPlaceholderText("New name (rename only)")
+        edit_row2.addWidget(self._new_name_input)
+
         self._apply_btn = QPushButton(self.tr("Apply"))
         self._apply_btn.setObjectName("tool_button")
         self._apply_btn.clicked.connect(self._on_edit_tree)
         edit_row2.addWidget(self._apply_btn)
         layout.addLayout(edit_row2)
+
+        assign_title = QLabel(self.tr("Assign Code-Unit Range to Fragment"))
+        assign_title.setFont(fm.get_ui_font_bold(9))
+        layout.addWidget(assign_title)
+
+        assign_row = QHBoxLayout()
+        self._assign_fragment_input = QLineEdit()
+        self._assign_fragment_input.setPlaceholderText("Fragment name")
+        assign_row.addWidget(self._assign_fragment_input)
+        self._assign_start_input = QLineEdit()
+        self._assign_start_input.setPlaceholderText("Start (hex)")
+        assign_row.addWidget(self._assign_start_input)
+        self._assign_end_input = QLineEdit()
+        self._assign_end_input.setPlaceholderText("End (hex)")
+        assign_row.addWidget(self._assign_end_input)
+        self._assign_btn = QPushButton(self.tr("Assign Range"))
+        self._assign_btn.setObjectName("tool_button")
+        self._assign_btn.clicked.connect(self._on_assign_fragment_range)
+        assign_row.addWidget(self._assign_btn)
+        layout.addLayout(assign_row)
 
         self._result_view = QPlainTextEdit()
         self._result_view.setReadOnly(True)
@@ -222,6 +279,62 @@ class ProgramTreeWidget(QWidget):
         self._result_view.setPlainText(f"Error: {exc}")
         _logger.warning("ghidra_get_program_tree_gui_failed", error=str(exc))
 
+    def _on_create_program_tree(self) -> None:
+        """Create an additional named program tree via ``GhidraBridge.create_program_tree``."""
+        if self._bridge is None:
+            self._result_view.setPlainText("No bridge configured")
+            return
+        if not self._bridge.state.is_ready():
+            self._result_view.setPlainText("Ghidra not connected")
+            return
+        tree_name = self._new_tree_name_input.text().strip()
+        if not tree_name:
+            self._result_view.setPlainText("New tree name required")
+            return
+        self._create_tree_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.create_program_tree(tree_name),
+            on_success=self._apply_create_program_tree,
+            on_error=self._on_create_program_tree_error,
+            parent=self,
+            event="ghidra_create_program_tree",
+            logger=_logger,
+            level="info",
+            tree_name=tree_name,
+        )
+
+    def _apply_create_program_tree(self, result: object) -> None:
+        """Render the result of a successful program tree creation and refresh the view.
+
+        Args:
+            result: Dict with tree_name, root_name, and success from the
+                bridge.
+        """
+        self._create_tree_btn.setEnabled(True)
+        if not isinstance(result, dict):
+            self._result_view.setPlainText(str(result))
+            return
+
+        info = cast("dict[str, Any]", result)
+        if not info.get("success", False):
+            self._result_view.setPlainText(f"Create tree failed for '{info.get('tree_name', '')}'")
+            return
+
+        self._result_view.setPlainText(
+            f"Created tree '{info.get('tree_name', '')}' (root '{info.get('root_name', '')}')",
+        )
+        self._on_refresh_tree()
+
+    def _on_create_program_tree_error(self, exc: object) -> None:
+        """Handle program tree creation failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._create_tree_btn.setEnabled(True)
+        self._result_view.setPlainText(f"Error: {exc}")
+        _logger.warning("ghidra_create_program_tree_gui_failed", error=str(exc))
+
     def _on_edit_tree(self) -> None:
         """Create or move a module/fragment via ``GhidraBridge.edit_program_tree``."""
         if self._bridge is None:
@@ -244,10 +357,11 @@ class ProgramTreeWidget(QWidget):
             self._result_view.setPlainText("Child name required")
             return
         operation = self._operation_combo.currentText()
+        new_name = self._new_name_input.text().strip() or None
 
         self._apply_btn.setEnabled(False)
         run_bridge_coroutine_logged(
-            self._bridge.edit_program_tree(tree_name, operation, parent_module, child_name),
+            self._bridge.edit_program_tree(tree_name, operation, parent_module, child_name, new_name),
             on_success=self._apply_edit_tree,
             on_error=self._on_edit_tree_error,
             parent=self,
@@ -258,6 +372,7 @@ class ProgramTreeWidget(QWidget):
             operation=operation,
             parent_module=parent_module,
             child_name=child_name,
+            new_name=new_name,
         )
 
     def _apply_edit_tree(self, result: object) -> None:
@@ -291,3 +406,76 @@ class ProgramTreeWidget(QWidget):
         self._apply_btn.setEnabled(True)
         self._result_view.setPlainText(f"Error: {exc}")
         _logger.warning("ghidra_edit_program_tree_gui_failed", error=str(exc))
+
+    def _on_assign_fragment_range(self) -> None:
+        """Move a code-unit address range into a fragment via ``GhidraBridge.assign_fragment_range``."""
+        if self._bridge is None:
+            self._result_view.setPlainText("No bridge configured")
+            return
+        if not self._bridge.state.is_ready():
+            self._result_view.setPlainText("Ghidra not connected")
+            return
+
+        tree_name = self._tree_name_input.text().strip()
+        if not tree_name:
+            self._result_view.setPlainText("Program tree name required")
+            return
+        fragment_name = self._assign_fragment_input.text().strip()
+        if not fragment_name:
+            self._result_view.setPlainText("Fragment name required")
+            return
+        start_address = _parse_address(self._assign_start_input.text())
+        if start_address is None:
+            self._result_view.setPlainText("Invalid start address")
+            return
+        end_address = _parse_address(self._assign_end_input.text())
+        if end_address is None:
+            self._result_view.setPlainText("Invalid end address")
+            return
+
+        self._assign_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.assign_fragment_range(tree_name, fragment_name, start_address, end_address),
+            on_success=self._apply_assign_fragment_range,
+            on_error=self._on_assign_fragment_range_error,
+            parent=self,
+            event="ghidra_assign_fragment_range",
+            logger=_logger,
+            level="info",
+            tree_name=tree_name,
+            fragment_name=fragment_name,
+            start_address=start_address,
+            end_address=end_address,
+        )
+
+    def _apply_assign_fragment_range(self, result: object) -> None:
+        """Render the result of a successful fragment-range assignment and refresh the view.
+
+        Args:
+            result: Dict with tree_name, fragment_name, start, end, and
+                success from the bridge.
+        """
+        self._assign_btn.setEnabled(True)
+        if not isinstance(result, dict):
+            self._result_view.setPlainText(str(result))
+            return
+
+        info = cast("dict[str, Any]", result)
+        if not info.get("success", False):
+            self._result_view.setPlainText(f"Assign range failed for '{info.get('fragment_name', '')}'")
+            return
+
+        self._result_view.setPlainText(
+            f"Assigned {info.get('start', '')}-{info.get('end', '')} to fragment '{info.get('fragment_name', '')}'",
+        )
+        self._on_refresh_tree()
+
+    def _on_assign_fragment_range_error(self, exc: object) -> None:
+        """Handle fragment-range assignment failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._assign_btn.setEnabled(True)
+        self._result_view.setPlainText(f"Error: {exc}")
+        _logger.warning("ghidra_assign_fragment_range_gui_failed", error=str(exc))
