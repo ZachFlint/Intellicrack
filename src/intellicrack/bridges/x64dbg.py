@@ -1744,6 +1744,14 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="List of labels",
                 ),
                 ToolFunction(
+                    name="x64dbg.delete_label",
+                    description="Delete the label at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address of the label to delete", required=True),
+                    ],
+                    returns="Dict with address, success, verified",
+                ),
+                ToolFunction(
                     name="x64dbg.set_comment",
                     description="Set a debug comment at an address in x64dbg",
                     parameters=[
@@ -7856,6 +7864,40 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
                     if start <= addr <= end:
                         labels.append({"address": addr_str, "text": text})
         return labels
+
+    async def delete_label(self, address: int) -> dict[str, Any]:
+        """Delete the label at an address and verify it is actually gone.
+
+        Mirrors :meth:`set_label`'s ``labeldel``-then-readback shape,
+        but asserts absence via :meth:`_lookup_label_text` (an empty
+        string means no label remains) rather than a matching value.
+
+        Args:
+            address: Address of the label to delete.
+
+        Returns:
+            dict[str, Any]: Dict with ``address``, ``success``, and
+            ``verified``. ``verified`` is ``True`` when the plugin
+            readback confirmed no label remains at ``address``;
+            ``False`` only when the plugin lacks ``lbl_list`` so a
+            readback cannot be performed.
+
+        Raises:
+            ToolError: If the readback still observes a label at
+                ``address`` after ``labeldel``.
+        """
+        await self._send_pipe_command("exec", {"command": f"labeldel {hex(address)}"})
+        observed = await self._lookup_label_text(address)
+        if observed is None:
+            return {"address": hex(address), "success": True, "verified": False}
+        if observed:
+            msg = f"delete_label verification failed: label at {hex(address)} is still {observed!r} after labeldel"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_REMOTE, "address": hex(address), "observed": observed},
+            )
+        return {"address": hex(address), "success": True, "verified": True}
 
     async def set_comment(self, address: int, text: str) -> dict[str, Any]:
         """Set a debug comment at an address and verify the comment was applied.
