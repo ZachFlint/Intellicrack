@@ -55,6 +55,7 @@ from intellicrack.ui.panels.frida_instrumentation_tab import (
     StalkerConfigControls,
     SymbolLookupControls,
     SystemFunctionCallControls,
+    TypedMemoryAccessControls,
 )
 from intellicrack.ui.panels.qt_compat import edit_table_item, set_max_block_count
 from intellicrack.ui.resources.font_manager import FontManager
@@ -665,6 +666,28 @@ class FridaPanel(AnalysisPanelBase):
         display_row.addStretch()
         layout.addLayout(display_row)
 
+        summary_title = QLabel("Call Summary Trace")
+        summary_title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(summary_title)
+
+        summary_btn_row = QHBoxLayout()
+        self._stalker_summary_start_btn = QPushButton("Start Summary")
+        self._stalker_summary_start_btn.setObjectName("tool_button")
+        self._stalker_summary_start_btn.clicked.connect(self._on_stalker_summary_start)
+        summary_btn_row.addWidget(self._stalker_summary_start_btn)
+        self._stalker_summary_stop_btn = QPushButton("Stop Summary")
+        self._stalker_summary_stop_btn.setObjectName("tool_button")
+        self._stalker_summary_stop_btn.setEnabled(False)
+        self._stalker_summary_stop_btn.clicked.connect(self._on_stalker_summary_stop)
+        summary_btn_row.addWidget(self._stalker_summary_stop_btn)
+        summary_btn_row.addStretch()
+        layout.addLayout(summary_btn_row)
+
+        self._stalker_summary_display = QPlainTextEdit()
+        self._stalker_summary_display.setReadOnly(True)
+        self._stalker_summary_display.setFont(FontManager.get_instance().get_code_font(9))
+        layout.addWidget(self._stalker_summary_display)
+
         self._stalker_call_probes = StalkerCallProbeControls()
         layout.addWidget(self._stalker_call_probes)
 
@@ -687,6 +710,7 @@ class FridaPanel(AnalysisPanelBase):
         self._stalker_config.set_bridge(bridge)
         self._mem_patch_string.set_bridge(bridge)
         self._instr_disasm.set_bridge(bridge)
+        self._typed_mem_access.set_bridge(bridge)
         self._sym_lookup_extras.set_bridge(bridge)
         self._syscall_controls.set_bridge(bridge)
         self._script_messaging.set_bridge(bridge)
@@ -2101,6 +2125,117 @@ class FridaPanel(AnalysisPanelBase):
             thread_id=thread_id,
         )
 
+    def _on_stalker_summary_start(self) -> None:
+        """Start Stalker call-summary tracing (aggregated call-target counts)."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+
+        tid_text = self._stalker_tid_input.text().strip()
+        thread_id: int | None = None
+        if tid_text:
+            try:
+                thread_id = int(tid_text)
+            except ValueError:
+                self._invalid_input(
+                    "frida_stalker_summary_start_invalid_tid",
+                    input_text=tid_text,
+                    console_msg=f"[-] Invalid thread ID: {tid_text}",
+                    logger=_logger,
+                )
+                return
+
+        self._stalker_summary_start_btn.setEnabled(False)
+        self._console.appendPlainText(f"[*] Starting Stalker call-summary trace (tid={thread_id or 'current'})")
+        run_bridge_coroutine_logged(
+            self._bridge.stalker_follow_call_summary(thread_id=thread_id),
+            on_success=self._on_stalker_summary_started,
+            on_error=self._on_stalker_summary_start_error,
+            parent=self,
+            event="frida_stalker_follow_call_summary",
+            logger=_logger,
+            level="info",
+            thread_id=thread_id,
+        )
+
+    def _on_stalker_summary_started(self, result: object) -> None:
+        """Handle successful Stalker call-summary trace start.
+
+        Args:
+            result: Trace ID from the bridge.
+        """
+        self._console.appendPlainText(f"[+] Stalker call-summary tracing started (trace_id={result})")
+        self._stalker_summary_start_btn.setEnabled(False)
+        self._stalker_summary_stop_btn.setEnabled(True)
+
+    def _on_stalker_summary_start_error(self, exc: object) -> None:
+        """Handle Stalker call-summary start failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Stalker call-summary start failed: {exc}")
+        _logger.warning("frida_stalker_summary_start_failed", error=str(exc))
+        self._stalker_summary_start_btn.setEnabled(True)
+
+    def _on_stalker_summary_stop(self) -> None:
+        """Stop Stalker call-summary tracing and display the aggregated counts."""
+        if self._bridge is None:
+            return
+
+        tid_text = self._stalker_tid_input.text().strip()
+        thread_id: int | None = None
+        if tid_text:
+            try:
+                thread_id = int(tid_text)
+            except ValueError:
+                self._console.appendPlainText(f"[-] Invalid thread ID: {tid_text}")
+                self._stalker_summary_stop_btn.setEnabled(True)
+                _logger.warning("frida_stalker_summary_stop_invalid_tid", tid_text=tid_text)
+                return
+
+        self._stalker_summary_stop_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.stalker_unfollow_call_summary(thread_id=thread_id),
+            on_success=self._on_stalker_summary_stopped,
+            on_error=self._on_stalker_summary_stop_error,
+            parent=self,
+            event="frida_stalker_unfollow_call_summary",
+            logger=_logger,
+            level="info",
+            thread_id=thread_id,
+        )
+
+    def _on_stalker_summary_stopped(self, result: object) -> None:
+        """Handle Stalker call-summary trace completion and display the aggregated counts.
+
+        Args:
+            result: StalkerCallSummary from the bridge.
+        """
+        raw_counts = getattr(result, "counts", {})
+        duration = getattr(result, "duration_ms", 0.0)
+        self._stalker_summary_display.clear()
+        target_count = 0
+        if isinstance(raw_counts, dict):
+            counts = cast("dict[str, int]", raw_counts)
+            target_count = len(counts)
+            for target, count in counts.items():
+                self._stalker_summary_display.appendPlainText(f"{target}: {count}")
+        self._console.appendPlainText(f"[+] Stalker call-summary trace complete: {target_count} targets in {duration:.1f}ms")
+        self._stalker_summary_start_btn.setEnabled(True)
+        self._stalker_summary_stop_btn.setEnabled(False)
+
+    def _on_stalker_summary_stop_error(self, exc: object) -> None:
+        """Handle Stalker call-summary stop failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Stalker call-summary stop failed: {exc}")
+        _logger.warning("frida_stalker_summary_stop_failed", error=str(exc))
+        self._stalker_summary_start_btn.setEnabled(True)
+        self._stalker_summary_stop_btn.setEnabled(False)
+
     def refresh_devices(self) -> None:
         """Refresh the device selector combo box."""
         if self._bridge is None:
@@ -2473,8 +2608,37 @@ class FridaPanel(AnalysisPanelBase):
         self._imports_btn.setObjectName("tool_button")
         self._imports_btn.clicked.connect(self._on_show_imports)
         detail_row.addWidget(self._imports_btn)
+        self._module_ranges_prot_combo = QComboBox()
+        self._module_ranges_prot_combo.addItems(_PROTECTIONS)
+        detail_row.addWidget(self._module_ranges_prot_combo)
+        self._module_ranges_btn = QPushButton("Ranges")
+        self._module_ranges_btn.setObjectName("tool_button")
+        self._module_ranges_btn.clicked.connect(self._on_show_module_ranges)
+        detail_row.addWidget(self._module_ranges_btn)
+        self._sections_btn = QPushButton("Sections")
+        self._sections_btn.setObjectName("tool_button")
+        self._sections_btn.clicked.connect(self._on_show_sections)
+        detail_row.addWidget(self._sections_btn)
+        self._dependencies_btn = QPushButton("Dependencies")
+        self._dependencies_btn.setObjectName("tool_button")
+        self._dependencies_btn.clicked.connect(self._on_show_dependencies)
+        detail_row.addWidget(self._dependencies_btn)
         detail_row.addStretch()
         layout.addLayout(detail_row)
+
+        find_export_row = QHBoxLayout()
+        find_export_row.addWidget(QLabel("Export name:"))
+        self._find_export_name_input = QLineEdit()
+        self._find_export_name_input.setPlaceholderText("CreateFileW")
+        find_export_row.addWidget(self._find_export_name_input)
+        self._find_export_btn = QPushButton("Find Export")
+        self._find_export_btn.setObjectName("tool_button")
+        self._find_export_btn.clicked.connect(self._on_find_export_by_name)
+        find_export_row.addWidget(self._find_export_btn)
+        self._find_export_result = QLabel("")
+        find_export_row.addWidget(self._find_export_result)
+        find_export_row.addStretch()
+        layout.addLayout(find_export_row)
 
         self._module_detail_tabs = QTabWidget()
         self._exports_table = QTableWidget(0, len(_EXPORT_COLUMNS))
@@ -2490,6 +2654,30 @@ class FridaPanel(AnalysisPanelBase):
         if imp_h is not None:
             imp_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self._module_detail_tabs.addTab(self._imports_table, "Imports")
+
+        self._module_ranges_table = QTableWidget(0, 3)
+        self._module_ranges_table.setHorizontalHeaderLabels(["Base", "Size", "Protection"])
+        mr_h = self._module_ranges_table.horizontalHeader()
+        if mr_h is not None:
+            mr_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._module_detail_tabs.addTab(self._module_ranges_table, "Ranges")
+
+        self._sections_table_index = self._module_detail_tabs.count()
+        self._sections_table = QTableWidget(0, 4)
+        self._sections_table.setHorizontalHeaderLabels(["ID", "Name", "Address", "Size"])
+        sec_h = self._sections_table.horizontalHeader()
+        if sec_h is not None:
+            sec_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._module_detail_tabs.addTab(self._sections_table, "Sections")
+
+        self._dependencies_table_index = self._module_detail_tabs.count()
+        self._dependencies_table = QTableWidget(0, 2)
+        self._dependencies_table.setHorizontalHeaderLabels(["Name", "Type"])
+        dep_h = self._dependencies_table.horizontalHeader()
+        if dep_h is not None:
+            dep_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._module_detail_tabs.addTab(self._dependencies_table, "Dependencies")
+
         self._configure_tab_overflow(self._module_detail_tabs)
         layout.addWidget(self._module_detail_tabs)
 
@@ -2689,6 +2877,134 @@ class FridaPanel(AnalysisPanelBase):
                 self._imports_table.setItem(row, 2, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
         self._module_detail_tabs.setCurrentIndex(1)
 
+    def _on_show_module_ranges(self) -> None:
+        """Show memory ranges for the selected module, filtered by protection."""
+        if self._bridge is None:
+            return
+        if module_name := self._module_combo.currentText():
+            run_bridge_coroutine_logged(
+                self._bridge.enumerate_module_ranges(module_name, self._module_ranges_prot_combo.currentText()),
+                on_success=self._populate_module_ranges_table,
+                on_error=lambda e: self._console.appendPlainText(f"[-] Module ranges failed: {e}"),
+                parent=self,
+                event="frida_enumerate_module_ranges",
+                logger=_logger,
+                module=module_name,
+            )
+        else:
+            return
+
+    def _populate_module_ranges_table(self, result: object) -> None:
+        """Populate the module ranges table from results.
+
+        Args:
+            result: List of MemoryRegion from the bridge.
+        """
+        self._module_ranges_table.setRowCount(0)
+        if isinstance(result, list):
+            for region in cast("list[object]", result):
+                base = getattr(region, "base_address", 0)
+                size = getattr(region, "size", 0)
+                protection = str(getattr(region, "protection", ""))
+                row = self._module_ranges_table.rowCount()
+                self._module_ranges_table.insertRow(row)
+                self._module_ranges_table.setItem(row, 0, QTableWidgetItem(f"0x{base:X}" if isinstance(base, int) else str(base)))
+                self._module_ranges_table.setItem(row, 1, QTableWidgetItem(str(size)))
+                self._module_ranges_table.setItem(row, 2, QTableWidgetItem(protection))
+        self._module_detail_tabs.setCurrentIndex(2)
+
+    def _on_show_sections(self) -> None:
+        """Show binary sections for the selected module."""
+        if self._bridge is None:
+            return
+        if module_name := self._module_combo.currentText():
+            run_bridge_coroutine_logged(
+                self._bridge.enumerate_module_sections(module_name),
+                on_success=self._populate_sections_table,
+                on_error=lambda e: self._console.appendPlainText(f"[-] Sections failed: {e}"),
+                parent=self,
+                event="frida_enumerate_module_sections",
+                logger=_logger,
+                module=module_name,
+            )
+        else:
+            return
+
+    def _populate_sections_table(self, result: object) -> None:
+        """Populate the sections table from results.
+
+        Args:
+            result: List of ModuleSectionInfo from the bridge.
+        """
+        self._sections_table.setRowCount(0)
+        if isinstance(result, list):
+            for section in cast("list[object]", result):
+                section_id = str(getattr(section, "id", ""))
+                name = str(getattr(section, "name", ""))
+                address = getattr(section, "address", 0)
+                size = getattr(section, "size", 0)
+                row = self._sections_table.rowCount()
+                self._sections_table.insertRow(row)
+                self._sections_table.setItem(row, 0, QTableWidgetItem(section_id))
+                self._sections_table.setItem(row, 1, QTableWidgetItem(name))
+                self._sections_table.setItem(row, 2, QTableWidgetItem(f"0x{address:X}" if isinstance(address, int) else str(address)))
+                self._sections_table.setItem(row, 3, QTableWidgetItem(str(size)))
+        self._module_detail_tabs.setCurrentIndex(self._sections_table_index)
+
+    def _on_show_dependencies(self) -> None:
+        """Show shared-library dependencies for the selected module."""
+        if self._bridge is None:
+            return
+        if module_name := self._module_combo.currentText():
+            run_bridge_coroutine_logged(
+                self._bridge.enumerate_module_dependencies(module_name),
+                on_success=self._populate_dependencies_table,
+                on_error=lambda e: self._console.appendPlainText(f"[-] Dependencies failed: {e}"),
+                parent=self,
+                event="frida_enumerate_module_dependencies",
+                logger=_logger,
+                module=module_name,
+            )
+        else:
+            return
+
+    def _populate_dependencies_table(self, result: object) -> None:
+        """Populate the dependencies table from results.
+
+        Args:
+            result: List of ModuleDependencyInfo from the bridge.
+        """
+        self._dependencies_table.setRowCount(0)
+        if isinstance(result, list):
+            for dependency in cast("list[object]", result):
+                name = str(getattr(dependency, "name", ""))
+                dep_type = str(getattr(dependency, "type", ""))
+                row = self._dependencies_table.rowCount()
+                self._dependencies_table.insertRow(row)
+                self._dependencies_table.setItem(row, 0, QTableWidgetItem(name))
+                self._dependencies_table.setItem(row, 1, QTableWidgetItem(dep_type))
+        self._module_detail_tabs.setCurrentIndex(self._dependencies_table_index)
+
+    def _on_find_export_by_name(self) -> None:
+        """Find a single export's address by name via ``find_export_by_name``."""
+        if self._bridge is None:
+            return
+        export_name = self._find_export_name_input.text().strip()
+        if not export_name:
+            self._console.appendPlainText("[!] Enter an export name")
+            return
+        module_name = self._module_combo.currentText().strip() or None
+        run_bridge_coroutine_logged(
+            self._bridge.find_export_by_name(export_name, module_name),
+            on_success=lambda r: self._find_export_result.setText(f"0x{r:X}" if isinstance(r, int) else "Not found"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Find export failed: {e}"),
+            parent=self,
+            event="frida_find_export_by_name",
+            logger=_logger,
+            export_name=export_name,
+            module=module_name,
+        )
+
     def _create_memory_section(self) -> QWidget:
         """Create the memory operations section.
 
@@ -2709,6 +3025,8 @@ class FridaPanel(AnalysisPanelBase):
         mem_tabs.addTab(self._mem_patch_string, "Patch / Alloc String")
         self._instr_disasm = InstructionDisassembleControls()
         mem_tabs.addTab(self._instr_disasm, "Disassemble")
+        self._typed_mem_access = TypedMemoryAccessControls()
+        mem_tabs.addTab(self._typed_mem_access, "Typed Read/Write")
         self._configure_tab_overflow(mem_tabs)
 
         layout.addWidget(mem_tabs)
