@@ -1771,3 +1771,140 @@ class CancellableControls(QWidget):
         self._cancel_btn.setEnabled(True)
         self._status_label.setText(f"Cancel failed: {exc}")
         _logger.warning("frida_cancel_failed", cancellable_id=cancellable_id, error=str(exc))
+
+
+class PrecompiledScriptControls(QWidget):
+    """Precompile-to-bytecode / load-from-bytecode controls for the Advanced section.
+
+    Exposes ``compile_script`` (``Session.compile_script`` - precompile source to bytecode without creating a script instance) and
+    ``load_compiled_script`` (``Session.create_script_from_bytes`` - create+load a persistent script from that bytecode), distinct from
+    the source-based Run Script flow in the main editor toolbar.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the precompiled-script controls.
+
+        Args:
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        self._bridge: FridaBridge | None = None
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        title = QLabel("Precompiled Script (bytecode)")
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(title)
+
+        source_row = QHBoxLayout()
+        source_row.addWidget(QLabel("Source:"))
+        self._source_input = QPlainTextEdit()
+        self._source_input.setPlaceholderText("// script source to precompile")
+        self._source_input.setMaximumHeight(_POST_MESSAGE_INPUT_MAX_HEIGHT)
+        source_row.addWidget(self._source_input)
+        self._compile_btn = QPushButton("Compile")
+        self._compile_btn.setObjectName("tool_button")
+        self._compile_btn.clicked.connect(self._on_compile_script)
+        source_row.addWidget(self._compile_btn)
+        layout.addLayout(source_row)
+
+        bytecode_row = QHBoxLayout()
+        bytecode_row.addWidget(QLabel("Bytecode:"))
+        self._bytecode_input = QLineEdit()
+        self._bytecode_input.setPlaceholderText("hex-encoded compiled bytecode")
+        bytecode_row.addWidget(self._bytecode_input)
+        self._load_compiled_btn = QPushButton("Load Compiled Script")
+        self._load_compiled_btn.setObjectName("tool_button")
+        self._load_compiled_btn.clicked.connect(self._on_load_compiled_script)
+        bytecode_row.addWidget(self._load_compiled_btn)
+        layout.addLayout(bytecode_row)
+
+        self._status_label = QLabel("")
+        layout.addWidget(self._status_label)
+
+    def set_bridge(self, bridge: FridaBridge) -> None:
+        """Set the FridaBridge instance used to compile and load precompiled scripts.
+
+        Args:
+            bridge: The FridaBridge to use.
+        """
+        self._bridge = bridge
+
+    def _on_compile_script(self) -> None:
+        """Precompile the entered script source to bytecode via ``compile_script``."""
+        if self._bridge is None:
+            self._status_label.setText("No bridge available")
+            _logger.warning("frida_compile_script_failed_no_bridge")
+            return
+        source = self._source_input.toPlainText().strip()
+        if not source:
+            self._status_label.setText("Enter script source to compile")
+            return
+        self._compile_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.compile_script(source),
+            on_success=self._on_compile_script_done,
+            on_error=lambda e: self._on_precompiled_script_error("Compile", e, self._compile_btn),
+            parent=self,
+            event="frida_compile_script",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_compile_script_done(self, result: object) -> None:
+        """Handle a successful script precompilation.
+
+        Args:
+            result: Hex-encoded bytecode returned by the bridge.
+        """
+        self._compile_btn.setEnabled(True)
+        bytecode_hex = str(result)
+        self._bytecode_input.setText(bytecode_hex)
+        self._status_label.setText(f"Compiled {len(bytecode_hex) // 2} bytes")
+        _logger.info("frida_script_compiled_via_gui", bytecode_length=len(bytecode_hex) // 2)
+
+    def _on_load_compiled_script(self) -> None:
+        """Create and load a persistent script from the entered bytecode via ``load_compiled_script``."""
+        if self._bridge is None:
+            self._status_label.setText("No bridge available")
+            _logger.warning("frida_load_compiled_script_failed_no_bridge")
+            return
+        bytecode_hex = self._bytecode_input.text().strip()
+        if not bytecode_hex:
+            self._status_label.setText("Enter (or compile) bytecode to load")
+            return
+        self._load_compiled_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.load_compiled_script(bytecode_hex),
+            on_success=self._on_load_compiled_script_done,
+            on_error=lambda e: self._on_precompiled_script_error("Load compiled script", e, self._load_compiled_btn),
+            parent=self,
+            event="frida_load_compiled_script",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_load_compiled_script_done(self, result: object) -> None:
+        """Handle a successful compiled-script load.
+
+        Args:
+            result: Script ID returned by the bridge.
+        """
+        self._load_compiled_btn.setEnabled(True)
+        script_id = str(result)
+        self._status_label.setText(f"Loaded script {script_id}")
+        _logger.info("frida_compiled_script_loaded_via_gui", script_id=script_id)
+
+    def _on_precompiled_script_error(self, operation: str, exc: object, button: QPushButton) -> None:
+        """Handle a precompiled-script operation failure.
+
+        Args:
+            operation: Human-readable name of the failed operation.
+            exc: The exception that occurred.
+            button: The button to re-enable.
+        """
+        button.setEnabled(True)
+        self._status_label.setText(f"{operation} failed: {exc}")
+        _logger.warning("frida_precompiled_script_failed", operation=operation, error=str(exc))
