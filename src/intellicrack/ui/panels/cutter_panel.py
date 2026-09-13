@@ -207,9 +207,9 @@ class CutterPanel(AnalysisPanelBase):
         self._goto_btn = self._add_tool_button(toolbar, "Go", self._on_goto_address)
         self._find_func_input = self._add_toolbar_input(toolbar, "Function name...", max_width=140)
         self._find_func_btn = self._add_tool_button(toolbar, "Find", self._on_find_function)
-        self._seek_delta_input = self._add_toolbar_input(toolbar, "Δ bytes...", max_width=70)
-        self._seek_back_btn = self._add_tool_button(toolbar, "◀", self._on_seek_relative_back)
-        self._seek_fwd_btn = self._add_tool_button(toolbar, "▶", self._on_seek_relative_forward)
+        self._seek_delta_input = self._add_toolbar_input(toolbar, "Delta bytes...", max_width=70)
+        self._seek_back_btn = self._add_tool_button(toolbar, "Seek -", self._on_seek_relative_back)
+        self._seek_fwd_btn = self._add_tool_button(toolbar, "Seek +", self._on_seek_relative_forward)
         self._seek_back_history_btn = self._add_tool_button(toolbar, "Back", self._on_seek_undo)
         self._seek_fwd_history_btn = self._add_tool_button(toolbar, "Forward", self._on_seek_redo)
 
