@@ -2002,6 +2002,36 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="Dict with success, address, silent, bp_type",
                 ),
                 ToolFunction(
+                    name="x64dbg.reset_breakpoint_hit_count",
+                    description="Reset a breakpoint's hit counter to a given value (default 0)",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Breakpoint address", required=True),
+                        ToolParameter(
+                            name="new_count",
+                            type="integer",
+                            description="Hit count to reset to",
+                            required=False,
+                            default=0,
+                        ),
+                    ],
+                    returns="Dict with success, address, hit_count, bp_type, verified",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_breakpoint_name",
+                    description="Set (or clear, with an empty string) the display name of a breakpoint",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Breakpoint address", required=True),
+                        ToolParameter(
+                            name="name",
+                            type="string",
+                            description="Display name; empty string clears it",
+                            required=False,
+                            default="",
+                        ),
+                    ],
+                    returns="Dict with success, address, name, bp_type",
+                ),
+                ToolFunction(
                     name="x64dbg.set_dll_breakpoint",
                     description="Set a breakpoint on DLL load/unload",
                     parameters=[
@@ -2015,6 +2045,40 @@ class _X64DbgBridgeBase(DebuggerBridge):
                         ),
                     ],
                     returns="Dict with success status, dll_name, and event",
+                ),
+                ToolFunction(
+                    name="x64dbg.remove_dll_breakpoint",
+                    description="Remove a DLL load/unload breakpoint set via LibrarianSetBreakpoint",
+                    parameters=[
+                        ToolParameter(name="dll_name", type="string", description="DLL name the breakpoint was set on", required=True),
+                    ],
+                    returns="Dict with success and dll_name",
+                ),
+                ToolFunction(
+                    name="x64dbg.enable_dll_breakpoint",
+                    description="Enable a DLL breakpoint by name, or all DLL breakpoints if no name is given",
+                    parameters=[
+                        ToolParameter(
+                            name="dll_name",
+                            type="string",
+                            description="DLL name; omit to enable all DLL breakpoints",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dict with success and dll_name",
+                ),
+                ToolFunction(
+                    name="x64dbg.disable_dll_breakpoint",
+                    description="Disable a DLL breakpoint by name, or all DLL breakpoints if no name is given",
+                    parameters=[
+                        ToolParameter(
+                            name="dll_name",
+                            type="string",
+                            description="DLL name; omit to disable all DLL breakpoints",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dict with success and dll_name",
                 ),
                 ToolFunction(
                     name="x64dbg.trace_into",
@@ -8896,6 +8960,154 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         await self._send_command(f"{cmd} {hex(address)}, {1 if enabled else 0}")
         return {"success": True, "address": hex(address), "silent": enabled, "bp_type": bp_type}
 
+    async def _verify_breakpoint_hit_count(self, address: int, bp_type: BreakpointType, expected: int) -> bool:
+        """Confirm via ``bp_list`` that a breakpoint's hit counter reads ``expected``.
+
+        Mirrors :meth:`_verify_breakpoint_condition`'s ``bp_list``
+        poll-and-compare shape, but checks the reported ``hitCount``
+        field (falling back to ``hit_count``, matching the same
+        fallback :meth:`get_breakpoints` already applies) instead of
+        ``breakCondition``, so a ``ResetBreakpointHitCount`` command
+        that parses without taking effect surfaces as an error rather
+        than a false success.
+
+        Args:
+            address: Breakpoint address the hit count was reset on.
+            bp_type: Breakpoint type the hit count was reset on,
+                included in the error message when verification fails.
+            expected: Hit count value the reset command was sent with.
+
+        Returns:
+            bool: ``True`` when ``bp_list`` reports ``expected`` at
+            ``address``; ``False`` when the plugin reports ``bp_list``
+            as an unknown command (older plugin builds), so the caller
+            can record verification as skipped rather than fail.
+
+        Raises:
+            ToolError: If ``bp_list`` succeeds but reports no entry for
+                ``address``, or reports a hit count that does not match
+                ``expected``.
+        """
+        try:
+            result = await self._send_pipe_command("bp_list")
+        except ToolError as exc:
+            if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
+                _logger.warning("breakpoint_hit_count_verification_skipped_no_bp_list", address=hex(address))
+                return False
+            log_passthrough(
+                _logger,
+                "verify_breakpoint_hit_count_passthrough",
+                exc,
+                bridge="x64dbg",
+                address=hex(address),
+                x64dbg_error_code=_x64dbg_error_code(exc),
+            )
+            raise
+        if not isinstance(result, list):
+            msg = f"reset_breakpoint_hit_count verification: bp_list returned {type(result).__name__}, expected list"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
+                    "address": hex(address),
+                },
+            )
+        for entry in result:
+            if not _is_str_obj_dict(entry):
+                continue
+            if _coerce_address(entry.get("address")) != address:
+                continue
+            raw_hits = entry.get("hitCount", entry.get("hit_count"))
+            observed = raw_hits if isinstance(raw_hits, int) else None
+            if observed == expected:
+                return True
+            msg = (
+                f"reset_breakpoint_hit_count verification failed: bp_list reports hitCount {observed!r} "
+                f"for {bp_type} breakpoint {hex(address)}, expected {expected!r}"
+            )
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "address": hex(address),
+                    "bp_type": bp_type,
+                    "expected_hit_count": expected,
+                    "observed_hit_count": observed,
+                },
+            )
+        msg = f"reset_breakpoint_hit_count verification failed: address {hex(address)} not present in bp_list after reset"
+        raise ToolError(
+            msg,
+            tool_name="x64dbg",
+            details={"x64dbg_error_code": _X64DBG_ERR_REMOTE, "address": hex(address), "bp_type": bp_type},
+        )
+
+    async def reset_breakpoint_hit_count(self, address: int, new_count: int = 0) -> dict[str, Any]:
+        """Reset a breakpoint's hit counter to ``new_count`` and verify the reset took.
+
+        Dispatches through :func:`_bp_command_for_type` since the
+        software-only ``ResetBreakpointHitCount`` command silently does
+        nothing against a hardware or memory breakpoint (audit7.md
+        T1-3), then confirms via :meth:`_verify_breakpoint_hit_count`
+        that ``bp_list`` reports the new count, so a reset that parses
+        without taking effect surfaces as an error instead of a false
+        success.
+
+        Args:
+            address: Breakpoint address.
+            new_count: Hit count to reset to.
+
+        Returns:
+            dict[str, Any]: Dict with success status, address, hit_count,
+            bp_type, and verified.
+        """
+        bp_type = self._resolve_breakpoint_type(address)
+        _logger.debug("x64dbg_command_queued", command="reset_breakpoint_hit_count", address=hex(address), bp_type=bp_type)
+        cmd = _bp_command_for_type(
+            bp_type,
+            software="ResetBreakpointHitCount",
+            hardware="ResetHardwareBreakpointHitCount",
+            memory="ResetMemoryBreakpointHitCount",
+        )
+        await self._send_command(f"{cmd} {hex(address)}, {new_count}")
+        verified = await self._verify_breakpoint_hit_count(address, bp_type, new_count)
+        return {"success": True, "address": hex(address), "hit_count": new_count, "bp_type": bp_type, "verified": verified}
+
+    async def set_breakpoint_name(self, address: int, name: str = "") -> dict[str, Any]:
+        """Set or clear a breakpoint's display name.
+
+        ``SetBreakpointName`` (and its hardware/memory siblings) sets
+        the name shown for a breakpoint in the breakpoints view and in
+        the log when it is hit; an empty ``name`` is the documented way
+        to clear a previously set name, so it is still sent rather than
+        treated as a no-op. Dispatches through
+        :func:`_bp_command_for_type` since the software-only command
+        silently does nothing against a hardware or memory breakpoint
+        (audit7.md T1-3). This bridge's ``bp_list`` parsing
+        (:meth:`get_breakpoints`) has no ``name`` field, so - like
+        :meth:`set_breakpoint_log_condition`'s sibling setters - there
+        is no readback to verify against.
+
+        Args:
+            address: Breakpoint address.
+            name: Display name; an empty string clears an existing name.
+
+        Returns:
+            dict[str, Any]: Dict with success status, address, name, and bp_type.
+        """
+        bp_type = self._resolve_breakpoint_type(address)
+        _logger.debug("x64dbg_command_queued", command="set_breakpoint_name", address=hex(address), bp_type=bp_type)
+        cmd = _bp_command_for_type(
+            bp_type,
+            software="SetBreakpointName",
+            hardware="SetHardwareBreakpointName",
+            memory="SetMemoryBreakpointName",
+        )
+        await self._send_command(f'{cmd} {hex(address)}, "{name}"')
+        return {"success": True, "address": hex(address), "name": name, "bp_type": bp_type}
+
     async def set_dll_breakpoint(self, dll_name: str, event: str = "load") -> dict[str, Any]:
         """Set a breakpoint on DLL load/unload.
 
@@ -8912,6 +9124,70 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
             cmd += ", unload"
         await self._send_command(cmd)
         return {"success": True, "dll_name": dll_name, "event": event}
+
+    async def remove_dll_breakpoint(self, dll_name: str) -> dict[str, Any]:
+        """Remove a DLL load/unload breakpoint previously set via the Librarian.
+
+        ``LibrarianRemoveBreakpoint``/``bcdll`` takes only a DLL name -
+        no event argument - since removal applies to whatever
+        load/unload breakpoint(s) :meth:`set_dll_breakpoint` armed on
+        that DLL. This bridge exposes no RPC that lists DLL
+        breakpoints, so - mirroring :meth:`set_dll_breakpoint` itself -
+        there is no readback to verify the removal against.
+
+        Args:
+            dll_name: DLL name the breakpoint was set on.
+
+        Returns:
+            dict[str, Any]: Dict with success status and dll_name.
+        """
+        _logger.debug("x64dbg_command_queued", command="remove_dll_breakpoint", dll=dll_name)
+        await self._send_command(f'LibrarianRemoveBreakpoint "{dll_name}"')
+        return {"success": True, "dll_name": dll_name}
+
+    async def enable_dll_breakpoint(self, dll_name: str | None = None) -> dict[str, Any]:
+        """Enable a DLL load/unload breakpoint, or all DLL breakpoints if no name is given.
+
+        ``LibrarianEnableBreakpoint``/``bpedll`` takes an optional DLL
+        name; per the docs, omitting the argument entirely enables
+        every DLL breakpoint, which is distinct from passing an
+        empty-string name, so ``dll_name is None`` sends the bare
+        command with no argument at all rather than an empty quoted
+        string. This bridge exposes no RPC that lists DLL breakpoints,
+        so there is no readback to verify the change against.
+
+        Args:
+            dll_name: DLL name to enable; omit to enable all DLL breakpoints.
+
+        Returns:
+            dict[str, Any]: Dict with success status and dll_name.
+        """
+        _logger.debug("x64dbg_command_queued", command="enable_dll_breakpoint", dll=dll_name)
+        cmd = "LibrarianEnableBreakpoint" if dll_name is None else f'LibrarianEnableBreakpoint "{dll_name}"'
+        await self._send_command(cmd)
+        return {"success": True, "dll_name": dll_name}
+
+    async def disable_dll_breakpoint(self, dll_name: str | None = None) -> dict[str, Any]:
+        """Disable a DLL load/unload breakpoint, or all DLL breakpoints if no name is given.
+
+        ``LibrarianDisableBreakpoint``/``bpddll`` takes an optional DLL
+        name; per the docs, omitting the argument entirely disables
+        every DLL breakpoint, which is distinct from passing an
+        empty-string name, so ``dll_name is None`` sends the bare
+        command with no argument at all rather than an empty quoted
+        string. This bridge exposes no RPC that lists DLL breakpoints,
+        so there is no readback to verify the change against.
+
+        Args:
+            dll_name: DLL name to disable; omit to disable all DLL breakpoints.
+
+        Returns:
+            dict[str, Any]: Dict with success status and dll_name.
+        """
+        _logger.debug("x64dbg_command_queued", command="disable_dll_breakpoint", dll=dll_name)
+        cmd = "LibrarianDisableBreakpoint" if dll_name is None else f'LibrarianDisableBreakpoint "{dll_name}"'
+        await self._send_command(cmd)
+        return {"success": True, "dll_name": dll_name}
 
     async def trace_into(self, condition: str | None = None, max_steps: int = 50000) -> dict[str, Any]:
         """Trace into by ``StepInto`` until a condition trips and verify the trace actually ran.

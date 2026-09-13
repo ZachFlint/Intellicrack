@@ -869,6 +869,11 @@ class X64DbgAdvancedTab(QWidget):
             ),
         )
 
+        self._bpcfg_reset_hits_btn = QPushButton(self.tr("Reset Hit Count"))
+        self._bpcfg_reset_hits_btn.setObjectName("tool_button")
+        self._bpcfg_reset_hits_btn.clicked.connect(self._on_reset_breakpoint_hit_count)
+        layout.addLayout(self._bpcfg_row(self._bpcfg_reset_hits_btn, stretch=True))
+
         log_bp_row = QHBoxLayout()
         self._bpcfg_logging_btn = QPushButton(self.tr("Set Logging BP (non-stopping)"))
         self._bpcfg_logging_btn.setObjectName("tool_button")
@@ -892,8 +897,27 @@ class X64DbgAdvancedTab(QWidget):
         self._bpcfg_dll_btn.setObjectName("tool_button")
         self._bpcfg_dll_btn.clicked.connect(self._on_set_dll_breakpoint)
         dll_row.addWidget(self._bpcfg_dll_btn)
+        self._bpcfg_dll_remove_btn = QPushButton(self.tr("Remove DLL BP"))
+        self._bpcfg_dll_remove_btn.setObjectName("tool_button")
+        self._bpcfg_dll_remove_btn.clicked.connect(self._on_remove_dll_breakpoint)
+        dll_row.addWidget(self._bpcfg_dll_remove_btn)
+        self._bpcfg_dll_enable_btn = QPushButton(self.tr("Enable DLL BP"))
+        self._bpcfg_dll_enable_btn.setObjectName("tool_button")
+        self._bpcfg_dll_enable_btn.clicked.connect(self._on_enable_dll_breakpoint)
+        dll_row.addWidget(self._bpcfg_dll_enable_btn)
+        self._bpcfg_dll_disable_btn = QPushButton(self.tr("Disable DLL BP"))
+        self._bpcfg_dll_disable_btn.setObjectName("tool_button")
+        self._bpcfg_dll_disable_btn.clicked.connect(self._on_disable_dll_breakpoint)
+        dll_row.addWidget(self._bpcfg_dll_disable_btn)
         dll_row.addStretch()
         layout.addLayout(dll_row)
+
+        self._bpcfg_name_input = QLineEdit()
+        self._bpcfg_name_input.setPlaceholderText(self.tr("optional"))
+        self._bpcfg_name_btn = QPushButton(self.tr("Set Name"))
+        self._bpcfg_name_btn.setObjectName("tool_button")
+        self._bpcfg_name_btn.clicked.connect(self._on_set_breakpoint_name)
+        layout.addLayout(self._bpcfg_row(self._bpcfg_name_input, self._bpcfg_name_btn, label="Name:", stretch=True))
 
         self._bpcfg_status_label = QLabel("")
         self._bpcfg_status_label.setWordWrap(True)
@@ -1057,6 +1081,25 @@ class X64DbgAdvancedTab(QWidget):
             enabled=enabled,
         )
 
+    def _on_reset_breakpoint_hit_count(self) -> None:
+        """Reset a breakpoint's hit counter to 0."""
+        if self._bridge is None:
+            return
+        address = self._bpcfg_address()
+        if address is None:
+            return
+        self._bpcfg_reset_hits_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.reset_breakpoint_hit_count(address),
+            on_success=lambda _: self._on_bpcfg_success(f"Hit count reset at 0x{address:X}", self._bpcfg_reset_hits_btn),
+            on_error=lambda e: self._on_bpcfg_error("reset_breakpoint_hit_count", e, self._bpcfg_reset_hits_btn),
+            parent=self,
+            event="x64dbg_reset_breakpoint_hit_count",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+        )
+
     def _on_set_dll_breakpoint(self) -> None:
         """Set a DLL load/unload breakpoint via the Librarian."""
         if self._bridge is None:
@@ -1076,6 +1119,86 @@ class X64DbgAdvancedTab(QWidget):
             level="info",
             dll_name=dll_name,
             dll_event=event,
+        )
+
+    def _on_remove_dll_breakpoint(self) -> None:
+        """Remove a DLL load/unload breakpoint via the Librarian."""
+        if self._bridge is None:
+            return
+        dll_name = self._bpcfg_dll_input.text().strip()
+        if not dll_name:
+            return
+        self._bpcfg_dll_remove_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.remove_dll_breakpoint(dll_name),
+            on_success=lambda _: self._on_bpcfg_success(f"DLL breakpoint removed on {dll_name}", self._bpcfg_dll_remove_btn),
+            on_error=lambda e: self._on_bpcfg_error("remove_dll_breakpoint", e, self._bpcfg_dll_remove_btn),
+            parent=self,
+            event="x64dbg_remove_dll_breakpoint",
+            logger=_logger,
+            level="info",
+            dll_name=dll_name,
+        )
+
+    def _on_enable_dll_breakpoint(self) -> None:
+        """Enable a DLL breakpoint by name, or all DLL breakpoints if the name field is empty."""
+        if self._bridge is None:
+            return
+        dll_name = self._bpcfg_dll_input.text().strip() or None
+        self._bpcfg_dll_enable_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.enable_dll_breakpoint(dll_name),
+            on_success=lambda _: self._on_bpcfg_success(
+                f"DLL breakpoint(s) enabled{f' on {dll_name}' if dll_name else ''}",
+                self._bpcfg_dll_enable_btn,
+            ),
+            on_error=lambda e: self._on_bpcfg_error("enable_dll_breakpoint", e, self._bpcfg_dll_enable_btn),
+            parent=self,
+            event="x64dbg_enable_dll_breakpoint",
+            logger=_logger,
+            level="info",
+            dll_name=dll_name,
+        )
+
+    def _on_disable_dll_breakpoint(self) -> None:
+        """Disable a DLL breakpoint by name, or all DLL breakpoints if the name field is empty."""
+        if self._bridge is None:
+            return
+        dll_name = self._bpcfg_dll_input.text().strip() or None
+        self._bpcfg_dll_disable_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.disable_dll_breakpoint(dll_name),
+            on_success=lambda _: self._on_bpcfg_success(
+                f"DLL breakpoint(s) disabled{f' on {dll_name}' if dll_name else ''}",
+                self._bpcfg_dll_disable_btn,
+            ),
+            on_error=lambda e: self._on_bpcfg_error("disable_dll_breakpoint", e, self._bpcfg_dll_disable_btn),
+            parent=self,
+            event="x64dbg_disable_dll_breakpoint",
+            logger=_logger,
+            level="info",
+            dll_name=dll_name,
+        )
+
+    def _on_set_breakpoint_name(self) -> None:
+        """Set or clear a breakpoint's display name."""
+        if self._bridge is None:
+            return
+        address = self._bpcfg_address()
+        if address is None:
+            return
+        name = self._bpcfg_name_input.text().strip()
+        self._bpcfg_name_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.set_breakpoint_name(address, name),
+            on_success=lambda _: self._on_bpcfg_success(f"Name set at 0x{address:X}", self._bpcfg_name_btn),
+            on_error=lambda e: self._on_bpcfg_error("set_breakpoint_name", e, self._bpcfg_name_btn),
+            parent=self,
+            event="x64dbg_set_breakpoint_name",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            name=name,
         )
 
     def _on_bpcfg_success(self, message: str, btn: QPushButton) -> None:
