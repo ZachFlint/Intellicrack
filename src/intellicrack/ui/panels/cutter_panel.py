@@ -167,6 +167,21 @@ class CutterPanel(AnalysisPanelBase):
         self._decompile_btn = self._add_tool_button(toolbar, "Decompile", self._on_decompile_selected)
         self._graph_btn = self._add_tool_button(toolbar, "Graph", self._on_graph_selected)
 
+        analysis_pass_actions = self._add_tool_menu(
+            toolbar,
+            "Analysis Passes",
+            [
+                ToolMenuEntry("Basic Blocks (aab)", self._on_analyze_basic_blocks),
+                ToolMenuEntry("Function Calls (aac)", self._on_analyze_function_calls),
+                ToolMenuEntry("Data/Code Refs (aar)", self._on_analyze_references),
+                ToolMenuEntry("Autoname Functions (aan)", self._on_autoname_functions),
+            ],
+        )
+        self._analyze_basic_blocks_btn = analysis_pass_actions["Basic Blocks (aab)"]
+        self._analyze_function_calls_btn = analysis_pass_actions["Function Calls (aac)"]
+        self._analyze_references_btn = analysis_pass_actions["Data/Code Refs (aar)"]
+        self._autoname_functions_btn = analysis_pass_actions["Autoname Functions (aan)"]
+
         toolbar.addSeparator()
 
         binary_actions = self._add_tool_menu(
@@ -779,6 +794,91 @@ class CutterPanel(AnalysisPanelBase):
         self._set_status(f"Analysis failed: {exc}")
         _logger.warning("cutter_analysis_failed", error=str(exc))
         self._analyze_btn.setEnabled(True)
+
+    def _on_analysis_pass_complete(self, message: str) -> None:
+        """Report completion of a standalone analysis sub-pass and refresh the functions list.
+
+        Args:
+            message: Status message describing which sub-pass completed.
+        """
+        self._set_status(message)
+        self._on_refresh_functions()
+
+    def _on_analyze_basic_blocks(self) -> None:
+        """Run a standalone basic-block analysis pass (rizin 'aab')."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        if not self._bridge.state.binary_loaded:
+            self._set_status("No binary loaded - load a binary first")
+            return
+        self._set_status("Running basic-block analysis (aab)...")
+        run_bridge_coroutine_logged(
+            self._bridge.analyze_basic_blocks(),
+            on_success=lambda _: self._on_analysis_pass_complete("Basic-block analysis complete"),
+            on_error=lambda e: self._set_status(f"Basic-block analysis failed: {e}"),
+            parent=self,
+            event="cutter_analyze_basic_blocks",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_analyze_function_calls(self) -> None:
+        """Run a standalone function-call analysis pass (rizin 'aac')."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        if not self._bridge.state.binary_loaded:
+            self._set_status("No binary loaded - load a binary first")
+            return
+        self._set_status("Running function-call analysis (aac)...")
+        run_bridge_coroutine_logged(
+            self._bridge.analyze_function_calls(),
+            on_success=lambda _: self._on_analysis_pass_complete("Function-call analysis complete"),
+            on_error=lambda e: self._set_status(f"Function-call analysis failed: {e}"),
+            parent=self,
+            event="cutter_analyze_function_calls",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_analyze_references(self) -> None:
+        """Run a standalone data/code cross-reference analysis pass (rizin 'aar')."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        if not self._bridge.state.binary_loaded:
+            self._set_status("No binary loaded - load a binary first")
+            return
+        self._set_status("Running reference analysis (aar)...")
+        run_bridge_coroutine_logged(
+            self._bridge.analyze_references(),
+            on_success=lambda _: self._on_analysis_pass_complete("Reference analysis complete"),
+            on_error=lambda e: self._set_status(f"Reference analysis failed: {e}"),
+            parent=self,
+            event="cutter_analyze_references",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_autoname_functions(self) -> None:
+        """Run a standalone function autoname pass (rizin 'aan') and refresh the functions tree."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        if not self._bridge.state.binary_loaded:
+            self._set_status("No binary loaded - load a binary first")
+            return
+        self._set_status("Running function autoname (aan)...")
+        run_bridge_coroutine_logged(
+            self._bridge.autoname_functions(),
+            on_success=lambda _: self._on_analysis_pass_complete("Function autoname complete"),
+            on_error=lambda e: self._set_status(f"Autoname failed: {e}"),
+            parent=self,
+            event="cutter_autoname_functions",
+            logger=_logger,
+            level="info",
+        )
 
     def _on_refresh_functions(self) -> None:
         """Refresh the functions list from bridge."""
