@@ -188,6 +188,14 @@ class TestSandboxCreateConfigWiringL3:
             timeout_seconds=9999,
             network_enabled=True,
             memory_limit_mb=65536,
+            block_telemetry=True,
+            clipboard_enabled=False,
+            audio_enabled=False,
+            video_enabled=False,
+            printer_enabled=False,
+            shared_folders=[],
+            startup_commands=[],
+            environment_variables={},
         )
 
     def test_on_create_passes_default_config_values_unmodified(
@@ -221,6 +229,14 @@ class TestSandboxCreateConfigWiringL3:
             timeout_seconds=300,
             network_enabled=False,
             memory_limit_mb=2048,
+            block_telemetry=True,
+            clipboard_enabled=False,
+            audio_enabled=False,
+            video_enabled=False,
+            printer_enabled=False,
+            shared_folders=[],
+            startup_commands=[],
+            environment_variables={},
         )
 
     def test_on_create_no_dispatch_without_bridge(

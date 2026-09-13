@@ -134,11 +134,27 @@ class _SandboxCreateConfig(TypedDict):
         timeout_seconds: Execution timeout in seconds.
         network_enabled: Whether network access is enabled.
         memory_limit_mb: Memory limit in megabytes.
+        block_telemetry: Whether the guest's own operating-system telemetry is blocked.
+        clipboard_enabled: Whether clipboard sharing is enabled.
+        audio_enabled: Whether host audio input is redirected into the sandbox.
+        video_enabled: Whether the sandbox is given a virtualized GPU.
+        printer_enabled: Whether host printers are shared with the sandbox.
+        shared_folders: Additional host folders to share with the sandbox.
+        startup_commands: Additional commands to run inside the guest at startup.
+        environment_variables: Environment variables to set inside the guest.
     """
 
     timeout_seconds: int
     network_enabled: bool
     memory_limit_mb: int
+    block_telemetry: bool
+    clipboard_enabled: bool
+    audio_enabled: bool
+    video_enabled: bool
+    printer_enabled: bool
+    shared_folders: list[dict[str, object]]
+    startup_commands: list[str]
+    environment_variables: dict[str, str]
 
 
 class SandboxPanel(AnalysisPanelBase):
@@ -323,6 +339,110 @@ class SandboxPanel(AnalysisPanelBase):
         config_row.addStretch(1)
         exec_layout.addLayout(config_row)
 
+    def _build_isolation_row(self, exec_layout: QVBoxLayout, fm: FontManager) -> None:
+        """Build the per-instance isolation-extras controls.
+
+        Adds the checkboxes and delimited text fields that feed
+        ``SandboxBridge.create``/``restart``'s ``block_telemetry``,
+        ``clipboard_enabled``, ``audio_enabled``, ``video_enabled``,
+        ``printer_enabled``, ``shared_folders``, ``startup_commands``, and
+        ``environment_variables`` parameters.
+
+        Args:
+            exec_layout: Layout to append the isolation-extras header and rows to.
+            fm: Font manager used for consistent heading and input styling.
+        """
+        isolation_header = QLabel("Isolation Extras")
+        isolation_header.setFont(fm.get_heading_font(10))
+        exec_layout.addWidget(isolation_header)
+
+        checks_row = QHBoxLayout()
+
+        self._block_telemetry_check = QCheckBox("Block Telemetry")
+        self._block_telemetry_check.setChecked(True)
+        self._block_telemetry_check.setToolTip(
+            "Silence the guest's own operating-system telemetry inside the guest at start",
+        )
+        checks_row.addWidget(self._block_telemetry_check)
+
+        self._clipboard_enabled_check = QCheckBox("Clipboard")
+        self._clipboard_enabled_check.setChecked(False)
+        self._clipboard_enabled_check.setToolTip(
+            "Share the host clipboard with the sandbox (Windows Sandbox ClipboardRedirection; no effect on QEMU)",
+        )
+        checks_row.addWidget(self._clipboard_enabled_check)
+
+        self._audio_enabled_check = QCheckBox("Audio")
+        self._audio_enabled_check.setChecked(False)
+        self._audio_enabled_check.setToolTip(
+            "Redirect the host's audio input into the sandbox (Windows Sandbox AudioInput; no effect on QEMU)",
+        )
+        checks_row.addWidget(self._audio_enabled_check)
+
+        self._video_enabled_check = QCheckBox("Video/GPU")
+        self._video_enabled_check.setChecked(False)
+        self._video_enabled_check.setToolTip(
+            "Give the sandbox a virtualized GPU (Windows Sandbox vGPU; no effect on QEMU)",
+        )
+        checks_row.addWidget(self._video_enabled_check)
+
+        self._printer_enabled_check = QCheckBox("Printer")
+        self._printer_enabled_check.setChecked(False)
+        self._printer_enabled_check.setToolTip(
+            "Share host printers with the sandbox (Windows Sandbox PrinterRedirection; no effect on QEMU)",
+        )
+        checks_row.addWidget(self._printer_enabled_check)
+
+        checks_row.addStretch(1)
+        exec_layout.addLayout(checks_row)
+
+        shared_folders_row = QHBoxLayout()
+        shared_folders_label = QLabel("Shared Folders:")
+        shared_folders_label.setObjectName("toolbar_label")
+        shared_folders_row.addWidget(shared_folders_label)
+
+        self._shared_folders_input = QLineEdit()
+        self._shared_folders_input.setFont(fm.get_code_font(9))
+        self._shared_folders_input.setMinimumWidth(_MIN_FIELD_WIDTH)
+        self._shared_folders_input.setPlaceholderText(r"C:\path\one|ro;C:\path\two")
+        self._shared_folders_input.setToolTip(
+            "Host folders to share beyond the sandbox's private work share, separated by ';'. Append |ro to mark "
+            r"one read-only, e.g. C:\samples|ro;C:\scratch. Windows Sandbox honors a folder without |ro as "
+            "writable; QEMU stages every shared folder read-only regardless.",
+        )
+        shared_folders_row.addWidget(self._shared_folders_input)
+        exec_layout.addLayout(shared_folders_row)
+
+        startup_commands_row = QHBoxLayout()
+        startup_commands_label = QLabel("Startup Commands:")
+        startup_commands_label.setObjectName("toolbar_label")
+        startup_commands_row.addWidget(startup_commands_label)
+
+        self._startup_commands_input = QLineEdit()
+        self._startup_commands_input.setFont(fm.get_code_font(9))
+        self._startup_commands_input.setMinimumWidth(_MIN_FIELD_WIDTH)
+        self._startup_commands_input.setPlaceholderText("echo hello;ipconfig /all")
+        self._startup_commands_input.setToolTip(
+            "cmd.exe command lines to run inside the guest after the dispatcher/monitor fleet starts, separated by ';'",
+        )
+        startup_commands_row.addWidget(self._startup_commands_input)
+        exec_layout.addLayout(startup_commands_row)
+
+        environment_variables_row = QHBoxLayout()
+        environment_variables_label = QLabel("Environment Variables:")
+        environment_variables_label.setObjectName("toolbar_label")
+        environment_variables_row.addWidget(environment_variables_label)
+
+        self._environment_variables_input = QLineEdit()
+        self._environment_variables_input.setFont(fm.get_code_font(9))
+        self._environment_variables_input.setMinimumWidth(_MIN_FIELD_WIDTH)
+        self._environment_variables_input.setPlaceholderText("FOO=bar;BAZ=qux")
+        self._environment_variables_input.setToolTip(
+            "Environment variables to set inside the guest before startup commands run, as KEY=VALUE pairs separated by ';'",
+        )
+        environment_variables_row.addWidget(self._environment_variables_input)
+        exec_layout.addLayout(environment_variables_row)
+
     def _build_analysis_controls(self, exec_layout: QVBoxLayout, fm: FontManager) -> None:
         """Build the L3 instance-management and analysis control rows.
 
@@ -428,6 +548,7 @@ class SandboxPanel(AnalysisPanelBase):
         exec_layout.setSpacing(_EXEC_SPACING)
 
         self._build_config_row(exec_layout, fm)
+        self._build_isolation_row(exec_layout, fm)
 
         exec_header = QLabel("Binary Execution")
         exec_header.setFont(fm.get_heading_font(10))
@@ -999,13 +1120,45 @@ class SandboxPanel(AnalysisPanelBase):
         Returns:
             _SandboxCreateConfig: Keyword arguments for
             ``SandboxBridge.create``: ``timeout_seconds``,
-            ``network_enabled``, and ``memory_limit_mb`` reflecting the
-            current toolbar widget values.
+            ``network_enabled``, ``memory_limit_mb``, ``block_telemetry``,
+            ``clipboard_enabled``, ``audio_enabled``, ``video_enabled``,
+            ``printer_enabled``, ``shared_folders``, ``startup_commands``,
+            and ``environment_variables`` reflecting the current toolbar
+            widget values.
         """
+        shared_folders: list[dict[str, object]] = []
+        for raw_entry in self._shared_folders_input.text().split(_COMPANION_SEPARATOR):
+            stripped_entry = raw_entry.strip()
+            if not stripped_entry:
+                continue
+            host_part, _, ro_flag = stripped_entry.partition("|")
+            shared_folders.append({
+                "host_path": host_part.strip(),
+                "read_only": ro_flag.strip().lower() == "ro",
+            })
+
+        startup_commands = [entry.strip() for entry in self._startup_commands_input.text().split(_COMPANION_SEPARATOR) if entry.strip()]
+
+        environment_variables: dict[str, str] = {}
+        for raw_entry in self._environment_variables_input.text().split(_COMPANION_SEPARATOR):
+            stripped_entry = raw_entry.strip()
+            if not stripped_entry or "=" not in stripped_entry:
+                continue
+            key, _, value = stripped_entry.partition("=")
+            environment_variables[key.strip()] = value.strip()
+
         return {
             "timeout_seconds": self._timeout_spin.value(),
             "network_enabled": self._network_enabled_check.isChecked(),
             "memory_limit_mb": self._memory_limit_spin.value(),
+            "block_telemetry": self._block_telemetry_check.isChecked(),
+            "clipboard_enabled": self._clipboard_enabled_check.isChecked(),
+            "audio_enabled": self._audio_enabled_check.isChecked(),
+            "video_enabled": self._video_enabled_check.isChecked(),
+            "printer_enabled": self._printer_enabled_check.isChecked(),
+            "shared_folders": shared_folders,
+            "startup_commands": startup_commands,
+            "environment_variables": environment_variables,
         }
 
     @staticmethod
