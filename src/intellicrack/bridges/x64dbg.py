@@ -1607,8 +1607,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 ToolFunction(
                     name="x64dbg.trace_start",
                     description=(
-                        "Start a run-trace recording session in x64dbg (see trace_into/trace_over for a "
-                        "genuinely conditional trace)"
+                        "Start a run-trace recording session in x64dbg (see trace_into/trace_over for a genuinely conditional trace)"
                     ),
                     parameters=[
                         ToolParameter(
@@ -1624,12 +1623,16 @@ class _X64DbgBridgeBase(DebuggerBridge):
                             name="condition",
                             type="string",
                             description=(
-                                "Log condition gating log_text (TraceSetLog's second argument); requires "
-                                "log_text to also be supplied"
+                                "Log condition gating log_text (TraceSetLog's second argument); requires log_text to also be supplied"
                             ),
                             required=False,
                         ),
-                        ToolParameter(name="log_text", type="string", description="Text to log at each traced instruction via TraceSetLog", required=False),
+                        ToolParameter(
+                            name="log_text",
+                            type="string",
+                            description="Text to log at each traced instruction via TraceSetLog",
+                            required=False,
+                        ),
                     ],
                     returns="Dict with success, trace_file, and (when log_text is supplied) log_text/log_condition",
                 ),
