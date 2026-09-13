@@ -1169,6 +1169,33 @@ class X64DbgPanel(AnalysisPanelBase):
         self._trace_over_btn.setObjectName("tool_button")
         self._trace_over_btn.clicked.connect(self._on_trace_over)
         trace_toolbar.addWidget(self._trace_over_btn)
+        trace_coverage_label = QLabel(self.tr("Coverage:"))
+        trace_coverage_label.setFont(fm.get_ui_font(9))
+        trace_toolbar.addWidget(trace_coverage_label)
+        self._trace_coverage_combo = QComboBox()
+        self._trace_coverage_combo.addItem(self.tr("Beyond (into)"), "trace_into_beyond_coverage")
+        self._trace_coverage_combo.addItem(self.tr("Beyond (over)"), "trace_over_beyond_coverage")
+        self._trace_coverage_combo.addItem(self.tr("Within (into)"), "trace_into_within_coverage")
+        self._trace_coverage_combo.addItem(self.tr("Within (over)"), "trace_over_within_coverage")
+        trace_toolbar.addWidget(self._trace_coverage_combo)
+        self._trace_coverage_btn = QPushButton(self.tr("Coverage Trace"))
+        self._trace_coverage_btn.setObjectName("tool_button")
+        self._trace_coverage_btn.clicked.connect(self._on_trace_coverage)
+        trace_toolbar.addWidget(self._trace_coverage_btn)
+        trace_logfile_label = QLabel(self.tr("Log File:"))
+        trace_logfile_label.setFont(fm.get_ui_font(9))
+        trace_toolbar.addWidget(trace_logfile_label)
+        self._trace_logfile_input = QLineEdit()
+        self._trace_logfile_input.setMinimumWidth(150)
+        trace_toolbar.addWidget(self._trace_logfile_input)
+        self._trace_logfile_browse_btn = QPushButton(self.tr("Browse"))
+        self._trace_logfile_browse_btn.setObjectName("tool_button")
+        self._trace_logfile_browse_btn.clicked.connect(self._on_browse_trace_logfile)
+        trace_toolbar.addWidget(self._trace_logfile_browse_btn)
+        self._trace_logfile_btn = QPushButton(self.tr("Set Log File"))
+        self._trace_logfile_btn.setObjectName("tool_button")
+        self._trace_logfile_btn.clicked.connect(self._on_set_trace_log_file)
+        trace_toolbar.addWidget(self._trace_logfile_btn)
         trace_toolbar.addStretch()
         trace_layout.addWidget(self._make_control_row(trace_toolbar))
         trace_record_toolbar = QHBoxLayout()
@@ -3667,6 +3694,49 @@ class X64DbgPanel(AnalysisPanelBase):
             logger=_logger,
             level="info",
             condition=condition,
+        )
+
+    def _on_trace_coverage(self) -> None:
+        """Run the coverage-boundary trace variant selected in the Coverage combo."""
+        if self._bridge is None:
+            return
+        condition = self._trace_cond_input.text().strip() or None
+        method_data = self._trace_coverage_combo.currentData()
+        method_name = method_data if isinstance(method_data, str) else "trace_into_beyond_coverage"
+        method = getattr(self._bridge, method_name)
+        run_bridge_coroutine_logged(
+            method(condition=condition),
+            on_success=lambda _: self._trace_output.appendPlainText(f"[+] {method_name} started"),
+            on_error=lambda e: self._on_generic_error("Coverage Trace", e),
+            parent=self,
+            event=f"x64dbg_{method_name}",
+            logger=_logger,
+            level="info",
+            condition=condition,
+        )
+
+    def _on_browse_trace_logfile(self) -> None:
+        """Open a file dialog to choose the trace-log destination file."""
+        path, _ = QFileDialog.getSaveFileName(self, self.tr("Select Trace Log File"), "", "Log Files (*.log *.txt);;All Files (*)")
+        if path:
+            self._trace_logfile_input.setText(path)
+
+    def _on_set_trace_log_file(self) -> None:
+        """Redirect trace-log output to the path entered in the Log File field."""
+        if self._bridge is None:
+            return
+        path = self._trace_logfile_input.text().strip()
+        if not path:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.set_trace_log_file(path),
+            on_success=lambda _: self._trace_output.appendPlainText(f"[+] Trace log file set to {path}"),
+            on_error=lambda e: self._on_generic_error("Set Log File", e),
+            parent=self,
+            event="x64dbg_set_trace_log_file",
+            logger=_logger,
+            level="info",
+            path=path,
         )
 
     def _on_get_trace_record(self) -> None:
