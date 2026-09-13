@@ -1290,6 +1290,23 @@ class StalkerTrace:
 
 
 @dataclass
+class StalkerCallSummary:
+    """Aggregated Stalker call-target counts for a thread (Stalker.follow onCallSummary mode).
+
+    Attributes:
+        thread_id: Thread that was traced.
+        counts: Mapping of call target address (hex string, as Frida
+            formats it) to number of calls observed, accumulated across
+            the whole trace duration.
+        duration_ms: Trace duration in milliseconds.
+    """
+
+    thread_id: int
+    counts: dict[str, int]
+    duration_ms: float
+
+
+@dataclass
 class FridaDeviceInfo:
     """Frida device information.
 
