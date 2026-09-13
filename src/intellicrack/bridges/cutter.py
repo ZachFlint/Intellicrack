@@ -1240,6 +1240,12 @@ def _build_tool_functions() -> list[ToolFunction]:
             "List of BlockInfo objects",
         ),
         _tf(
+            "list_attachable_processes",
+            "Discover OS processes that can be attached to via attach(), before the target PID is known (rizin 'dpl')",
+            [],
+            "List of process dictionaries (at least a 'pid' field; other fields vary by platform)",
+        ),
+        _tf(
             "attach",
             "Attach the rizin debugger to a running process",
             [
@@ -1334,6 +1340,14 @@ def _build_tool_functions() -> list[ToolFunction]:
             [
                 _tp("register", "string", "Register name (e.g. rax, rbx, rip)"),
                 _tp("value", "integer", "Numeric value to write into the register"),
+            ],
+            "True on success",
+        ),
+        _tf(
+            "send_signal",
+            "Send a signal to the attached debuggee process",
+            [
+                _tp("signal", "integer", "Signal number to send (e.g. 9 for SIGKILL, 11 for SIGSEGV)"),
             ],
             "True on success",
         ),
@@ -4823,6 +4837,30 @@ class CutterDebugMixin(CutterDisplayMixin):
             return None
         return _extract_rizin_json(result, command)
 
+    async def list_attachable_processes(self) -> list[dict[str, Any]]:
+        """Discover OS processes that rizin's debug backend can attach to.
+
+        Issues rizin's ``dplj`` ("list all attachable pids") command so a caller can choose a target PID before calling :meth:`attach`,
+        rather than requiring the PID to already be known out-of-band. Unlike every other method in this mixin, this call does not require
+        an existing debug session -- it is the discovery step that precedes one.
+
+        Returns:
+            list[dict[str, Any]]: Process dictionaries, each containing at least a ``pid`` key (other fields vary by platform and rizin
+            version). Bare-integer entries -- if rizin ever emits a flat pid list instead of objects -- are normalized into
+            ``{"pid": <int>}`` dicts so callers always see a consistent shape.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("list_attachable_processes_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        raw: list[Any] = await self._cmd_json("dplj", command_timeout=_METADATA_LISTING_TIMEOUT)
+        normalized: list[dict[str, Any]] = [cast("dict[str, Any]", entry) if isinstance(entry, dict) else {"pid": entry} for entry in raw]
+        _logger.debug("attachable_processes_queried", result_count=len(normalized))
+        return normalized
+
     async def attach(self, pid: int) -> None:
         """Attach the rizin debugger to a running process.
 
@@ -5196,6 +5234,22 @@ class CutterDebugMixin(CutterDisplayMixin):
         validate_r2_argument(register, field="set_register register")
         await self._r2_cmd(f"dr {register}={value}")
         _logger.info("cutter_register_set", register=register, value=hex(value))
+        return True
+
+    async def send_signal(self, signal: int) -> bool:
+        """Send a signal to the attached debuggee process.
+
+        Propagates ``ToolError`` from :meth:`_require_attached` when no process is attached.
+
+        Args:
+            signal: Signal number to send (e.g. 9 for SIGKILL, 11 for SIGSEGV).
+
+        Returns:
+            bool: ``True`` after the signal has been sent.
+        """
+        self._require_attached("send_signal")
+        await self._r2_cmd(f"dk {signal}")
+        _logger.info("cutter_signal_sent", signal=signal)
         return True
 
     async def read_memory(self, address: int, size: int) -> bytes:

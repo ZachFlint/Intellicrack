@@ -203,6 +203,73 @@ def _list_item_text(list_widget: QListWidget, row: int) -> str:
 
 
 @pytest.mark.usefixtures("qapp")
+class TestListAttachableProcesses:
+    """L1/L2/L3 gate: process discovery before attach (rizin 'dpl'/'dplj') must be real and reachable."""
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_dplj_and_returns_dicts() -> None:
+        """``list_attachable_processes`` must issue rizin's 'dplj' and return dict-shaped entries."""
+        recorder = CommandRecorder({"dplj": '[{"pid":1234,"path":"/usr/bin/target"},{"pid":5678,"path":"/bin/other"}]'})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        processes = await bridge.list_attachable_processes()
+
+        assert "dplj" in recorder.commands
+        assert [p["pid"] for p in processes] == [1234, 5678]
+        assert bridge.state.process_attached is False
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_normalizes_bare_int_entries() -> None:
+        """``list_attachable_processes`` must normalize a bare-integer pid list into pid dicts."""
+        recorder = CommandRecorder({"dplj": "[1234, 5678]"})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        processes = await bridge.list_attachable_processes()
+
+        assert [p["pid"] for p in processes] == [1234, 5678]
+
+    @staticmethod
+    def test_discover_button_populates_table_and_double_click_fills_pid(qapp: QApplication) -> None:
+        """Clicking Refresh must issue 'dplj' and populate the table; double-clicking a row must fill the PID input.
+
+        Falsifiable: if ``_on_discover_processes`` never called
+        ``self._bridge.list_attachable_processes``, 'dplj' would never be
+        recorded and the table would stay empty. Broken production line:
+        the ``run_bridge_coroutine_logged(self._bridge.list_attachable_processes(), ...)``
+        call in ``DebuggerTab._on_discover_processes`` (``cutter_debugger_tab.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({"dplj": '[{"pid":1234,"path":"/usr/bin/target"},{"pid":5678,"path":"/bin/other"}]'})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        attachable_table = cast(QTableWidget, getattr(tab, "_attachable_table"))
+        on_discover = cast(Callable[[], None], getattr(tab, "_on_discover_processes"))
+        on_double_clicked = cast(Callable[[QTableWidgetItem], None], getattr(tab, "_on_attachable_process_double_clicked"))
+        pid_input = cast(QLineEdit, getattr(tab, "_pid_input"))
+
+        on_discover()
+
+        assert _pump_until(qapp, lambda: "dplj" in recorder.commands)
+        assert "dplj" in recorder.commands
+        assert _pump_until(qapp, lambda: attachable_table.rowCount() == 2)
+
+        row0_item = attachable_table.item(0, 0)
+        assert row0_item is not None
+        on_double_clicked(row0_item)
+
+        assert pid_input.text() == "1234"
+
+
+@pytest.mark.usefixtures("qapp")
 class TestDebuggerTabAttachDetach:
     """L3 gate: rows 1-2 -- Attach/Detach buttons must invoke the real bridge methods."""
 
@@ -416,6 +483,61 @@ class TestDebuggerTabSteppingAndContinue:
         assert _pump_until(qapp, lambda: "dc" in recorder.commands)
         assert "dc" in recorder.commands
         assert _pump_until(qapp, lambda: status_label.text() == "Stopped")
+
+
+@pytest.mark.usefixtures("qapp")
+class TestSendSignal:
+    """L1/L2/L3 gate: signal delivery to the debuggee (rizin 'dk') must be real and reachable."""
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_dk_command() -> None:
+        """``send_signal`` must issue rizin's 'dk <signal>' and return True."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        result = await bridge.send_signal(9)
+
+        assert "dk 9" in recorder.commands
+        assert result is True
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_requires_attachment() -> None:
+        """``send_signal`` on an unattached bridge must raise ``ToolError`` rather than issue a command."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        with pytest.raises(ToolError, match="not attached"):
+            await bridge.send_signal(9)
+
+    @staticmethod
+    def test_send_signal_button_issues_dk(qapp: QApplication) -> None:
+        """Typing a signal number and clicking Send must issue rizin's 'dk <signal>'.
+
+        Falsifiable: if ``_on_send_signal`` never called
+        ``self._bridge.send_signal``, 'dk 11' would never appear in the
+        recorder. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.send_signal(signal), ...)``
+        call in ``DebuggerTab._on_send_signal`` (``cutter_debugger_tab.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({"dbj": "[]", "dmj": "[]", "dptj": "[]", "dbtj": "[]", "dmIj": "[]", "drj": "{}"})
+        bridge = _attached_bridge(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        signal_input = cast(QLineEdit, getattr(tab, "_signal_input"))
+        on_send_signal = cast(Callable[[], None], getattr(tab, "_on_send_signal"))
+        signal_input.setText("11")
+
+        on_send_signal()
+
+        assert _pump_until(qapp, lambda: "dk 11" in recorder.commands)
+        assert "dk 11" in recorder.commands
 
 
 @pytest.mark.usefixtures("qapp")
