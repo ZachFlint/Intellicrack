@@ -22,6 +22,8 @@ from PyQt6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QHBoxLayout,
     QHeaderView,
@@ -326,7 +328,26 @@ class GhidraPanel(AnalysisPanelBase):
         self._disasm_view.setFont(fm.get_code_font(10))
         self._disasm_view.setReadOnly(True)
         set_max_block_count(self._disasm_view, 50000)
-        tabs.addTab(self._disasm_view, self.tr("Disassembly"))
+
+        disasm_container = QWidget()
+        disasm_layout = QVBoxLayout(disasm_container)
+        disasm_layout.setContentsMargins(0, 0, 0, 0)
+        disasm_toolbar = QHBoxLayout()
+        self._disasm_range_start_input = QLineEdit()
+        self._disasm_range_start_input.setPlaceholderText("Start (hex)")
+        disasm_toolbar.addWidget(self._disasm_range_start_input)
+        self._disasm_range_end_input = QLineEdit()
+        self._disasm_range_end_input.setPlaceholderText("End (hex)")
+        disasm_toolbar.addWidget(self._disasm_range_end_input)
+        self._disasm_range_btn = QPushButton(self.tr("Disassemble Range"))
+        self._disasm_range_btn.clicked.connect(self._on_disassemble_range)
+        disasm_toolbar.addWidget(self._disasm_range_btn)
+        self._clear_code_btn = QPushButton(self.tr("Clear Code Bytes"))
+        self._clear_code_btn.clicked.connect(self._on_clear_code_bytes)
+        disasm_toolbar.addWidget(self._clear_code_btn)
+        disasm_layout.addLayout(disasm_toolbar)
+        disasm_layout.addWidget(self._disasm_view)
+        tabs.addTab(disasm_container, self.tr("Disassembly"))
 
         self._pcode_view = QPlainTextEdit()
         self._pcode_view.setFont(fm.get_code_font(10))
@@ -2319,6 +2340,57 @@ class GhidraPanel(AnalysisPanelBase):
             address=hex(address),
         )
 
+    def _on_disassemble_range(self) -> None:
+        """Disassemble undefined bytes into instructions over the entered address range."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        start = self._parse_address(self._disasm_range_start_input.text())
+        if start is None:
+            self._set_status("Invalid start address for disassemble range")
+            return
+        end = self._parse_address(self._disasm_range_end_input.text())
+        if end is None:
+            self._set_status("Invalid end address for disassemble range")
+            return
+        run_bridge_coroutine_logged(
+            bridge.disassemble_range(start, end),
+            on_success=lambda _, addr=start: self._on_cfg_block_clicked(addr),
+            on_error=lambda e: self._set_status(f"Disassemble range failed: {e}"),
+            parent=self,
+            event="ghidra_disassemble_range",
+            logger=_logger,
+            level="info",
+            start=hex(start),
+            end=hex(end),
+        )
+
+    def _on_clear_code_bytes(self) -> None:
+        """Clear code bytes (undefine instructions back to raw bytes) over the entered address range."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        start = self._parse_address(self._disasm_range_start_input.text())
+        if start is None:
+            self._set_status("Invalid start address for clear code bytes")
+            return
+        end = self._parse_address(self._disasm_range_end_input.text())
+        if end is None:
+            self._set_status("Invalid end address for clear code bytes")
+            return
+        status_msg = f"Cleared code bytes 0x{start:X}-0x{end:X}"
+        run_bridge_coroutine_logged(
+            bridge.clear_code_bytes(start, end),
+            on_success=lambda _, msg=status_msg: self._set_status(msg),
+            on_error=lambda e: self._set_status(f"Clear code bytes failed: {e}"),
+            parent=self,
+            event="ghidra_clear_code_bytes",
+            logger=_logger,
+            level="info",
+            start=hex(start),
+            end=hex(end),
+        )
+
     def _show_function_body_info(self, result: object) -> None:
         """Display function body info including thunk status.
 
@@ -2420,8 +2492,10 @@ class GhidraPanel(AnalysisPanelBase):
         raw_actions: dict[str, QAction | None] = {
             "rename": menu.addAction(self.tr("Rename Function")),
             "edit_sig": menu.addAction(self.tr("Edit Signature")),
+            "flags": menu.addAction(self.tr("Set Function Flags")),
             "add_cmt": menu.addAction(self.tr("Add Comment")),
             "set_var": menu.addAction(self.tr("Set Variable Type")),
+            "rename_var": menu.addAction(self.tr("Rename Variable")),
             "call_graph": menu.addAction(self.tr("Show Call Graph")),
             "stack": menu.addAction(self.tr("Get Stack Frame")),
             "body": menu.addAction(self.tr("Get Function Body")),
@@ -2481,6 +2555,9 @@ class GhidraPanel(AnalysisPanelBase):
         elif chosen is actions["edit_sig"]:
             self._handle_edit_signature(address, func_name, bridge)
 
+        elif chosen is actions["flags"]:
+            self._handle_set_function_flags(address, bridge)
+
         elif chosen is actions["add_cmt"]:
             cmt_text, ok = QInputDialog.getText(self, self.tr("Add Comment"), self.tr("Comment:"))
             if ok and cmt_text.strip():
@@ -2516,6 +2593,27 @@ class GhidraPanel(AnalysisPanelBase):
                     address=hex(address),
                     variable_name=var_name.strip(),
                     variable_type=var_type.strip(),
+                )
+
+        elif chosen is actions["rename_var"]:
+            var_info, ok = QInputDialog.getText(
+                self,
+                self.tr("Rename Variable"),
+                self.tr("Variable name:new_name (e.g. myVar:newName):"),
+            )
+            if ok and ":" in var_info:
+                var_name, new_name = var_info.split(":", 1)
+                run_bridge_coroutine_logged(
+                    bridge.rename_function_variable(address, var_name.strip(), new_name.strip()),
+                    on_success=lambda _: self._set_status("Variable renamed"),
+                    on_error=lambda e: self._set_status(f"Rename variable failed: {e}"),
+                    parent=self,
+                    event="ghidra_rename_function_variable",
+                    logger=_logger,
+                    level="info",
+                    address=hex(address),
+                    variable_name=var_name.strip(),
+                    new_variable_name=new_name.strip(),
                 )
 
         elif chosen is actions["call_graph"]:
@@ -2647,6 +2745,64 @@ class GhidraPanel(AnalysisPanelBase):
                 calling_convention=cc,
                 new_name=new_sig_name,
             )
+
+    def _handle_set_function_flags(self, address: int, bridge: GhidraBridge) -> None:
+        """Prompt the user to set a function's no-return/var-args/inline flags and apply them.
+
+        Args:
+            address: Function address to modify.
+            bridge: Connected GhidraBridge instance.
+        """
+        dialog = QDialog(self)
+        dialog.setWindowTitle(self.tr("Set Function Flags"))
+        layout = QVBoxLayout(dialog)
+        no_return_box = QCheckBox(self.tr("No Return"))
+        no_return_box.setTristate(True)
+        var_args_box = QCheckBox(self.tr("Var Args"))
+        var_args_box.setTristate(True)
+        inline_box = QCheckBox(self.tr("Inline"))
+        inline_box.setTristate(True)
+        for box in (no_return_box, var_args_box, inline_box):
+            box.setCheckState(Qt.CheckState.PartiallyChecked)
+            layout.addWidget(box)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        def _tri(box: QCheckBox) -> bool | None:
+            """Convert a tri-state checkbox to a tri-state bool.
+
+            Args:
+                box: The checkbox to read.
+
+            Returns:
+                bool | None: True/False when checked/unchecked, None
+                when left partially checked ("don't change").
+            """
+            state = box.checkState()
+            if state == Qt.CheckState.PartiallyChecked:
+                return None
+            return state == Qt.CheckState.Checked
+
+        no_return = _tri(no_return_box)
+        var_args = _tri(var_args_box)
+        is_inline = _tri(inline_box)
+        run_bridge_coroutine_logged(
+            bridge.set_function_flags(address, no_return=no_return, var_args=var_args, is_inline=is_inline),
+            on_success=lambda r: self._set_status(f"Flags updated: {r}"),
+            on_error=lambda e: self._set_status(f"Set function flags failed: {e}"),
+            parent=self,
+            event="ghidra_set_function_flags",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            no_return=no_return,
+            var_args=var_args,
+            is_inline=is_inline,
+        )
 
     # ------------------------------------------------------------------
     # Imports / Exports

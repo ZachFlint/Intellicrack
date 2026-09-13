@@ -178,12 +178,26 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._flow_btn.clicked.connect(self._on_get_instruction_flow)
         row.addWidget(self._flow_btn)
 
+        self._raw_pcode_btn = QPushButton(self.tr("Get Raw P-code"))
+        self._raw_pcode_btn.clicked.connect(self._on_get_instruction_pcode)
+        row.addWidget(self._raw_pcode_btn)
+
         self._register_input = QLineEdit()
         self._register_input.setPlaceholderText("Register (e.g. EAX)")
         row.addWidget(self._register_input)
         self._register_btn = QPushButton(self.tr("Get Register"))
         self._register_btn.clicked.connect(self._on_get_register_value)
         row.addWidget(self._register_btn)
+
+        self._register_range_end_input = QLineEdit()
+        self._register_range_end_input.setPlaceholderText("End (hex, optional -- defaults to start)")
+        row.addWidget(self._register_range_end_input)
+        self._register_value_input = QLineEdit()
+        self._register_value_input.setPlaceholderText("Value (hex or dec)")
+        row.addWidget(self._register_value_input)
+        self._set_register_btn = QPushButton(self.tr("Set Register"))
+        self._set_register_btn.clicked.connect(self._on_set_register_value)
+        row.addWidget(self._set_register_btn)
         section_layout.addLayout(row)
 
         self._flow_register_result = QPlainTextEdit()
@@ -238,6 +252,42 @@ class GhidraAnalysisExtrasWidget(QWidget):
         ]
         self._flow_register_result.setPlainText("\n".join(parts))
 
+    def _on_get_instruction_pcode(self) -> None:
+        """Query raw per-instruction P-code ops for the instruction at the entered address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        address = _parse_address(self._flow_addr_input.text())
+        if address is None:
+            self._status_label.setText("Invalid address for raw P-code")
+            return
+        self._raw_pcode_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            bridge.get_instruction_pcode(address),
+            on_success=self._apply_instruction_pcode,
+            on_error=self._on_flow_register_error,
+            parent=self,
+            event="ghidra_get_instruction_pcode",
+            logger=_logger,
+            address=hex(address),
+        )
+
+    def _apply_instruction_pcode(self, result: object) -> None:
+        """Render the raw per-instruction P-code result.
+
+        Args:
+            result: Dict with address, mnemonic, and a list of raw P-code operation dicts.
+        """
+        self._raw_pcode_btn.setEnabled(True)
+        if not isinstance(result, dict):
+            self._flow_register_result.setPlainText(str(result))
+            return
+        info = cast("dict[str, Any]", result)
+        ops_raw = info.get("pcode_ops", [])
+        ops_list = cast("list[dict[str, Any]]", ops_raw) if isinstance(ops_raw, list) else []
+        lines = [f"{op.get('mnemonic', '')}  out={op.get('output')}  in={op.get('inputs')}" for op in ops_list]
+        self._flow_register_result.setPlainText("\n".join(lines))
+
     def _on_get_register_value(self) -> None:
         """Query the context-tracked register value at the entered address."""
         bridge = self._require_connected()
@@ -279,14 +329,65 @@ class GhidraAnalysisExtrasWidget(QWidget):
             return
         self._flow_register_result.setPlainText(f"Register: {info.get('register', '')}\nValue: {info.get('value', '')}")
 
+    def _on_set_register_value(self) -> None:
+        """Set the context-tracked register value over the entered address range."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        start = _parse_address(self._flow_addr_input.text())
+        if start is None:
+            self._status_label.setText("Invalid address for set register value")
+            return
+        end_text = self._register_range_end_input.text().strip()
+        end = start if not end_text else _parse_address(end_text)
+        if end is None:
+            self._status_label.setText("Invalid end address for set register value")
+            return
+        register = self._register_input.text().strip()
+        if not register:
+            self._status_label.setText("Register name required")
+            return
+        value = _parse_address(self._register_value_input.text())
+        if value is None:
+            self._status_label.setText("Invalid value for set register value")
+            return
+        self._set_register_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            bridge.set_register_value(start, end, register, value),
+            on_success=self._on_register_value_set,
+            on_error=self._on_flow_register_error,
+            parent=self,
+            event="ghidra_set_register_value",
+            logger=_logger,
+            level="info",
+            start=hex(start),
+            end=hex(end),
+            register=register,
+            value=hex(value),
+        )
+
+    def _on_register_value_set(self, _result: object) -> None:
+        """Re-enable the Set Register button and refresh the displayed register value.
+
+        Args:
+            _result: Dict returned by ``set_register_value``, unused --
+                the freshly written value is re-read via
+                ``get_register_value`` instead so the rendered text
+                always reflects a real readback.
+        """
+        self._set_register_btn.setEnabled(True)
+        self._on_get_register_value()
+
     def _on_flow_register_error(self, exc: object) -> None:
-        """Handle instruction-flow or register-value lookup failure.
+        """Handle instruction-flow or register-value lookup/write failure.
 
         Args:
             exc: The exception that occurred.
         """
         self._flow_btn.setEnabled(True)
+        self._raw_pcode_btn.setEnabled(True)
         self._register_btn.setEnabled(True)
+        self._set_register_btn.setEnabled(True)
         self._flow_register_result.setPlainText(f"Error: {exc}")
         _logger.warning("ghidra_flow_register_gui_failed", error=str(exc))
 
