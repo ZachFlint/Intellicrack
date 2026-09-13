@@ -902,6 +902,20 @@ class FunctionDisasmTab(QWidget):
         toolbar.addStretch()
         layout.addLayout(toolbar)
 
+        range_toolbar = QHBoxLayout()
+        length_label = QLabel(self.tr("Byte Length:"))
+        length_label.setFont(fm.get_ui_font(9))
+        range_toolbar.addWidget(length_label)
+        self._length_input = QLineEdit("64")
+        self._length_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        range_toolbar.addWidget(self._length_input)
+        self._fetch_range_btn = QPushButton(self.tr("Disassemble Range"))
+        self._fetch_range_btn.setObjectName("tool_button")
+        self._fetch_range_btn.clicked.connect(self._on_fetch_range)
+        range_toolbar.addWidget(self._fetch_range_btn)
+        range_toolbar.addStretch()
+        layout.addLayout(range_toolbar)
+
         self._output = QPlainTextEdit()
         self._output.setFont(fm.get_code_font(10))
         self._output.setReadOnly(True)
@@ -963,6 +977,46 @@ class FunctionDisasmTab(QWidget):
         if not _widget_is_alive(self):
             return
         self._output.setPlainText(f"[error] {exc}")
+
+    def _on_fetch_range(self) -> None:
+        """Fetch a fixed-length byte-range disassembly for the address/length inputs."""
+        if self._bridge is None:
+            return
+        address = _parse_address(self._addr_input.text())
+        if address is None:
+            self._output.setPlainText("[error] Invalid address")
+            return
+        try:
+            length = int(self._length_input.text().strip())
+        except ValueError:
+            self._output.setPlainText("[error] Invalid byte length")
+            return
+        self._fetch_range_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.disassemble_range(address, length),
+            on_success=self._apply_range_data,
+            on_error=lambda e: self._output.setPlainText(f"[error] {e}"),
+            parent=self,
+            event="cutter_disassemble_range",
+            logger=_logger,
+            address=hex(address),
+            length=length,
+        )
+
+    def _apply_range_data(self, result: object) -> None:
+        """Display the byte-range disassembly lines as formatted text.
+
+        Args:
+            result: List of :class:`DisassemblyLine` dataclass instances from the bridge.
+        """
+        self._fetch_range_btn.setEnabled(True)
+        lines: list[object] = [*result] if isinstance(result, list) else []
+        text = "\n".join(
+            f"0x{getattr(line, 'address', 0):X}  {getattr(line, 'bytes_str', '')}  "
+            f"{getattr(line, 'mnemonic', '')} {getattr(line, 'operands', '')}".rstrip()
+            for line in lines
+        )
+        self._output.setPlainText(text)
 
 
 class FunctionDetailsTab(QWidget):

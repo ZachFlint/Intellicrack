@@ -1006,3 +1006,322 @@ class TestConfigTabGetAndSetL3:
         assert _pump_until(qapp, lambda: "e asm.bits=32" in recorder.commands)
         assert "e asm.bits=32" in recorder.commands
         assert _pump_until(qapp, lambda: "asm.bits = 32" in output.toPlainText())
+
+
+@pytest.mark.usefixtures("qapp")
+class TestAnalyzeBasicBlocksPass:
+    """L1/L2/L3 gate: the standalone basic-block analysis pass (rizin 'aab') must be real and reachable.
+
+    Falsified by: changing the issued command string away from the exact
+    literal ``"aab"`` (e.g. to ``"aaa"``) or dropping the ``_r2_cmd`` call
+    entirely turns both assertions below red immediately, because the
+    recorder and the menu-driven Qt handler both assert on that exact
+    literal appearing in ``recorder.commands``.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_aab_command(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``analyze_basic_blocks`` must issue rizin's 'aab' and must not set the full-analysis flag.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        await bridge_with_recorder.analyze_basic_blocks()
+        assert "aab" in recorder.commands
+        assert priv(bridge_with_recorder, "_analyzed", bool) is False
+
+    @staticmethod
+    def test_menu_action_calls_bridge_method(qapp: QApplication) -> None:
+        """Triggering the 'Basic Blocks (aab)' menu action must invoke the real bridge method.
+
+        Falsifiable: if ``CutterPanel._on_analyze_basic_blocks`` called a
+        different bridge method or never dispatched at all, 'aab' would
+        never appear in the recorder. Broken production line: the
+        ``self._bridge.analyze_basic_blocks()`` call in
+        ``CutterPanel._on_analyze_basic_blocks`` (``cutter_panel.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop while
+                the real background bridge-call worker thread runs.
+        """
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        bridge.state.binary_loaded = True
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        on_analyze_bb = cast(Callable[[], None], getattr(panel, "_on_analyze_basic_blocks"))
+
+        on_analyze_bb()
+
+        assert _pump_until(qapp, lambda: "aab" in recorder.commands)
+        assert "aab" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
+class TestAnalyzeFunctionCallsPass:
+    """L1/L2/L3 gate: the standalone function-call analysis pass (rizin 'aac') must be real and reachable.
+
+    Falsified by: changing the issued command string away from the exact
+    literal ``"aac"`` turns both assertions below red immediately, because
+    the recorder and the menu-driven Qt handler both assert on that exact
+    literal appearing in ``recorder.commands``.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_aac_command(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``analyze_function_calls`` must issue rizin's 'aac' and must not set the full-analysis flag.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        await bridge_with_recorder.analyze_function_calls()
+        assert "aac" in recorder.commands
+        assert priv(bridge_with_recorder, "_analyzed", bool) is False
+
+    @staticmethod
+    def test_menu_action_calls_bridge_method(qapp: QApplication) -> None:
+        """Triggering the 'Function Calls (aac)' menu action must invoke the real bridge method.
+
+        Falsifiable: if ``CutterPanel._on_analyze_function_calls`` called a
+        different bridge method or never dispatched at all, 'aac' would
+        never appear in the recorder. Broken production line: the
+        ``self._bridge.analyze_function_calls()`` call in
+        ``CutterPanel._on_analyze_function_calls`` (``cutter_panel.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop while
+                the real background bridge-call worker thread runs.
+        """
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        bridge.state.binary_loaded = True
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        on_analyze_calls = cast(Callable[[], None], getattr(panel, "_on_analyze_function_calls"))
+
+        on_analyze_calls()
+
+        assert _pump_until(qapp, lambda: "aac" in recorder.commands)
+        assert "aac" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
+class TestAnalyzeReferencesPass:
+    """L1/L2/L3 gate: the standalone cross-reference analysis pass (rizin 'aar') must be real and reachable.
+
+    Falsified by: changing the command-building logic to always emit a
+    fixed string (dropping the ``n_bytes`` branch, or using a different
+    base command than ``"aar"``) turns the relevant assertions below red
+    immediately, since each asserts on the exact command literal the real
+    implementation must issue for that code path.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_bare_aar_command(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``analyze_references`` with no ``n_bytes`` must issue the bare rizin 'aar' command.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        await bridge_with_recorder.analyze_references()
+        assert "aar" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_aar_with_n_bytes(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``analyze_references`` with an explicit ``n_bytes`` must issue 'aar <n_bytes>'.
+
+        This is the falsifiable distinction from the bare-command path: a
+        naive implementation that ignores ``n_bytes`` would never emit this
+        exact command literal.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        await bridge_with_recorder.analyze_references(n_bytes=4096)
+        assert "aar 4096" in recorder.commands
+
+    @staticmethod
+    def test_menu_action_calls_bridge_method(qapp: QApplication) -> None:
+        """Triggering the 'Data/Code Refs (aar)' menu action must invoke the real bridge method.
+
+        Falsifiable: if ``CutterPanel._on_analyze_references`` called a
+        different bridge method or never dispatched at all, 'aar' would
+        never appear in the recorder. Broken production line: the
+        ``self._bridge.analyze_references()`` call in
+        ``CutterPanel._on_analyze_references`` (``cutter_panel.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop while
+                the real background bridge-call worker thread runs.
+        """
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        bridge.state.binary_loaded = True
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        on_analyze_refs = cast(Callable[[], None], getattr(panel, "_on_analyze_references"))
+
+        on_analyze_refs()
+
+        assert _pump_until(qapp, lambda: "aar" in recorder.commands)
+        assert "aar" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
+class TestAutonameFunctionsPass:
+    """L1/L2/L3 gate: the standalone function autoname pass (rizin 'aan') must be real and reachable.
+
+    Falsified by: changing the issued command string away from the exact
+    literal ``"aan"`` turns the L1 and menu-dispatch assertions red
+    immediately; separately, if the handler's success callback stopped
+    calling ``_on_analysis_pass_complete``/``_on_refresh_functions``, the
+    function-tree-refresh assertion would go red while the command-issued
+    assertion still passed, proving the two assertions gate genuinely
+    independent behaviors.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_aan_command(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``autoname_functions`` must issue rizin's 'aan' and must not set the full-analysis flag.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        await bridge_with_recorder.autoname_functions()
+        assert "aan" in recorder.commands
+        assert priv(bridge_with_recorder, "_analyzed", bool) is False
+
+    @staticmethod
+    def test_menu_action_refreshes_function_tree(qapp: QApplication) -> None:
+        """Triggering the 'Autoname Functions (aan)' menu action must issue 'aan' and refresh the functions tree.
+
+        The ``_analyzed`` precondition ``CutterBridge.get_functions`` enforces
+        is reached through the real production ``analyze()`` path (mirroring
+        ``_attached_bridge`` in ``test_cutter_dynamic_navigation.py``), not by
+        writing the private attribute directly.
+
+        Falsifiable: if ``CutterPanel._on_autoname_functions`` called a
+        different bridge method, or never refreshed the functions tree
+        afterward, 'aan' would never appear in the recorder or the tree
+        would stay empty. Broken production line: the
+        ``self._bridge.autoname_functions()`` call and the
+        ``_on_analysis_pass_complete`` success callback in
+        ``CutterPanel._on_autoname_functions`` (``cutter_panel.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop while
+                the real background bridge-call worker thread runs.
+        """
+        recorder = CommandRecorder({"aflj": '[{"name":"renamed_fn","offset":4198400,"size":16}]'})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        bridge.state.binary_loaded = True
+        asyncio.run(bridge.analyze("quick"))
+        recorder.commands.clear()
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        on_autoname = cast(Callable[[], None], getattr(panel, "_on_autoname_functions"))
+        func_tree = cast(QTreeWidget, getattr(panel, "_func_tree"))
+
+        on_autoname()
+
+        assert _pump_until(qapp, lambda: "aan" in recorder.commands)
+        assert _pump_until(qapp, lambda: func_tree.topLevelItemCount() == 1)
+        top = func_tree.topLevelItem(0)
+        assert top is not None
+        assert top.text(0) == "renamed_fn"
+
+
+@pytest.mark.usefixtures("qapp")
+class TestDisassembleRange:
+    """L1/L2/L3 gate: fixed byte-range disassembly (rizin 'pD'/'pDj') must be real and reachable.
+
+    Falsified by: changing the issued command from ``f"pDj {length}"`` to
+    ``f"pdj {length}"`` (the pre-existing instruction-count command) turns
+    the exact-match assertion on ``"pDj 8"`` red immediately -- this is the
+    precise defect this item closes, since a naive implementation could
+    accidentally alias to the existing ``disassemble``/``pdj`` path instead
+    of a genuine byte-bounded variant.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_byte_range_command_and_parses_lines(
+        bridge_with_recorder: CutterBridge,
+        recorder: CommandRecorder,
+    ) -> None:
+        """``disassemble_range`` must issue rizin's 'pDj <length>' and parse the real returned lines.
+
+        The ``_analyzed`` precondition is reached through the real
+        production ``analyze()`` path (mirroring ``_attached_bridge`` in
+        ``test_cutter_dynamic_navigation.py``), not by writing the private
+        attribute directly.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        recorder.responses["pDj 8"] = (
+            '[{"offset":4198400,"bytes":"90","opcode":"nop","comment":null},{"offset":4198401,"bytes":"c3","opcode":"ret","comment":null}]'
+        )
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+
+        lines = await bridge_with_recorder.disassemble_range(0x400000, 8)
+
+        assert any(cmd.startswith("pDj 8") for cmd in recorder.commands), recorder.commands
+        assert "pdj 8" not in recorder.commands
+        assert [line.mnemonic for line in lines] == ["nop", "ret"]
+
+    @staticmethod
+    def test_menu_action_fetches_range_and_renders_text(qapp: QApplication) -> None:
+        """``FunctionDisasmTab._on_fetch_range`` must issue 'pDj <n>' and render the real mnemonics.
+
+        Falsifiable: if ``_on_fetch_range`` called ``disassemble`` (the
+        instruction-count ``pdj`` path) instead of the new
+        ``disassemble_range`` (``pDj``), 'pDj 8' would never be recorded and
+        the output would stay empty. Broken production line: the
+        ``self._bridge.disassemble_range(address, length)`` call in
+        ``FunctionDisasmTab._on_fetch_range`` (``cutter_static_extra_tab.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop while
+                the real background bridge-call worker thread runs.
+        """
+        recorder = CommandRecorder({
+            "pDj 8": (
+                '[{"offset":4198400,"bytes":"90","opcode":"nop","comment":null},'
+                '{"offset":4198401,"bytes":"c3","opcode":"ret","comment":null}]'
+            ),
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        asyncio.run(bridge.analyze("quick"))
+        recorder.commands.clear()
+        tab = FunctionDisasmTab()
+        tab.refresh(bridge)
+        addr_input = cast(QLineEdit, getattr(tab, "_addr_input"))
+        length_input = cast(QLineEdit, getattr(tab, "_length_input"))
+        addr_input.setText("0x400000")
+        length_input.setText("8")
+        on_fetch_range = cast(Callable[[], None], getattr(tab, "_on_fetch_range"))
+        output = cast(QPlainTextEdit, getattr(tab, "_output"))
+
+        on_fetch_range()
+
+        assert _pump_until(qapp, lambda: "pDj 8" in recorder.commands)
+        assert _pump_until(qapp, lambda: "nop" in output.toPlainText())
+        assert "ret" in output.toPlainText()
