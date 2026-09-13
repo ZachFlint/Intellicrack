@@ -953,6 +953,22 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Success status",
                 ),
                 ToolFunction(
+                    name="ghidra.remove_comment",
+                    description="Delete/clear an existing comment of a given type at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address of the comment to clear", required=True),
+                        ToolParameter(
+                            name="comment_type",
+                            type="string",
+                            description="Type: EOL, PRE, POST, PLATE, REPEATABLE",
+                            required=False,
+                            default="EOL",
+                            enum=["EOL", "PRE", "POST", "PLATE", "REPEATABLE"],
+                        ),
+                    ],
+                    returns="Dict with address, comment_type, and success",
+                ),
+                ToolFunction(
                     name="ghidra.get_imports",
                     description="Get all imported functions",
                     parameters=[],
@@ -1726,6 +1742,44 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Dict with address, is_thunk, thunked_function, and thunked_address",
                 ),
                 ToolFunction(
+                    name="ghidra.create_function_tag",
+                    description="Create a function tag in the program's tag manager",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Tag name", required=True),
+                        ToolParameter(name="comment", type="string", description="Tag comment", required=False, default=""),
+                    ],
+                    returns="Dict with name, comment, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.set_function_tags",
+                    description="Add or remove a function tag on a specific function",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Function entry address", required=True),
+                        ToolParameter(name="tag_name", type="string", description="Tag name to add or remove", required=True),
+                        ToolParameter(
+                            name="operation",
+                            type="string",
+                            description="Whether to add or remove the tag",
+                            required=True,
+                            enum=["add", "remove"],
+                        ),
+                    ],
+                    returns="Dict with address, tag_name, operation, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.get_function_tags",
+                    description="List function tags: all tags in the program, or the tags on one function",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Function address to list tags for; omit to list every tag in the program",
+                            required=False,
+                        ),
+                    ],
+                    returns="List of tag dicts with name and comment",
+                ),
+                ToolFunction(
                     name="ghidra.get_external_references",
                     description="Get external (imported) references from an address",
                     parameters=[
@@ -1797,6 +1851,15 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ToolParameter(name="name", type="string", description="Label name to remove", required=True),
                     ],
                     returns="Dict with address, name, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.promote_symbol_to_primary",
+                    description="Promote an already-existing symbol at an address to primary (Symbol Table's Set Primary action)",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address of the symbol", required=True),
+                        ToolParameter(name="name", type="string", description="Name of the existing symbol to promote", required=True),
+                    ],
+                    returns="Dict with address, name, already_primary, and success",
                 ),
                 ToolFunction(
                     name="ghidra.add_thunk",
@@ -4047,6 +4110,101 @@ metadata
 
         _logger.info("comment_added", address=hex(address), comment_type=comment_type)
         return True
+
+    async def remove_comment(self, address: int, comment_type: str = "EOL") -> dict[str, Any]:
+        """Delete/clear an existing comment of a given type at an address.
+
+        After issuing ``CodeUnit.setComment(type, None)`` the bridge
+        re-queries the same comment slot via ``remote_eval`` and
+        verifies the stored value is now empty, mirroring
+        :meth:`add_comment`'s own write-then-verify readback philosophy.
+
+        Args:
+            address: Address of the comment to clear.
+            comment_type: Type of comment: EOL, PRE, POST, PLATE, or
+                REPEATABLE.
+
+        Returns:
+            dict[str, Any]: Dict with address, comment_type, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, ``comment_type`` is
+                unrecognized, no code unit exists at ``address``, the
+                clear fails, or the readback still reports a comment.
+        """
+        if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
+            error_message = _ERR_NOT_CONNECTED
+            raise ToolError(error_message)
+
+        comment_map = {
+            "EOL": "CodeUnit.EOL_COMMENT",
+            "PRE": "CodeUnit.PRE_COMMENT",
+            "POST": "CodeUnit.POST_COMMENT",
+            "PLATE": "CodeUnit.PLATE_COMMENT",
+            "REPEATABLE": "CodeUnit.REPEATABLE_COMMENT",
+        }
+        ghidra_type = comment_map.get(comment_type)
+        if ghidra_type is None:
+            _logger.error("ghidra_unknown_comment_type", address=hex(address), comment_type=comment_type)
+            error_message = f"Unknown comment_type {comment_type!r}: must be one of {sorted(comment_map)}"
+            raise ToolError(error_message)
+
+        try:
+            await self._execute_remote(
+                textwrap.dedent(
+                    f"""
+                    from ghidra.program.model.listing import CodeUnit
+
+                    addr = toAddr({address})
+                    cu = currentProgram.getListing().getCodeUnitAt(addr)
+                    if cu is None:
+                        raise RuntimeError('No code unit at ' + str(addr))
+                    tx_id = currentProgram.startTransaction('intellicrack.remove_comment')
+                    try:
+                        cu.setComment({ghidra_type}, None)
+                    finally:
+                        currentProgram.endTransaction(tx_id, True)
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
+        except Exception as e:
+            _logger.warning("ghidra_remove_comment_failed", address=hex(address), error=str(e))
+            error_message = f"Remove comment failed: {e}"
+            raise ToolError(error_message) from e
+
+        try:
+            readback = await self._execute_remote_eval(
+                textwrap.dedent(
+                    f"""
+                    (lambda cu: cu.getComment({ghidra_type}) if cu is not None else None)(
+                        currentProgram.getListing().getCodeUnitAt(toAddr({address}))
+                    )
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
+        except Exception as e:
+            _logger.warning("ghidra_remove_comment_readback_failed", address=hex(address), error=str(e))
+            error_message = f"Remove comment readback failed: {e}"
+            raise ToolError(error_message) from e
+
+        observed = "" if readback is None else str(readback)
+        if observed:
+            _logger.error(
+                "ghidra_remove_comment_verification_failed",
+                address=hex(address),
+                comment_type=comment_type,
+                observed_length=len(observed),
+            )
+            msg = f"Comment removal verification failed at {hex(address)}: comment still present"
+            raise ToolError(msg)
+
+        _logger.info("comment_removed", address=hex(address), comment_type=comment_type)
+        return {"address": hex(address), "comment_type": comment_type, "success": True}
 
     async def get_imports(self) -> list[ImportInfo]:
         """Get imported functions.
@@ -8567,6 +8725,166 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
 
+    async def create_function_tag(self, name: str, comment: str = "") -> dict[str, Any]:
+        """Create a function tag in the program's tag manager.
+
+        Args:
+            name: Tag name.
+            comment: Optional tag comment.
+
+        Returns:
+            dict[str, Any]: Dict with name, comment, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the tag manager
+                refuses to create the tag.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("function_tag_creating", tag_name=name)
+        try:
+            result = await self._execute_remote(f"""
+                ftm = currentProgram.getFunctionManager().getFunctionTagManager()
+                tx_id = currentProgram.startTransaction('intellicrack.create_function_tag')
+                try:
+                    tag = ftm.createFunctionTag({json.dumps(name)}, {json.dumps(comment)})
+                finally:
+                    currentProgram.endTransaction(tx_id, tag is not None)
+                {{
+                    'name': tag.getName() if tag is not None else None,
+                    'comment': (tag.getComment() or '') if tag is not None else '',
+                    'success': tag is not None,
+                }}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_create_function_tag_failed", tag_name=name)
+            msg = f"Create function tag failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("success", False)):
+            msg = f"Create function tag failed: Ghidra refused tag {name!r}"
+            raise ToolError(msg)
+        return {"name": name, "comment": comment, "success": True}
+
+    async def set_function_tags(self, address: int, tag_name: str, operation: str) -> dict[str, Any]:
+        """Add or remove a function tag on a specific function.
+
+        Args:
+            address: Function entry address.
+            tag_name: Name of the tag to add or remove.
+            operation: One of ``add`` or ``remove``.
+
+        Returns:
+            dict[str, Any]: Dict with address, tag_name, operation, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, ``operation`` is
+                unrecognized, the function is not found, or the
+                mutation fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        valid_operations = {"add", "remove"}
+        if operation not in valid_operations:
+            msg = f"Unknown operation {operation!r}: must be one of {sorted(valid_operations)}"
+            raise ToolError(msg)
+
+        _logger.info("function_tags_setting", address=hex(address), tag_name=tag_name, operation=operation)
+        if operation == "add":
+            mutate_script = f"""
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                found = func is not None
+                applied = False
+                tx_id = currentProgram.startTransaction('intellicrack.set_function_tags')
+                try:
+                    if found:
+                        applied = bool(func.addTag({json.dumps(tag_name)}))
+                finally:
+                    currentProgram.endTransaction(tx_id, applied)
+                {{'found': found, 'applied': applied}}
+            """
+        else:
+            mutate_script = f"""
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                found = func is not None
+                applied = False
+                tx_id = currentProgram.startTransaction('intellicrack.set_function_tags')
+                try:
+                    if found:
+                        func.removeTag({json.dumps(tag_name)})
+                        applied = True
+                finally:
+                    currentProgram.endTransaction(tx_id, applied)
+                {{'found': found, 'applied': applied}}
+            """
+        try:
+            result = await self._execute_remote(mutate_script)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_set_function_tags_failed", address=hex(address))
+            msg = f"Set function tags failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found", False)):
+            msg = f"{_ERR_FUNCTION_NOT_FOUND}: {hex(address)}"
+            raise ToolError(msg)
+        if not bool(info.get("applied", False)):
+            msg = f"Set function tags failed: {operation} {tag_name!r} at {hex(address)}"
+            raise ToolError(msg)
+        return {"address": hex(address), "tag_name": tag_name, "operation": operation, "success": True}
+
+    async def get_function_tags(self, address: int | None = None) -> list[dict[str, Any]]:
+        """List function tags: every tag in the program, or one function's tags.
+
+        Args:
+            address: Function address to list tags for; omit to list
+                every tag registered in the program's tag manager.
+
+        Returns:
+            list[dict[str, Any]]: List of tag dicts with name and comment.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        addr_repr = hex(address) if address is not None else None
+        addr_literal = str(address) if address is not None else "None"
+        _logger.debug("function_tags_fetching", address=addr_repr)
+        try:
+            result = await self._execute_remote(f"""
+                addr_literal = {addr_literal}
+                tags = []
+                if addr_literal is None:
+                    ftm = currentProgram.getFunctionManager().getFunctionTagManager()
+                    for tag in ftm.getAllFunctionTags():
+                        tags.append({{'name': tag.getName(), 'comment': tag.getComment() or ''}})
+                else:
+                    func = getFunctionContaining(toAddr(addr_literal))
+                    if func is not None:
+                        for tag in func.getTags():
+                            tags.append({{'name': tag.getName(), 'comment': tag.getComment() or ''}})
+                tags
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_get_function_tags_failed", address=addr_repr)
+            msg = f"Get function tags failed: {exc}"
+            raise ToolError(msg) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
+
     async def get_external_references(self, address: int) -> list[dict[str, Any]]:
         """Get external (imported) references from an address.
 
@@ -8945,6 +9263,72 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             msg = f"{_ERR_LABEL_NOT_FOUND}: {name!r} at {hex(address)}"
             raise ToolError(msg)
         return {"address": hex(address), "name": name, "success": True}
+
+    async def promote_symbol_to_primary(self, address: int, name: str) -> dict[str, Any]:
+        """Promote an already-existing symbol at an address to primary.
+
+        Looks up the named symbol among every symbol already defined at
+        ``address`` and calls ``Symbol.setPrimary()`` on it -- the
+        programmatic form of the Symbol Table window's "Set Primary"
+        action. Unlike :meth:`add_label`'s creation-time ``primary=True``
+        flag, this method never creates a symbol; it only acts on one
+        ``SymbolTable.getSymbols`` already returns.
+
+        Args:
+            address: Address of the symbol.
+            name: Name of the existing symbol to promote.
+
+        Returns:
+            dict[str, Any]: Dict with address, name, already_primary,
+            and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, the RPC fails, or no
+                symbol named ``name`` exists at ``address``.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.debug("symbol_promoting", address=hex(address), symbol_name=name)
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                st = currentProgram.getSymbolTable()
+                target_name = {json.dumps(name)}
+                promoted = False
+                already_primary = False
+                tx_id = currentProgram.startTransaction('intellicrack.promote_symbol_to_primary')
+                try:
+                    symbols = list(st.getSymbols(addr))
+                    for sym in symbols:
+                        if sym.getName() == target_name:
+                            already_primary = bool(sym.isPrimary())
+                            if already_primary:
+                                promoted = True
+                            elif sym.setPrimary():
+                                promoted = True
+                            break
+                finally:
+                    currentProgram.endTransaction(tx_id, promoted)
+                {{'promoted': promoted, 'already_primary': already_primary}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_promote_symbol_to_primary_failed", address=hex(address))
+            msg = f"Promote symbol failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("promoted", False)):
+            msg = f"No symbol named {name!r} found at {hex(address)}"
+            raise ToolError(msg)
+        return {
+            "address": hex(address),
+            "name": name,
+            "already_primary": bool(info.get("already_primary", False)),
+            "success": True,
+        }
 
     async def add_thunk(self, address: int, thunked_address: int) -> dict[str, Any]:
         """Mark a function as a thunk forwarding to another function.
