@@ -209,6 +209,13 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         parameters=[
             ToolParameter(name="path", type="string", description="Path to executable", required=True),
             ToolParameter(name="args", type="array", description="Command line arguments", required=False),
+            ToolParameter(
+                name="env",
+                type="object",
+                description="Environment variables to merge onto the inherited environment",
+                required=False,
+            ),
+            ToolParameter(name="cwd", type="string", description="Working directory for the spawned process", required=False),
             ToolParameter(name="cancellable_id", type="string", description="Cancellation token from create_cancellable", required=False),
         ],
         returns="Process ID of spawned process",
@@ -626,10 +633,34 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="List of CrashInfo with crash details",
     ),
     ToolFunction(
+        name="frida.enable_device_lost_notifications",
+        description="Enable notification when the currently connected Frida device becomes unavailable",
+        parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.disable_device_lost_notifications",
+        description="Disable device-lost notifications",
+        parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
         name="frida.enumerate_devices",
         description="List all available Frida devices (local, USB, remote)",
         parameters=[],
         returns="List of FridaDeviceInfo",
+    ),
+    ToolFunction(
+        name="frida.enable_device_change_notifications",
+        description="Enable live notifications when the Frida device list changes (device added/removed/changed)",
+        parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.disable_device_change_notifications",
+        description="Disable live device-list-changed notifications",
+        parameters=[],
+        returns="Success status",
     ),
     ToolFunction(
         name="frida.connect_device",
@@ -650,6 +681,19 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ),
         ],
         returns="FridaDeviceInfo for the connected device",
+    ),
+    ToolFunction(
+        name="frida.remove_remote_device",
+        description="Remove a previously-added remote Frida device",
+        parameters=[
+            ToolParameter(
+                name="host",
+                type="string",
+                description="host[:port] of the remote device to remove, as previously passed to frida.connect_device",
+                required=True,
+            ),
+        ],
+        returns="Success status",
     ),
     ToolFunction(
         name="frida.post_message",
@@ -873,6 +917,12 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         description="List all installed applications on the device",
         parameters=[],
         returns="List of FridaApplicationInfo",
+    ),
+    ToolFunction(
+        name="frida.get_frontmost_application",
+        description="Get the frontmost/foreground application on the current device",
+        parameters=[],
+        returns="FridaApplicationInfo, or null if none is frontmost / not supported on this device",
     ),
     ToolFunction(
         name="frida.inject_library_file",
@@ -1301,6 +1351,11 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._file_monitors: dict[str, object] = {}
         self._crash_handler: Callable[[object], None] | None = None
         self._crash_reporting_enabled: bool = False
+        self._device_manager_changed_handler: Callable[[], None] | None = None
+        self._device_change_notifications_enabled: bool = False
+        self._device_lost_handler: Callable[[], None] | None = None
+        self._device_lost_handler_target: frida.Device | None = None
+        self._device_lost_notifications_enabled: bool = False
         self._typescript_compiler: frida.Compiler | None = None
         self._typescript_compiler_lock: threading.Lock = threading.Lock()
         self._capabilities = BridgeCapabilities(
@@ -1375,6 +1430,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         await self._shutdown_stalker_scripts()
         await self._shutdown_child_gating()
         self._teardown_crash_handler()
+        self._teardown_device_change_notifications()
+        self._teardown_device_lost_notifications()
         await self._shutdown_file_monitors()
         await self._shutdown_call_probes()
         await self._shutdown_exception_handler_script()
@@ -1792,6 +1849,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         path: Path,
         args: Sequence[str] | None = None,
         *,
+        env: dict[str, str] | None = None,
+        cwd: str | None = None,
         cancellable_id: str | None = None,
     ) -> int:
         """Spawn a new process with Frida instrumentation.
@@ -1799,6 +1858,9 @@ class _FridaBridgeBase(InstrumentationBridge):
         Args:
             path: Path to executable.
             args: Command line arguments.
+            env: Environment variables to merge onto the inherited
+                environment of the spawned process.
+            cwd: Working directory for the spawned process.
             cancellable_id: Optional cancellation token identifier returned by
                 :meth:`create_cancellable`. When supplied, the token is passed
                 through to the underlying Frida spawn and attach calls so the
@@ -1830,6 +1892,8 @@ class _FridaBridgeBase(InstrumentationBridge):
                 str(path),
                 spawn_argv,
                 cancellable,
+                env=env,
+                cwd=cwd,
             )
         except (
             frida.ExecutableNotFoundError,
@@ -4364,6 +4428,9 @@ class _FridaBridgeBase(InstrumentationBridge):
         program: str,
         argv: Sequence[str | bytes],
         cancellable: frida.Cancellable | None,
+        *,
+        env: dict[str, str] | None = None,
+        cwd: str | None = None,
     ) -> int:
         """Invoke ``Device.spawn`` honoring an optional cancellation token.
 
@@ -4373,14 +4440,16 @@ class _FridaBridgeBase(InstrumentationBridge):
             argv: Argument vector for the spawned process.
             cancellable: Optional cancellation token; entered as Frida's
                 thread-local cancellable scope around the call when provided.
+            env: Environment variables to merge onto the inherited environment.
+            cwd: Working directory for the spawned process.
 
         Returns:
             int: PID of the spawned process.
         """
         if cancellable is not None:
             with cancellable:
-                return device.spawn(program, argv=list(argv))
-        return device.spawn(program, argv=list(argv))
+                return device.spawn(program, argv=list(argv), env=env, cwd=cwd)
+        return device.spawn(program, argv=list(argv), env=env, cwd=cwd)
 
     @staticmethod
     def _create_script_with_cancellable(
@@ -4430,6 +4499,68 @@ class _FridaBridgeBase(InstrumentationBridge):
                 off_fn("process-crashed", handler)
         self._crash_handler = None
         self._crash_reporting_enabled = False
+
+    def _teardown_device_change_notifications(self) -> None:
+        """Best-effort detach of the device-changed handler called from :meth:`shutdown`.
+
+        Mirrors :meth:`disable_device_change_notifications` but never raises so it does not interrupt the rest of the shutdown sequence.
+        """
+        try:
+            self._detach_device_manager_changed_handler()
+        except Exception:
+            _logger.exception("device_change_notifications_teardown_failed")
+
+    def _detach_device_manager_changed_handler(self) -> None:
+        """Drop the registered device-manager "changed" handler if one is currently active.
+
+        Shared core for :meth:`disable_device_change_notifications` and :meth:`_teardown_device_change_notifications`; the public methods
+        differ only in whether errors are surfaced or logged.
+        """
+        if not self._device_change_notifications_enabled:
+            return
+        handler = self._device_manager_changed_handler
+        if handler is not None:
+            manager = frida.get_device_manager()
+            off_fn = getattr(manager, "off", None)
+            if callable(off_fn):
+                off_fn("changed", handler)
+        self._device_manager_changed_handler = None
+        self._device_change_notifications_enabled = False
+
+    def _teardown_device_lost_notifications(self) -> None:
+        """Best-effort detach of the device-lost handler called from :meth:`shutdown`.
+
+        Mirrors :meth:`disable_device_lost_notifications` but never raises so it does not interrupt the rest of the shutdown sequence.
+        """
+        try:
+            self._detach_device_lost_handler()
+        except Exception:
+            _logger.exception("device_lost_notifications_teardown_failed")
+
+    def _detach_device_lost_handler(self) -> None:
+        """Drop the registered device "lost" handler if one is currently active.
+
+        Detaches from the device the handler was actually registered on
+        (tracked separately in ``self._device_lost_handler_target``) rather
+        than the bridge's current ``self._device``, since the handler's own
+        callback clears ``self._device`` the moment the signal fires -
+        by the time this runs, the device that is now lost may no longer be
+        reachable through ``self._device`` at all. Shared core for
+        :meth:`disable_device_lost_notifications` and
+        :meth:`_teardown_device_lost_notifications`; the public methods
+        differ only in whether errors are surfaced or logged.
+        """
+        if not self._device_lost_notifications_enabled:
+            return
+        device = self._device_lost_handler_target
+        handler = self._device_lost_handler
+        if device is not None and handler is not None:
+            off_fn = getattr(device, "off", None)
+            if callable(off_fn):
+                off_fn("lost", handler)
+        self._device_lost_handler = None
+        self._device_lost_handler_target = None
+        self._device_lost_notifications_enabled = False
 
     @staticmethod
     def _build_native_call_script(
@@ -4895,6 +5026,113 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             _logger.warning("child_resume_failed", pid=pid, error=str(e))
             raise ToolError(_ERR_CHILD_GATING_FAILED) from e
 
+    async def enable_device_change_notifications(self) -> None:
+        """Enable live notifications when the Frida device list changes.
+
+        Registers a callback on ``DeviceManager``'s ``"changed"`` signal, which
+        fires with no arguments whenever a device is added, removed, or
+        otherwise changes anywhere in the manager (USB attach/detach, a remote
+        endpoint added or removed by any client) - the same signal a manual
+        "Refresh Devices" click responds to, delivered live instead.
+
+        Raises:
+            ToolError: If the handler cannot be registered.
+        """
+        _logger.info("frida_enable_device_change_notifications_started")
+        if self._device_change_notifications_enabled:
+            return
+
+        def on_devices_changed() -> None:
+            """Publish a ``device_list_changed`` dispatch message when the device manager's list changes."""
+            _logger.info("frida_device_list_changed")
+            self._dispatch_message({"type": "send", "payload": {"type": "device_list_changed"}})
+
+        manager = frida.get_device_manager()
+        try:
+            manager.on("changed", on_devices_changed)
+        except Exception as e:
+            _logger.warning("device_change_notifications_enable_failed", error=str(e))
+            raise ToolError(_ERR_DEVICE_FAILED) from e
+
+        self._device_manager_changed_handler = on_devices_changed
+        self._device_change_notifications_enabled = True
+        _logger.info("device_change_notifications_enabled")
+
+    async def disable_device_change_notifications(self) -> None:
+        """Disable live device-list-changed notifications.
+
+        Idempotent; safe to call when notifications were never enabled.
+
+        Raises:
+            ToolError: If detaching the handler fails for a reason other than
+                the device manager already being torn down.
+        """
+        try:
+            self._detach_device_manager_changed_handler()
+        except Exception as e:
+            _logger.warning("device_change_notifications_disable_failed", error=str(e))
+            raise ToolError(_ERR_DEVICE_FAILED, details=self._frida_error_details(e)) from e
+        _logger.info("device_change_notifications_disabled")
+
+    async def enable_device_lost_notifications(self) -> None:
+        """Enable notification when the currently connected device is lost.
+
+        Registers a callback on the active ``Device``'s ``"lost"`` signal,
+        which fires with no arguments when the device itself becomes
+        unavailable (USB unplugged, remote connection dropped, local provider
+        gone) - distinct from :meth:`_register_session_detached_handler`,
+        which reacts to the *session* being torn down while the device may
+        still be reachable. Resets the bridge's connection state and publishes
+        a ``device_lost`` message when the signal fires.
+
+        Raises:
+            ToolError: If no device is available or the handler cannot be
+                registered.
+        """
+        _logger.info("frida_enable_device_lost_notifications_started")
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        if self._device_lost_notifications_enabled:
+            return
+
+        def on_device_lost() -> None:
+            """Reset connection state and publish a ``device_lost`` message when the device is lost."""
+            _logger.warning("frida_device_lost")
+            self._device = None
+            self.state.connected = False
+            self.state.last_error = "device lost"
+            self._publish_tool_state()
+            self._dispatch_message({"type": "send", "payload": {"type": "device_lost"}})
+
+        try:
+            device.on("lost", on_device_lost)
+        except Exception as e:
+            _logger.warning("device_lost_notifications_enable_failed", error=str(e))
+            raise ToolError(_ERR_DEVICE_FAILED, details=self._frida_error_details(e)) from e
+
+        self._device_lost_handler = on_device_lost
+        self._device_lost_handler_target = device
+        self._device_lost_notifications_enabled = True
+        _logger.info("device_lost_notifications_enabled")
+
+    async def disable_device_lost_notifications(self) -> None:
+        """Disable device-lost notifications.
+
+        Idempotent; safe to call when notifications were never enabled.
+
+        Raises:
+            ToolError: If detaching the handler fails for a reason other than
+                the device already being gone.
+        """
+        try:
+            self._detach_device_lost_handler()
+        except Exception as e:
+            _logger.warning("device_lost_notifications_disable_failed", error=str(e))
+            raise ToolError(_ERR_DEVICE_FAILED, details=self._frida_error_details(e)) from e
+        _logger.info("device_lost_notifications_disabled")
+
     async def enable_crash_reporting(self) -> None:
         """Enable crash event monitoring for attached processes.
 
@@ -5091,6 +5329,34 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             name=str(device.name),
             device_type=str(device.type),
         )
+
+    async def remove_remote_device(self, host: str) -> None:
+        """Remove a previously-added remote Frida device.
+
+        Args:
+            host: The ``host[:port]`` of the remote device to remove, exactly as
+                passed to :meth:`connect_device` with ``device_type="remote"``.
+
+        Raises:
+            ToolError: If the device manager cannot remove the endpoint.
+        """
+        manager = frida.get_device_manager()
+        try:
+            await asyncio.to_thread(manager.remove_remote_device, host)
+        except Exception as e:
+            _logger.warning("remote_device_remove_failed", host=host, error=str(e))
+            raise ToolError(_ERR_DEVICE_FAILED, details=self._frida_error_details(e, host=host)) from e
+
+        if self._device is not None and str(getattr(self._device, "type", "")) == "remote" and str(getattr(self._device, "id", "")) == host:
+            if self._session is not None:
+                try:
+                    await self.detach(kill_spawned=False)
+                except ToolError:
+                    _logger.exception("session_release_before_device_removal_failed")
+            self._device = None
+            self._publish_tool_state()
+
+        _logger.info("remote_device_removed", host=host)
 
     async def post_message(self, script_id: str, message: str) -> bool:
         """Send a message from Python to a running Frida script.
@@ -6114,6 +6380,40 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             )
             for app in apps
         ]
+
+    async def get_frontmost_application(self) -> FridaApplicationInfo | None:
+        """Get the frontmost/foreground application on the current device.
+
+        Returns:
+            FridaApplicationInfo | None: The frontmost application, or None if
+                the device reports no frontmost application.
+
+        Raises:
+            ToolError: If the bridge is not initialised or the query itself
+                fails, including when the device does not support this query
+                (``frida.NotSupportedError`` - the confirmed, always-hit case on
+                this codebase's local Windows device; see the native-API
+                section of work order 07-A9).
+        """
+        _logger.debug("frida_get_frontmost_application_started")
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE, details={"reason": "bridge not initialised; call initialize() first"})
+
+        try:
+            app = await asyncio.to_thread(device.get_frontmost_application)
+        except frida.NotSupportedError as e:
+            raise ToolError(_ERR_ENUMERATE_FAILED, details=self._frida_error_details(e)) from e
+        except (frida.ServerNotRunningError, frida.TransportError, frida.InvalidOperationError, OSError) as e:
+            raise ToolError(_ERR_ENUMERATE_FAILED, details=self._frida_error_details(e)) from e
+
+        if app is None:
+            return None
+        return FridaApplicationInfo(
+            identifier=str(getattr(app, "identifier", "")),
+            name=str(getattr(app, "name", "")),
+            pid=int(getattr(app, "pid", 0)),
+        )
 
     async def inject_library_file(self, pid: int, path: str, entrypoint: str, data: str) -> int:
         """Inject a shared library file into a process.
