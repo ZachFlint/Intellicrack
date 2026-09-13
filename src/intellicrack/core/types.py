@@ -955,6 +955,9 @@ class HookInfo:
         address: Resolved address if known.
         script_id: ID of the script containing the hook.
         active: Whether the hook is currently active.
+        original_trampoline: Pointer to the original implementation's
+            trampoline, when installed via Interceptor.replaceFast (None
+            for every other hook kind).
     """
 
     id: str
@@ -962,6 +965,7 @@ class HookInfo:
     address: int | None
     script_id: str
     active: bool
+    original_trampoline: int | None = None
 
 
 @dataclass
