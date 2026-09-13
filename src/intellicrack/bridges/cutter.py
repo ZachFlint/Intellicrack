@@ -31,6 +31,7 @@ from intellicrack.bridges.base import (
     BridgeCapabilities,
     BridgeState,
     DisassemblyLine,
+    StackFrame,
     StaticAnalysisBridge,
 )
 from intellicrack.core.logging import get_logger
@@ -745,6 +746,15 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Decompile a function to pseudocode",
             [
                 _tp("address", "integer", "Function address to decompile"),
+                _tp(
+                    "backend",
+                    "string",
+                    "Decompiler backend: 'pdg' (rz-ghidra, default) or 'pdd' (jsdec, alternate backend "
+                    "for when pdg fails or is not preferred)",
+                    required=False,
+                    default="pdg",
+                    enum=["pdg", "pdd"],
+                ),
             ],
             "Decompiled C-like pseudocode",
         ),
@@ -1016,6 +1026,38 @@ def _build_tool_functions() -> list[ToolFunction]:
         ),
         _tf("search_zignatures", "Search for matching zignatures", [], "List of match dictionaries"),
         _tf(
+            "apply_flirt_signatures",
+            "Apply FLIRT signatures to the loaded binary from a .sig/.pat file (rizin 'Fs') or from the "
+            "configured sigdb (rizin 'Fa') when no file path is given",
+            [
+                _tp(
+                    "path",
+                    "string",
+                    "Path to a .sig/.pat FLIRT signature file to apply; when omitted, applies from the configured flirt.sigdb.path instead",
+                    required=False,
+                ),
+                _tp(
+                    "sigdb_filter",
+                    "string",
+                    "Optional name filter forwarded to 'Fa' when path is omitted",
+                    required=False,
+                ),
+            ],
+            "Raw command output describing signatures applied/matched",
+        ),
+        _tf(
+            "create_flirt_signatures",
+            "Create/export a FLIRT signature file (.sig or .pat) from the currently analyzed functions (rizin 'Fc')",
+            [
+                _tp(
+                    "path",
+                    "string",
+                    "Output file path for the FLIRT signature file; extension (.sig or .pat) selects the on-disk format",
+                ),
+            ],
+            "Success status",
+        ),
+        _tf(
             "save_project",
             "Save the current analysis as a Rizin project",
             [
@@ -1261,6 +1303,26 @@ def _build_tool_functions() -> list[ToolFunction]:
             "None",
         ),
         _tf(
+            "continue_until",
+            "Continue debugger execution until a syscall, a call instruction, or a specific address is reached",
+            [
+                _tp(
+                    "mode",
+                    "string",
+                    "Continue-until mode",
+                    enum=["syscall", "call", "address"],
+                ),
+                _tp(
+                    "target",
+                    "string",
+                    "For mode='syscall': optional syscall name/number filter. For mode='address': "
+                    "required target address (decimal or 0x-prefixed hex). Ignored for mode='call'.",
+                    required=False,
+                ),
+            ],
+            "None",
+        ),
+        _tf(
             "get_registers",
             "Read the full CPU register state of the attached process",
             [],
@@ -1304,6 +1366,12 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Enumerate threads of the attached process",
             [],
             "List of ThreadInfo objects",
+        ),
+        _tf(
+            "get_backtrace",
+            "Get the call stack / backtrace of the attached thread",
+            [],
+            "List of StackFrame objects",
         ),
         _tf(
             "get_modules",
@@ -2319,18 +2387,24 @@ class CutterAnalysisMixin(_CutterBridgeBase):
         self._ghidra_sleighhome_applied = True
         _logger.debug("ghidra_sleighhome_configured", sleighhome=str(sleighhome))
 
-    async def decompile(self, address: int) -> str:
+    async def decompile(self, address: int, backend: Literal["pdg", "pdd"] = "pdg") -> str:
         """Decompile function at address.
 
-        Uses rz-ghidra's ``pdg`` command exclusively -- rizin 0.9.1 ships no
+        Uses rz-ghidra's ``pdg`` command by default -- rizin 0.9.1 ships no
         native ``pdc`` decompiler, so a prior fallback to it always failed
         and masked genuine ``pdg`` failures. The SLEIGH specifications
         ``pdg`` depends on are loaded lazily on first use within a session,
         which can exceed the default per-command timeout, so this call uses
-        an extended timeout specific to ``pdg``.
+        an extended timeout specific to ``pdg``. Passing ``backend="pdd"``
+        instead uses the bundled jsdec plugin, an alternate heuristic
+        decompiler that does not depend on SLEIGH specifications, useful
+        when ``pdg`` fails for an architecture or a user simply prefers
+        jsdec's output style.
 
         Args:
             address: Function address.
+            backend: Decompiler backend -- ``"pdg"`` (rz-ghidra, default) or
+                ``"pdd"`` (jsdec, alternate backend).
 
         Returns:
             str: Decompiled C-like pseudocode.
@@ -2345,14 +2419,22 @@ class CutterAnalysisMixin(_CutterBridgeBase):
             _logger.warning("decompile_without_analysis", address=hex(address))
             raise ToolError(_ERR_NOT_ANALYZED)
 
-        _logger.debug("decompile_requested", address=hex(address))
-        await self._configure_ghidra_sleighhome()
+        _logger.debug("decompile_requested", address=hex(address), backend=backend)
         await self._r2_cmd(f"s {address}")
-        result = await self._r2_cmd("pdg", command_timeout=_PDG_DECOMPILE_TIMEOUT)
+        if backend == "pdd":
+            result = await self._r2_cmd("pdd", command_timeout=_PDG_DECOMPILE_TIMEOUT)
+        else:
+            await self._configure_ghidra_sleighhome()
+            result = await self._r2_cmd("pdg", command_timeout=_PDG_DECOMPILE_TIMEOUT)
 
         stripped = result.strip() if result else ""
         if not stripped or stripped.startswith("Cannot ") or "Decompiler Error" in stripped:
-            _logger.warning("decompile_unavailable", address=hex(address), response_prefix=stripped[:120])
+            _logger.warning(
+                "decompile_unavailable",
+                address=hex(address),
+                backend=backend,
+                response_prefix=stripped[:120],
+            )
             raise ToolError(_ERR_DECOMPILE_NA)
 
         return result
@@ -3972,6 +4054,87 @@ class CutterZignatureMixin(CutterEsilMixin):
         _logger.debug("zignatures_searched", result_count=len(result))
         return result
 
+    async def apply_flirt_signatures(self, path: str | None = None, sigdb_filter: str | None = None) -> str:
+        """Apply FLIRT signatures to the loaded binary.
+
+        Dispatches to rizin's ``Fs <path>`` when ``path`` is given (opens a
+        FLIRT ``.sig``/``.pat`` file and applies its signatures), or to
+        ``Fa [<sigdb_filter>]`` when ``path`` is omitted (applies signatures
+        from the configured ``flirt.sigdb.path`` sigdb location, optionally
+        filtered by name). Per the Rizin Handbook, matched signatures are
+        recorded in the ``flirt`` flag space; this method deliberately does
+        not switch the globally-selected rizin flag space to enumerate
+        them, since that is a side effect that could corrupt
+        :meth:`get_flags`'s behavior for the rest of the session. Callers
+        that want to see which functions were renamed should call
+        :meth:`get_functions` afterward.
+
+        Args:
+            path: Path to a ``.sig``/``.pat`` FLIRT signature file to
+                apply. When ``None``, signatures are applied from the
+                configured sigdb instead.
+            sigdb_filter: Optional name filter forwarded to ``Fa`` when
+                ``path`` is omitted. Ignored when ``path`` is given.
+
+        Returns:
+            str: Raw rizin command output describing the signatures
+            applied/matched.
+
+        Raises:
+            ToolError: If no binary is loaded, or ``path``/``sigdb_filter``
+                contains rizin command-control characters.
+        """
+        if self._r2 is None:
+            _logger.warning("apply_flirt_signatures_without_binary", path=path)
+            raise ToolError(_ERR_NO_BINARY)
+
+        if path is not None:
+            validate_r2_argument(path, field="apply_flirt_signatures path")
+            result = await self._r2_cmd(f"Fs {path}")
+        else:
+            if sigdb_filter is not None:
+                validate_r2_argument(sigdb_filter, field="apply_flirt_signatures sigdb_filter")
+            cmd = f"Fa {sigdb_filter}" if sigdb_filter else "Fa"
+            result = await self._r2_cmd(cmd)
+
+        _logger.info("flirt_signatures_applied", path=path, sigdb_filter=sigdb_filter)
+        return result
+
+    async def create_flirt_signatures(self, path: str) -> bool:
+        """Create/export a FLIRT signature file from the currently analyzed functions.
+
+        Issues rizin's ``Fc <path>`` and verifies the file actually landed
+        on disk -- like :meth:`save_project`'s ``Ps`` command, rizin's
+        signature-family commands can silently no-op on some failure modes
+        instead of reporting an error through command output, so a passing
+        command response alone is not sufficient evidence of success.
+
+        Args:
+            path: Output file path for the FLIRT signature file. The
+                extension (``.sig`` or ``.pat``) selects the on-disk
+                format.
+
+        Returns:
+            bool: True if the signature file was created.
+
+        Raises:
+            ToolError: If no binary is loaded, ``path`` contains rizin
+                command-control characters, or the file was not written to
+                disk.
+        """
+        if self._r2 is None:
+            _logger.warning("create_flirt_signatures_without_binary", path=path)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(path, field="create_flirt_signatures path")
+        await self._r2_cmd(f"Fc {path}")
+        if not await asyncio.to_thread(Path(path).is_file):
+            _logger.warning("flirt_signature_creation_verification_failed", path=path)
+            msg = f"failed to create FLIRT signature file: {path} was not written"
+            raise ToolError(msg)
+        _logger.info("flirt_signatures_created", path=path)
+        return True
+
 
 class CutterProjectConfigMixin(CutterZignatureMixin):
     """Rizin project save/open/list and runtime configuration operations."""
@@ -4900,6 +5063,50 @@ class CutterDebugMixin(CutterDisplayMixin):
         await self._r2_cmd("dc")
         _logger.info("cutter_execution_continued")
 
+    async def continue_until(
+        self,
+        mode: Literal["syscall", "call", "address"],
+        target: str | int | None = None,
+    ) -> None:
+        """Continue debugger execution until a syscall, call, or address.
+
+        Dispatches to rizin's ``dcs`` (continue until syscall, optionally
+        filtered to a specific syscall name/number), ``dcc`` (continue
+        until the next ``call`` instruction, implemented internally via
+        repeated step-into), or ``dcu <address>`` (continue until a
+        specific address is reached). These are alternates to the plain
+        ``dc`` already issued by :meth:`run`.
+
+        Args:
+            mode: Continue-until mode -- ``"syscall"``, ``"call"``, or
+                ``"address"``.
+            target: For ``mode="syscall"``, an optional syscall name/
+                number filter. For ``mode="address"``, the required
+                target address (a native ``int``, or a decimal/
+                ``0x``-prefixed hex string). Ignored for ``mode="call"``.
+
+        Raises:
+            ToolError: If no process is attached, or ``mode="address"``
+                is given without a ``target``.
+        """
+        self._require_attached("continue_until")
+        _logger.info("cutter_conditional_continue", mode=mode, target=target)
+        if mode == "syscall":
+            if target is not None:
+                validate_r2_argument(str(target), field="continue_until target")
+                await self._r2_cmd(f"dcs {target}")
+            else:
+                await self._r2_cmd("dcs")
+        elif mode == "call":
+            await self._r2_cmd("dcc")
+        else:
+            if target is None:
+                msg = "continue_until: mode='address' requires a target address"
+                raise ToolError(msg, tool_name="cutter")
+            resolved_address = int(target, 0) if isinstance(target, str) else target
+            await self._r2_cmd(f"dcu {resolved_address}")
+        _logger.info("cutter_conditional_continue_complete", mode=mode)
+
     async def get_registers(self) -> RegisterState:
         """Read the full CPU register state of the attached process.
 
@@ -5139,6 +5346,56 @@ class CutterDebugMixin(CutterDisplayMixin):
         self._threads = thread_map
         _logger.debug("cutter_threads_queried", count=len(threads))
         return threads
+
+    async def get_backtrace(self) -> list[StackFrame]:
+        """Get the call stack / backtrace of the attached thread.
+
+        Issues rizin's ``dbtj`` (the JSON output mode of ``dbt``, the same
+        ``j``-suffix convention already used throughout this mixin for
+        ``dbj``/``drj``/``dmj``/``dptj``/``dmIj``) and parses each frame
+        defensively with multiple candidate key names, since rizin's public
+        documentation enumerates ``dbt``'s command syntax but not ``dbtj``'s
+        exact JSON field names. Unrecognized keys degrade to ``0``/``None``
+        rather than raising, so the method never crashes on an unexpected
+        schema.
+
+        Propagates ``ToolError`` from :meth:`_require_attached` when no
+        process is attached, and from :meth:`_debug_cmd_json` when rizin
+        returns malformed JSON.
+
+        Returns:
+            list[StackFrame]: Stack frames reported by rizin's ``dbtj``
+            command, ordered from the innermost (top) frame outward.
+        """
+        self._require_attached("get_backtrace")
+        parsed = await self._debug_cmd_json("dbtj")
+        frames: list[StackFrame] = []
+        if not isinstance(parsed, list):
+            _logger.debug("get_backtrace_empty")
+            return frames
+        for index, entry in enumerate(cast("list[object]", parsed)):
+            if not isinstance(entry, dict):
+                continue
+            entry_dict = cast("dict[str, Any]", entry)
+            pc = _get_int(entry_dict, "pc", _get_int(entry_dict, "addr", _get_int(entry_dict, "offset")))
+            ret_addr = _get_int(entry_dict, "ret", _get_int(entry_dict, "return", pc))
+            frame_ptr = _get_int(entry_dict, "fp", _get_int(entry_dict, "bp"))
+            stack_ptr = _get_int(entry_dict, "sp")
+            fn_name = _get_optional_str(entry_dict, "fname") or _get_optional_str(entry_dict, "name")
+            module_name = _get_optional_str(entry_dict, "module") or _get_optional_str(entry_dict, "lib")
+            frames.append(
+                StackFrame(
+                    index=_get_int(entry_dict, "n", index),
+                    address=pc,
+                    return_address=ret_addr,
+                    frame_pointer=frame_ptr,
+                    stack_pointer=stack_ptr,
+                    function_name=fn_name,
+                    module_name=module_name,
+                ),
+            )
+        _logger.debug("cutter_backtrace_queried", count=len(frames))
+        return frames
 
     async def get_modules(self) -> list[ModuleInfo]:
         """Enumerate loaded modules of the attached process.
