@@ -368,6 +368,16 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Success status",
     ),
     ToolFunction(
+        name="frida.copy_memory",
+        description="Copy bytes natively, in-process, between two addresses (Memory.copy, like memcpy)",
+        parameters=[
+            ToolParameter(name="dst_address", type="integer", description="Destination base address", required=True),
+            ToolParameter(name="src_address", type="integer", description="Source base address", required=True),
+            ToolParameter(name="size", type="integer", description="Number of bytes to copy", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
         name="frida.scan_memory",
         description="Scan process memory for a hex byte pattern with optional wildcards",
         parameters=[
@@ -550,6 +560,14 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="True if protection was changed successfully",
     ),
     ToolFunction(
+        name="frida.query_memory_protection",
+        description="Read back the current page protection of a memory address",
+        parameters=[
+            ToolParameter(name="address", type="integer", description="Address to query", required=True),
+        ],
+        returns="Protection flags in rwx-triplet form (e.g. 'r-x')",
+    ),
+    ToolFunction(
         name="frida.find_base_address",
         description="Get the base address of a loaded module",
         parameters=[
@@ -620,6 +638,27 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Hook ID for the replacement",
     ),
     ToolFunction(
+        name="frida.replace_function_fast",
+        description="Replace a function using Interceptor.replaceFast (low-overhead trampoline replace, returns a pointer to call the original)",
+        parameters=[
+            ToolParameter(name="target", type="string", description="Function name (module!func) or hex address", required=True),
+            ToolParameter(
+                name="replacement_code",
+                type="string",
+                description="JavaScript body for the NativeCallback replacement",
+                required=True,
+            ),
+            ToolParameter(
+                name="calling_convention",
+                type="string",
+                description="Calling convention for the replacement",
+                required=False,
+                enum=["default", "sysv", "stdcall", "thiscall", "fastcall", "mscdecl", "win64"],
+            ),
+        ],
+        returns="HookInfo, with original_trampoline set to the pointer for calling the original implementation",
+    ),
+    ToolFunction(
         name="frida.enumerate_processes",
         description="List all running processes on the device (no attachment needed)",
         parameters=[],
@@ -653,6 +692,45 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Trace ID for later retrieval via stalker_unfollow",
     ),
     ToolFunction(
+        name="frida.stalker_follow_with_transform",
+        description=(
+            "Start Stalker code tracing with a custom per-basic-block transform (StalkerTransformer); "
+            "torn down the same way as frida.stalker_follow via frida.stalker_unfollow"
+        ),
+        parameters=[
+            ToolParameter(
+                name="thread_id",
+                type="integer",
+                description="Thread ID to trace (null for current thread)",
+                required=False,
+            ),
+            ToolParameter(
+                name="events",
+                type="string",
+                description="Comma-separated event types: call, ret, exec, block, compile",
+                required=False,
+                default="call",
+            ),
+            ToolParameter(
+                name="limit",
+                type="integer",
+                description="Maximum events to collect before auto-stop",
+                required=False,
+                default=10000,
+            ),
+            ToolParameter(
+                name="transform_code",
+                type="string",
+                description=(
+                    "JavaScript run per instruction inside the transform iterator; must call iterator.keep() "
+                    "(or another put* method) to preserve an instruction"
+                ),
+                required=True,
+            ),
+        ],
+        returns="Trace ID for later retrieval via frida.stalker_unfollow",
+    ),
+    ToolFunction(
         name="frida.stalker_unfollow",
         description="Stop Stalker tracing and retrieve collected events",
         parameters=[
@@ -664,6 +742,19 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ),
         ],
         returns="StalkerTrace with collected events and duration",
+    ),
+    ToolFunction(
+        name="frida.stalker_flush",
+        description="Flush buffered Stalker events for an active trace without stopping it",
+        parameters=[
+            ToolParameter(
+                name="thread_id",
+                type="integer",
+                description="Thread ID whose active trace to flush (null for current thread)",
+                required=False,
+            ),
+        ],
+        returns="Success status",
     ),
     ToolFunction(
         name="frida.enable_child_gating",
@@ -2473,6 +2564,52 @@ class _FridaBridgeBase(InstrumentationBridge):
         _logger.info("memory_written", length=len(data), address=hex(validated_address))
         return len(data)
 
+    async def copy_memory(self, dst_address: int, src_address: int, size: int) -> bool:
+        """Copy bytes natively, in-process, between two addresses (Memory.copy).
+
+        Unlike read_memory followed by write_memory, the bytes never leave
+        the target process or cross the IPC boundary.
+
+        Args:
+            dst_address: Destination base address.
+            src_address: Source base address.
+            size: Number of bytes to copy.
+
+        Returns:
+            bool: True if the copy succeeded.
+
+        Raises:
+            ToolError: If not attached, size is negative, or the copy fails.
+        """
+        _logger.info("frida_copy_memory_started", dst=hex(dst_address), src=hex(src_address), size=size)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        validated_dst = self._validate_js_int(dst_address, name="dst_address")
+        validated_src = self._validate_js_int(src_address, name="src_address")
+        validated_size = self._validate_js_int(size, name="size")
+        if validated_size < 0:
+            raise ToolError(_ERR_WRITE_FAILED, details={"reason": "size must be non-negative"})
+
+        script_code = f"""
+        try {{
+            Memory.copy(ptr({validated_dst}), ptr({validated_src}), {validated_size});
+            send({{ type: 'copy', success: true }});
+        }} catch (e) {{
+            send({{ type: 'copy', success: false, error: e.message }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if "error" in result:
+            raise ToolError(_ERR_WRITE_FAILED)
+        if not result.get("success", False):
+            raise ToolError(_ERR_WRITE_FAILED, details={"reason": str(result.get("error", ""))})
+
+        _logger.info("memory_copied", dst=hex(validated_dst), src=hex(validated_src), size=validated_size)
+        return True
+
     async def get_memory_regions(self, protection: str = "---") -> list[MemoryRegion]:
         """Get process memory map.
 
@@ -4228,6 +4365,45 @@ class _FridaBridgeBase(InstrumentationBridge):
         )
         return True
 
+    async def query_memory_protection(self, address: int) -> str:
+        """Read back the current page protection of a memory address.
+
+        Args:
+            address: Address to query.
+
+        Returns:
+            str: Protection flags in rwx-triplet form (e.g. 'r-x').
+
+        Raises:
+            ToolError: If not attached or the query fails.
+        """
+        _logger.debug("frida_query_memory_protection_started", address=hex(address))
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        validated_address = self._validate_js_int(address, name="address")
+
+        script_code = f"""
+        try {{
+            var protection = Memory.queryProtection(ptr({validated_address}));
+            send({{ type: 'query_protection', success: true, protection: protection }});
+        }} catch (e) {{
+            send({{ type: 'query_protection', success: false, error: e.message }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if "error" in result:
+            raise ToolError(_ERR_READ_FAILED)
+
+        if not result.get("success", False):
+            raise ToolError(_ERR_READ_FAILED, details={"reason": str(result.get("error", ""))})
+
+        protection = str(result.get("protection", ""))
+        _logger.debug("memory_protection_queried", address=hex(validated_address), protection=protection)
+        return protection
+
     async def find_base_address(self, module_name: str) -> int:
         """Get the base address of a loaded module.
 
@@ -4550,6 +4726,121 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._hooks[hook_id] = hook_info
 
         _logger.info("function_replaced", hook_id=hook_id, target=target)
+        return hook_info
+
+    async def replace_function_fast(
+        self,
+        target: str,
+        replacement_code: str,
+        *,
+        calling_convention: str = "default",
+    ) -> HookInfo:
+        """Replace a function using Interceptor.replaceFast (low-overhead trampoline replace).
+
+        Unlike :meth:`replace_function` (``Interceptor.replace``), the target
+        is modified to vector directly to the replacement, and a pointer to a
+        trampoline for calling the original implementation is returned on
+        ``HookInfo.original_trampoline``.
+
+        Args:
+            target: Function name (module!func) or hex address.
+            replacement_code: JavaScript body defining the NativeCallback.
+            calling_convention: Calling convention for the replacement.
+
+        Returns:
+            HookInfo: Hook information, with ``original_trampoline`` set to
+                the pointer for calling the original implementation.
+
+        Raises:
+            ToolError: If replacement fails.
+        """
+        _logger.info("frida_replace_function_fast_started", target=target, calling_convention=calling_convention)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        if calling_convention not in _VALID_CALLING_CONVENTIONS:
+            raise ToolError(_ERR_REPLACE_FAILED, details={"reason": f"invalid calling convention: {calling_convention}"})
+
+        hook_id = str(uuid.uuid4())[:8]
+        addr_resolve = self._resolve_target_js(target)
+
+        script_code = f"""
+        var targetAddr = {addr_resolve};
+        recv('install_replacement_fast', function(msg) {{
+            try {{
+                var replacement = (new Function('return (' + msg.replacementCode + ')'))();
+                var original = Interceptor.replaceFast(targetAddr, replacement);
+                send({{
+                    type: 'replaced_fast',
+                    address: targetAddr.toString(),
+                    original: original.toString(),
+                    callingConvention: msg.callingConvention || null
+                }});
+            }} catch (e) {{
+                send({{ type: 'replace_fast_error', error: e.message }});
+            }}
+        }});
+        send({{ type: 'replace_fast_ready' }});
+        """
+
+        script = await asyncio.to_thread(self._session.create_script, script_code)
+
+        messages, on_message, installed_event = self._make_install_waiter({"replaced_fast", "replace_fast_error"})
+        script.on("message", on_message)
+        await asyncio.to_thread(script.load)
+
+        cc_payload = calling_convention if calling_convention != "default" else None
+        await asyncio.to_thread(
+            script.post,
+            {"type": "install_replacement_fast", "replacementCode": replacement_code, "callingConvention": cc_payload},
+        )
+
+        try:
+            await asyncio.wait_for(installed_event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("replace_fast_install_timeout", target=target)
+            raise ToolError(_ERR_REPLACE_FAILED) from e
+
+        address = await self._resolve_install_address(
+            script=script,
+            messages=messages,
+            target=target,
+            success_type="replaced_fast",
+            error_type="replace_fast_error",
+            error_constant=_ERR_REPLACE_FAILED,
+            log_prefix="replace_fast",
+        )
+
+        original_trampoline: int | None = None
+        for msg in messages:
+            msg_type = msg.get("type")
+            if msg_type != "send":
+                continue
+            payload = msg.get("payload", {})
+            if not isinstance(payload, dict):
+                continue
+            payload_dict = cast("dict[str, object]", payload)
+            if payload_dict.get("type") != "replaced_fast":
+                continue
+            original_val = payload_dict.get("original")
+            if isinstance(original_val, str):
+                original_trampoline = int(original_val, 16) if original_val.startswith("0x") else int(original_val)
+            break
+
+        self._scripts[hook_id] = script
+
+        hook_info = HookInfo(
+            id=hook_id,
+            target=target,
+            address=address,
+            script_id=hook_id,
+            active=True,
+            original_trampoline=original_trampoline,
+        )
+        self._hooks[hook_id] = hook_info
+
+        _logger.info("function_replaced_fast", hook_id=hook_id, target=target, original_trampoline=original_trampoline)
         return hook_info
 
     async def enumerate_processes(self) -> list[FridaProcessEntry]:
@@ -5487,6 +5778,15 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         recv('stalker_unfollow_request', function(msg) {{
             stopStalker();
+        }});
+
+        recv('stalker_flush_request', function(msg) {{
+            try {{
+                Stalker.flush();
+                send({{ type: 'stalker_flushed', tid: tid }});
+            }} catch (e) {{
+                send({{ type: 'stalker_flush_error', error: e.message, tid: tid }});
+            }}
         }});
 
         Stalker.follow(tid, {{
@@ -7605,7 +7905,250 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         return hook_info
 
 
-class FridaBridge(_FridaBridgeAnalysisMixin):
+class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
+    """Stalker.follow custom transform (StalkerTransformer) and standalone flush support for the Frida bridge."""
+
+    async def stalker_follow_with_transform(
+        self,
+        thread_id: int | None = None,
+        events: str = "call",
+        limit: int = 10000,
+        *,
+        transform_code: str,
+    ) -> str:
+        """Start Stalker code tracing with a custom per-basic-block transform.
+
+        Identical to :meth:`stalker_follow` (same event collection, same
+        ``self._stalker_traces``/``self._stalker_scripts`` bookkeeping, torn
+        down the same way via the existing, unmodified :meth:`stalker_unfollow`)
+        except the installed ``Stalker.follow`` call also carries a ``transform``
+        option, letting ``transform_code`` inspect and selectively rewrite each
+        compiled basic block via the ``iterator`` argument
+        (``iterator.next()``/``iterator.keep()``/``iterator.putCallout(...)``/etc.,
+        exactly as Frida's own ``StalkerTransformer`` API documents).
+
+        Args:
+            thread_id: Thread ID to trace. None for current thread.
+            events: Comma-separated event types (call, ret, exec, block, compile).
+            limit: Maximum events to collect before auto-stop.
+            transform_code: JavaScript statements executed once per instruction
+                inside the transform's iteration loop; receives ``instruction``
+                and ``iterator`` in scope and is responsible for calling
+                ``iterator.keep()`` (or another ``put*`` method) for every
+                instruction it wants preserved - an instruction it does not act
+                on is dropped from the recompiled block, matching Frida's own
+                documented behavior.
+
+        Returns:
+            str: Trace ID for later retrieval via :meth:`stalker_unfollow`.
+
+        Raises:
+            ToolError: If Stalker fails to start.
+        """
+        _logger.info(
+            "frida_stalker_follow_with_transform_started",
+            thread_id=thread_id,
+            events=events,
+            limit=limit,
+        )
+        if self._session is None:
+            _logger.error("frida_not_attached", operation="stalker_follow_with_transform")
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        event_list = [e.strip() for e in events.split(",")]
+        event_config_parts = [f"{evt}: true" for evt in event_list]
+        event_config = ", ".join(event_config_parts)
+
+        effective_tid = thread_id if thread_id is not None else 0
+        with self._stalker_traces_lock:
+            self._stalker_traces[effective_tid] = []
+
+        tid_js = str(thread_id) if thread_id is not None else "Process.getCurrentThreadId()"
+
+        validated_limit = self._validate_js_int(limit, name="limit")
+
+        script_code = f"""
+        var count = 0;
+        var limit = {validated_limit};
+        var batch = [];
+        var tid = {tid_js};
+        var stopped = false;
+
+        function stopStalker() {{
+            if (stopped) return;
+            stopped = true;
+            try {{
+                Stalker.unfollow(tid);
+                Stalker.flush();
+            }} catch (e) {{
+                send({{ type: 'stalker_unfollow_error', error: e.message, tid: tid }});
+                return;
+            }}
+            send({{ type: 'stalker_unfollowed', tid: tid }});
+        }}
+
+        recv('stalker_unfollow_request', function(msg) {{
+            stopStalker();
+        }});
+
+        Stalker.follow(tid, {{
+            events: {{ {event_config} }},
+            onReceive: function(events) {{
+                var parsed = Stalker.parse(events, {{ annotate: true, stringify: false }});
+                parsed.forEach(function(ev) {{
+                    if (count >= limit) return;
+                    count++;
+                    var entry = {{
+                        type: ev[0] || 'exec',
+                        from: ev[1] ? ev[1].toString() : '0',
+                        to: ev[2] ? ev[2].toString() : null,
+                        depth: ev[3] || 0
+                    }};
+                    batch.push(entry);
+                }});
+                if (batch.length > 0) {{
+                    send({{ type: 'stalker_batch', tid: tid, events: batch }});
+                    batch = [];
+                }}
+                if (count >= limit) {{
+                    stopStalker();
+                    send({{ type: 'stalker_done', tid: tid, count: count }});
+                }}
+            }},
+            transform: function (iterator) {{
+                var instruction;
+                while ((instruction = iterator.next()) !== null) {{
+                    {transform_code}
+                }}
+            }}
+        }});
+        send({{ type: 'stalker_started', tid: tid }});
+        """
+
+        script_id = str(uuid.uuid4())[:8]
+        try:
+            script = await asyncio.to_thread(self._session.create_script, script_code)
+        except Exception as e:
+            _logger.warning("stalker_transform_create_script_failed", thread_id=effective_tid, error=str(e))
+            raise ToolError(_ERR_STALKER_FAILED) from e
+
+        captured_tid = effective_tid
+        started_event = asyncio.Event()
+        start_status: dict[str, object] = {}
+
+        def on_stalker_transform_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Parse Stalker batch payloads and forward messages downstream.
+
+            When a ``stalker_batch`` message arrives, the nested event list
+            is decoded and stored against the followed thread identifier.
+            The waiter is released once ``stalker_started`` or any ``error``
+            message is observed. All messages are forwarded to the bridge
+            dispatcher.
+
+            Args:
+                message: Message payload emitted by the Stalker script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            if message["type"] == "send":
+                payload = message.get("payload", {})
+                if isinstance(payload, dict):
+                    payload_dict = cast("dict[str, object]", payload)
+                    inner_type = payload_dict.get("type")
+                    if inner_type == "stalker_batch":
+                        raw_evts = payload_dict.get("events")
+                        if isinstance(raw_evts, list):
+                            self._parse_stalker_batch(captured_tid, cast("list[object]", raw_evts))
+                    elif inner_type == "stalker_started":
+                        start_status["started"] = True
+                        self._set_event_threadsafe(started_event)
+            elif message["type"] == "error":
+                start_status["error"] = message["description"]
+                self._set_event_threadsafe(started_event)
+            self._dispatch_message(dict(cast("dict[str, object]", message)))
+
+        script.on("message", on_stalker_transform_message)
+        try:
+            await asyncio.to_thread(script.load)
+        except Exception as e:
+            _logger.warning("stalker_transform_load_failed", thread_id=effective_tid, error=str(e))
+            raise ToolError(_ERR_STALKER_FAILED) from e
+
+        try:
+            await asyncio.wait_for(started_event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("stalker_transform_start_timeout", thread_id=effective_tid)
+            raise ToolError(_ERR_STALKER_FAILED) from e
+
+        if "error" in start_status:
+            await asyncio.to_thread(script.unload)
+            _logger.warning(
+                "stalker_transform_start_failed",
+                thread_id=effective_tid,
+                description=start_status.get("error", ""),
+            )
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(start_status.get("error", ""))})
+
+        if not start_status.get("started"):
+            await asyncio.to_thread(script.unload)
+            _logger.warning("stalker_transform_not_started", thread_id=effective_tid)
+            raise ToolError(_ERR_STALKER_FAILED)
+
+        self._scripts[script_id] = script
+        self._stalker_scripts[effective_tid] = script_id
+
+        _logger.info(
+            "stalker_follow_with_transform_started",
+            thread_id=effective_tid,
+            events=events,
+            limit=limit,
+        )
+
+        return script_id
+
+    async def stalker_flush(self, thread_id: int | None = None) -> bool:
+        """Flush buffered Stalker events for an active trace without stopping it.
+
+        Posts a request into the running trace's own script (the same script
+        :meth:`stalker_follow` created), which calls the real ``Stalker.flush()``
+        inside that script's context - the trace keeps running afterward and
+        must still be stopped separately via :meth:`stalker_unfollow`.
+
+        Args:
+            thread_id: Thread ID whose active trace should be flushed. None
+                for current thread.
+
+        Returns:
+            bool: True if the flush request was posted successfully.
+
+        Raises:
+            ToolError: If no active trace exists for the thread, or posting
+                the request fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        effective_tid = thread_id if thread_id is not None else 0
+        script_id = self._stalker_scripts.get(effective_tid)
+        if script_id is None:
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": f"no active Stalker trace for thread {effective_tid}"})
+
+        script = self._scripts.get(script_id)
+        if script is None:
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": "stalker script handle missing"})
+
+        try:
+            await asyncio.to_thread(script.post, {"type": "stalker_flush_request", "tid": effective_tid})
+        except Exception as e:
+            _logger.warning("frida_stalker_flush_failed", thread_id=effective_tid, error=str(e))
+            raise ToolError(_ERR_STALKER_FAILED, details=self._frida_error_details(e)) from e
+
+        _logger.info("stalker_flush_requested", thread_id=effective_tid)
+        return True
+
+
+class FridaBridge(_FridaBridgeStalkerTransformMixin):
     """Bridge for Frida dynamic instrumentation.
 
     Composed from the ``_FridaBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references resolve
