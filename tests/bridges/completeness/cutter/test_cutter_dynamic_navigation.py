@@ -38,6 +38,7 @@ from typing import TYPE_CHECKING, Final, cast
 import pytest
 from PyQt6.QtWidgets import (
     QComboBox,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -52,6 +53,7 @@ from intellicrack.core.types import ToolError
 from intellicrack.ui.panels.cutter_debugger_tab import DebuggerTab
 from intellicrack.ui.panels.cutter_project_tab import ProjectTab
 from intellicrack.ui.panels.cutter_search_tab import SearchTab
+from intellicrack.ui.panels.cutter_tabs import FlagsTab
 from tests.bridges.completeness.cutter.conftest import CommandRecorder, as_r2pipe
 
 
@@ -1452,3 +1454,237 @@ class TestGetBacktrace:
         on_detach_success()
 
         assert backtrace_table.rowCount() == 0
+
+
+@pytest.mark.usefixtures("qapp")
+class TestRemoveFlag:
+    """L1/L2/L3 gate: flag removal (rizin 'f-') must be real and reachable.
+
+    Falsifiable: changing the issued command from ``"f- {name}"`` to ``"f
+    {name}"`` (a plausible one-character typo that would instead try to
+    *add* a flag named ``name`` with no size/address) turns
+    ``test_issues_f_dash_command`` red immediately.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_f_dash_command() -> None:
+        """``remove_flag`` must issue rizin's 'f- <name>'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        result = await bridge.remove_flag("my_flag")
+        assert "f- my_flag" in recorder.commands
+        assert result is True
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_rejects_command_injection() -> None:
+        """``remove_flag`` must reject a ``name`` containing rizin command-control characters."""
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(CommandRecorder())
+        with pytest.raises(ToolError):
+            await bridge.remove_flag("my_flag; wx 9090")
+
+    @staticmethod
+    def test_context_menu_remove_action_issues_f_dash(qapp: QApplication) -> None:
+        """Triggering the flag table's "Remove" context-menu action must issue rizin's 'f- <name>'.
+
+        Falsifiable: if ``_ctx_remove_flag`` never called
+        ``self._bridge.remove_flag(name)``, 'f- my_flag' would never appear
+        in the recorder and the flags table would not shrink back to zero
+        rows. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.remove_flag(name), ...)``
+        call in ``FlagsTab._ctx_remove_flag`` (``cutter_tabs.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({
+            "fj": '[{"name":"my_flag","offset":4198400,"size":1}]',
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        tab = FlagsTab()
+        tab.refresh(bridge, _no_op_run_async)
+        table = cast(QTableWidget, getattr(tab, "_table"))
+        assert _pump_until(qapp, lambda: table.rowCount() == 1)
+        ctx_remove_flag = cast(Callable[[str], None], getattr(tab, "_ctx_remove_flag"))
+        recorder.responses["fj"] = "[]"
+
+        ctx_remove_flag("my_flag")
+
+        assert _pump_until(qapp, lambda: "f- my_flag" in recorder.commands)
+        assert "f- my_flag" in recorder.commands
+        assert _pump_until(qapp, lambda: table.rowCount() == 0)
+
+
+@pytest.mark.usefixtures("qapp")
+class TestRenameFlag:
+    """L1/L2/L3 gate: flag rename (rizin 'fr') must be real and reachable.
+
+    Falsifiable: swapping the argument order (``f"fr {new_name}
+    {old_name}"``) turns ``test_issues_fr_command_with_correct_order`` red
+    immediately, because the recorded command becomes ``"fr new_flag
+    old_flag"`` instead of the asserted ``"fr old_flag new_flag"``.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_fr_command_with_correct_order() -> None:
+        """``rename_flag`` must issue rizin's 'fr <old_name> <new_name>' in that exact order."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        result = await bridge.rename_flag("old_flag", "new_flag")
+        assert "fr old_flag new_flag" in recorder.commands
+        assert result is True
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_rejects_command_injection_in_either_name() -> None:
+        """``rename_flag`` must reject command-control characters in either ``old_name`` or ``new_name``."""
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(CommandRecorder())
+        with pytest.raises(ToolError):
+            await bridge.rename_flag("old_flag", "new; wx 9090")
+        with pytest.raises(ToolError):
+            await bridge.rename_flag("old; wx 9090", "new_flag")
+
+    @staticmethod
+    def test_context_menu_rename_action_issues_fr(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Triggering the flag table's "Rename..." context-menu action must issue rizin's 'fr <old> <new>'.
+
+        Drives the real ``_ctx_rename_flag`` handler with
+        ``QInputDialog.getText`` patched to supply a deterministic new name
+        instead of blocking on a real modal dialog.
+
+        Falsifiable: if ``_ctx_rename_flag`` never called
+        ``self._bridge.rename_flag(old_name, new_name)``, 'fr old_flag
+        new_flag' would never appear in the recorder and the flags table
+        would keep showing the old name. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.rename_flag(old_name, new_name), ...)``
+        call in ``FlagsTab._ctx_rename_flag`` (``cutter_tabs.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+            monkeypatch: Pytest monkeypatch fixture used to stub the modal
+                ``QInputDialog.getText`` prompt with a deterministic response.
+        """
+        recorder = CommandRecorder({
+            "fj": '[{"name":"old_flag","offset":4198400,"size":1}]',
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        def fake_get_text(*_args: object, **_kwargs: object) -> tuple[str, bool]:
+            """Return a deterministic ("new_flag", True) response for ``QInputDialog.getText``.
+
+            Args:
+                *_args: Ignored positional arguments Qt would pass.
+                **_kwargs: Ignored keyword arguments Qt would pass.
+
+            Returns:
+                tuple[str, bool]: The scripted response.
+            """
+            return ("new_flag", True)
+
+        monkeypatch.setattr(QInputDialog, "getText", staticmethod(fake_get_text))
+
+        tab = FlagsTab()
+        tab.refresh(bridge, _no_op_run_async)
+        table = cast(QTableWidget, getattr(tab, "_table"))
+        assert _pump_until(qapp, lambda: table.rowCount() == 1)
+        ctx_rename_flag = cast(Callable[[str], None], getattr(tab, "_ctx_rename_flag"))
+        recorder.responses["fj"] = '[{"name":"new_flag","offset":4198400,"size":1}]'
+
+        ctx_rename_flag("old_flag")
+
+        assert _pump_until(qapp, lambda: "fr old_flag new_flag" in recorder.commands)
+        assert "fr old_flag new_flag" in recorder.commands
+        assert _pump_until(qapp, lambda: _item_text(table, 0, 0) == "new_flag")
+
+
+@pytest.mark.usefixtures("qapp")
+class TestFlagspaceManagement:
+    """L1/L2/L3 gate: flagspace create/list/remove (rizin 'fs'/'fslj'/'fs-') must be real and reachable.
+
+    Falsifiable: each test below asserts a distinct exact command string
+    (``"fs my_space"``, ``"fslj"``, ``"fs- my_space"``), so a regression in
+    any one of ``add_flagspace``/``list_flagspaces``/``remove_flagspace`` is
+    caught by exactly one test, not silently masked by the other two.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_add_flagspace_issues_fs() -> None:
+        """``add_flagspace`` must issue rizin's 'fs <name>'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        result = await bridge.add_flagspace("my_space")
+        assert "fs my_space" in recorder.commands
+        assert result is True
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_list_flagspaces_issues_fslj_and_returns_dicts() -> None:
+        """``list_flagspaces`` must issue rizin's 'fslj' and return its parsed dicts unmodified."""
+        recorder = CommandRecorder({"fslj": '[{"name":"sections","count":5},{"name":"my_space","count":0}]'})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        spaces = await bridge.list_flagspaces()
+        assert "fslj" in recorder.commands
+        assert [s["name"] for s in spaces] == ["sections", "my_space"]
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_remove_flagspace_issues_fs_dash() -> None:
+        """``remove_flagspace`` must issue rizin's 'fs- <name>'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        result = await bridge.remove_flagspace("my_space")
+        assert "fs- my_space" in recorder.commands
+        assert result is True
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_rejects_command_injection_in_either_method() -> None:
+        """Both ``add_flagspace`` and ``remove_flagspace`` must reject rizin command-control characters."""
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(CommandRecorder())
+        with pytest.raises(ToolError):
+            await bridge.add_flagspace("my_space; wx 9090")
+        with pytest.raises(ToolError):
+            await bridge.remove_flagspace("my_space; wx 9090")
+
+    @staticmethod
+    def test_refresh_populates_flagspace_combo(qapp: QApplication) -> None:
+        """Opening the flags tab must query 'fslj' and populate the flagspace combo box in order.
+
+        Falsifiable: if ``_on_refresh_flagspaces`` never called
+        ``self._bridge.list_flagspaces()``, 'fslj' would never appear in
+        the recorder and the combo box would stay empty. Broken production
+        line: the
+        ``run_bridge_coroutine_logged(self._bridge.list_flagspaces(), ...)``
+        call in ``FlagsTab._on_refresh_flagspaces`` (``cutter_tabs.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({
+            "fslj": '[{"name":"sections","count":5},{"name":"my_space","count":0}]',
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        tab = FlagsTab()
+        tab.refresh(bridge, _no_op_run_async)
+        combo = cast(QComboBox, getattr(tab, "_flagspace_combo"))
+
+        assert _pump_until(qapp, lambda: combo.count() == 2)
+        assert "fslj" in recorder.commands
+        assert combo.itemText(0) == "sections"
+        assert combo.itemText(1) == "my_space"
