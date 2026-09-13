@@ -45,6 +45,7 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPlainTextEdit,
+    QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QTreeWidget,
@@ -257,11 +258,11 @@ class TestListAttachableProcesses:
         tab = DebuggerTab()
         tab.set_bridge(bridge)
         attachable_table = cast(QTableWidget, getattr(tab, "_attachable_table"))
-        on_discover = cast(Callable[[], None], getattr(tab, "_on_discover_processes"))
-        on_double_clicked = cast(Callable[[QTableWidgetItem], None], getattr(tab, "_on_attachable_process_double_clicked"))
+        discover_btn = cast(QPushButton, getattr(tab, "_discover_btn"))
         pid_input = cast(QLineEdit, getattr(tab, "_pid_input"))
 
-        on_discover()
+        assert discover_btn.isEnabled(), "_discover_btn must be enabled to drive discovery via a real click"
+        discover_btn.click()
 
         assert _pump_until(qapp, lambda: "dplj" in recorder.commands)
         assert "dplj" in recorder.commands
@@ -269,7 +270,7 @@ class TestListAttachableProcesses:
 
         row0_item = attachable_table.item(0, 0)
         assert row0_item is not None
-        on_double_clicked(row0_item)
+        attachable_table.itemDoubleClicked.emit(row0_item)
 
         assert pid_input.text() == "1234"
 
@@ -536,10 +537,11 @@ class TestSendSignal:
         tab = DebuggerTab()
         tab.set_bridge(bridge)
         signal_input = cast(QLineEdit, getattr(tab, "_signal_input"))
-        on_send_signal = cast(Callable[[], None], getattr(tab, "_on_send_signal"))
+        send_signal_btn = cast(QPushButton, getattr(tab, "_send_signal_btn"))
         signal_input.setText("11")
 
-        on_send_signal()
+        assert send_signal_btn.isEnabled(), "_send_signal_btn must be enabled to deliver the signal via a real click"
+        send_signal_btn.click()
 
         assert _pump_until(qapp, lambda: "dk 11" in recorder.commands)
         assert "dk 11" in recorder.commands
@@ -1323,9 +1325,10 @@ class TestConditionalContinue:
         tab.set_bridge(bridge)
         mode_combo = cast(QComboBox, getattr(tab, "_continue_until_mode_combo"))
         mode_combo.setCurrentText("call")
-        on_continue_until = cast(Callable[[], None], getattr(tab, "_on_continue_until"))
+        continue_until_btn = cast(QPushButton, getattr(tab, "_continue_until_btn"))
 
-        on_continue_until()
+        assert continue_until_btn.isEnabled(), "_continue_until_btn must be enabled to continue via a real click"
+        continue_until_btn.click()
 
         assert _pump_until(qapp, lambda: "dcc" in recorder.commands)
         assert "dcc" in recorder.commands
@@ -1352,9 +1355,10 @@ class TestConditionalContinue:
         target_input = cast(QLineEdit, getattr(tab, "_continue_until_target_input"))
         mode_combo.setCurrentText("address")
         target_input.setText("not-an-address")
-        on_continue_until = cast(Callable[[], None], getattr(tab, "_on_continue_until"))
+        continue_until_btn = cast(QPushButton, getattr(tab, "_continue_until_btn"))
 
-        on_continue_until()
+        assert continue_until_btn.isEnabled(), "_continue_until_btn must be enabled to drive validation via a real click"
+        continue_until_btn.click()
 
         assert not any(cmd.startswith("dcu") for cmd in recorder.commands)
 
@@ -1941,9 +1945,10 @@ class TestSeekRelative:
         panel.set_bridge(bridge)
         seek_delta_input = cast(QLineEdit, getattr(panel, "_seek_delta_input"))
         seek_delta_input.setText("16")
-        on_seek_relative_back = cast(Callable[[], None], getattr(panel, "_on_seek_relative_back"))
+        seek_back_btn = cast(QPushButton, getattr(panel, "_seek_back_btn"))
 
-        on_seek_relative_back()
+        assert seek_back_btn.isEnabled(), "_seek_back_btn must be enabled to seek via a real click"
+        seek_back_btn.click()
 
         assert _pump_until(qapp, lambda: "sd -16" in recorder.commands)
         assert "sd -16" in recorder.commands
@@ -2003,9 +2008,10 @@ class TestSeekHistory:
 
         panel = CutterPanel()
         panel.set_bridge(bridge)
-        on_seek_undo = cast(Callable[[], None], getattr(panel, "_on_seek_undo"))
+        seek_back_history_btn = cast(QPushButton, getattr(panel, "_seek_back_history_btn"))
 
-        on_seek_undo()
+        assert seek_back_history_btn.isEnabled(), "_seek_back_history_btn must be enabled to undo the seek via a real click"
+        seek_back_history_btn.click()
 
         assert _pump_until(qapp, lambda: "shu" in recorder.commands)
         assert "shu" in recorder.commands
@@ -2023,9 +2029,10 @@ class TestSeekHistory:
 
         panel = CutterPanel()
         panel.set_bridge(bridge)
-        on_seek_redo = cast(Callable[[], None], getattr(panel, "_on_seek_redo"))
+        seek_fwd_history_btn = cast(QPushButton, getattr(panel, "_seek_fwd_history_btn"))
 
-        on_seek_redo()
+        assert seek_fwd_history_btn.isEnabled(), "_seek_fwd_history_btn must be enabled to redo the seek via a real click"
+        seek_fwd_history_btn.click()
 
         assert _pump_until(qapp, lambda: "shr" in recorder.commands)
         assert "shr" in recorder.commands

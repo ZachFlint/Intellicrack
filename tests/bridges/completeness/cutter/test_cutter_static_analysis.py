@@ -59,7 +59,18 @@ from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Final, cast
 
 import pytest
-from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QLineEdit, QPlainTextEdit, QTableWidget, QTabWidget, QTreeWidget
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFileDialog,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QPushButton,
+    QTableWidget,
+    QTabWidget,
+    QTreeWidget,
+)
 
 from intellicrack.bridges.cutter import CutterBridge
 from intellicrack.core.tools import ToolRegistry
@@ -920,9 +931,10 @@ class TestEsilInitState:
         tab.refresh(bridge, _no_op_run_async)
         assert _pump_until(qapp, lambda: "aeim" in recorder.commands)
         recorder.commands.clear()
-        on_init_state = cast(Callable[[], None], getattr(tab, "_on_init_state"))
+        init_state_btn = priv(tab, "_init_state_btn", QPushButton)
 
-        on_init_state()
+        assert init_state_btn.isEnabled(), "_init_state_btn must be enabled to drive _on_init_state"
+        init_state_btn.click()
 
         assert _pump_until(qapp, lambda: "aei" in recorder.commands)
         assert "aeim" not in recorder.commands
@@ -1005,11 +1017,12 @@ class TestEsilStepUntil:
         recorder.commands.clear()
         mode_combo = priv(tab, "_until_mode_combo", QComboBox)
         target_input = priv(tab, "_until_target_input", QLineEdit)
-        on_step_until = cast(Callable[[], None], getattr(tab, "_on_step_until"))
+        step_until_btn = priv(tab, "_step_until_btn", QPushButton)
         mode_combo.setCurrentText("address")
         target_input.setText("0x401000")
 
-        on_step_until()
+        assert step_until_btn.isEnabled(), "_step_until_btn must be enabled to drive _on_step_until"
+        step_until_btn.click()
 
         assert _pump_until(qapp, lambda: "aesu 0x401000" in recorder.commands)
         assert "aesu 0x401000" in recorder.commands
@@ -1072,12 +1085,13 @@ class TestAddEsilWatchpoint:
         perm_combo = priv(tab, "_watch_perm_combo", QComboBox)
         kind_combo = priv(tab, "_watch_kind_combo", QComboBox)
         expr_input = priv(tab, "_watch_expr_input", QLineEdit)
-        on_add_watchpoint = cast(Callable[[], None], getattr(tab, "_on_add_watchpoint"))
+        add_watchpoint_btn = priv(tab, "_add_watchpoint_btn", QPushButton)
         perm_combo.setCurrentText("w")
         kind_combo.setCurrentText("mem")
         expr_input.setText("0x601000")
 
-        on_add_watchpoint()
+        assert add_watchpoint_btn.isEnabled(), "_add_watchpoint_btn must be enabled to drive _on_add_watchpoint"
+        add_watchpoint_btn.click()
 
         assert _pump_until(qapp, lambda: "de w mem 0x601000" in recorder.commands)
         assert "de w mem 0x601000" in recorder.commands
@@ -1273,9 +1287,10 @@ class TestAnalyzeBasicBlocksPass:
         bridge.state.binary_loaded = True
         panel = CutterPanel()
         panel.set_bridge(bridge)
-        on_analyze_bb = cast(Callable[[], None], getattr(panel, "_on_analyze_basic_blocks"))
+        analyze_basic_blocks_action = priv(panel, "_analyze_basic_blocks_btn", QAction)
 
-        on_analyze_bb()
+        assert analyze_basic_blocks_action.isEnabled(), "_analyze_basic_blocks_btn action must be enabled to drive _on_analyze_basic_blocks"
+        analyze_basic_blocks_action.trigger()
 
         assert _pump_until(qapp, lambda: "aab" in recorder.commands)
         assert "aab" in recorder.commands
@@ -1324,9 +1339,12 @@ class TestAnalyzeFunctionCallsPass:
         bridge.state.binary_loaded = True
         panel = CutterPanel()
         panel.set_bridge(bridge)
-        on_analyze_calls = cast(Callable[[], None], getattr(panel, "_on_analyze_function_calls"))
+        analyze_function_calls_action = priv(panel, "_analyze_function_calls_btn", QAction)
 
-        on_analyze_calls()
+        assert analyze_function_calls_action.isEnabled(), (
+            "_analyze_function_calls_btn action must be enabled to drive _on_analyze_function_calls"
+        )
+        analyze_function_calls_action.trigger()
 
         assert _pump_until(qapp, lambda: "aac" in recorder.commands)
         assert "aac" in recorder.commands
@@ -1391,9 +1409,10 @@ class TestAnalyzeReferencesPass:
         bridge.state.binary_loaded = True
         panel = CutterPanel()
         panel.set_bridge(bridge)
-        on_analyze_refs = cast(Callable[[], None], getattr(panel, "_on_analyze_references"))
+        analyze_references_action = priv(panel, "_analyze_references_btn", QAction)
 
-        on_analyze_refs()
+        assert analyze_references_action.isEnabled(), "_analyze_references_btn action must be enabled to drive _on_analyze_references"
+        analyze_references_action.trigger()
 
         assert _pump_until(qapp, lambda: "aar" in recorder.commands)
         assert "aar" in recorder.commands
@@ -1454,10 +1473,11 @@ class TestAutonameFunctionsPass:
         recorder.commands.clear()
         panel = CutterPanel()
         panel.set_bridge(bridge)
-        on_autoname = cast(Callable[[], None], getattr(panel, "_on_autoname_functions"))
+        autoname_functions_action = priv(panel, "_autoname_functions_btn", QAction)
         func_tree = cast(QTreeWidget, getattr(panel, "_func_tree"))
 
-        on_autoname()
+        assert autoname_functions_action.isEnabled(), "_autoname_functions_btn action must be enabled to drive _on_autoname_functions"
+        autoname_functions_action.trigger()
 
         assert _pump_until(qapp, lambda: "aan" in recorder.commands)
         assert _pump_until(qapp, lambda: func_tree.topLevelItemCount() == 1)
@@ -1538,10 +1558,11 @@ class TestDisassembleRange:
         length_input = cast(QLineEdit, getattr(tab, "_length_input"))
         addr_input.setText("0x400000")
         length_input.setText("8")
-        on_fetch_range = cast(Callable[[], None], getattr(tab, "_on_fetch_range"))
+        fetch_range_btn = cast(QPushButton, getattr(tab, "_fetch_range_btn"))
         output = cast(QPlainTextEdit, getattr(tab, "_output"))
 
-        on_fetch_range()
+        assert fetch_range_btn.isEnabled(), "_fetch_range_btn must be enabled to drive _on_fetch_range"
+        fetch_range_btn.click()
 
         assert _pump_until(qapp, lambda: "pDj 8" in recorder.commands)
         assert _pump_until(qapp, lambda: "nop" in output.toPlainText())
@@ -1646,18 +1667,22 @@ class TestDecompileAlternateBackend:
 
         panel = CutterPanel()
         panel.set_bridge(bridge)
-        on_refresh_functions = cast(Callable[[], None], getattr(panel, "_on_refresh_functions"))
+        refresh_funcs_btn = cast(QPushButton, getattr(panel, "_refresh_funcs_btn"))
         func_tree = cast(QTreeWidget, getattr(panel, "_func_tree"))
-        on_refresh_functions()
+
+        assert refresh_funcs_btn.isEnabled(), "_refresh_funcs_btn must be enabled to drive _on_refresh_functions"
+        refresh_funcs_btn.click()
+
         assert _pump_until(qapp, lambda: func_tree.topLevelItemCount() > 0)
         item = func_tree.topLevelItem(0)
         assert item is not None
         item.setSelected(True)
         backend_combo = cast(QComboBox, getattr(panel, "_decompiler_backend_combo"))
         backend_combo.setCurrentText("pdd")
-        on_decompile = cast(Callable[[], None], getattr(panel, "_on_decompile_selected"))
+        decompile_btn = cast(QPushButton, getattr(panel, "_decompile_btn"))
 
-        on_decompile()
+        assert decompile_btn.isEnabled(), "_decompile_btn must be enabled to drive _on_decompile_selected"
+        decompile_btn.click()
 
         assert _pump_until(qapp, lambda: "pdd" in recorder.commands)
         assert "pdd" in recorder.commands
@@ -1859,10 +1884,11 @@ class TestZignaturesTabFlirtButtonsL3:
 
         tab = ZignaturesTab()
         setattr(tab, "_bridge", bridge)
-        on_apply_flirt = cast(Callable[[], None], getattr(tab, "_on_apply_flirt"))
+        apply_flirt_btn = cast(QPushButton, getattr(tab, "_apply_flirt_btn"))
         status_label = cast(QLabel, getattr(tab, "_status_label"))
 
-        on_apply_flirt()
+        assert apply_flirt_btn.isEnabled(), "_apply_flirt_btn must be enabled to drive _on_apply_flirt"
+        apply_flirt_btn.click()
 
         assert _pump_until(qapp, lambda: f"Fs {chosen}" in recorder.commands)
         assert f"Fs {chosen}" in recorder.commands
@@ -1892,9 +1918,10 @@ class TestZignaturesTabFlirtButtonsL3:
 
         tab = ZignaturesTab()
         setattr(tab, "_bridge", bridge)
-        on_apply_flirt = cast(Callable[[], None], getattr(tab, "_on_apply_flirt"))
+        apply_flirt_btn = cast(QPushButton, getattr(tab, "_apply_flirt_btn"))
 
-        on_apply_flirt()
+        assert apply_flirt_btn.isEnabled(), "_apply_flirt_btn must be enabled to drive _on_apply_flirt"
+        apply_flirt_btn.click()
 
         assert not any(cmd.startswith("Fs") for cmd in recorder.commands)
 
@@ -1930,10 +1957,11 @@ class TestZignaturesTabFlirtButtonsL3:
 
         tab = ZignaturesTab()
         setattr(tab, "_bridge", bridge)
-        on_export_flirt = cast(Callable[[], None], getattr(tab, "_on_export_flirt"))
+        export_flirt_btn = cast(QPushButton, getattr(tab, "_export_flirt_btn"))
         status_label = cast(QLabel, getattr(tab, "_status_label"))
 
-        on_export_flirt()
+        assert export_flirt_btn.isEnabled(), "_export_flirt_btn must be enabled to drive _on_export_flirt"
+        export_flirt_btn.click()
 
         assert _pump_until(qapp, lambda: f"Fc {chosen}" in recorder.commands)
         assert f"Fc {chosen}" in recorder.commands
@@ -1963,8 +1991,9 @@ class TestZignaturesTabFlirtButtonsL3:
 
         tab = ZignaturesTab()
         setattr(tab, "_bridge", bridge)
-        on_export_flirt = cast(Callable[[], None], getattr(tab, "_on_export_flirt"))
+        export_flirt_btn = cast(QPushButton, getattr(tab, "_export_flirt_btn"))
 
-        on_export_flirt()
+        assert export_flirt_btn.isEnabled(), "_export_flirt_btn must be enabled to drive _on_export_flirt"
+        export_flirt_btn.click()
 
         assert not any(cmd.startswith("Fc") for cmd in recorder.commands)
