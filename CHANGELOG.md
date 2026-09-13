@@ -9,6 +9,68 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **cutter:** 04-36+04-37+04-48+04-49 Cutter: manually add code/call/data cross-references (axc/axC/axd); Cutter: remove a cross-reference, optionally scoped to one source address (ax-); Cutter: relative seek stepping by a signed byte delta (sd); Cutter: seek-history navigation -- list, undo, redo (sh/shu/shr) (`2275cc4`)
+
+- **frida:** 08-B2+08-D3+08-E5+08-E6+08-E10 Stalker call-summary tracing; Frida NativePointer typed read/write accessors as one coherent surface; Frida Module.enumerateRanges with a protection filter; Frida Module.enumerateSections and Module.enumerateDependencies; Frida single-export lookup via Module.findExportByName/getExportByName (`0e93305`)
+
+- **x64dbg:** 02-A4+02-H7 x64dbg debug registers (DR0-DR7) and extended FPU/SIMD register read-write; x64dbg script engine single-step (DbgScriptStep) (`c7ff531`)
+
+- **cutter:** 04-27+04-31+04-32+04-33 Cutter ESIL watchpoints on register/memory access (rizin 'de'); Cutter flag removal (rizin 'f-') via flags-table context menu; Cutter flag rename (rizin 'fr') via flags-table context menu; Cutter flagspace management (rizin 'fs'/'fslj'/'fs-') (`1b50f18`)
+
+- **bridges:** 08-B2-prep add StalkerCallSummary for Stalker.follow onCallSummary mode (unblocks 08-B2) (`c8248be`)
+
+- **bridges:** 08-E6-prep add ModuleSectionInfo and ModuleDependencyInfo for Module.enumerateSections/enumerateDependencies (unblocks 08-E6) (`f00c122`)
+
+- **frida:** 08-A6+08-B3+08-B5+08-C5+08-C9 Interceptor.replaceFast low-overhead function replacement; Stalker.follow custom per-basic-block transform (StalkerTransformer); Independently callable Stalker.flush without stopping the trace; Read back live memory protection via Memory.queryProtection; Native in-process memory copy via Memory.copy (`b390fd2`)
+
+- **ghidra:** 06-PT5+06-PT6+06-HS4+06-HS5 Ghidra create additional named program tree; Ghidra program-tree delete/rename and fragment-range assignment; Ghidra one-shot headless batch analysis with pre/post scripts; Ghidra configurable per-call analysis completion timeout (`1e394be`)
+
+- **cutter:** 04-25+04-26 Initialize ESIL VM state distinct from memory init (Cutter/Rizin aei); Step ESIL emulation until a target address or expression (Cutter/Rizin aesu/aesue) (`8b4ce78`)
+
+- **cutter:** 04-18+04-19 Discover attachable OS processes before attaching (Cutter/Rizin dpl/dplj); Send a signal to the attached debuggee process (Cutter/Rizin dk) (`8a76bc4`)
+
+- **x64dbg:** 02-G6 x64dbg delete_label (labeldel) bridge method and Labels tab Delete control (`97851ea`)
+
+- **x64dbg:** 02-G5 x64dbg delete_comment (commentdel) bridge method and Comments tab Delete control (`0e7db2b`)
+
+- **x64dbg:** 02-D7 x64dbg create_thread/kill_thread (createthread/killthread) bridge methods and Threads tab Create/Kill controls (`c8982d6`)
+
+- **x64dbg:** 02-C10 x64dbg load_library (loadlib) bridge method and Load DLL GUI control (`fd7ba08`)
+
+- **bridges:** 08-A6-prep add HookInfo.original_trampoline so Interceptor.replaceFast can report its trampoline (unblocks 08-A6) (`0d89205`)
+
+- **frida:** 07-D7+07-D8+07-D9+07-E2 Frida snapshot a warmed-up script VM and load a script from that snapshot; Frida attach a debugger/inspector to a running script; Frida forcibly terminate a hung script whose runtime never yields; Frida discover a running script's RPC exports (frida.list_rpc_exports) (`b6b6b5f`)
+
+- **ghidra:** 06-DT11+06-MM6+06-MM7+06-MM9 Ghidra bulk data-type interchange: C header import and .gdt archive export/import; Ghidra move a memory block to a different start address; Ghidra rename a memory block and edit its comment; Ghidra non-default memory block creation (uninitialized, byte-mapped, bit-mapped) (`3b71862`)
+
+- **x64dbg:** 01-H4 x64dbg coverage-boundary conditional tracing and trace-log-file redirection (`48598e5`)
+
+- **x64dbg:** 01-H1+01-H2+01-H3+02-B5 x64dbg run to user code and to a caller-party boundary (RunToUserCode/RunToParty); x64dbg mode-restricted and exception-passthrough stepping (step into user/system code, extended step); x64dbg undo the last stepped instruction (InstrUndo); x64dbg memory page protection rights via setpagerights (`e9378a9`)
+
+- **cutter:** 03-13+03-27+03-28+04-5+04-17 add the jsdec (pdd) alternate decompiler backend; apply FLIRT signatures to the loaded binary (Fs/Fa); create/export a FLIRT signature file from analyzed functions (Fc); conditional debugger continue (until syscall, call, or address); read the call stack / backtrace of the attached thread (`59f76ac`)
+
+- **frida:** 07-B3+07-B8+07-C1+07-D6 capture spawned-process stdio via pipe mode; kill an arbitrary process (frida.kill); add session-scoped child-process gating; precompile Frida scripts to bytecode and load from precompiled bytes (`2a5e81d`)
+
+- **x64dbg:** 01-E5 remove, enable, and disable exception breakpoints (remove_exception_config, enable_exception_config, disable_exception_config) (`4cf971a`)
+
+- **x64dbg:** 01-D9+01-D10+01-E2+01-E3 reset a breakpoint's hit counter (reset_breakpoint_hit_count); set or clear a breakpoint's display name (set_breakpoint_name); remove a DLL breakpoint (remove_dll_breakpoint); enable and disable DLL breakpoints (enable_dll_breakpoint, disable_dll_breakpoint) (`f4924ba`)
+
+- **ghidra:** 06-DT7 browse the full Data Type Manager category tree (not only structures) (`4e2f517`)
+
+- **ghidra:** 05-6+05-7+06-CB4 add function tag management (create/assign/list FunctionTags); promote an existing symbol to primary in the Symbol Table; clear an existing comment at an address (remove_comment) (`bde1a1e`)
+
+- **sandbox:** 10-17 sandbox per-instance isolation extras (`10fbedc`)
+
+- **frida:** 07-A4+07-A5+07-A6+07-A9+07-B2 Frida remove/forget remote device; Frida device-change notifications; Frida device-lost notifications; Frida get frontmost application; Frida spawn with env/cwd overrides (`0c0db13`)
+
+- **ghidra:** 05-1+05-2+05-3+05-4+05-5 Ghidra raw per-instruction P-code; Ghidra disassemble undefined bytes / clear code; Ghidra set context register over range; Ghidra rename parameter / local variable; Ghidra function flags no-return/var-args/inline (`83d239e`)
+
+- **cutter:** 03-5+03-6+03-7+03-8+03-11 Cutter basic-block analysis pass (aab); Cutter function-call analysis pass (aac); Cutter reference analysis pass (aar); Cutter function autoname pass (aan); Cutter disassemble fixed byte range (pD) (`852c07a`)
+
+- **x64dbg:** 01-D3+01-D5+01-D7 x64dbg breakpoint log condition; x64dbg breakpoint command condition; x64dbg breakpoint singleshot/silent flags (`6e70b06`)
+
+- **x64dbg:** 01-C4+01-C8 x64dbg memory-range breakpoint (SetMemoryRangeBPX); x64dbg default breakpoint opcode type (SetBPXOptions) (`5180632`)
+
 - **ui:** Add dark2/light2 theme assets required by the S19 four-theme gates (`90183f9`)
 Commit 091e5e65 landed theme_manager.py's dark2/light2 support and the
 four-theme parity gates (test_theme_stylesheet_rules, test_session_tag_theme,
@@ -541,6 +603,23 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
+
+- Expand bridge capabilities across dynamic and static tools (``)
+Expand API surfaces and UI controls across all reverse-engineering
+bridges to support granular execution flows, direct register access, and
+extended metadata manipulation.
+- Cutter: add basic block/call/ref analysis passes, relative seek history,
+flagspace management, ESIL state/watchpoint controls, and FLIRT tooling
+- Frida: support low-overhead fast replace, typed memory accessors, module
+section/dependency enumeration, script debugger attachment, and bytecode
+precompilation/snapshots
+- Ghidra: implement standalone P-code inspection, arbitrary byte range
+disassembly, non-default memory block types, DTM tree navigation, and
+headless batch processing
+- x64dbg: add debug/extended register inspection, coverage tracing, thread
+creation/termination, and memory range breakpoint controls
+- UI: expose the new bridge operations in their respective Qt panels and
+add integration test coverage across all tool surfaces
 
 
 ### Changed
@@ -1171,6 +1250,34 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **cutter:** ASCII labels for the relative-seek toolbar controls (`67622fb`)
+The two relative-seek buttons were labelled with geometric-triangle glyphs and
+the delta input with a Greek capital delta. These were the only non-ASCII UI
+strings in the whole ui/panels tree, so they matched no existing convention, and
+on a font without those glyphs both buttons degrade to the same replacement box -
+leaving two indistinguishable arrow buttons on a platform where Windows
+compatibility is a stated priority.
+They also read as the same kind of control as the adjacent Back/Forward pair
+while doing something different: these seek by the typed byte delta, Back and
+Forward navigate seek history.
+"<left triangle>"  -> "Seek -"
+"<right triangle>" -> "Seek +"
+"<delta> bytes..." -> "Delta bytes..."
+The signs mirror the sign actually applied in _do_seek_relative. Attribute names
+and handlers are unchanged, and no test referenced any of these captions.
+
+- Harden bridge commands, UI overflow layout, and hexcore operations (`c855696`)
+Align bridge implementations with real backend command contracts across
+x64dbg, Ghidra, and Frida, resolve UI widget clipping and layout overflow
+issues across panels, and harden hexcore undo/eval execution against
+unbounded growth and numeric overflow.
+- x64dbg: replace nonexistent console commands with supported RPC/trace calls, fix conditional trace argument order, and implement desktop window mirroring via PrintWindow
+- Ghidra: support real reparenting via ModuleDB, add AWT headless runtime flag, enforce kill-on-close job objects, and adapt CFG graph scene mapping
+- Frida: migrate device spawn gating to spawn-added/spawn-removed signals, support Frida 17 cancellable scopes, and add instruction disassembly UI controls
+- Hex editor: route panel operations through bridge when attached, fix template field collision in MRO, add Replace undo operation, and check bounds in template eval
+- UI: install tab overflow menus, enforce minimum scrollable bounds on tool panels, and add chat pane collapse toggle
+- Core & dependencies: recursively hydrate tool dataclass arguments, delete backing files on script removal, and bump security floors for pyasn1 and gitpython
 
 - Harden IPC pipe security and prevent arithmetic overflow panics (`c6b8146`)
 Harden the x64dbg IPC pipe against unauthorized access and command
@@ -5989,17 +6096,3 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- Harden bridge commands, UI overflow layout, and hexcore operations (``)
-Align bridge implementations with real backend command contracts across
-x64dbg, Ghidra, and Frida, resolve UI widget clipping and layout overflow
-issues across panels, and harden hexcore undo/eval execution against
-unbounded growth and numeric overflow.
-- x64dbg: replace nonexistent console commands with supported RPC/trace calls, fix conditional trace argument order, and implement desktop window mirroring via PrintWindow
-- Ghidra: support real reparenting via ModuleDB, add AWT headless runtime flag, enforce kill-on-close job objects, and adapt CFG graph scene mapping
-- Frida: migrate device spawn gating to spawn-added/spawn-removed signals, support Frida 17 cancellable scopes, and add instruction disassembly UI controls
-- Hex editor: route panel operations through bridge when attached, fix template field collision in MRO, add Replace undo operation, and check bounds in template eval
-- UI: install tab overflow menus, enforce minimum scrollable bounds on tool panels, and add chat pane collapse toggle
-- Core & dependencies: recursively hydrate tool dataclass arguments, delete backing files on script removal, and bump security floors for pyasn1 and gitpython
-
-

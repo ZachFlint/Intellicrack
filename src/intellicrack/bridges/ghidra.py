@@ -316,6 +316,10 @@ _ERR_UNSUPPORTED_DEBUG_FORMAT = "Unsupported debug info file format"
 _ERR_DEBUG_PATH_INVALID = "Debug info file path invalid"
 _ERR_DEBUG_PATH_NOT_FOUND = "Debug info file not found"
 _ERR_DEBUG_PATH_NOT_FILE = "Debug info path is not a regular file"
+_ERR_C_HEADER_IMPORT_FAILED = "C header import failed"
+_ERR_C_HEADER_PATH_INVALID = "C header file path invalid"
+_ERR_C_HEADER_PATH_NOT_FOUND = "C header file not found"
+_ERR_C_HEADER_PATH_NOT_FILE = "C header path is not a regular file"
 
 
 _XRefRefType = Literal["call", "jump", "data", "read", "write"]
@@ -346,6 +350,24 @@ def _map_ghidra_ref_type(raw_type: str) -> _XRefRefType:
     if "WRITE" in upper:
         return "write"
     return "read" if "READ" in upper else "data"
+
+
+def _tri_bool_literal(*, value: bool | None) -> str:
+    """Render a tri-state bool as a Jython literal: 'True', 'False', or 'None'.
+
+    A ``bool | None`` flag needs a three-way literal rather than a plain
+    truthiness check, since ``False`` is itself a meaningful value
+    distinct from "leave unchanged" (``None``).
+
+    Args:
+        value: The tri-state flag to render.
+
+    Returns:
+        str: The literal text ``"True"``, ``"False"``, or ``"None"``.
+    """
+    if value is None:
+        return "None"
+    return "True" if value else "False"
 
 
 def _resolve_debug_info_path(path: str) -> Path:
@@ -395,6 +417,57 @@ def _resolve_debug_info_path(path: str) -> Path:
 
     if not normalized.is_file():
         msg = f"{_ERR_DEBUG_PATH_NOT_FILE}: {normalized}"
+        raise ToolError(msg)
+
+    return normalized
+
+
+def _resolve_c_header_path(path: str) -> Path:
+    r"""Canonicalise and validate a C header path before passing it to Ghidra.
+
+    Normalises the supplied path with ``os.path.normpath`` to collapse
+    traversal sequences such as ``..\..\Windows\System32`` lexically,
+    without opening a filesystem handle to any path component. Existence
+    and file-type are then verified with ``Path.exists()`` /
+    ``Path.is_file()``, which query filesystem metadata only and never
+    open the target for reading. This avoids ``Path.resolve(strict=True)``,
+    whose Windows implementation opens a ``CreateFileW`` handle with
+    backup semantics to canonicalise the path and can raise ``WinError 5``
+    (Access is denied) against ACL-protected files even though the file
+    itself is world-readable.
+
+    Args:
+        path: Untrusted, possibly-relative path supplied by the caller.
+
+    Returns:
+        Path: Absolute, lexically-normalised filesystem path that is
+        guaranteed to exist and to refer to a regular file at the moment
+        of the check.
+
+    Raises:
+        ToolError: If ``path`` is empty, cannot be normalised, does not
+            exist, or does not refer to a regular file.
+    """
+    if not path or not path.strip():
+        raise ToolError(_ERR_C_HEADER_PATH_INVALID)
+
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = Path.cwd() / candidate
+    normalized = Path(os.path.normpath(str(candidate)))
+
+    try:
+        exists = normalized.exists()
+    except OSError as exc:
+        msg = f"{_ERR_C_HEADER_PATH_INVALID}: {path}: {exc}"
+        raise ToolError(msg) from exc
+
+    if not exists:
+        msg = f"{_ERR_C_HEADER_PATH_NOT_FOUND}: {path}"
+        raise ToolError(msg)
+
+    if not normalized.is_file():
+        msg = f"{_ERR_C_HEADER_PATH_NOT_FILE}: {normalized}"
         raise ToolError(msg)
 
     return normalized
@@ -751,7 +824,14 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                 ToolFunction(
                     name="ghidra.analyze",
                     description="Run full Ghidra analysis on loaded binary",
-                    parameters=[],
+                    parameters=[
+                        ToolParameter(
+                            name="timeout_seconds",
+                            type="number",
+                            description="Maximum seconds to poll for analysis completion before raising (default: 1800s)",
+                            required=False,
+                        ),
+                    ],
                     returns="Analysis completion status",
                 ),
                 ToolFunction(
@@ -799,6 +879,34 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ),
                     ],
                     returns="Disassembly text",
+                ),
+                ToolFunction(
+                    name="ghidra.disassemble_range",
+                    description="Convert undefined bytes into instructions over an address range (Ghidra's Disassemble action)",
+                    parameters=[
+                        ToolParameter(name="start_address", type="integer", description="Start of the range to disassemble", required=True),
+                        ToolParameter(
+                            name="end_address",
+                            type="integer",
+                            description="End of the range to disassemble (inclusive)",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with start, end, instructions_created, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.clear_code_bytes",
+                    description="Undefine instructions back to raw bytes over an address range (Ghidra's Clear Code Bytes action)",
+                    parameters=[
+                        ToolParameter(name="start_address", type="integer", description="Start of the range to clear", required=True),
+                        ToolParameter(
+                            name="end_address",
+                            type="integer",
+                            description="End of the range to clear (inclusive)",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with start, end, and success",
                 ),
                 ToolFunction(
                     name="ghidra.get_xrefs_to",
@@ -907,6 +1015,22 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Success status",
                 ),
                 ToolFunction(
+                    name="ghidra.remove_comment",
+                    description="Delete/clear an existing comment of a given type at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address of the comment to clear", required=True),
+                        ToolParameter(
+                            name="comment_type",
+                            type="string",
+                            description="Type: EOL, PRE, POST, PLATE, REPEATABLE",
+                            required=False,
+                            default="EOL",
+                            enum=["EOL", "PRE", "POST", "PLATE", "REPEATABLE"],
+                        ),
+                    ],
+                    returns="Dict with address, comment_type, and success",
+                ),
+                ToolFunction(
                     name="ghidra.get_imports",
                     description="Get all imported functions",
                     parameters=[],
@@ -969,6 +1093,75 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ),
                     ],
                     returns="None",
+                ),
+                ToolFunction(
+                    name="ghidra.run_headless_batch",
+                    description="Run a one-shot analyzeHeadless batch: import/process multiple binaries with pre/post-analysis scripts",
+                    parameters=[
+                        ToolParameter(name="project_dir", type="string", description="Directory for the Ghidra project", required=True),
+                        ToolParameter(
+                            name="targets",
+                            type="array",
+                            description="Files and/or directories to import",
+                            required=True,
+                            items_type="string",
+                        ),
+                        ToolParameter(
+                            name="project_name",
+                            type="string",
+                            description="Name of the project",
+                            required=False,
+                            default="intellicrack",
+                        ),
+                        ToolParameter(
+                            name="pre_scripts",
+                            type="array",
+                            description="Scripts to run before analysis (list of {name, args})",
+                            required=False,
+                            items_type="object",
+                            item_properties=[
+                                ToolParameter(name="name", type="string", description="Script filename with extension", required=True),
+                                ToolParameter(
+                                    name="args",
+                                    type="array",
+                                    description="Arguments passed to the script",
+                                    required=False,
+                                    items_type="string",
+                                ),
+                            ],
+                        ),
+                        ToolParameter(
+                            name="post_scripts",
+                            type="array",
+                            description="Scripts to run after analysis (list of {name, args})",
+                            required=False,
+                            items_type="object",
+                            item_properties=[
+                                ToolParameter(name="name", type="string", description="Script filename with extension", required=True),
+                                ToolParameter(
+                                    name="args",
+                                    type="array",
+                                    description="Arguments passed to the script",
+                                    required=False,
+                                    items_type="string",
+                                ),
+                            ],
+                        ),
+                        ToolParameter(
+                            name="recursive",
+                            type="boolean",
+                            description="Recurse into imported directories",
+                            required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="analysis_timeout_seconds",
+                            type="integer",
+                            description="Per-file analysis timeout in seconds (-analysisTimeoutPerFile)",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dict with project_dir, project_name, targets, return_code, and success",
                 ),
                 ToolFunction(
                     name="ghidra.get_function",
@@ -1069,6 +1262,27 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Updated function info",
                 ),
                 ToolFunction(
+                    name="ghidra.set_function_flags",
+                    description="Set a function's no-return, var-args, and/or inline property flags",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Function entry address", required=True),
+                        ToolParameter(
+                            name="no_return",
+                            type="boolean",
+                            description="Function never returns (e.g. ExitProcess-style wrapper)",
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="var_args",
+                            type="boolean",
+                            description="Function accepts a variable argument list (e.g. printf-style)",
+                            required=False,
+                        ),
+                        ToolParameter(name="is_inline", type="boolean", description="Function is inline", required=False),
+                    ],
+                    returns="Dict with name, address, no_return, var_args, and is_inline",
+                ),
+                ToolFunction(
                     name="ghidra.set_function_variable_type",
                     description="Change the data type of a local variable in a function",
                     parameters=[
@@ -1077,6 +1291,16 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ToolParameter(name="new_type", type="string", description="New data type", required=True),
                     ],
                     returns="Variable retype result",
+                ),
+                ToolFunction(
+                    name="ghidra.rename_function_variable",
+                    description="Rename a function parameter or local variable, distinct from retyping it",
+                    parameters=[
+                        ToolParameter(name="func_address", type="integer", description="Function entry address", required=True),
+                        ToolParameter(name="var_name", type="string", description="Current variable name", required=True),
+                        ToolParameter(name="new_name", type="string", description="New variable name", required=True),
+                    ],
+                    returns="Dict with var_name, new_name, and success",
                 ),
                 ToolFunction(
                     name="ghidra.define_structure",
@@ -1252,6 +1476,22 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Dict with address, register name, value, and has_value flag",
                 ),
                 ToolFunction(
+                    name="ghidra.set_register_value",
+                    description="Set the context-tracked register value over an address range (Ghidra's Set Register Values action)",
+                    parameters=[
+                        ToolParameter(name="start_address", type="integer", description="Start of the range to set", required=True),
+                        ToolParameter(name="end_address", type="integer", description="End of the range to set (inclusive)", required=True),
+                        ToolParameter(name="register", type="string", description="Register name (e.g. TMode, EAX)", required=True),
+                        ToolParameter(
+                            name="value",
+                            type="integer",
+                            description="Value to assign to the register over the range",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with start, end, register, value, and success",
+                ),
+                ToolFunction(
                     name="ghidra.import_debug_info",
                     description="Import debug symbols from a PDB or DWARF file",
                     parameters=[
@@ -1384,6 +1624,14 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Dict with address, mnemonic, flow_type, fall_through, and flows",
                 ),
                 ToolFunction(
+                    name="ghidra.get_instruction_pcode",
+                    description="Get raw per-instruction P-code ops, independent of decompilation",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Instruction address", required=True),
+                    ],
+                    returns="Dict with address, mnemonic, and list of raw P-code operations",
+                ),
+                ToolFunction(
                     name="ghidra.create_data_type",
                     description="Create a new data type (enum, union, typedef, or function_def) in the type manager",
                     parameters=[
@@ -1421,6 +1669,57 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ),
                     ],
                     returns="Dict with name, kind, size, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.get_data_type_tree",
+                    description="Browse the full Data Type Manager tree: categories and every data type kind (enums, unions, typedefs, function-defs, structures)",
+                    parameters=[
+                        ToolParameter(
+                            name="category_path",
+                            type="string",
+                            description="Category path to root the browse at (e.g. /MyTypes); omit for the DTM root category",
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="max_depth",
+                            type="integer",
+                            description="Maximum recursion depth into subcategories",
+                            required=False,
+                            default=32,
+                        ),
+                    ],
+                    returns="Recursive dict of categories, subcategories, and data types of every kind",
+                ),
+                ToolFunction(
+                    name="ghidra.import_c_header",
+                    description="Parse a C header file and add its declared types to the program's data type manager",
+                    parameters=[
+                        ToolParameter(name="header_path", type="string", description="Path to the .h file to parse", required=True),
+                        ToolParameter(
+                            name="include_paths",
+                            type="array",
+                            description="Additional include directories for the parser",
+                            required=False,
+                            items_type="string",
+                        ),
+                    ],
+                    returns="Dict with path, types_added, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.export_data_type_archive",
+                    description="Export every data type in the program's type manager to a new .gdt archive file",
+                    parameters=[
+                        ToolParameter(name="archive_path", type="string", description="Destination .gdt file path", required=True),
+                    ],
+                    returns="Dict with path, types_exported, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.import_data_type_archive",
+                    description="Import every data type from an existing .gdt archive file into the program's type manager",
+                    parameters=[
+                        ToolParameter(name="archive_path", type="string", description="Source .gdt file path", required=True),
+                    ],
+                    returns="Dict with path, types_imported, and success",
                 ),
                 ToolFunction(
                     name="ghidra.create_data",
@@ -1479,6 +1778,84 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Dict with name, start, size, permissions, and success",
                 ),
                 ToolFunction(
+                    name="ghidra.create_uninitialized_block",
+                    description="Create a new uninitialized memory block (no backing byte storage)",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Block name", required=True),
+                        ToolParameter(name="start", type="integer", description="Start address", required=True),
+                        ToolParameter(name="size", type="integer", description="Block size in bytes", required=True),
+                        ToolParameter(
+                            name="overlay",
+                            type="boolean",
+                            description="Create as an overlay block",
+                            required=False,
+                            default=False,
+                        ),
+                    ],
+                    returns="Dict with name, start, size, block_type, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.create_byte_mapped_block",
+                    description="Create a byte-mapped memory block with a 1:1 byte mapping onto another address range",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Block name", required=True),
+                        ToolParameter(
+                            name="start",
+                            type="integer",
+                            description="Start address of the new block",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="mapped_address",
+                            type="integer",
+                            description="Address the block is mapped onto",
+                            required=True,
+                        ),
+                        ToolParameter(name="length", type="integer", description="Block length in bytes", required=True),
+                        ToolParameter(
+                            name="overlay",
+                            type="boolean",
+                            description="Create as an overlay block",
+                            required=False,
+                            default=False,
+                        ),
+                    ],
+                    returns="Dict with name, start, mapped_address, length, block_type, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.create_bit_mapped_block",
+                    description="Create a bit-mapped memory block, where each byte's value (0 or 1) is taken from one bit at a mapped address",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Block name", required=True),
+                        ToolParameter(
+                            name="start",
+                            type="integer",
+                            description="Start address of the new block",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="mapped_address",
+                            type="integer",
+                            description="Address the block's bits are mapped onto",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="length",
+                            type="integer",
+                            description="Block length in bytes (bits consumed from the mapped range)",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="overlay",
+                            type="boolean",
+                            description="Create as an overlay block",
+                            required=False,
+                            default=False,
+                        ),
+                    ],
+                    returns="Dict with name, start, mapped_address, length, block_type, and success",
+                ),
+                ToolFunction(
                     name="ghidra.remove_memory_block",
                     description="Remove a memory block from the program",
                     parameters=[
@@ -1499,6 +1876,33 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ),
                     ],
                     returns="Dict with name, split_address, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.move_memory_block",
+                    description="Move a memory block to a different start address",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Name of the memory block to move", required=True),
+                        ToolParameter(name="new_start", type="integer", description="New start address for the block", required=True),
+                    ],
+                    returns="Dict with name, new_start, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.rename_memory_block",
+                    description="Rename an existing memory block",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Current name of the memory block", required=True),
+                        ToolParameter(name="new_name", type="string", description="New name for the block", required=True),
+                    ],
+                    returns="Dict with name, previous_name, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.set_memory_block_comment",
+                    description="Set or replace the comment on an existing memory block",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Name of the memory block", required=True),
+                        ToolParameter(name="comment", type="string", description="Comment text to set on the block", required=True),
+                    ],
+                    returns="Dict with name, comment, and success",
                 ),
                 ToolFunction(
                     name="ghidra.join_memory_blocks",
@@ -1536,6 +1940,14 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="List of comment dicts with address, type, and comment text",
                 ),
                 ToolFunction(
+                    name="ghidra.create_program_tree",
+                    description="Create an additional named program tree beyond the program's existing tree(s)",
+                    parameters=[
+                        ToolParameter(name="tree_name", type="string", description="Name for the new program tree", required=True),
+                    ],
+                    returns="Dict with tree_name, root_name, and success",
+                ),
+                ToolFunction(
                     name="ghidra.get_program_tree",
                     description="Get the program tree module/fragment hierarchy",
                     parameters=[],
@@ -1543,7 +1955,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                 ),
                 ToolFunction(
                     name="ghidra.edit_program_tree",
-                    description="Create a module/fragment in a program tree, or move an existing child under a new parent",
+                    description="Create, delete, rename, or move a module/fragment in a program tree",
                     parameters=[
                         ToolParameter(name="tree_name", type="string", description="Name of the program tree to modify", required=True),
                         ToolParameter(
@@ -1551,7 +1963,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                             type="string",
                             description="Operation to perform",
                             required=True,
-                            enum=["create_module", "create_fragment", "move_child"],
+                            enum=["create_module", "create_fragment", "move_child", "delete", "rename"],
                         ),
                         ToolParameter(
                             name="parent_module",
@@ -1562,11 +1974,48 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ToolParameter(
                             name="child_name",
                             type="string",
-                            description="Name of the module/fragment to create or move",
+                            description="Name of the module/fragment to create, move, delete, or rename",
                             required=True,
+                        ),
+                        ToolParameter(
+                            name="new_name",
+                            type="string",
+                            description="New name for the child when operation is 'rename'; unused otherwise",
+                            required=False,
                         ),
                     ],
                     returns="Dict with tree_name, operation, child_name, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.assign_fragment_range",
+                    description="Move a code-unit address range into an existing (typically newly created, empty) fragment",
+                    parameters=[
+                        ToolParameter(
+                            name="tree_name",
+                            type="string",
+                            description="Name of the program tree containing the fragment",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="fragment_name",
+                            type="string",
+                            description="Name of the fragment to receive the range",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="start_address",
+                            type="integer",
+                            description="Start of the code-unit range (must be a code unit start)",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="end_address",
+                            type="integer",
+                            description="End of the code-unit range (must be a code unit end, inclusive)",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with tree_name, fragment_name, start, end, and success",
                 ),
                 ToolFunction(
                     name="ghidra.get_properties",
@@ -1623,6 +2072,44 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ToolParameter(name="address", type="integer", description="Function address", required=True),
                     ],
                     returns="Dict with address, is_thunk, thunked_function, and thunked_address",
+                ),
+                ToolFunction(
+                    name="ghidra.create_function_tag",
+                    description="Create a function tag in the program's tag manager",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Tag name", required=True),
+                        ToolParameter(name="comment", type="string", description="Tag comment", required=False, default=""),
+                    ],
+                    returns="Dict with name, comment, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.set_function_tags",
+                    description="Add or remove a function tag on a specific function",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Function entry address", required=True),
+                        ToolParameter(name="tag_name", type="string", description="Tag name to add or remove", required=True),
+                        ToolParameter(
+                            name="operation",
+                            type="string",
+                            description="Whether to add or remove the tag",
+                            required=True,
+                            enum=["add", "remove"],
+                        ),
+                    ],
+                    returns="Dict with address, tag_name, operation, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.get_function_tags",
+                    description="List function tags: all tags in the program, or the tags on one function",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Function address to list tags for; omit to list every tag in the program",
+                            required=False,
+                        ),
+                    ],
+                    returns="List of tag dicts with name and comment",
                 ),
                 ToolFunction(
                     name="ghidra.get_external_references",
@@ -1696,6 +2183,15 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ToolParameter(name="name", type="string", description="Label name to remove", required=True),
                     ],
                     returns="Dict with address, name, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.promote_symbol_to_primary",
+                    description="Promote an already-existing symbol at an address to primary (Symbol Table's Set Primary action)",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address of the symbol", required=True),
+                        ToolParameter(name="name", type="string", description="Name of the existing symbol to promote", required=True),
+                    ],
+                    returns="Dict with address, name, already_primary, and success",
                 ),
                 ToolFunction(
                     name="ghidra.add_thunk",
@@ -2972,7 +3468,7 @@ metadata
                 return queried
         return header_arch, header_is_64
 
-    async def analyze(self) -> None:
+    async def analyze(self, timeout_seconds: float | None = None) -> None:
         """Run full Ghidra auto-analysis, polling to completion without a blocking RPC.
 
         ``GhidraScript.analyzeAll`` schedules every pending analyser and
@@ -2989,6 +3485,11 @@ metadata
         bounded overall deadline elapses. Any exception raised by
         ``analyzeAll`` is captured on the server and re-raised on the client,
         so callers only return once Ghidra reports the program fully analysed.
+
+        Args:
+            timeout_seconds: Maximum seconds to poll for analysis
+                completion before raising. When ``None``, uses the
+                module default (``_GHIDRA_ANALYZE_DEADLINE_SECONDS``).
 
         Raises:
             ToolError: If Ghidra is not connected, the analysis worker
@@ -3041,7 +3542,8 @@ metadata
             raise ToolError(error_message) from exc
 
         loop = asyncio.get_running_loop()
-        deadline = loop.time() + _GHIDRA_ANALYZE_DEADLINE_SECONDS
+        effective_timeout = _GHIDRA_ANALYZE_DEADLINE_SECONDS if timeout_seconds is None else timeout_seconds
+        deadline = loop.time() + effective_timeout
 
         while True:
             try:
@@ -3060,9 +3562,9 @@ metadata
             if loop.time() >= deadline:
                 _logger.warning(
                     "ghidra_analysis_timeout",
-                    deadline_seconds=_GHIDRA_ANALYZE_DEADLINE_SECONDS,
+                    deadline_seconds=effective_timeout,
                 )
-                error_message = f"Ghidra analysis did not complete within {_GHIDRA_ANALYZE_DEADLINE_SECONDS:.0f}s"
+                error_message = f"Ghidra analysis did not complete within {effective_timeout:.0f}s"
                 raise ToolError(error_message)
 
             await asyncio.sleep(_GHIDRA_ANALYZE_POLL_INTERVAL_SECONDS)
@@ -3947,6 +4449,101 @@ metadata
         _logger.info("comment_added", address=hex(address), comment_type=comment_type)
         return True
 
+    async def remove_comment(self, address: int, comment_type: str = "EOL") -> dict[str, Any]:
+        """Delete/clear an existing comment of a given type at an address.
+
+        After issuing ``CodeUnit.setComment(type, None)`` the bridge
+        re-queries the same comment slot via ``remote_eval`` and
+        verifies the stored value is now empty, mirroring
+        :meth:`add_comment`'s own write-then-verify readback philosophy.
+
+        Args:
+            address: Address of the comment to clear.
+            comment_type: Type of comment: EOL, PRE, POST, PLATE, or
+                REPEATABLE.
+
+        Returns:
+            dict[str, Any]: Dict with address, comment_type, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, ``comment_type`` is
+                unrecognized, no code unit exists at ``address``, the
+                clear fails, or the readback still reports a comment.
+        """
+        if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
+            error_message = _ERR_NOT_CONNECTED
+            raise ToolError(error_message)
+
+        comment_map = {
+            "EOL": "CodeUnit.EOL_COMMENT",
+            "PRE": "CodeUnit.PRE_COMMENT",
+            "POST": "CodeUnit.POST_COMMENT",
+            "PLATE": "CodeUnit.PLATE_COMMENT",
+            "REPEATABLE": "CodeUnit.REPEATABLE_COMMENT",
+        }
+        ghidra_type = comment_map.get(comment_type)
+        if ghidra_type is None:
+            _logger.error("ghidra_unknown_comment_type", address=hex(address), comment_type=comment_type)
+            error_message = f"Unknown comment_type {comment_type!r}: must be one of {sorted(comment_map)}"
+            raise ToolError(error_message)
+
+        try:
+            await self._execute_remote(
+                textwrap.dedent(
+                    f"""
+                    from ghidra.program.model.listing import CodeUnit
+
+                    addr = toAddr({address})
+                    cu = currentProgram.getListing().getCodeUnitAt(addr)
+                    if cu is None:
+                        raise RuntimeError('No code unit at ' + str(addr))
+                    tx_id = currentProgram.startTransaction('intellicrack.remove_comment')
+                    try:
+                        cu.setComment({ghidra_type}, None)
+                    finally:
+                        currentProgram.endTransaction(tx_id, True)
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
+        except Exception as e:
+            _logger.warning("ghidra_remove_comment_failed", address=hex(address), error=str(e))
+            error_message = f"Remove comment failed: {e}"
+            raise ToolError(error_message) from e
+
+        try:
+            readback = await self._execute_remote_eval(
+                textwrap.dedent(
+                    f"""
+                    (lambda cu: cu.getComment({ghidra_type}) if cu is not None else None)(
+                        currentProgram.getListing().getCodeUnitAt(toAddr({address}))
+                    )
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
+        except Exception as e:
+            _logger.warning("ghidra_remove_comment_readback_failed", address=hex(address), error=str(e))
+            error_message = f"Remove comment readback failed: {e}"
+            raise ToolError(error_message) from e
+
+        observed = "" if readback is None else str(readback)
+        if observed:
+            _logger.error(
+                "ghidra_remove_comment_verification_failed",
+                address=hex(address),
+                comment_type=comment_type,
+                observed_length=len(observed),
+            )
+            msg = f"Comment removal verification failed at {hex(address)}: comment still present"
+            raise ToolError(msg)
+
+        _logger.info("comment_removed", address=hex(address), comment_type=comment_type)
+        return {"address": hex(address), "comment_type": comment_type, "success": True}
+
     async def get_imports(self) -> list[ImportInfo]:
         """Get imported functions.
 
@@ -4747,6 +5344,96 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
 
+    async def set_function_flags(
+        self,
+        address: int,
+        *,
+        no_return: bool | None = None,
+        var_args: bool | None = None,
+        is_inline: bool | None = None,
+    ) -> dict[str, Any]:
+        """Set a function's no-return, var-args, and/or inline property flags.
+
+        Each flag is applied only when its argument is not ``None`` --
+        ``False`` is a meaningful value distinct from "leave unchanged"
+        and is always applied when passed explicitly.
+
+        Args:
+            address: Function entry address.
+            no_return: Function never returns (e.g. an ExitProcess-style
+                wrapper). Left unchanged when ``None``.
+            var_args: Function accepts a variable argument list (e.g.
+                printf-style). Left unchanged when ``None``.
+            is_inline: Function is inline. Left unchanged when ``None``.
+
+        Returns:
+            dict[str, Any]: Dict with name, address, no_return, var_args,
+            and is_inline reflecting the function's post-write state.
+
+        Raises:
+            ToolError: If Ghidra is not connected or no function exists
+                at ``address``.
+        """
+        if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.info(
+            "function_flags_setting",
+            address=hex(address),
+            no_return=no_return,
+            var_args=var_args,
+            is_inline=is_inline,
+        )
+        set_lines: list[str] = []
+        if no_return is not None:
+            set_lines.append(f"func.setNoReturn({_tri_bool_literal(value=no_return)})")
+        if var_args is not None:
+            set_lines.append(f"func.setVarArgs({_tri_bool_literal(value=var_args)})")
+        if is_inline is not None:
+            set_lines.append(f"func.setInline({_tri_bool_literal(value=is_inline)})")
+        set_block = "\n                        ".join(set_lines) if set_lines else "pass"
+
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                _sff_result = None
+                if func is None:
+                    _sff_result = None
+                else:
+                    tx_id = currentProgram.startTransaction('intellicrack.set_function_flags')
+                    try:
+                        {set_block}
+                    finally:
+                        currentProgram.endTransaction(tx_id, True)
+
+                    _sff_result = {{
+                        'name': func.getName(),
+                        'address': func.getEntryPoint().getOffset(),
+                        'no_return': bool(func.hasNoReturn()),
+                        'var_args': bool(func.hasVarArgs()),
+                        'is_inline': bool(func.isInline()),
+                    }}
+            """)
+        except Exception as e:
+            _logger.warning(
+                "ghidra_set_function_flags_failed",
+                address=hex(address),
+                no_return=no_return,
+                var_args=var_args,
+                is_inline=is_inline,
+                error=str(e),
+            )
+            error_message = f"Set function flags failed: {e}"
+            raise ToolError(error_message) from e
+
+        if result is None:
+            error_message = f"No function at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
+
     async def set_function_variable_type(self, func_address: int, var_name: str, new_type: str) -> dict[str, Any]:
         """Change the data type of a local variable in a function.
 
@@ -4804,6 +5491,61 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             error_message = f"Variable {var_name!r} not found in function at {hex(func_address)}"
             raise ToolError(error_message)
         return {"var_name": var_name, "new_type": new_type, "success": True}
+
+    async def rename_function_variable(self, func_address: int, var_name: str, new_name: str) -> dict[str, Any]:
+        """Rename a function parameter or local variable, distinct from retyping it.
+
+        Args:
+            func_address: Function entry address.
+            var_name: Current variable name.
+            new_name: New variable name.
+
+        Returns:
+            dict[str, Any]: Dict with var_name, new_name, and success status.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the rename fails.
+        """
+        if self._bridge is None:
+            _logger.error("ghidra_not_connected")
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("variable_renaming", func_address=hex(func_address), var_name=var_name, new_name=new_name)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.symbol import SourceType
+
+                addr = toAddr({func_address})
+                func = getFunctionContaining(addr)
+                found = False
+                if func is not None:
+                    tx_id = currentProgram.startTransaction('intellicrack.rename_function_variable')
+                    try:
+                        for var in func.getAllVariables():
+                            if var.getName() == {json.dumps(var_name)}:
+                                var.setName({json.dumps(new_name)}, SourceType.USER_DEFINED)
+                                found = True
+                                break
+                    finally:
+                        currentProgram.endTransaction(tx_id, found)
+                found
+            """)
+        except Exception as e:
+            _logger.warning(
+                "ghidra_rename_function_variable_failed",
+                func_address=hex(func_address),
+                var_name=var_name,
+                new_name=new_name,
+                error=str(e),
+            )
+            error_message = f"Rename variable failed: {e}"
+            raise ToolError(error_message) from e
+
+        if not result:
+            error_message = f"Variable {var_name!r} not found in function at {hex(func_address)}"
+            raise ToolError(error_message)
+        return {"var_name": var_name, "new_name": new_name, "success": True}
 
     async def define_structure(self, name: str, fields: list[dict[str, Any]]) -> dict[str, Any]:
         """Define a new struct data type with named fields.
@@ -5013,6 +5755,216 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             raise ToolError(error_message) from exc
 
         return cast("list[dict[str, Any]]", result) if result else []
+
+    async def create_uninitialized_block(
+        self,
+        name: str,
+        start: int,
+        size: int,
+        *,
+        overlay: bool = False,
+    ) -> dict[str, Any]:
+        """Create a new uninitialized memory block with no backing byte storage.
+
+        Args:
+            name: Block name.
+            start: Start address.
+            size: Block size in bytes.
+            overlay: Create the block in a new overlay address space.
+
+        Returns:
+            dict[str, Any]: Dict with name, start, size, block_type, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the block could not be created.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("uninitialized_memory_block_creating", block_name=name, start=hex(start), size=size, overlay=overlay)
+        overlay_literal = "True" if overlay else "False"
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                addr = toAddr({start})
+                tx_id = currentProgram.startTransaction('intellicrack.create_uninitialized_block')
+                block = None
+                try:
+                    block = memory.createUninitializedBlock({json.dumps(name)}, addr, {size}, {overlay_literal})
+                finally:
+                    currentProgram.endTransaction(tx_id, block is not None)
+                {{'name': (block.getName() if block is not None else None), 'success': block is not None}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_create_uninitialized_block_failed", block_name=name, start=hex(start))
+            msg = f"Create uninitialized block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("success", False)):
+            msg = f"Create uninitialized block failed: {name!r}"
+            raise ToolError(msg)
+        return {"name": name, "start": hex(start), "size": size, "block_type": "uninitialized", "success": True}
+
+    async def create_byte_mapped_block(
+        self,
+        name: str,
+        start: int,
+        mapped_address: int,
+        length: int,
+        *,
+        overlay: bool = False,
+    ) -> dict[str, Any]:
+        """Create a byte-mapped memory block with a 1:1 mapping onto another address range.
+
+        Uses the 5-argument ``Memory.createByteMappedBlock`` convenience
+        overload, which forwards to the full 6-argument form with
+        ``byteMappingScheme=null`` -- a null scheme means a 1:1 byte
+        mapping onto ``mapped_address``.
+
+        Args:
+            name: Block name.
+            start: Start address of the new block.
+            mapped_address: Address the block is mapped onto.
+            length: Block length in bytes.
+            overlay: Create the block in a new overlay address space.
+
+        Returns:
+            dict[str, Any]: Dict with name, start, mapped_address, length,
+            block_type, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the block could not be created.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info(
+            "byte_mapped_memory_block_creating",
+            block_name=name,
+            start=hex(start),
+            mapped_address=hex(mapped_address),
+            length=length,
+            overlay=overlay,
+        )
+        overlay_literal = "True" if overlay else "False"
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                addr = toAddr({start})
+                mapped_addr = toAddr({mapped_address})
+                tx_id = currentProgram.startTransaction('intellicrack.create_byte_mapped_block')
+                block = None
+                try:
+                    block = memory.createByteMappedBlock({json.dumps(name)}, addr, mapped_addr, {length}, {overlay_literal})
+                finally:
+                    currentProgram.endTransaction(tx_id, block is not None)
+                {{'name': (block.getName() if block is not None else None), 'success': block is not None}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception(
+                "ghidra_create_byte_mapped_block_failed",
+                block_name=name,
+                start=hex(start),
+                mapped_address=hex(mapped_address),
+            )
+            msg = f"Create byte-mapped block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("success", False)):
+            msg = f"Create byte-mapped block failed: {name!r}"
+            raise ToolError(msg)
+        return {
+            "name": name,
+            "start": hex(start),
+            "mapped_address": hex(mapped_address),
+            "length": length,
+            "block_type": "byte_mapped",
+            "success": True,
+        }
+
+    async def create_bit_mapped_block(
+        self,
+        name: str,
+        start: int,
+        mapped_address: int,
+        length: int,
+        *,
+        overlay: bool = False,
+    ) -> dict[str, Any]:
+        """Create a bit-mapped memory block whose byte values come from single bits.
+
+        Each byte of the new block reads as 0 or 1, taken from one bit of
+        a byte at the corresponding offset in the mapped address range.
+
+        Args:
+            name: Block name.
+            start: Start address of the new block.
+            mapped_address: Address the block's bits are mapped onto.
+            length: Block length in bytes (bits consumed from the mapped range).
+            overlay: Create the block in a new overlay address space.
+
+        Returns:
+            dict[str, Any]: Dict with name, start, mapped_address, length,
+            block_type, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the block could not be created.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info(
+            "bit_mapped_memory_block_creating",
+            block_name=name,
+            start=hex(start),
+            mapped_address=hex(mapped_address),
+            length=length,
+            overlay=overlay,
+        )
+        overlay_literal = "True" if overlay else "False"
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                addr = toAddr({start})
+                mapped_addr = toAddr({mapped_address})
+                tx_id = currentProgram.startTransaction('intellicrack.create_bit_mapped_block')
+                block = None
+                try:
+                    block = memory.createBitMappedBlock({json.dumps(name)}, addr, mapped_addr, {length}, {overlay_literal})
+                finally:
+                    currentProgram.endTransaction(tx_id, block is not None)
+                {{'name': (block.getName() if block is not None else None), 'success': block is not None}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception(
+                "ghidra_create_bit_mapped_block_failed",
+                block_name=name,
+                start=hex(start),
+                mapped_address=hex(mapped_address),
+            )
+            msg = f"Create bit-mapped block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("success", False)):
+            msg = f"Create bit-mapped block failed: {name!r}"
+            raise ToolError(msg)
+        return {
+            "name": name,
+            "start": hex(start),
+            "mapped_address": hex(mapped_address),
+            "length": length,
+            "block_type": "bit_mapped",
+            "success": True,
+        }
 
     async def get_call_graph(self, address: int, depth: int = 2) -> dict[str, Any]:
         """Get function call graph rooted at an address in both directions.
@@ -5804,6 +6756,108 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
 
+    async def set_register_value(
+        self,
+        start_address: int,
+        end_address: int,
+        register: str,
+        value: int,
+    ) -> dict[str, Any]:
+        """Set the context-tracked register value over an address range.
+
+        Programmatic form of Ghidra's "Set Register Values" action.
+        After ``ProgramContext.setRegisterValue`` returns, the bridge
+        re-queries the same register/address pair via ``remote_eval``
+        and verifies the stored value matches ``value``.
+
+        Args:
+            start_address: Start of the range to set.
+            end_address: End of the range to set (inclusive).
+            register: Register name (e.g. TMode, EAX).
+            value: Value to assign to the register over the range.
+
+        Returns:
+            dict[str, Any]: Dict with start, end, register, value, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, the register name is
+                unknown, the write fails, or the readback does not
+                match the requested value.
+        """
+        if self._bridge is None:
+            _logger.error("ghidra_not_connected")
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug(
+            "register_value_setting",
+            start=hex(start_address),
+            end=hex(end_address),
+            register=register,
+            value=hex(value),
+        )
+        register_literal = json.dumps(register)
+        try:
+            result = await self._execute_remote(
+                f"""
+                from java.math import BigInteger
+                from ghidra.program.model.lang import RegisterValue
+
+                start = toAddr({start_address})
+                end = toAddr({end_address})
+                ctx = currentProgram.getProgramContext()
+                reg = ctx.getRegister({register_literal})
+                if reg is None:
+                    _set_reg_result = {{'set': False, 'reason': 'unknown_register'}}
+                else:
+                    rv = RegisterValue(reg, BigInteger(str({value})))
+                    tx_id = currentProgram.startTransaction('intellicrack.set_register_value')
+                    try:
+                        ctx.setRegisterValue(start, end, rv)
+                        _set_reg_result = {{'set': True, 'reason': None}}
+                    finally:
+                        currentProgram.endTransaction(tx_id, _set_reg_result['set'])
+                _set_reg_result
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_set_register_value_failed", start=hex(start_address), register=register)
+            error_message = f"Set register value failed for {register!r}: {exc}"
+            raise ToolError(error_message) from exc
+
+        write_info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if write_info.get("set") is False:
+            reason = write_info.get("reason", "unknown")
+            error_message = f"Set register value failed for {register!r}: {reason}"
+            raise ToolError(error_message)
+
+        try:
+            readback = await self._execute_remote_eval(
+                "(lambda ctx, reg, addr: (lambda v: int(v.getUnsignedValue()) if v is not None else None)"
+                "(ctx.getRegisterValue(reg, addr)))"
+                f"(currentProgram.getProgramContext(), currentProgram.getProgramContext().getRegister({register_literal}), toAddr({start_address}))",
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_set_register_value_readback_failed", start=hex(start_address), register=register)
+            error_message = f"Set register value readback failed for {register!r}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(readback, int) or readback != value:
+            error_message = f"Register value verification failed at {hex(start_address)}: expected {value}, observed {readback!r}"
+            raise ToolError(error_message)
+
+        return {
+            "start": hex(start_address),
+            "end": hex(end_address),
+            "register": register,
+            "value": value,
+            "success": True,
+        }
+
     async def import_debug_info(self, path: str) -> dict[str, Any]:
         """Import debug symbols from a PDB or DWARF file.
 
@@ -6463,6 +7517,218 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
 
+    async def assign_fragment_range(
+        self,
+        tree_name: str,
+        fragment_name: str,
+        start_address: int,
+        end_address: int,
+    ) -> dict[str, Any]:
+        """Move a code-unit address range into an existing fragment.
+
+        Wraps ``ProgramFragment.move(Address min, Address max)``, which
+        moves every code unit in the range ``[start_address,
+        end_address]`` into the named fragment. This is the operation
+        needed to populate a fragment created empty by
+        ``edit_program_tree(operation="create_fragment")``.
+
+        Args:
+            tree_name: Name of the program tree containing the fragment.
+            fragment_name: Name of the fragment to receive the range.
+            start_address: Start of the code-unit range (must be a
+                code unit start).
+            end_address: End of the code-unit range (must be a code
+                unit end, inclusive).
+
+        Returns:
+            dict[str, Any]: Dict with tree_name, fragment_name, start,
+            end, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, the tree or
+                fragment does not exist, or the move otherwise fails
+                (e.g. an address does not align to a code unit
+                boundary or does not exist in program memory).
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info(
+            "fragment_range_assigning",
+            tree_name=tree_name,
+            fragment_name=fragment_name,
+            start_address=hex(start_address),
+            end_address=hex(end_address),
+        )
+        try:
+            result = await self._execute_remote(f"""
+                listing = currentProgram.getListing()
+                root = listing.getRootModule({json.dumps(tree_name)})
+                tree_found = root is not None
+                fragment = listing.getFragment({json.dumps(tree_name)}, {json.dumps(fragment_name)}) if tree_found else None
+                fragment_found = fragment is not None
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.assign_fragment_range')
+                try:
+                    if fragment_found:
+                        fragment.move(toAddr({start_address}), toAddr({end_address}))
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'tree_found': tree_found, 'fragment_found': fragment_found, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception(
+                "ghidra_assign_fragment_range_failed",
+                tree_name=tree_name,
+                fragment_name=fragment_name,
+            )
+            msg = f"Assign fragment range failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("tree_found", False)):
+            msg = f"Program tree not found: {tree_name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("fragment_found", False)):
+            msg = f"Fragment not found: {fragment_name!r} in tree {tree_name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Assign fragment range failed: {hex(start_address)}-{hex(end_address)} into {fragment_name!r}"
+            raise ToolError(msg)
+        return {
+            "tree_name": tree_name,
+            "fragment_name": fragment_name,
+            "start": hex(start_address),
+            "end": hex(end_address),
+            "success": True,
+        }
+
+    async def run_headless_batch(
+        self,
+        project_dir: Path,
+        targets: list[str],
+        project_name: str = "intellicrack",
+        pre_scripts: list[dict[str, Any]] | None = None,
+        post_scripts: list[dict[str, Any]] | None = None,
+        *,
+        recursive: bool = False,
+        analysis_timeout_seconds: int | None = None,
+    ) -> dict[str, Any]:
+        """Run a one-shot ``analyzeHeadless`` batch importing/analyzing multiple binaries.
+
+        Unlike :meth:`start_headless`, which deploys its own bridge script
+        and keeps the JVM alive indefinitely as an RPC server, this method
+        runs ``analyzeHeadless`` as a one-shot batch job that is awaited to
+        completion and does not touch ``self._bridge``,
+        ``self.state.connected``, or ``self._project_path`` -- those
+        describe a separate, already-open interactive session (if any)
+        that this batch run must not disturb.
+
+        Args:
+            project_dir: Directory for the Ghidra project used for this
+                batch run.
+            targets: Files and/or directories to import.
+            project_name: Name of the project.
+            pre_scripts: Scripts to run before analysis, each a dict with
+                ``name`` (script filename with extension) and optional
+                ``args`` (list of string arguments).
+            post_scripts: Scripts to run after analysis, in the same
+                ``{"name": ..., "args": [...]}`` shape as ``pre_scripts``.
+            recursive: Recurse into imported directories.
+            analysis_timeout_seconds: Per-file analysis timeout in
+                seconds, passed as ``-analysisTimeoutPerFile``.
+
+        Returns:
+            dict[str, Any]: Dict with project_dir, project_name, targets,
+            return_code, and success.
+
+        Raises:
+            ToolError: If the Ghidra path is not set, the headless
+                launcher is missing for this platform, or the batch
+                process exits with a non-zero return code.
+        """
+        if self._ghidra_path is None:
+            error_message = "Ghidra path not set"
+            raise ToolError(error_message)
+
+        _ = await asyncio.to_thread(self._resolve_headless_executable, self._ghidra_path)
+
+        cmd = [
+            sys.executable,
+            "-m",
+            "pyghidra.ghidra_launch",
+            "--install-dir",
+            str(self._ghidra_path),
+            "-D",
+            "java.awt.headless=true",
+            "ghidra.app.util.headless.AnalyzeHeadless",
+            str(project_dir),
+            project_name,
+            "-import",
+            *targets,
+        ]
+        for script in pre_scripts or []:
+            cmd += ["-preScript", script["name"], *[str(a) for a in script.get("args", [])]]
+        for script in post_scripts or []:
+            cmd += ["-postScript", script["name"], *[str(a) for a in script.get("args", [])]]
+        if recursive:
+            cmd.append("-recursive")
+        if analysis_timeout_seconds is not None:
+            cmd += ["-analysisTimeoutPerFile", str(analysis_timeout_seconds)]
+
+        env = self._scrubbed_environment()
+        jdk_home = await asyncio.to_thread(self._discover_jdk, self._ghidra_path)
+        if jdk_home is not None:
+            env["JAVA_HOME"] = str(jdk_home)
+        cwd = str(self._ghidra_path)
+        creation_flags = CREATE_NO_WINDOW if os.name == "nt" else 0
+
+        _logger.info(
+            "ghidra_headless_batch_starting",
+            command=" ".join(cmd),
+            cwd=cwd,
+            target_count=len(targets),
+        )
+
+        def _start_process() -> Popen[bytes]:
+            """Launch the analyzeHeadless batch subprocess.
+
+            Returns:
+                Popen[bytes]: Handle for the spawned batch process.
+            """
+            return Popen(
+                cmd,
+                stdout=PIPE,
+                stderr=PIPE,
+                cwd=cwd,
+                env=env,
+                creationflags=creation_flags,
+            )
+
+        process = await asyncio.to_thread(_start_process)
+        job_handle = await asyncio.to_thread(_create_kill_on_close_job_object)
+        if job_handle is not None:
+            await asyncio.to_thread(_assign_process_to_job_object, job_handle, process.pid)
+        self._start_drain_threads(process)
+        return_code = await asyncio.to_thread(process.wait)
+        if job_handle is not None:
+            await asyncio.to_thread(_close_job_object_handle, job_handle)
+        await self._join_drain_threads()
+
+        if return_code != 0:
+            msg = self._format_with_stderr_tail(f"Headless batch failed with exit code {return_code}")
+            raise ToolError(msg)
+        return {
+            "project_dir": str(project_dir),
+            "project_name": project_name,
+            "targets": targets,
+            "return_code": return_code,
+            "success": True,
+        }
+
 
 class GhidraBridge(_GhidraBridgeAnalysisMixin):
     """Bridge for Ghidra reverse engineering suite.
@@ -6743,6 +8009,187 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
 
+    async def get_instruction_pcode(self, address: int) -> dict[str, Any]:
+        """Get raw per-instruction P-code ops, independent of decompilation.
+
+        Reads P-code directly off the ``Instruction`` object in the
+        ``Listing`` via ``Instruction.getPcode()``, so it is available
+        even when full decompilation fails, times out, or the function
+        has no recognized boundaries at all.
+
+        Args:
+            address: Instruction address.
+
+        Returns:
+            dict[str, Any]: Dict with address, mnemonic, and a list of
+            raw P-code operation dicts (opcode, mnemonic, output, inputs).
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("instruction_pcode_fetching", address=hex(address))
+        try:
+            result = await self._execute_remote(
+                f"""
+                addr = toAddr({address})
+                listing = currentProgram.getListing()
+                instr = listing.getInstructionAt(addr)
+                if instr is None:
+                    _instr_pcode_payload = {{'address': None, 'mnemonic': None, 'pcode_ops': []}}
+                else:
+                    ops = []
+                    for op in instr.getPcode():
+                        out_vn = op.getOutput()
+                        if out_vn is not None:
+                            out_dict = {{
+                                'space': out_vn.getAddress().getAddressSpace().getName(),
+                                'offset': out_vn.getAddress().getOffset(),
+                                'size': out_vn.getSize(),
+                            }}
+                        else:
+                            out_dict = None
+                        inputs = []
+                        for i in range(op.getNumInputs()):
+                            ivn = op.getInput(i)
+                            inputs.append({{
+                                'space': ivn.getAddress().getAddressSpace().getName(),
+                                'offset': ivn.getAddress().getOffset(),
+                                'size': ivn.getSize(),
+                            }})
+                        ops.append({{
+                            'opcode': int(op.getOpcode()),
+                            'mnemonic': op.getMnemonic(),
+                            'output': out_dict,
+                            'inputs': inputs,
+                        }})
+                    _instr_pcode_payload = {{'address': addr.getOffset(), 'mnemonic': instr.getMnemonicString(), 'pcode_ops': ops}}
+                _instr_pcode_payload
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("get_instruction_pcode_failed", address=hex(address))
+            error_message = f"Get instruction pcode failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get instruction pcode returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
+
+    async def disassemble_range(self, start_address: int, end_address: int) -> dict[str, Any]:
+        """Convert undefined bytes into instructions over an address range.
+
+        Wraps Ghidra's ``DisassembleCommand``, the programmatic form of
+        the Listing's "Disassemble" (D) action, following flows the
+        same way the GUI action does.
+
+        Args:
+            start_address: Start of the range to disassemble.
+            end_address: End of the range to disassemble (inclusive).
+
+        Returns:
+            dict[str, Any]: Dict with start, end, instructions_created,
+            and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the command is
+                rejected by Ghidra.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("disassemble_range_running", start=hex(start_address), end=hex(end_address))
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.app.cmd.disassemble import DisassembleCommand
+                from ghidra.program.model.address import AddressSet
+
+                start = toAddr({start_address})
+                end = toAddr({end_address})
+                before = currentProgram.getListing().getNumInstructions()
+                tx_id = currentProgram.startTransaction('intellicrack.disassemble_range')
+                applied = False
+                try:
+                    cmd = DisassembleCommand(AddressSet(start, end), None, True)
+                    applied = cmd.applyTo(currentProgram, monitor)
+                finally:
+                    currentProgram.endTransaction(tx_id, applied)
+                after = currentProgram.getListing().getNumInstructions()
+                {{'applied': bool(applied), 'instructions_created': int(after - before)}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_disassemble_range_failed", start=hex(start_address), end=hex(end_address))
+            error_message = f"Disassemble range failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("applied", False)):
+            error_message = f"Disassemble command rejected for range {hex(start_address)}-{hex(end_address)}"
+            raise ToolError(error_message)
+        return {
+            "start": hex(start_address),
+            "end": hex(end_address),
+            "instructions_created": int(cast("int", info.get("instructions_created", 0))),
+            "success": True,
+        }
+
+    async def clear_code_bytes(self, start_address: int, end_address: int) -> dict[str, Any]:
+        """Undefine instructions back to raw bytes over an address range.
+
+        Wraps ``Listing.clearCodeUnits``, the programmatic form of the
+        Listing's "Clear Code Bytes" (C) action. Clearing an
+        already-undefined range is a harmless no-op in Ghidra, so this
+        still reports success in that case.
+
+        Args:
+            start_address: Start of the range to clear.
+            end_address: End of the range to clear (inclusive).
+
+        Returns:
+            dict[str, Any]: Dict with start, end, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the remote call fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("clear_code_bytes_running", start=hex(start_address), end=hex(end_address))
+        try:
+            result = await self._execute_remote(f"""
+                start = toAddr({start_address})
+                end = toAddr({end_address})
+                listing = currentProgram.getListing()
+                had_code = listing.getCodeUnitAt(start) is not None
+                tx_id = currentProgram.startTransaction('intellicrack.clear_code_bytes')
+                try:
+                    listing.clearCodeUnits(start, end, False)
+                    cleared = True
+                finally:
+                    currentProgram.endTransaction(tx_id, cleared)
+                {{'had_code': bool(had_code), 'cleared': bool(cleared)}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_clear_code_bytes_failed", start=hex(start_address), end=hex(end_address))
+            error_message = f"Clear code bytes failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Clear code bytes returned no payload for range {hex(start_address)}-{hex(end_address)}"
+            raise ToolError(error_message)
+        return {"start": hex(start_address), "end": hex(end_address), "success": True}
+
     async def create_data_type(
         self,
         category: str,
@@ -6830,6 +8277,286 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             )
             error_message = f"Create data type failed: {e}"
             raise ToolError(error_message) from e
+
+    async def get_data_type_tree(self, category_path: str | None = None, max_depth: int = 32) -> dict[str, Any]:
+        """Browse the full Data Type Manager tree: categories and every data type kind.
+
+        Unlike :meth:`get_structures`, which only surfaces structures
+        via ``DataTypeManager.getAllStructures()``, this walks the
+        category tree itself (``Category.getCategories()``/
+        ``Category.getDataTypes()``) so enums, unions, typedefs, and
+        function-definitions are included alongside structures.
+
+        Args:
+            category_path: Category path to root the browse at (e.g.
+                /MyTypes); omit for the DTM root category.
+            max_depth: Maximum recursion depth into subcategories.
+
+        Returns:
+            dict[str, Any]: Recursive dict of categories,
+            subcategories, and data types of every kind.
+
+        Raises:
+            ToolError: If Ghidra is not connected or ``category_path``
+                does not name an existing category.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        category_path_literal = json.dumps(category_path) if category_path is not None else "None"
+        _logger.debug("data_type_tree_fetching", category_path=category_path, max_depth=max_depth)
+        try:
+            result = await self._execute_remote(f"""
+                MAX_DEPTH = {max_depth}
+
+                def build_data_type(dt):
+                    return {{
+                        'name': dt.getName(),
+                        'kind': dt.getClass().getSimpleName(),
+                        'size': int(dt.getLength()) if dt.getLength() >= 0 else 0,
+                    }}
+
+                def build_category(cat, depth, visited):
+                    key = str(cat.getCategoryPath())
+                    if depth >= MAX_DEPTH or key in visited:
+                        return {{'name': cat.getName(), 'path': key, 'subcategories': [], 'data_types': [], 'truncated': True}}
+                    visited = set(visited)
+                    visited.add(key)
+                    subcats = [build_category(c, depth + 1, visited) for c in cat.getCategories()]
+                    dtypes = [build_data_type(dt) for dt in cat.getDataTypes()]
+                    return {{'name': cat.getName(), 'path': key, 'subcategories': subcats, 'data_types': dtypes}}
+
+                dtm = currentProgram.getDataTypeManager()
+                category_path = {category_path_literal}
+                if category_path is not None:
+                    from ghidra.program.model.data import CategoryPath
+                    root_cat = dtm.getCategory(CategoryPath(category_path))
+                else:
+                    root_cat = dtm.getRootCategory()
+                _dt_tree_payload = None if root_cat is None else build_category(root_cat, 0, set())
+                _dt_tree_payload
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_get_data_type_tree_failed", category_path=category_path)
+            msg = f"Get data type tree failed: {exc}"
+            raise ToolError(msg) from exc
+
+        if result is None:
+            msg = f"Category not found: {category_path!r}"
+            raise ToolError(msg)
+        if not isinstance(result, dict):
+            msg = f"Get data type tree returned no payload for {category_path!r}"
+            raise ToolError(msg)
+        return cast("dict[str, Any]", result)
+
+    async def import_c_header(self, header_path: str, include_paths: list[str] | None = None) -> dict[str, Any]:
+        """Parse a C header file and add its declared types to the program's data type manager.
+
+        Dispatches to Ghidra's ``CParserUtils.parseHeaderFiles`` with the
+        current program's own ``DataTypeManager`` as the parse target, so
+        every type the header declares is added directly to the open
+        program instead of to a separate archive. The supplied path is
+        lexically normalised and verified to exist as a regular file
+        before any value is forwarded to Ghidra, and the parse runs
+        inside a Ghidra transaction that is rolled back if parsing
+        fails. A non-``None`` result from ``parseHeaderFiles`` does not
+        by itself mean the parse succeeded, so the returned
+        ``CParseResults`` record's own ``successful()`` accessor is
+        read explicitly rather than treating "no exception raised" as
+        success.
+
+        Args:
+            header_path: Path to the ``.h`` file to parse.
+            include_paths: Additional include directories for the parser.
+
+        Returns:
+            dict[str, Any]: Dict with path, types_added, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, ``header_path`` is
+                empty, cannot be resolved, does not exist, is not a
+                regular file, or Ghidra fails to parse the header.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        resolved_path = await asyncio.to_thread(_resolve_c_header_path, header_path)
+        canonical_path = str(resolved_path)
+        includes = include_paths or []
+        _logger.info("c_header_importing", path=canonical_path, include_paths=includes)
+        header_literal = json.dumps(canonical_path)
+        includes_literal = ", ".join(json.dumps(p) for p in includes)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.app.util.cparser.C import CParserUtils
+                from ghidra.util.task import ConsoleTaskMonitor
+                import jpype
+                from jpype import JArray, JString
+
+                dtm = currentProgram.getDataTypeManager()
+                tm = ConsoleTaskMonitor()
+                filenames = JArray(JString)([{header_literal}])
+                include_paths = JArray(JString)([{includes_literal}])
+                args = JArray(JString)([])
+                error_msg = None
+                type_count_before = dtm.getDataTypeCount(True)
+                tx_id = currentProgram.startTransaction('intellicrack.import_c_header')
+                success = False
+                try:
+                    try:
+                        results = CParserUtils.parseHeaderFiles(
+                            JArray(currentProgram.getDataTypeManager().getClass())([]),
+                            filenames, include_paths, args, dtm, tm,
+                        )
+                        success = bool(results.successful())
+                        if not success:
+                            error_msg = (results.cParseMessages() or '') + (results.cppParseMessages() or '')
+                    except Exception as _parse_exc:
+                        error_msg = str(_parse_exc)
+                finally:
+                    currentProgram.endTransaction(tx_id, success)
+                type_count_after = dtm.getDataTypeCount(True)
+                {{'success': bool(success), 'types_added': int(type_count_after - type_count_before), 'error': error_msg}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_import_c_header_failed", path=canonical_path)
+            msg = f"{_ERR_C_HEADER_IMPORT_FAILED}: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("success", False)):
+            err = info.get("error") or "unknown error"
+            msg = f"{_ERR_C_HEADER_IMPORT_FAILED}: {err}"
+            raise ToolError(msg)
+        return {
+            "path": header_path,
+            "types_added": int(info.get("types_added", 0)),
+            "success": True,
+        }
+
+    async def export_data_type_archive(self, archive_path: str) -> dict[str, Any]:
+        """Export every data type in the program's type manager to a new .gdt archive file.
+
+        Creates a new ``FileDataTypeManager`` archive and copies every
+        data type from the current program's own ``DataTypeManager``
+        into it via ``DataTypeManager.addDataType``, then saves and
+        closes the archive. The current program is never mutated by
+        this operation (only read from), so no Ghidra transaction is
+        opened against it; the archive's own internal transaction
+        handling inside ``addDataType``/``save()`` is sufficient.
+
+        Args:
+            archive_path: Destination ``.gdt`` file path.
+
+        Returns:
+            dict[str, Any]: Dict with path, types_exported, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the archive cannot
+                be created, populated, or saved.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("data_type_archive_exporting", path=archive_path)
+        archive_literal = json.dumps(archive_path)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.data import FileDataTypeManager
+                import java.io.File as _JFile
+
+                archive_file = _JFile({archive_literal})
+                file_dtm = FileDataTypeManager.createFileArchive(archive_file)
+                count = 0
+                try:
+                    src_dtm = currentProgram.getDataTypeManager()
+                    it = src_dtm.getAllDataTypes()
+                    while it.hasNext():
+                        dt = it.next()
+                        file_dtm.addDataType(dt, None)
+                        count += 1
+                    file_dtm.save()
+                finally:
+                    file_dtm.close()
+                {{'path': str(archive_file.getAbsolutePath()), 'types_exported': count}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_export_data_type_archive_failed", path=archive_path)
+            msg = f"Export data type archive failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        return {
+            "path": str(info.get("path", archive_path)),
+            "types_exported": int(info.get("types_exported", 0)),
+            "success": True,
+        }
+
+    async def import_data_type_archive(self, archive_path: str) -> dict[str, Any]:
+        """Import every data type from an existing .gdt archive file into the program's type manager.
+
+        Opens the archive read-only via
+        ``FileDataTypeManager.openFileArchive`` and copies every data
+        type it contains into the current program's own
+        ``DataTypeManager`` via ``addDataType``. The copy runs inside a
+        Ghidra transaction against the current program; the archive
+        itself is opened read-only and is never written back to.
+
+        Args:
+            archive_path: Source ``.gdt`` file path.
+
+        Returns:
+            dict[str, Any]: Dict with path, types_imported, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the archive cannot
+                be opened or read.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("data_type_archive_importing", path=archive_path)
+        archive_literal = json.dumps(archive_path)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.data import FileDataTypeManager
+                import java.io.File as _JFile
+
+                archive_file = _JFile({archive_literal})
+                file_dtm = FileDataTypeManager.openFileArchive(archive_file, False)
+                count = 0
+                tx_id = currentProgram.startTransaction('intellicrack.import_data_type_archive')
+                try:
+                    dest_dtm = currentProgram.getDataTypeManager()
+                    it = file_dtm.getAllDataTypes()
+                    while it.hasNext():
+                        dt = it.next()
+                        dest_dtm.addDataType(dt, None)
+                        count += 1
+                finally:
+                    currentProgram.endTransaction(tx_id, True)
+                    file_dtm.close()
+                {{'types_imported': count}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_import_data_type_archive_failed", path=archive_path)
+            msg = f"Import data type archive failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        return {
+            "path": archive_path,
+            "types_imported": int(info.get("types_imported", 0)),
+            "success": True,
+        }
 
     async def create_data(self, address: int, data_type: str) -> dict[str, Any]:
         """Create a data item at an address using a named data type.
@@ -7217,6 +8944,155 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             raise ToolError(msg)
         return {"name": name, "split_address": hex(split_address), "success": True}
 
+    async def move_memory_block(self, name: str, new_start: int) -> dict[str, Any]:
+        """Move a memory block to a different start address.
+
+        Args:
+            name: Name of the memory block to move.
+            new_start: New start address for the block.
+
+        Returns:
+            dict[str, Any]: Dict with name, new_start, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, no block with
+                ``name`` exists, or the move fails (e.g. the target
+                range overlaps an existing block).
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("memory_block_moving", block_name=name, new_start=hex(new_start))
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                block = memory.getBlock({json.dumps(name)})
+                found = block is not None
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.move_memory_block')
+                try:
+                    if found:
+                        memory.moveBlock(block, toAddr({new_start}), monitor)
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'found': found, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_move_memory_block_failed", block_name=name, new_start=hex(new_start))
+            msg = f"Move memory block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found", False)):
+            msg = f"Memory block not found: {name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Move memory block failed: {name!r} to {hex(new_start)}"
+            raise ToolError(msg)
+        return {"name": name, "new_start": hex(new_start), "success": True}
+
+    async def rename_memory_block(self, name: str, new_name: str) -> dict[str, Any]:
+        """Rename an existing memory block.
+
+        Args:
+            name: Current name of the memory block.
+            new_name: New name for the block.
+
+        Returns:
+            dict[str, Any]: Dict with name, previous_name, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, no block with
+                ``name`` exists, or the rename fails (e.g. renaming an
+                overlay block without exclusive access).
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("memory_block_renaming", block_name=name, new_name=new_name)
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                block = memory.getBlock({json.dumps(name)})
+                found = block is not None
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.rename_memory_block')
+                try:
+                    if found:
+                        block.setName({json.dumps(new_name)})
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'found': found, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_rename_memory_block_failed", block_name=name, new_name=new_name)
+            msg = f"Rename memory block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found", False)):
+            msg = f"Memory block not found: {name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Rename memory block failed: {name!r} -> {new_name!r}"
+            raise ToolError(msg)
+        return {"name": new_name, "previous_name": name, "success": True}
+
+    async def set_memory_block_comment(self, name: str, comment: str) -> dict[str, Any]:
+        """Set or replace the comment on an existing memory block.
+
+        Args:
+            name: Name of the memory block.
+            comment: Comment text to set on the block.
+
+        Returns:
+            dict[str, Any]: Dict with name, comment, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, no block with
+                ``name`` exists, or setting the comment fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("memory_block_comment_setting", block_name=name)
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                block = memory.getBlock({json.dumps(name)})
+                found = block is not None
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.set_memory_block_comment')
+                try:
+                    if found:
+                        block.setComment({json.dumps(comment)})
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'found': found, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_set_memory_block_comment_failed", block_name=name)
+            msg = f"Set memory block comment failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found", False)):
+            msg = f"Memory block not found: {name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Set memory block comment failed: {name!r}"
+            raise ToolError(msg)
+        return {"name": name, "comment": comment, "success": True}
+
     async def join_memory_blocks(self, name1: str, name2: str) -> dict[str, Any]:
         """Join two contiguous memory blocks into one.
 
@@ -7383,6 +9259,60 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
 
         return cast("list[dict[str, Any]]", result) if result else []
 
+    async def create_program_tree(self, tree_name: str) -> dict[str, Any]:
+        """Create an additional named program tree.
+
+        Wraps ``Listing.createRootModule(treeName)``. The new root
+        module's own name defaults to the program's name (not
+        ``tree_name``) per the Ghidra API -- ``tree_name`` is purely the
+        tree's identifier as used by ``Listing.getRootModule``/
+        ``getTreeNames`` elsewhere in this bridge.
+
+        Args:
+            tree_name: Name for the new program tree.
+
+        Returns:
+            dict[str, Any]: Dict with tree_name, root_name, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, a tree with this
+                name already exists, or tree creation otherwise fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("program_tree_creating", tree_name=tree_name)
+        try:
+            result = await self._execute_remote(f"""
+                listing = currentProgram.getListing()
+                tree_name = {json.dumps(tree_name)}
+                existing_names = list(listing.getTreeNames())
+                already_exists = tree_name in existing_names
+                root = None
+                tx_id = currentProgram.startTransaction('intellicrack.create_program_tree')
+                try:
+                    if not already_exists:
+                        root = listing.createRootModule(tree_name)
+                finally:
+                    currentProgram.endTransaction(tx_id, root is not None or already_exists)
+                {{'already_exists': already_exists, 'created': root is not None, 'root_name': (root.getName() if root is not None else None)}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_create_program_tree_failed", tree_name=tree_name)
+            msg = f"Create program tree failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if bool(info.get("already_exists", False)):
+            msg = f"Program tree already exists: {tree_name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("created", False)):
+            msg = f"Failed to create program tree: {tree_name!r}"
+            raise ToolError(msg)
+        return {"tree_name": tree_name, "root_name": info.get("root_name"), "success": True}
+
     async def get_program_tree(self) -> dict[str, Any]:
         """Get the program tree module and fragment hierarchy.
 
@@ -7488,12 +9418,14 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
         operation: str,
         parent_module: str,
         child_name: str,
+        new_name: str | None = None,
     ) -> dict[str, Any]:
-        """Create or reparent a module/fragment in a program tree.
+        """Create, delete, rename, or reparent a module/fragment in a program tree.
 
         Wraps ``ProgramModule.createModule``, ``ProgramModule.createFragment``,
-        and ``ProgramModule.reparent`` to give write access to the program
-        tree hierarchy that :meth:`get_program_tree` only reads.
+        ``ProgramModule.reparent``, ``ProgramModule.removeChild``, and
+        ``Group.setName`` to give write access to the program tree
+        hierarchy that :meth:`get_program_tree` only reads.
         ``move_child`` is implemented with ``ProgramModule.reparent``, not
         ``ProgramModule.moveChild``: the latter only reorders a child that
         is already directly under the module it is called on and never
@@ -7504,39 +9436,53 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             tree_name: Name of the program tree to modify (as returned
                 by ``get_program_tree``'s ``trees[].name``).
             operation: One of ``create_module``, ``create_fragment``,
-                or ``move_child``. ``create_module``/``create_fragment``
-                create ``child_name`` as a new child of
-                ``parent_module``. ``move_child`` looks up every module
-                that currently parents the existing module or fragment
-                named ``child_name`` (a child may legitimately have more
-                than one parent in a program tree) and reparents it
-                under ``parent_module``, removing it from each of those
-                other parents so it ends up a direct child of
-                ``parent_module`` and nowhere else.
+                ``move_child``, ``delete``, or ``rename``.
+                ``create_module``/``create_fragment`` create
+                ``child_name`` as a new child of ``parent_module``.
+                ``move_child`` looks up every module that currently
+                parents the existing module or fragment named
+                ``child_name`` (a child may legitimately have more than
+                one parent in a program tree) and reparents it under
+                ``parent_module``, removing it from each of those other
+                parents so it ends up a direct child of
+                ``parent_module`` and nowhere else. ``delete`` removes
+                the existing module or fragment named ``child_name``
+                from its direct parent ``parent_module``. ``rename``
+                renames the existing module or fragment named
+                ``child_name`` to ``new_name``.
             parent_module: Name of the existing module that will
-                contain (or already contains, for ``move_child``) the
-                child.
-            child_name: Name of the module/fragment to create or move.
+                contain (or already contains, for ``move_child``/
+                ``delete``) the child.
+            child_name: Name of the module/fragment to create, move,
+                delete, or rename.
+            new_name: New name for the child when ``operation`` is
+                ``rename``; required for ``rename``, unused otherwise.
 
         Returns:
             dict[str, Any]: Dict with tree_name, operation, child_name,
-            and success.
+            and success. Also includes ``new_name`` when ``operation``
+            is ``rename``.
 
         Raises:
             ToolError: If Ghidra is not connected, ``operation`` is
-                unrecognized, the tree does not exist, ``parent_module``
-                does not exist or names a fragment rather than a module,
-                ``move_child``'s ``child_name`` does not exist, names
-                ``parent_module`` itself, would create a cycle by moving
-                a module under one of its own descendants, names the
-                tree's parentless root module, or the mutation fails.
+                unrecognized, ``new_name`` is missing for ``rename``,
+                the tree does not exist, ``parent_module`` does not
+                exist or names a fragment rather than a module,
+                ``child_name`` does not exist, names ``parent_module``
+                itself, would create a cycle by moving a module under
+                one of its own descendants, names the tree's
+                parentless root module, ``delete`` targets a
+                non-empty module, or the mutation otherwise fails.
         """
         if self._bridge is None:
             raise ToolError(_ERR_NOT_CONNECTED)
 
-        valid_operations = {"create_module", "create_fragment", "move_child"}
+        valid_operations = {"create_module", "create_fragment", "move_child", "delete", "rename"}
         if operation not in valid_operations:
             msg = f"Unknown operation {operation!r}: must be one of {sorted(valid_operations)}"
+            raise ToolError(msg)
+        if operation == "rename" and not new_name:
+            msg = "new_name is required when operation is 'rename'"
             raise ToolError(msg)
 
         _logger.info(
@@ -7546,6 +9492,7 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             parent_module=parent_module,
             child_name=child_name,
         )
+        new_name_literal = json.dumps(new_name) if new_name else "None"
         try:
             result = await self._execute_remote(f"""
                 listing = currentProgram.getListing()
@@ -7598,6 +9545,22 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
                                             ok = True
                                         elif already_there:
                                             ok = True
+                        elif operation == 'delete':
+                            child = listing.getModule({json.dumps(tree_name)}, {json.dumps(child_name)})
+                            is_module_child = child is not None
+                            if child is None:
+                                child = listing.getFragment({json.dumps(tree_name)}, {json.dumps(child_name)})
+                            child_found = child is not None
+                            if child_found:
+                                ok = bool(parent.removeChild({json.dumps(child_name)}))
+                        elif operation == 'rename':
+                            child = listing.getModule({json.dumps(tree_name)}, {json.dumps(child_name)})
+                            if child is None:
+                                child = listing.getFragment({json.dumps(tree_name)}, {json.dumps(child_name)})
+                            child_found = child is not None
+                            if child_found:
+                                child.setName({new_name_literal})
+                                ok = True
                 finally:
                     currentProgram.endTransaction(tx_id, ok)
                 {{
@@ -7644,15 +9607,21 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
         if bool(info.get("no_prior_parent", False)):
             msg = f"Cannot move {child_name!r}: it is the root of tree {tree_name!r} and has no parent to remove it from"
             raise ToolError(msg)
+        if operation == "delete" and bool(info.get("child_found", True)) and not bool(info.get("ok", False)):
+            msg = f"Cannot delete {child_name!r}: module is not empty"
+            raise ToolError(msg)
         if not bool(info.get("ok", False)):
             msg = f"Edit program tree failed: {operation} {child_name!r} under {parent_module!r}"
             raise ToolError(msg)
-        return {
+        result_info: dict[str, Any] = {
             "tree_name": tree_name,
             "operation": operation,
             "child_name": child_name,
             "success": True,
         }
+        if operation == "rename":
+            result_info["new_name"] = new_name
+        return result_info
 
     async def get_properties(self, address: int) -> dict[str, Any]:
         """Get user-defined properties stored at an address.
@@ -8038,6 +10007,166 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
 
+    async def create_function_tag(self, name: str, comment: str = "") -> dict[str, Any]:
+        """Create a function tag in the program's tag manager.
+
+        Args:
+            name: Tag name.
+            comment: Optional tag comment.
+
+        Returns:
+            dict[str, Any]: Dict with name, comment, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the tag manager
+                refuses to create the tag.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("function_tag_creating", tag_name=name)
+        try:
+            result = await self._execute_remote(f"""
+                ftm = currentProgram.getFunctionManager().getFunctionTagManager()
+                tx_id = currentProgram.startTransaction('intellicrack.create_function_tag')
+                try:
+                    tag = ftm.createFunctionTag({json.dumps(name)}, {json.dumps(comment)})
+                finally:
+                    currentProgram.endTransaction(tx_id, tag is not None)
+                {{
+                    'name': tag.getName() if tag is not None else None,
+                    'comment': (tag.getComment() or '') if tag is not None else '',
+                    'success': tag is not None,
+                }}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_create_function_tag_failed", tag_name=name)
+            msg = f"Create function tag failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("success", False)):
+            msg = f"Create function tag failed: Ghidra refused tag {name!r}"
+            raise ToolError(msg)
+        return {"name": name, "comment": comment, "success": True}
+
+    async def set_function_tags(self, address: int, tag_name: str, operation: str) -> dict[str, Any]:
+        """Add or remove a function tag on a specific function.
+
+        Args:
+            address: Function entry address.
+            tag_name: Name of the tag to add or remove.
+            operation: One of ``add`` or ``remove``.
+
+        Returns:
+            dict[str, Any]: Dict with address, tag_name, operation, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, ``operation`` is
+                unrecognized, the function is not found, or the
+                mutation fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        valid_operations = {"add", "remove"}
+        if operation not in valid_operations:
+            msg = f"Unknown operation {operation!r}: must be one of {sorted(valid_operations)}"
+            raise ToolError(msg)
+
+        _logger.info("function_tags_setting", address=hex(address), tag_name=tag_name, operation=operation)
+        if operation == "add":
+            mutate_script = f"""
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                found = func is not None
+                applied = False
+                tx_id = currentProgram.startTransaction('intellicrack.set_function_tags')
+                try:
+                    if found:
+                        applied = bool(func.addTag({json.dumps(tag_name)}))
+                finally:
+                    currentProgram.endTransaction(tx_id, applied)
+                {{'found': found, 'applied': applied}}
+            """
+        else:
+            mutate_script = f"""
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                found = func is not None
+                applied = False
+                tx_id = currentProgram.startTransaction('intellicrack.set_function_tags')
+                try:
+                    if found:
+                        func.removeTag({json.dumps(tag_name)})
+                        applied = True
+                finally:
+                    currentProgram.endTransaction(tx_id, applied)
+                {{'found': found, 'applied': applied}}
+            """
+        try:
+            result = await self._execute_remote(mutate_script)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_set_function_tags_failed", address=hex(address))
+            msg = f"Set function tags failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found", False)):
+            msg = f"{_ERR_FUNCTION_NOT_FOUND}: {hex(address)}"
+            raise ToolError(msg)
+        if not bool(info.get("applied", False)):
+            msg = f"Set function tags failed: {operation} {tag_name!r} at {hex(address)}"
+            raise ToolError(msg)
+        return {"address": hex(address), "tag_name": tag_name, "operation": operation, "success": True}
+
+    async def get_function_tags(self, address: int | None = None) -> list[dict[str, Any]]:
+        """List function tags: every tag in the program, or one function's tags.
+
+        Args:
+            address: Function address to list tags for; omit to list
+                every tag registered in the program's tag manager.
+
+        Returns:
+            list[dict[str, Any]]: List of tag dicts with name and comment.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        addr_repr = hex(address) if address is not None else None
+        addr_literal = str(address) if address is not None else "None"
+        _logger.debug("function_tags_fetching", address=addr_repr)
+        try:
+            result = await self._execute_remote(f"""
+                addr_literal = {addr_literal}
+                tags = []
+                if addr_literal is None:
+                    ftm = currentProgram.getFunctionManager().getFunctionTagManager()
+                    for tag in ftm.getAllFunctionTags():
+                        tags.append({{'name': tag.getName(), 'comment': tag.getComment() or ''}})
+                else:
+                    func = getFunctionContaining(toAddr(addr_literal))
+                    if func is not None:
+                        for tag in func.getTags():
+                            tags.append({{'name': tag.getName(), 'comment': tag.getComment() or ''}})
+                tags
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_get_function_tags_failed", address=addr_repr)
+            msg = f"Get function tags failed: {exc}"
+            raise ToolError(msg) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
+
     async def get_external_references(self, address: int) -> list[dict[str, Any]]:
         """Get external (imported) references from an address.
 
@@ -8416,6 +10545,72 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             msg = f"{_ERR_LABEL_NOT_FOUND}: {name!r} at {hex(address)}"
             raise ToolError(msg)
         return {"address": hex(address), "name": name, "success": True}
+
+    async def promote_symbol_to_primary(self, address: int, name: str) -> dict[str, Any]:
+        """Promote an already-existing symbol at an address to primary.
+
+        Looks up the named symbol among every symbol already defined at
+        ``address`` and calls ``Symbol.setPrimary()`` on it -- the
+        programmatic form of the Symbol Table window's "Set Primary"
+        action. Unlike :meth:`add_label`'s creation-time ``primary=True``
+        flag, this method never creates a symbol; it only acts on one
+        ``SymbolTable.getSymbols`` already returns.
+
+        Args:
+            address: Address of the symbol.
+            name: Name of the existing symbol to promote.
+
+        Returns:
+            dict[str, Any]: Dict with address, name, already_primary,
+            and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, the RPC fails, or no
+                symbol named ``name`` exists at ``address``.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.debug("symbol_promoting", address=hex(address), symbol_name=name)
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                st = currentProgram.getSymbolTable()
+                target_name = {json.dumps(name)}
+                promoted = False
+                already_primary = False
+                tx_id = currentProgram.startTransaction('intellicrack.promote_symbol_to_primary')
+                try:
+                    symbols = list(st.getSymbols(addr))
+                    for sym in symbols:
+                        if sym.getName() == target_name:
+                            already_primary = bool(sym.isPrimary())
+                            if already_primary:
+                                promoted = True
+                            elif sym.setPrimary():
+                                promoted = True
+                            break
+                finally:
+                    currentProgram.endTransaction(tx_id, promoted)
+                {{'promoted': promoted, 'already_primary': already_primary}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_promote_symbol_to_primary_failed", address=hex(address))
+            msg = f"Promote symbol failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("promoted", False)):
+            msg = f"No symbol named {name!r} found at {hex(address)}"
+            raise ToolError(msg)
+        return {
+            "address": hex(address),
+            "name": name,
+            "already_primary": bool(info.get("already_primary", False)),
+            "success": True,
+        }
 
     async def add_thunk(self, address: int, thunked_address: int) -> dict[str, Any]:
         """Mark a function as a thunk forwarding to another function.

@@ -760,6 +760,202 @@ class InstructionDisassembleControls(QWidget):
         _logger.warning("frida_disassemble_instruction_failed", error=str(exc))
 
 
+class TypedMemoryAccessControls(QWidget):
+    """Typed NativePointer read/write controls for the Memory section.
+
+    One coherent entry point for ``read_typed_value``/``write_typed_value``, with a single type-selector combo
+    (pointer/cstring/utf8/u8../s8../float/double) driving both the Read and Write actions, distinct from the
+    raw-hex Read/Write controls already present in the Memory tab.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the typed memory access controls.
+
+        Args:
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        self._bridge: FridaBridge | None = None
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        title = QLabel("Typed Read/Write")
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(title)
+
+        addr_row = QHBoxLayout()
+        addr_row.addWidget(QLabel("Address:"))
+        self._typed_addr_input = QLineEdit()
+        self._typed_addr_input.setPlaceholderText("0x401000")
+        self._typed_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        addr_row.addWidget(self._typed_addr_input)
+        addr_row.addWidget(QLabel("Type:"))
+        self._typed_type_combo = QComboBox()
+        self._typed_type_combo.addItems(
+            ["pointer", "cstring", "utf8", "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "float", "double"],
+        )
+        addr_row.addWidget(self._typed_type_combo)
+        addr_row.addStretch()
+        layout.addLayout(addr_row)
+
+        read_row = QHBoxLayout()
+        self._typed_read_btn = QPushButton("Read")
+        self._typed_read_btn.setObjectName("tool_button")
+        self._typed_read_btn.clicked.connect(self._on_read_typed_value)
+        read_row.addWidget(self._typed_read_btn)
+        read_row.addWidget(QLabel("Value:"))
+        self._typed_read_result_label = QLabel("")
+        self._typed_read_result_label.setWordWrap(True)
+        read_row.addWidget(self._typed_read_result_label)
+        read_row.addStretch()
+        layout.addLayout(read_row)
+
+        write_row = QHBoxLayout()
+        self._typed_write_value_input = QLineEdit()
+        self._typed_write_value_input.setPlaceholderText("42, 3.5, 0x1000, or text for utf8")
+        write_row.addWidget(self._typed_write_value_input)
+        self._typed_write_btn = QPushButton("Write")
+        self._typed_write_btn.setObjectName("tool_button")
+        self._typed_write_btn.clicked.connect(self._on_write_typed_value)
+        write_row.addWidget(self._typed_write_btn)
+        layout.addLayout(write_row)
+
+        self._typed_status_label = QLabel("")
+        layout.addWidget(self._typed_status_label)
+        layout.addStretch()
+
+    def set_bridge(self, bridge: FridaBridge) -> None:
+        """Set the FridaBridge instance used to service typed read/write requests.
+
+        Args:
+            bridge: The FridaBridge to use.
+        """
+        self._bridge = bridge
+
+    def _on_read_typed_value(self) -> None:
+        """Read a single typed value at the entered address via ``read_typed_value``."""
+        if self._bridge is None:
+            self._typed_status_label.setText("No bridge available")
+            _logger.warning("frida_read_typed_value_failed_no_bridge")
+            return
+        addr = _parse_hex_address(self._typed_addr_input.text())
+        if addr is None:
+            self._typed_status_label.setText("Invalid address")
+            return
+        value_type = self._typed_type_combo.currentText()
+        self._typed_read_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.read_typed_value(addr, value_type),
+            on_success=self._on_read_typed_value_done,
+            on_error=self._on_read_typed_value_error,
+            parent=self,
+            event="frida_read_typed_value",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            value_type=value_type,
+        )
+
+    def _on_read_typed_value_done(self, result: object) -> None:
+        """Render a successfully read typed value.
+
+        Args:
+            result: The decoded value returned by the bridge.
+        """
+        self._typed_read_btn.setEnabled(True)
+        self._typed_read_result_label.setText(str(result))
+        self._typed_status_label.setText("Read complete")
+        _logger.info("frida_typed_value_read_via_gui", value=str(result))
+
+    def _on_read_typed_value_error(self, exc: object) -> None:
+        """Handle a typed read failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._typed_read_btn.setEnabled(True)
+        self._typed_status_label.setText(f"Read failed: {exc}")
+        _logger.warning("frida_read_typed_value_failed", error=str(exc))
+
+    @staticmethod
+    def _parse_typed_write_text(value_type: str, raw_text: str) -> int | float | str:
+        """Parse the Write-field text into the Python type ``write_typed_value`` expects.
+
+        Args:
+            value_type: Selected NativePointer value type (never ``'cstring'``;
+                callers reject that case before parsing).
+            raw_text: Raw text entered in the Write value field.
+
+        Returns:
+            int | float | str: ``float(raw_text)`` for float/double,
+                ``raw_text`` unchanged for utf8, ``int(raw_text, 0)``
+                otherwise (pointer and every integer width). Propagates
+                ``ValueError`` from ``float()``/``int()`` when ``raw_text``
+                cannot be parsed for ``value_type``.
+        """
+        if value_type in {"float", "double"}:
+            return float(raw_text)
+        if value_type == "utf8":
+            return raw_text
+        return int(raw_text, 0)
+
+    def _on_write_typed_value(self) -> None:
+        """Write a single typed value at the entered address via ``write_typed_value``."""
+        if self._bridge is None:
+            self._typed_status_label.setText("No bridge available")
+            _logger.warning("frida_write_typed_value_failed_no_bridge")
+            return
+        addr = _parse_hex_address(self._typed_addr_input.text())
+        if addr is None:
+            self._typed_status_label.setText("Invalid address")
+            return
+        value_type = self._typed_type_combo.currentText()
+        if value_type == "cstring":
+            self._typed_status_label.setText("cstring is read-only; use utf8 to write a string")
+            return
+        raw_text = self._typed_write_value_input.text()
+        try:
+            parsed_value = self._parse_typed_write_text(value_type, raw_text)
+        except ValueError:
+            self._typed_status_label.setText(f"Invalid value for type {value_type}")
+            return
+
+        self._typed_write_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.write_typed_value(addr, value_type, parsed_value),
+            on_success=self._on_write_typed_value_done,
+            on_error=self._on_write_typed_value_error,
+            parent=self,
+            event="frida_write_typed_value",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            value_type=value_type,
+        )
+
+    def _on_write_typed_value_done(self, result: object) -> None:
+        """Report a successful typed write.
+
+        Args:
+            result: Success status returned by the bridge.
+        """
+        self._typed_write_btn.setEnabled(True)
+        self._typed_status_label.setText("Write complete" if result else "Write failed")
+        _logger.info("frida_typed_value_written_via_gui", success=bool(result))
+
+    def _on_write_typed_value_error(self, exc: object) -> None:
+        """Handle a typed write failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._typed_write_btn.setEnabled(True)
+        self._typed_status_label.setText(f"Write failed: {exc}")
+        _logger.warning("frida_write_typed_value_failed", error=str(exc))
+
+
 class SymbolLookupControls(QWidget):
     """Module-symbol dump, address-to-module, and glob function-search controls for the Symbols section.
 
@@ -1422,7 +1618,27 @@ class ScriptMessagingControls(QWidget):
         self._eternalize_btn.setObjectName("tool_button")
         self._eternalize_btn.clicked.connect(self._on_eternalize_script)
         script_row.addWidget(self._eternalize_btn)
+        self._terminate_btn = QPushButton("Terminate (Force)")
+        self._terminate_btn.setObjectName("tool_button")
+        self._terminate_btn.clicked.connect(self._on_terminate_script)
+        script_row.addWidget(self._terminate_btn)
         layout.addLayout(script_row)
+
+        debugger_row = QHBoxLayout()
+        debugger_row.addWidget(QLabel("Debugger port:"))
+        self._debugger_port_input = QSpinBox()
+        self._debugger_port_input.setRange(1, 65535)
+        self._debugger_port_input.setValue(9229)
+        debugger_row.addWidget(self._debugger_port_input)
+        self._enable_debugger_btn = QPushButton("Enable Debugger")
+        self._enable_debugger_btn.setObjectName("tool_button")
+        self._enable_debugger_btn.clicked.connect(self._on_enable_script_debugger)
+        debugger_row.addWidget(self._enable_debugger_btn)
+        self._disable_debugger_btn = QPushButton("Disable Debugger")
+        self._disable_debugger_btn.setObjectName("tool_button")
+        self._disable_debugger_btn.clicked.connect(self._on_disable_script_debugger)
+        debugger_row.addWidget(self._disable_debugger_btn)
+        layout.addLayout(debugger_row)
 
         rpc_row = QHBoxLayout()
         rpc_row.addWidget(QLabel("RPC method:"))
@@ -1437,6 +1653,10 @@ class ScriptMessagingControls(QWidget):
         self._rpc_call_btn.setObjectName("tool_button")
         self._rpc_call_btn.clicked.connect(self._on_rpc_call)
         rpc_row.addWidget(self._rpc_call_btn)
+        self._list_exports_btn = QPushButton("List Exports")
+        self._list_exports_btn.setObjectName("tool_button")
+        self._list_exports_btn.clicked.connect(self._on_list_rpc_exports)
+        rpc_row.addWidget(self._list_exports_btn)
         layout.addLayout(rpc_row)
 
         self._rpc_result_label = QLabel("")
@@ -1534,6 +1754,36 @@ class ScriptMessagingControls(QWidget):
         self._rpc_result_label.setToolTip(result_text)
         _logger.info("frida_rpc_call_completed_via_gui", result_type=type(result).__name__)
 
+    def _on_list_rpc_exports(self) -> None:
+        """Discover the RPC exports the target script provides via ``list_rpc_exports``."""
+        if self._bridge is None:
+            self._status_label.setText("No bridge available")
+            return
+        script_id = self._resolve_script_id()
+        if not script_id:
+            self._status_label.setText("Enter a script ID")
+            return
+        self._list_exports_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.list_rpc_exports(script_id),
+            on_success=self._on_list_rpc_exports_done,
+            on_error=lambda e: self._on_script_messaging_error("List exports", e, self._list_exports_btn),
+            parent=self,
+            event="frida_list_rpc_exports",
+            logger=_logger,
+            script_id=script_id,
+        )
+
+    def _on_list_rpc_exports_done(self, result: object) -> None:
+        """Handle a successful RPC-export discovery.
+
+        Args:
+            result: List of export names returned by ``list_rpc_exports``.
+        """
+        self._list_exports_btn.setEnabled(True)
+        names = ", ".join(str(n) for n in cast("list[object]", result)) if isinstance(result, list) else str(result)
+        self._rpc_result_label.setText(f"Exports: {names}" if names else "Exports: (none)")
+
     def _on_post_message(self) -> None:
         """Post a raw JSON message to the target script via ``post_message``."""
         if self._bridge is None:
@@ -1608,6 +1858,118 @@ class ScriptMessagingControls(QWidget):
         self._eternalize_btn.setEnabled(True)
         self._status_label.setText(f"Script {script_id} eternalized" if result else "Eternalize reported failure")
         _logger.info("frida_script_eternalized_via_gui", script_id=script_id, success=bool(result))
+
+    def _on_enable_script_debugger(self) -> None:
+        """Attach a V8 Inspector-protocol debugger to the target script via ``enable_script_debugger``."""
+        if self._bridge is None:
+            self._status_label.setText("No bridge available")
+            _logger.warning("frida_enable_script_debugger_failed_no_bridge")
+            return
+        script_id = self._resolve_script_id()
+        if not script_id:
+            self._status_label.setText("Enter a script ID")
+            return
+        port = self._debugger_port_input.value()
+        self._enable_debugger_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.enable_script_debugger(script_id, port=port),
+            on_success=lambda r: self._on_enable_script_debugger_done(script_id, port, r),
+            on_error=lambda e: self._on_script_messaging_error("Enable debugger", e, self._enable_debugger_btn),
+            parent=self,
+            event="frida_enable_script_debugger",
+            logger=_logger,
+            level="info",
+            script_id=script_id,
+            port=port,
+        )
+
+    def _on_enable_script_debugger_done(self, script_id: str, port: int, result: object) -> None:
+        """Handle successful debugger attachment.
+
+        Args:
+            script_id: ID of the script the debugger was attached to.
+            port: TCP port the inspector protocol is listening on.
+            result: Success flag returned by the bridge.
+        """
+        self._enable_debugger_btn.setEnabled(True)
+        self._status_label.setText(
+            f"Debugger enabled for {script_id} on port {port}" if result else "Enable debugger reported failure",
+        )
+        _logger.info("frida_script_debugger_enabled_via_gui", script_id=script_id, port=port, success=bool(result))
+
+    def _on_disable_script_debugger(self) -> None:
+        """Detach the V8 Inspector-protocol debugger from the target script via ``disable_script_debugger``."""
+        if self._bridge is None:
+            self._status_label.setText("No bridge available")
+            _logger.warning("frida_disable_script_debugger_failed_no_bridge")
+            return
+        script_id = self._resolve_script_id()
+        if not script_id:
+            self._status_label.setText("Enter a script ID")
+            return
+        self._disable_debugger_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.disable_script_debugger(script_id),
+            on_success=lambda r: self._on_disable_script_debugger_done(script_id, r),
+            on_error=lambda e: self._on_script_messaging_error("Disable debugger", e, self._disable_debugger_btn),
+            parent=self,
+            event="frida_disable_script_debugger",
+            logger=_logger,
+            level="info",
+            script_id=script_id,
+        )
+
+    def _on_disable_script_debugger_done(self, script_id: str, result: object) -> None:
+        """Handle successful debugger detachment.
+
+        Args:
+            script_id: ID of the script the debugger was detached from.
+            result: Success flag returned by the bridge.
+        """
+        self._disable_debugger_btn.setEnabled(True)
+        self._status_label.setText(f"Debugger disabled for {script_id}" if result else "Disable debugger reported failure")
+        _logger.info("frida_script_debugger_disabled_via_gui", script_id=script_id, success=bool(result))
+
+    def _on_terminate_script(self) -> None:
+        """Forcibly terminate the target script's runtime immediately via ``terminate_script``."""
+        if self._bridge is None:
+            self._status_label.setText("No bridge available")
+            _logger.warning("frida_terminate_script_failed_no_bridge")
+            return
+        script_id = self._resolve_script_id()
+        if not script_id:
+            self._status_label.setText("Enter a script ID")
+            return
+        self._terminate_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.terminate_script(script_id),
+            on_success=lambda r: self._on_terminate_script_done(script_id, r),
+            on_error=lambda e: self._on_script_messaging_error("Terminate", e, self._terminate_btn),
+            parent=self,
+            event="frida_terminate_script",
+            logger=_logger,
+            level="info",
+            script_id=script_id,
+        )
+
+    def _on_terminate_script_done(self, script_id: str, result: object) -> None:
+        """Handle successful forced script termination by clearing the now-gone script ID.
+
+        Unlike eternalize (which leaves the script running forever) or a
+        failed operation, a terminated script no longer exists, so the
+        script-ID field is cleared rather than left pointing at a dead id.
+
+        Args:
+            script_id: ID of the script that was terminated.
+            result: Success flag returned by the bridge.
+        """
+        self._terminate_btn.setEnabled(True)
+        if result:
+            self._script_id_input.setText("")
+            self._status_label.setText(f"Script {script_id} terminated")
+        else:
+            self._status_label.setText("Terminate reported failure")
+        _logger.info("frida_script_terminated_via_gui", script_id=script_id, success=bool(result))
 
     def _on_script_messaging_error(self, operation: str, exc: object, button: QPushButton) -> None:
         """Handle a script messaging operation failure.
@@ -1771,3 +2133,294 @@ class CancellableControls(QWidget):
         self._cancel_btn.setEnabled(True)
         self._status_label.setText(f"Cancel failed: {exc}")
         _logger.warning("frida_cancel_failed", cancellable_id=cancellable_id, error=str(exc))
+
+
+class PrecompiledScriptControls(QWidget):
+    """Precompile-to-bytecode / load-from-bytecode controls for the Advanced section.
+
+    Exposes ``compile_script`` (``Session.compile_script`` - precompile source to bytecode without creating a script instance) and
+    ``load_compiled_script`` (``Session.create_script_from_bytes`` - create+load a persistent script from that bytecode), distinct from
+    the source-based Run Script flow in the main editor toolbar.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the precompiled-script controls.
+
+        Args:
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        self._bridge: FridaBridge | None = None
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        title = QLabel("Precompiled Script (bytecode)")
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(title)
+
+        source_row = QHBoxLayout()
+        source_row.addWidget(QLabel("Source:"))
+        self._source_input = QPlainTextEdit()
+        self._source_input.setPlaceholderText("// script source to precompile")
+        self._source_input.setMaximumHeight(_POST_MESSAGE_INPUT_MAX_HEIGHT)
+        source_row.addWidget(self._source_input)
+        self._compile_btn = QPushButton("Compile")
+        self._compile_btn.setObjectName("tool_button")
+        self._compile_btn.clicked.connect(self._on_compile_script)
+        source_row.addWidget(self._compile_btn)
+        layout.addLayout(source_row)
+
+        bytecode_row = QHBoxLayout()
+        bytecode_row.addWidget(QLabel("Bytecode:"))
+        self._bytecode_input = QLineEdit()
+        self._bytecode_input.setPlaceholderText("hex-encoded compiled bytecode")
+        bytecode_row.addWidget(self._bytecode_input)
+        self._load_compiled_btn = QPushButton("Load Compiled Script")
+        self._load_compiled_btn.setObjectName("tool_button")
+        self._load_compiled_btn.clicked.connect(self._on_load_compiled_script)
+        bytecode_row.addWidget(self._load_compiled_btn)
+        layout.addLayout(bytecode_row)
+
+        self._status_label = QLabel("")
+        layout.addWidget(self._status_label)
+
+    def set_bridge(self, bridge: FridaBridge) -> None:
+        """Set the FridaBridge instance used to compile and load precompiled scripts.
+
+        Args:
+            bridge: The FridaBridge to use.
+        """
+        self._bridge = bridge
+
+    def _on_compile_script(self) -> None:
+        """Precompile the entered script source to bytecode via ``compile_script``."""
+        if self._bridge is None:
+            self._status_label.setText("No bridge available")
+            _logger.warning("frida_compile_script_failed_no_bridge")
+            return
+        source = self._source_input.toPlainText().strip()
+        if not source:
+            self._status_label.setText("Enter script source to compile")
+            return
+        self._compile_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.compile_script(source),
+            on_success=self._on_compile_script_done,
+            on_error=lambda e: self._on_precompiled_script_error("Compile", e, self._compile_btn),
+            parent=self,
+            event="frida_compile_script",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_compile_script_done(self, result: object) -> None:
+        """Handle a successful script precompilation.
+
+        Args:
+            result: Hex-encoded bytecode returned by the bridge.
+        """
+        self._compile_btn.setEnabled(True)
+        bytecode_hex = str(result)
+        self._bytecode_input.setText(bytecode_hex)
+        self._status_label.setText(f"Compiled {len(bytecode_hex) // 2} bytes")
+        _logger.info("frida_script_compiled_via_gui", bytecode_length=len(bytecode_hex) // 2)
+
+    def _on_load_compiled_script(self) -> None:
+        """Create and load a persistent script from the entered bytecode via ``load_compiled_script``."""
+        if self._bridge is None:
+            self._status_label.setText("No bridge available")
+            _logger.warning("frida_load_compiled_script_failed_no_bridge")
+            return
+        bytecode_hex = self._bytecode_input.text().strip()
+        if not bytecode_hex:
+            self._status_label.setText("Enter (or compile) bytecode to load")
+            return
+        self._load_compiled_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.load_compiled_script(bytecode_hex),
+            on_success=self._on_load_compiled_script_done,
+            on_error=lambda e: self._on_precompiled_script_error("Load compiled script", e, self._load_compiled_btn),
+            parent=self,
+            event="frida_load_compiled_script",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_load_compiled_script_done(self, result: object) -> None:
+        """Handle a successful compiled-script load.
+
+        Args:
+            result: Script ID returned by the bridge.
+        """
+        self._load_compiled_btn.setEnabled(True)
+        script_id = str(result)
+        self._status_label.setText(f"Loaded script {script_id}")
+        _logger.info("frida_compiled_script_loaded_via_gui", script_id=script_id)
+
+    def _on_precompiled_script_error(self, operation: str, exc: object, button: QPushButton) -> None:
+        """Handle a precompiled-script operation failure.
+
+        Args:
+            operation: Human-readable name of the failed operation.
+            exc: The exception that occurred.
+            button: The button to re-enable.
+        """
+        button.setEnabled(True)
+        self._status_label.setText(f"{operation} failed: {exc}")
+        _logger.warning("frida_precompiled_script_failed", operation=operation, error=str(exc))
+
+
+class ScriptSnapshotControls(QWidget):
+    """Script-VM snapshot create/warm-start-load controls for the Advanced section.
+
+    Exposes ``snapshot_script`` (``Session.snapshot_script`` - capture a warmed-up script VM's heap state) and
+    ``load_script_with_snapshot`` (``Session.create_script`` with a snapshot - warm-start a new script from that
+    state), a startup-latency optimization distinct from the plain source-based Run Script flow.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the script-snapshot controls.
+
+        Args:
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        self._bridge: FridaBridge | None = None
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        title = QLabel("Script VM Snapshot (fast-start)")
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(title)
+
+        embed_row = QHBoxLayout()
+        embed_row.addWidget(QLabel("Embed script:"))
+        self._embed_script_input = QPlainTextEdit()
+        self._embed_script_input.setPlaceholderText("// JavaScript run inside the throwaway VM to snapshot")
+        self._embed_script_input.setMaximumHeight(_POST_MESSAGE_INPUT_MAX_HEIGHT)
+        embed_row.addWidget(self._embed_script_input)
+        embed_row.addWidget(QLabel("Warmup (optional):"))
+        self._warmup_script_input = QLineEdit()
+        self._warmup_script_input.setPlaceholderText("optional additional setup JavaScript")
+        embed_row.addWidget(self._warmup_script_input)
+        self._snapshot_btn = QPushButton("Create Snapshot")
+        self._snapshot_btn.setObjectName("tool_button")
+        self._snapshot_btn.clicked.connect(self._on_snapshot_script)
+        embed_row.addWidget(self._snapshot_btn)
+        layout.addLayout(embed_row)
+
+        snapshot_row = QHBoxLayout()
+        snapshot_row.addWidget(QLabel("Snapshot:"))
+        self._snapshot_input = QLineEdit()
+        self._snapshot_input.setPlaceholderText("hex-encoded snapshot bytes")
+        snapshot_row.addWidget(self._snapshot_input)
+        layout.addLayout(snapshot_row)
+
+        source_row = QHBoxLayout()
+        source_row.addWidget(QLabel("Source to run with snapshot:"))
+        self._snapshot_source_input = QPlainTextEdit()
+        self._snapshot_source_input.setPlaceholderText("// script source to run warm-started from the snapshot")
+        self._snapshot_source_input.setMaximumHeight(_POST_MESSAGE_INPUT_MAX_HEIGHT)
+        source_row.addWidget(self._snapshot_source_input)
+        self._load_with_snapshot_btn = QPushButton("Load With Snapshot")
+        self._load_with_snapshot_btn.setObjectName("tool_button")
+        self._load_with_snapshot_btn.clicked.connect(self._on_load_script_with_snapshot)
+        source_row.addWidget(self._load_with_snapshot_btn)
+        layout.addLayout(source_row)
+
+        self._status_label = QLabel("")
+        layout.addWidget(self._status_label)
+
+    def set_bridge(self, bridge: FridaBridge) -> None:
+        """Set the FridaBridge instance used to create and load script-VM snapshots.
+
+        Args:
+            bridge: The FridaBridge to use.
+        """
+        self._bridge = bridge
+
+    def _on_snapshot_script(self) -> None:
+        """Capture a warmed-up script VM's heap state via ``snapshot_script``."""
+        if self._bridge is None:
+            self._status_label.setText("No bridge available")
+            _logger.warning("frida_snapshot_script_failed_no_bridge")
+            return
+        embed_script = self._embed_script_input.toPlainText().strip()
+        if not embed_script:
+            self._status_label.setText("Enter an embed script to snapshot")
+            return
+        warmup_script = self._warmup_script_input.text().strip() or None
+        self._snapshot_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.snapshot_script(embed_script, warmup_script),
+            on_success=self._on_snapshot_script_done,
+            on_error=lambda e: self._on_script_snapshot_error("Create snapshot", e, self._snapshot_btn),
+            parent=self,
+            event="frida_snapshot_script",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_snapshot_script_done(self, result: object) -> None:
+        """Handle a successful script-VM snapshot.
+
+        Args:
+            result: Hex-encoded snapshot bytes returned by the bridge.
+        """
+        self._snapshot_btn.setEnabled(True)
+        snapshot_hex = str(result)
+        self._snapshot_input.setText(snapshot_hex)
+        self._status_label.setText(f"Snapshot captured ({len(snapshot_hex) // 2} bytes)")
+        _logger.info("frida_script_snapshotted_via_gui", snapshot_length=len(snapshot_hex) // 2)
+
+    def _on_load_script_with_snapshot(self) -> None:
+        """Create and load a script warm-started from the entered snapshot via ``load_script_with_snapshot``."""
+        if self._bridge is None:
+            self._status_label.setText("No bridge available")
+            _logger.warning("frida_load_script_with_snapshot_failed_no_bridge")
+            return
+        source = self._snapshot_source_input.toPlainText().strip()
+        if not source:
+            self._status_label.setText("Enter script source to run with the snapshot")
+            return
+        snapshot_hex = self._snapshot_input.text().strip()
+        if not snapshot_hex:
+            self._status_label.setText("Enter (or create) a snapshot to load")
+            return
+        self._load_with_snapshot_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.load_script_with_snapshot(source, snapshot_hex),
+            on_success=self._on_load_script_with_snapshot_done,
+            on_error=lambda e: self._on_script_snapshot_error("Load with snapshot", e, self._load_with_snapshot_btn),
+            parent=self,
+            event="frida_load_script_with_snapshot",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_load_script_with_snapshot_done(self, result: object) -> None:
+        """Handle a successful snapshot-started script load.
+
+        Args:
+            result: Script ID returned by the bridge.
+        """
+        self._load_with_snapshot_btn.setEnabled(True)
+        script_id = str(result)
+        self._status_label.setText(f"Loaded script {script_id}")
+        _logger.info("frida_script_loaded_with_snapshot_via_gui", script_id=script_id)
+
+    def _on_script_snapshot_error(self, operation: str, exc: object, button: QPushButton) -> None:
+        """Handle a script-snapshot operation failure.
+
+        Args:
+            operation: Human-readable name of the failed operation.
+            exc: The exception that occurred.
+            button: The button to re-enable.
+        """
+        button.setEnabled(True)
+        self._status_label.setText(f"{operation} failed: {exc}")
+        _logger.warning("frida_script_snapshot_failed", operation=operation, error=str(exc))

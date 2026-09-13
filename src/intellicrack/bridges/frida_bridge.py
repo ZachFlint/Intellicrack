@@ -20,7 +20,7 @@ import time
 import uuid
 from json import JSONDecodeError
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast, override
+from typing import TYPE_CHECKING, Any, Final, cast, override
 
 import frida
 
@@ -44,7 +44,10 @@ from intellicrack.core.types import (
     ImportInfo,
     InstructionInfo,
     MemoryRegion,
+    ModuleDependencyInfo,
     ModuleInfo,
+    ModuleSectionInfo,
+    StalkerCallSummary,
     StalkerEvent,
     StalkerTrace,
     SymbolInfo,
@@ -72,6 +75,7 @@ _ERR_ATTACH_FAILED = "failed to attach to process"
 _ERR_NOT_ATTACHED = "not attached to a process"
 _ERR_NO_SESSION = "no active session"
 _ERR_RESUME_FAILED = "failed to resume process"
+_ERR_KILL_FAILED = "failed to kill process"
 _ERR_DETACH_FAILED = "failed to detach from process"
 _ERR_UNKNOWN_CANCELLABLE = "unknown cancellable token"
 _ERR_READ_FAILED = "memory read failed"
@@ -108,6 +112,7 @@ _ERR_FILE_FAILED = "file operation failed"
 _ERR_SQLITE_FAILED = "SQLite operation failed"
 _ERR_CODE_WRITER_FAILED = "code writing failed"
 _ERR_COMPILE_FAILED = "TypeScript compilation failed"
+_ERR_SCRIPT_COMPILE_FAILED = "script precompilation failed"
 _ERR_MONITOR_FAILED = "file monitoring failed"
 _ERR_PROBE_FAILED = "call probe operation failed"
 _ERR_INVALID_JSON_MESSAGE = "invalid JSON message"
@@ -144,6 +149,7 @@ _VALID_CALLING_CONVENTIONS: frozenset[str] = frozenset({
     "win64",
 })
 _VALID_STRING_ENCODINGS: frozenset[str] = frozenset({"utf8", "ansi", "utf16"})
+_VALID_STDIO_MODES: frozenset[str] = frozenset({"inherit", "pipe"})
 _VALID_BACKTRACER_TYPES: frozenset[str] = frozenset({"accurate", "fuzzy"})
 _VALID_RESOLVER_TYPES: frozenset[str] = frozenset({"module", "objc", "swift"})
 _VALID_CODE_ARCHITECTURES: frozenset[str] = frozenset({"x86", "arm", "arm64", "thumb", "mips"})
@@ -158,6 +164,38 @@ _VALID_PROTECTION_FLAGS: frozenset[str] = frozenset({
     "rwx",
 })
 _VALID_SOCKET_FAMILIES: frozenset[str] = frozenset({"ipv4", "ipv6", "unix"})
+_TYPED_VALUE_TYPES: frozenset[str] = frozenset({
+    "pointer",
+    "cstring",
+    "utf8",
+    "u8",
+    "u16",
+    "u32",
+    "u64",
+    "s8",
+    "s16",
+    "s32",
+    "s64",
+    "float",
+    "double",
+})
+_TYPED_STRING_RESULT_TYPES: frozenset[str] = frozenset({"cstring", "utf8"})
+_TYPED_INT64_RESULT_TYPES: frozenset[str] = frozenset({"u64", "s64"})
+_TYPED_READ_ACCESSORS: dict[str, str] = {
+    "pointer": "readPointer()",
+    "cstring": "readCString()",
+    "utf8": "readUtf8String()",
+    "u8": "readU8()",
+    "u16": "readU16()",
+    "u32": "readU32()",
+    "u64": "readU64()",
+    "s8": "readS8()",
+    "s16": "readS16()",
+    "s32": "readS32()",
+    "s64": "readS64()",
+    "float": "readFloat()",
+    "double": "readDouble()",
+}
 _SCAN_CONTEXT_BYTES: int = 16
 _SCAN_CHUNK_BYTES: int = 4 * 1024 * 1024
 _SCAN_CHUNK_TIMEOUT: float = 5.0
@@ -193,6 +231,8 @@ _ASCII_PRINTABLE_MIN: int = 0x20
 _ASCII_PRINTABLE_MAX: int = 0x7E
 _ASCII_DEL: int = 0x7F
 _HOOK_DEFAULT_ARG_SAMPLE_COUNT: int = 4
+_SNAPSHOT_SCRIPT_RUNTIME: str = "v8"
+_DEFAULT_SCRIPT_DEBUGGER_PORT: Final[int] = 9229
 _CODE_WRITER_MAP: dict[str, str] = {
     "x86": "X86Writer",
     "arm": "ArmWriter",
@@ -209,6 +249,20 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         parameters=[
             ToolParameter(name="path", type="string", description="Path to executable", required=True),
             ToolParameter(name="args", type="array", description="Command line arguments", required=False),
+            ToolParameter(
+                name="env",
+                type="object",
+                description="Environment variables to merge onto the inherited environment",
+                required=False,
+            ),
+            ToolParameter(name="cwd", type="string", description="Working directory for the spawned process", required=False),
+            ToolParameter(
+                name="stdio",
+                type="string",
+                description="Stdio mode for the spawned process: 'inherit' (default) or 'pipe' to capture stdout/stderr via process_output messages",
+                required=False,
+                enum=["inherit", "pipe"],
+            ),
             ToolParameter(name="cancellable_id", type="string", description="Cancellation token from create_cancellable", required=False),
         ],
         returns="Process ID of spawned process",
@@ -257,6 +311,14 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Success status",
     ),
     ToolFunction(
+        name="frida.kill",
+        description="Kill an arbitrary process on the current device, independent of any attach/spawn",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="Process ID to kill", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
         name="frida.enumerate_modules",
         description="List all loaded modules in the process",
         parameters=[],
@@ -277,6 +339,22 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ToolParameter(name="module_name", type="string", description="Name of the module", required=True),
         ],
         returns="List of import names and addresses",
+    ),
+    ToolFunction(
+        name="frida.enumerate_module_sections",
+        description="List a module's binary sections",
+        parameters=[
+            ToolParameter(name="module_name", type="string", description="Name of the module", required=True),
+        ],
+        returns="List of ModuleSectionInfo (id, name, address, size)",
+    ),
+    ToolFunction(
+        name="frida.enumerate_module_dependencies",
+        description="List a module's shared-library dependencies",
+        parameters=[
+            ToolParameter(name="module_name", type="string", description="Name of the module", required=True),
+        ],
+        returns="List of ModuleDependencyInfo (name, type)",
     ),
     ToolFunction(
         name="frida.enumerate_threads",
@@ -341,6 +419,52 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Success status",
     ),
     ToolFunction(
+        name="frida.copy_memory",
+        description="Copy bytes natively, in-process, between two addresses (Memory.copy, like memcpy)",
+        parameters=[
+            ToolParameter(name="dst_address", type="integer", description="Destination base address", required=True),
+            ToolParameter(name="src_address", type="integer", description="Source base address", required=True),
+            ToolParameter(name="size", type="integer", description="Number of bytes to copy", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.read_typed_value",
+        description="Read a single typed value from memory (NativePointer typed accessors), selected by value_type",
+        parameters=[
+            ToolParameter(name="address", type="integer", description="Memory address to read from", required=True),
+            ToolParameter(
+                name="value_type",
+                type="string",
+                required=True,
+                description="Value type to read",
+                enum=["pointer", "cstring", "utf8", "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "float", "double"],
+            ),
+        ],
+        returns="The decoded value (int, float, or string depending on value_type)",
+    ),
+    ToolFunction(
+        name="frida.write_typed_value",
+        description="Write a single typed value to memory (NativePointer typed accessors), selected by value_type",
+        parameters=[
+            ToolParameter(name="address", type="integer", description="Memory address to write to", required=True),
+            ToolParameter(
+                name="value_type",
+                type="string",
+                required=True,
+                description="Value type to write ('cstring' is read-only; use 'utf8' to write a string)",
+                enum=["pointer", "utf8", "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "float", "double"],
+            ),
+            ToolParameter(
+                name="value",
+                type="string",
+                description="Value to write, as a string (e.g. '42', '3.5', '0x1000', or text for utf8)",
+                required=True,
+            ),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
         name="frida.scan_memory",
         description="Scan process memory for a hex byte pattern with optional wildcards",
         parameters=[
@@ -395,6 +519,60 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Success status",
     ),
     ToolFunction(
+        name="frida.compile_script",
+        description="Precompile Frida script source to bytecode without creating a script instance",
+        parameters=[
+            ToolParameter(name="source", type="string", description="JavaScript source to compile", required=True),
+        ],
+        returns="Hex-encoded compiled bytecode",
+    ),
+    ToolFunction(
+        name="frida.load_compiled_script",
+        description="Create and load a persistent script from precompiled bytecode",
+        parameters=[
+            ToolParameter(
+                name="bytecode_hex",
+                type="string",
+                description="Hex-encoded bytecode from frida.compile_script",
+                required=True,
+            ),
+        ],
+        returns="Script ID for later unloading via frida.unload_script",
+    ),
+    ToolFunction(
+        name="frida.snapshot_script",
+        description="Create a V8 snapshot of a warmed-up script VM for fast-start reuse",
+        parameters=[
+            ToolParameter(
+                name="embed_script",
+                type="string",
+                description="JavaScript run inside the throwaway VM to snapshot",
+                required=True,
+            ),
+            ToolParameter(
+                name="warmup_script",
+                type="string",
+                description="Optional additional setup JavaScript run before the snapshot is taken",
+                required=False,
+            ),
+        ],
+        returns="Hex-encoded snapshot bytes",
+    ),
+    ToolFunction(
+        name="frida.load_script_with_snapshot",
+        description="Create and load a persistent script warm-started from a script-VM snapshot",
+        parameters=[
+            ToolParameter(name="source", type="string", description="JavaScript source for the new script", required=True),
+            ToolParameter(
+                name="snapshot_hex",
+                type="string",
+                description="Hex-encoded snapshot bytes from frida.snapshot_script",
+                required=True,
+            ),
+        ],
+        returns="Script ID for later unloading via frida.unload_script",
+    ),
+    ToolFunction(
         name="frida.intercept_return",
         description="Hook a function and modify its return value",
         parameters=[
@@ -440,6 +618,20 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="List of memory regions",
     ),
     ToolFunction(
+        name="frida.enumerate_module_ranges",
+        description="Get a module's memory ranges, optionally filtered by protection",
+        parameters=[
+            ToolParameter(name="module_name", type="string", description="Name of the module", required=True),
+            ToolParameter(
+                name="protection",
+                type="string",
+                description="Filter by protection (e.g., 'r-x', '---' for all)",
+                required=False,
+            ),
+        ],
+        returns="List of memory regions scoped to the module",
+    ),
+    ToolFunction(
         name="frida.allocate_memory",
         description="Allocate memory in the target process (persists until detach)",
         parameters=[
@@ -467,6 +659,14 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ),
         ],
         returns="True if protection was changed successfully",
+    ),
+    ToolFunction(
+        name="frida.query_memory_protection",
+        description="Read back the current page protection of a memory address",
+        parameters=[
+            ToolParameter(name="address", type="integer", description="Address to query", required=True),
+        ],
+        returns="Protection flags in rwx-triplet form (e.g. 'r-x')",
     ),
     ToolFunction(
         name="frida.find_base_address",
@@ -539,6 +739,27 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Hook ID for the replacement",
     ),
     ToolFunction(
+        name="frida.replace_function_fast",
+        description="Replace a function using Interceptor.replaceFast (low-overhead trampoline replace, returns a pointer to call the original)",
+        parameters=[
+            ToolParameter(name="target", type="string", description="Function name (module!func) or hex address", required=True),
+            ToolParameter(
+                name="replacement_code",
+                type="string",
+                description="JavaScript body for the NativeCallback replacement",
+                required=True,
+            ),
+            ToolParameter(
+                name="calling_convention",
+                type="string",
+                description="Calling convention for the replacement",
+                required=False,
+                enum=["default", "sysv", "stdcall", "thiscall", "fastcall", "mscdecl", "win64"],
+            ),
+        ],
+        returns="HookInfo, with original_trampoline set to the pointer for calling the original implementation",
+    ),
+    ToolFunction(
         name="frida.enumerate_processes",
         description="List all running processes on the device (no attachment needed)",
         parameters=[],
@@ -572,6 +793,45 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Trace ID for later retrieval via stalker_unfollow",
     ),
     ToolFunction(
+        name="frida.stalker_follow_with_transform",
+        description=(
+            "Start Stalker code tracing with a custom per-basic-block transform (StalkerTransformer); "
+            "torn down the same way as frida.stalker_follow via frida.stalker_unfollow"
+        ),
+        parameters=[
+            ToolParameter(
+                name="thread_id",
+                type="integer",
+                description="Thread ID to trace (null for current thread)",
+                required=False,
+            ),
+            ToolParameter(
+                name="events",
+                type="string",
+                description="Comma-separated event types: call, ret, exec, block, compile",
+                required=False,
+                default="call",
+            ),
+            ToolParameter(
+                name="limit",
+                type="integer",
+                description="Maximum events to collect before auto-stop",
+                required=False,
+                default=10000,
+            ),
+            ToolParameter(
+                name="transform_code",
+                type="string",
+                description=(
+                    "JavaScript run per instruction inside the transform iterator; must call iterator.keep() "
+                    "(or another put* method) to preserve an instruction"
+                ),
+                required=True,
+            ),
+        ],
+        returns="Trace ID for later retrieval via frida.stalker_unfollow",
+    ),
+    ToolFunction(
         name="frida.stalker_unfollow",
         description="Stop Stalker tracing and retrieve collected events",
         parameters=[
@@ -583,6 +843,40 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ),
         ],
         returns="StalkerTrace with collected events and duration",
+    ),
+    ToolFunction(
+        name="frida.stalker_follow_call_summary",
+        description="Start Stalker call-summary tracing on a thread (aggregated call-target counts, lower overhead than per-event streaming)",
+        parameters=[
+            ToolParameter(name="thread_id", type="integer", description="Thread ID to trace (null for current thread)", required=False),
+        ],
+        returns="Trace ID for later retrieval via stalker_unfollow_call_summary",
+    ),
+    ToolFunction(
+        name="frida.stalker_unfollow_call_summary",
+        description="Stop Stalker call-summary tracing and retrieve the aggregated call-target counts",
+        parameters=[
+            ToolParameter(
+                name="thread_id",
+                type="integer",
+                description="Thread ID to stop tracing (null for current thread)",
+                required=False,
+            ),
+        ],
+        returns="StalkerCallSummary with aggregated counts and duration",
+    ),
+    ToolFunction(
+        name="frida.stalker_flush",
+        description="Flush buffered Stalker events for an active trace without stopping it",
+        parameters=[
+            ToolParameter(
+                name="thread_id",
+                type="integer",
+                description="Thread ID whose active trace to flush (null for current thread)",
+                required=False,
+            ),
+        ],
+        returns="Success status",
     ),
     ToolFunction(
         name="frida.enable_child_gating",
@@ -614,6 +908,35 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Success status",
     ),
     ToolFunction(
+        name="frida.enable_session_child_gating",
+        description=(
+            "Enable session-scoped child gating: processes spawned as true children of the attached target "
+            "launch suspended until resumed via frida.resume_session_child (distinct from device-wide spawn gating)"
+        ),
+        parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.disable_session_child_gating",
+        description="Disable session-scoped child gating",
+        parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.get_pending_session_children",
+        description="Get the true children currently suspended by session-scoped gating, queried directly from the device",
+        parameters=[],
+        returns="List of ChildProcessInfo",
+    ),
+    ToolFunction(
+        name="frida.resume_session_child",
+        description="Resume a true child process suspended by session-scoped gating",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="PID of the suspended child to resume", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
         name="frida.enable_crash_reporting",
         description="Enable crash event monitoring for attached processes",
         parameters=[],
@@ -626,10 +949,34 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="List of CrashInfo with crash details",
     ),
     ToolFunction(
+        name="frida.enable_device_lost_notifications",
+        description="Enable notification when the currently connected Frida device becomes unavailable",
+        parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.disable_device_lost_notifications",
+        description="Disable device-lost notifications",
+        parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
         name="frida.enumerate_devices",
         description="List all available Frida devices (local, USB, remote)",
         parameters=[],
         returns="List of FridaDeviceInfo",
+    ),
+    ToolFunction(
+        name="frida.enable_device_change_notifications",
+        description="Enable live notifications when the Frida device list changes (device added/removed/changed)",
+        parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.disable_device_change_notifications",
+        description="Disable live device-list-changed notifications",
+        parameters=[],
+        returns="Success status",
     ),
     ToolFunction(
         name="frida.connect_device",
@@ -652,6 +999,19 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="FridaDeviceInfo for the connected device",
     ),
     ToolFunction(
+        name="frida.remove_remote_device",
+        description="Remove a previously-added remote Frida device",
+        parameters=[
+            ToolParameter(
+                name="host",
+                type="string",
+                description="host[:port] of the remote device to remove, as previously passed to frida.connect_device",
+                required=True,
+            ),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
         name="frida.post_message",
         description="Send a message from Python to a running Frida script",
         parameters=[
@@ -669,6 +1029,37 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Success status",
     ),
     ToolFunction(
+        name="frida.enable_script_debugger",
+        description="Attach a V8 Inspector-protocol debugger to a running script",
+        parameters=[
+            ToolParameter(name="script_id", type="string", description="ID of the target script", required=True),
+            ToolParameter(
+                name="port",
+                type="integer",
+                description="TCP port for the inspector protocol (default 9229)",
+                required=False,
+                default=9229,
+            ),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.disable_script_debugger",
+        description="Detach the V8 Inspector-protocol debugger from a running script",
+        parameters=[
+            ToolParameter(name="script_id", type="string", description="ID of the target script", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.terminate_script",
+        description="Forcibly terminate a script's runtime immediately, without waiting for graceful teardown (for a hung script)",
+        parameters=[
+            ToolParameter(name="script_id", type="string", description="ID of the target script", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
         name="frida.rpc_call",
         description="Call an RPC-exported function in a running script",
         parameters=[
@@ -677,6 +1068,14 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ToolParameter(name="args", type="array", description="Arguments for the RPC call", required=False),
         ],
         returns="Return value from the RPC call",
+    ),
+    ToolFunction(
+        name="frida.list_rpc_exports",
+        description="Discover which RPC exports a running script provides, by name",
+        parameters=[
+            ToolParameter(name="script_id", type="string", description="ID of the target script", required=True),
+        ],
+        returns="List of export names, usable directly as frida.rpc_call's method_name",
     ),
     ToolFunction(
         name="frida.create_cancellable",
@@ -739,6 +1138,20 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ToolParameter(name="address", type="integer", description="Address to look up", required=True),
         ],
         returns="ModuleInfo or null if not found",
+    ),
+    ToolFunction(
+        name="frida.find_export_by_name",
+        description="Find a single export's address by name, without a full module export dump",
+        parameters=[
+            ToolParameter(name="export_name", type="string", description="Name of the export to look up", required=True),
+            ToolParameter(
+                name="module_name",
+                type="string",
+                required=False,
+                description="Module to scope the lookup to; omit for a global (slower) lookup across every loaded module",
+            ),
+        ],
+        returns="The export's absolute address, or null if not found",
     ),
     ToolFunction(
         name="frida.find_functions_matching",
@@ -873,6 +1286,12 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         description="List all installed applications on the device",
         parameters=[],
         returns="List of FridaApplicationInfo",
+    ),
+    ToolFunction(
+        name="frida.get_frontmost_application",
+        description="Get the frontmost/foreground application on the current device",
+        parameters=[],
+        returns="FridaApplicationInfo, or null if none is frontmost / not supported on this device",
     ),
     ToolFunction(
         name="frida.inject_library_file",
@@ -1287,11 +1706,19 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._stalker_traces: dict[int, list[StalkerEvent]] = {}
         self._stalker_traces_lock: threading.Lock = threading.Lock()
         self._stalker_scripts: dict[int, str] = {}
+        self._stalker_summary_scripts: dict[int, str] = {}
+        self._stalker_summaries: dict[int, dict[str, int]] = {}
+        self._stalker_summaries_lock: threading.Lock = threading.Lock()
         self._child_gating_enabled: bool = False
         self._gated_children: list[ChildProcessInfo] = []
         self._gated_children_lock: threading.Lock = threading.Lock()
         self._spawn_added_handler: Callable[[object], None] | None = None
         self._spawn_removed_handler: Callable[[object], None] | None = None
+        self._session_child_gating_enabled: bool = False
+        self._session_gated_children: list[ChildProcessInfo] = []
+        self._session_gated_children_lock: threading.Lock = threading.Lock()
+        self._child_added_handler: Callable[[object], None] | None = None
+        self._child_removed_handler: Callable[[object], None] | None = None
         self._crashes: list[CrashInfo] = []
         self._crashes_lock: threading.Lock = threading.Lock()
         self._alloc_scripts: dict[int, str] = {}
@@ -1301,6 +1728,12 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._file_monitors: dict[str, object] = {}
         self._crash_handler: Callable[[object], None] | None = None
         self._crash_reporting_enabled: bool = False
+        self._output_handler: Callable[[int, int, bytes], None] | None = None
+        self._device_manager_changed_handler: Callable[[], None] | None = None
+        self._device_change_notifications_enabled: bool = False
+        self._device_lost_handler: Callable[[], None] | None = None
+        self._device_lost_handler_target: frida.Device | None = None
+        self._device_lost_notifications_enabled: bool = False
         self._typescript_compiler: frida.Compiler | None = None
         self._typescript_compiler_lock: threading.Lock = threading.Lock()
         self._capabilities = BridgeCapabilities(
@@ -1374,7 +1807,11 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
         await self._shutdown_stalker_scripts()
         await self._shutdown_child_gating()
+        await self._shutdown_session_child_gating()
+        self._detach_output_handler()
         self._teardown_crash_handler()
+        self._teardown_device_change_notifications()
+        self._teardown_device_lost_notifications()
         await self._shutdown_file_monitors()
         await self._shutdown_call_probes()
         await self._shutdown_exception_handler_script()
@@ -1406,6 +1843,15 @@ class _FridaBridgeBase(InstrumentationBridge):
                 _logger.exception("child_gating_disable_failed_during_shutdown")
             self._detach_spawn_gating_handlers()
             self._child_gating_enabled = False
+
+    async def _shutdown_session_child_gating(self) -> None:
+        """Disable session-scoped child gating on the active session, if it was enabled."""
+        if self._session_child_gating_enabled and self._session is not None:
+            try:
+                await asyncio.to_thread(self._session.disable_child_gating)
+            except Exception:
+                _logger.exception("session_child_gating_disable_failed_during_shutdown")
+        self._reset_session_child_gating_state()
 
     def _register_spawn_gating_handlers(
         self,
@@ -1464,6 +1910,126 @@ class _FridaBridgeBase(InstrumentationBridge):
                         _logger.exception("spawn_removed_handler_detach_failed")
         self._spawn_added_handler = None
         self._spawn_removed_handler = None
+
+    def _register_session_child_gating_handlers(
+        self,
+        device: frida.Device,
+        on_child_added: Callable[[object], None],
+        on_child_removed: Callable[[object], None],
+    ) -> None:
+        """Register and record the device's true child-gating signal handlers.
+
+        Args:
+            device: Frida device to register the handlers on.
+            on_child_added: Callback for the device's ``child-added`` signal.
+            on_child_removed: Callback for the device's ``child-removed`` signal.
+        """
+        device.on("child-added", on_child_added)
+        self._child_added_handler = on_child_added
+        device.on("child-removed", on_child_removed)
+        self._child_removed_handler = on_child_removed
+
+    def _remove_session_gated_child(self, pid: int) -> None:
+        """Drop a single pending child from the in-memory session-gated-children record.
+
+        Args:
+            pid: PID of the process to remove from the tracked list.
+        """
+        with self._session_gated_children_lock:
+            self._session_gated_children = [c for c in self._session_gated_children if c.pid != pid]
+
+    def _clear_session_gated_children(self) -> None:
+        """Clear the in-memory record of session-gated child processes."""
+        with self._session_gated_children_lock:
+            self._session_gated_children.clear()
+
+    def _detach_session_child_gating_handlers(self) -> None:
+        """Detach and forget any registered child-added/child-removed signal handlers.
+
+        Best-effort: a device that is already lost or torn down simply has
+        nothing to detach from. Safe to call whether or not gating was ever
+        successfully enabled.
+        """
+        device = self._device
+        added_handler = self._child_added_handler
+        removed_handler = self._child_removed_handler
+        if device is not None:
+            off_fn = getattr(device, "off", None)
+            if callable(off_fn):
+                if added_handler is not None:
+                    try:
+                        off_fn("child-added", added_handler)
+                    except Exception:
+                        _logger.exception("child_added_handler_detach_failed")
+                if removed_handler is not None:
+                    try:
+                        off_fn("child-removed", removed_handler)
+                    except Exception:
+                        _logger.exception("child_removed_handler_detach_failed")
+        self._child_added_handler = None
+        self._child_removed_handler = None
+
+    def _reset_session_child_gating_state(self) -> None:
+        """Best-effort reset of session-child-gating bookkeeping when a session is torn down.
+
+        Called from both the explicit ``detach()`` path and the
+        ``session.on("detached", ...)`` listener so a leaked device-level
+        ``"child-added"``/``"child-removed"`` handler never outlives its
+        session.
+        """
+        self._detach_session_child_gating_handlers()
+        self._session_child_gating_enabled = False
+        self._clear_session_gated_children()
+
+    def _ensure_output_handler_registered(self, device: frida.Device) -> None:
+        """Register the device's ``"output"`` signal handler if not already active.
+
+        Idempotent: safe to call before every pipe-stdio spawn. Forwards every
+        captured stdout/stderr chunk as a ``process_output`` dispatch message.
+
+        Args:
+            device: Frida device the spawned process will run on.
+        """
+        if self._output_handler is not None:
+            return
+
+        def on_output(pid: int, fd: int, data: bytes) -> None:
+            """Forward a captured stdio chunk as a dispatch message.
+
+            Args:
+                pid: PID of the process that produced the output.
+                fd: POSIX-numbered stream (1 = stdout, 2 = stderr).
+                data: Raw captured bytes.
+            """
+            self._dispatch_message({
+                "type": "send",
+                "payload": {
+                    "type": "process_output",
+                    "pid": pid,
+                    "fd": fd,
+                    "data": data.decode("utf-8", errors="replace"),
+                },
+            })
+
+        device.on("output", on_output)
+        self._output_handler = on_output
+
+    def _detach_output_handler(self) -> None:
+        """Detach the registered ``"output"`` handler, if any.
+
+        Best-effort: a device that is already lost or torn down simply has
+        nothing to detach from.
+        """
+        device = self._device
+        handler = self._output_handler
+        if device is not None and handler is not None:
+            off_fn = getattr(device, "off", None)
+            if callable(off_fn):
+                try:
+                    off_fn("output", handler)
+                except Exception:
+                    _logger.exception("output_handler_detach_failed")
+        self._output_handler = None
 
     async def _shutdown_file_monitors(self) -> None:
         """Disable any registered Frida file monitors and clear the registry."""
@@ -1653,6 +2219,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             """
             _logger.warning("frida_session_detached", pid=pid, reason=reason, has_crash=crash is not None)
             self._session = None
+            self._reset_session_child_gating_state()
             self._pid = None
             self.state.process_attached = False
             self.state.target_pid = None
@@ -1792,6 +2359,9 @@ class _FridaBridgeBase(InstrumentationBridge):
         path: Path,
         args: Sequence[str] | None = None,
         *,
+        env: dict[str, str] | None = None,
+        cwd: str | None = None,
+        stdio: str | None = None,
         cancellable_id: str | None = None,
     ) -> int:
         """Spawn a new process with Frida instrumentation.
@@ -1799,6 +2369,12 @@ class _FridaBridgeBase(InstrumentationBridge):
         Args:
             path: Path to executable.
             args: Command line arguments.
+            env: Environment variables to merge onto the inherited
+                environment of the spawned process.
+            cwd: Working directory for the spawned process.
+            stdio: Stdio mode for the spawned process: ``"inherit"``
+                (default) or ``"pipe"`` to capture stdout/stderr via
+                ``process_output`` dispatch messages.
             cancellable_id: Optional cancellation token identifier returned by
                 :meth:`create_cancellable`. When supplied, the token is passed
                 through to the underlying Frida spawn and attach calls so the
@@ -1808,7 +2384,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             int: PID of spawned process.
 
         Raises:
-            ToolError: If the bridge is not initialised or the spawn fails.
+            ToolError: If the bridge is not initialised, ``stdio`` is not a
+                valid mode, or the spawn fails.
         """
         device = self._device
         if device is None:
@@ -1816,6 +2393,11 @@ class _FridaBridgeBase(InstrumentationBridge):
                 _ERR_DEVICE_FAILED,
                 details={"reason": "bridge not initialised; call initialize() first"},
             )
+
+        if stdio is not None and stdio not in _VALID_STDIO_MODES:
+            raise ToolError(_ERR_ATTACH_FAILED, details={"reason": f"invalid stdio mode: {stdio}"})
+        if stdio == "pipe":
+            self._ensure_output_handler_registered(device)
 
         cancellable = self._resolve_cancellable(cancellable_id)
 
@@ -1830,6 +2412,9 @@ class _FridaBridgeBase(InstrumentationBridge):
                 str(path),
                 spawn_argv,
                 cancellable,
+                env=env,
+                cwd=cwd,
+                stdio=stdio,
             )
         except (
             frida.ExecutableNotFoundError,
@@ -1990,6 +2575,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             await self._unload_script(script_id)
 
         await asyncio.to_thread(session.detach)
+        self._reset_session_child_gating_state()
         self._session = None
 
         if kill_spawned and self._spawned_pid is not None and self._device is not None:
@@ -2012,6 +2598,31 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._publish_tool_state()
 
         _logger.info("process_detached", bridge="frida")
+
+    async def kill(self, pid: int) -> bool:
+        """Kill an arbitrary process on the current device, independent of attach/spawn.
+
+        Args:
+            pid: Process ID to kill.
+
+        Returns:
+            bool: True if the kill request succeeded.
+
+        Raises:
+            ToolError: If no device is available or the kill fails.
+        """
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        try:
+            await asyncio.to_thread(device.kill, pid)
+        except (frida.ProcessNotFoundError, frida.PermissionDeniedError, frida.TransportError, OSError) as e:
+            _logger.warning("frida_kill_failed", pid=pid, error=str(e), error_type=type(e).__name__)
+            raise ToolError(_ERR_KILL_FAILED, details=self._frida_error_details(e, pid=pid)) from e
+
+        _logger.info("frida_process_killed", pid=pid)
+        return True
 
     async def read_memory(self, address: int, size: int) -> bytes:
         """Read memory from the target process.
@@ -2092,6 +2703,212 @@ class _FridaBridgeBase(InstrumentationBridge):
         _logger.info("memory_written", length=len(data), address=hex(validated_address))
         return len(data)
 
+    async def copy_memory(self, dst_address: int, src_address: int, size: int) -> bool:
+        """Copy bytes natively, in-process, between two addresses (Memory.copy).
+
+        Unlike read_memory followed by write_memory, the bytes never leave
+        the target process or cross the IPC boundary.
+
+        Args:
+            dst_address: Destination base address.
+            src_address: Source base address.
+            size: Number of bytes to copy.
+
+        Returns:
+            bool: True if the copy succeeded.
+
+        Raises:
+            ToolError: If not attached, size is negative, or the copy fails.
+        """
+        _logger.info("frida_copy_memory_started", dst=hex(dst_address), src=hex(src_address), size=size)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        validated_dst = self._validate_js_int(dst_address, name="dst_address")
+        validated_src = self._validate_js_int(src_address, name="src_address")
+        validated_size = self._validate_js_int(size, name="size")
+        if validated_size < 0:
+            raise ToolError(_ERR_WRITE_FAILED, details={"reason": "size must be non-negative"})
+
+        script_code = f"""
+        try {{
+            Memory.copy(ptr({validated_dst}), ptr({validated_src}), {validated_size});
+            send({{ type: 'copy', success: true }});
+        }} catch (e) {{
+            send({{ type: 'copy', success: false, error: e.message }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if "error" in result:
+            raise ToolError(_ERR_WRITE_FAILED)
+        if not result.get("success", False):
+            raise ToolError(_ERR_WRITE_FAILED, details={"reason": str(result.get("error", ""))})
+
+        _logger.info("memory_copied", dst=hex(validated_dst), src=hex(validated_src), size=validated_size)
+        return True
+
+    async def read_typed_value(self, address: int, value_type: str) -> int | float | str | None:
+        """Read a single typed value from memory via NativePointer's typed accessors.
+
+        One coherent entry point for every NativePointer typed read
+        (readPointer/readCString/readUtf8String/readU8..readU64/readS8..readS64/
+        readFloat/readDouble), selected by value_type - distinct from the raw
+        byte-array read_memory/write_memory pair.
+
+        Args:
+            address: Memory address to read from.
+            value_type: One of 'pointer', 'cstring', 'utf8', 'u8', 'u16',
+                'u32', 'u64', 's8', 's16', 's32', 's64', 'float', 'double'.
+
+        Returns:
+            int | float | str | None: int for pointer/u8..u64/s8..s64, float
+                for float/double, str for cstring/utf8 (None only if the
+                target address holds a null pointer, per Frida's own
+                readCString/readUtf8String contract).
+
+        Raises:
+            ToolError: If not attached, value_type is unsupported, or the
+                read fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        if value_type not in _TYPED_VALUE_TYPES:
+            raise ToolError(
+                _ERR_READ_FAILED,
+                details={"reason": f"unsupported value_type: {value_type}", "allowed": sorted(_TYPED_VALUE_TYPES)},
+            )
+
+        validated_address = self._validate_js_int(address, name="address")
+        accessor = _TYPED_READ_ACCESSORS[value_type]
+        read_expr = f"ptr({validated_address}).{accessor}"
+        if value_type == "pointer" or value_type in _TYPED_INT64_RESULT_TYPES:
+            read_expr = f"({read_expr}).toString()"
+
+        script_code = f"""
+        try {{
+            var v = {read_expr};
+            send({{ type: 'typed_read', success: true, value: v }});
+        }} catch (e) {{
+            send({{ type: 'typed_read', success: false, error: e.message }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+        if "error" in result:
+            raise ToolError(_ERR_READ_FAILED)
+        if not result.get("success", False):
+            raise ToolError(_ERR_READ_FAILED, details={"reason": str(result.get("error", ""))})
+
+        raw_value = result.get("value")
+        if value_type in _TYPED_STRING_RESULT_TYPES:
+            return None if raw_value is None else str(raw_value)
+        if value_type == "pointer":
+            s = str(raw_value)
+            return int(s, 16) if s.startswith("0x") else int(s)
+        if value_type in _TYPED_INT64_RESULT_TYPES:
+            return int(str(raw_value))
+        if value_type in {"float", "double"}:
+            return float(cast("float", raw_value))
+        return int(cast("int", raw_value))
+
+    async def write_typed_value(self, address: int, value_type: str, value: float | str) -> bool:
+        """Write a single typed value to memory via NativePointer's typed accessors.
+
+        Companion to :meth:`read_typed_value`; the same value_type enum
+        selects which NativePointer write* accessor is used.
+
+        Args:
+            address: Memory address to write to.
+            value_type: One of 'pointer', 'utf8', 'u8', 'u16', 'u32', 'u64',
+                's8', 's16', 's32', 's64', 'float', 'double' ('cstring' is
+                read-only here - see hazards).
+            value: int for pointer (or a '0x...' hex string)/u8..u64/s8..s64,
+                float for float/double, str for utf8.
+
+        Returns:
+            bool: True if the write succeeded.
+
+        Raises:
+            ToolError: If not attached, value_type is unsupported, value is
+                the wrong shape for value_type, or the write fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        if value_type not in _TYPED_VALUE_TYPES:
+            raise ToolError(
+                _ERR_WRITE_FAILED,
+                details={"reason": f"unsupported value_type: {value_type}", "allowed": sorted(_TYPED_VALUE_TYPES)},
+            )
+
+        validated_address = self._validate_js_int(address, name="address")
+        write_call = self._build_typed_write_call(value_type, value)
+
+        script_code = f"""
+        try {{
+            ptr({validated_address}).{write_call};
+            send({{ type: 'typed_write', success: true }});
+        }} catch (e) {{
+            send({{ type: 'typed_write', success: false, error: e.message }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+        if "error" in result:
+            raise ToolError(_ERR_WRITE_FAILED)
+        if not result.get("success", False):
+            raise ToolError(_ERR_WRITE_FAILED, details={"reason": str(result.get("error", ""))})
+        return True
+
+    def _build_typed_write_call(self, value_type: str, value: float | str) -> str:
+        """Build the NativePointer write*(...) call fragment for a typed write.
+
+        Args:
+            value_type: One of the values in _TYPED_VALUE_TYPES (except
+                'cstring', which is read-only).
+            value: The Python value to encode into the JS call.
+
+        Returns:
+            str: A JS fragment like "writeU32(42)", safe to append after
+                "ptr(ADDR).".
+
+        Raises:
+            ToolError: If value_type is 'cstring', or value is the wrong
+                shape for value_type.
+        """
+        if value_type == "cstring":
+            raise ToolError(
+                _ERR_WRITE_FAILED,
+                details={"reason": "cstring has no dedicated write accessor; use value_type='utf8' to write"},
+            )
+        if value_type == "pointer":
+            if isinstance(value, str):
+                hex_value = value if value.startswith("0x") else hex(int(value, 0))
+            elif isinstance(value, int):
+                hex_value = hex(value)
+            else:
+                raise ToolError(_ERR_WRITE_FAILED, details={"reason": "pointer value must be an int or hex string"})
+            return f"writePointer(ptr('{hex_value}'))"
+        if value_type == "utf8":
+            if not isinstance(value, str):
+                raise ToolError(_ERR_WRITE_FAILED, details={"reason": "utf8 value must be a string"})
+            return f"writeUtf8String('{self._escape_js_string(value)}')"
+        if value_type in {"u64", "s64"}:
+            if not isinstance(value, int):
+                raise ToolError(_ERR_WRITE_FAILED, details={"reason": f"{value_type} value must be an int"})
+            ctor = "uint64" if value_type == "u64" else "int64"
+            write_fn = "writeU64" if value_type == "u64" else "writeS64"
+            return f"{write_fn}({ctor}('{value}'))"
+        if value_type in {"float", "double"}:
+            if not isinstance(value, (int, float)):
+                raise ToolError(_ERR_WRITE_FAILED, details={"reason": f"{value_type} value must be a number"})
+            write_fn = "writeFloat" if value_type == "float" else "writeDouble"
+            return f"{write_fn}({float(value)})"
+        validated_int = self._validate_js_int(value, name="value")
+        write_fn = f"write{value_type[0].upper()}{value_type[1:]}"
+        return f"{write_fn}({validated_int})"
+
     async def get_memory_regions(self, protection: str = "---") -> list[MemoryRegion]:
         """Get process memory map.
 
@@ -2153,6 +2970,72 @@ class _FridaBridgeBase(InstrumentationBridge):
                 )
 
         _logger.debug("memory_regions_enumerated", count=len(regions))
+        return regions
+
+    async def enumerate_module_ranges(self, module_name: str, protection: str = "---") -> list[MemoryRegion]:
+        """Get a module's memory ranges, optionally filtered by protection.
+
+        Args:
+            module_name: Name of the module.
+            protection: Protection filter (e.g., 'r-x', '---' for all).
+
+        Returns:
+            list[MemoryRegion]: List of memory regions scoped to the module.
+
+        Raises:
+            ToolError: If not attached, the module is not found, or the
+                operation fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        self._validate_protection(protection)
+        escaped_module = self._escape_js_string(module_name)
+        escaped_protection = self._escape_js_string(protection)
+
+        script_code = f"""
+        var mod = Process.findModuleByName('{escaped_module}');
+        if (!mod) {{
+            send({{ type: 'module_ranges', error: 'module_not_found', data: [] }});
+        }} else {{
+            var ranges = mod.enumerateRanges('{escaped_protection}');
+            var result = ranges.map(function(r) {{
+                return {{ base: r.base.toString(), size: r.size, protection: r.protection }};
+            }});
+            send({{ type: 'module_ranges', data: result }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if result.get("error") == "module_not_found":
+            raise ToolError(_ERR_MODULE_NOT_FOUND, details={"module": module_name})
+        if "error" in result:
+            raise ToolError(_ERR_READ_FAILED)
+
+        regions: list[MemoryRegion] = []
+        range_data = result.get("data", [])
+        if isinstance(range_data, list):
+            for raw_item in cast("list[object]", range_data):
+                if not isinstance(raw_item, dict):
+                    continue
+                r = cast("dict[str, object]", raw_item)
+                base_str = str(r.get("base", "0"))
+                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+                size_val = r.get("size", 0)
+                protection_val = r.get("protection", "")
+                regions.append(
+                    MemoryRegion(
+                        base_address=base,
+                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                        protection=str(protection_val) if protection_val else "",
+                        state="committed",
+                        type="image",
+                        module_name=module_name,
+                    ),
+                )
+
+        _logger.debug("module_ranges_enumerated", module_name=module_name, count=len(regions))
         return regions
 
     async def scan_memory(
@@ -2819,6 +3702,177 @@ class _FridaBridgeBase(InstrumentationBridge):
         _logger.info("script_unloaded", script_id=script_id)
         return True
 
+    async def compile_script(self, source: str) -> str:
+        """Precompile Frida script source to bytecode without creating a script instance.
+
+        Args:
+            source: JavaScript (or TypeScript, if the runtime supports it)
+                source to compile.
+
+        Returns:
+            str: Hex-encoded compiled bytecode, loadable via
+                :meth:`load_compiled_script`.
+
+        Raises:
+            ToolError: If not attached or compilation fails.
+        """
+        if self._session is None:
+            _logger.error("frida_not_attached", operation="compile_script")
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        try:
+            bytecode: bytes = await asyncio.to_thread(self._session.compile_script, source)
+        except Exception as e:
+            _logger.warning("frida_compile_script_failed", error=str(e))
+            raise ToolError(_ERR_SCRIPT_COMPILE_FAILED, details=self._frida_error_details(e)) from e
+
+        _logger.info("script_compiled", source_length=len(source), bytecode_length=len(bytecode))
+        return bytecode.hex()
+
+    async def load_compiled_script(self, bytecode_hex: str) -> str:
+        """Create and load a persistent script from precompiled bytecode.
+
+        Args:
+            bytecode_hex: Hex-encoded bytecode produced by :meth:`compile_script`.
+
+        Returns:
+            str: Script ID for later unloading via :meth:`unload_script`.
+
+        Raises:
+            ToolError: If not attached, ``bytecode_hex`` is not valid hex, or
+                loading fails.
+        """
+        if self._session is None:
+            _logger.error("frida_not_attached", operation="load_compiled_script")
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        try:
+            data = bytes.fromhex(bytecode_hex)
+        except ValueError as e:
+            raise ToolError(_ERR_SCRIPT_COMPILE_FAILED, details={"reason": "invalid hex bytecode"}) from e
+
+        script_id = str(uuid.uuid4())[:8]
+        try:
+            script = await asyncio.to_thread(self._session.create_script_from_bytes, data)
+        except Exception as e:
+            _logger.warning("frida_load_compiled_script_failed", error=str(e))
+            raise ToolError(_ERR_SCRIPT_COMPILE_FAILED, details=self._frida_error_details(e)) from e
+
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Forward compiled-script messages to the bridge dispatcher.
+
+            Args:
+                message: Message payload emitted by the compiled script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            self._dispatch_message(dict(cast("dict[str, object]", message)))
+
+        script.on("message", on_message)
+        await asyncio.to_thread(script.load)
+
+        self._scripts[script_id] = script
+        _logger.info("compiled_script_loaded", script_id=script_id)
+        return script_id
+
+    async def snapshot_script(self, embed_script: str, warmup_script: str | None = None) -> str:
+        """Create a V8 snapshot of a warmed-up script VM for fast-start reuse.
+
+        Script-VM snapshotting is only supported by Frida's V8 runtime (the
+        QuickJS runtime this bridge otherwise defaults to raises
+        ``InvalidArgumentError`` for it), so the throwaway VM used to take
+        the snapshot is explicitly started with ``runtime="v8"`` regardless
+        of the process-wide default.
+
+        Args:
+            embed_script: JavaScript run inside the throwaway VM whose heap
+                state will be captured.
+            warmup_script: Optional additional JavaScript run after
+                ``embed_script`` to perform one-time setup work before the
+                snapshot is taken.
+
+        Returns:
+            str: Hex-encoded snapshot bytes, usable via
+                :meth:`load_script_with_snapshot`.
+
+        Raises:
+            ToolError: If not attached or snapshotting fails.
+        """
+        if self._session is None:
+            _logger.error("frida_not_attached", operation="snapshot_script")
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        try:
+            snapshot: bytes = await asyncio.to_thread(
+                self._session.snapshot_script,
+                embed_script,
+                warmup_script,
+                _SNAPSHOT_SCRIPT_RUNTIME,
+            )
+        except Exception as e:
+            _logger.warning("frida_snapshot_script_failed", error=str(e))
+            raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e)) from e
+
+        _logger.info("script_snapshotted", embed_length=len(embed_script), snapshot_length=len(snapshot))
+        return snapshot.hex()
+
+    async def load_script_with_snapshot(self, source: str, snapshot_hex: str) -> str:
+        """Create and load a persistent script warm-started from a script-VM snapshot.
+
+        The new script is started with ``runtime="v8"`` to match the engine
+        that produced the snapshot in :meth:`snapshot_script` -- a snapshot
+        taken under V8 does not apply to a QuickJS VM.
+
+        Args:
+            source: JavaScript source for the new script.
+            snapshot_hex: Hex-encoded snapshot bytes from :meth:`snapshot_script`.
+
+        Returns:
+            str: Script ID for later unloading via :meth:`unload_script`.
+
+        Raises:
+            ToolError: If not attached, ``snapshot_hex`` is not valid hex, or
+                loading fails.
+        """
+        if self._session is None:
+            _logger.error("frida_not_attached", operation="load_script_with_snapshot")
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        try:
+            snapshot = bytes.fromhex(snapshot_hex)
+        except ValueError as e:
+            raise ToolError(_ERR_SCRIPT_FAILED, details={"reason": "invalid hex snapshot"}) from e
+
+        script_id = str(uuid.uuid4())[:8]
+        try:
+            script = await asyncio.to_thread(
+                self._session.create_script,
+                source,
+                None,
+                snapshot,
+                _SNAPSHOT_SCRIPT_RUNTIME,
+            )
+        except Exception as e:
+            _logger.warning("frida_load_script_with_snapshot_failed", error=str(e))
+            raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e)) from e
+
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Forward snapshot-started script messages to the bridge dispatcher.
+
+            Args:
+                message: Message payload emitted by the snapshot-started script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            self._dispatch_message(dict(cast("dict[str, object]", message)))
+
+        script.on("message", on_message)
+        await asyncio.to_thread(script.load)
+
+        self._scripts[script_id] = script
+        _logger.info("snapshot_script_loaded", script_id=script_id)
+        return script_id
+
     async def intercept_return(self, target: str, return_value: int) -> HookInfo:
         """Intercept a function and replace its return value.
 
@@ -3483,6 +4537,118 @@ class _FridaBridgeBase(InstrumentationBridge):
         _logger.debug("imports_enumerated", module_name=module_name, count=len(imports))
         return imports
 
+    async def enumerate_module_sections(self, module_name: str) -> list[ModuleSectionInfo]:
+        """List a module's binary sections.
+
+        Args:
+            module_name: Name of the module.
+
+        Returns:
+            list[ModuleSectionInfo]: List of section information.
+
+        Raises:
+            ToolError: If not attached, the module is not found, or the
+                operation fails.
+        """
+        _logger.debug("frida_enumerate_module_sections_started", module_name=module_name)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        escaped_module = self._escape_js_string(module_name)
+        script_code = f"""
+        var mod = Process.findModuleByName('{escaped_module}');
+        if (!mod) {{
+            send({{ type: 'sections', error: 'module_not_found', data: [] }});
+        }} else {{
+            var sections = mod.enumerateSections();
+            var result = sections.map(function(s) {{
+                return {{ id: s.id, name: s.name, address: s.address.toString(), size: s.size }};
+            }});
+            send({{ type: 'sections', data: result }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if result.get("error") == "module_not_found":
+            raise ToolError(_ERR_MODULE_NOT_FOUND, details={"module": module_name})
+        if "error" in result:
+            raise ToolError(_ERR_READ_FAILED)
+
+        sections: list[ModuleSectionInfo] = []
+        section_data = result.get("data", [])
+        if isinstance(section_data, list):
+            for raw_section in cast("list[object]", section_data):
+                if not isinstance(raw_section, dict):
+                    continue
+                entry = cast("dict[str, object]", raw_section)
+                addr_str = str(entry.get("address", "0"))
+                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+                size_val = entry.get("size", 0)
+                sections.append(
+                    ModuleSectionInfo(
+                        id=str(entry.get("id", "")),
+                        name=str(entry.get("name", "")),
+                        address=addr,
+                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    ),
+                )
+
+        _logger.debug("module_sections_enumerated", module_name=module_name, count=len(sections))
+        return sections
+
+    async def enumerate_module_dependencies(self, module_name: str) -> list[ModuleDependencyInfo]:
+        """List a module's shared-library dependencies.
+
+        Args:
+            module_name: Name of the module.
+
+        Returns:
+            list[ModuleDependencyInfo]: List of dependency information.
+
+        Raises:
+            ToolError: If not attached, the module is not found, or the
+                operation fails.
+        """
+        _logger.debug("frida_enumerate_module_dependencies_started", module_name=module_name)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        escaped_module = self._escape_js_string(module_name)
+        script_code = f"""
+        var mod = Process.findModuleByName('{escaped_module}');
+        if (!mod) {{
+            send({{ type: 'dependencies', error: 'module_not_found', data: [] }});
+        }} else {{
+            var deps = mod.enumerateDependencies();
+            var result = deps.map(function(d) {{
+                return {{ name: d.name, type: d.type }};
+            }});
+            send({{ type: 'dependencies', data: result }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if result.get("error") == "module_not_found":
+            raise ToolError(_ERR_MODULE_NOT_FOUND, details={"module": module_name})
+        if "error" in result:
+            raise ToolError(_ERR_READ_FAILED)
+
+        dependencies: list[ModuleDependencyInfo] = []
+        dep_data = result.get("data", [])
+        if isinstance(dep_data, list):
+            for raw_dep in cast("list[object]", dep_data):
+                if not isinstance(raw_dep, dict):
+                    continue
+                entry = cast("dict[str, object]", raw_dep)
+                dependencies.append(
+                    ModuleDependencyInfo(name=str(entry.get("name", "")), type=str(entry.get("type", ""))),
+                )
+
+        _logger.debug("module_dependencies_enumerated", module_name=module_name, count=len(dependencies))
+        return dependencies
+
     @override
     async def enumerate_threads(self) -> list[ThreadInfo]:
         """List all threads in the attached process.
@@ -3675,6 +4841,45 @@ class _FridaBridgeBase(InstrumentationBridge):
             protection=protection,
         )
         return True
+
+    async def query_memory_protection(self, address: int) -> str:
+        """Read back the current page protection of a memory address.
+
+        Args:
+            address: Address to query.
+
+        Returns:
+            str: Protection flags in rwx-triplet form (e.g. 'r-x').
+
+        Raises:
+            ToolError: If not attached or the query fails.
+        """
+        _logger.debug("frida_query_memory_protection_started", address=hex(address))
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        validated_address = self._validate_js_int(address, name="address")
+
+        script_code = f"""
+        try {{
+            var protection = Memory.queryProtection(ptr({validated_address}));
+            send({{ type: 'query_protection', success: true, protection: protection }});
+        }} catch (e) {{
+            send({{ type: 'query_protection', success: false, error: e.message }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if "error" in result:
+            raise ToolError(_ERR_READ_FAILED)
+
+        if not result.get("success", False):
+            raise ToolError(_ERR_READ_FAILED, details={"reason": str(result.get("error", ""))})
+
+        protection = str(result.get("protection", ""))
+        _logger.debug("memory_protection_queried", address=hex(validated_address), protection=protection)
+        return protection
 
     async def find_base_address(self, module_name: str) -> int:
         """Get the base address of a loaded module.
@@ -3998,6 +5203,121 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._hooks[hook_id] = hook_info
 
         _logger.info("function_replaced", hook_id=hook_id, target=target)
+        return hook_info
+
+    async def replace_function_fast(
+        self,
+        target: str,
+        replacement_code: str,
+        *,
+        calling_convention: str = "default",
+    ) -> HookInfo:
+        """Replace a function using Interceptor.replaceFast (low-overhead trampoline replace).
+
+        Unlike :meth:`replace_function` (``Interceptor.replace``), the target
+        is modified to vector directly to the replacement, and a pointer to a
+        trampoline for calling the original implementation is returned on
+        ``HookInfo.original_trampoline``.
+
+        Args:
+            target: Function name (module!func) or hex address.
+            replacement_code: JavaScript body defining the NativeCallback.
+            calling_convention: Calling convention for the replacement.
+
+        Returns:
+            HookInfo: Hook information, with ``original_trampoline`` set to
+                the pointer for calling the original implementation.
+
+        Raises:
+            ToolError: If replacement fails.
+        """
+        _logger.info("frida_replace_function_fast_started", target=target, calling_convention=calling_convention)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        if calling_convention not in _VALID_CALLING_CONVENTIONS:
+            raise ToolError(_ERR_REPLACE_FAILED, details={"reason": f"invalid calling convention: {calling_convention}"})
+
+        hook_id = str(uuid.uuid4())[:8]
+        addr_resolve = self._resolve_target_js(target)
+
+        script_code = f"""
+        var targetAddr = {addr_resolve};
+        recv('install_replacement_fast', function(msg) {{
+            try {{
+                var replacement = (new Function('return (' + msg.replacementCode + ')'))();
+                var original = Interceptor.replaceFast(targetAddr, replacement);
+                send({{
+                    type: 'replaced_fast',
+                    address: targetAddr.toString(),
+                    original: original.toString(),
+                    callingConvention: msg.callingConvention || null
+                }});
+            }} catch (e) {{
+                send({{ type: 'replace_fast_error', error: e.message }});
+            }}
+        }});
+        send({{ type: 'replace_fast_ready' }});
+        """
+
+        script = await asyncio.to_thread(self._session.create_script, script_code)
+
+        messages, on_message, installed_event = self._make_install_waiter({"replaced_fast", "replace_fast_error"})
+        script.on("message", on_message)
+        await asyncio.to_thread(script.load)
+
+        cc_payload = calling_convention if calling_convention != "default" else None
+        await asyncio.to_thread(
+            script.post,
+            {"type": "install_replacement_fast", "replacementCode": replacement_code, "callingConvention": cc_payload},
+        )
+
+        try:
+            await asyncio.wait_for(installed_event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("replace_fast_install_timeout", target=target)
+            raise ToolError(_ERR_REPLACE_FAILED) from e
+
+        address = await self._resolve_install_address(
+            script=script,
+            messages=messages,
+            target=target,
+            success_type="replaced_fast",
+            error_type="replace_fast_error",
+            error_constant=_ERR_REPLACE_FAILED,
+            log_prefix="replace_fast",
+        )
+
+        original_trampoline: int | None = None
+        for msg in messages:
+            msg_type = msg.get("type")
+            if msg_type != "send":
+                continue
+            payload = msg.get("payload", {})
+            if not isinstance(payload, dict):
+                continue
+            payload_dict = cast("dict[str, object]", payload)
+            if payload_dict.get("type") != "replaced_fast":
+                continue
+            original_val = payload_dict.get("original")
+            if isinstance(original_val, str):
+                original_trampoline = int(original_val, 16) if original_val.startswith("0x") else int(original_val)
+            break
+
+        self._scripts[hook_id] = script
+
+        hook_info = HookInfo(
+            id=hook_id,
+            target=target,
+            address=address,
+            script_id=hook_id,
+            active=True,
+            original_trampoline=original_trampoline,
+        )
+        self._hooks[hook_id] = hook_info
+
+        _logger.info("function_replaced_fast", hook_id=hook_id, target=target, original_trampoline=original_trampoline)
         return hook_info
 
     async def enumerate_processes(self) -> list[FridaProcessEntry]:
@@ -4364,6 +5684,10 @@ class _FridaBridgeBase(InstrumentationBridge):
         program: str,
         argv: Sequence[str | bytes],
         cancellable: frida.Cancellable | None,
+        *,
+        env: dict[str, str] | None = None,
+        cwd: str | None = None,
+        stdio: str | None = None,
     ) -> int:
         """Invoke ``Device.spawn`` honoring an optional cancellation token.
 
@@ -4373,14 +5697,17 @@ class _FridaBridgeBase(InstrumentationBridge):
             argv: Argument vector for the spawned process.
             cancellable: Optional cancellation token; entered as Frida's
                 thread-local cancellable scope around the call when provided.
+            env: Environment variables to merge onto the inherited environment.
+            cwd: Working directory for the spawned process.
+            stdio: Stdio mode for the spawned process ("inherit" or "pipe").
 
         Returns:
             int: PID of the spawned process.
         """
         if cancellable is not None:
             with cancellable:
-                return device.spawn(program, argv=list(argv))
-        return device.spawn(program, argv=list(argv))
+                return device.spawn(program, argv=list(argv), env=env, cwd=cwd, stdio=stdio)
+        return device.spawn(program, argv=list(argv), env=env, cwd=cwd, stdio=stdio)
 
     @staticmethod
     def _create_script_with_cancellable(
@@ -4430,6 +5757,68 @@ class _FridaBridgeBase(InstrumentationBridge):
                 off_fn("process-crashed", handler)
         self._crash_handler = None
         self._crash_reporting_enabled = False
+
+    def _teardown_device_change_notifications(self) -> None:
+        """Best-effort detach of the device-changed handler called from :meth:`shutdown`.
+
+        Mirrors :meth:`disable_device_change_notifications` but never raises so it does not interrupt the rest of the shutdown sequence.
+        """
+        try:
+            self._detach_device_manager_changed_handler()
+        except Exception:
+            _logger.exception("device_change_notifications_teardown_failed")
+
+    def _detach_device_manager_changed_handler(self) -> None:
+        """Drop the registered device-manager "changed" handler if one is currently active.
+
+        Shared core for :meth:`disable_device_change_notifications` and :meth:`_teardown_device_change_notifications`; the public methods
+        differ only in whether errors are surfaced or logged.
+        """
+        if not self._device_change_notifications_enabled:
+            return
+        handler = self._device_manager_changed_handler
+        if handler is not None:
+            manager = frida.get_device_manager()
+            off_fn = getattr(manager, "off", None)
+            if callable(off_fn):
+                off_fn("changed", handler)
+        self._device_manager_changed_handler = None
+        self._device_change_notifications_enabled = False
+
+    def _teardown_device_lost_notifications(self) -> None:
+        """Best-effort detach of the device-lost handler called from :meth:`shutdown`.
+
+        Mirrors :meth:`disable_device_lost_notifications` but never raises so it does not interrupt the rest of the shutdown sequence.
+        """
+        try:
+            self._detach_device_lost_handler()
+        except Exception:
+            _logger.exception("device_lost_notifications_teardown_failed")
+
+    def _detach_device_lost_handler(self) -> None:
+        """Drop the registered device "lost" handler if one is currently active.
+
+        Detaches from the device the handler was actually registered on
+        (tracked separately in ``self._device_lost_handler_target``) rather
+        than the bridge's current ``self._device``, since the handler's own
+        callback clears ``self._device`` the moment the signal fires -
+        by the time this runs, the device that is now lost may no longer be
+        reachable through ``self._device`` at all. Shared core for
+        :meth:`disable_device_lost_notifications` and
+        :meth:`_teardown_device_lost_notifications`; the public methods
+        differ only in whether errors are surfaced or logged.
+        """
+        if not self._device_lost_notifications_enabled:
+            return
+        device = self._device_lost_handler_target
+        handler = self._device_lost_handler
+        if device is not None and handler is not None:
+            off_fn = getattr(device, "off", None)
+            if callable(off_fn):
+                off_fn("lost", handler)
+        self._device_lost_handler = None
+        self._device_lost_handler_target = None
+        self._device_lost_notifications_enabled = False
 
     @staticmethod
     def _build_native_call_script(
@@ -4484,7 +5873,328 @@ class _FridaBridgeBase(InstrumentationBridge):
         return 0
 
 
-class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
+class _FridaBridgeSessionChildGatingMixin(_FridaBridgeBase):
+    """Session-scoped (``Session.enable_child_gating``) true child-process gating for the Frida bridge.
+
+    Kept as a separate mixin from :class:`_FridaBridgeAnalysisMixin` purely
+    to keep each class's own public method count under this project's
+    ``too-many-public-methods`` lint ceiling; the four methods below are
+    still reachable as ordinary ``FridaBridge`` methods via the normal
+    method-resolution order.
+    """
+
+    async def enable_session_child_gating(self) -> None:
+        """Enable session-scoped child-process gating.
+
+        Unlike :meth:`enable_child_gating` (device-wide: every new process
+        the *device* observes launches suspended), this calls
+        :meth:`frida.Session.enable_child_gating`, which gates only
+        processes spawned as true children of the currently attached
+        session's target. Pending children are reported through the
+        device's ``"child-added"``/``"child-removed"`` signals - the same
+        pairing the official frida-python example uses alongside
+        session-scoped gating - and can be queried directly at any time
+        with :meth:`get_pending_session_children`.
+
+        Raises:
+            ToolError: If not attached, no device is available, or gating
+                cannot be enabled.
+        """
+        _logger.info("frida_enable_session_child_gating_started")
+        session = self._session
+        if session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        if self._session_child_gating_enabled:
+            return
+
+        def on_child_added(child: object) -> None:
+            """Record a pending true child reported by the device.
+
+            Extracts identifying attributes from the Frida ``Child`` object,
+            appends a ``ChildProcessInfo`` record to the session-gated-
+            children list (unless it is already tracked), and publishes a
+            ``session_child_added`` dispatch message.
+
+            Args:
+                child: Frida ``Child`` object describing the pending process.
+            """
+            child_pid = int(getattr(child, "pid", 0))
+            info = ChildProcessInfo(
+                pid=child_pid,
+                parent_pid=int(getattr(child, "parent_pid", 0) or 0),
+                origin=str(getattr(child, "origin", "")),
+                identifier=getattr(child, "identifier", None),
+                path=getattr(child, "path", None),
+                argv=list(getattr(child, "argv", []) or []),
+            )
+            _logger.info("session_child_gating_pending_child_added", pid=child_pid)
+            with self._session_gated_children_lock:
+                if not any(existing.pid == child_pid for existing in self._session_gated_children):
+                    self._session_gated_children.append(info)
+            self._dispatch_message({
+                "type": "send",
+                "payload": {
+                    "type": "session_child_added",
+                    "pid": child_pid,
+                },
+            })
+
+        def on_child_removed(child: object) -> None:
+            """Drop a pending true child once the device reports it is no longer gated.
+
+            Fires whether the child was removed by
+            :meth:`resume_session_child`, by some other Frida client acting
+            on the same device, or because the process exited while
+            suspended, so the tracked list never goes stale.
+
+            Args:
+                child: Frida ``Child`` object describing the removed process.
+            """
+            child_pid = int(getattr(child, "pid", 0))
+            self._remove_session_gated_child(child_pid)
+            _logger.info("session_child_gating_pending_child_removed", pid=child_pid)
+            self._dispatch_message({
+                "type": "send",
+                "payload": {
+                    "type": "session_child_removed",
+                    "pid": child_pid,
+                },
+            })
+
+        try:
+            self._register_session_child_gating_handlers(device, on_child_added, on_child_removed)
+            await asyncio.to_thread(session.enable_child_gating)
+            self._session_child_gating_enabled = True
+            _logger.info("session_child_gating_enabled")
+        except frida.NotSupportedError as e:
+            self._detach_session_child_gating_handlers()
+            _logger.warning("session_child_gating_enable_not_supported", error=str(e))
+            raise ToolError(
+                _ERR_CHILD_GATING_NOT_SUPPORTED,
+                details={"reason": _ERR_CHILD_GATING_NOT_SUPPORTED},
+            ) from e
+        except Exception as e:
+            self._detach_session_child_gating_handlers()
+            reason = str(e) or type(e).__name__
+            _logger.warning("session_child_gating_enable_failed", error=reason)
+            raise ToolError(_ERR_CHILD_GATING_FAILED, details={"reason": reason}) from e
+
+    async def disable_session_child_gating(self) -> None:
+        """Disable session-scoped child-process gating.
+
+        Raises:
+            ToolError: If not attached or gating cannot be disabled.
+        """
+        _logger.info("frida_disable_session_child_gating_started")
+        session = self._session
+        if session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        if self._device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        if not self._session_child_gating_enabled:
+            return
+
+        try:
+            await asyncio.to_thread(session.disable_child_gating)
+            self._reset_session_child_gating_state()
+            _logger.info("session_child_gating_disabled")
+        except frida.NotSupportedError as e:
+            _logger.warning("session_child_gating_disable_not_supported", error=str(e))
+            raise ToolError(
+                _ERR_CHILD_GATING_NOT_SUPPORTED,
+                details={"reason": _ERR_CHILD_GATING_NOT_SUPPORTED},
+            ) from e
+        except Exception as e:
+            _logger.warning("session_child_gating_disable_failed", error=str(e))
+            raise ToolError(_ERR_CHILD_GATING_FAILED) from e
+
+    async def get_pending_session_children(self) -> list[ChildProcessInfo]:
+        """Get the true children currently suspended by session-scoped gating.
+
+        Queries the device directly via ``enumerate_pending_children`` (the
+        session-scoped counterpart of ``enumerate_pending_spawn``) rather
+        than relying solely on the cached ``"child-added"``/
+        ``"child-removed"`` event cache, so the returned list is correct
+        even if a device event was missed. The in-memory cache used by
+        :meth:`resume_session_child` is resynchronized to this authoritative
+        result.
+
+        Returns:
+            list[ChildProcessInfo]: List of pending true-child information.
+
+        Raises:
+            ToolError: If not attached, no Frida device is available,
+                session-scoped gating is not supported on this OS, or
+                enumeration otherwise fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        try:
+            pending = await asyncio.to_thread(device.enumerate_pending_children)
+        except frida.NotSupportedError as e:
+            _logger.warning("pending_session_children_query_not_supported", error=str(e))
+            raise ToolError(
+                _ERR_CHILD_GATING_NOT_SUPPORTED,
+                details={"reason": _ERR_CHILD_GATING_NOT_SUPPORTED},
+            ) from e
+        except (frida.ServerNotRunningError, frida.TransportError, frida.InvalidOperationError, OSError) as e:
+            _logger.warning("pending_session_children_query_failed", error=str(e))
+            raise ToolError(_ERR_CHILD_GATING_FAILED, details=self._frida_error_details(e)) from e
+
+        result = [
+            ChildProcessInfo(
+                pid=int(getattr(child, "pid", 0)),
+                parent_pid=int(getattr(child, "parent_pid", 0) or 0),
+                origin=str(getattr(child, "origin", "")),
+                identifier=getattr(child, "identifier", None),
+                path=getattr(child, "path", None),
+                argv=list(getattr(child, "argv", []) or []),
+            )
+            for child in pending
+        ]
+
+        with self._session_gated_children_lock:
+            self._session_gated_children = list(result)
+
+        _logger.debug("pending_session_children_queried", count=len(result))
+        return result
+
+    async def resume_session_child(self, pid: int) -> None:
+        """Resume a true child process suspended by session-scoped gating.
+
+        Args:
+            pid: PID of the suspended child to resume, as reported by
+                :meth:`get_pending_session_children`.
+
+        Raises:
+            ToolError: If not attached, no device is available, or resume fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        try:
+            await asyncio.to_thread(device.resume, pid)
+            self._remove_session_gated_child(pid)
+            _logger.info("session_child_resumed", pid=pid)
+        except Exception as e:
+            _logger.warning("session_child_resume_failed", pid=pid, error=str(e))
+            raise ToolError(_ERR_CHILD_GATING_FAILED) from e
+
+
+class _FridaBridgeScriptControlMixin(_FridaBridgeSessionChildGatingMixin):
+    """Per-script debugger attach/detach controls for the Frida bridge.
+
+    Kept as a separate mixin from :class:`_FridaBridgeAnalysisMixin` purely
+    to keep each class's own public method count under this project's
+    ``too-many-public-methods`` lint ceiling; the methods below are still
+    reachable as ordinary ``FridaBridge`` methods via the normal
+    method-resolution order.
+    """
+
+    async def enable_script_debugger(self, script_id: str, port: int = _DEFAULT_SCRIPT_DEBUGGER_PORT) -> bool:
+        """Attach a V8 Inspector-protocol debugger to a running script.
+
+        Args:
+            script_id: ID of the target script.
+            port: TCP port the inspector protocol listens on. Defaults to the
+                conventional V8/Node inspector port (9229) rather than Frida's
+                own ``port=0`` "pick any free port" default, since
+                ``Script.enable_debugger`` returns ``None`` and there is no way
+                to discover an OS-chosen port after the fact.
+
+        Returns:
+            bool: True if the debugger was enabled successfully.
+
+        Raises:
+            ToolError: If the script is not found or enabling the debugger fails.
+        """
+        if script_id not in self._scripts:
+            _logger.error("frida_script_not_found", script_id=script_id, operation="enable_script_debugger")
+            raise ToolError(_ERR_SCRIPT_NOT_FOUND)
+
+        script = self._scripts[script_id]
+        try:
+            await asyncio.to_thread(script.enable_debugger, port)
+        except Exception as e:
+            _logger.warning("frida_enable_script_debugger_failed", script_id=script_id, port=port, error=str(e))
+            raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e, script_id=script_id, port=port)) from e
+
+        _logger.info("script_debugger_enabled", script_id=script_id, port=port)
+        return True
+
+    async def disable_script_debugger(self, script_id: str) -> bool:
+        """Detach the V8 Inspector-protocol debugger from a running script.
+
+        Args:
+            script_id: ID of the target script.
+
+        Returns:
+            bool: True if the debugger was disabled successfully.
+
+        Raises:
+            ToolError: If the script is not found or disabling the debugger fails.
+        """
+        if script_id not in self._scripts:
+            _logger.error("frida_script_not_found", script_id=script_id, operation="disable_script_debugger")
+            raise ToolError(_ERR_SCRIPT_NOT_FOUND)
+
+        script = self._scripts[script_id]
+        try:
+            await asyncio.to_thread(script.disable_debugger)
+        except Exception as e:
+            _logger.warning("frida_disable_script_debugger_failed", script_id=script_id, error=str(e))
+            raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e, script_id=script_id)) from e
+
+        _logger.info("script_debugger_disabled", script_id=script_id)
+        return True
+
+    async def terminate_script(self, script_id: str) -> bool:
+        """Forcibly terminate a script's runtime immediately, without graceful teardown.
+
+        Unlike :meth:`unload_script`, which performs an orderly async teardown
+        requiring the script's own runtime to cooperate, this stops the
+        runtime immediately even if the script is stuck in a synchronous
+        infinite loop or blocked in a long-running native call - the scenario
+        a graceful unload can never recover from.
+
+        Args:
+            script_id: ID of the target script.
+
+        Returns:
+            bool: True if the script was terminated successfully.
+
+        Raises:
+            ToolError: If the script is not found or termination fails.
+        """
+        if script_id not in self._scripts:
+            _logger.error("frida_script_not_found", script_id=script_id, operation="terminate_script")
+            raise ToolError(_ERR_SCRIPT_NOT_FOUND)
+
+        script = self._scripts[script_id]
+        try:
+            await asyncio.to_thread(script.terminate)
+        except Exception as e:
+            _logger.warning("frida_terminate_script_failed", script_id=script_id, error=str(e))
+            raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e, script_id=script_id)) from e
+
+        self._forget_script_registries(script_id)
+        _logger.info("script_terminated", script_id=script_id)
+        return True
+
+
+class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
     """Stalker tracing, child gating, crash reporting, and Objective-C surface for the Frida bridge."""
 
     async def stalker_follow(
@@ -4545,6 +6255,15 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
 
         recv('stalker_unfollow_request', function(msg) {{
             stopStalker();
+        }});
+
+        recv('stalker_flush_request', function(msg) {{
+            try {{
+                Stalker.flush();
+                send({{ type: 'stalker_flushed', tid: tid }});
+            }} catch (e) {{
+                send({{ type: 'stalker_flush_error', error: e.message, tid: tid }});
+            }}
         }});
 
         Stalker.follow(tid, {{
@@ -4895,6 +6614,113 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             _logger.warning("child_resume_failed", pid=pid, error=str(e))
             raise ToolError(_ERR_CHILD_GATING_FAILED) from e
 
+    async def enable_device_change_notifications(self) -> None:
+        """Enable live notifications when the Frida device list changes.
+
+        Registers a callback on ``DeviceManager``'s ``"changed"`` signal, which
+        fires with no arguments whenever a device is added, removed, or
+        otherwise changes anywhere in the manager (USB attach/detach, a remote
+        endpoint added or removed by any client) - the same signal a manual
+        "Refresh Devices" click responds to, delivered live instead.
+
+        Raises:
+            ToolError: If the handler cannot be registered.
+        """
+        _logger.info("frida_enable_device_change_notifications_started")
+        if self._device_change_notifications_enabled:
+            return
+
+        def on_devices_changed() -> None:
+            """Publish a ``device_list_changed`` dispatch message when the device manager's list changes."""
+            _logger.info("frida_device_list_changed")
+            self._dispatch_message({"type": "send", "payload": {"type": "device_list_changed"}})
+
+        manager = frida.get_device_manager()
+        try:
+            manager.on("changed", on_devices_changed)
+        except Exception as e:
+            _logger.warning("device_change_notifications_enable_failed", error=str(e))
+            raise ToolError(_ERR_DEVICE_FAILED) from e
+
+        self._device_manager_changed_handler = on_devices_changed
+        self._device_change_notifications_enabled = True
+        _logger.info("device_change_notifications_enabled")
+
+    async def disable_device_change_notifications(self) -> None:
+        """Disable live device-list-changed notifications.
+
+        Idempotent; safe to call when notifications were never enabled.
+
+        Raises:
+            ToolError: If detaching the handler fails for a reason other than
+                the device manager already being torn down.
+        """
+        try:
+            self._detach_device_manager_changed_handler()
+        except Exception as e:
+            _logger.warning("device_change_notifications_disable_failed", error=str(e))
+            raise ToolError(_ERR_DEVICE_FAILED, details=self._frida_error_details(e)) from e
+        _logger.info("device_change_notifications_disabled")
+
+    async def enable_device_lost_notifications(self) -> None:
+        """Enable notification when the currently connected device is lost.
+
+        Registers a callback on the active ``Device``'s ``"lost"`` signal,
+        which fires with no arguments when the device itself becomes
+        unavailable (USB unplugged, remote connection dropped, local provider
+        gone) - distinct from :meth:`_register_session_detached_handler`,
+        which reacts to the *session* being torn down while the device may
+        still be reachable. Resets the bridge's connection state and publishes
+        a ``device_lost`` message when the signal fires.
+
+        Raises:
+            ToolError: If no device is available or the handler cannot be
+                registered.
+        """
+        _logger.info("frida_enable_device_lost_notifications_started")
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        if self._device_lost_notifications_enabled:
+            return
+
+        def on_device_lost() -> None:
+            """Reset connection state and publish a ``device_lost`` message when the device is lost."""
+            _logger.warning("frida_device_lost")
+            self._device = None
+            self.state.connected = False
+            self.state.last_error = "device lost"
+            self._publish_tool_state()
+            self._dispatch_message({"type": "send", "payload": {"type": "device_lost"}})
+
+        try:
+            device.on("lost", on_device_lost)
+        except Exception as e:
+            _logger.warning("device_lost_notifications_enable_failed", error=str(e))
+            raise ToolError(_ERR_DEVICE_FAILED, details=self._frida_error_details(e)) from e
+
+        self._device_lost_handler = on_device_lost
+        self._device_lost_handler_target = device
+        self._device_lost_notifications_enabled = True
+        _logger.info("device_lost_notifications_enabled")
+
+    async def disable_device_lost_notifications(self) -> None:
+        """Disable device-lost notifications.
+
+        Idempotent; safe to call when notifications were never enabled.
+
+        Raises:
+            ToolError: If detaching the handler fails for a reason other than
+                the device already being gone.
+        """
+        try:
+            self._detach_device_lost_handler()
+        except Exception as e:
+            _logger.warning("device_lost_notifications_disable_failed", error=str(e))
+            raise ToolError(_ERR_DEVICE_FAILED, details=self._frida_error_details(e)) from e
+        _logger.info("device_lost_notifications_disabled")
+
     async def enable_crash_reporting(self) -> None:
         """Enable crash event monitoring for attached processes.
 
@@ -5092,6 +6918,34 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             device_type=str(device.type),
         )
 
+    async def remove_remote_device(self, host: str) -> None:
+        """Remove a previously-added remote Frida device.
+
+        Args:
+            host: The ``host[:port]`` of the remote device to remove, exactly as
+                passed to :meth:`connect_device` with ``device_type="remote"``.
+
+        Raises:
+            ToolError: If the device manager cannot remove the endpoint.
+        """
+        manager = frida.get_device_manager()
+        try:
+            await asyncio.to_thread(manager.remove_remote_device, host)
+        except Exception as e:
+            _logger.warning("remote_device_remove_failed", host=host, error=str(e))
+            raise ToolError(_ERR_DEVICE_FAILED, details=self._frida_error_details(e, host=host)) from e
+
+        if self._device is not None and str(getattr(self._device, "type", "")) == "remote" and str(getattr(self._device, "id", "")) == host:
+            if self._session is not None:
+                try:
+                    await self.detach(kill_spawned=False)
+                except ToolError:
+                    _logger.exception("session_release_before_device_removal_failed")
+            self._device = None
+            self._publish_tool_state()
+
+        _logger.info("remote_device_removed", host=host)
+
     async def post_message(self, script_id: str, message: str) -> bool:
         """Send a message from Python to a running Frida script.
 
@@ -5179,6 +7033,34 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
         else:
             _logger.debug("rpc_call_complete", method=method_name)
             return result
+
+    async def list_rpc_exports(self, script_id: str) -> list[str]:
+        """Discover which RPC exports a running script provides.
+
+        Args:
+            script_id: ID of the target script.
+
+        Returns:
+            list[str]: Export names exactly as declared in the script's
+                ``rpc.exports`` object (camelCase, if so written) - pass one of
+                these names directly to :meth:`rpc_call`.
+
+        Raises:
+            ToolError: If the script is not found or the query fails.
+        """
+        if script_id not in self._scripts:
+            _logger.error("frida_script_not_found", script_id=script_id, operation="list_rpc_exports")
+            raise ToolError(_ERR_SCRIPT_NOT_FOUND)
+
+        script = self._scripts[script_id]
+        try:
+            exports: list[str] = await asyncio.to_thread(script.list_exports_sync)
+        except Exception as e:
+            _logger.warning("frida_list_rpc_exports_failed", script_id=script_id, error=str(e))
+            raise ToolError(_ERR_RPC_FAILED, details=self._frida_error_details(e, script_id=script_id)) from e
+
+        _logger.debug("rpc_exports_listed", script_id=script_id, count=len(exports))
+        return list(exports)
 
     async def create_cancellable(self) -> str:
         """Create a Frida cancellation token for long-running operations.
@@ -6115,6 +7997,40 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             for app in apps
         ]
 
+    async def get_frontmost_application(self) -> FridaApplicationInfo | None:
+        """Get the frontmost/foreground application on the current device.
+
+        Returns:
+            FridaApplicationInfo | None: The frontmost application, or None if
+                the device reports no frontmost application.
+
+        Raises:
+            ToolError: If the bridge is not initialised or the query itself
+                fails, including when the device does not support this query
+                (``frida.NotSupportedError`` - the confirmed, always-hit case on
+                this codebase's local Windows device; see the native-API
+                section of work order 07-A9).
+        """
+        _logger.debug("frida_get_frontmost_application_started")
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE, details={"reason": "bridge not initialised; call initialize() first"})
+
+        try:
+            app = await asyncio.to_thread(device.get_frontmost_application)
+        except frida.NotSupportedError as e:
+            raise ToolError(_ERR_ENUMERATE_FAILED, details=self._frida_error_details(e)) from e
+        except (frida.ServerNotRunningError, frida.TransportError, frida.InvalidOperationError, OSError) as e:
+            raise ToolError(_ERR_ENUMERATE_FAILED, details=self._frida_error_details(e)) from e
+
+        if app is None:
+            return None
+        return FridaApplicationInfo(
+            identifier=str(getattr(app, "identifier", "")),
+            name=str(getattr(app, "name", "")),
+            pid=int(getattr(app, "pid", 0)),
+        )
+
     async def inject_library_file(self, pid: int, path: str, entrypoint: str, data: str) -> int:
         """Inject a shared library file into a process.
 
@@ -6466,7 +8382,499 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
         return hook_info
 
 
-class FridaBridge(_FridaBridgeAnalysisMixin):
+class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
+    """Stalker.follow custom transform (StalkerTransformer) and standalone flush support for the Frida bridge."""
+
+    async def stalker_follow_with_transform(
+        self,
+        thread_id: int | None = None,
+        events: str = "call",
+        limit: int = 10000,
+        *,
+        transform_code: str,
+    ) -> str:
+        """Start Stalker code tracing with a custom per-basic-block transform.
+
+        Identical to :meth:`stalker_follow` (same event collection, same
+        ``self._stalker_traces``/``self._stalker_scripts`` bookkeeping, torn
+        down the same way via the existing, unmodified :meth:`stalker_unfollow`)
+        except the installed ``Stalker.follow`` call also carries a ``transform``
+        option, letting ``transform_code`` inspect and selectively rewrite each
+        compiled basic block via the ``iterator`` argument
+        (``iterator.next()``/``iterator.keep()``/``iterator.putCallout(...)``/etc.,
+        exactly as Frida's own ``StalkerTransformer`` API documents).
+
+        Args:
+            thread_id: Thread ID to trace. None for current thread.
+            events: Comma-separated event types (call, ret, exec, block, compile).
+            limit: Maximum events to collect before auto-stop.
+            transform_code: JavaScript statements executed once per instruction
+                inside the transform's iteration loop; receives ``instruction``
+                and ``iterator`` in scope and is responsible for calling
+                ``iterator.keep()`` (or another ``put*`` method) for every
+                instruction it wants preserved - an instruction it does not act
+                on is dropped from the recompiled block, matching Frida's own
+                documented behavior.
+
+        Returns:
+            str: Trace ID for later retrieval via :meth:`stalker_unfollow`.
+
+        Raises:
+            ToolError: If Stalker fails to start.
+        """
+        _logger.info(
+            "frida_stalker_follow_with_transform_started",
+            thread_id=thread_id,
+            events=events,
+            limit=limit,
+        )
+        if self._session is None:
+            _logger.error("frida_not_attached", operation="stalker_follow_with_transform")
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        event_list = [e.strip() for e in events.split(",")]
+        event_config_parts = [f"{evt}: true" for evt in event_list]
+        event_config = ", ".join(event_config_parts)
+
+        effective_tid = thread_id if thread_id is not None else 0
+        with self._stalker_traces_lock:
+            self._stalker_traces[effective_tid] = []
+
+        tid_js = str(thread_id) if thread_id is not None else "Process.getCurrentThreadId()"
+
+        validated_limit = self._validate_js_int(limit, name="limit")
+
+        script_code = f"""
+        var count = 0;
+        var limit = {validated_limit};
+        var batch = [];
+        var tid = {tid_js};
+        var stopped = false;
+
+        function stopStalker() {{
+            if (stopped) return;
+            stopped = true;
+            try {{
+                Stalker.unfollow(tid);
+                Stalker.flush();
+            }} catch (e) {{
+                send({{ type: 'stalker_unfollow_error', error: e.message, tid: tid }});
+                return;
+            }}
+            send({{ type: 'stalker_unfollowed', tid: tid }});
+        }}
+
+        recv('stalker_unfollow_request', function(msg) {{
+            stopStalker();
+        }});
+
+        Stalker.follow(tid, {{
+            events: {{ {event_config} }},
+            onReceive: function(events) {{
+                var parsed = Stalker.parse(events, {{ annotate: true, stringify: false }});
+                parsed.forEach(function(ev) {{
+                    if (count >= limit) return;
+                    count++;
+                    var entry = {{
+                        type: ev[0] || 'exec',
+                        from: ev[1] ? ev[1].toString() : '0',
+                        to: ev[2] ? ev[2].toString() : null,
+                        depth: ev[3] || 0
+                    }};
+                    batch.push(entry);
+                }});
+                if (batch.length > 0) {{
+                    send({{ type: 'stalker_batch', tid: tid, events: batch }});
+                    batch = [];
+                }}
+                if (count >= limit) {{
+                    stopStalker();
+                    send({{ type: 'stalker_done', tid: tid, count: count }});
+                }}
+            }},
+            transform: function (iterator) {{
+                var instruction;
+                while ((instruction = iterator.next()) !== null) {{
+                    {transform_code}
+                }}
+            }}
+        }});
+        send({{ type: 'stalker_started', tid: tid }});
+        """
+
+        script_id = str(uuid.uuid4())[:8]
+        try:
+            script = await asyncio.to_thread(self._session.create_script, script_code)
+        except Exception as e:
+            _logger.warning("stalker_transform_create_script_failed", thread_id=effective_tid, error=str(e))
+            raise ToolError(_ERR_STALKER_FAILED) from e
+
+        captured_tid = effective_tid
+        started_event = asyncio.Event()
+        start_status: dict[str, object] = {}
+
+        def on_stalker_transform_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Parse Stalker batch payloads and forward messages downstream.
+
+            When a ``stalker_batch`` message arrives, the nested event list
+            is decoded and stored against the followed thread identifier.
+            The waiter is released once ``stalker_started`` or any ``error``
+            message is observed. All messages are forwarded to the bridge
+            dispatcher.
+
+            Args:
+                message: Message payload emitted by the Stalker script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            if message["type"] == "send":
+                payload = message.get("payload", {})
+                if isinstance(payload, dict):
+                    payload_dict = cast("dict[str, object]", payload)
+                    inner_type = payload_dict.get("type")
+                    if inner_type == "stalker_batch":
+                        raw_evts = payload_dict.get("events")
+                        if isinstance(raw_evts, list):
+                            self._parse_stalker_batch(captured_tid, cast("list[object]", raw_evts))
+                    elif inner_type == "stalker_started":
+                        start_status["started"] = True
+                        self._set_event_threadsafe(started_event)
+            elif message["type"] == "error":
+                start_status["error"] = message["description"]
+                self._set_event_threadsafe(started_event)
+            self._dispatch_message(dict(cast("dict[str, object]", message)))
+
+        script.on("message", on_stalker_transform_message)
+        try:
+            await asyncio.to_thread(script.load)
+        except Exception as e:
+            _logger.warning("stalker_transform_load_failed", thread_id=effective_tid, error=str(e))
+            raise ToolError(_ERR_STALKER_FAILED) from e
+
+        try:
+            await asyncio.wait_for(started_event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("stalker_transform_start_timeout", thread_id=effective_tid)
+            raise ToolError(_ERR_STALKER_FAILED) from e
+
+        if "error" in start_status:
+            await asyncio.to_thread(script.unload)
+            _logger.warning(
+                "stalker_transform_start_failed",
+                thread_id=effective_tid,
+                description=start_status.get("error", ""),
+            )
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(start_status.get("error", ""))})
+
+        if not start_status.get("started"):
+            await asyncio.to_thread(script.unload)
+            _logger.warning("stalker_transform_not_started", thread_id=effective_tid)
+            raise ToolError(_ERR_STALKER_FAILED)
+
+        self._scripts[script_id] = script
+        self._stalker_scripts[effective_tid] = script_id
+
+        _logger.info(
+            "stalker_follow_with_transform_started",
+            thread_id=effective_tid,
+            events=events,
+            limit=limit,
+        )
+
+        return script_id
+
+    async def stalker_flush(self, thread_id: int | None = None) -> bool:
+        """Flush buffered Stalker events for an active trace without stopping it.
+
+        Posts a request into the running trace's own script (the same script
+        :meth:`stalker_follow` created), which calls the real ``Stalker.flush()``
+        inside that script's context - the trace keeps running afterward and
+        must still be stopped separately via :meth:`stalker_unfollow`.
+
+        Args:
+            thread_id: Thread ID whose active trace should be flushed. None
+                for current thread.
+
+        Returns:
+            bool: True if the flush request was posted successfully.
+
+        Raises:
+            ToolError: If no active trace exists for the thread, or posting
+                the request fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        effective_tid = thread_id if thread_id is not None else 0
+        script_id = self._stalker_scripts.get(effective_tid)
+        if script_id is None:
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": f"no active Stalker trace for thread {effective_tid}"})
+
+        script = self._scripts.get(script_id)
+        if script is None:
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": "stalker script handle missing"})
+
+        try:
+            await asyncio.to_thread(script.post, {"type": "stalker_flush_request", "tid": effective_tid})
+        except Exception as e:
+            _logger.warning("frida_stalker_flush_failed", thread_id=effective_tid, error=str(e))
+            raise ToolError(_ERR_STALKER_FAILED, details=self._frida_error_details(e)) from e
+
+        _logger.info("stalker_flush_requested", thread_id=effective_tid)
+        return True
+
+    async def stalker_follow_call_summary(self, thread_id: int | None = None) -> str:
+        """Start Stalker call-summary tracing on a thread (aggregated call-target counts).
+
+        Lower overhead than :meth:`stalker_follow`'s per-event streaming:
+        instead of every individual call/ret/exec event, Frida aggregates
+        call counts per target address in the current time window via
+        Stalker's ``onCallSummary`` callback. Counts from every summary
+        callback firing are accumulated for the life of the trace.
+
+        Args:
+            thread_id: Thread ID to trace. None for current thread.
+
+        Returns:
+            str: Trace ID for later retrieval via
+                :meth:`stalker_unfollow_call_summary`.
+
+        Raises:
+            ToolError: If Stalker fails to start.
+        """
+        _logger.info("frida_stalker_follow_call_summary_started", thread_id=thread_id)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        effective_tid = thread_id if thread_id is not None else 0
+        with self._stalker_summaries_lock:
+            self._stalker_summaries[effective_tid] = {}
+
+        tid_js = str(thread_id) if thread_id is not None else "Process.getCurrentThreadId()"
+
+        script_code = f"""
+        var tid = {tid_js};
+        var stopped = false;
+
+        function stopStalker() {{
+            if (stopped) return;
+            stopped = true;
+            try {{
+                Stalker.unfollow(tid);
+                Stalker.flush();
+            }} catch (e) {{
+                send({{ type: 'stalker_summary_unfollow_error', error: e.message, tid: tid }});
+                return;
+            }}
+            send({{ type: 'stalker_summary_unfollowed', tid: tid }});
+        }}
+
+        recv('stalker_summary_unfollow_request', function(msg) {{
+            stopStalker();
+        }});
+
+        Stalker.follow(tid, {{
+            events: {{ call: true }},
+            onCallSummary: function(summary) {{
+                send({{ type: 'stalker_call_summary', tid: tid, summary: summary }});
+            }}
+        }});
+        send({{ type: 'stalker_summary_started', tid: tid }});
+        """
+
+        script = await asyncio.to_thread(self._session.create_script, script_code)
+
+        captured_tid = effective_tid
+        started_event = asyncio.Event()
+        start_status: dict[str, object] = {}
+
+        def on_summary_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Accumulate call-summary payloads and forward messages downstream.
+
+            Args:
+                message: Message payload emitted by the Stalker script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            if message["type"] == "send":
+                payload = message.get("payload", {})
+                if isinstance(payload, dict):
+                    payload_dict = cast("dict[str, object]", payload)
+                    inner_type = payload_dict.get("type")
+                    if inner_type == "stalker_call_summary":
+                        raw_summary = payload_dict.get("summary")
+                        if isinstance(raw_summary, dict):
+                            with self._stalker_summaries_lock:
+                                bucket = self._stalker_summaries.setdefault(captured_tid, {})
+                                for key, value in cast("dict[str, object]", raw_summary).items():
+                                    if isinstance(value, (int, float)):
+                                        bucket[key] = bucket.get(key, 0) + int(value)
+                    elif inner_type == "stalker_summary_started":
+                        start_status["started"] = True
+                        self._set_event_threadsafe(started_event)
+            elif message["type"] == "error":
+                start_status["error"] = message["description"]
+                self._set_event_threadsafe(started_event)
+            self._dispatch_message(dict(cast("dict[str, object]", message)))
+
+        script.on("message", on_summary_message)
+        await asyncio.to_thread(script.load)
+
+        try:
+            await asyncio.wait_for(started_event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            raise ToolError(_ERR_STALKER_FAILED) from e
+        if "error" in start_status or not start_status.get("started"):
+            await asyncio.to_thread(script.unload)
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(start_status.get("error", ""))})
+
+        script_id = str(uuid.uuid4())[:8]
+        self._scripts[script_id] = script
+        self._stalker_summary_scripts[effective_tid] = script_id
+        _logger.info("stalker_follow_call_summary_started", thread_id=effective_tid)
+        return script_id
+
+    async def _await_stalker_summary_unfollow_ack(self, script: frida.Script, tid: int) -> None:
+        """Post the call-summary unfollow request and wait for the script to ack it.
+
+        ``onCallSummary`` buffers its aggregated counts until the followed
+        thread is unfollowed (unlike ``onReceive``, which streams batches
+        continuously while the trace runs) -- unloading the owning script
+        immediately after posting the unfollow request, without waiting for
+        an acknowledgement, races the script's own in-flight
+        ``Stalker.unfollow``/``Stalker.flush`` call and can tear the script
+        down before the final ``stalker_call_summary`` payload reaches
+        :meth:`stalker_follow_call_summary`'s accumulation closure.
+
+        Args:
+            script: The script that owns the active Stalker call-summary trace.
+            tid: Effective thread id whose trace is being torn down.
+        """
+        ack_event = asyncio.Event()
+
+        def on_unfollow_ack(message: ScriptMessage, data: bytes | None) -> None:
+            """Release the waiter once the script acknowledges the unfollow request.
+
+            Args:
+                message: Message payload emitted by the Stalker script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            if message["type"] == "send":
+                payload = message.get("payload", {})
+                if isinstance(payload, dict):
+                    inner_type = cast("dict[str, object]", payload).get("type")
+                    if inner_type in {"stalker_summary_unfollowed", "stalker_summary_unfollow_error"}:
+                        self._set_event_threadsafe(ack_event)
+            elif message["type"] == "error":
+                self._set_event_threadsafe(ack_event)
+
+        script.on("message", on_unfollow_ack)
+        try:
+            await asyncio.to_thread(script.post, {"type": "stalker_summary_unfollow_request", "tid": tid})
+            try:
+                await asyncio.wait_for(ack_event.wait(), timeout=5.0)
+            except TimeoutError:
+                _logger.warning("stalker_summary_unfollow_ack_timeout", thread_id=tid)
+        except Exception:
+            _logger.exception("stalker_summary_unfollow_request_failed", thread_id=tid)
+        finally:
+            script.off("message", on_unfollow_ack)
+
+    async def stalker_unfollow_call_summary(self, thread_id: int | None = None) -> StalkerCallSummary:
+        """Stop Stalker call-summary tracing and retrieve the aggregated counts.
+
+        Args:
+            thread_id: Thread ID to stop tracing. None for current thread.
+
+        Returns:
+            StalkerCallSummary: Aggregated call-target counts and duration.
+
+        Raises:
+            ToolError: If unfollow fails.
+        """
+        _logger.info("frida_stalker_unfollow_call_summary_started", thread_id=thread_id)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        effective_tid = thread_id if thread_id is not None else 0
+        start_time = time.monotonic()
+
+        script_id = self._stalker_summary_scripts.pop(effective_tid, None)
+        if script_id is not None:
+            script = self._scripts.get(script_id)
+            if script is not None:
+                await self._await_stalker_summary_unfollow_ack(script, effective_tid)
+            await self._unload_script(script_id)
+
+        with self._stalker_summaries_lock:
+            counts = self._stalker_summaries.pop(effective_tid, {})
+        duration = (time.monotonic() - start_time) * 1000
+
+        _logger.info("stalker_unfollow_call_summary_complete", thread_id=effective_tid, target_count=len(counts))
+        return StalkerCallSummary(thread_id=effective_tid, counts=counts, duration_ms=duration)
+
+    async def find_export_by_name(self, export_name: str, module_name: str | None = None) -> int | None:
+        """Find a single export's address by name, without a full module dump.
+
+        Args:
+            export_name: Name of the export to look up.
+            module_name: Module to scope the lookup to. If None, performs a
+                global lookup across every loaded module (a more costly
+                search, per Frida's own documentation - prefer supplying
+                module_name when it is known).
+
+        Returns:
+            int | None: The export's absolute address, or None if no such
+                export could be found (module-not-found is also reported as
+                None, matching find_module_by_address's own not-found
+                convention).
+
+        Raises:
+            ToolError: If not attached or the lookup itself fails.
+        """
+        _logger.debug("frida_find_export_by_name_started", export_name=export_name, module_name=module_name)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        escaped_export = self._escape_js_string(export_name)
+        if module_name is not None:
+            escaped_module = self._escape_js_string(module_name)
+            lookup_stmt = (
+                f"var mod = Process.findModuleByName('{escaped_module}');\n"
+                f"        var addr = mod ? mod.findExportByName('{escaped_export}') : null;"
+            )
+        else:
+            lookup_stmt = f"var addr = Module.findGlobalExportByName('{escaped_export}');"
+
+        script_code = f"""
+        try {{
+            {lookup_stmt}
+            send({{ type: 'export_lookup', address: addr ? addr.toString() : null }});
+        }} catch (e) {{
+            send({{ type: 'export_lookup', error: e.message }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if "error" in result:
+            raise ToolError(_ERR_EXPORT_NOT_FOUND, details={"reason": str(result.get("error", ""))})
+
+        addr_val = result.get("address")
+        if addr_val is None:
+            _logger.debug("export_not_found", export_name=export_name, module_name=module_name)
+            return None
+
+        s = str(addr_val)
+        address = int(s, 16) if s.startswith("0x") else int(s)
+        _logger.debug("export_found", export_name=export_name, module_name=module_name, address=hex(address))
+        return address
+
+
+class FridaBridge(_FridaBridgeStalkerTransformMixin):
     """Bridge for Frida dynamic instrumentation.
 
     Composed from the ``_FridaBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references resolve

@@ -282,6 +282,8 @@ void CommandHandler::register_commands() {
     m_commands["reg_all"] = [](const PipeMessage& m) { return cmd_reg_all(m); };
     m_commands["reg_get"] = [](const PipeMessage& m) { return cmd_reg_get(m); };
     m_commands["reg_set"] = [](const PipeMessage& m) { return cmd_reg_set(m); };
+    m_commands["reg_extended"] = [](const PipeMessage& m) { return cmd_reg_extended(m); };
+    m_commands["reg_set_extended"] = [](const PipeMessage& m) { return cmd_reg_set_extended(m); };
 
     m_commands["mem_read"] = [](const PipeMessage& m) { return cmd_mem_read(m); };
     m_commands["mem_write"] = [](const PipeMessage& m) { return cmd_mem_write(m); };
@@ -319,6 +321,7 @@ void CommandHandler::register_commands() {
     m_commands["plugin_list"] = [](const PipeMessage& m) { return cmd_plugin_list(m); };
     m_commands["script_abort"] = [](const PipeMessage& m) { return cmd_script_abort(m); };
     m_commands["thread_detail"] = [](const PipeMessage& m) { return cmd_thread_detail(m); };
+    m_commands["script_step"] = [](const PipeMessage& m) { return cmd_script_step(m); };
 }
 
 PipeResponse CommandHandler::handle_command(const PipeMessage& msg) {
@@ -856,6 +859,316 @@ PipeResponse CommandHandler::cmd_reg_set(const PipeMessage& msg) {
 
     response.success = result;
     response.result = result ? "true" : "false";
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_reg_extended(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    REGDUMP_AVX512 regdump = {};
+    if (!DbgGetRegDumpEx(&regdump, sizeof(regdump))) {
+        response.success = false;
+        response.error = "Failed to get register dump";
+        return response;
+    }
+
+#ifdef BUILD_X64
+    constexpr int kSimdCount = 16;
+#else
+    constexpr int kSimdCount = 8;
+#endif
+    std::ostringstream ss;
+    ss << "{\"xmm\":[";
+    for (int i = 0; i < kSimdCount; ++i) {
+        if (i > 0) ss << ",";
+        ss << "\"" << bytes_to_hex(reinterpret_cast<const BYTE*>(&regdump.regcontext.ZmmRegisters[i]), 16) << "\"";
+    }
+    ss << "],\"ymm\":[";
+    for (int i = 0; i < kSimdCount; ++i) {
+        if (i > 0) ss << ",";
+        ss << "\"" << bytes_to_hex(reinterpret_cast<const BYTE*>(&regdump.regcontext.ZmmRegisters[i]), 32) << "\"";
+    }
+    ss << "],\"st\":[";
+    for (int i = 0; i < 8; ++i) {
+        if (i > 0) ss << ",";
+        ss << "\"" << bytes_to_hex(&regdump.regcontext.RegisterArea[i * 10], 10) << "\"";
+    }
+    ss << "],\"mmx\":[";
+    for (int i = 0; i < 8; ++i) {
+        if (i > 0) ss << ",";
+        ss << "\"" << bytes_to_hex(&regdump.regcontext.RegisterArea[i * 10], 8) << "\"";
+    }
+    ss << "],\"mxcsr\":\"" << format_address(regdump.regcontext.MxCsr) << "\"";
+    ss << ",\"x87control\":" << regdump.regcontext.x87fpu.ControlWord;
+    ss << ",\"x87status\":" << regdump.regcontext.x87fpu.StatusWord;
+    ss << ",\"x87tag\":" << regdump.regcontext.x87fpu.TagWord;
+    ss << "}";
+
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+namespace {
+
+// Parse a non-negative decimal register index (e.g. the "3" in "xmm3").
+// Returns -1 for an empty, non-numeric, or out-of-range-for-int string
+// rather than throwing, since this runs inside a plugin callback where an
+// uncaught exception would take down the host debugger.
+int parse_register_index(const std::string& digits) {
+    if (digits.empty()) {
+        return -1;
+    }
+    for (char c : digits) {
+        if (!std::isdigit(static_cast<unsigned char>(c))) {
+            return -1;
+        }
+    }
+    try {
+        return std::stoi(digits);
+    } catch (const std::exception&) {
+        return -1;
+    }
+}
+
+}  // namespace
+
+PipeResponse CommandHandler::cmd_reg_set_extended(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    // SetThreadContext on a running thread is undefined, so only accept
+    // extended-register writes while the debuggee is actually paused.
+    // g_state.paused is kept current by the CBPAUSEDEBUG/CBRESUMEDEBUG
+    // plugin callbacks, so it reflects every pause regardless of whether
+    // it was triggered by this bridge or by the user's own x64dbg GUI.
+    if (!DbgIsDebugging() || !g_state.paused) {
+        response.success = false;
+        response.error = "Debuggee must be paused to write extended registers";
+        return response;
+    }
+
+    std::string reg_name;
+    if (!extract_json_string(msg.params, "name", reg_name) || reg_name.empty()) {
+        response.success = false;
+        response.error = "Missing or invalid 'name' parameter";
+        return response;
+    }
+    bool reg_name_invalid =
+        std::ranges::any_of(reg_name, [](char c) { return !std::isalnum(static_cast<unsigned char>(c)); });
+    if (reg_name_invalid) {
+        response.success = false;
+        response.error = "Invalid 'name' parameter";
+        return response;
+    }
+
+    std::string value_hex;
+    if (!extract_json_string(msg.params, "value", value_hex) || value_hex.empty()) {
+        response.success = false;
+        response.error = "Missing or invalid 'value' parameter";
+        return response;
+    }
+
+    std::string lower_name = to_lower(reg_name);
+
+    HANDLE hThread = DbgGetThreadHandle();
+    if (hThread == nullptr) {
+        response.success = false;
+        response.error = "Failed to get debuggee thread handle";
+        return response;
+    }
+
+    CONTEXT ctx = {};
+#ifdef BUILD_X64
+    ctx.ContextFlags = CONTEXT_FLOATING_POINT;
+#else
+    ctx.ContextFlags = CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
+#endif
+    if (!GetThreadContext(hThread, &ctx)) {
+        response.success = false;
+        response.error = "GetThreadContext failed: error " + std::to_string(GetLastError());
+        return response;
+    }
+
+#ifdef BUILD_X64
+    constexpr int kSimdCount = 16;
+#else
+    constexpr int kSimdCount = 8;
+#endif
+
+    bool handled = false;
+    bool write_ymm_upper = false;
+    int ymm_index = -1;
+    BYTE ymm_upper_bytes[16] = {};
+
+    if (lower_name.rfind("xmm", 0) == 0 && lower_name.size() > 3) {
+        int idx = parse_register_index(lower_name.substr(3));
+        if (idx < 0 || idx >= kSimdCount || value_hex.size() != 32) {
+            response.success = false;
+            response.error = "Invalid xmm register index or value length";
+            return response;
+        }
+#ifdef BUILD_X64
+        if (!hex_to_bytes(value_hex, reinterpret_cast<BYTE*>(&ctx.FltSave.XmmRegisters[idx]), 16)) {
+#else
+        if (!hex_to_bytes(value_hex, ctx.ExtendedRegisters + 160 + idx * 16, 16)) {
+#endif
+            response.success = false;
+            response.error = "Invalid hex value";
+            return response;
+        }
+        handled = true;
+    } else if (lower_name.rfind("ymm", 0) == 0 && lower_name.size() > 3) {
+        int idx = parse_register_index(lower_name.substr(3));
+        if (idx < 0 || idx >= kSimdCount || value_hex.size() != 64) {
+            response.success = false;
+            response.error = "Invalid ymm register index or value length";
+            return response;
+        }
+        BYTE full[32] = {};
+        if (!hex_to_bytes(value_hex, full, 32)) {
+            response.success = false;
+            response.error = "Invalid hex value";
+            return response;
+        }
+#ifdef BUILD_X64
+        std::memcpy(&ctx.FltSave.XmmRegisters[idx], full, 16);
+#else
+        std::memcpy(ctx.ExtendedRegisters + 160 + idx * 16, full, 16);
+#endif
+        std::memcpy(ymm_upper_bytes, full + 16, 16);
+        write_ymm_upper = true;
+        ymm_index = idx;
+        handled = true;
+    } else if (lower_name.rfind("st", 0) == 0 && lower_name.size() > 2) {
+        int idx = parse_register_index(lower_name.substr(2));
+        if (idx < 0 || idx >= 8 || value_hex.size() != 20) {
+            response.success = false;
+            response.error = "Invalid st register index or value length";
+            return response;
+        }
+#ifdef BUILD_X64
+        if (!hex_to_bytes(value_hex, reinterpret_cast<BYTE*>(&ctx.FltSave.FloatRegisters[idx]), 10)) {
+#else
+        if (!hex_to_bytes(value_hex, ctx.ExtendedRegisters + 32 + idx * 16, 10)) {
+#endif
+            response.success = false;
+            response.error = "Invalid hex value";
+            return response;
+        }
+        handled = true;
+    } else if (lower_name.rfind("mmx", 0) == 0 && lower_name.size() > 3) {
+        int idx = parse_register_index(lower_name.substr(3));
+        if (idx < 0 || idx >= 8 || value_hex.size() != 16) {
+            response.success = false;
+            response.error = "Invalid mmx register index or value length";
+            return response;
+        }
+#ifdef BUILD_X64
+        if (!hex_to_bytes(value_hex, reinterpret_cast<BYTE*>(&ctx.FltSave.FloatRegisters[idx]), 8)) {
+#else
+        if (!hex_to_bytes(value_hex, ctx.ExtendedRegisters + 32 + idx * 16, 8)) {
+#endif
+            response.success = false;
+            response.error = "Invalid hex value";
+            return response;
+        }
+        handled = true;
+    } else if (lower_name == "mxcsr") {
+        if (value_hex.size() != 8) {
+            response.success = false;
+            response.error = "Invalid mxcsr value length";
+            return response;
+        }
+        BYTE raw[4] = {};
+        if (!hex_to_bytes(value_hex, raw, 4)) {
+            response.success = false;
+            response.error = "Invalid hex value";
+            return response;
+        }
+#ifdef BUILD_X64
+        std::memcpy(&ctx.FltSave.MxCsr, raw, 4);
+#else
+        std::memcpy(ctx.ExtendedRegisters + 24, raw, 4);
+#endif
+        handled = true;
+    }
+
+    if (!handled) {
+        response.success = false;
+        response.error = "Unsupported extended register name: " + reg_name;
+        return response;
+    }
+
+    if (!SetThreadContext(hThread, &ctx)) {
+        response.success = false;
+        response.error = "SetThreadContext failed: error " + std::to_string(GetLastError());
+        return response;
+    }
+
+    if (write_ymm_upper) {
+        if ((GetEnabledXStateFeatures() & XSTATE_MASK_AVX) == 0) {
+            response.success = false;
+            response.error = "AVX XSTATE feature is not available on this CPU";
+            return response;
+        }
+
+        DWORD ctxSize = 0;
+        PCONTEXT sizeProbe = nullptr;
+        InitializeContext(nullptr, CONTEXT_FLOATING_POINT | CONTEXT_XSTATE, &sizeProbe, &ctxSize);
+        if (ctxSize == 0) {
+            response.success = false;
+            response.error = "InitializeContext failed to report a buffer size";
+            return response;
+        }
+
+        std::vector<BYTE> buffer(ctxSize);
+        PCONTEXT xctx = nullptr;
+        DWORD xctxSize = ctxSize;
+        if (!InitializeContext(buffer.data(), CONTEXT_FLOATING_POINT | CONTEXT_XSTATE, &xctx, &xctxSize)) {
+            response.success = false;
+            response.error = "InitializeContext failed: error " + std::to_string(GetLastError());
+            return response;
+        }
+
+        if (!SetXStateFeaturesMask(xctx, XSTATE_MASK_AVX)) {
+            response.success = false;
+            response.error = "SetXStateFeaturesMask failed: error " + std::to_string(GetLastError());
+            return response;
+        }
+        if (!GetThreadContext(hThread, xctx)) {
+            response.success = false;
+            response.error = "GetThreadContext (XSTATE) failed: error " + std::to_string(GetLastError());
+            return response;
+        }
+
+        DWORD featLen = 0;
+        void* ymm_high_ptr = LocateXStateFeature(xctx, XSTATE_AVX, &featLen);
+        if (ymm_high_ptr == nullptr) {
+            response.success = false;
+            response.error = "AVX XSTATE feature unavailable in thread context";
+            return response;
+        }
+        auto* ymm_high = static_cast<M128A*>(ymm_high_ptr);
+        std::memcpy(&ymm_high[ymm_index], ymm_upper_bytes, sizeof(ymm_upper_bytes));
+
+        if (!SetXStateFeaturesMask(xctx, XSTATE_MASK_AVX)) {
+            response.success = false;
+            response.error = "SetXStateFeaturesMask failed: error " + std::to_string(GetLastError());
+            return response;
+        }
+        if (!SetThreadContext(hThread, xctx)) {
+            response.success = false;
+            response.error = "SetThreadContext (XSTATE) failed: error " + std::to_string(GetLastError());
+            return response;
+        }
+    }
+
+    GuiUpdateRegisterView();
+
+    response.success = true;
+    response.result = "true";
     return response;
 }
 
@@ -2210,6 +2523,21 @@ PipeResponse CommandHandler::cmd_thread_detail(const PipeMessage& msg) {
     return response;
 }
 
+PipeResponse CommandHandler::cmd_script_step(const PipeMessage& msg) {
+    // DbgScriptStep() is not a registered console command (the x64dbg GUI's
+    // own Script tab Step button calls it directly), so it can only be
+    // reached by a plugin linking the SDK. It returns void; the Python
+    // bridge verifies the step via a script.iserror() readback afterward.
+    PipeResponse response;
+    response.id = msg.id;
+
+    DbgScriptStep();
+
+    response.success = true;
+    response.result = "true";
+    return response;
+}
+
 uint64_t CommandHandler::parse_address(const std::string& addr_str) {
     if (addr_str.empty()) return 0;
 
@@ -2253,6 +2581,40 @@ std::string CommandHandler::escape_json(const std::string& s) {
         }
     }
     return ss.str();
+}
+
+std::string CommandHandler::bytes_to_hex(const BYTE* data, size_t len) {
+    static const char kDigits[] = "0123456789abcdef";
+    std::string out;
+    out.reserve(len * 2);
+    for (size_t i = 0; i < len; ++i) {
+        out.push_back(kDigits[(data[i] >> 4) & 0xF]);
+        out.push_back(kDigits[data[i] & 0xF]);
+    }
+    return out;
+}
+
+bool CommandHandler::hex_to_bytes(const std::string& hex, BYTE* out, size_t len) {
+    if (hex.size() != len * 2) {
+        return false;
+    }
+    for (size_t i = 0; i < len; ++i) {
+        int hi = -1;
+        int lo = -1;
+        char hc = hex[i * 2];
+        char lc = hex[i * 2 + 1];
+        if (hc >= '0' && hc <= '9') hi = hc - '0';
+        else if (hc >= 'a' && hc <= 'f') hi = hc - 'a' + 10;
+        else if (hc >= 'A' && hc <= 'F') hi = hc - 'A' + 10;
+        if (lc >= '0' && lc <= '9') lo = lc - '0';
+        else if (lc >= 'a' && lc <= 'f') lo = lc - 'a' + 10;
+        else if (lc >= 'A' && lc <= 'F') lo = lc - 'A' + 10;
+        if (hi < 0 || lo < 0) {
+            return false;
+        }
+        out[i] = static_cast<BYTE>((hi << 4) | lo);
+    }
+    return true;
 }
 
 }

@@ -1153,17 +1153,22 @@ class TestProgramTreeWiring:
         program_tree_widget: ProgramTreeWidget,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Clicking Apply must call bridge.edit_program_tree with tree/operation/parent/child.
+        """Clicking Apply must call bridge.edit_program_tree with tree/operation/parent/child/new_name.
+
+        ``new_name`` is the rename operation's target name; the panel
+        resolves an empty input to ``None``, which is what every other
+        operation passes, so it is asserted here too rather than ignored.
 
         Falsifiable: removing the ``self._bridge.edit_program_tree(...)``
         call from ``_on_edit_tree`` (or wiring Apply to the refresh
-        handler instead) leaves the recorded call list empty.
+        handler instead) leaves the recorded call list empty; dropping
+        ``new_name`` from the call reddens the recorded tuple.
 
         Args:
             program_tree_widget: ProgramTreeWidget fixture.
             monkeypatch: Pytest monkeypatch fixture.
         """
-        calls: list[tuple[str, str, str, str]] = []
+        calls: list[tuple[str, str, str, str, str | None]] = []
 
         class _StubBridge:
             state = BridgeState(connected=True, tool_running=True)
@@ -1174,8 +1179,9 @@ class TestProgramTreeWiring:
                 operation: str,
                 parent_module: str,
                 child_name: str,
+                new_name: str | None = None,
             ) -> dict[str, Any]:
-                calls.append((tree_name, operation, parent_module, child_name))
+                calls.append((tree_name, operation, parent_module, child_name, new_name))
                 return {"tree_name": tree_name, "operation": operation, "child_name": child_name, "success": True}
 
             async def get_program_tree(self) -> dict[str, Any]:
@@ -1191,7 +1197,7 @@ class TestProgramTreeWiring:
         priv(program_tree_widget, "_child_name_input", QLineEdit).setText("NewFrag")
         priv(program_tree_widget, "_apply_btn", QPushButton).click()
 
-        assert calls == [("Program Tree", "create_fragment", "Root", "NewFrag")]
+        assert calls == [("Program Tree", "create_fragment", "Root", "NewFrag", None)]
 
     @staticmethod
     def test_apply_edit_blank_tree_name_does_not_dispatch(
