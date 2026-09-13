@@ -687,6 +687,18 @@ class X64DbgPanel(AnalysisPanelBase):
         self._rename_thread_btn.setObjectName("tool_button")
         self._rename_thread_btn.clicked.connect(self._on_rename_thread)
         thread_btn_row.addWidget(self._rename_thread_btn)
+        self._create_thread_addr_input = QLineEdit()
+        self._create_thread_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._create_thread_addr_input.setPlaceholderText("0x... entry")
+        thread_btn_row.addWidget(self._create_thread_addr_input)
+        self._create_thread_btn = QPushButton(self.tr("Create"))
+        self._create_thread_btn.setObjectName("tool_button")
+        self._create_thread_btn.clicked.connect(self._on_create_thread)
+        thread_btn_row.addWidget(self._create_thread_btn)
+        self._kill_thread_btn = QPushButton(self.tr("Kill"))
+        self._kill_thread_btn.setObjectName("tool_button")
+        self._kill_thread_btn.clicked.connect(self._on_kill_thread)
+        thread_btn_row.addWidget(self._kill_thread_btn)
         thread_btn_row.addStretch()
         thread_vlayout.addLayout(thread_btn_row)
         tabs.addTab(thread_container, self.tr("Threads"))
@@ -4693,6 +4705,84 @@ class X64DbgPanel(AnalysisPanelBase):
         self._rename_thread_btn.setEnabled(True)
         self._thread_name_input.clear()
         self._console_output.appendPlainText(f"[+] Thread {tid} renamed to {name!r}")
+        self._refresh_state()
+
+    def _on_create_thread(self) -> None:
+        """Create a new thread in the debuggee at the entered entry address."""
+        if self._bridge is None:
+            return
+        entry_text = self._create_thread_addr_input.text().strip()
+        if not entry_text:
+            return
+        try:
+            entry = int(entry_text, 0)
+        except ValueError:
+            self._invalid_input(
+                "x64dbg_create_thread_invalid_entry",
+                input_text=entry_text,
+                console_msg=f"[!] Invalid address: {entry_text}",
+                logger=_logger,
+            )
+            return
+        self._create_thread_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.create_thread(entry),
+            on_success=self._on_create_thread_success,
+            on_error=lambda e: self._on_generic_error("Create Thread", e, self._create_thread_btn),
+            parent=self,
+            event="x64dbg_create_thread",
+            logger=_logger,
+            level="info",
+            entry=hex(entry),
+        )
+
+    def _on_create_thread_success(self, result: object) -> None:
+        """Handle a successful thread creation by reporting the new tid and refreshing state.
+
+        Args:
+            result: Bridge result dict containing ``tid``.
+        """
+        self._create_thread_btn.setEnabled(True)
+        self._create_thread_addr_input.clear()
+        tid: object = None
+        if isinstance(result, dict):
+            tid = cast("dict[str, object]", result).get("tid")
+        self._console_output.appendPlainText(f"[+] Thread created: tid={tid}")
+        self._refresh_state()
+
+    def _on_kill_thread(self) -> None:
+        """Kill the selected thread."""
+        if self._bridge is None:
+            return
+        row = self._thread_table.currentRow()
+        if row < 0:
+            return
+        tid_item = self._thread_table.item(row, 0)
+        if tid_item is None:
+            return
+        try:
+            tid = int(tid_item.text())
+        except ValueError:
+            _logger.warning("x64dbg_kill_thread_invalid_tid", input_text=tid_item.text())
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.kill_thread(tid),
+            on_success=lambda _: self._on_kill_thread_success(tid),
+            on_error=lambda e: self._on_generic_error("Kill Thread", e),
+            parent=self,
+            event="x64dbg_kill_thread",
+            logger=_logger,
+            level="info",
+            tid=tid,
+        )
+
+    def _on_kill_thread_success(self, tid: int) -> None:
+        """Handle successful thread termination by reporting and refreshing thread state.
+
+        Args:
+            tid: Thread ID that was killed.
+        """
+        self._console_output.appendPlainText(f"[+] Thread {tid} killed")
         self._refresh_state()
 
     def _on_eval_expression(self) -> None:

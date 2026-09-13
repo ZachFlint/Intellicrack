@@ -2081,6 +2081,41 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="Dict with success status, tid, and name",
                 ),
                 ToolFunction(
+                    name="x64dbg.create_thread",
+                    description="Create a new thread in the debuggee starting at the given entry address",
+                    parameters=[
+                        ToolParameter(name="entry", type="integer", description="Entry point address for the new thread", required=True),
+                        ToolParameter(
+                            name="arg",
+                            type="integer",
+                            description="Argument passed to the new thread",
+                            required=False,
+                            default=0,
+                        ),
+                    ],
+                    returns="Dict with success, tid, entry, verified",
+                ),
+                ToolFunction(
+                    name="x64dbg.kill_thread",
+                    description="Forcibly terminate a thread in the debuggee (defaults to the main thread if no tid is given)",
+                    parameters=[
+                        ToolParameter(
+                            name="tid",
+                            type="integer",
+                            description="Thread id to kill; omit for the main thread",
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="exit_code",
+                            type="integer",
+                            description="Exit code for the killed thread",
+                            required=False,
+                            default=0,
+                        ),
+                    ],
+                    returns="Dict with success, tid, verified",
+                ),
+                ToolFunction(
                     name="x64dbg.get_seh_chain",
                     description="Get the structured exception handler chain",
                     parameters=[],
@@ -12110,6 +12145,106 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
             None,
         )
         return {"success": bool(result), "privilege": name, "enabled": enable}
+
+    async def create_thread(self, entry: int, arg: int = 0) -> dict[str, Any]:
+        """Create a new thread in the debuggee and verify it was observed.
+
+        Queues the ``createthread`` console command, reads the new
+        thread id back via x64dbg's ``$result`` pseudo-variable (the
+        same mechanism :meth:`_await_debuggee_pid` uses for ``$pid``),
+        then polls ``thread_detail`` via :meth:`_wait_for_thread_state`
+        to confirm the new thread actually appears in the debuggee.
+
+        Args:
+            entry: Entry point address for the new thread.
+            arg: Argument passed to the new thread.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``tid``, ``entry``,
+            and ``verified``. ``verified`` is ``True`` when
+            ``thread_detail`` listed the new thread; ``False`` only
+            when the plugin lacks ``thread_detail``.
+
+        Raises:
+            ToolError: If ``$result`` is ``0`` or unparseable after
+                ``createthread``, or if ``thread_detail`` never lists
+                the new thread id within :attr:`VERIFY_TIMEOUT`.
+        """
+        await self._send_command(f"createthread {hex(entry)}, {hex(arg)}")
+        result = await self._send_pipe_command("reg_get", {"name": "$result"})
+        new_tid: int | None = None
+        if isinstance(result, str):
+            new_tid = safe_int_from_str(result, base=0, context="x64dbg_create_thread")
+        elif isinstance(result, int):
+            new_tid = result
+        if not new_tid:
+            msg = f"create_thread verification failed: $result is {result!r} after createthread at {hex(entry)}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_REMOTE, "entry": hex(entry)},
+            )
+        record, rpc_available = await self._wait_for_thread_state(new_tid, predicate=lambda _entry: True)
+        verified = record is not None
+        if rpc_available and not verified:
+            msg = f"create_thread verification failed: thread_detail never listed new tid={new_tid} within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_TIMEOUT, "tid": new_tid},
+            )
+        return {"success": True, "tid": new_tid, "entry": hex(entry), "verified": verified}
+
+    async def kill_thread(self, tid: int | None = None, exit_code: int = 0) -> dict[str, Any]:
+        """Forcibly terminate a thread in the debuggee.
+
+        Queues ``killthread`` and, when ``tid`` is given, polls
+        ``thread_detail`` until that thread id no longer appears (the
+        inverse of :meth:`_wait_for_thread_state`, which waits for a
+        matching record to appear rather than disappear). When ``tid``
+        is omitted, x64dbg kills its own current main thread; this
+        bridge does not track that thread's id without an extra
+        ``thread_detail`` round trip, so that case is reported
+        unverified rather than fabricating a verified result for an id
+        that was never actually checked.
+
+        Args:
+            tid: Thread id to kill; omit to kill the main thread.
+            exit_code: Exit code for the killed thread.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``tid``, and
+            ``verified``. ``verified`` is ``True`` when
+            ``thread_detail`` confirmed ``tid`` is gone; ``False`` when
+            ``tid`` was omitted or the plugin lacks ``thread_detail``.
+
+        Raises:
+            ToolError: If ``thread_detail`` still lists ``tid`` after
+                ``killthread`` within :attr:`VERIFY_TIMEOUT`.
+        """
+        cmd = "killthread" if tid is None else f"killthread {tid}, {exit_code}"
+        await self._send_command(cmd)
+        if tid is None:
+            return {"success": True, "tid": None, "verified": False}
+        deadline = asyncio.get_running_loop().time() + self.VERIFY_TIMEOUT
+        rpc_available = False
+        while True:
+            entries = await self._query_thread_details()
+            if entries is not None:
+                rpc_available = True
+                if self._find_thread_record(entries, tid) is None:
+                    return {"success": True, "tid": tid, "verified": True}
+            if asyncio.get_running_loop().time() >= deadline:
+                break
+            await asyncio.sleep(self.VERIFY_POLL_INTERVAL)
+        if not rpc_available:
+            return {"success": True, "tid": tid, "verified": False}
+        msg = f"kill_thread verification failed: thread_detail still lists tid={tid} after killthread within {self.VERIFY_TIMEOUT}s"
+        raise ToolError(
+            msg,
+            tool_name="x64dbg",
+            details={"x64dbg_error_code": _X64DBG_ERR_TIMEOUT, "tid": tid},
+        )
 
 
 class X64DbgBridge(_X64DbgScriptingMixin):
