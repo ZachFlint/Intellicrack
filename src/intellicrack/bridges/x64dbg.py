@@ -352,6 +352,8 @@ _RECOVERABLE_RPC_MISSING_CODES = frozenset({_X64DBG_ERR_UNKNOWN_COMMAND})
 
 BreakpointType = Literal["software", "hardware", "memory"]
 MemoryProtection = Literal["read", "write", "execute"]
+MemoryRangeAccess = Literal["read", "write", "execute", "all"]
+BreakpointOpcodeType = Literal["short", "long", "ud2"]
 
 # x64dbg keeps execution counters per 4 KiB page, and only for pages a trace
 # record type has been set on. ``word`` counts to 16383 executions per byte,
@@ -1200,6 +1202,46 @@ class _X64DbgBridgeBase(DebuggerBridge):
                         ),
                     ],
                     returns="Breakpoint ID",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_memory_range_breakpoint",
+                    description="Set a memory breakpoint (guard page) over an address range",
+                    parameters=[
+                        ToolParameter(name="start", type="integer", description="Start address of the range", required=True),
+                        ToolParameter(name="size", type="integer", description="Size of the range in bytes", required=True),
+                        ToolParameter(
+                            name="access",
+                            type="string",
+                            description="Access type to break on",
+                            required=False,
+                            default="all",
+                            enum=["read", "write", "execute", "all"],
+                        ),
+                        ToolParameter(
+                            name="singleshot",
+                            type="boolean",
+                            description="Remove the breakpoint after the first hit",
+                            required=False,
+                            default=False,
+                        ),
+                    ],
+                    returns="Dict with success, start, size, access, singleshot, verified",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_default_breakpoint_type",
+                    description=(
+                        "Set the default opcode style x64dbg uses for future SetBPX/bp breakpoints (does not retype an existing breakpoint)"
+                    ),
+                    parameters=[
+                        ToolParameter(
+                            name="bp_opcode_type",
+                            type="string",
+                            description="Default opcode: 'short' (CC), 'long' (CD03), or 'ud2' (0F0B)",
+                            required=True,
+                            enum=["short", "long", "ud2"],
+                        ),
+                    ],
+                    returns="Dict with success and bp_opcode_type",
                 ),
                 ToolFunction(
                     name="x64dbg.remove_breakpoint",
@@ -3885,6 +3927,99 @@ class _X64DbgBridgeBase(DebuggerBridge):
             tool_name="x64dbg",
             details={"x64dbg_error_code": _X64DBG_ERR_REMOTE, "address": hex(address), "bp_type": bp_type},
         )
+
+    async def set_memory_range_breakpoint(
+        self,
+        start: int,
+        size: int,
+        access: MemoryRangeAccess = "all",
+        *,
+        singleshot: bool = False,
+    ) -> dict[str, Any]:
+        """Set a guard-page memory breakpoint over an address range.
+
+        ``SetMemoryRangeBPX``/``bpmrange`` installs a single
+        ``GUARD_PAGE``-based breakpoint spanning ``[start, start +
+        size)`` - distinct from both the per-address memory breakpoint
+        :meth:`set_breakpoint` installs and the DR-register hardware
+        watchpoint :meth:`set_watchpoint` installs. The range
+        breakpoint is keyed in x64dbg's ``bp_list``/``DbgGetBpList``
+        table at the range's start address as a ``"memory"``-type
+        entry, so verification reuses :meth:`_verify_breakpoint_present`
+        unmodified.
+
+        Args:
+            start: Start address of the memory range.
+            size: Size of the memory range in bytes.
+            access: Access type to break on.
+            singleshot: Whether the breakpoint is removed after its first hit.
+
+        Returns:
+            dict[str, Any]: Dict with success status, start, size, access, singleshot, and verified.
+
+        Raises:
+            ToolError: When the plugin reports via ``bp_list`` that no
+                memory breakpoint exists at ``start`` after
+                ``SetMemoryRangeBPX`` was issued.
+        """
+        access_letters: dict[MemoryRangeAccess, str] = {"read": "r", "write": "w", "execute": "x", "all": "a"}
+        type_arg = access_letters[access] + ("ss" if singleshot else "")
+        _logger.info(
+            "set_memory_range_breakpoint_started",
+            start=hex(start),
+            size=hex(size),
+            access=access,
+            singleshot=singleshot,
+        )
+        await self._send_command(f"SetMemoryRangeBPX {hex(start)}, {hex(size)}, {type_arg}")
+
+        verification_state = await self._verify_breakpoint_present(start, "memory")
+        if verification_state is False:
+            msg = f"x64dbg accepted SetMemoryRangeBPX but no memory breakpoint exists at {hex(start)}"
+            raise ToolError(msg, tool_name="x64dbg")
+        verified = bool(verification_state)
+
+        with self._state_lock:
+            self._breakpoints[start] = BreakpointInfo(
+                id=start,
+                address=start,
+                bp_type="memory",
+                enabled=True,
+                hit_count=0,
+                condition=None,
+            )
+
+        _logger.info("memory_range_breakpoint_set", start=hex(start), size=hex(size), access=access, verified=verified)
+        return {
+            "success": True,
+            "start": hex(start),
+            "size": hex(size),
+            "access": access,
+            "singleshot": singleshot,
+            "verified": verified,
+        }
+
+    async def set_default_breakpoint_type(self, bp_opcode_type: BreakpointOpcodeType) -> dict[str, Any]:
+        """Set the default opcode x64dbg uses for future ``SetBPX``/``bp`` breakpoints.
+
+        ``SetBPXOptions``/``bptype`` is a global default that governs
+        the opcode used by future ``SetBPX``/``bp`` calls (both normal
+        and singleshot) - it does not retype an already-placed
+        breakpoint, and the breakpoint-control command set exposes no
+        getter for the current default, so this is a fire-and-forget
+        command with no readback verification available (mirroring
+        :meth:`trace_stop`).
+
+        Args:
+            bp_opcode_type: Default opcode: ``"short"`` (``CC``),
+                ``"long"`` (``CD03``), or ``"ud2"`` (``0F0B``).
+
+        Returns:
+            dict[str, Any]: Dict with success status and bp_opcode_type.
+        """
+        _logger.debug("x64dbg_command_queued", command="set_default_breakpoint_type", bp_opcode_type=bp_opcode_type)
+        await self._send_command(f"SetBPXOptions {bp_opcode_type}")
+        return {"success": True, "bp_opcode_type": bp_opcode_type}
 
     async def remove_breakpoint(self, address: int) -> bool:
         """Remove a breakpoint.
