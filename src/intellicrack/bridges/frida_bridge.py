@@ -20,7 +20,7 @@ import time
 import uuid
 from json import JSONDecodeError
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast, override
+from typing import TYPE_CHECKING, Any, Final, cast, override
 
 import frida
 
@@ -196,6 +196,8 @@ _ASCII_PRINTABLE_MIN: int = 0x20
 _ASCII_PRINTABLE_MAX: int = 0x7E
 _ASCII_DEL: int = 0x7F
 _HOOK_DEFAULT_ARG_SAMPLE_COUNT: int = 4
+_SNAPSHOT_SCRIPT_RUNTIME: str = "v8"
+_DEFAULT_SCRIPT_DEBUGGER_PORT: Final[int] = 9229
 _CODE_WRITER_MAP: dict[str, str] = {
     "x86": "X86Writer",
     "arm": "ArmWriter",
@@ -435,6 +437,39 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
                 name="bytecode_hex",
                 type="string",
                 description="Hex-encoded bytecode from frida.compile_script",
+                required=True,
+            ),
+        ],
+        returns="Script ID for later unloading via frida.unload_script",
+    ),
+    ToolFunction(
+        name="frida.snapshot_script",
+        description="Create a V8 snapshot of a warmed-up script VM for fast-start reuse",
+        parameters=[
+            ToolParameter(
+                name="embed_script",
+                type="string",
+                description="JavaScript run inside the throwaway VM to snapshot",
+                required=True,
+            ),
+            ToolParameter(
+                name="warmup_script",
+                type="string",
+                description="Optional additional setup JavaScript run before the snapshot is taken",
+                required=False,
+            ),
+        ],
+        returns="Hex-encoded snapshot bytes",
+    ),
+    ToolFunction(
+        name="frida.load_script_with_snapshot",
+        description="Create and load a persistent script warm-started from a script-VM snapshot",
+        parameters=[
+            ToolParameter(name="source", type="string", description="JavaScript source for the new script", required=True),
+            ToolParameter(
+                name="snapshot_hex",
+                type="string",
+                description="Hex-encoded snapshot bytes from frida.snapshot_script",
                 required=True,
             ),
         ],
@@ -781,6 +816,37 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Success status",
     ),
     ToolFunction(
+        name="frida.enable_script_debugger",
+        description="Attach a V8 Inspector-protocol debugger to a running script",
+        parameters=[
+            ToolParameter(name="script_id", type="string", description="ID of the target script", required=True),
+            ToolParameter(
+                name="port",
+                type="integer",
+                description="TCP port for the inspector protocol (default 9229)",
+                required=False,
+                default=9229,
+            ),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.disable_script_debugger",
+        description="Detach the V8 Inspector-protocol debugger from a running script",
+        parameters=[
+            ToolParameter(name="script_id", type="string", description="ID of the target script", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.terminate_script",
+        description="Forcibly terminate a script's runtime immediately, without waiting for graceful teardown (for a hung script)",
+        parameters=[
+            ToolParameter(name="script_id", type="string", description="ID of the target script", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
         name="frida.rpc_call",
         description="Call an RPC-exported function in a running script",
         parameters=[
@@ -789,6 +855,14 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ToolParameter(name="args", type="array", description="Arguments for the RPC call", required=False),
         ],
         returns="Return value from the RPC call",
+    ),
+    ToolFunction(
+        name="frida.list_rpc_exports",
+        description="Discover which RPC exports a running script provides, by name",
+        parameters=[
+            ToolParameter(name="script_id", type="string", description="ID of the target script", required=True),
+        ],
+        returns="List of export names, usable directly as frida.rpc_call's method_name",
     ),
     ToolFunction(
         name="frida.create_cancellable",
@@ -3199,6 +3273,104 @@ class _FridaBridgeBase(InstrumentationBridge):
         _logger.info("compiled_script_loaded", script_id=script_id)
         return script_id
 
+    async def snapshot_script(self, embed_script: str, warmup_script: str | None = None) -> str:
+        """Create a V8 snapshot of a warmed-up script VM for fast-start reuse.
+
+        Script-VM snapshotting is only supported by Frida's V8 runtime (the
+        QuickJS runtime this bridge otherwise defaults to raises
+        ``InvalidArgumentError`` for it), so the throwaway VM used to take
+        the snapshot is explicitly started with ``runtime="v8"`` regardless
+        of the process-wide default.
+
+        Args:
+            embed_script: JavaScript run inside the throwaway VM whose heap
+                state will be captured.
+            warmup_script: Optional additional JavaScript run after
+                ``embed_script`` to perform one-time setup work before the
+                snapshot is taken.
+
+        Returns:
+            str: Hex-encoded snapshot bytes, usable via
+                :meth:`load_script_with_snapshot`.
+
+        Raises:
+            ToolError: If not attached or snapshotting fails.
+        """
+        if self._session is None:
+            _logger.error("frida_not_attached", operation="snapshot_script")
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        try:
+            snapshot: bytes = await asyncio.to_thread(
+                self._session.snapshot_script,
+                embed_script,
+                warmup_script,
+                _SNAPSHOT_SCRIPT_RUNTIME,
+            )
+        except Exception as e:
+            _logger.warning("frida_snapshot_script_failed", error=str(e))
+            raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e)) from e
+
+        _logger.info("script_snapshotted", embed_length=len(embed_script), snapshot_length=len(snapshot))
+        return snapshot.hex()
+
+    async def load_script_with_snapshot(self, source: str, snapshot_hex: str) -> str:
+        """Create and load a persistent script warm-started from a script-VM snapshot.
+
+        The new script is started with ``runtime="v8"`` to match the engine
+        that produced the snapshot in :meth:`snapshot_script` -- a snapshot
+        taken under V8 does not apply to a QuickJS VM.
+
+        Args:
+            source: JavaScript source for the new script.
+            snapshot_hex: Hex-encoded snapshot bytes from :meth:`snapshot_script`.
+
+        Returns:
+            str: Script ID for later unloading via :meth:`unload_script`.
+
+        Raises:
+            ToolError: If not attached, ``snapshot_hex`` is not valid hex, or
+                loading fails.
+        """
+        if self._session is None:
+            _logger.error("frida_not_attached", operation="load_script_with_snapshot")
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        try:
+            snapshot = bytes.fromhex(snapshot_hex)
+        except ValueError as e:
+            raise ToolError(_ERR_SCRIPT_FAILED, details={"reason": "invalid hex snapshot"}) from e
+
+        script_id = str(uuid.uuid4())[:8]
+        try:
+            script = await asyncio.to_thread(
+                self._session.create_script,
+                source,
+                None,
+                snapshot,
+                _SNAPSHOT_SCRIPT_RUNTIME,
+            )
+        except Exception as e:
+            _logger.warning("frida_load_script_with_snapshot_failed", error=str(e))
+            raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e)) from e
+
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Forward snapshot-started script messages to the bridge dispatcher.
+
+            Args:
+                message: Message payload emitted by the snapshot-started script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            self._dispatch_message(dict(cast("dict[str, object]", message)))
+
+        script.on("message", on_message)
+        await asyncio.to_thread(script.load)
+
+        self._scripts[script_id] = script
+        _logger.info("snapshot_script_loaded", script_id=script_id)
+        return script_id
+
     async def intercept_return(self, target: str, return_value: int) -> HookInfo:
         """Intercept a function and replace its return value.
 
@@ -5153,7 +5325,108 @@ class _FridaBridgeSessionChildGatingMixin(_FridaBridgeBase):
             raise ToolError(_ERR_CHILD_GATING_FAILED) from e
 
 
-class _FridaBridgeAnalysisMixin(_FridaBridgeSessionChildGatingMixin):
+class _FridaBridgeScriptControlMixin(_FridaBridgeSessionChildGatingMixin):
+    """Per-script debugger attach/detach controls for the Frida bridge.
+
+    Kept as a separate mixin from :class:`_FridaBridgeAnalysisMixin` purely
+    to keep each class's own public method count under this project's
+    ``too-many-public-methods`` lint ceiling; the methods below are still
+    reachable as ordinary ``FridaBridge`` methods via the normal
+    method-resolution order.
+    """
+
+    async def enable_script_debugger(self, script_id: str, port: int = _DEFAULT_SCRIPT_DEBUGGER_PORT) -> bool:
+        """Attach a V8 Inspector-protocol debugger to a running script.
+
+        Args:
+            script_id: ID of the target script.
+            port: TCP port the inspector protocol listens on. Defaults to the
+                conventional V8/Node inspector port (9229) rather than Frida's
+                own ``port=0`` "pick any free port" default, since
+                ``Script.enable_debugger`` returns ``None`` and there is no way
+                to discover an OS-chosen port after the fact.
+
+        Returns:
+            bool: True if the debugger was enabled successfully.
+
+        Raises:
+            ToolError: If the script is not found or enabling the debugger fails.
+        """
+        if script_id not in self._scripts:
+            _logger.error("frida_script_not_found", script_id=script_id, operation="enable_script_debugger")
+            raise ToolError(_ERR_SCRIPT_NOT_FOUND)
+
+        script = self._scripts[script_id]
+        try:
+            await asyncio.to_thread(script.enable_debugger, port)
+        except Exception as e:
+            _logger.warning("frida_enable_script_debugger_failed", script_id=script_id, port=port, error=str(e))
+            raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e, script_id=script_id, port=port)) from e
+
+        _logger.info("script_debugger_enabled", script_id=script_id, port=port)
+        return True
+
+    async def disable_script_debugger(self, script_id: str) -> bool:
+        """Detach the V8 Inspector-protocol debugger from a running script.
+
+        Args:
+            script_id: ID of the target script.
+
+        Returns:
+            bool: True if the debugger was disabled successfully.
+
+        Raises:
+            ToolError: If the script is not found or disabling the debugger fails.
+        """
+        if script_id not in self._scripts:
+            _logger.error("frida_script_not_found", script_id=script_id, operation="disable_script_debugger")
+            raise ToolError(_ERR_SCRIPT_NOT_FOUND)
+
+        script = self._scripts[script_id]
+        try:
+            await asyncio.to_thread(script.disable_debugger)
+        except Exception as e:
+            _logger.warning("frida_disable_script_debugger_failed", script_id=script_id, error=str(e))
+            raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e, script_id=script_id)) from e
+
+        _logger.info("script_debugger_disabled", script_id=script_id)
+        return True
+
+    async def terminate_script(self, script_id: str) -> bool:
+        """Forcibly terminate a script's runtime immediately, without graceful teardown.
+
+        Unlike :meth:`unload_script`, which performs an orderly async teardown
+        requiring the script's own runtime to cooperate, this stops the
+        runtime immediately even if the script is stuck in a synchronous
+        infinite loop or blocked in a long-running native call - the scenario
+        a graceful unload can never recover from.
+
+        Args:
+            script_id: ID of the target script.
+
+        Returns:
+            bool: True if the script was terminated successfully.
+
+        Raises:
+            ToolError: If the script is not found or termination fails.
+        """
+        if script_id not in self._scripts:
+            _logger.error("frida_script_not_found", script_id=script_id, operation="terminate_script")
+            raise ToolError(_ERR_SCRIPT_NOT_FOUND)
+
+        script = self._scripts[script_id]
+        try:
+            await asyncio.to_thread(script.terminate)
+        except Exception as e:
+            _logger.warning("frida_terminate_script_failed", script_id=script_id, error=str(e))
+            raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e, script_id=script_id)) from e
+
+        self._forget_script_registries(script_id)
+        _logger.info("script_terminated", script_id=script_id)
+        return True
+
+
+class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
     """Stalker tracing, child gating, crash reporting, and Objective-C surface for the Frida bridge."""
 
     async def stalker_follow(
@@ -5983,6 +6256,34 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeSessionChildGatingMixin):
         else:
             _logger.debug("rpc_call_complete", method=method_name)
             return result
+
+    async def list_rpc_exports(self, script_id: str) -> list[str]:
+        """Discover which RPC exports a running script provides.
+
+        Args:
+            script_id: ID of the target script.
+
+        Returns:
+            list[str]: Export names exactly as declared in the script's
+                ``rpc.exports`` object (camelCase, if so written) - pass one of
+                these names directly to :meth:`rpc_call`.
+
+        Raises:
+            ToolError: If the script is not found or the query fails.
+        """
+        if script_id not in self._scripts:
+            _logger.error("frida_script_not_found", script_id=script_id, operation="list_rpc_exports")
+            raise ToolError(_ERR_SCRIPT_NOT_FOUND)
+
+        script = self._scripts[script_id]
+        try:
+            exports: list[str] = await asyncio.to_thread(script.list_exports_sync)
+        except Exception as e:
+            _logger.warning("frida_list_rpc_exports_failed", script_id=script_id, error=str(e))
+            raise ToolError(_ERR_RPC_FAILED, details=self._frida_error_details(e, script_id=script_id)) from e
+
+        _logger.debug("rpc_exports_listed", script_id=script_id, count=len(exports))
+        return list(exports)
 
     async def create_cancellable(self) -> str:
         """Create a Frida cancellation token for long-running operations.

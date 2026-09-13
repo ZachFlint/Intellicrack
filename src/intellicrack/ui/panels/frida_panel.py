@@ -50,6 +50,7 @@ from intellicrack.ui.panels.frida_instrumentation_tab import (
     MemoryPatchStringControls,
     PrecompiledScriptControls,
     ScriptMessagingControls,
+    ScriptSnapshotControls,
     StalkerCallProbeControls,
     StalkerConfigControls,
     SymbolLookupControls,
@@ -672,6 +673,7 @@ class FridaPanel(AnalysisPanelBase):
         self._script_messaging.set_bridge(bridge)
         self._cancellable_controls.set_bridge(bridge)
         self._precompiled_script_controls.set_bridge(bridge)
+        self._script_snapshot_controls.set_bridge(bridge)
         _logger.info("frida_bridge_set", bridge_type=type(bridge).__name__)
 
     def get_bridge(self) -> FridaBridge | None:
@@ -3221,6 +3223,9 @@ class FridaPanel(AnalysisPanelBase):
 
         self._precompiled_script_controls = PrecompiledScriptControls()
         layout.addWidget(self._precompiled_script_controls)
+
+        self._script_snapshot_controls = ScriptSnapshotControls()
+        layout.addWidget(self._script_snapshot_controls)
 
         child_title = QLabel("Child Gating")
         child_title.setFont(FontManager.get_instance().get_ui_font_bold(9))
