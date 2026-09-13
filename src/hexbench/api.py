@@ -193,18 +193,23 @@ def _json_response(payload: JsonValue, status: int = _STATUS_OK) -> Response:
     return Response(status=status, body=_json_body(payload), content_type=_JSON_TYPE)
 
 
-def _failure(message: str, *, kind: str, status: int) -> Response:
+def _failure(message: str, *, kind: str, status: int, detail: str | None = None) -> Response:
     """Build the standard error response.
 
     Args:
         message: Human readable description of the failure.
         kind: Stable slug a client can branch on.
         status: HTTP status code to send.
+        detail: Actionable second line naming the route or the fix, or ``None``
+            when the message is the whole story; only carried in the envelope
+            when set, so a failure with nothing to add leaves no empty line.
 
     Returns:
         Response: A JSON response whose body is ``{"error": {...}}``.
     """
     error: dict[str, JsonValue] = {"kind": kind, "status": status, "message": message}
+    if detail is not None:
+        error["detail"] = detail
     return _json_response({"error": error}, status=status)
 
 
@@ -215,9 +220,10 @@ def _error_response(error: DispatchError) -> Response:
         error: The classified failure.
 
     Returns:
-        Response: A JSON response carrying the failure's slug and message.
+        Response: A JSON response carrying the failure's slug, message and, when
+        the failure has a next step to offer, its actionable detail.
     """
-    return _failure(str(error), kind=error.kind, status=error.status)
+    return _failure(str(error), kind=error.kind, status=error.status, detail=error.detail)
 
 
 def _method_not_allowed(allowed: tuple[str, ...]) -> Response:

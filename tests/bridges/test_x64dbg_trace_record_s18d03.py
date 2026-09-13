@@ -197,6 +197,15 @@ class _FakePipeClient:
 class _PlaceholderProcess:
     """Sentinel satisfying the bridge's ``self._process is not None`` guards."""
 
+    def poll(self) -> int | None:
+        """Report process status the way :class:`subprocess.Popen.poll` does.
+
+        Returns:
+            int | None: Always ``None``, indicating this stand-in debugger
+            process is still running.
+        """
+        return None
+
 
 def _install_fake_pipe(
     bridge: X64DbgBridge,

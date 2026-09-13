@@ -13,11 +13,12 @@ from __future__ import annotations
 import ctypes
 import ctypes.wintypes
 import platform
+import threading
 from ctypes import POINTER
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, ClassVar, Final, cast
 
 from PyQt6.QtCore import QTimer
-from PyQt6.QtGui import QWindow
+from PyQt6.QtGui import QImage, QWindow
 from PyQt6.QtWidgets import QWidget
 
 from intellicrack.core.logging import get_logger
@@ -33,6 +34,11 @@ _logger = get_logger(__name__)
 
 _EMBED_MIN_WIDTH: Final[int] = 200
 _EMBED_MIN_HEIGHT: Final[int] = 150
+
+_PW_RENDERFULLCONTENT: Final[int] = 2
+_BI_RGB: Final[int] = 0
+_DIB_RGB_COLORS: Final[int] = 0
+_CAPTURE_BYTES_PER_PIXEL: Final[int] = 4
 
 _GW_OWNER: Final[int] = 4
 _MAX_TITLE_LEN: Final[int] = 256
@@ -142,7 +148,7 @@ def find_window_by_pid(pid: int) -> int | None:
     )
 
     def _enum_callback(hwnd: int, _lparam: int) -> bool:
-        """EnumWindows callback that captures the first top-level window for ``pid``.
+        """Capture the first top-level window for ``pid`` during ``EnumWindows``.
 
         Continues enumeration for windows that fail the ownership, visibility,
         owner, or title checks, and stops once a matching hwnd is recorded.
@@ -349,3 +355,268 @@ def poll_and_embed(
             )
 
     QTimer.singleShot(interval_ms, _try_embed)
+
+
+class _BitmapInfoHeader(ctypes.Structure):
+    """Win32 ``BITMAPINFOHEADER`` describing an uncompressed 32bpp top-down DIB.
+
+    Used with ``GetDIBits`` to pull a captured window's pixels out of a GDI
+    bitmap in a layout (``BGRX``, top-down rows) that matches
+    :class:`PyQt6.QtGui.QImage`'s ``Format_RGB32`` directly, with no channel
+    reordering or row-flipping required.
+    """
+
+    _fields_: ClassVar = [
+        ("biSize", ctypes.wintypes.DWORD),
+        ("biWidth", ctypes.c_long),
+        ("biHeight", ctypes.c_long),
+        ("biPlanes", ctypes.wintypes.WORD),
+        ("biBitCount", ctypes.wintypes.WORD),
+        ("biCompression", ctypes.wintypes.DWORD),
+        ("biSizeImage", ctypes.wintypes.DWORD),
+        ("biXPelsPerMeter", ctypes.c_long),
+        ("biYPelsPerMeter", ctypes.c_long),
+        ("biClrUsed", ctypes.wintypes.DWORD),
+        ("biClrImportant", ctypes.wintypes.DWORD),
+    ]
+
+
+class _CaptureBindings:
+    """Lazily bound ``user32``/``gdi32`` entry points for window-content capture.
+
+    x64dbg's debugger window is deliberately kept on a dedicated Win32
+    desktop that is never made the input desktop (see
+    :mod:`intellicrack.core.win32_desktop_process`), so its window can be
+    found (:func:`intellicrack.ui.panels.x64dbg_panel.find_window_by_pid_on_desktop`)
+    but can never be reparented into a Qt container: ``SetParent`` fails
+    with ``ERROR_INVALID_PARAMETER`` whenever the child and new-parent
+    windows belong to different desktops, which is confirmed empirically
+    and is why :func:`embed_window` can never succeed for it. GDI capture
+    operations such as ``PrintWindow`` are not restricted this way, so this
+    class backs :func:`capture_window_image`, which mirrors the window's
+    live rendered content instead of reparenting the real ``HWND``.
+    """
+
+    def __init__(self) -> None:
+        """Load ``user32``/``gdi32`` and bind the entry points this capture needs."""
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
+        wt = ctypes.wintypes
+
+        self.get_window_rect = user32.GetWindowRect
+        self.get_window_rect.restype = wt.BOOL
+        self.get_window_rect.argtypes = [wt.HWND, POINTER(wt.RECT)]
+
+        self.get_dc = user32.GetDC
+        self.get_dc.restype = wt.HDC
+        self.get_dc.argtypes = [wt.HWND]
+
+        self.release_dc = user32.ReleaseDC
+        self.release_dc.restype = ctypes.c_int
+        self.release_dc.argtypes = [wt.HWND, wt.HDC]
+
+        self.print_window = user32.PrintWindow
+        self.print_window.restype = wt.BOOL
+        self.print_window.argtypes = [wt.HWND, wt.HDC, wt.UINT]
+
+        self.create_compatible_dc = gdi32.CreateCompatibleDC
+        self.create_compatible_dc.restype = wt.HDC
+        self.create_compatible_dc.argtypes = [wt.HDC]
+
+        self.create_compatible_bitmap = gdi32.CreateCompatibleBitmap
+        self.create_compatible_bitmap.restype = wt.HBITMAP
+        self.create_compatible_bitmap.argtypes = [wt.HDC, ctypes.c_int, ctypes.c_int]
+
+        self.select_object = gdi32.SelectObject
+        self.select_object.restype = wt.HGDIOBJ
+        self.select_object.argtypes = [wt.HDC, wt.HGDIOBJ]
+
+        self.delete_dc = gdi32.DeleteDC
+        self.delete_dc.restype = wt.BOOL
+        self.delete_dc.argtypes = [wt.HDC]
+
+        self.delete_object = gdi32.DeleteObject
+        self.delete_object.restype = wt.BOOL
+        self.delete_object.argtypes = [wt.HGDIOBJ]
+
+        self.get_dibits = gdi32.GetDIBits
+        self.get_dibits.restype = ctypes.c_int
+        self.get_dibits.argtypes = [
+            wt.HDC,
+            wt.HBITMAP,
+            wt.UINT,
+            wt.UINT,
+            wt.LPVOID,
+            POINTER(_BitmapInfoHeader),
+            wt.UINT,
+        ]
+
+
+_capture_bindings_cache: list[_CaptureBindings] = []
+_capture_bindings_lock = threading.Lock()
+
+
+def _get_capture_bindings() -> _CaptureBindings | None:
+    """Return the lazily-bound capture entry points, creating them on first use.
+
+    Returns:
+        _CaptureBindings | None: The cached bindings, or ``None`` when not
+        running on Windows.
+    """
+    if not _is_windows() or not hasattr(ctypes, "windll"):
+        return None
+    if not _capture_bindings_cache:
+        with _capture_bindings_lock:
+            if not _capture_bindings_cache:
+                _capture_bindings_cache.append(_CaptureBindings())
+    return _capture_bindings_cache[0]
+
+
+def capture_window_image(hwnd: int) -> QImage | None:
+    """Capture a foreign window's current rendered contents as a ``QImage``.
+
+    Renders ``hwnd`` into an off-screen GDI bitmap via ``PrintWindow`` with
+    ``PW_RENDERFULLCONTENT`` and copies the pixels into a ``QImage``. Unlike
+    :func:`embed_window`, this succeeds even when ``hwnd`` belongs to a
+    Win32 desktop other than the calling thread's own current desktop -
+    confirmed empirically against a real hidden-desktop child process,
+    where ``SetParent`` fails with ``ERROR_INVALID_PARAMETER`` but
+    ``PrintWindow`` renders correctly. This is how the x64dbg panel shows a
+    live mirror of its debugger window's real content when the window
+    itself cannot be embedded as a native child widget (S20-D01).
+
+    Args:
+        hwnd: Native window handle (HWND) to capture.
+
+    Returns:
+        QImage | None: A deep copy of the captured frame, or ``None`` when
+        ``hwnd`` is invalid, the platform is unsupported, the window has
+        no area, or any Win32/GDI call in the capture sequence fails.
+    """
+    if hwnd <= 0:
+        return None
+
+    api = _get_capture_bindings()
+    if api is None:
+        return None
+
+    rect = ctypes.wintypes.RECT()
+    if not api.get_window_rect(hwnd, ctypes.byref(rect)):
+        _logger.debug("win32_capture_get_window_rect_failed", hwnd=hex(hwnd))
+        return None
+
+    width = int(rect.right - rect.left)
+    height = int(rect.bottom - rect.top)
+    if width <= 0 or height <= 0:
+        return None
+
+    screen_dc = api.get_dc(None)
+    if not screen_dc:
+        _logger.debug("win32_capture_get_screen_dc_failed", hwnd=hex(hwnd))
+        return None
+
+    try:
+        return _capture_via_memory_dc(api, hwnd, screen_dc, width, height)
+    finally:
+        api.release_dc(None, screen_dc)
+
+
+def _capture_via_memory_dc(
+    api: _CaptureBindings,
+    hwnd: int,
+    screen_dc: int,
+    width: int,
+    height: int,
+) -> QImage | None:
+    """Render ``hwnd`` into a memory DC and extract the pixels as a ``QImage``.
+
+    Args:
+        api: Bound capture entry points from :func:`_get_capture_bindings`.
+        hwnd: Native window handle to capture.
+        screen_dc: Screen device context used as the compatibility
+            reference for the memory DC and bitmap.
+        width: Window width in pixels, from ``GetWindowRect``.
+        height: Window height in pixels, from ``GetWindowRect``.
+
+    Returns:
+        QImage | None: The captured frame, or ``None`` if any step of the
+        capture sequence fails.
+    """
+    mem_dc = api.create_compatible_dc(screen_dc)
+    if not mem_dc:
+        _logger.debug("win32_capture_create_compatible_dc_failed", hwnd=hex(hwnd))
+        return None
+
+    try:
+        bitmap = api.create_compatible_bitmap(screen_dc, width, height)
+        if not bitmap:
+            _logger.debug("win32_capture_create_compatible_bitmap_failed", hwnd=hex(hwnd))
+            return None
+
+        try:
+            old_object = api.select_object(mem_dc, bitmap)
+            try:
+                if not api.print_window(hwnd, mem_dc, _PW_RENDERFULLCONTENT):
+                    _logger.debug("win32_capture_print_window_failed", hwnd=hex(hwnd))
+                    return None
+                return _read_bitmap_pixels(api, mem_dc, bitmap, width, height)
+            finally:
+                if old_object:
+                    api.select_object(mem_dc, old_object)
+        finally:
+            api.delete_object(bitmap)
+    finally:
+        api.delete_dc(mem_dc)
+
+
+def _read_bitmap_pixels(
+    api: _CaptureBindings,
+    mem_dc: int,
+    bitmap: int,
+    width: int,
+    height: int,
+) -> QImage | None:
+    """Read a compatible bitmap's pixels into a top-down 32bpp ``QImage``.
+
+    Args:
+        api: Bound capture entry points from :func:`_get_capture_bindings`.
+        mem_dc: Memory device context the bitmap is selected into.
+        bitmap: Compatible bitmap already painted via ``PrintWindow``.
+        width: Bitmap width in pixels.
+        height: Bitmap height in pixels.
+
+    Returns:
+        QImage | None: A deep copy of the decoded frame, or ``None`` when
+        ``GetDIBits`` reports no scanlines were copied.
+    """
+    header = _BitmapInfoHeader()
+    header.biSize = ctypes.sizeof(_BitmapInfoHeader)
+    header.biWidth = width
+    header.biHeight = -height
+    header.biPlanes = 1
+    header.biBitCount = 32
+    header.biCompression = _BI_RGB
+
+    stride = width * _CAPTURE_BYTES_PER_PIXEL
+    pixel_buffer = ctypes.create_string_buffer(stride * height)
+    scanlines = api.get_dibits(
+        mem_dc,
+        bitmap,
+        0,
+        height,
+        pixel_buffer,
+        ctypes.byref(header),
+        _DIB_RGB_COLORS,
+    )
+    if scanlines <= 0:
+        _logger.debug("win32_capture_get_dibits_failed", width=width, height=height)
+        return None
+
+    image = QImage(
+        bytes(pixel_buffer),
+        width,
+        height,
+        stride,
+        QImage.Format.Format_RGB32,
+    )
+    return image.copy()

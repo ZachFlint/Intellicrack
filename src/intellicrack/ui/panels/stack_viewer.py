@@ -35,7 +35,7 @@ from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import Callable, Coroutine
 
     from PyQt6.QtGui import QCloseEvent
 
@@ -166,6 +166,46 @@ class StackDataSource(Protocol):
         return type(self).__name__
 
 
+def _pull_x64dbg_bridge(provider: object) -> X64DbgBridge | None:
+    """Resolve the currently active x64dbg bridge from an orchestrator-like object.
+
+    Reads the ``x64dbg_bridge`` attribute directly on every call rather than
+    caching a value from a prior lookup, so a bridge that connects (or is
+    replaced) after a stack source was created is still picked up on the very
+    next connection check or refresh.
+
+    Args:
+        provider: Object exposing an ``x64dbg_bridge`` attribute, such as the
+            tool-panel host that tracks the application's live x64dbg bridge.
+
+    Returns:
+        X64DbgBridge | None: The live bridge instance, or None when the
+        provider currently exposes no attached bridge.
+    """
+    bridge = getattr(provider, "x64dbg_bridge", None)
+    return None if bridge is None else cast("X64DbgBridge", bridge)
+
+
+def _pull_frida_bridge(provider: object) -> FridaBridge | None:
+    """Resolve the currently active Frida bridge from an orchestrator-like object.
+
+    Reads the ``frida_bridge`` attribute directly on every call rather than
+    caching a value from a prior lookup, so a bridge that connects (or is
+    replaced) after a stack source was created is still picked up on the very
+    next connection check or refresh.
+
+    Args:
+        provider: Object exposing a ``frida_bridge`` attribute, such as the
+            tool-panel host that tracks the application's live Frida bridge.
+
+    Returns:
+        FridaBridge | None: The live bridge instance, or None when the
+        provider currently exposes no attached bridge.
+    """
+    bridge = getattr(provider, "frida_bridge", None)
+    return None if bridge is None else cast("FridaBridge", bridge)
+
+
 class X64DbgStackSource:
     """Stack data source backed by X64DbgBridge.
 
@@ -177,6 +217,7 @@ class X64DbgStackSource:
     def __init__(self) -> None:
         """Initialize the X64DbgStackSource instance."""
         self._bridge: X64DbgBridge | None = None
+        self._bridge_provider: Callable[[], X64DbgBridge | None] | None = None
 
     def set_bridge(self, bridge: X64DbgBridge) -> None:
         """Set the X64DbgBridge instance.
@@ -186,6 +227,35 @@ class X64DbgStackSource:
         """
         self._bridge = bridge
 
+    def set_bridge_provider(self, provider: Callable[[], X64DbgBridge | None]) -> None:
+        """Register a callable that resolves the current live bridge on demand.
+
+        Args:
+            provider: Callable returning the currently active X64DbgBridge, or
+                None when no x64dbg session is attached. Invoked fresh on every
+                connection check and refresh instead of once at construction,
+                so a bridge that connected before this source existed - or was
+                later replaced - is always reflected rather than missed.
+        """
+        self._bridge_provider = provider
+
+    def _resolve_bridge(self) -> X64DbgBridge | None:
+        """Resolve the effective bridge, preferring a live provider pull.
+
+        Returns:
+            X64DbgBridge | None: The bridge returned by the registered
+            provider when one is set (even if that pull currently yields
+            None), otherwise the bridge previously supplied via
+            :meth:`set_bridge`.
+        """
+        if self._bridge_provider is not None:
+            try:
+                self._bridge = self._bridge_provider()
+            except (RuntimeError, ConnectionError, OSError, AttributeError):
+                _logger.debug("x64dbg_bridge_provider_pull_failed", exc_info=True)
+                self._bridge = None
+        return self._bridge
+
     def get_stack_coroutine(self) -> Coroutine[object, object, object] | None:
         """Get the x64dbg bridge coroutine that fetches the raw stack trace.
 
@@ -193,7 +263,8 @@ class X64DbgStackSource:
             Coroutine[object, object, object] | None: The bridge
             ``get_stack_trace`` coroutine, or None when no bridge is attached.
         """
-        return None if self._bridge is None else self._bridge.get_stack_trace()
+        bridge = self._resolve_bridge()
+        return None if bridge is None else bridge.get_stack_trace()
 
     @staticmethod
     def frames_from_raw(raw: object) -> list[StackFrame]:
@@ -233,11 +304,12 @@ class X64DbgStackSource:
         Returns:
             list[StackFrame]: List of StackFrame objects.
         """
-        if self._bridge is None:
+        bridge = self._resolve_bridge()
+        if bridge is None:
             return []
 
         try:
-            raw = run_bridge_coroutine(self._bridge.get_stack_trace())
+            raw = run_bridge_coroutine(bridge.get_stack_trace())
         except (RuntimeError, ConnectionError, OSError):
             _logger.exception("x64dbg_stack_frames_failed", bridge_type="x64dbg")
             return []
@@ -250,10 +322,11 @@ class X64DbgStackSource:
         Returns:
             bool: True if bridge is attached and connected.
         """
-        if self._bridge is None:
+        bridge = self._resolve_bridge()
+        if bridge is None:
             return False
         try:
-            return bool(self._bridge.state.is_ready())
+            return bool(bridge.state.is_ready())
         except (RuntimeError, ConnectionError, OSError, AttributeError):
             _logger.debug("x64dbg_connection_check_failed", exc_info=True)
             return False
@@ -278,6 +351,7 @@ class FridaStackSource:
     def __init__(self) -> None:
         """Initialize the FridaStackSource instance."""
         self._bridge: FridaBridge | None = None
+        self._bridge_provider: Callable[[], FridaBridge | None] | None = None
         self._cached_frames: list[StackFrame] = []
 
     def set_bridge(self, bridge: FridaBridge) -> None:
@@ -288,6 +362,34 @@ class FridaStackSource:
         """
         self._bridge = bridge
 
+    def set_bridge_provider(self, provider: Callable[[], FridaBridge | None]) -> None:
+        """Register a callable that resolves the current live bridge on demand.
+
+        Args:
+            provider: Callable returning the currently active FridaBridge, or
+                None when no Frida session is attached. Invoked fresh on every
+                connection check and refresh instead of once at construction,
+                so a bridge that connected before this source existed - or was
+                later replaced - is always reflected rather than missed.
+        """
+        self._bridge_provider = provider
+
+    def _resolve_bridge(self) -> FridaBridge | None:
+        """Resolve the effective bridge, preferring a live provider pull.
+
+        Returns:
+            FridaBridge | None: The bridge returned by the registered provider
+            when one is set (even if that pull currently yields None),
+            otherwise the bridge previously supplied via :meth:`set_bridge`.
+        """
+        if self._bridge_provider is not None:
+            try:
+                self._bridge = self._bridge_provider()
+            except (RuntimeError, ConnectionError, OSError, AttributeError):
+                _logger.debug("frida_bridge_provider_pull_failed", exc_info=True)
+                self._bridge = None
+        return self._bridge
+
     def get_stack_coroutine(self) -> Coroutine[object, object, object] | None:
         """Get the Frida bridge coroutine that fetches the raw backtrace.
 
@@ -295,7 +397,8 @@ class FridaStackSource:
             Coroutine[object, object, object] | None: The bridge
             ``get_backtrace`` coroutine, or None when no bridge is attached.
         """
-        return None if self._bridge is None else self._bridge.get_backtrace()
+        bridge = self._resolve_bridge()
+        return None if bridge is None else bridge.get_backtrace()
 
     def frames_from_raw(self, raw: object) -> list[StackFrame]:
         """Convert a raw Frida backtrace response into StackFrame objects.
@@ -337,11 +440,12 @@ class FridaStackSource:
             list[StackFrame]: List of StackFrame objects derived from the bridge's
             SymbolInfo backtrace entries.
         """
-        if self._bridge is None:
+        bridge = self._resolve_bridge()
+        if bridge is None:
             return self._cached_frames
 
         try:
-            raw = run_bridge_coroutine(self._bridge.get_backtrace())
+            raw = run_bridge_coroutine(bridge.get_backtrace())
         except (RuntimeError, ConnectionError, OSError):
             _logger.exception("frida_stack_frames_failed", bridge_type="frida")
             return self._cached_frames
@@ -354,10 +458,11 @@ class FridaStackSource:
         Returns:
             bool: True if bridge is attached and session is active.
         """
-        if self._bridge is None:
+        bridge = self._resolve_bridge()
+        if bridge is None:
             return False
         try:
-            return bool(self._bridge.state.process_attached)
+            return bool(bridge.state.process_attached)
         except (RuntimeError, ConnectionError, OSError, AttributeError):
             _logger.debug("frida_connection_check_failed", exc_info=True)
             return False
@@ -367,6 +472,100 @@ class FridaStackSource:
 
         Returns:
             str: 'Frida' string.
+        """
+        return self._source_name
+
+
+class OrchestratorStackSource:
+    """Aggregate stack data source that pulls whichever tool bridge is currently live.
+
+    Wraps an orchestrator/registry-like object (for example the tool-panel host
+    in :mod:`intellicrack.ui.tools`) and re-resolves its ``x64dbg_bridge`` and
+    ``frida_bridge`` attributes on every connection check and refresh - rather
+    than capturing a bridge once at construction time - so it always reflects
+    whichever debugging session is presently attached, preferring x64dbg when
+    both are connected.
+    """
+
+    _source_name: ClassVar[str] = "orchestrator"
+
+    def __init__(self, provider: object) -> None:
+        """Initialize the OrchestratorStackSource instance.
+
+        Args:
+            provider: Object exposing ``x64dbg_bridge``/``frida_bridge``
+                attributes for the application's currently active tool bridges.
+        """
+        self._x64dbg = X64DbgStackSource()
+        self._x64dbg.set_bridge_provider(lambda: _pull_x64dbg_bridge(provider))
+        self._frida = FridaStackSource()
+        self._frida.set_bridge_provider(lambda: _pull_frida_bridge(provider))
+        self._active: X64DbgStackSource | FridaStackSource | None = None
+
+    def _resolve_active(self) -> X64DbgStackSource | FridaStackSource | None:
+        """Resolve which wrapped source is presently connected, preferring x64dbg.
+
+        Returns:
+            X64DbgStackSource | FridaStackSource | None: The connected wrapped
+            source, or None when neither tool bridge is currently attached.
+        """
+        if self._x64dbg.is_connected():
+            self._active = self._x64dbg
+            return self._active
+        if self._frida.is_connected():
+            self._active = self._frida
+            return self._active
+        self._active = None
+        return None
+
+    def get_stack_frames(self) -> list[StackFrame]:
+        """Get current stack frames from whichever wrapped source is connected.
+
+        Returns:
+            list[StackFrame]: Frames from the connected source, or an empty
+            list when neither tool bridge is currently attached.
+        """
+        active = self._resolve_active()
+        return [] if active is None else active.get_stack_frames()
+
+    def get_stack_coroutine(self) -> Coroutine[object, object, object] | None:
+        """Get the bridge coroutine for whichever wrapped source is connected.
+
+        Returns:
+            Coroutine[object, object, object] | None: The coroutine from the
+            connected wrapped source, or None when neither is attached.
+        """
+        active = self._resolve_active()
+        return None if active is None else active.get_stack_coroutine()
+
+    def frames_from_raw(self, raw: object) -> list[StackFrame]:
+        """Convert a raw response using whichever wrapped source produced it.
+
+        Args:
+            raw: The raw value returned by the coroutine from
+                :meth:`get_stack_coroutine`.
+
+        Returns:
+            list[StackFrame]: Parsed StackFrame objects, or an empty list when
+            no wrapped source is currently active.
+        """
+        if self._active is None:
+            return []
+        return self._active.frames_from_raw(raw)
+
+    def is_connected(self) -> bool:
+        """Check whether either wrapped tool bridge is currently connected.
+
+        Returns:
+            bool: True if the x64dbg or Frida bridge is presently attached.
+        """
+        return self._resolve_active() is not None
+
+    def get_source_name(self) -> str:
+        """Get the source name.
+
+        Returns:
+            str: 'orchestrator' string.
         """
         return self._source_name
 
@@ -537,7 +736,7 @@ class StackViewerPanel(QWidget):
             parent: Parent widget.
         """
         super().__init__(parent)
-        self._sources: dict[str, X64DbgStackSource | FridaStackSource] = {}
+        self._sources: dict[str, StackDataSource] = {}
         self._active_source: str | None = None
         self.refresh_timer: QTimer | None = None
         self._refresh_in_flight: bool = False
@@ -718,7 +917,7 @@ class StackViewerPanel(QWidget):
             source=self._active_source,
         )
 
-    def _on_frames_loaded(self, source: X64DbgStackSource | FridaStackSource, raw: object) -> None:
+    def _on_frames_loaded(self, source: StackDataSource, raw: object) -> None:
         """Render stack frames parsed from a completed bridge round-trip.
 
         Args:
@@ -778,16 +977,51 @@ class StackViewerPanel(QWidget):
             if self._active_source == "Frida":
                 self.refresh()
 
-    def add_source(self, name: str, source: X64DbgStackSource | FridaStackSource) -> None:
-        """Add a custom stack data source.
+    def add_source(self, name: str, source: object) -> None:
+        """Add a custom stack data source, or wire a live orchestrator bridge provider.
+
+        A ``source`` that structurally implements :class:`StackDataSource`
+        (another :class:`X64DbgStackSource`/:class:`FridaStackSource`, or an
+        :class:`OrchestratorStackSource`) is registered directly as a
+        selectable source. Anything else - the intended case being the
+        tool-panel host registered under the reserved name ``"orchestrator"``,
+        which tracks the application's live x64dbg/Frida bridges but does not
+        itself implement the stack-source protocol - is instead wired as a
+        live bridge provider onto the existing ``"x64dbg"``/``"Frida"``
+        sources (so they pull the current bridge on every connection check and
+        refresh instead of only when handed one through
+        :meth:`set_x64dbg_bridge`/:meth:`set_frida_bridge`) and additionally
+        wrapped in an :class:`OrchestratorStackSource` registered under
+        ``name`` so it also works as its own selectable, non-crashing entry.
 
         Args:
             name: Display name for the source.
-            source: The stack data source instance.
+            source: The stack data source instance, or an orchestrator/registry
+                -like object exposing ``x64dbg_bridge``/``frida_bridge``
+                attributes for the application's live tool bridges.
         """
-        self._sources[name] = source
-        if name not in [self._source_combo.itemText(i) for i in range(self._source_combo.count())]:
-            self._source_combo.addItem(name)
+        if isinstance(source, StackDataSource):
+            self._sources[name] = source
+            if name not in [self._source_combo.itemText(i) for i in range(self._source_combo.count())]:
+                self._source_combo.addItem(name)
+            return
+
+        x64dbg_source = self._sources.get("x64dbg")
+        if isinstance(x64dbg_source, X64DbgStackSource):
+            x64dbg_source.set_bridge_provider(lambda: _pull_x64dbg_bridge(source))
+
+        frida_source = self._sources.get("Frida")
+        if isinstance(frida_source, FridaStackSource):
+            frida_source.set_bridge_provider(lambda: _pull_frida_bridge(source))
+
+        if name not in self._sources:
+            self._sources[name] = OrchestratorStackSource(source)
+            if name not in [self._source_combo.itemText(i) for i in range(self._source_combo.count())]:
+                self._source_combo.addItem(name)
+
+        _logger.info("stack_viewer_orchestrator_wired", name=name)
+        self._update_status()
+        self.refresh()
 
     def clear(self) -> None:
         """Clear the stack frame display."""

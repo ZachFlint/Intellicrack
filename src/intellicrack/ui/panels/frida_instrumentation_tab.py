@@ -10,7 +10,8 @@ definition but historically had no reachable GUI control: ``Interceptor.revert``
 ``invalidate``/``setTrustThreshold`` (Stalker tuning), ``Memory.patchCode`` and the
 ``Memory.allocUtf8String``/``allocAnsiString``/``allocUtf16String`` family (code patching and string allocation),
 ``Module.enumerateSymbols``/``Process.findModuleByAddress``/``DebugSymbol.findFunctionsMatching`` (symbol and module
-lookups), the ``SystemFunction``-based ``call_system_function`` (errno/``GetLastError`` capture), RPC exports and
+lookups), ``Instruction.parse``-based single-instruction disassembly (``disassemble_instruction``), the
+``SystemFunction``-based ``call_system_function`` (errno/``GetLastError`` capture), RPC exports and
 raw script messaging (``rpc_call``/``post_message``/``eternalize_script``), and cancellation tokens
 (``create_cancellable``/``cancel``). Each widget is driven directly by ``FridaBridge`` methods
 (``bridges/frida_bridge.py``) via ``run_bridge_coroutine_logged``.
@@ -619,6 +620,144 @@ class MemoryPatchStringControls(QWidget):
         self._alloc_string_btn.setEnabled(True)
         self._alloc_string_result.setText(f"Allocate failed: {exc}")
         _logger.warning("frida_allocate_string_failed", error=str(exc))
+
+
+class InstructionDisassembleControls(QWidget):
+    """Single-instruction disassembly controls for the Memory section.
+
+    Exposes ``disassemble_instruction`` (backed by Frida's ``Instruction.parse``), decoding one instruction at a
+    target address and rendering its address, next-instruction address, size, mnemonic, operand string, and full
+    textual form, distinct from the raw byte-oriented Read/Write/Scan controls already present in the Memory tab.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the instruction disassembly controls.
+
+        Args:
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        self._bridge: FridaBridge | None = None
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        title = QLabel("Disassemble Instruction")
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(title)
+
+        addr_row = QHBoxLayout()
+        addr_row.addWidget(QLabel("Address:"))
+        self._disasm_addr_input = QLineEdit()
+        self._disasm_addr_input.setPlaceholderText("0x401000")
+        self._disasm_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        addr_row.addWidget(self._disasm_addr_input)
+        self._disasm_btn = QPushButton("Disassemble")
+        self._disasm_btn.setObjectName("tool_button")
+        self._disasm_btn.clicked.connect(self._on_disassemble_instruction)
+        addr_row.addWidget(self._disasm_btn)
+        addr_row.addStretch()
+        layout.addLayout(addr_row)
+
+        fields_row = QHBoxLayout()
+        fields_row.addWidget(QLabel("Address:"))
+        self._disasm_address_label = QLabel("")
+        fields_row.addWidget(self._disasm_address_label)
+        fields_row.addSpacing(_RESULT_GROUP_SPACING)
+        fields_row.addWidget(QLabel("Next:"))
+        self._disasm_next_label = QLabel("")
+        fields_row.addWidget(self._disasm_next_label)
+        fields_row.addSpacing(_RESULT_GROUP_SPACING)
+        fields_row.addWidget(QLabel("Size:"))
+        self._disasm_size_label = QLabel("")
+        fields_row.addWidget(self._disasm_size_label)
+        fields_row.addSpacing(_RESULT_GROUP_SPACING)
+        fields_row.addWidget(QLabel("Mnemonic:"))
+        self._disasm_mnemonic_label = QLabel("")
+        fields_row.addWidget(self._disasm_mnemonic_label)
+        fields_row.addStretch()
+        layout.addLayout(fields_row)
+
+        opstr_row = QHBoxLayout()
+        opstr_row.addWidget(QLabel("Operands:"))
+        self._disasm_opstr_label = QLabel("")
+        self._disasm_opstr_label.setWordWrap(True)
+        opstr_row.addWidget(self._disasm_opstr_label)
+        layout.addLayout(opstr_row)
+
+        string_row = QHBoxLayout()
+        string_row.addWidget(QLabel("Instruction:"))
+        self._disasm_string_label = QLabel("")
+        self._disasm_string_label.setWordWrap(True)
+        string_row.addWidget(self._disasm_string_label)
+        layout.addLayout(string_row)
+
+        self._status_label = QLabel("")
+        layout.addWidget(self._status_label)
+        layout.addStretch()
+
+    def set_bridge(self, bridge: FridaBridge) -> None:
+        """Set the FridaBridge instance used to service disassembly requests.
+
+        Args:
+            bridge: The FridaBridge to use.
+        """
+        self._bridge = bridge
+
+    def _on_disassemble_instruction(self) -> None:
+        """Disassemble a single instruction at an address via ``disassemble_instruction``."""
+        if self._bridge is None:
+            self._status_label.setText("No bridge available")
+            _logger.warning("frida_disassemble_instruction_failed_no_bridge")
+            return
+        addr = _parse_hex_address(self._disasm_addr_input.text())
+        if addr is None:
+            self._status_label.setText("Invalid address")
+            return
+        self._disasm_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.disassemble_instruction(addr),
+            on_success=self._on_disassemble_instruction_done,
+            on_error=self._on_disassemble_instruction_error,
+            parent=self,
+            event="frida_disassemble_instruction",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+        )
+
+    def _on_disassemble_instruction_done(self, result: object) -> None:
+        """Render a successfully disassembled instruction's fields.
+
+        Args:
+            result: InstructionInfo returned by the bridge.
+        """
+        self._disasm_btn.setEnabled(True)
+        address = getattr(result, "address", None)
+        next_address = getattr(result, "next_address", None)
+        size = getattr(result, "size", None)
+        mnemonic = str(getattr(result, "mnemonic", ""))
+        op_str = str(getattr(result, "op_str", ""))
+        full_string = str(getattr(result, "string", ""))
+        self._disasm_address_label.setText(f"0x{address:X}" if isinstance(address, int) else str(address))
+        self._disasm_next_label.setText(f"0x{next_address:X}" if isinstance(next_address, int) else str(next_address))
+        self._disasm_size_label.setText(str(size) if isinstance(size, int) else "")
+        self._disasm_mnemonic_label.setText(mnemonic)
+        self._disasm_opstr_label.setText(op_str)
+        self._disasm_string_label.setText(full_string)
+        self._status_label.setText("Disassembled")
+        _logger.info("frida_instruction_disassembled_via_gui", address=address, mnemonic=mnemonic)
+
+    def _on_disassemble_instruction_error(self, exc: object) -> None:
+        """Handle a disassembly failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._disasm_btn.setEnabled(True)
+        self._status_label.setText(f"Disassemble failed: {exc}")
+        _logger.warning("frida_disassemble_instruction_failed", error=str(exc))
 
 
 class SymbolLookupControls(QWidget):

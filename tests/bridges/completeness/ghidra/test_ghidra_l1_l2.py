@@ -355,6 +355,403 @@ class TestMemoryBlockOps:
 # ---------------------------------------------------------------------------
 # edit_program_tree (MISSING -> real)
 # ---------------------------------------------------------------------------
+#
+# ``TestEditProgramTreeRealReparentSemantics`` below (near the end of this
+# section) additionally executes the exact script ``edit_program_tree``
+# builds -- captured through ``FakeGhidraBridge.exec_calls`` -- against the
+# small fake Ghidra program-tree model defined here. The model's
+# ``moveChild``/``reparent``/``isDescendant`` behavior mirrors the real
+# ``ghidra.program.database.module.ModuleDB`` (verified against its
+# published source at the Ghidra_11.2.1_build tag and master): ``moveChild``
+# only reorders a child already directly under the module it is called on
+# and raises if it is not a direct child of that module, while
+# ``reparent`` adds the child to the new parent and removes it from the
+# named old parent.
+
+
+def _camel_to_snake(name: str) -> str:
+    """Convert a Java-style camelCase identifier to its snake_case spelling.
+
+    Args:
+        name: A camelCase (or already all-lowercase) identifier.
+
+    Returns:
+        str: The snake_case spelling. Equal to ``name`` when ``name``
+        contains no uppercase letters.
+    """
+    pieces: list[str] = []
+    for index, char in enumerate(name):
+        if char.isupper() and index > 0:
+            pieces.append("_")
+        pieces.append(char.lower())
+    return "".join(pieces)
+
+
+class _JavaNamingShim:
+    """Resolves a camelCase Ghidra-API-style attribute lookup to a snake_case implementation.
+
+    The scripts under test are authored against Ghidra's real, camelCase
+    Java API (``getName``, ``createModule``, ``isDescendant``,
+    ``startTransaction``, ...). This project's naming rules require
+    snake_case Python methods, so every fake below implements the
+    snake_case spelling and this shim resolves the camelCase spelling
+    the captured script actually calls at runtime -- exactly as jpype
+    resolves a Java method name against the real Ghidra objects the
+    production bridge drives.
+    """
+
+    def __getattr__(self, name: str) -> object:
+        """Resolve a camelCase attribute to its snake_case counterpart.
+
+        Args:
+            name: The camelCase attribute name being looked up.
+
+        Returns:
+            object: The corresponding snake_case attribute.
+
+        Raises:
+            AttributeError: If ``name`` has no snake_case counterpart
+                on this object.
+        """
+        snake_name = _camel_to_snake(name)
+        if snake_name != name:
+            try:
+                return object.__getattribute__(self, snake_name)
+            except AttributeError:
+                pass
+        msg = f"{type(self).__name__!r} object has no attribute {name!r}"
+        raise AttributeError(msg)
+
+
+class _FakeGroup(_JavaNamingShim):
+    """Fake of Ghidra's ``Group`` (the ``ProgramModule``/``ProgramFragment`` base)."""
+
+    def __init__(self, name: str, tree: _FakeProgramTree) -> None:
+        """Initialise a named group belonging to a fake program tree.
+
+        Args:
+            name: The group's unique name within the tree.
+            tree: The fake program tree this group belongs to.
+        """
+        self._name = name
+        self._tree = tree
+        self.parents: list[_FakeModule] = []
+
+    def get_name(self) -> str:
+        """Return the group's name (``Group.getName``).
+
+        Returns:
+            str: The group's name.
+        """
+        return self._name
+
+    def get_parents(self) -> list[_FakeModule]:
+        """Return every module that currently parents this group (``Group.getParents``).
+
+        Returns:
+            list[_FakeModule]: The group's current parent modules, in
+            no particular order.
+        """
+        return list(self.parents)
+
+
+class _FakeFragment(_FakeGroup):
+    """Fake of Ghidra's ``ProgramFragment``: a leaf group that never has children."""
+
+
+class _FakeModule(_FakeGroup):
+    """Fake of Ghidra's ``ProgramModule`` mirroring the real ``ModuleDB`` semantics under test."""
+
+    def __init__(self, name: str, tree: _FakeProgramTree) -> None:
+        """Initialise a module with no children.
+
+        Args:
+            name: The module's unique name within the tree.
+            tree: The fake program tree this module belongs to.
+        """
+        super().__init__(name, tree)
+        self.children: list[_FakeGroup] = []
+
+    def create_module(self, name: str) -> _FakeModule:
+        """Create and register a new child module under this module (``ProgramModule.createModule``).
+
+        Args:
+            name: Name for the new module.
+
+        Returns:
+            _FakeModule: The newly created child module.
+        """
+        child = _FakeModule(name, self._tree)
+        self._tree.modules[name] = child
+        self.children.append(child)
+        child.parents.append(self)
+        return child
+
+    def create_fragment(self, name: str) -> _FakeFragment:
+        """Create and register a new child fragment under this module (``ProgramModule.createFragment``).
+
+        Args:
+            name: Name for the new fragment.
+
+        Returns:
+            _FakeFragment: The newly created child fragment.
+        """
+        child = _FakeFragment(name, self._tree)
+        self._tree.fragments[name] = child
+        self.children.append(child)
+        child.parents.append(self)
+        return child
+
+    def add(self, child: _FakeGroup) -> None:
+        """Add an existing group as an additional direct child of this module (``ProgramModule.add``).
+
+        A group may end up with more than one parent this way, matching
+        Ghidra's real multi-parent program trees.
+
+        Args:
+            child: The already-existing module or fragment to add.
+        """
+        if child not in self.children:
+            self.children.append(child)
+        if self not in child.parents:
+            child.parents.append(self)
+
+    def move_child(self, name: str, index: int) -> None:
+        """Reorder a child already directly under this module (``ProgramModule.moveChild``).
+
+        Mirrors the real ``ModuleDB.moveChild``: it never searches any
+        module other than ``self`` and never changes a child's parent.
+
+        Args:
+            name: Name of the direct child to reorder.
+            index: Position to move the child to.
+
+        Raises:
+            LookupError: If ``name`` is not already a direct child of
+                this module, mirroring Ghidra's real
+                ``NotFoundException``.
+        """
+        for position, existing in enumerate(self.children):
+            if existing.get_name() == name:
+                self.children.insert(index, self.children.pop(position))
+                return
+        msg = f"{name} is not a child of {self.get_name()}"
+        raise LookupError(msg)
+
+    def remove_child(self, name: str) -> bool:
+        """Remove a direct child of this module (``ProgramModule.removeChild``).
+
+        Args:
+            name: Name of the direct child to remove.
+
+        Returns:
+            bool: True if a matching child was found and removed,
+            False if this module has no direct child with that name.
+        """
+        for existing in self.children:
+            if existing.get_name() == name:
+                self.children.remove(existing)
+                existing.parents.remove(self)
+                return True
+        return False
+
+    def reparent(self, name: str, old_parent: _FakeModule) -> None:
+        """Move the named child from ``old_parent`` to this module (``ProgramModule.reparent``).
+
+        Mirrors the real ``ModuleDB.reparent``: it looks ``name`` up
+        tree-wide (a child may be a module or a fragment), unconditionally
+        adds a new parent/child link to ``self``, and removes the link
+        from ``old_parent``.
+
+        Args:
+            name: Name of the module or fragment to reparent.
+            old_parent: The module ``name`` must currently be a direct
+                child of.
+
+        Raises:
+            LookupError: If ``name`` does not exist anywhere in the
+                tree, or is not currently a direct child of
+                ``old_parent`` -- mirroring Ghidra's real behavior of
+                operating on a stale/incorrect parent/child record.
+        """
+        child = self._tree.modules.get(name)
+        if child is None:
+            child = self._tree.fragments.get(name)
+        if child is None or old_parent not in child.parents:
+            msg = f"{name} was not found as child of {old_parent.get_name()}"
+            raise LookupError(msg)
+        old_parent.children = [existing for existing in old_parent.children if existing is not child]
+        child.parents.remove(old_parent)
+        self.children.append(child)
+        child.parents.append(self)
+
+    def is_descendant(self, module: _FakeModule) -> bool:
+        """Report whether ``module`` appears anywhere in this module's subtree (``ProgramModule.isDescendant``).
+
+        Args:
+            module: The candidate descendant module.
+
+        Returns:
+            bool: True if ``module`` is nested under ``self`` at any
+            depth, False otherwise.
+        """
+        for existing in self.children:
+            if isinstance(existing, _FakeModule) and (existing.get_name() == module.get_name() or existing.is_descendant(module)):
+                return True
+        return False
+
+
+class _FakeListing(_JavaNamingShim):
+    """Fake of Ghidra's ``Listing`` program-tree lookup surface used by the emitted script."""
+
+    def __init__(self, tree: _FakeProgramTree) -> None:
+        """Bind this fake listing to a single fake program tree.
+
+        Args:
+            tree: The tree this listing answers queries for.
+        """
+        self._tree = tree
+
+    def get_root_module(self, tree_name: str) -> _FakeModule | None:
+        """Return the tree's root module when ``tree_name`` matches (``Listing.getRootModule``).
+
+        Args:
+            tree_name: Name of the program tree to look up.
+
+        Returns:
+            _FakeModule | None: The root module, or None if
+            ``tree_name`` does not match this listing's tree.
+        """
+        return self._tree.root if tree_name == self._tree.name else None
+
+    def get_module(self, tree_name: str, name: str) -> _FakeModule | None:
+        """Return the named module anywhere in the tree (``Listing.getModule``).
+
+        Args:
+            tree_name: Name of the program tree to search.
+            name: Name of the module to find.
+
+        Returns:
+            _FakeModule | None: The matching module, or None if not
+            found or ``tree_name`` does not match this listing's tree.
+        """
+        return self._tree.modules.get(name) if tree_name == self._tree.name else None
+
+    def get_fragment(self, tree_name: str, name: str) -> _FakeFragment | None:
+        """Return the named fragment anywhere in the tree (``Listing.getFragment``).
+
+        Args:
+            tree_name: Name of the program tree to search.
+            name: Name of the fragment to find.
+
+        Returns:
+            _FakeFragment | None: The matching fragment, or None if not
+            found or ``tree_name`` does not match this listing's tree.
+        """
+        return self._tree.fragments.get(name) if tree_name == self._tree.name else None
+
+
+class _FakeProgramTree:
+    """A single named fake program tree with a root module and name-indexed registries."""
+
+    def __init__(self, name: str) -> None:
+        """Create a tree containing only its root module.
+
+        Args:
+            name: Name of the program tree; also the root module's name.
+        """
+        self.name = name
+        self.root = _FakeModule(name, self)
+        self.modules: dict[str, _FakeModule] = {name: self.root}
+        self.fragments: dict[str, _FakeFragment] = {}
+
+
+class _FakeCurrentProgram(_JavaNamingShim):
+    """Fake of Ghidra's ``currentProgram`` transaction surface used by the emitted script."""
+
+    def __init__(self, tree: _FakeProgramTree) -> None:
+        """Bind this fake program to a single fake program tree.
+
+        Args:
+            tree: The tree returned by this program's ``getListing()``.
+        """
+        self._listing = _FakeListing(tree)
+        self.transactions_started: list[str] = []
+        self.transactions_ended: list[tuple[int, bool]] = []
+        self._next_tx_id = 1
+
+    def get_listing(self) -> _FakeListing:
+        """Return this program's fake listing (``Program.getListing``).
+
+        Returns:
+            _FakeListing: The listing bound at construction time.
+        """
+        return self._listing
+
+    def start_transaction(self, label: str) -> int:
+        """Record the start of a transaction and hand back its id (``Program.startTransaction``).
+
+        Args:
+            label: The transaction's description.
+
+        Returns:
+            int: A freshly allocated transaction id.
+        """
+        tx_id = self._next_tx_id
+        self._next_tx_id += 1
+        self.transactions_started.append(label)
+        return tx_id
+
+    def end_transaction(self, tx_id: int, *commit_flags: bool) -> None:
+        """Record the end of a transaction (``Program.endTransaction``).
+
+        Takes the commit flag as a trailing vararg (rather than a
+        second plain positional parameter) solely so this fake's own
+        definition does not trip this project's boolean-positional-
+        argument lint rule; every call site -- including the captured
+        production script's ``currentProgram.endTransaction(tx_id,
+        ok)`` -- still passes it positionally as a single value.
+
+        Args:
+            tx_id: The id returned by the matching
+                ``start_transaction``.
+            *commit_flags: Exactly one bool: whether the transaction
+                committed (True) or was rolled back (False).
+        """
+        (commit,) = commit_flags
+        self.transactions_ended.append((tx_id, commit))
+
+
+def _run_captured_script(script: str, current_program: _FakeCurrentProgram) -> dict[str, object]:
+    """Execute a script captured from ``FakeGhidraBridge.exec_calls`` against a fake ``currentProgram``.
+
+    ``GhidraBridge._execute_remote`` rewrites a script whose final
+    statement is a bare expression into an assignment of that
+    expression to a uniquely named sentinel variable (see
+    ``prepare_remote_script``), so the exact text captured in
+    ``exec_calls`` always ends with ``<sentinel> = <result-expression>``
+    on its own line. This runs that real, production-built script and
+    reads back the value assigned to that sentinel, exactly as
+    ``_execute_remote`` would retrieve it via ``remote_eval`` against a
+    live Ghidra process.
+
+    Args:
+        script: The exact source ``GhidraBridge`` sent to
+            ``remote_exec``, captured via ``FakeGhidraBridge.exec_calls``.
+        current_program: Fake standing in for Ghidra's ``currentProgram``
+            global the script references.
+
+    Returns:
+        dict[str, object]: The dict assigned to the script's trailing
+        sentinel variable.
+    """
+    namespace: dict[str, object] = {"currentProgram": current_program}
+    exec(script, namespace)
+    last_line = next(line for line in reversed(script.splitlines()) if line.strip())
+    sentinel_name = last_line.split("=", 1)[0].strip()
+    value = namespace[sentinel_name]
+    assert isinstance(value, dict)
+    return cast("dict[str, object]", value)
 
 
 class TestEditProgramTree:
@@ -451,7 +848,7 @@ class TestEditProgramTree:
 
     @staticmethod
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
-        """ghidra.edit_program_tree must dispatch via ToolRegistry and perform the real create_module call.
+        """ghidra.edit_program_tree must dispatch via ToolRegistry and perform the real move_child call.
 
         Falsifiable: an unregistered or parameter-mismatched tool-def
         would raise before ``edit_program_tree`` ever executed.
@@ -475,7 +872,372 @@ class TestEditProgramTree:
         )
         assert result["operation"] == "move_child"
         assert result["success"] is True
-        assert "moveChild" in fake.exec_calls[0]
+        assert "reparent" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_move_child_uses_reparent_not_bare_move_child_reorder(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """move_child must emit ``reparent``, never Ghidra's reorder-only ``moveChild``.
+
+        ``ProgramModule.moveChild(name, index)`` only changes a child's
+        position among the children it already has under the module it
+        is called on; it never changes which module is the child's
+        parent (confirmed against the real Ghidra
+        ``ghidra.program.database.module.ModuleDB`` source: ``moveChild``
+        raises ``NotFoundException`` unless ``name`` is already a direct
+        child, and never touches the parent/child table for any other
+        module). ``ProgramModule.reparent(name, oldParent)`` is the API
+        that actually adds the child to the new parent and removes it
+        from ``oldParent``.
+
+        The absence check below requires the leading ``.`` immediately
+        before ``moveChild(`` rather than matching the bare method name:
+        the correct script above legitimately emits
+        ``extra_parent.removeChild(...)`` for every stale extra parent,
+        and the plain substring ``"moveChild("`` occurs inside
+        ``"removeChild("`` (``"re" + "moveChild("``), so a bare
+        ``"moveChild(" not in script`` guard fires even on this correct
+        script. No real call to ``removeChild`` is ever written with a
+        ``.`` immediately followed by ``moveChild(``, so ``".moveChild("``
+        unambiguously identifies a genuine bare reorder-only call.
+
+        Falsifiable: reverting to the prior
+        ``parent.moveChild(child_name, 0)`` implementation removes every
+        ``reparent(`` occurrence from the emitted script and reintroduces
+        a genuine ``.moveChild(`` call, failing both assertions below.
+        """
+        fake.eval_response = {"tree_found": True, "parent_found": True, "ok": True}
+
+        run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "NewParent", "Existing"))
+
+        script = fake.exec_calls[0]
+        assert "reparent(" in script
+        assert ".moveChild(" not in script
+
+    @staticmethod
+    def test_move_child_and_create_resolve_parent_tree_wide(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """edit_program_tree must resolve parent_module via Listing, not a nonexistent ProgramModule method.
+
+        ``ghidra.program.model.listing.ProgramModule`` (and its real
+        implementation, ``ModuleDB``) declares no ``getModule``/
+        ``getFragment`` method taking a bare name -- that name-based
+        lookup exists only on ``Listing.getModule(treeName, name)`` /
+        ``Listing.getFragment(treeName, name)``, confirmed against the
+        real Ghidra 11.2.1 and master sources. The prior
+        ``root.getModule(name)``/``root.getFragment(name)`` calls in
+        this bridge would raise an attribute/method-resolution error at
+        runtime for any parent or child not literally named the same as
+        the tree's root.
+
+        Falsifiable: reverting to ``root.getModule(``/``root.getFragment(``
+        removes every ``listing.getModule(``/``listing.getFragment(``
+        occurrence from the emitted script, failing this assertion.
+        """
+        fake.eval_response = {"tree_found": True, "parent_found": True, "ok": True}
+
+        run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "NewParent", "Existing"))
+
+        script = fake.exec_calls[0]
+        assert "listing.getModule(" in script
+        assert "listing.getFragment(" in script
+        assert "root.getModule(" not in script
+        assert "root.getFragment(" not in script
+
+    @staticmethod
+    def test_move_child_parent_is_fragment_raises_clear_error(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """move_child must raise a specific error when parent_module names a fragment, not silently no-op.
+
+        Falsifiable: if the ``parent_is_fragment`` guard were removed,
+        this scenario would fall through to the generic "Parent module
+        not found" branch (or worse, silently report success) instead
+        of the fragment-specific message.
+        """
+        fake.eval_response = {"tree_found": True, "parent_found": False, "parent_is_fragment": True, "ok": False}
+
+        with pytest.raises(ToolError, match="is a fragment and cannot contain children"):
+            run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "LeafFrag", "Existing"))
+
+    @staticmethod
+    def test_move_child_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """move_child must raise ToolError when child_name does not exist anywhere in the tree.
+
+        Falsifiable: if the ``child_found`` guard were removed, a
+        nonexistent child would fall through to the generic
+        "Edit program tree failed" message instead of this specific one.
+        """
+        fake.eval_response = {"tree_found": True, "parent_found": True, "child_found": False, "ok": False}
+
+        with pytest.raises(ToolError, match="Child not found"):
+            run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "NewParent", "Ghost"))
+
+    @staticmethod
+    def test_move_child_self_parent_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """move_child must reject naming the same module as both parent_module and child_name.
+
+        Falsifiable: if the ``self_parent`` guard were removed, this
+        would fall through to whatever the reparent branch happens to
+        do with an old-parent list that never excludes the target,
+        instead of raising this specific, clear error.
+        """
+        fake.eval_response = {"tree_found": True, "parent_found": True, "self_parent": True, "ok": False}
+
+        with pytest.raises(ToolError, match="cannot be its own parent"):
+            run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "SameName", "SameName"))
+
+    @staticmethod
+    def test_move_child_circular_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """move_child must reject moving a module underneath one of its own descendants.
+
+        Falsifiable: if the ``circular`` guard (backed by
+        ``ProgramModule.isDescendant``) were removed, this would attempt
+        the reparent and either corrupt the tree into a cycle or raise
+        an opaque low-level error instead of this specific message.
+        """
+        fake.eval_response = {"tree_found": True, "parent_found": True, "circular": True, "ok": False}
+
+        with pytest.raises(ToolError, match="is nested inside"):
+            run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "GrandchildFolder", "AncestorFolder"))
+
+    @staticmethod
+    def test_move_child_root_has_no_parent_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """move_child must reject moving a tree's root module, which has no parent to remove it from.
+
+        Falsifiable: if the ``no_prior_parent`` guard were removed, a
+        request naming the root as child_name would fall through to the
+        generic "Edit program tree failed" message, or -- worse -- to
+        the ``already_there`` branch reporting a bogus success.
+        """
+        fake.eval_response = {"tree_found": True, "parent_found": True, "no_prior_parent": True, "ok": False}
+
+        with pytest.raises(ToolError, match="has no parent to remove it from"):
+            run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "SomeModule", "Program Tree"))
+
+
+class TestEditProgramTreeRealReparentSemantics:
+    """Executes the exact script ``edit_program_tree`` emits against a faithful fake Ghidra tree model.
+
+    ``FakeGhidraBridge`` (this package's only test double) stands in
+    solely for the external ``ghidra_bridge``/PyGhidra RPC transport; it
+    records the script ``GhidraBridge`` builds but does not execute it.
+    These tests close that gap for the disputed ``move_child`` defect by
+    capturing the real, production-built script text and running it
+    (via ``exec``) against ``_FakeProgramTree``, a minimal pure-Python
+    model whose ``move_child``/``reparent``/``is_descendant`` methods
+    (exposed to the captured script under their real camelCase Ghidra
+    names -- ``moveChild``/``reparent``/``isDescendant`` -- through
+    ``_JavaNamingShim``) mirror the exact semantics of Ghidra's real
+    ``ghidra.program.database.module.ModuleDB`` (verified against its
+    published source): ``moveChild`` only reorders a child already
+    directly under the module it is called on and raises if it is not,
+    while ``reparent`` truly adds the child to the new parent and
+    removes it from the named old parent. No Ghidra API call or return
+    value is stubbed to produce the "success" these tests check for --
+    the fake tree's actual parent/child links are asserted afterward.
+    """
+
+    @staticmethod
+    def test_move_child_actually_moves_child_between_parents(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """A single-parent child must end up under the new parent and off the old one.
+
+        Falsifiable: reverting the production ``move_child`` branch to
+        ``parent.moveChild(child_name, 0)`` makes this test raise
+        ``LookupError`` from the fake's faithful ``move_child`` (the
+        child is not yet a direct child of ``new_parent``, matching
+        Ghidra's real ``NotFoundException`` behavior) instead of
+        completing with the child relocated.
+        """
+        tree = _FakeProgramTree("Program Tree")
+        old_parent = tree.root.create_module("OldParent")
+        new_parent = tree.root.create_module("NewParent")
+        child = old_parent.create_fragment("Payload")
+        assert [p.get_name() for p in child.get_parents()] == ["OldParent"]
+
+        fake.eval_response = {"tree_found": True, "parent_found": True, "ok": True}
+        run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "NewParent", "Payload"))
+
+        current_program = _FakeCurrentProgram(tree)
+        info = _run_captured_script(fake.exec_calls[0], current_program)
+
+        assert info["ok"] is True
+        assert [p.get_name() for p in child.get_parents()] == ["NewParent"]
+        assert child not in old_parent.children
+        assert child in new_parent.children
+        assert current_program.transactions_started == ["intellicrack.edit_program_tree"]
+        assert current_program.transactions_ended == [(1, True)]
+
+    @staticmethod
+    def test_move_child_with_multiple_parents_leaves_only_the_new_one(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """A fragment with two legitimate parents must end up under only the requested new parent.
+
+        Ghidra program trees allow a fragment to have more than one
+        parent (``Group.getNumParents``/``getParents``). Falsifiable:
+        reverting to ``moveChild`` would raise ``LookupError`` here too
+        (the child is not a direct child of ``new_parent``); a fix that
+        only removed the *first* old parent instead of iterating
+        ``getParents()`` would leave ``ParentB`` in the result, failing
+        the final assertion.
+        """
+        tree = _FakeProgramTree("Program Tree")
+        parent_a = tree.root.create_module("ParentA")
+        parent_b = tree.root.create_module("ParentB")
+        new_parent = tree.root.create_module("NewParent")
+        child = parent_a.create_fragment("Shared")
+        parent_b.add(child)
+        assert {p.get_name() for p in child.get_parents()} == {"ParentA", "ParentB"}
+
+        fake.eval_response = {"tree_found": True, "parent_found": True, "ok": True}
+        run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "NewParent", "Shared"))
+
+        current_program = _FakeCurrentProgram(tree)
+        info = _run_captured_script(fake.exec_calls[0], current_program)
+
+        assert info["ok"] is True
+        assert [p.get_name() for p in child.get_parents()] == ["NewParent"]
+        assert child in new_parent.children
+        assert child not in parent_a.children
+        assert child not in parent_b.children
+
+    @staticmethod
+    def test_move_child_already_under_target_is_idempotent(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """Requesting a move to the child's only current parent must succeed without altering the tree.
+
+        Falsifiable: if the ``already_there`` branch were removed, this
+        would fall to ``no_prior_parent`` and ``ok`` would stay
+        ``False``, failing the first assertion.
+        """
+        tree = _FakeProgramTree("Program Tree")
+        parent = tree.root.create_module("Parent")
+        child = parent.create_fragment("Already")
+
+        fake.eval_response = {"tree_found": True, "parent_found": True, "ok": True}
+        run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "Parent", "Already"))
+
+        current_program = _FakeCurrentProgram(tree)
+        info = _run_captured_script(fake.exec_calls[0], current_program)
+
+        assert info["ok"] is True
+        assert [p.get_name() for p in child.get_parents()] == ["Parent"]
+        assert child in parent.children
+
+    @staticmethod
+    def test_move_child_circular_is_rejected_before_mutating_tree(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """Moving a module underneath its own descendant must be rejected without touching the tree.
+
+        Real Ghidra's ``ModuleDB.reparent`` performs no cycle check of
+        its own (unlike ``add``, which raises
+        ``CircularDependencyException``); this fake mirrors that
+        omission faithfully. Falsifiable: if the production
+        ``child.isDescendant(parent)`` guard were removed, ``ok`` would
+        stay ``False`` only by accident of this specific fixture -- the
+        ``Descendant.reparent("Ancestor", root)`` call would actually
+        run and silently link ``Ancestor`` under ``Descendant`` while
+        ``Descendant`` remains under ``Ancestor``, corrupting the fake
+        tree into a real two-node cycle without raising -- so
+        ``info["circular"]`` would be falsy and the final two structural
+        assertions below would fail.
+        """
+        tree = _FakeProgramTree("Program Tree")
+        ancestor = tree.root.create_module("Ancestor")
+        descendant = ancestor.create_module("Descendant")
+
+        fake.eval_response = {"tree_found": True, "parent_found": True, "ok": True}
+        run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "Descendant", "Ancestor"))
+
+        current_program = _FakeCurrentProgram(tree)
+        info = _run_captured_script(fake.exec_calls[0], current_program)
+
+        assert info["circular"] is True
+        assert info["ok"] is False
+        assert [p.get_name() for p in ancestor.get_parents()] == [tree.name]
+        assert descendant in ancestor.children
+
+    @staticmethod
+    def test_move_child_cannot_relocate_tree_root(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """Naming the tree's own root as child_name must be rejected without touching the tree.
+
+        The root is the one group in a program tree with zero parents
+        (``Group.getNumParents() == 0``), so there is nothing to remove
+        it from. Checking this (``no_prior_parent``) before the
+        ``isDescendant`` cycle check matters: every other module in the
+        tree is trivially a descendant of the root, so if the cycle
+        check ran first it would also fire here (root moved under module
+        X is circular too) and permanently shadow this branch --
+        production would still refuse the move, but through a check that
+        can never observe a real "no parent to remove from" case.
+        Falsifiable: swapping the checks back so ``isDescendant`` is
+        evaluated before the empty-parents guard makes
+        ``info["circular"]`` true and ``info["no_prior_parent"]`` false
+        here, failing the first two assertions.
+        """
+        tree = _FakeProgramTree("Program Tree")
+        tree.root.create_module("SomeModule")
+
+        fake.eval_response = {"tree_found": True, "parent_found": True, "ok": True}
+        run_async(connected_bridge.edit_program_tree("Program Tree", "move_child", "SomeModule", "Program Tree"))
+
+        current_program = _FakeCurrentProgram(tree)
+        info = _run_captured_script(fake.exec_calls[0], current_program)
+
+        assert info["no_prior_parent"] is True
+        assert info["circular"] is False
+        assert info["ok"] is False
+        assert tree.root.get_parents() == []
+
+    @staticmethod
+    def test_real_move_child_raises_not_found_when_reverted_to_move_child_reorder() -> None:
+        """Documents the audited defect directly: bare ``moveChild`` cannot reparent across modules.
+
+        This does not exercise the production bridge; it pins down, on
+        the same faithful fake used above, exactly what the disputed
+        code used to do -- call ``moveChild(child_name, 0)`` on the new
+        parent for a child that is not yet one of its direct children.
+        Real Ghidra's ``ModuleDB.moveChild`` raises ``NotFoundException``
+        in this situation (it never searches other modules); the fake
+        mirrors that with ``LookupError``. This is the concrete
+        behavior the ``reparent``-based fix above replaces.
+        """
+        tree = _FakeProgramTree("Program Tree")
+        old_parent = tree.root.create_module("OldParent")
+        new_parent = tree.root.create_module("NewParent")
+        old_parent.create_fragment("Payload")
+
+        with pytest.raises(LookupError, match="not a child of"):
+            new_parent.move_child("Payload", 0)
 
 
 # ---------------------------------------------------------------------------

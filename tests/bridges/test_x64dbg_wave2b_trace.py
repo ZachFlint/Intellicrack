@@ -30,6 +30,8 @@ defined in this file, never re-computed via the production code under test.
 
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 import pytest
@@ -45,6 +47,7 @@ if TYPE_CHECKING:
 _TRACE_ADDR: Final[int] = 0x4010AB
 _TRACE_CONDITION: Final[str] = "eax==1"
 _TRACE_LOG_TEXT: Final[str] = "hit:eax"
+_EXPECTED_TRACE_DIR: Final[Path] = Path(tempfile.gettempdir()) / "intellicrack" / "x64dbg_traces"
 _GOTO_ADDR: Final[int] = 0x00403210
 _SKIP_IP: Final[int] = 0x00401000
 _NEW_IP_1BYTE: Final[int] = 0x00401001
@@ -105,6 +108,15 @@ class _FakePipeClient:
 class _PlaceholderProcess:
     """Sentinel satisfying ``self._process is not None`` guards in ``_send_command``."""
 
+    def poll(self) -> int | None:
+        """Report process status the way :class:`subprocess.Popen.poll` does.
+
+        Returns:
+            int | None: Always ``None``, indicating this stand-in debugger
+            process is still running.
+        """
+        return None
+
 
 def _install_fake_pipe(
     bridge: X64DbgBridge,
@@ -158,149 +170,209 @@ def _always_ok(
 
 @pytest.mark.asyncio
 class TestTraceStart:
-    """Command-framing gates for ``trace_start``.
+    """Command-framing gates for ``trace_start`` against its real x64dbg contract.
 
-    The oracle for every assertion is the command string constant the
-    bridge must emit, derived independently from the known inputs.
+    x64dbg exposes no ``TraceSetCondition`` command under any name or
+    alias, ``TraceSetLog`` only ever takes ``[log text]``/``[log
+    condition]`` (never an address), and ``StartRunTrace``'s file-name
+    argument is required, not optional (help.x64dbg.com). The oracle for
+    every assertion below is that real command shape, derived
+    independently from the known inputs - never the fabricated,
+    address-gated framing this class used to pin.
     """
 
     async def test_no_params_emits_only_start_run_trace(
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """No address/condition/log_text produces exactly one exec with StartRunTrace.
+        """No address/condition/log_text still opens a real, argument-complete trace.
 
-        Mutation caught: changing "StartRunTrace" to any other string causes
-        the ``params["command"]`` assertion to fail.
+        ``StartRunTrace``'s file-name argument is required, not optional
+        (help.x64dbg.com StartRunTrace) - the bare, argument-less
+        ``"StartRunTrace"`` this test used to pin never actually opened a
+        trace file.
+
+        Mutation caught: reverting to a bare ``"StartRunTrace"`` command,
+        or emitting more than the one exec call, fails the assertions
+        below.
 
         Args:
             bridge: Fixture bridge instance.
         """
         fake = _install_fake_pipe(bridge, _always_ok)
         result = await bridge.trace_start()
-        assert result == {"success": True}
         assert len(fake.sent) == 1
         cmd, params = fake.sent[0]
         assert cmd == "exec"
         assert params is not None
-        assert params["command"] == "StartRunTrace"
+        sent_command = params["command"]
+        assert "TraceSetCondition" not in sent_command
+        assert sent_command.startswith('StartRunTrace "')
+        assert sent_command.endswith('.trace64"')
+        assert str(_EXPECTED_TRACE_DIR) in sent_command
+        assert result["success"] is True
+        assert result["trace_file"] == sent_command[len('StartRunTrace "') : -1]
+        assert "log_text" not in result
+        assert "log_condition" not in result
 
     async def test_with_address_and_log_text_sends_trace_set_log_then_start(
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """Address + log_text → TraceSetLog exec precedes StartRunTrace exec.
+        """Address + log_text sends a real, address-free quoted TraceSetLog, then StartRunTrace.
 
-        The independent oracle is:
-        ``f"TraceSetLog {hex(_TRACE_ADDR)}, {_TRACE_LOG_TEXT}"``.
-        Mutation caught: misspelling "TraceSetLog", omitting the hex address,
-        or transposing the order of commands causes an assertion failure.
+        ``TraceSetLog``'s only two arguments are ``[log text]`` and
+        ``[log condition]`` (help.x64dbg.com TraceSetLog) - it never
+        takes an address, unlike the fabricated
+        ``f"TraceSetLog {hex(_TRACE_ADDR)}, {_TRACE_LOG_TEXT}"`` framing
+        this test used to pin. ``address`` only folds into the generated
+        trace file name, never into the ``TraceSetLog`` command itself.
+
+        Mutation caught: reintroducing the address into the
+        ``TraceSetLog`` command, leaving the log text unquoted, or
+        emitting the two commands out of order fails the assertions
+        below.
 
         Args:
             bridge: Fixture bridge instance.
         """
-        expected_log_cmd = f"TraceSetLog {hex(_TRACE_ADDR)}, {_TRACE_LOG_TEXT}"
         fake = _install_fake_pipe(bridge, _always_ok)
         await bridge.trace_start(address=_TRACE_ADDR, log_text=_TRACE_LOG_TEXT)
         assert len(fake.sent) == 2
         log_cmd, log_params = fake.sent[0]
         assert log_cmd == "exec"
         assert log_params is not None
-        assert log_params["command"] == expected_log_cmd
+        assert log_params["command"] == f'TraceSetLog "{_TRACE_LOG_TEXT}"'
+        assert hex(_TRACE_ADDR) not in log_params["command"]
         start_cmd, start_params = fake.sent[1]
         assert start_cmd == "exec"
         assert start_params is not None
-        assert start_params["command"] == "StartRunTrace"
+        assert start_params["command"].startswith('StartRunTrace "')
+        assert f"{_TRACE_ADDR:08x}" in start_params["command"]
 
-    async def test_with_address_and_condition_sends_trace_set_condition_then_start(
+    async def test_address_and_condition_without_log_text_raises_tool_error(
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """Address + condition → TraceSetCondition exec precedes StartRunTrace exec.
+        """Address + condition with no log_text raises instead of faking a command.
 
-        The independent oracle is:
-        ``f"TraceSetCondition {hex(_TRACE_ADDR)}, {_TRACE_CONDITION}"``.
-        Mutation caught: misspelling "TraceSetCondition" or omitting the
-        hex address from the command string.
+        x64dbg exposes no ``TraceSetCondition`` command under any name or
+        alias (help.x64dbg.com tracing command index) - the
+        ``f"TraceSetCondition {hex(_TRACE_ADDR)}, {_TRACE_CONDITION}"``
+        string this test used to pin was never real. Supplying
+        ``address`` must not smuggle a bare condition past the guard:
+        ``TraceSetLog`` cannot carry a condition without also carrying
+        log text, and ``StartRunTrace`` takes no condition at all, so
+        this raises before anything is sent.
 
-        Args:
-            bridge: Fixture bridge instance.
-        """
-        expected_cond_cmd = f"TraceSetCondition {hex(_TRACE_ADDR)}, {_TRACE_CONDITION}"
-        fake = _install_fake_pipe(bridge, _always_ok)
-        await bridge.trace_start(address=_TRACE_ADDR, condition=_TRACE_CONDITION)
-        assert len(fake.sent) == 2
-        cond_cmd, cond_params = fake.sent[0]
-        assert cond_cmd == "exec"
-        assert cond_params is not None
-        assert cond_params["command"] == expected_cond_cmd
-        start_cmd, start_params = fake.sent[1]
-        assert start_cmd == "exec"
-        assert start_params is not None
-        assert start_params["command"] == "StartRunTrace"
-
-    async def test_all_params_emits_three_commands_in_documented_order(
-        self,
-        bridge: X64DbgBridge,
-    ) -> None:
-        """Address + condition + log_text → TraceSetLog, TraceSetCondition, StartRunTrace.
-
-        The oracle is the production docstring's documented order: log first,
-        condition second, StartRunTrace last.  Swapping any two commands or
-        dropping one causes this gate to fail.
+        Mutation caught: reintroducing an address-gated branch that
+        sends ``TraceSetCondition`` (or any command) instead of raising
+        fails both assertions below.
 
         Args:
             bridge: Fixture bridge instance.
         """
         fake = _install_fake_pipe(bridge, _always_ok)
-        await bridge.trace_start(
+        with pytest.raises(ToolError, match="condition"):
+            await bridge.trace_start(address=_TRACE_ADDR, condition=_TRACE_CONDITION)
+        assert fake.sent == []
+
+    async def test_all_params_emits_two_commands_with_condition_folded_into_log(
+        self,
+        bridge: X64DbgBridge,
+    ) -> None:
+        """Address + condition + log_text -> TraceSetLog carrying the condition, then StartRunTrace.
+
+        x64dbg has no command that binds a condition to ``trace_start``
+        on its own, so a supplied ``condition`` only takes effect as
+        ``TraceSetLog``'s second (log-condition) argument once
+        ``log_text`` is also present - never as a separate
+        ``TraceSetCondition`` exec, and never as a third command. This
+        test used to pin a three-command ``TraceSetLog``,
+        ``TraceSetCondition``, ``StartRunTrace`` sequence built from
+        command framing that was never real.
+
+        Mutation caught: splitting the condition back out into its own
+        command, dropping it from ``TraceSetLog``, or emitting a third
+        command fails the assertions below.
+
+        Args:
+            bridge: Fixture bridge instance.
+        """
+        fake = _install_fake_pipe(bridge, _always_ok)
+        result = await bridge.trace_start(
             address=_TRACE_ADDR,
             condition=_TRACE_CONDITION,
             log_text=_TRACE_LOG_TEXT,
         )
-        assert len(fake.sent) == 3
+        assert len(fake.sent) == 2
         commands = [p["command"] for _, p in fake.sent if p is not None]
-        assert commands[0] == f"TraceSetLog {hex(_TRACE_ADDR)}, {_TRACE_LOG_TEXT}"
-        assert commands[1] == f"TraceSetCondition {hex(_TRACE_ADDR)}, {_TRACE_CONDITION}"
-        assert commands[2] == "StartRunTrace"
+        assert commands[0] == f'TraceSetLog "{_TRACE_LOG_TEXT}", "{_TRACE_CONDITION}"'
+        assert commands[1].startswith('StartRunTrace "')
+        assert not any("TraceSetCondition" in c for c in commands)
+        assert result["log_text"] == _TRACE_LOG_TEXT
+        assert result["log_condition"] == _TRACE_CONDITION
 
-    async def test_log_text_without_address_is_suppressed(
+    async def test_log_text_without_address_still_sends_trace_set_log(
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """log_text without an address produces only the StartRunTrace exec.
+        """log_text with no address still issues TraceSetLog, not just a bare StartRunTrace.
 
-        The guard ``if address is not None and log_text is not None``
-        suppresses TraceSetLog when no address is supplied.
-        Mutation caught: removing the address guard sends an extra command.
+        The old ``if address is not None and log_text is not None``
+        guard silently dropped ``log_text`` whenever no address was
+        supplied - exactly the case the Trace tab's Condition/Log
+        inputs always hit, since that tab carries no address field.
+        ``TraceSetLog`` never took an address to begin with, so there is
+        nothing left to gate on.
+
+        Mutation caught: reintroducing any address-based guard around
+        the ``TraceSetLog`` call collapses this back to a single
+        ``StartRunTrace`` and fails the count/content assertions below.
 
         Args:
             bridge: Fixture bridge instance.
         """
         fake = _install_fake_pipe(bridge, _always_ok)
-        await bridge.trace_start(log_text=_TRACE_LOG_TEXT)
-        assert len(fake.sent) == 1
-        _, params = fake.sent[0]
-        assert params is not None
-        assert params["command"] == "StartRunTrace"
+        result = await bridge.trace_start(log_text=_TRACE_LOG_TEXT)
+        assert len(fake.sent) == 2
+        log_cmd, log_params = fake.sent[0]
+        assert log_cmd == "exec"
+        assert log_params is not None
+        assert log_params["command"] == f'TraceSetLog "{_TRACE_LOG_TEXT}"'
+        start_cmd, start_params = fake.sent[1]
+        assert start_cmd == "exec"
+        assert start_params is not None
+        assert start_params["command"].startswith('StartRunTrace "')
+        assert start_params["command"].endswith('.trace64"')
+        assert result["success"] is True
+        assert result["log_text"] == _TRACE_LOG_TEXT
+        assert result["log_condition"] is None
 
-    async def test_condition_without_address_is_suppressed(
+    async def test_condition_without_log_text_raises_tool_error(
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """Condition without an address produces only the StartRunTrace exec.
+        """A bare condition with no log_text and no address raises, not a silent trace.
 
-        Mutation caught: removing the address guard sends an extra command.
+        This is the exact silent-success defect the fix closes: an
+        operator supplies only a Condition. ``TraceSetLog`` cannot carry
+        a condition without log text, and ``StartRunTrace`` accepts no
+        condition at all, so there is no real command left to bind this
+        to - the bridge must raise here instead of falling through to an
+        unconditional, successfully-reported trace.
+
+        Mutation caught: reverting to the old silent-drop behavior sends
+        a bare ``StartRunTrace`` and reports success instead of raising,
+        so ``pytest.raises`` fails and ``fake.sent`` is non-empty.
 
         Args:
             bridge: Fixture bridge instance.
         """
         fake = _install_fake_pipe(bridge, _always_ok)
-        await bridge.trace_start(condition=_TRACE_CONDITION)
-        assert len(fake.sent) == 1
-        _, params = fake.sent[0]
-        assert params is not None
-        assert params["command"] == "StartRunTrace"
+        with pytest.raises(ToolError, match="condition"):
+            await bridge.trace_start(condition=_TRACE_CONDITION)
+        assert fake.sent == []
 
 
 @pytest.mark.asyncio

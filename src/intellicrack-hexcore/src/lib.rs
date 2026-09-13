@@ -357,11 +357,8 @@ impl DocumentState {
         if count > 0 {
             let old_data = data;
             self.inner = MmapDocument::from_bytes(&new_data);
-            self.undo_mgr.record(Operation::Overwrite {
-                offset: 0,
-                old_data,
-                new_data,
-            });
+            self.undo_mgr
+                .record(Operation::Replace { old_data, new_data });
             self.touch();
         }
         count

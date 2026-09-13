@@ -1094,7 +1094,7 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 
 ### Documentation
 
-- Generate API autosummaries and purge external tools (`f9c0f18`)
+- Generate API autosummaries and purge external tools (`4ba3ea6`)
 Update Sphinx configuration and autosummary templates to document
 internal modules and suppress warnings during framework dunder probes.
 Purge bundled third-party binaries and tooling scripts from the repository.
@@ -5989,5 +5989,17 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+- Harden bridge commands, UI overflow layout, and hexcore operations (``)
+Align bridge implementations with real backend command contracts across
+x64dbg, Ghidra, and Frida, resolve UI widget clipping and layout overflow
+issues across panels, and harden hexcore undo/eval execution against
+unbounded growth and numeric overflow.
+- x64dbg: replace nonexistent console commands with supported RPC/trace calls, fix conditional trace argument order, and implement desktop window mirroring via PrintWindow
+- Ghidra: support real reparenting via ModuleDB, add AWT headless runtime flag, enforce kill-on-close job objects, and adapt CFG graph scene mapping
+- Frida: migrate device spawn gating to spawn-added/spawn-removed signals, support Frida 17 cancellable scopes, and add instruction disassembly UI controls
+- Hex editor: route panel operations through bridge when attached, fix template field collision in MRO, add Replace undo operation, and check bounds in template eval
+- UI: install tab overflow menus, enforce minimum scrollable bounds on tool panels, and add chat pane collapse toggle
+- Core & dependencies: recursively hydrate tool dataclass arguments, delete backing files on script removal, and bump security floors for pyasn1 and gitpython
 
 

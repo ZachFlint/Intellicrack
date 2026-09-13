@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.base_panel import make_control_row
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -135,11 +136,19 @@ class SearchTab(QWidget):
         vlayout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         vlayout.setSpacing(_PANEL_SPACING)
 
+        # The header label and mode selector are bundled into one fixed-height,
+        # horizontally scrollable row via make_control_row() rather than added
+        # as separate widgets/layouts: when the surrounding sub-tab pane is
+        # squeezed short (S20-D21), a plain QVBoxLayout lets Qt shrink both
+        # down toward zero height, hiding the "Search" title and making the
+        # Mode combo (Wildcard/String/Assembly/Crypto/Magic/Numeric) impossible
+        # to reach. A control row backed by a fixed-height QScrollArea cannot
+        # be compressed below its natural size.
+        mode_row = QHBoxLayout()
         search_label = QLabel(self.tr("Search"))
         search_label.setFont(fm.get_ui_font_bold(9))
-        vlayout.addWidget(search_label)
-
-        mode_row = QHBoxLayout()
+        mode_row.addWidget(search_label)
+        mode_row.addSpacing(12)
         mode_label = QLabel(self.tr("Mode:"))
         mode_label.setFont(fm.get_ui_font(9))
         mode_row.addWidget(mode_label)
@@ -154,7 +163,7 @@ class SearchTab(QWidget):
         self._value_size_combo.setVisible(False)
         mode_row.addWidget(self._value_size_combo)
         mode_row.addStretch()
-        vlayout.addLayout(mode_row)
+        vlayout.addWidget(make_control_row(mode_row))
 
         pattern_row = QHBoxLayout()
         self._pattern_input = QLineEdit()

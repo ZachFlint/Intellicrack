@@ -25,14 +25,15 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
-    QToolBar,
     QVBoxLayout,
     QWidget,
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import compute_toolbar_height
+from intellicrack.ui.panels.process_panel.tab_overflow import install_tab_overflow
 from intellicrack.ui.panels.qt_compat import set_sorting_enabled
 
 
@@ -162,6 +163,7 @@ class MemoryTab(QWidget):
         self._tabs.addTab(self._build_alloc_tab(), "Allocate/Free")
         self._tabs.addTab(self._build_protect_tab(), "Protection")
         self._tabs.addTab(self._build_search_tab(), "Pattern Search")
+        install_tab_overflow(self._tabs)
         layout.addWidget(self._tabs)
 
         for btn in self._action_buttons:
@@ -178,7 +180,7 @@ class MemoryTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Memory Regions", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -220,7 +222,8 @@ class MemoryTab(QWidget):
         set_sorting_enabled(self._region_table, enable=True)
         rh = self._region_table.horizontalHeader()
         if rh is not None:
-            rh.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
+            rh.setStretchLastSection(False)
+            rh.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._region_table)
         return tab
 
@@ -235,7 +238,7 @@ class MemoryTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Read Memory", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -281,7 +284,7 @@ class MemoryTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Write Memory", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -319,7 +322,7 @@ class MemoryTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Allocations", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -374,7 +377,8 @@ class MemoryTab(QWidget):
         self._alloc_log.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         ah = self._alloc_log.horizontalHeader()
         if ah is not None:
-            ah.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            ah.setStretchLastSection(False)
+            ah.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._alloc_log)
         return tab
 
@@ -389,7 +393,7 @@ class MemoryTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Protection", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -435,7 +439,7 @@ class MemoryTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Search Memory", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -480,7 +484,8 @@ class MemoryTab(QWidget):
         self._search_results.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         sh = self._search_results.horizontalHeader()
         if sh is not None:
-            sh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            sh.setStretchLastSection(False)
+            sh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._search_results)
         return tab
 

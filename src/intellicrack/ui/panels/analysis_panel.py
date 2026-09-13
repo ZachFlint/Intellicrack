@@ -11,7 +11,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
-from PyQt6.QtCore import QSignalBlocker, pyqtSignal
+from PyQt6.QtCore import QSignalBlocker, Qt, pyqtSignal
+from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
     QGridLayout,
     QHeaderView,
@@ -40,6 +41,11 @@ _PANEL_SPACING: Final[int] = 2
 _HEADER_MARGIN_H: Final[int] = 8
 _HEADER_MARGIN_V: Final[int] = 4
 _HEADER_SPACING: Final[int] = 4
+# Number of average-width monospace characters a table column must be able to
+# show before it is considered legible; used to derive a per-table minimum
+# section width from the live table font rather than a hard-coded pixel count
+# (S20-D16).
+_MIN_COLUMN_WIDTH_CHARS: Final[int] = 6
 
 
 class BridgeAnalysisPanel(QWidget):
@@ -80,6 +86,7 @@ class BridgeAnalysisPanel(QWidget):
         self._user_notes_by_binary: dict[str, str] = {}
         self._mono_font = FontManager.get_instance().get_code_font(9)
         self._addr_color = ThemeManager.get_instance().get_analysis_colors()["accent"]
+        self._min_column_width: int = QFontMetrics(self._mono_font).horizontalAdvance("M" * _MIN_COLUMN_WIDTH_CHARS)
         self._setup_ui()
         ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
 
@@ -127,17 +134,26 @@ class BridgeAnalysisPanel(QWidget):
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setObjectName("analysis_tabs")
+        self.tab_widget.setUsesScrollButtons(True)
+        tab_bar = self.tab_widget.tabBar()
+        if tab_bar is not None:
+            # With Strings/Imports/Exports/Functions/Sections/Notes all present,
+            # this strip outgrows the ~530px tool pane at the fresh-launch window
+            # width; ElideRight plus the scroll buttons enabled above means a
+            # clipped tab degrades to a legible "Str..." with a reachable nav
+            # arrow instead of Qt's default of silently shrinking every label
+            # with no indication more tabs exist (S20-D16).
+            tab_bar.setElideMode(Qt.TextElideMode.ElideRight)
+            tab_bar.setUsesScrollButtons(True)
 
-        self._strings_table = self._create_table(["Address", "Value", "Encoding", "Section"], [1])
-        self._imports_table = self._create_table(["DLL", "Function", "Ordinal", "Address"], [0, 1])
-        self._exports_table = self._create_table(["Name", "Ordinal", "Address"], [0])
+        self._strings_table = self._create_table(["Address", "Value", "Encoding", "Section"])
+        self._imports_table = self._create_table(["DLL", "Function", "Ordinal", "Address"])
+        self._exports_table = self._create_table(["Name", "Ordinal", "Address"])
         self._functions_table = self._create_table(
             ["Address", "Name", "Size", "Convention", "Return Type"],
-            [1],
         )
         self._sections_table = self._create_table(
             ["Name", "VA", "VSize", "RawSize", "Characteristics", "Entropy"],
-            [0],
         )
         self._notes_edit = QTextEdit()
         self._notes_edit.setReadOnly(True)
@@ -207,14 +223,11 @@ class BridgeAnalysisPanel(QWidget):
                 if item is not None:
                     item.setForeground(self._addr_color)
 
-    def _create_table(self, headers: list[str], stretch_columns: list[int]) -> QTableWidget:
+    def _create_table(self, headers: list[str]) -> QTableWidget:
         """Create a styled table widget with given column headers.
 
         Args:
             headers: Column header labels.
-            stretch_columns: Indices of columns holding variable-length data
-                that should stretch to fill available space. All other
-                columns are sized to fit their contents.
 
         Returns:
             QTableWidget: Configured QTableWidget.
@@ -231,6 +244,8 @@ class BridgeAnalysisPanel(QWidget):
         table.setAlternatingRowColors(True)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setWordWrap(False)
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         v_header = table.verticalHeader()
         if v_header is not None:
             v_header.setVisible(False)
@@ -238,9 +253,20 @@ class BridgeAnalysisPanel(QWidget):
 
         h_header = table.horizontalHeader()
         if h_header is not None:
+            # ResizeToContents keeps every column sized to its real content
+            # and lets the table's own horizontal scrollbar (the
+            # ScrollBarAsNeeded policy set above) reach columns that overflow
+            # the viewport. A Stretch section is instead defined to always
+            # fill exactly the remaining viewport width -- it can never
+            # overflow, so it can never trigger that scrollbar -- which is why
+            # a Stretch "Value"/"Function" column here used to get crushed
+            # down to its bare minimum section size ("Va...") once the narrow
+            # tool pane left little room for its siblings (S20-D16).
+            # setMinimumSectionSize floors every column at a font-derived
+            # width so a short or empty column never shrinks below legible
+            # text.
             h_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-            for col in stretch_columns:
-                h_header.setSectionResizeMode(col, QHeaderView.ResizeMode.Stretch)
+            h_header.setMinimumSectionSize(self._min_column_width)
 
         return table
 

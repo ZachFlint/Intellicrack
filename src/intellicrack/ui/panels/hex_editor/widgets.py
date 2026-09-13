@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import math
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from PyQt6.QtCore import QRect, QSize, pyqtSignal
 from PyQt6.QtGui import (
@@ -33,7 +33,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, worker_is_running
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine, worker_is_running
 from intellicrack.ui.panels.hex_editor.base import (
     BYTE_VALUES_COUNT,
     ENTROPY_HIGH_THRESHOLD,
@@ -42,6 +42,10 @@ from intellicrack.ui.panels.hex_editor.base import (
     compute_streaming_custom_crc,
 )
 from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+if TYPE_CHECKING:
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 _logger = get_logger(__name__)
@@ -397,6 +401,64 @@ def _stream_crc_from_source(
     )
 
 
+def _compute_custom_crc_for_worker(
+    bridge: HexEditorBridge | None,
+    file_path: str | None,
+    document: object,
+    length: int,
+    width: int,
+    poly: int,
+    init: int,
+    *,
+    ref_in: bool,
+    ref_out: bool,
+    xor_out: int,
+) -> int:
+    """Worker entry point computing a custom CRC, routing through the bridge when attached.
+
+    Prefers ``HexEditorBridge.calculate_hash_custom_crc`` -- which uses the
+    backend's native, packed-buffer accessor when available -- over the
+    local streaming fallback whenever a bridge is attached. Falls back to
+    :func:`_stream_crc_from_source` when no bridge is attached.
+
+    Args:
+        bridge: Attached HexEditorBridge, or None when no bridge is attached.
+        file_path: When non-``None`` and pointing at a readable file, the
+            streaming fallback mmaps the file instead of paging through
+            ``document.read``.
+        document: Fallback hexcore-style document used when ``file_path``
+            is ``None`` and no bridge is attached.
+        length: Total number of bytes covered by the CRC.
+        width: CRC bit width.
+        poly: Generator polynomial.
+        init: Initial CRC value.
+        ref_in: Reflect each input byte before processing.
+        ref_out: Reflect the final CRC value before XOR-out.
+        xor_out: Value to XOR with the final CRC.
+
+    Returns:
+        int: Computed CRC value.
+    """
+    if bridge is not None:
+        result: object = run_bridge_coroutine(
+            bridge.calculate_hash_custom_crc(0, length, poly, init, width, refin=ref_in, refout=ref_out, xorout=xor_out),
+        )
+        if isinstance(result, str):
+            return int(result, 16)
+
+    return _stream_crc_from_source(
+        file_path,
+        document,
+        length,
+        width,
+        poly,
+        init,
+        ref_in=ref_in,
+        ref_out=ref_out,
+        xor_out=xor_out,
+    )
+
+
 class CustomCrcDialog(QDialog):
     """Dialog for computing a custom parametric CRC.
 
@@ -416,6 +478,7 @@ class CustomCrcDialog(QDialog):
         file_path: str | None,
         document: object,
         length: int,
+        bridge: HexEditorBridge | None = None,
         parent: QWidget | None = None,
         worker_parent: QWidget | None = None,
     ) -> None:
@@ -427,8 +490,14 @@ class CustomCrcDialog(QDialog):
                 document API. ``None`` means "go through the document".
             document: Hexcore-style document exposing
                 ``read(offset, length)``. Used when ``file_path`` is
-                ``None`` or when the file becomes unreadable.
+                ``None`` or when the file becomes unreadable, and as the
+                fallback source when no bridge is attached.
             length: Number of bytes the document currently holds.
+            bridge: Optional attached ``HexEditorBridge``. When present,
+                Calculate routes through
+                ``HexEditorBridge.calculate_hash_custom_crc`` (using the
+                backend's native accessor when available) instead of the
+                local streaming fallback.
             parent: Parent widget for the dialog.
             worker_parent: Parent for the :class:`GenericCallableWorker`.
                 Defaults to the dialog itself; pass ``None`` explicitly
@@ -438,6 +507,7 @@ class CustomCrcDialog(QDialog):
         self._file_path: str | None = file_path
         self._document: object = document
         self._length: int = length
+        self._bridge: HexEditorBridge | None = bridge
         self._worker_parent: QWidget | None = worker_parent if worker_parent is not None else self
         self._worker: GenericCallableWorker | None = None
 
@@ -525,7 +595,8 @@ class CustomCrcDialog(QDialog):
         self._result_label.setText("Computing\u2026")
         self._result_label.setToolTip("Computing\u2026")
         worker = GenericCallableWorker(
-            _stream_crc_from_source,
+            _compute_custom_crc_for_worker,
+            self._bridge,
             self._file_path,
             self._document,
             self._length,

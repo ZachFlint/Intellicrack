@@ -3039,24 +3039,10 @@ class ProviderSettingsWidget(QFrame):
             provider=self.provider_id,
         )
 
-        env_vars = {
-            "anthropic": "ANTHROPIC_API_KEY",
-            "openai": "OPENAI_API_KEY",
-            "google": "GOOGLE_API_KEY",
-            "openrouter": "OPENROUTER_API_KEY",
-            "huggingface": "HUGGINGFACE_API_TOKEN",
-            "local_transformers": "LOCAL_TRANSFORMERS_HF_TOKEN",
-        }
-
-        api_key = ""
-        if self.provider_id in env_vars:
-            env_key = os.environ.get(env_vars[self.provider_id], "")
-            if not env_key and self.provider_id == "local_transformers":
-                env_key = os.environ.get("HUGGINGFACE_API_TOKEN", "")
-            config_key = saved_settings.get("api_key", "")
-            api_key = config_key or env_key
-            if api_key:
-                self._api_key_input.setText(api_key)
+        config_key = saved_settings.get("api_key", "")
+        api_key = config_key or self._resolve_env_api_key()
+        if api_key:
+            self._api_key_input.setText(api_key)
 
         if self.provider_id == "ollama":
             base_url = saved_settings.get("api_base", os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
@@ -3087,6 +3073,31 @@ class ProviderSettingsWidget(QFrame):
         has_key = bool(self._api_key_input.text().strip())
         if has_key or self.provider_id in NO_API_KEY_PROVIDER_IDS:
             QTimer.singleShot(200, self._auto_refresh_models)
+
+    def _resolve_env_api_key(self) -> str:
+        """Resolve this provider's API key from the environment or ``.env`` file.
+
+        Delegates to :class:`~intellicrack.credentials.env_loader.CredentialLoader`,
+        the single source of truth for provider-to-environment-variable
+        mapping (including any configured aliases). This is the same
+        mapping :class:`CredentialSourceDetector` and
+        :class:`~intellicrack.credentials.store.CredentialStore` consult, so
+        the credential source shown to the user and the key value actually
+        loaded into the field can never disagree about which environment
+        variable a provider reads from.
+
+        Returns:
+            str: The resolved API key, or an empty string if none is configured.
+        """
+        try:
+            provider_name = ProviderName(self.provider_id)
+        except ValueError:
+            return ""
+
+        credentials = get_credential_loader().get_credentials(provider_name)
+        if credentials is None or credentials.api_key is None:
+            return ""
+        return credentials.api_key
 
     def _load_from_config(self) -> dict[str, Any]:
         """Load settings from the config file.

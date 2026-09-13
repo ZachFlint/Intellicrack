@@ -338,9 +338,8 @@ def test_f0004_bridges_unknown_attribute_raises() -> None:
 def test_f0004_bridges_public_unknown_attribute_warns() -> None:
     """A genuine public typo still emits the ``lazy_resolve_unknown_attribute`` warning."""
     scratch_globals: dict[str, object] = {}
-    with structlog.testing.capture_logs() as captured:
-        with pytest.raises(AttributeError, match="NotARealBridge"):
-            resolve_lazy("NotARealBridge", scratch_globals)
+    with structlog.testing.capture_logs() as captured, pytest.raises(AttributeError, match="NotARealBridge"):
+        resolve_lazy("NotARealBridge", scratch_globals)
     events = [entry["event"] for entry in captured]
     assert "lazy_resolve_unknown_attribute" in events
 
@@ -355,13 +354,10 @@ def test_f0004_bridges_dunder_probe_is_silent() -> None:
     """
     scratch_globals: dict[str, object] = {}
     for probe in ("__sphinx_mock__", "__wrapped__", "_private_probe"):
-        with structlog.testing.capture_logs() as captured:
-            with pytest.raises(AttributeError, match=probe):
-                resolve_lazy(probe, scratch_globals)
+        with structlog.testing.capture_logs() as captured, pytest.raises(AttributeError, match=probe):
+            resolve_lazy(probe, scratch_globals)
         events = [entry["event"] for entry in captured]
-        assert "lazy_resolve_unknown_attribute" not in events, (
-            f"probe {probe!r} logged unexpected warning noise: {events}"
-        )
+        assert "lazy_resolve_unknown_attribute" not in events, f"probe {probe!r} logged unexpected warning noise: {events}"
 
 
 # ---------------------------------------------------------------------------

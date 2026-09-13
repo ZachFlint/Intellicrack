@@ -21,14 +21,15 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
-    QToolBar,
     QVBoxLayout,
     QWidget,
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import compute_toolbar_height
+from intellicrack.ui.panels.process_panel.tab_overflow import install_tab_overflow
 
 
 if TYPE_CHECKING:
@@ -143,6 +144,7 @@ class ThreadsTab(QWidget):
         self._tabs.addTab(self._build_stack_walk(), "Stack Walk")
         self._tabs.addTab(self._build_seh_chain(), "Exception Handlers")
         self._tabs.addTab(self._build_fiber_tls(), "Fibers/TLS")
+        install_tab_overflow(self._tabs)
         layout.addWidget(self._tabs)
 
     def _build_thread_list(self) -> QWidget:
@@ -156,7 +158,7 @@ class ThreadsTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Threads", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -211,7 +213,8 @@ class ThreadsTab(QWidget):
         self._thread_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         th = self._thread_table.horizontalHeader()
         if th is not None:
-            th.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+            th.setStretchLastSection(False)
+            th.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._thread_table)
 
         self._wait_status = QLabel("")
@@ -231,7 +234,7 @@ class ThreadsTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Registers", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -257,7 +260,8 @@ class ThreadsTab(QWidget):
         self._reg_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         rh = self._reg_table.horizontalHeader()
         if rh is not None:
-            rh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            rh.setStretchLastSection(False)
+            rh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self._reg_sync_active: bool = False
         self._reg_last_edited_col: dict[int, int] = {}
         _ = self._reg_table.cellChanged.connect(self._on_reg_cell_changed)
@@ -275,7 +279,7 @@ class ThreadsTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Stack Walk", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -297,7 +301,8 @@ class ThreadsTab(QWidget):
         self._stack_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         sh = self._stack_table.horizontalHeader()
         if sh is not None:
-            sh.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+            sh.setStretchLastSection(False)
+            sh.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._stack_table)
         return tab
 
@@ -312,7 +317,7 @@ class ThreadsTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("SEH Chain", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -334,7 +339,8 @@ class ThreadsTab(QWidget):
         self._seh_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         seh_h = self._seh_table.horizontalHeader()
         if seh_h is not None:
-            seh_h.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+            seh_h.setStretchLastSection(False)
+            seh_h.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._seh_table)
         return tab
 
@@ -349,7 +355,7 @@ class ThreadsTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        fiber_toolbar = QToolBar()
+        fiber_toolbar = OverflowToolBar("Fibers", self)
         fiber_toolbar.setMovable(False)
         fiber_toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -369,10 +375,11 @@ class ThreadsTab(QWidget):
         self._fiber_table.setHorizontalHeaderLabels(["Field", "Value"])
         fh = self._fiber_table.horizontalHeader()
         if fh is not None:
-            fh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            fh.setStretchLastSection(False)
+            fh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._fiber_table)
 
-        tls_toolbar = QToolBar()
+        tls_toolbar = OverflowToolBar("TLS Slots", self)
         tls_toolbar.setMovable(False)
         tls_toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -392,7 +399,8 @@ class ThreadsTab(QWidget):
         self._tls_table.setHorizontalHeaderLabels(["Index", "Value"])
         tlsh = self._tls_table.horizontalHeader()
         if tlsh is not None:
-            tlsh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            tlsh.setStretchLastSection(False)
+            tlsh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._tls_table)
         return tab
 

@@ -204,6 +204,15 @@ class _AsyncAssemblePipe:
 class _PlaceholderProcess:
     """Sentinel satisfying ``self._process is not None`` guards."""
 
+    def poll(self) -> int | None:
+        """Report process status the way :class:`subprocess.Popen.poll` does.
+
+        Returns:
+            int | None: Always ``None``, indicating this stand-in debugger
+            process is still running.
+        """
+        return None
+
 
 def _attach_pipe(bridge: X64DbgBridge, pipe: object) -> None:
     """Install a fake pipe client and mark the plugin/process ready.

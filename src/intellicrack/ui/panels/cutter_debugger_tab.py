@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.base_panel import make_control_row
 from intellicrack.ui.panels.qt_compat import connect_cell_changed, set_max_block_count
 from intellicrack.ui.resources.font_manager import FontManager
 
@@ -159,7 +160,12 @@ class DebuggerTab(QWidget):
         self._status_label.setWordWrap(True)
         self._status_label.setToolTip(self.tr("Not attached"))
         attach_row.addWidget(self._status_label)
-        layout.addLayout(attach_row)
+        # Wrapped in a fixed-height, horizontally scrollable control row rather
+        # than added as a plain layout: when the surrounding sub-tab pane is
+        # squeezed short (S20-D21), a bare QHBoxLayout lets Qt clip the
+        # Start/Attach/Spawn controls off the left edge instead of keeping
+        # them at natural size and reachable via horizontal scroll.
+        layout.addWidget(make_control_row(attach_row))
 
         top_split = QSplitter(Qt.Orientation.Horizontal)
         top_split.setChildrenCollapsible(False)

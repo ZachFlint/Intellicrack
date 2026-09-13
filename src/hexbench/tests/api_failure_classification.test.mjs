@@ -47,6 +47,26 @@ check('a classified error is never mistaken for busy', !isBusy(internalFailure),
 const missingKind = classifyFailure({ error: { message: 'boom' } }, 500, 'Internal Server Error');
 check('a classified error missing a kind falls back to internal', missingKind.kind === 'internal', `expected the internal fallback, got ${missingKind.kind}`);
 
+/* The server sets an actionable second line as `error.detail`; renderError draws
+   it under the message, so classifyFailure must carry it onto the DispatchError
+   rather than dropping it at the transport boundary (the defect). */
+const withDetail = classifyFailure(
+  { error: { message: "unknown operation 'nope'", kind: 'unknown_operation', status: 404, detail: 'GET /api/catalog lists every one of them' } },
+  404,
+  'Not Found',
+);
+check(
+  'a classified failure carries its detail onto the DispatchError (the defect)',
+  withDetail.detail === 'GET /api/catalog lists every one of them',
+  `expected the server detail to survive classification, got ${JSON.stringify(withDetail.detail)}`,
+);
+
+const noDetail = classifyFailure({ error: { message: 'offset is negative', kind: 'value', status: 400 } }, 400, 'Bad Request');
+check('a failure with no detail carries a null detail rather than undefined', noDetail.detail === null, `expected null, got ${JSON.stringify(noDetail.detail)}`);
+
+const nonStringDetail = classifyFailure({ error: { message: 'boom', kind: 'internal', status: 500, detail: 42 } }, 500, 'Internal Server Error');
+check('a non-string detail is rejected rather than passed through', nonStringDetail.detail === null, `expected a non-string detail to become null, got ${JSON.stringify(nonStringDetail.detail)}`);
+
 /* The server never emits a bare {"busy": true} envelope (BusyError is always
    routed through dispatch.py's _EXCEPTION_RULES into the same {"error": {...}}
    shape as every other classified failure) - this was dead code claiming a

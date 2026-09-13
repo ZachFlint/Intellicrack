@@ -843,6 +843,13 @@ def _build_docker_run_argv(
     packaging_dir = _PROJECT_ROOT / "packaging"
     if packaging_dir.is_dir():
         argv.extend(["--volume", f"{packaging_dir}:{_CONTAINER_WORKSPACE}\\packaging:ro"])
+    # Mount the local type-stub tree when present so the stub-drift gates under
+    # ``tests/bridges`` compare the live ``typings`` package against the
+    # installed third-party runtime instead of a copy baked into the image at
+    # build time.
+    typings_dir = _PROJECT_ROOT / "typings"
+    if typings_dir.is_dir():
+        argv.extend(["--volume", f"{typings_dir}:{_CONTAINER_WORKSPACE}\\typings:ro"])
     # Mount the Jupyter notebooks tree when present so the executable-tutorial
     # gate (``tests/core/test_hexcore_tutorial_notebook.py``) validates the live
     # ``notebooks/hexcore_tutorial.ipynb`` against the in-container hexcore build

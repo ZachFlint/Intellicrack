@@ -39,6 +39,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QTabWidget,
     QToolBar,
+    QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -47,10 +48,11 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
-from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
+from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry, make_scrollable
 from intellicrack.ui.panels.ghidra_panel_data_types import DataTypeManagerWidget
 from intellicrack.ui.panels.ghidra_panel_extras import GhidraAnalysisExtrasWidget
 from intellicrack.ui.panels.ghidra_panel_program_tree import ProgramTreeWidget
+from intellicrack.ui.panels.process_panel.tab_overflow import install_tab_overflow
 from intellicrack.ui.panels.qt_compat import (
     set_header_labels,
     set_max_block_count,
@@ -77,7 +79,23 @@ _CODE_SPLIT_RATIO_BOTTOM: Final[int] = 300
 _MAIN_SPLIT_RATIO_LEFT: Final[int] = 600
 _MAIN_SPLIT_RATIO_RIGHT: Final[int] = 250
 
-_DATA_TABS_MIN_HEIGHT: Final[int] = 32
+# Genuine floor for the bottom data-tabs pane (S20-D09/S20-D14): the previous
+# 32px value was smaller than any real tab page could use, so QSplitter's
+# qSmartMinSize() (which lets an explicit minimumSize override a widget's
+# computed layout minimum outright) let the splitter crush whichever data
+# tab was active into overlapping, unusable slivers. Every densely packed
+# data tab (Scripting, Analysis Extras) now also carries its own internal
+# scrollable floor, so this constant only needs to keep the pane itself from
+# collapsing below a usable height -- overflow within the active tab scrolls.
+_DATA_TABS_MIN_HEIGHT: Final[int] = 220
+
+# Floor for the Scripting tab's scrollable viewport (S20-D14): the editor,
+# output, decompiler-options, and analysis-configuration rows previously had
+# no shared scroll boundary, so a short docked pane forced Qt's layout to
+# shrink several of them below their own minimum size hint, which is what
+# produced literally overlapping widgets (Run-over-Output, Simplification
+# style-over-Analysis-Configuration, and the rest of S20-D14's Ghidra rows).
+_SCRIPTING_TAB_SCROLL_MIN_HEIGHT: Final[int] = 240
 
 _ADDRESS_INPUT_MAX_WIDTH: Final[int] = 160
 _TYPE_INPUT_MAX_WIDTH: Final[int] = 220
@@ -328,6 +346,7 @@ class GhidraPanel(AnalysisPanelBase):
         tabs.addTab(self._cfg_view, self.tr("CFG"))
 
         self._code_tabs = tabs
+        self._install_tab_overflow_with_stable_targets(tabs)
         return tabs
 
     # ------------------------------------------------------------------
@@ -387,7 +406,85 @@ class GhidraPanel(AnalysisPanelBase):
         tabs.addTab(self._create_program_tree_tab(), self.tr("Program Tree"))
         tabs.addTab(self._create_analysis_extras_tab(), self.tr("Analysis Extras"))
 
+        self._install_tab_overflow_with_stable_targets(tabs)
+        # install_tab_overflow() sets ElideRight on the tab bar; this pane's own
+        # contract (established elsewhere and covered by
+        # tests/ui/test_ghidra_panel_data_tabs_overflow.py) is ElideNone so tab
+        # labels are never truncated, only reachable via scroll buttons or the
+        # corner menu install_tab_overflow() also adds -- restore it last.
+        if data_tab_bar is not None:
+            data_tab_bar.setElideMode(Qt.TextElideMode.ElideNone)
         return tabs
+
+    @staticmethod
+    def _install_tab_overflow_with_stable_targets(tabs: QTabWidget) -> QToolButton:
+        """Install the shared tab-overflow corner menu with corrected jump targets.
+
+        ``install_tab_overflow`` (``intellicrack.ui.panels.process_panel.tab_overflow``,
+        owned by the Process panel domain) connects each menu entry's
+        ``QAction.triggered`` directly to a closure over a captured index with
+        a positional default (``target: int = index``). ``QAction.triggered``
+        emits a ``checked: bool`` argument, and PyQt6 passes it positionally
+        into any connected slot whose signature can accept it -- including a
+        parameter that merely has a default -- so the captured ``target`` is
+        silently overridden by that boolean on every trigger and every jump
+        lands on tab 0 or 1 regardless of which entry was actually clicked.
+
+        Reconnecting each action once the corner menu has been rebuilt --
+        using the tab index implied by the action's position in that freshly
+        built list, which matches build order in the shared helper -- restores
+        the intended per-entry jump target without editing the shared helper
+        module, which this panel does not own.
+
+        Args:
+            tabs: The tab widget to install the overflow corner menu on.
+
+        Returns:
+            QToolButton: The installed corner overflow button.
+        """
+        button = install_tab_overflow(tabs)
+        menu = button.menu()
+        if menu is not None:
+            menu.aboutToShow.connect(lambda: GhidraPanel._retarget_tab_overflow_actions(tabs, menu))
+        return button
+
+    @staticmethod
+    def _retarget_tab_overflow_actions(tabs: QTabWidget, menu: QMenu) -> None:
+        """Reconnect each overflow-menu action to the tab index its position implies.
+
+        Connected to the same menu's ``aboutToShow`` signal after the shared
+        helper's own populate slot, so it runs immediately afterward (Qt
+        invokes directly connected slots in connection order) and corrects
+        every action's target before the user can click one.
+
+        Args:
+            tabs: The tab widget the corner menu jumps between.
+            menu: The corner menu, already repopulated for the current tab set.
+        """
+        for target, action in enumerate(menu.actions()):
+
+            def _jump_to_tab(*, checked: bool = False, target: int = target) -> None:
+                """Switch the tab widget to this menu entry's tab index.
+
+                Both parameters are keyword-only (after the bare ``*``), so
+                PyQt6's slot introspection -- which forwards
+                ``QAction.triggered``'s ``checked: bool`` argument
+                positionally into however many *positional* parameters a
+                connected slot declares -- finds none to fill here and calls
+                this with no arguments at all, leaving ``target`` at the
+                value captured for this entry when the closure was built.
+
+                Args:
+                    checked: The checked state ``QAction.triggered`` would
+                        otherwise fill positionally; unreachable here since
+                        it is keyword-only, so it always keeps this default.
+                    target: Tab index captured at menu-build time for this entry.
+                """
+                del checked
+                tabs.setCurrentIndex(target)
+
+            action.triggered.disconnect()
+            action.triggered.connect(_jump_to_tab)
 
     # ------------------------------------------------------------------
     # Tab 4: XRefs
@@ -1018,8 +1115,18 @@ class GhidraPanel(AnalysisPanelBase):
     def _create_scripting_tab(self) -> QWidget:
         """Create the Scripting tab.
 
+        The editor, output view, decompiler-options, and analysis-
+        configuration rows stack to a combined minimum height that can
+        exceed the docked pane, so the container is hosted in a vertically
+        scrolling viewport (:func:`make_scrollable`) to keep every row
+        legible and reachable instead of Qt shrinking several of them
+        below their own minimum size hint, which is what produced the
+        overlapping controls in S20-D14 (Run over Output, Simplification
+        style over Analysis Configuration, and the rest of that row).
+
         Returns:
-            QWidget: Widget with script editor, output view, and configuration forms.
+            QWidget: Scroll area hosting the script editor, output view,
+            and configuration forms.
         """
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -1032,6 +1139,7 @@ class GhidraPanel(AnalysisPanelBase):
         self._script_editor = QPlainTextEdit()
         fm = FontManager.get_instance()
         self._script_editor.setFont(fm.get_code_font(10))
+        self._script_editor.setMinimumHeight(_text_edit_min_height(self._script_editor, _TEXT_MIN_VISIBLE_LINES))
         if PythonSyntaxHighlighter is not None:
             doc = self._script_editor.document()
             if doc is not None:
@@ -1104,7 +1212,7 @@ class GhidraPanel(AnalysisPanelBase):
         )
         layout.addWidget(self._analyzer_options_input)
 
-        return container
+        return make_scrollable(container, min_height=_SCRIPTING_TAB_SCROLL_MIN_HEIGHT)
 
     # ------------------------------------------------------------------
     # Tab: Data Types

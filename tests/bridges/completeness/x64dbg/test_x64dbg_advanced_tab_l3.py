@@ -671,6 +671,8 @@ class TestBreakpointConfigDispatch:
         def responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
             if command == "exec":
                 return ok("")
+            if command == "bp_list":
+                return ok([{"address": "0x401000", "breakCondition": "eax==1"}])
             msg = f"unexpected command: {command}"
             raise AssertionError(msg)
 
@@ -1341,14 +1343,20 @@ class TestScriptEngineDispatch:
         assert all(name != "exec" for name, _ in fake.sent)
 
     @staticmethod
-    def test_abort_button_dispatches_scriptabort(
+    def test_abort_button_dispatches_script_abort_rpc(
         wired_tab: tuple[X64DbgAdvancedTab, X64DbgBridge],
         qapp: QApplication,
     ) -> None:
-        """The Abort button must issue ``scriptabort``.
+        """The Abort button must issue the ``script_abort`` RPC.
 
-        Falsifiable: reverting ``await self._send_command("scriptabort")`` in
-        ``X64DbgBridge.script_abort`` removes the recorded ``exec`` script.
+        Falsifiable: reverting ``X64DbgBridge.script_abort`` to
+        ``await self._send_command("scriptabort")`` records an ``exec``
+        carrying ``scriptabort`` and no ``script_abort`` RPC, failing
+        both assertions. ``scriptabort`` is not a registered x64dbg
+        command - the script section registers ``scriptload``,
+        ``scriptcmd``, ``scriptrun``, ``scriptexec`` and ``scriptdll``
+        but no abort - so the abort is dispatched through the plugin,
+        which calls the bridge SDK's ``DbgScriptAbort()``.
 
         Args:
             wired_tab: Advanced-tab/bridge pair fixture.
@@ -1357,8 +1365,8 @@ class TestScriptEngineDispatch:
         tab, bridge = wired_tab
 
         def responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
-            if command == "exec":
-                return ok("")
+            if command == "script_abort":
+                return ok("true")
             if command == "eval":
                 return ok(0)
             msg = f"unexpected command: {command}"
@@ -1370,7 +1378,8 @@ class TestScriptEngineDispatch:
         priv(tab, "_script_abort_btn", QPushButton).click()
         pump_until(qapp, lambda: "script_abort" in status.text())
 
-        assert ("exec", {"command": "scriptabort"}) in fake.sent
+        assert any(name == "script_abort" for name, _ in fake.sent)
+        assert ("exec", {"command": "scriptabort"}) not in fake.sent
 
 
 class TestPluginManagerDispatch:

@@ -26,7 +26,6 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
-    QToolBar,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -34,8 +33,10 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import compute_toolbar_height, make_scrollable
+from intellicrack.ui.panels.process_panel.tab_overflow import install_tab_overflow
 
 
 if TYPE_CHECKING:
@@ -159,6 +160,7 @@ class SystemTab(QWidget):
         self._tabs.addTab(self._build_processes_tab(), "System Processes")
         self._tabs.addTab(self._build_objects_tab(), "Kernel Objects")
         self._tabs.addTab(self._build_advanced_tab(), "Advanced")
+        install_tab_overflow(self._tabs)
         layout.addWidget(self._tabs)
 
     def _build_token_tab(self) -> QWidget:
@@ -172,7 +174,7 @@ class SystemTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Token Privileges", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -210,7 +212,8 @@ class SystemTab(QWidget):
         self._priv_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         ph = self._priv_table.horizontalHeader()
         if ph is not None:
-            ph.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            ph.setStretchLastSection(False)
+            ph.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._priv_table)
 
         self._token_status = QLabel("")
@@ -229,7 +232,7 @@ class SystemTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Windows", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -245,7 +248,8 @@ class SystemTab(QWidget):
         self._win_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         wh = self._win_table.horizontalHeader()
         if wh is not None:
-            wh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            wh.setStretchLastSection(False)
+            wh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
             wh.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._win_table)
         return tab
@@ -261,7 +265,7 @@ class SystemTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Services", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -289,7 +293,8 @@ class SystemTab(QWidget):
         self._svc_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         svh = self._svc_table.horizontalHeader()
         if svh is not None:
-            svh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            svh.setStretchLastSection(False)
+            svh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._svc_table)
         return tab
 
@@ -304,7 +309,7 @@ class SystemTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("PEB/TEB", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -329,7 +334,8 @@ class SystemTab(QWidget):
         self._peb_tree.setHeaderLabels(["Field", "Value"])
         pth = self._peb_tree.header()
         if pth is not None:
-            pth.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            pth.setStretchLastSection(False)
+            pth.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._peb_tree)
         return tab
 
@@ -349,7 +355,7 @@ class SystemTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Named Pipes", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -376,10 +382,11 @@ class SystemTab(QWidget):
         self._pipe_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         pih = self._pipe_table.horizontalHeader()
         if pih is not None:
-            pih.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            pih.setStretchLastSection(False)
+            pih.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._pipe_table)
 
-        io_toolbar = QToolBar()
+        io_toolbar = OverflowToolBar("Pipe I/O", self)
         io_toolbar.setMovable(False)
         io_toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -423,7 +430,7 @@ class SystemTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Mitigations", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -465,7 +472,8 @@ class SystemTab(QWidget):
         self._mit_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         mh = self._mit_table.horizontalHeader()
         if mh is not None:
-            mh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            mh.setStretchLastSection(False)
+            mh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._mit_table)
         return tab
 
@@ -483,6 +491,7 @@ class SystemTab(QWidget):
         nested.addTab(self._build_registry_section(), "Registry")
         nested.addTab(self._build_resources_section(), "Resources")
         nested.addTab(self._build_raw_query_section(), "Raw Query")
+        install_tab_overflow(nested)
 
         tab_layout.addWidget(nested)
         return tab
@@ -498,7 +507,7 @@ class SystemTab(QWidget):
         reg_layout.setContentsMargins(0, 0, 0, 0)
         reg_layout.setSpacing(_SPACING)
 
-        reg_toolbar = QToolBar()
+        reg_toolbar = OverflowToolBar("Registry Keys", self)
         reg_toolbar.setMovable(False)
         reg_toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -530,7 +539,7 @@ class SystemTab(QWidget):
 
         reg_layout.addWidget(reg_toolbar)
 
-        typed_toolbar = QToolBar()
+        typed_toolbar = OverflowToolBar("Registry Value", self)
         typed_toolbar.setMovable(False)
         typed_toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -563,7 +572,8 @@ class SystemTab(QWidget):
         self._reg_tree.setHeaderLabels(["Key/Value", "Data"])
         rth = self._reg_tree.header()
         if rth is not None:
-            rth.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            rth.setStretchLastSection(False)
+            rth.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         reg_layout.addWidget(self._reg_tree)
 
         return reg_tab
@@ -579,7 +589,7 @@ class SystemTab(QWidget):
         res_layout.setContentsMargins(0, 0, 0, 0)
         res_layout.setSpacing(_SPACING)
 
-        res_toolbar = QToolBar()
+        res_toolbar = OverflowToolBar("Resources", self)
         res_toolbar.setMovable(False)
         res_toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -612,7 +622,7 @@ class SystemTab(QWidget):
         raw_layout.setContentsMargins(0, 0, 0, 0)
         raw_layout.setSpacing(_SPACING)
 
-        raw_toolbar = QToolBar()
+        raw_toolbar = OverflowToolBar("Raw Query", self)
         raw_toolbar.setMovable(False)
         raw_toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -652,7 +662,7 @@ class SystemTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Handles", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -685,7 +695,8 @@ class SystemTab(QWidget):
         self._handles_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         hh = self._handles_table.horizontalHeader()
         if hh is not None:
-            hh.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+            hh.setStretchLastSection(False)
+            hh.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._handles_table)
         return tab
 
@@ -700,7 +711,7 @@ class SystemTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Processes", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -721,7 +732,8 @@ class SystemTab(QWidget):
         self._proc_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         prh = self._proc_table.horizontalHeader()
         if prh is not None:
-            prh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            prh.setStretchLastSection(False)
+            prh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._proc_table)
         return tab
 
@@ -750,7 +762,7 @@ class SystemTab(QWidget):
         group_layout.setContentsMargins(_SPACING, _SPACING, _SPACING, _SPACING)
         group_layout.setSpacing(_SPACING)
 
-        open_toolbar = QToolBar()
+        open_toolbar = OverflowToolBar("Device Open", self)
         open_toolbar.setMovable(False)
         open_toolbar.setFixedHeight(compute_toolbar_height(self))
         open_toolbar.addWidget(QLabel("Device Path:"))
@@ -774,10 +786,11 @@ class SystemTab(QWidget):
         self._device_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         dth = self._device_table.horizontalHeader()
         if dth is not None:
-            dth.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            dth.setStretchLastSection(False)
+            dth.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         group_layout.addWidget(self._device_table)
 
-        ioctl_toolbar = QToolBar()
+        ioctl_toolbar = OverflowToolBar("Device IOCTL", self)
         ioctl_toolbar.setMovable(False)
         ioctl_toolbar.setFixedHeight(compute_toolbar_height(self))
         ioctl_toolbar.addWidget(QLabel("IOCTL:"))
@@ -824,7 +837,7 @@ class SystemTab(QWidget):
         group_layout.setContentsMargins(_SPACING, _SPACING, _SPACING, _SPACING)
         group_layout.setSpacing(_SPACING)
 
-        create_toolbar = QToolBar()
+        create_toolbar = OverflowToolBar("Section Create", self)
         create_toolbar.setMovable(False)
         create_toolbar.setFixedHeight(compute_toolbar_height(self))
         create_toolbar.addWidget(QLabel("Size:"))
@@ -848,10 +861,11 @@ class SystemTab(QWidget):
         self._section_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         sth = self._section_table.horizontalHeader()
         if sth is not None:
-            sth.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            sth.setStretchLastSection(False)
+            sth.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         group_layout.addWidget(self._section_table)
 
-        map_toolbar = QToolBar()
+        map_toolbar = OverflowToolBar("Section Map", self)
         map_toolbar.setMovable(False)
         map_toolbar.setFixedHeight(compute_toolbar_height(self))
         map_toolbar.addWidget(QLabel("Map Size:"))
@@ -876,7 +890,8 @@ class SystemTab(QWidget):
         self._views_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         vth = self._views_table.horizontalHeader()
         if vth is not None:
-            vth.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            vth.setStretchLastSection(False)
+            vth.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         group_layout.addWidget(self._views_table)
 
         self._section_status = QLabel("")

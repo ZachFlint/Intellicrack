@@ -82,6 +82,14 @@ _SANDBOX_FEATURE_NAME = "Containers-DisposableClientVM"
 _SANDBOX_INSTALL_STATE_ENABLED = "1"
 _DISPATCHER_STARTUP_TIMEOUT = 120
 _DISPATCHER_POLL_INTERVAL = 0.5
+# The dispatcher-ready wait is adaptive rather than a single fixed timeout: it
+# starts with the same budget as before for a normal-speed boot, but extends
+# itself every time real evidence of guest progress appears (the logon
+# command having actually run, or a monitor having produced its first log),
+# up to a hard ceiling that covers a genuinely slow Windows Sandbox cold boot
+# observed live on this host to outlast the previous fixed 120s budget.
+_DISPATCHER_READY_MAX_CEILING_S: Final[float] = 600.0
+_DISPATCHER_READY_PROGRESS_EXTENSION_S: Final[float] = 90.0
 _WORKER_PID_POLL_INTERVAL = 1.0
 _WORKER_PID_POLL_TIMEOUT = 90
 _PROCESS_WAIT_TIMEOUT = 10
@@ -633,6 +641,10 @@ class WindowsSandbox(SandboxBase):
         SHARED_FOLDER_NAME: Host-side shared folder name for sandbox mapping.
         SANDBOX_SHARED_PATH: Guest-side path where the shared folder is mounted.
         DISPATCHER_READY_MARKER: Marker filename used to signal dispatcher readiness.
+        DISPATCHER_LOGON_MARKER: Marker filename written the moment the guest
+            logon command actually runs, before the dispatcher itself is
+            launched. Its presence (or absence) lets a failed readiness wait
+            report whether the guest desktop/logon stage was ever reached.
     """
 
     SANDBOX_EXE = "WindowsSandbox.exe"
@@ -642,6 +654,7 @@ class WindowsSandbox(SandboxBase):
     SHARED_FOLDER_NAME = "IntellicrackShared"
     SANDBOX_SHARED_PATH = r"C:\Users\WDAGUtilityAccount\Desktop\Shared"
     DISPATCHER_READY_MARKER = "dispatcher_ready.flag"
+    DISPATCHER_LOGON_MARKER = "logon_started.flag"
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
         """Initialize the WindowsSandbox with the given configuration.
@@ -1659,29 +1672,101 @@ class WindowsSandbox(SandboxBase):
         self._monitor_folder = None
         self._wsb_path = None
 
+    def _dispatcher_progress_markers(self) -> tuple[bool, bool]:
+        """Report which stages of guest startup have left evidence on the host.
+
+        Returns:
+            tuple[bool, bool]: ``(logon_ran, monitor_reported)`` - whether the
+            guest logon command has actually executed (see
+            :attr:`DISPATCHER_LOGON_MARKER`), and whether any monitor in the
+            fleet has produced its first log line under ``logs``. Both are
+            ``False`` when the shared folder is not yet initialized.
+        """
+        if self._shared_folder is None:
+            return False, False
+        logon_ran = (self._shared_folder / "flags" / self.DISPATCHER_LOGON_MARKER).exists()
+        logs_dir = self._shared_folder / "logs"
+        monitor_reported = logs_dir.is_dir() and any(logs_dir.iterdir())
+        return logon_ran, monitor_reported
+
+    @staticmethod
+    def _dispatcher_wait_failure_stage(*, logon_ran: bool, monitor_reported: bool) -> str:
+        """Describe which startup stage the guest never got past.
+
+        Args:
+            logon_ran: Whether the guest logon command was observed to run.
+            monitor_reported: Whether any monitor produced its first log line.
+
+        Returns:
+            str: A precise, human-readable diagnostic naming the stage that
+            was not reached, for inclusion in the raised error.
+        """
+        if not logon_ran:
+            return "the guest logon command never ran (the Windows Sandbox desktop likely never finished booting/signing in)"
+        if not monitor_reported:
+            return "the guest logon command ran but no monitor produced any output (the in-guest dispatcher/monitor fleet failed to launch)"
+        return "the monitor fleet started but the dispatcher never signalled ready"
+
     async def _wait_for_dispatcher_ready(self) -> None:
         """Block until the in-guest dispatcher has signalled readiness.
 
+        The wait is adaptive rather than a single fixed timeout: it starts
+        with :data:`_DISPATCHER_STARTUP_TIMEOUT` (enough for a normal-speed
+        boot), but every time real evidence of guest progress newly appears
+        (see :meth:`_dispatcher_progress_markers`) the deadline is pushed out
+        by :data:`_DISPATCHER_READY_PROGRESS_EXTENSION_S`, capped at
+        :data:`_DISPATCHER_READY_MAX_CEILING_S`. A guest that is genuinely
+        still cold-booting therefore keeps being given more time as long as
+        it keeps proving it is alive, while a guest that never gets anywhere
+        still fails at the original budget.
+
         Raises:
-            SandboxError: If readiness was not signalled within the timeout,
-                or the sandbox process terminated during startup.
+            SandboxError: If readiness was not signalled before the deadline,
+                or the sandbox process terminated during startup. The message
+                names the last startup stage reached, from
+                :meth:`_dispatcher_wait_failure_stage`.
         """
         if self._shared_folder is None:
             _logger.error("dispatcher_wait_shared_folder_not_initialized")
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
 
         marker = self._shared_folder / "flags" / self.DISPATCHER_READY_MARKER
-        deadline = time.monotonic() + _DISPATCHER_STARTUP_TIMEOUT
+        start = time.monotonic()
+        max_deadline = start + _DISPATCHER_READY_MAX_CEILING_S
+        deadline = min(start + _DISPATCHER_STARTUP_TIMEOUT, max_deadline)
+        logon_ran = False
+        monitor_reported = False
 
         while time.monotonic() < deadline:
             await self._check_startup_health()
             if await asyncio.to_thread(marker.exists):
-                _logger.info("dispatcher_ready_signalled")
+                _logger.info("dispatcher_ready_signalled", elapsed_seconds=round(time.monotonic() - start, 1))
                 return
+
+            new_logon_ran, new_monitor_reported = await asyncio.to_thread(self._dispatcher_progress_markers)
+            progressed = (new_logon_ran and not logon_ran) or (new_monitor_reported and not monitor_reported)
+            logon_ran = logon_ran or new_logon_ran
+            monitor_reported = monitor_reported or new_monitor_reported
+            if progressed and deadline < max_deadline:
+                deadline = min(time.monotonic() + _DISPATCHER_READY_PROGRESS_EXTENSION_S, max_deadline)
+                _logger.info(
+                    "dispatcher_ready_wait_extended",
+                    logon_ran=logon_ran,
+                    monitor_reported=monitor_reported,
+                    new_deadline_in_seconds=round(deadline - time.monotonic(), 1),
+                )
             await asyncio.sleep(_DISPATCHER_POLL_INTERVAL)
 
-        _logger.error("dispatcher_ready_timeout", time_limit=_DISPATCHER_STARTUP_TIMEOUT)
-        raise SandboxError(_ERR_DISPATCHER_NOT_READY)
+        waited = round(time.monotonic() - start, 1)
+        stage = self._dispatcher_wait_failure_stage(logon_ran=logon_ran, monitor_reported=monitor_reported)
+        _logger.error(
+            "dispatcher_ready_timeout",
+            waited_seconds=waited,
+            logon_ran=logon_ran,
+            monitor_reported=monitor_reported,
+        )
+        message = f"{_ERR_DISPATCHER_NOT_READY}: {stage} (waited {waited:.0f}s)"
+        raise SandboxError(message)
 
     async def _generate_wsb_config(self) -> None:
         """Generate the .wsb configuration file.
@@ -1844,6 +1929,8 @@ class WindowsSandbox(SandboxBase):
             str: Batch script source text.
         """
         logs_dir = rf"{self.SANDBOX_SHARED_PATH}\logs"
+        flags_dir = rf"{self.SANDBOX_SHARED_PATH}\flags"
+        logon_marker = rf"{flags_dir}\{self.DISPATCHER_LOGON_MARKER}"
         monitor_dir = rf"{self.SANDBOX_SHARED_PATH}\monitor"
         dispatcher_ps1 = rf"{monitor_dir}\sandbox_dispatcher.ps1"
         start_monitors = rf"{monitor_dir}\start_monitors.cmd"
@@ -1864,6 +1951,8 @@ class WindowsSandbox(SandboxBase):
             "@echo off",
             "setlocal ENABLEEXTENSIONS",
             f'if not exist "{logs_dir}" mkdir "{logs_dir}"',
+            f'if not exist "{flags_dir}" mkdir "{flags_dir}"',
+            f'echo logon_started>"{logon_marker}"',
             *env_lines,
             (
                 'start "" /B powershell.exe -NoLogo -NoProfile -NonInteractive '

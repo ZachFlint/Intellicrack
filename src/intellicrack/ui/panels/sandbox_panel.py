@@ -547,6 +547,7 @@ class SandboxPanel(AnalysisPanelBase):
 
         vnc_w.connection_status_changed.connect(_vnc_status_slot)
         self._vnc_tab_index = output_tabs.addTab(vnc_w, "VM Display")
+        vnc_w.configure_dock_host(output_tabs, "VM Display")
         self._output_tabs = output_tabs
 
         self._api_calls_tree = QTreeWidget()
@@ -935,14 +936,25 @@ class SandboxPanel(AnalysisPanelBase):
     def _set_vm_display_enabled(self, *, enabled: bool) -> None:
         """Enable or disable the VM Display tab and the VNC view it hosts.
 
+        The tab's current index is looked up rather than trusting the index
+        captured when the tab was first created, because popping the VNC
+        widget out (see :meth:`VNCWidget.popout`) removes it from
+        ``_output_tabs`` entirely until it re-docks - acting on a stale
+        captured index while it is undocked would silently mistarget
+        whichever other tab has shifted into that slot.
+
         Args:
             enabled: True when the effective backend exposes a VNC display.
         """
-        if self._vnc_widget is not None:
-            self._vnc_widget.setEnabled(enabled)
-        self._output_tabs.setTabEnabled(self._vnc_tab_index, enabled)
+        if self._vnc_widget is None:
+            return
+        self._vnc_widget.setEnabled(enabled)
+        index = self._output_tabs.indexOf(self._vnc_widget)
+        if index == -1:
+            return
+        self._output_tabs.setTabEnabled(index, enabled)
         self._output_tabs.setTabToolTip(
-            self._vnc_tab_index,
+            index,
             "" if enabled else _VM_DISPLAY_UNSUPPORTED_TIP,
         )
 
@@ -1028,6 +1040,7 @@ class SandboxPanel(AnalysisPanelBase):
         qemu_config = self._qemu_create_config(sandbox_type)
         _logger.debug("sandbox_create_via_bridge", sandbox_type=sandbox_type, **config)
         self.create_btn.setEnabled(False)
+        self._status_indicator.setText("Starting...")
         run_bridge_coroutine_logged(
             self._bridge.create(sandbox_type=sandbox_type, qemu_config=qemu_config, **config),
             on_success=self._on_bridge_create_success,
@@ -1080,6 +1093,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
+        self._status_indicator.setText("Inactive")
         self._report_failure("Sandbox Creation Failed", "Failed to create sandbox", exc)
         self.create_btn.setEnabled(True)
         _logger.warning("sandbox_create_failed", error=str(exc))

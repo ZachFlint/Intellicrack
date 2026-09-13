@@ -165,6 +165,48 @@ def dataclass_to_dict(obj: object) -> dict[str, Any]:
     return cast("dict[str, Any]", safe)
 
 
+_QEMU_CONFIG_PARAM_DESCRIPTION = (
+    "QEMU backend configuration; required to give a 'qemu' sandbox a bootable disk "
+    "(ignored for 'windows'). Object with optional keys: guest_os ('windows' or "
+    "'linux', default 'windows'), image_path (path to the qcow2 disk image - "
+    "without it a QEMU sandbox has no bootable disk and cannot start), cpu_cores "
+    "(integer, default 2), memory_mb (integer, default 4096), display ('none', "
+    "'vnc', 'sdl', or 'spice', default 'none'), ssh_port (integer, default 0 = "
+    "auto-allocate a bindable host port), monitor_port (integer, default 0 = "
+    "auto-allocate), agent_port (integer, default 0 = auto-allocate), "
+    "enable_acceleration (boolean, default true), snapshot_name (string; snapshot "
+    "to restore on start), disk_overlay (boolean, default true; gives this sandbox "
+    "its own copy-on-write layer instead of writing to image_path directly), "
+    "shared_folder (host path shared with the guest), anti_evasion_profile "
+    "('default', 'workstation', or 'laptop', default 'default'), "
+    "agent_connect_timeout (seconds, default 60.0), guest_agent_ready_timeout "
+    "(seconds, default 300.0), guest_shutdown_timeout (seconds, default 120.0), "
+    "snapshot_timeout (seconds, default 600.0), memory_dump_timeout (seconds, "
+    "default 1800.0)"
+)
+
+
+def _qemu_config_parameter() -> ToolParameter:
+    """Build the shared ``qemu_config`` tool parameter.
+
+    A fresh :class:`ToolParameter` is returned on every call so
+    ``sandbox.create``, ``sandbox.restart``, and ``sandbox.run_binary`` -
+    the three tool functions whose underlying methods accept ``qemu_config``
+    - each own an independent instance rather than sharing one mutable
+    object across ``ToolFunction`` definitions.
+
+    Returns:
+        ToolParameter: Optional, object-typed parameter documenting the
+        ``QEMUConfig`` fields a caller may supply.
+    """
+    return ToolParameter(
+        name="qemu_config",
+        type="object",
+        description=_QEMU_CONFIG_PARAM_DESCRIPTION,
+        required=False,
+    )
+
+
 class _StateTracker:
     """Async context manager that maintains ``BridgeState.last_error`` lifecycle.
 
@@ -425,12 +467,23 @@ class SandboxBridge(ToolBridgeBase):
                             default=False,
                         ),
                         ToolParameter(
+                            name="block_telemetry",
+                            type="boolean",
+                            description=(
+                                "Whether the guest's own operating-system telemetry is blocked inside the guest at start, so "
+                                "captured outbound traffic belongs to the sample rather than the OS reporting home"
+                            ),
+                            required=False,
+                            default=True,
+                        ),
+                        ToolParameter(
                             name="memory_limit_mb",
                             type="integer",
                             description="Memory limit in megabytes (default: 2048)",
                             required=False,
                             default=2048,
                         ),
+                        _qemu_config_parameter(),
                     ],
                     returns="Dictionary with instance_id and status",
                 ),
@@ -467,19 +520,30 @@ class SandboxBridge(ToolBridgeBase):
                             type="integer",
                             description="Execution timeout in seconds for the replacement instance",
                             required=False,
+                            default=300,
                         ),
                         ToolParameter(
                             name="network_enabled",
                             type="boolean",
                             description="Whether the replacement instance may access the network",
                             required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="block_telemetry",
+                            type="boolean",
+                            description="Whether the replacement instance blocks the guest's own operating-system telemetry inside the guest at start",
+                            required=False,
+                            default=True,
                         ),
                         ToolParameter(
                             name="memory_limit_mb",
                             type="integer",
                             description="Memory limit in megabytes for the replacement instance",
                             required=False,
+                            default=2048,
                         ),
+                        _qemu_config_parameter(),
                     ],
                     returns="New instance_id, the previous_instance_id, type, status, and creation timestamp",
                 ),
@@ -518,7 +582,17 @@ class SandboxBridge(ToolBridgeBase):
                             type="integer",
                             description="Execution timeout in seconds (default: sandbox config value)",
                             required=False,
-                            default=300,
+                        ),
+                        ToolParameter(
+                            name="companions",
+                            type="array",
+                            description=(
+                                "Paths to files or directories the target needs beside it, each staged under its own name next "
+                                "to the binary in the sandbox. A target that depends on one of these still launches and still "
+                                "exits 0 while doing nothing if it is left out"
+                            ),
+                            required=False,
+                            default=[],
                         ),
                         ToolParameter(
                             name="monitor",
@@ -526,6 +600,26 @@ class SandboxBridge(ToolBridgeBase):
                             description="Whether to monitor behavior (default: true)",
                             required=False,
                             default=True,
+                        ),
+                        _qemu_config_parameter(),
+                        ToolParameter(
+                            name="reuse_instance",
+                            type="boolean",
+                            description=(
+                                "Run in an existing idle sandbox of the same type instead of creating a new one. Cannot target "
+                                "a specific instance among several running ones; ignored when instance_id is given"
+                            ),
+                            required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description=(
+                                "Identifier of an existing sandbox instance to run the binary in, taking precedence over "
+                                "reuse_instance. Required to produce two comparable runs for sandbox.diff"
+                            ),
+                            required=False,
                         ),
                     ],
                     returns="ExecutionReport with results and monitored activity",

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, cast
 from PyQt6.QtWidgets import QLabel, QTreeWidget, QTreeWidgetItem, QWidget
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, discard_worker, worker_is_running
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, discard_worker, run_bridge_coroutine, worker_is_running
 from intellicrack.ui.panels.hex_editor.base import (
     BYTE_TYPE_DIST_MIN_LEN,
     BYTE_VALUES_COUNT,
@@ -28,6 +28,7 @@ _logger = get_logger(__name__)
 
 
 if TYPE_CHECKING:
+    from intellicrack.bridges.hex_editor import HexEditorBridge
     from intellicrack.ui.panels.hex_editor.widgets import (
         ByteDistributionWidget,
         EntropyGraphWidget,
@@ -202,6 +203,176 @@ def compute_digram_matrix(document: object) -> list[int]:
     return [int(v) for v in digram_result]
 
 
+def _fetch_bridge_byte_statistics(bridge: HexEditorBridge) -> list[tuple[int, int]]:
+    """Fetch byte-frequency statistics via ``HexEditorBridge.get_byte_statistics``.
+
+    Args:
+        bridge: Attached HexEditorBridge with an open document.
+
+    Returns:
+        list[tuple[int, int]]: ``(byte_value, count)`` pairs as reported by
+            the bridge.
+    """
+    raw: object = run_bridge_coroutine(bridge.get_byte_statistics())
+    if not isinstance(raw, list):
+        return []
+    return [(int(entry["byte"]), int(entry["count"])) for entry in raw]
+
+
+def _fetch_bridge_entropy(bridge: HexEditorBridge) -> float:
+    """Fetch the overall Shannon entropy via ``HexEditorBridge.get_entropy``.
+
+    Args:
+        bridge: Attached HexEditorBridge with an open document.
+
+    Returns:
+        float: Entropy value between 0.0 and 8.0, or 0.0 if unavailable.
+    """
+    try:
+        raw: object = run_bridge_coroutine(bridge.get_entropy())
+    except (RuntimeError, TimeoutError):
+        _logger.exception("bridge_entropy_failed")
+        return 0.0
+    return float(raw) if isinstance(raw, (int, float)) else 0.0
+
+
+def _fetch_bridge_entropy_map(bridge: HexEditorBridge, block_size: int) -> list[float] | None:
+    """Fetch per-block entropy values via ``HexEditorBridge.get_entropy_map``.
+
+    Args:
+        bridge: Attached HexEditorBridge with an open document.
+        block_size: Block size in bytes for entropy calculation.
+
+    Returns:
+        list[float] | None: Per-block entropy values, or None if unavailable.
+    """
+    try:
+        raw: object = run_bridge_coroutine(bridge.get_entropy_map(block_size))
+    except (RuntimeError, ValueError, TimeoutError):
+        _logger.exception("bridge_entropy_map_failed")
+        return None
+    if not isinstance(raw, list):
+        return None
+    return [float(v) for v in raw]
+
+
+def _fetch_bridge_byte_distribution(bridge: HexEditorBridge) -> list[int] | None:
+    """Fetch the 256-element byte frequency distribution via the bridge.
+
+    Args:
+        bridge: Attached HexEditorBridge with an open document.
+
+    Returns:
+        list[int] | None: Byte frequency counts, or None if unavailable.
+    """
+    try:
+        raw: object = run_bridge_coroutine(bridge.get_byte_distribution())
+    except (RuntimeError, TimeoutError):
+        _logger.exception("bridge_byte_distribution_failed")
+        return None
+    if not isinstance(raw, list):
+        return None
+    return [int(v) for v in raw]
+
+
+def _fetch_bridge_type_distribution(bridge: HexEditorBridge) -> tuple[int, ...] | None:
+    """Fetch byte type distribution counts via ``HexEditorBridge.get_byte_type_distribution``.
+
+    Args:
+        bridge: Attached HexEditorBridge with an open document.
+
+    Returns:
+        tuple[int, ...] | None: ``(null, printable, control, high)`` byte
+            counts, or None if unavailable.
+    """
+    try:
+        raw: object = run_bridge_coroutine(bridge.get_byte_type_distribution())
+    except (RuntimeError, TimeoutError):
+        _logger.exception("bridge_byte_type_distribution_failed")
+        return None
+    if not isinstance(raw, dict):
+        return None
+    return (
+        int(raw.get("null_count", 0)),
+        int(raw.get("printable_count", 0)),
+        int(raw.get("control_count", 0)),
+        int(raw.get("high_count", 0)),
+    )
+
+
+def _fetch_bridge_classification(bridge: HexEditorBridge, block_size: int) -> list[int] | None:
+    """Fetch per-block content classification via ``HexEditorBridge.get_content_classification``.
+
+    Args:
+        bridge: Attached HexEditorBridge with an open document.
+        block_size: Block size in bytes used for the classification.
+
+    Returns:
+        list[int] | None: Classification values per block, or None if unavailable.
+    """
+    try:
+        raw: object = run_bridge_coroutine(bridge.get_content_classification(block_size))
+    except (RuntimeError, TimeoutError):
+        _logger.exception("bridge_content_classification_failed")
+        return None
+    if not isinstance(raw, list):
+        return None
+    return [int(v) for v in raw]
+
+
+def compute_statistics_via_bridge(bridge: HexEditorBridge, entropy_block_size: int) -> _StatisticsResult:
+    """Compute Shannon entropy, byte distribution, and content classification via the bridge.
+
+    Mirrors :func:`compute_statistics` but sources every value from the
+    attached ``HexEditorBridge`` instead of calling the document directly,
+    so the bridge's packed-buffer accessors and state-notify consistency
+    apply to the GUI statistics tab exactly as they do to AI/CLI callers.
+
+    Args:
+        bridge: Attached HexEditorBridge with an open document.
+        entropy_block_size: Block size in bytes used for per-block entropy
+            and classification calculations.
+
+    Returns:
+        _StatisticsResult: Bundle of all computed statistics.
+    """
+    byte_stats = _fetch_bridge_byte_statistics(bridge)
+    total = sum(count for _byte, count in byte_stats)
+
+    return _StatisticsResult(
+        byte_stats=byte_stats,
+        total=total,
+        entropy=_fetch_bridge_entropy(bridge),
+        entropy_values=_fetch_bridge_entropy_map(bridge, entropy_block_size),
+        entropy_block_size=entropy_block_size,
+        dist_counts=_fetch_bridge_byte_distribution(bridge),
+        type_dist=_fetch_bridge_type_distribution(bridge),
+        classification=_fetch_bridge_classification(bridge, entropy_block_size),
+        classification_block_size=entropy_block_size,
+    )
+
+
+def compute_digram_matrix_via_bridge(bridge: HexEditorBridge) -> list[int]:
+    """Compute the flattened 256x256 byte digram frequency matrix via the bridge.
+
+    Args:
+        bridge: Attached HexEditorBridge with an open document.
+
+    Returns:
+        list[int]: Flattened 65536-element digram frequency matrix.
+
+    Raises:
+        TypeError: If the bridge does not return a full digram matrix.
+    """
+    raw: object = run_bridge_coroutine(bridge.get_digram_matrix())
+    if isinstance(raw, dict):
+        matrix = raw.get("matrix")
+        if isinstance(matrix, list):
+            return [int(v) for v in cast("list[int]", matrix)]
+    msg = "bridge.get_digram_matrix did not return a full matrix"
+    raise TypeError(msg)
+
+
 class StatisticsMixin:
     """Mixin providing statistics and analysis for the hex editor panel."""
 
@@ -223,7 +394,9 @@ class StatisticsMixin:
         """Update the statistics tab with entropy graph, histogram, and byte tree.
 
         Launches a background worker to compute entropy, byte distribution, byte type distribution, and content classification without
-        blocking the Qt main thread.  UI widgets display "Computing..." status text until the worker completes.
+        blocking the Qt main thread.  UI widgets display "Computing..." status text until the worker completes. Routes every computation
+        through the attached ``HexEditorBridge`` when one is present, so the bridge's packed-buffer accessors and state-notify consistency
+        back the statistics tab; falls back to calling the document directly when no bridge is attached.
         """
         if self.document is None:
             return
@@ -259,11 +432,21 @@ class StatisticsMixin:
         )
 
         parent_obj: QWidget | None = self if isinstance(self, QWidget) else None
-        worker = GenericCallableWorker(
-            compute_statistics,
-            self.document,
-            ENTROPY_BLOCK_SIZE,
-            parent=parent_obj,
+        bridge: HexEditorBridge | None = getattr(self, "_bridge", None)
+        worker = (
+            GenericCallableWorker(
+                compute_statistics_via_bridge,
+                bridge,
+                ENTROPY_BLOCK_SIZE,
+                parent=parent_obj,
+            )
+            if bridge is not None
+            else GenericCallableWorker(
+                compute_statistics,
+                self.document,
+                ENTROPY_BLOCK_SIZE,
+                parent=parent_obj,
+            )
         )
         _: object = worker.call_finished.connect(self._on_statistics_computed)
         _ = worker.call_error.connect(self._on_statistics_error)
@@ -444,15 +627,18 @@ class StatisticsMixin:
 
         The native scan and the subsequent element-by-element conversion are offloaded to a :class:`GenericCallableWorker` so the Qt event
         loop is not blocked while the digram matrix is computed; the matrix dialog is opened from :meth:`_on_digram_matrix_computed` once
-        the worker finishes.
+        the worker finishes. Routes through the attached ``HexEditorBridge`` when one is present so the bridge's packed-buffer accessor is
+        used; falls back to calling the document directly when no bridge is attached.
         """
         if self.document is None:
             return
 
-        digram_fn: Any = getattr(self.document, "digram_matrix", None)
-        if not callable(digram_fn):
-            _logger.debug("digram_matrix_not_available")
-            return
+        bridge: HexEditorBridge | None = getattr(self, "_bridge", None)
+        if bridge is None:
+            digram_fn: Any = getattr(self.document, "digram_matrix", None)
+            if not callable(digram_fn):
+                _logger.debug("digram_matrix_not_available")
+                return
 
         worker_attr: GenericCallableWorker | None = getattr(self, "_digram_worker", None)
         if worker_is_running(worker_attr):
@@ -462,10 +648,18 @@ class StatisticsMixin:
         discard_worker(worker_attr)
 
         parent_obj: QWidget | None = self if isinstance(self, QWidget) else None
-        worker = GenericCallableWorker(
-            compute_digram_matrix,
-            self.document,
-            parent=parent_obj,
+        worker = (
+            GenericCallableWorker(
+                compute_digram_matrix_via_bridge,
+                bridge,
+                parent=parent_obj,
+            )
+            if bridge is not None
+            else GenericCallableWorker(
+                compute_digram_matrix,
+                self.document,
+                parent=parent_obj,
+            )
         )
         _: object = worker.call_finished.connect(self._on_digram_matrix_computed)
         _ = worker.call_error.connect(self._on_digram_matrix_error)

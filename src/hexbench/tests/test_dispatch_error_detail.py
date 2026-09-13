@@ -19,16 +19,21 @@ import unittest
 from typing import TYPE_CHECKING, Final
 
 from hexbench.dispatch import DispatchError, operation_for, translate_exception
-from hexbench.tests._support import Assertions
+from hexbench.tests._support import Assertions, HexbenchTestCase, error_of, json_object, wait_for_job
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from hexbench.codec import JsonValue
+
 
 _STATUS_BAD_REQUEST: Final = 400
 _STATUS_INTERNAL: Final = 500
 _UNKNOWN_OPERATION: Final = "not_an_operation_any_engine_publishes"
+_CATALOG_ROUTE: Final = "/api/catalog"
+_DOCUMENTS_ROUTE: Final = "/api/documents"
+_DETAIL_KEY: Final = "detail"
 
 
 def raised_by(action: Callable[[], object]) -> DispatchError:
@@ -84,6 +89,54 @@ class DispatchErrorDetailTests(Assertions, unittest.TestCase):
         translated = translate_exception(ValueError("offset is negative"))
         self.equal(translated.kind, "value", "translated.kind")
         self.is_none(translated.detail, "translated.detail")
+
+
+class ErrorEnvelopeDetailTests(HexbenchTestCase):
+    """The detail must survive the HTTP boundary, not just the ``DispatchError``.
+
+    ``DispatchError.detail`` carries the actionable second line the browser's
+    ``renderError`` draws under the message, and the design system documents that
+    line as coming from it. The synchronous ``/api/op`` route, the asynchronous
+    job record and every other producer of the error envelope must therefore put
+    a set detail into the JSON, and must leave it out when there is none.
+    """
+
+    def test_unknown_operation_response_carries_its_detail(self) -> None:
+        """A mistyped operation's 404 body must name the route that lists the real names."""
+        response = self.session.post_operation(_UNKNOWN_OPERATION)
+        error = error_of(response)
+        detail = error.get(_DETAIL_KEY)
+        self.require(isinstance(detail, str), "the unknown-operation envelope must carry a string detail")
+        self.contains(_CATALOG_ROUTE, detail if isinstance(detail, str) else "", "error.detail")
+
+    def test_missing_document_response_carries_its_detail(self) -> None:
+        """A document operation with no handle must tell the caller to open one first."""
+        response = self.session.post_operation("write_bytes", {"offset": 0, "data": "00"})
+        error = error_of(response)
+        detail = error.get(_DETAIL_KEY)
+        self.require(isinstance(detail, str), "the missing-document envelope must carry a string detail")
+        self.contains(_DOCUMENTS_ROUTE, detail if isinstance(detail, str) else "", "error.detail")
+
+    def test_a_plain_value_failure_response_carries_no_detail(self) -> None:
+        """A failure classified only by type must not grow an empty detail line in the body."""
+        info = self.session.open_bytes(b"\x00" * 8)
+        response = self.session.post_operation("write_bytes", {"offset": -1, "data": "00"}, handle=info.handle)
+        error = error_of(response)
+        self.equal(error.get("kind"), "value", "error.kind")
+        self.require(_DETAIL_KEY not in error, "a type-classified failure must send no detail key at all")
+
+    def test_async_job_error_record_carries_its_detail(self) -> None:
+        """A background job that fails with a detail-bearing error must keep the detail in its record."""
+        submitted = json_object(self.session.post_operation("write_bytes", {"offset": 0, "data": "00"}, query={"mode": "async"}))
+        job_id = submitted.get("job_id")
+        self.require(isinstance(job_id, str), "an async submission must return a job id")
+        record = wait_for_job(self.session, job_id if isinstance(job_id, str) else "")
+        self.equal(record.get("state"), "failed", "record.state")
+        error = record.get("error")
+        self.require(isinstance(error, dict), "a failed job must carry an error object")
+        detail: JsonValue = error.get(_DETAIL_KEY) if isinstance(error, dict) else None
+        self.require(isinstance(detail, str), "the async missing-document job error must carry a string detail")
+        self.contains(_DOCUMENTS_ROUTE, detail if isinstance(detail, str) else "", "job error.detail")
 
 
 if __name__ == "__main__":

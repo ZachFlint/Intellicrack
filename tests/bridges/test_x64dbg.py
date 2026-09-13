@@ -511,11 +511,17 @@ async def _assert_readonly_region_present(bridge: X64DbgBridge, buffer_address: 
 @pytest.mark.asyncio
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
 async def test_assemble_with_keystone(x64dbg_bridge_64bit: X64DbgBridge) -> None:
-    """Assemble a real instruction and verify it is written into live memory.
+    """Assemble a real instruction and verify ``assemble_at`` stays preview-only.
 
-    Assembles ``nop`` with keystone and writes it into a real writable buffer
-    in the current process, then reads the buffer back through the bridge to
-    confirm the assembled byte was actually committed to process memory.
+    Assembles ``nop`` with keystone against a real writable buffer in the
+    current process and confirms the returned bytes are the genuine
+    encoded opcode, while the buffer itself - poisoned with a sentinel
+    byte before the call - is left completely untouched: ``assemble_at``
+    is preview-only, and ``patch_instruction`` is the dedicated write
+    path (verified separately). Reading the buffer back through the real
+    ``ReadProcessMemory``-backed ``read_memory`` after the call would
+    show the NOP opcode instead of the sentinel if ``assemble_at`` still
+    wrote through to memory.
 
     Args:
         x64dbg_bridge_64bit: Bridge fixture configured for 64-bit disassembly.
@@ -526,9 +532,11 @@ async def test_assemble_with_keystone(x64dbg_bridge_64bit: X64DbgBridge) -> None
     x64dbg_bridge_64bit.attached_pid = os.getpid()
     buffer = ctypes.create_string_buffer(16)
     buffer_address = ctypes.addressof(buffer)
+    sentinel = b"\xcc"
+    ctypes.memmove(buffer_address, sentinel, 1)
 
     result = await x64dbg_bridge_64bit.assemble_at(buffer_address, "nop")
     assert result == b"\x90"
 
-    written = await x64dbg_bridge_64bit.read_memory(buffer_address, 1)
-    assert written == b"\x90"
+    unchanged = await x64dbg_bridge_64bit.read_memory(buffer_address, 1)
+    assert unchanged == sentinel

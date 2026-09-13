@@ -747,17 +747,76 @@ class ScriptManager:
         """
         return self.scripts.get(name)
 
+    def _resolve_saved_path(self, name: str, script: Script) -> Path:
+        """Resolve the on-disk path a script's backing file resides at.
+
+        Uses the same derivation :meth:`reload_script` and
+        :meth:`delete_script` rely on so save, load, and delete can never
+        disagree about where a script lives: the script's recorded
+        :attr:`Script.saved_path` is authoritative when present, since it
+        reflects the actual path :meth:`Script.save` wrote to (including
+        any ``subdir`` passed to :meth:`save_script`). When no save has
+        been recorded, the canonical ``scripts_dir/<name><ext>`` location
+        that :meth:`save_script` uses for a plain (no-subdir) save is
+        used as the fallback.
+
+        Args:
+            name: Script name identifier.
+            script: The script instance to resolve a path for.
+
+        Returns:
+            Path: The path the script's backing file resides (or would
+            reside) at, regardless of whether a file currently exists
+            there.
+        """
+        if script.saved_path is not None:
+            return script.saved_path
+        return self.scripts_dir / f"{name}{script.get_extension()}"
+
     def delete_script(self, name: str) -> bool:
-        """Delete a script by name.
+        """Delete a script by name, removing both memory and disk state.
+
+        Removes the in-memory entry and, when the script has a backing
+        file on disk, unlinks it so a deleted script cannot be reloaded
+        from a stale file. The backing path is derived with
+        :meth:`_resolve_saved_path`, the same logic
+        :meth:`save_script` and :meth:`reload_script` use.
+
+        If the file exists but cannot be removed (permission denied, the
+        file is held open by another process, or any other OS-level
+        failure), the failure is logged and the in-memory entry is
+        retained so the caller can retry the delete rather than being
+        left in a state where the script vanished from the list but its
+        file survived.
 
         Args:
             name: Script name to delete.
 
         Returns:
-            bool: True if script was deleted, False if not found.
+            bool: True if the script was deleted, meaning the in-memory
+            entry was removed and any backing file it had was unlinked
+            or never existed. False if no script named ``name`` is
+            registered, or if a backing file exists but could not be
+            removed.
         """
-        if name not in self.scripts:
+        script = self.scripts.get(name)
+        if script is None:
             return False
+
+        path = self._resolve_saved_path(name, script)
+        if path.exists():
+            try:
+                path.unlink()
+            except OSError as exc:
+                _logger.exception(
+                    "script_delete_file_failed",
+                    script_name=name,
+                    path=str(path),
+                    error=str(exc),
+                )
+                return False
+            _logger.info("script_file_deleted", script_name=name, path=str(path))
+
         del self.scripts[name]
         _logger.info("script_deleted", script_name=name)
         return True
@@ -884,10 +943,7 @@ class ScriptManager:
             _logger.debug("script_reload_not_in_cache", script=name)
             return False
 
-        path = script.saved_path
-        if path is None:
-            ext = script.get_extension()
-            path = self.scripts_dir / f"{name}{ext}"
+        path = self._resolve_saved_path(name, script)
 
         if not path.exists():
             _logger.debug("script_reload_file_missing", script=name, path=str(path))

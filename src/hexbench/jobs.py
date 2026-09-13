@@ -293,7 +293,10 @@ class JobQueue:
         failure = future.exception()
         if failure is not None:
             translated = translate_exception(failure)
-            self._fail(job_id, {"kind": translated.kind, "status": translated.status, "message": str(translated)})
+            error: dict[str, JsonValue] = {"kind": translated.kind, "status": translated.status, "message": str(translated)}
+            if translated.detail is not None:
+                error["detail"] = translated.detail
+            self._fail(job_id, error)
             return
         self._succeed(job_id, future.result())
 

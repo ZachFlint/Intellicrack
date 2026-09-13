@@ -91,6 +91,7 @@ private:
     static PipeResponse cmd_trace_record(const PipeMessage& msg);
     static PipeResponse cmd_trace_record_set(const PipeMessage& msg);
     static PipeResponse cmd_plugin_list(const PipeMessage& msg);
+    static PipeResponse cmd_script_abort(const PipeMessage& msg);
     static PipeResponse cmd_thread_detail(const PipeMessage& msg);
 
     static uint64_t parse_address(const std::string& addr_str);

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import ctypes
 import hashlib
 import importlib
 import importlib.util
@@ -26,6 +27,7 @@ import tempfile
 import textwrap
 import threading
 from collections.abc import Callable, Sequence
+from ctypes import wintypes
 from pathlib import Path
 from typing import IO, Any, Literal, cast
 
@@ -398,16 +400,244 @@ def _resolve_debug_info_path(path: str) -> Path:
     return normalized
 
 
+_JOB_OBJECT_EXTENDED_LIMIT_INFORMATION_CLASS = 9
+_JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000
+_PROCESS_TERMINATE = 0x0001
+_PROCESS_SET_QUOTA = 0x0100
+
+_PROJECT_LOCK_SUFFIXES = (".lock", ".lock~")
+
+
+class _JobObjectBasicLimitInformation(ctypes.Structure):
+    """Win32 ``JOBOBJECT_BASIC_LIMIT_INFORMATION`` structure layout."""
+
+    _fields_ = (
+        ("PerProcessUserTimeLimit", ctypes.c_int64),
+        ("PerJobUserTimeLimit", ctypes.c_int64),
+        ("LimitFlags", wintypes.DWORD),
+        ("MinimumWorkingSetSize", ctypes.c_size_t),
+        ("MaximumWorkingSetSize", ctypes.c_size_t),
+        ("ActiveProcessLimit", wintypes.DWORD),
+        ("Affinity", ctypes.c_void_p),
+        ("PriorityClass", wintypes.DWORD),
+        ("SchedulingClass", wintypes.DWORD),
+    )
+
+
+class _IoCounters(ctypes.Structure):
+    """Win32 ``IO_COUNTERS`` structure layout."""
+
+    _fields_ = (
+        ("ReadOperationCount", ctypes.c_uint64),
+        ("WriteOperationCount", ctypes.c_uint64),
+        ("OtherOperationCount", ctypes.c_uint64),
+        ("ReadTransferCount", ctypes.c_uint64),
+        ("WriteTransferCount", ctypes.c_uint64),
+        ("OtherTransferCount", ctypes.c_uint64),
+    )
+
+
+class _JobObjectExtendedLimitInformation(ctypes.Structure):
+    """Win32 ``JOBOBJECT_EXTENDED_LIMIT_INFORMATION`` structure layout."""
+
+    _fields_ = (
+        ("BasicLimitInformation", _JobObjectBasicLimitInformation),
+        ("IoInfo", _IoCounters),
+        ("ProcessMemoryLimit", ctypes.c_size_t),
+        ("JobMemoryLimit", ctypes.c_size_t),
+        ("PeakProcessMemoryUsed", ctypes.c_size_t),
+        ("PeakJobMemoryUsed", ctypes.c_size_t),
+    )
+
+
+def _create_kill_on_close_job_object() -> int | None:
+    """Create a Win32 job object that kills its member processes when closed.
+
+    The returned job handle must be kept open by the caller: Windows only
+    terminates the processes assigned to a ``JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE``
+    job when the *last* handle to that job is closed. Holding the handle in
+    this process means the OS itself closes it -- and so kills the assigned
+    child -- the moment this process exits or is forcibly terminated for any
+    reason (a clean shutdown, a crash, or an external ``TerminateProcess``),
+    which is a stronger guarantee than any cleanup code running inside this
+    process can offer on its own.
+
+    Returns:
+        int | None: The job object handle, or ``None`` on a non-Windows
+        platform or if the Win32 API calls fail.
+    """
+    if os.name != "nt":
+        return None
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+
+    job_handle = kernel32.CreateJobObjectW(None, None)
+    if not job_handle:
+        _logger.warning("ghidra_job_object_create_failed", error=ctypes.get_last_error())
+        return None
+
+    limit_info = _JobObjectExtendedLimitInformation()
+    limit_info.BasicLimitInformation.LimitFlags = _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.SetInformationJobObject.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+    ]
+    configured = kernel32.SetInformationJobObject(
+        job_handle,
+        _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION_CLASS,
+        ctypes.byref(limit_info),
+        ctypes.sizeof(limit_info),
+    )
+    if not configured:
+        _logger.warning("ghidra_job_object_configure_failed", error=ctypes.get_last_error())
+        kernel32.CloseHandle(job_handle)
+        return None
+
+    return int(cast("int", job_handle))
+
+
+def _assign_process_to_job_object(job_handle: int, pid: int) -> None:
+    """Assign a process to a kill-on-close job object.
+
+    Failure is logged and otherwise ignored: the job object is a
+    defense-in-depth safety net layered on top of the existing explicit
+    process teardown in :meth:`GhidraBridge.shutdown`, not the only
+    mechanism relied on to reap the process.
+
+    Args:
+        job_handle: Handle returned by :func:`_create_kill_on_close_job_object`.
+        pid: Process ID of the child process to assign to the job.
+    """
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+
+    process_handle = kernel32.OpenProcess(_PROCESS_TERMINATE | _PROCESS_SET_QUOTA, 0, pid)
+    if not process_handle:
+        _logger.warning("ghidra_job_object_open_process_failed", pid=pid, error=ctypes.get_last_error())
+        return
+
+    try:
+        kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+        kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        if not kernel32.AssignProcessToJobObject(job_handle, process_handle):
+            _logger.warning("ghidra_job_object_assign_failed", pid=pid, error=ctypes.get_last_error())
+        else:
+            _logger.info("ghidra_job_object_assigned", pid=pid)
+    finally:
+        kernel32.CloseHandle(process_handle)
+
+
+def _close_job_object_handle(job_handle: int) -> None:
+    """Close a job object handle acquired from :func:`_create_kill_on_close_job_object`.
+
+    Args:
+        job_handle: The job object handle to close.
+    """
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle(job_handle)
+
+
+def _project_lock_paths(project_dir: Path, project_name: str) -> tuple[Path, ...]:
+    """Return the Ghidra project lock file paths for a project.
+
+    Args:
+        project_dir: Directory containing the Ghidra project.
+        project_name: Name of the Ghidra project.
+
+    Returns:
+        tuple[Path, ...]: The ``.lock`` and ``.lock~`` paths Ghidra's
+        ``ProjectLocator``/``FileChannelLock`` machinery creates alongside
+        the project when it is open.
+    """
+    return tuple(project_dir / f"{project_name}{suffix}" for suffix in _PROJECT_LOCK_SUFFIXES)
+
+
+def _project_lock_is_stale(lock_paths: Sequence[Path]) -> bool:
+    """Determine whether existing project lock files are held by a dead process.
+
+    Ghidra's project lock is an OS-level exclusive file lock (a Java
+    ``FileChannel`` lock on Windows opens the lock file with no sharing), so
+    a plain exclusive open from this process succeeds if and only if no
+    other process currently holds the lock file open. This avoids ever
+    having to identify or trust a PID recorded inside the lock file itself:
+    the live owner, if any, is detected directly by the OS.
+
+    Args:
+        lock_paths: Candidate lock file paths to probe.
+
+    Returns:
+        bool: True if at least one of ``lock_paths`` exists on disk and
+        none of the existing ones are held open by a live process (so it is
+        safe to delete them); False if any existing lock file is currently
+        held open by another process, or if none of ``lock_paths`` exist.
+    """
+    existing = [path for path in lock_paths if path.exists()]
+    if not existing:
+        return False
+
+    for path in existing:
+        try:
+            with path.open("r+b"):
+                pass
+        except OSError:
+            return False
+    return True
+
+
+def _reclaim_stale_project_lock(project_dir: Path, project_name: str) -> None:
+    """Delete a Ghidra project's lock files when their owning process is gone.
+
+    Never deletes a lock file that :func:`_project_lock_is_stale` reports as
+    held by a live process; this only reclaims the lock left behind by a
+    PyGhidra headless bridge process from a prior run that exited without
+    releasing it (see :meth:`GhidraBridge.shutdown` and
+    :func:`_create_kill_on_close_job_object` for the process-teardown side
+    of this same failure mode).
+
+    Args:
+        project_dir: Directory containing the Ghidra project.
+        project_name: Name of the Ghidra project.
+    """
+    lock_paths = _project_lock_paths(project_dir, project_name)
+    if not _project_lock_is_stale(lock_paths):
+        return
+
+    for path in lock_paths:
+        if not path.exists():
+            continue
+        try:
+            path.unlink()
+        except OSError:
+            _logger.warning("ghidra_stale_project_lock_unlink_failed", path=str(path), exc_info=True)
+            return
+
+    _logger.info(
+        "ghidra_stale_project_lock_reclaimed",
+        project_dir=str(project_dir),
+        project_name=project_name,
+    )
+
+
 class _GhidraBridgeBase(StaticAnalysisBridge):
     """Bridge for Ghidra reverse engineering suite.
 
     Provides advanced static analysis and decompilation capabilities
     using the ghidra_bridge Python interface. Instances own slots for
     the Ghidra installation path, the active ``ghidra_bridge`` RPC
-    object, the spawned headless process handle, the tracked binary and
-    project paths, the RPC port (defaulting to ``DEFAULT_PORT``), the
-    deployed bridge script path, and the advertised static-analysis
-    ``BridgeCapabilities``.
+    object, the spawned headless process handle, a Windows job-object
+    handle that guarantees the headless process dies with this one even
+    on a hard kill, the tracked binary and project paths, the RPC port
+    (defaulting to ``DEFAULT_PORT``), the deployed bridge script path,
+    and the advertised static-analysis ``BridgeCapabilities``.
 
     Attributes:
         DEFAULT_PORT: TCP port for the ghidra_bridge RPC connection.
@@ -423,6 +653,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         self._ghidra_path: Path | None = None
         self._bridge: object | None = None
         self._process: Popen[bytes] | None = None
+        self._job_object_handle: int | None = None
         self._binary_path: Path | None = None
         self._project_path: Path | None = None
         self._port: int = self.DEFAULT_PORT
@@ -1765,6 +1996,15 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         await asyncio.to_thread(project_dir.mkdir, parents=True, exist_ok=True)
         self._project_path = project_dir / project_name
 
+        # A prior PyGhidra headless bridge process that exited without
+        # releasing its project lock (crash, force-kill, or a missed
+        # teardown) leaves ``<project>.lock``/``<project>.lock~`` behind;
+        # Ghidra's own ``openProject`` then raises ``LockException`` even
+        # though nothing is actually still using the project. Reclaim only
+        # once the OS itself confirms no live process holds the lock file
+        # open -- never on the recorded PID or file presence alone.
+        await asyncio.to_thread(_reclaim_stale_project_lock, project_dir, project_name)
+
         bridge_script = await asyncio.to_thread(self._create_bridge_script)
 
         # Launch analyzeHeadless *through PyGhidra* so the bridge post-script
@@ -1772,12 +2012,19 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         # interpreter and reject .py scripts otherwise). ``sys.executable`` is
         # the interpreter running Intellicrack, which carries the pyghidra,
         # jpype and jfx_bridge packages the launcher and bridge depend on.
+        # ``-D java.awt.headless=true`` is forwarded to the JVM (PyGhidra's
+        # launcher prefixes ``-D``-argument values with ``-D`` and passes
+        # them straight through) so a display-change event -- such as a GPU
+        # driver hot-swap -- cannot crash the headless analyzer JVM inside
+        # AWT's native display-scale handling.
         cmd = [
             sys.executable,
             "-m",
             "pyghidra.ghidra_launch",
             "--install-dir",
             str(self._ghidra_path),
+            "-D",
+            "java.awt.headless=true",
             "ghidra.app.util.headless.AnalyzeHeadless",
             str(project_dir),
             project_name,
@@ -1820,6 +2067,18 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
             )
 
         self._process = await asyncio.to_thread(_start_process)
+
+        # Defense-in-depth beyond the explicit teardown in
+        # :meth:`GhidraBridge.shutdown` and the app-level process sweep on
+        # window close: a Win32 kill-on-close job object guarantees the OS
+        # itself terminates this headless process the instant this one
+        # exits or is force-killed for any reason, including a crash or an
+        # external ``TerminateProcess`` that never reaches either of those
+        # code paths.
+        job_handle = await asyncio.to_thread(_create_kill_on_close_job_object)
+        if job_handle is not None:
+            await asyncio.to_thread(_assign_process_to_job_object, job_handle, self._process.pid)
+        self._job_object_handle = job_handle
 
         self._start_drain_threads(self._process)
 
@@ -5265,7 +5524,10 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             max_blocks: Maximum number of blocks to return.
 
         Returns:
-            dict[str, Any]: Dict with function name and list of basic block dicts.
+            dict[str, Any]: Dict with function name and list of basic block dicts. Each block dict carries ``start``/``end`` (each block's
+            real ``getFirstStartAddress()``/``getMaxAddress()`` offsets), ``sources`` (predecessor block addresses), ``destinations``
+            (successor block addresses), and ``destination_edges`` (the same successors paired with their Ghidra flow-type flags
+            ``is_conditional``/``is_fallthrough``/``is_call``, for callers that need to distinguish branch kinds).
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -5287,35 +5549,45 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     _bb_payload = {{'function': None, 'blocks': []}}
                 else:
                     bbm = BasicBlockModel(currentProgram)
-                    blocks = []
-                    count = 0
                     func_body = func.getBody()
-                    addr_iter = func_body.getAddressRanges()
-                    while addr_iter.hasNext() and count < {max_blocks}:
-                        rng = addr_iter.next()
-                        blk_array = bbm.getCodeBlocksContaining(rng.getMinAddress(), monitor)
-                        for blk in blk_array:
-                            if count >= {max_blocks}:
-                                break
-                            src_addrs = []
-                            src_it = blk.getSources(monitor)
-                            while src_it.hasNext():
-                                src_ref = src_it.next()
-                                src_addrs.append(src_ref.getSourceAddress().getOffset())
-                            dst_addrs = []
-                            dst_it = blk.getDestinations(monitor)
-                            while dst_it.hasNext():
-                                dst_ref = dst_it.next()
-                                dst_addrs.append(dst_ref.getDestinationAddress().getOffset())
-                            blk_start = blk.getMinAddress().getOffset()
-                            if blk_start not in [b.get('start') for b in blocks]:
-                                blocks.append({{
-                                    'start': blk_start,
-                                    'end': blk.getMaxAddress().getOffset(),
-                                    'sources': src_addrs,
-                                    'destinations': dst_addrs,
-                                }})
-                                count += 1
+                    blocks = []
+                    seen_starts = set()
+                    block_it = bbm.getCodeBlocksContaining(func_body, monitor)
+                    while block_it.hasNext() and len(blocks) < {max_blocks}:
+                        blk = block_it.next()
+                        blk_start = blk.getFirstStartAddress().getOffset()
+                        if blk_start in seen_starts:
+                            continue
+                        seen_starts.add(blk_start)
+
+                        src_addrs = []
+                        src_it = blk.getSources(monitor)
+                        while src_it.hasNext():
+                            src_ref = src_it.next()
+                            src_addrs.append(src_ref.getSourceAddress().getOffset())
+
+                        dst_addrs = []
+                        dst_edges = []
+                        dst_it = blk.getDestinations(monitor)
+                        while dst_it.hasNext():
+                            dst_ref = dst_it.next()
+                            dst_addr = dst_ref.getDestinationAddress().getOffset()
+                            flow = dst_ref.getFlowType()
+                            dst_addrs.append(dst_addr)
+                            dst_edges.append({{
+                                'address': dst_addr,
+                                'is_conditional': bool(flow.isConditional()),
+                                'is_fallthrough': bool(flow.isFallthrough()),
+                                'is_call': bool(flow.isCall()),
+                            }})
+
+                        blocks.append({{
+                            'start': blk_start,
+                            'end': blk.getMaxAddress().getOffset(),
+                            'sources': src_addrs,
+                            'destinations': dst_addrs,
+                            'destination_edges': dst_edges,
+                        }})
                     _bb_payload = {{'function': func.getName(), 'blocks': blocks}}
                 _bb_payload
                 """,
@@ -6205,9 +6477,9 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
     async def shutdown(self) -> None:
         """Shutdown Ghidra and cleanup resources.
 
-        Closes the active ghidra_bridge RPC client (preventing socket leaks), terminates the headless subprocess, joins the stdout/stderr
-        drain threads, and removes the bridge script under a process-wide lock to prevent races with concurrent ``start_headless``
-        invocations.
+        Closes the active ghidra_bridge RPC client (preventing socket leaks), terminates the headless subprocess, closes the kill-on-close
+        job object handle created for it in :meth:`start_headless`, joins the stdout/stderr drain threads, and removes the bridge script
+        under a process-wide lock to prevent races with concurrent ``start_headless`` invocations.
         """
         if self._bridge is not None:
             await asyncio.to_thread(self._close_bridge_client, self._bridge)
@@ -6230,6 +6502,10 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
 
             process_manager.unregister(pid)
             self._process = None
+
+        if self._job_object_handle is not None:
+            await asyncio.to_thread(_close_job_object_handle, self._job_object_handle)
+            self._job_object_handle = None
 
         await self._join_drain_threads()
 
@@ -7216,8 +7492,13 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
         """Create or reparent a module/fragment in a program tree.
 
         Wraps ``ProgramModule.createModule``, ``ProgramModule.createFragment``,
-        and ``ProgramModule.moveChild`` to give write access to the
-        program tree hierarchy that :meth:`get_program_tree` only reads.
+        and ``ProgramModule.reparent`` to give write access to the program
+        tree hierarchy that :meth:`get_program_tree` only reads.
+        ``move_child`` is implemented with ``ProgramModule.reparent``, not
+        ``ProgramModule.moveChild``: the latter only reorders a child that
+        is already directly under the module it is called on and never
+        changes that child's parent, so it cannot move a child across
+        parents.
 
         Args:
             tree_name: Name of the program tree to modify (as returned
@@ -7225,10 +7506,13 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             operation: One of ``create_module``, ``create_fragment``,
                 or ``move_child``. ``create_module``/``create_fragment``
                 create ``child_name`` as a new child of
-                ``parent_module``. ``move_child`` moves the existing
-                child named ``child_name`` so it becomes a direct
-                child of ``parent_module`` (removed from its previous
-                parent).
+                ``parent_module``. ``move_child`` looks up every module
+                that currently parents the existing module or fragment
+                named ``child_name`` (a child may legitimately have more
+                than one parent in a program tree) and reparents it
+                under ``parent_module``, removing it from each of those
+                other parents so it ends up a direct child of
+                ``parent_module`` and nowhere else.
             parent_module: Name of the existing module that will
                 contain (or already contains, for ``move_child``) the
                 child.
@@ -7240,8 +7524,12 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
 
         Raises:
             ToolError: If Ghidra is not connected, ``operation`` is
-                unrecognized, the tree or parent module does not
-                exist, or the mutation fails.
+                unrecognized, the tree does not exist, ``parent_module``
+                does not exist or names a fragment rather than a module,
+                ``move_child``'s ``child_name`` does not exist, names
+                ``parent_module`` itself, would create a cycle by moving
+                a module under one of its own descendants, names the
+                tree's parentless root module, or the mutation fails.
         """
         if self._bridge is None:
             raise ToolError(_ERR_NOT_CONNECTED)
@@ -7264,10 +7552,17 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
                 root = listing.getRootModule({json.dumps(tree_name)})
                 tree_found = root is not None
                 parent = None
+                parent_is_fragment = False
                 if tree_found:
-                    parent = root if root.getName() == {json.dumps(parent_module)} else root.getModule({json.dumps(parent_module)})
+                    parent = listing.getModule({json.dumps(tree_name)}, {json.dumps(parent_module)})
+                    if parent is None:
+                        parent_is_fragment = listing.getFragment({json.dumps(tree_name)}, {json.dumps(parent_module)}) is not None
                 parent_found = parent is not None
                 operation = {json.dumps(operation)}
+                child_found = True
+                self_parent = False
+                circular = False
+                no_prior_parent = False
                 ok = False
                 tx_id = currentProgram.startTransaction('intellicrack.edit_program_tree')
                 try:
@@ -7279,15 +7574,42 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
                             parent.createFragment({json.dumps(child_name)})
                             ok = True
                         elif operation == 'move_child':
-                            child = root.getModule({json.dumps(child_name)})
+                            child = listing.getModule({json.dumps(tree_name)}, {json.dumps(child_name)})
+                            is_module_child = child is not None
                             if child is None:
-                                child = root.getFragment({json.dumps(child_name)})
-                            if child is not None:
-                                parent.moveChild({json.dumps(child_name)}, 0)
-                                ok = True
+                                child = listing.getFragment({json.dumps(tree_name)}, {json.dumps(child_name)})
+                            child_found = child is not None
+                            if child_found:
+                                if child.getName() == parent.getName():
+                                    self_parent = True
+                                else:
+                                    all_parents = list(child.getParents())
+                                    if not all_parents:
+                                        no_prior_parent = True
+                                    elif is_module_child and child.isDescendant(parent):
+                                        circular = True
+                                    else:
+                                        already_there = any(p.getName() == parent.getName() for p in all_parents)
+                                        old_parents = [p for p in all_parents if p.getName() != parent.getName()]
+                                        if old_parents:
+                                            parent.reparent({json.dumps(child_name)}, old_parents[0])
+                                            for extra_parent in old_parents[1:]:
+                                                extra_parent.removeChild({json.dumps(child_name)})
+                                            ok = True
+                                        elif already_there:
+                                            ok = True
                 finally:
                     currentProgram.endTransaction(tx_id, ok)
-                {{'tree_found': tree_found, 'parent_found': parent_found, 'ok': ok}}
+                {{
+                    'tree_found': tree_found,
+                    'parent_found': parent_found,
+                    'parent_is_fragment': parent_is_fragment,
+                    'child_found': child_found,
+                    'self_parent': self_parent,
+                    'circular': circular,
+                    'no_prior_parent': no_prior_parent,
+                    'ok': ok,
+                }}
             """)
         except ToolError:
             raise
@@ -7304,8 +7626,23 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
         if not bool(info.get("tree_found", False)):
             msg = f"Program tree not found: {tree_name!r}"
             raise ToolError(msg)
+        if bool(info.get("parent_is_fragment", False)):
+            msg = f"Parent {parent_module!r} in tree {tree_name!r} is a fragment and cannot contain children"
+            raise ToolError(msg)
         if not bool(info.get("parent_found", False)):
             msg = f"Parent module not found: {parent_module!r} in tree {tree_name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("child_found", True)):
+            msg = f"Child not found in tree {tree_name!r}: {child_name!r}"
+            raise ToolError(msg)
+        if bool(info.get("self_parent", False)):
+            msg = f"Cannot move {child_name!r}: a module or fragment cannot be its own parent"
+            raise ToolError(msg)
+        if bool(info.get("circular", False)):
+            msg = f"Cannot move {child_name!r} under {parent_module!r}: {parent_module!r} is nested inside {child_name!r}"
+            raise ToolError(msg)
+        if bool(info.get("no_prior_parent", False)):
+            msg = f"Cannot move {child_name!r}: it is the root of tree {tree_name!r} and has no parent to remove it from"
             raise ToolError(msg)
         if not bool(info.get("ok", False)):
             msg = f"Edit program tree failed: {operation} {child_name!r} under {parent_module!r}"

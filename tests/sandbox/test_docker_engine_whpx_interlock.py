@@ -314,7 +314,7 @@ def test_the_gate_allows_a_host_with_no_engine() -> None:
     """
     containers = _ContainerQuery()
 
-    assert docker_engine_refusal_reason(engine_running=lambda: False, containers=containers) == ""
+    assert not docker_engine_refusal_reason(engine_running=lambda: False, containers=containers)
     assert containers.calls == 0, "a host with no engine running was still made to query Docker for its containers"
 
 

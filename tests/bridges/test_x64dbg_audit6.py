@@ -306,6 +306,15 @@ class _PlaceholderProcess:
     fake pipe client.
     """
 
+    def poll(self) -> int | None:
+        """Report process status the way :class:`subprocess.Popen.poll` does.
+
+        Returns:
+            int | None: Always ``None``, indicating this stand-in debugger
+            process is still running.
+        """
+        return None
+
 
 def _install_fake_pipe(
     bridge: X64DbgBridge,
@@ -1358,7 +1367,7 @@ class TestRunToVerification:
         """
 
         def responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
-            if command == "exec":
+            if command == "run_to":
                 return {"id": 1, "success": True, "result": None}
             if command == "reg_get":
                 assert params is not None
@@ -1383,7 +1392,7 @@ class TestRunToVerification:
         wrong_ip = _RUNTO_ADDR - 0x10
 
         def responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
-            if command == "exec":
+            if command == "run_to":
                 return {"id": 1, "success": True, "result": None}
             if command == "reg_get":
                 return {"id": 1, "success": True, "result": wrong_ip}
@@ -1404,7 +1413,7 @@ class TestRunToVerification:
         """
 
         def responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
-            if command == "exec":
+            if command == "run_to":
                 return {"id": 1, "success": True, "result": None}
             if command == "reg_get":
                 return {"id": 1, "success": False, "error": "Unknown command 'reg_get'"}
@@ -1881,9 +1890,16 @@ async def test_set_breakpoint_rejects_unverifiable_breakpoint(bridge_d: X64DbgBr
 async def test_set_breakpoint_with_condition_issues_bpcond(bridge_d: X64DbgBridge) -> None:
     """F-0026: conditional bp issues a ``bpcond`` script command after ``bp_set``.
 
+    The condition is then read back through a second ``bp_list`` (T1-3),
+    so a ``bpcond`` the debugger silently rejected cannot pass as
+    success. The software breakpoint resolved here must use ``bpcond``
+    specifically - ``bphwcond``/``bpmcond`` address the hardware and
+    memory breakpoint families and do nothing to a software breakpoint.
+
     Args:
         bridge_d: Pre-wired bridge fixture.
     """
+    condition = "rax==0"
     fake = _fake_of_d(bridge_d)
     fake.queue_response("bp_set", {"success": True, "result": hex(_BP_ADDR_PRIMARY)})
     fake.queue_response(
@@ -1902,8 +1918,23 @@ async def test_set_breakpoint_with_condition_issues_bpcond(bridge_d: X64DbgBridg
         },
     )
     fake.queue_response("exec", {"success": True, "result": "ok"})
+    fake.queue_response(
+        "bp_list",
+        {
+            "success": True,
+            "result": [
+                {
+                    "address": hex(_BP_ADDR_PRIMARY),
+                    "type": "normal",
+                    "enabled": True,
+                    "hitCount": 0,
+                    "breakCondition": condition,
+                },
+            ],
+        },
+    )
 
-    await bridge_d.set_breakpoint(_BP_ADDR_PRIMARY, "software", "rax==0")
+    await bridge_d.set_breakpoint(_BP_ADDR_PRIMARY, "software", condition)
 
     exec_calls = [c for c in fake.calls if c[0] == "exec"]
     assert len(exec_calls) == 1
@@ -1913,7 +1944,8 @@ async def test_set_breakpoint_with_condition_issues_bpcond(bridge_d: X64DbgBridg
     assert isinstance(cmd, str)
     assert cmd.startswith("bpcond ")
     assert hex(_BP_ADDR_PRIMARY) in cmd
-    assert '"rax==0"' in cmd
+    assert f'"{condition}"' in cmd
+    assert len([c for c in fake.calls if c[0] == "bp_list"]) == 2
 
 
 @pytest.mark.asyncio
@@ -2363,6 +2395,20 @@ async def test_detach_releases_cached_handles() -> None:
         """
 
         pid: int = -1
+
+        def poll(self) -> int | None:
+            """Report this stand-in debugger process as still running.
+
+            ``_send_command`` probes process liveness before dispatching,
+            so a stub without ``poll`` aborts the detach path with an
+            ``AttributeError`` before it ever reaches the handle-cache
+            release this test gates.
+
+            Returns:
+                int | None: Always ``None``, the ``Popen.poll`` value for
+                a process that has not exited.
+            """
+            return None
 
     setattr(bridge, "_process", cast("Any", _StubProcess()))
     bridge.attached_pid = os.getpid()

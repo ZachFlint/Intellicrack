@@ -7,14 +7,15 @@
 Provides a self-contained Qt widget exposing the native rizin static-analysis capabilities that have no GUI presence elsewhere in the panel:
 debug information (``iDj``), classes/RTTI enumeration (``icj``), the global call graph (``agcj``), virtual-function table detection
 (``avj``), syscall enumeration (``asj``), the four zignature/FLIRT-equivalent operations (``zj``/``zg``/``za``/``z/j``), per-function basic-
-block listing (``afbj``), and linear whole-function disassembly text (``pdf``), all driven by the ``CutterBridge`` static-analysis surface
-(``cutter.py:2630-2901,3329-3403,3936-3984``).
+block listing (``afbj``), linear whole-function disassembly text (``pdf``), and per-function parameter/local-variable/calling-convention
+detail (``afij``/``afvj``), all driven by the ``CutterBridge`` static-analysis surface (``cutter.py:2016-2104,2630-2901,3329-3403,3936-3984``).
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Final, cast
 
+from PyQt6 import sip
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
@@ -32,7 +33,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import BlockInfo, ClassInfo, VtableInfo
+from intellicrack.core.types import BlockInfo, ClassInfo, FunctionInfo, VtableInfo
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.resources.font_manager import FontManager
 
@@ -55,6 +56,7 @@ _SYSCALL_COLUMNS: Final[list[str]] = ["Name", "Number", "Address"]
 _ZIGNATURE_COLUMNS: Final[list[str]] = ["Name", "Bytes", "Function"]
 _BLOCK_COLUMNS: Final[list[str]] = ["Address", "Size", "Jump", "Fail", "Instructions"]
 _DEBUG_INFO_COLUMNS: Final[list[str]] = ["Field", "Value"]
+_FUNCTION_DETAIL_COLUMNS: Final[list[str]] = ["Name", "Type", "Size", "Location / Offset"]
 
 
 def _parse_address(text: str) -> int | None:
@@ -73,6 +75,21 @@ def _parse_address(text: str) -> int | None:
         return int(stripped, 16) if stripped.lower().startswith("0x") else int(stripped)
     except ValueError:
         return None
+
+
+def _format_signed_hex(value: int) -> str:
+    """Format an integer as a signed hexadecimal string.
+
+    Args:
+        value: Integer to format, which may be negative for a
+            stack-relative local-variable offset (e.g. relative to
+            ``rbp``).
+
+    Returns:
+        str: ``0x...`` for a non-negative value, ``-0x...`` for a
+        negative value.
+    """
+    return f"-0x{-value:X}" if value < 0 else f"0x{value:X}"
 
 
 def _stretch_headers(table: QTableWidget) -> None:
@@ -131,6 +148,34 @@ def _log_error(tab_name: str, rpc: str) -> Callable[[object], None]:
     return _callback
 
 
+def _widget_is_alive(widget: QWidget) -> bool:
+    """Report whether a Qt widget's underlying C++ object still exists.
+
+    A bridge call dispatched through ``run_bridge_coroutine_logged`` can
+    complete after the tab that started it -- and every child widget
+    nested inside it -- has already been torn down (the tab was closed,
+    detached, or replaced while the call was still in flight). Touching
+    any attribute of such a widget raises ``RuntimeError: wrapped C/C++
+    object ... has been deleted``. Every late-callback handler in this
+    module calls this first, on the tab itself, so it can return
+    harmlessly instead of crashing the Qt event loop; checking the tab
+    alone is sufficient because every widget a handler touches is one of
+    its Qt children and is destroyed in the same C++ deletion cascade.
+
+    Args:
+        widget: The tab widget handling the callback.
+
+    Returns:
+        bool: ``True`` when the widget's underlying C++ object is still
+        live and safe to touch, ``False`` when it has already been
+        deleted.
+    """
+    if sip.isdeleted(widget):
+        _logger.debug("cutter_static_extra_late_callback_dropped", widget_type=type(widget).__name__)
+        return False
+    return True
+
+
 class DebugInfoTab(QWidget):
     """Tab showing binary debug information (``iDj``) as a key/value table."""
 
@@ -187,6 +232,8 @@ class DebugInfoTab(QWidget):
         Args:
             result: Debug information dictionary from the bridge.
         """
+        if not _widget_is_alive(self):
+            return
         self._refresh_btn.setEnabled(True)
         self._table.setRowCount(0)
         if not isinstance(result, dict):
@@ -204,6 +251,8 @@ class DebugInfoTab(QWidget):
         Args:
             exc: The exception that occurred.
         """
+        if not _widget_is_alive(self):
+            return
         self._refresh_btn.setEnabled(True)
         _logger.warning("cutter_get_debug_info_failed", error=str(exc))
 
@@ -251,6 +300,8 @@ class ClassesTab(QWidget):
         Args:
             result: List of :class:`ClassInfo` dataclass instances from the bridge.
         """
+        if not _widget_is_alive(self):
+            return
         self._tree.clear()
         classes: list[ClassInfo] = []
         if isinstance(result, list):
@@ -331,6 +382,8 @@ class CallGraphTab(QWidget):
         Args:
             result: List of callgraph edge dictionaries from the bridge.
         """
+        if not _widget_is_alive(self):
+            return
         self._table.setRowCount(0)
         if not isinstance(result, list):
             return
@@ -387,6 +440,8 @@ class VtablesTab(QWidget):
         Args:
             result: List of :class:`VtableInfo` dataclass instances from the bridge.
         """
+        if not _widget_is_alive(self):
+            return
         vtables: list[VtableInfo] = []
         if isinstance(result, list):
             entries: list[object] = cast("list[object]", result)
@@ -434,6 +489,8 @@ class SyscallsTab(QWidget):
         Args:
             result: List of syscall dictionaries from the bridge.
         """
+        if not _widget_is_alive(self):
+            return
         self._table.setRowCount(0)
         if not isinstance(result, list):
             return
@@ -553,6 +610,8 @@ class ZignaturesTab(QWidget):
 
     def _on_generate_success(self) -> None:
         """Handle successful zignature generation and refresh the list."""
+        if not _widget_is_alive(self):
+            return
         self._status_label.setText(self.tr("Zignatures generated"))
         self._generate_btn.setEnabled(True)
         self._on_list()
@@ -563,6 +622,8 @@ class ZignaturesTab(QWidget):
         Args:
             exc: The exception that occurred.
         """
+        if not _widget_is_alive(self):
+            return
         self._status_label.setText(f"Generate failed: {exc}")
         _logger.warning("cutter_generate_zignatures_failed", error=str(exc))
         self._generate_btn.setEnabled(True)
@@ -596,6 +657,8 @@ class ZignaturesTab(QWidget):
         Args:
             name: The zignature name that was added.
         """
+        if not _widget_is_alive(self):
+            return
         self._status_label.setText(f"Added zignature '{name}'")
         self._add_btn.setEnabled(True)
         self._add_name_input.clear()
@@ -608,6 +671,8 @@ class ZignaturesTab(QWidget):
         Args:
             exc: The exception that occurred.
         """
+        if not _widget_is_alive(self):
+            return
         self._status_label.setText(f"Add failed: {exc}")
         _logger.warning("cutter_add_zignature_failed", error=str(exc))
         self._add_btn.setEnabled(True)
@@ -633,6 +698,8 @@ class ZignaturesTab(QWidget):
         Args:
             result: List of zignature dictionaries from the bridge.
         """
+        if not _widget_is_alive(self):
+            return
         self._fill_table(result)
         self._list_btn.setEnabled(True)
         self._status_label.setText(f"{self._table.rowCount()} zignature(s)")
@@ -643,6 +710,8 @@ class ZignaturesTab(QWidget):
         Args:
             exc: The exception that occurred.
         """
+        if not _widget_is_alive(self):
+            return
         self._status_label.setText(f"List failed: {exc}")
         _logger.warning("cutter_get_zignatures_failed", error=str(exc))
         self._list_btn.setEnabled(True)
@@ -668,6 +737,8 @@ class ZignaturesTab(QWidget):
         Args:
             result: List of zignature match dictionaries from the bridge.
         """
+        if not _widget_is_alive(self):
+            return
         self._fill_table(result)
         self._search_btn.setEnabled(True)
         self._status_label.setText(f"{self._table.rowCount()} match(es)")
@@ -678,6 +749,8 @@ class ZignaturesTab(QWidget):
         Args:
             exc: The exception that occurred.
         """
+        if not _widget_is_alive(self):
+            return
         self._status_label.setText(f"Search failed: {exc}")
         _logger.warning("cutter_search_zignatures_failed", error=str(exc))
         self._search_btn.setEnabled(True)
@@ -781,6 +854,8 @@ class BasicBlocksTab(QWidget):
         Args:
             result: List of :class:`BlockInfo` dataclass instances from the bridge.
         """
+        if not _widget_is_alive(self):
+            return
         self._fetch_btn.setEnabled(True)
         blocks: list[BlockInfo] = []
         if isinstance(result, list):
@@ -861,7 +936,7 @@ class FunctionDisasmTab(QWidget):
         run_bridge_coroutine_logged(
             self._bridge.disassemble_function(address),
             on_success=self._apply_data,
-            on_error=lambda e: self._output.setPlainText(f"[error] {e}"),
+            on_error=self._on_fetch_error,
             parent=self,
             event="cutter_disassemble_function",
             logger=_logger,
@@ -874,15 +949,158 @@ class FunctionDisasmTab(QWidget):
         Args:
             result: Disassembly text string from the bridge.
         """
+        if not _widget_is_alive(self):
+            return
         self._fetch_btn.setEnabled(True)
         self._output.setPlainText(str(result) if result else "")
+
+    def _on_fetch_error(self, exc: object) -> None:
+        """Handle linear disassembly query failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        if not _widget_is_alive(self):
+            return
+        self._output.setPlainText(f"[error] {exc}")
+
+
+class FunctionDetailsTab(QWidget):
+    """Tab showing full per-function detail: parameters, local variables, and calling convention.
+
+    Complements :class:`BasicBlocksTab` and :class:`FunctionDisasmTab` by exposing ``CutterBridge.get_function`` (``afij``/``afvj``), the only
+    per-function call that resolves real parameter and local-variable storage locations and sizes together with the function's calling
+    convention and return type, distinct from the function-list sidebar's bare name/address/size summary.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the FunctionDetailsTab with an address input and a detail tree.
+
+        Args:
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        self._bridge: CutterBridge | None = None
+        fm = FontManager.get_instance()
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        toolbar = QHBoxLayout()
+        addr_label = QLabel(self.tr("Function Address:"))
+        addr_label.setFont(fm.get_ui_font(9))
+        toolbar.addWidget(addr_label)
+        self._addr_input = QLineEdit()
+        self._addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._addr_input.setPlaceholderText("0x401000")
+        self._addr_input.returnPressed.connect(self._on_fetch)
+        toolbar.addWidget(self._addr_input)
+        self._fetch_btn = QPushButton(self.tr("Get Function Info"))
+        self._fetch_btn.setObjectName("tool_button")
+        self._fetch_btn.clicked.connect(self._on_fetch)
+        toolbar.addWidget(self._fetch_btn)
+        toolbar.addStretch()
+        layout.addLayout(toolbar)
+
+        self._summary_label = QLabel(self.tr("No function selected"))
+        self._summary_label.setWordWrap(True)
+        layout.addWidget(self._summary_label)
+
+        self._tree = QTreeWidget()
+        self._tree.setHeaderLabels(_FUNCTION_DETAIL_COLUMNS)
+        tree_header = self._tree.header()
+        if tree_header is not None:
+            tree_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            tree_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            tree_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            tree_header.setStretchLastSection(True)
+        layout.addWidget(self._tree)
+
+    def refresh(self, bridge: CutterBridge) -> None:
+        """Store the bridge reference for later address-driven fetches.
+
+        Args:
+            bridge: CutterBridge instance.
+        """
+        self._bridge = bridge
+
+    def set_address(self, address: int) -> None:
+        """Populate the address input and fetch function details for it.
+
+        Args:
+            address: Function address to query.
+        """
+        self._addr_input.setText(f"0x{address:X}")
+        self._on_fetch()
+
+    def _on_fetch(self) -> None:
+        """Fetch full function detail for the address in the address input."""
+        if self._bridge is None:
+            return
+        address = _parse_address(self._addr_input.text())
+        if address is None:
+            self._summary_label.setText(self.tr("Invalid address"))
+            self._tree.clear()
+            return
+        self._fetch_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.get_function(address),
+            on_success=self._apply_data,
+            on_error=self._on_fetch_error,
+            parent=self,
+            event="cutter_get_function",
+            logger=_logger,
+            address=hex(address),
+        )
+
+    def _apply_data(self, result: object) -> None:
+        """Populate the summary label and detail tree from a ``get_function`` result.
+
+        Args:
+            result: :class:`FunctionInfo` instance from the bridge, or ``None`` when no analyzed function exists at the requested address.
+        """
+        if not _widget_is_alive(self):
+            return
+        self._fetch_btn.setEnabled(True)
+        self._tree.clear()
+        if not isinstance(result, FunctionInfo):
+            self._summary_label.setText(self.tr("No function found at this address"))
+            return
+
+        self._summary_label.setText(
+            f"{result.name}   address=0x{result.address:X}   size={result.size}   "
+            f"calling_convention={result.calling_convention}   returns={result.return_type}",
+        )
+
+        params_node = QTreeWidgetItem(self._tree, [f"Parameters ({len(result.parameters)})", "", "", ""])
+        for param in result.parameters:
+            QTreeWidgetItem(params_node, [param.name, param.type, str(param.size), param.location])
+        params_node.setExpanded(True)
+
+        locals_node = QTreeWidgetItem(self._tree, [f"Local Variables ({len(result.local_variables)})", "", "", ""])
+        for var in result.local_variables:
+            QTreeWidgetItem(locals_node, [var.name, var.type, str(var.size), _format_signed_hex(var.offset)])
+        locals_node.setExpanded(True)
+
+    def _on_fetch_error(self, exc: object) -> None:
+        """Handle function-detail query failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        if not _widget_is_alive(self):
+            return
+        self._fetch_btn.setEnabled(True)
+        self._summary_label.setText(f"Query failed: {exc}")
+        _logger.warning("cutter_get_function_failed", error=str(exc))
 
 
 class StaticAnalysisExtrasTab(QWidget):
     """Composite tab hosting the remaining native static-analysis views.
 
-    Groups classes/RTTI, call graph, vtables, syscalls, zignatures, basic-block listing, and linear function disassembly into a single
-    nested tab widget, following the ``DebuggerTab`` sub-tab convention.
+    Groups classes/RTTI, call graph, vtables, syscalls, zignatures, basic-block listing, linear function disassembly, and per-function
+    parameter/local-variable/calling-convention detail into a single nested tab widget, following the ``DebuggerTab`` sub-tab convention.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -912,15 +1130,17 @@ class StaticAnalysisExtrasTab(QWidget):
         self._tabs.addTab(self._basic_blocks_tab, self.tr("Basic Blocks"))
         self._function_disasm_tab = FunctionDisasmTab()
         self._tabs.addTab(self._function_disasm_tab, self.tr("Function Disasm"))
+        self._function_details_tab = FunctionDetailsTab()
+        self._tabs.addTab(self._function_details_tab, self.tr("Function Details"))
         layout.addWidget(self._tabs)
 
     def refresh(self, bridge: CutterBridge) -> None:
         """Refresh all binary-wide sub-tabs from the bridge.
 
-        The address-driven sub-tabs (basic blocks, function disassembly)
-        are stored a bridge reference but not auto-fetched since they
-        require a function address supplied by the user or by
-        :meth:`show_function`.
+        The address-driven sub-tabs (basic blocks, function disassembly,
+        function details) are stored a bridge reference but not
+        auto-fetched since they require a function address supplied by
+        the user or by :meth:`show_function`.
 
         Args:
             bridge: CutterBridge instance.
@@ -933,6 +1153,7 @@ class StaticAnalysisExtrasTab(QWidget):
         self._zignatures_tab.refresh(bridge)
         self._basic_blocks_tab.refresh(bridge)
         self._function_disasm_tab.refresh(bridge)
+        self._function_details_tab.refresh(bridge)
 
     def show_function(self, address: int) -> None:
         """Populate the address-driven sub-tabs for a selected function.
@@ -942,3 +1163,4 @@ class StaticAnalysisExtrasTab(QWidget):
         """
         self._basic_blocks_tab.set_address(address)
         self._function_disasm_tab.set_address(address)
+        self._function_details_tab.set_address(address)

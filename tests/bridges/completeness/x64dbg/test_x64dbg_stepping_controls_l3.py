@@ -83,20 +83,25 @@ class TestStepCountButtonDrivesStepCountRpc:
     """Clicking Step N must drive ``bridge.step_count(count, step_type="into")``."""
 
     @staticmethod
-    def test_step_n_click_issues_tic_with_entered_count_and_reports_result(
+    def test_step_n_click_issues_traceintoconditional_with_entered_count_and_reports_result(
         wired_panel: tuple[X64DbgPanel, X64DbgBridge],
         qapp: QApplication,
     ) -> None:
-        """Clicking Step N must send ``tic 0, <count>`` and log the verified step count.
+        """Clicking Step N must send ``TraceIntoConditional 0, <count>`` and log the verified count.
 
         Falsifiable: if ``_on_step_count`` read a different widget, built the
         wrong ``exec`` command, or forwarded the wrong ``step_type``, the
-        recorded ``exec`` command would not match ``tic 0, 7`` exactly, and
-        the console message would not report a verified 7-step result.
-        Broken production line: ``cmd = f"tic 0, {count}" if step_type ==
-        "into" else f"toc 0, {count}"`` in ``X64DbgBridge.step_count``
-        (``bridges/x64dbg.py``) and ``self._bridge.step_count(count,
-        step_type="into")`` in ``_on_step_count`` (``ui/panels/x64dbg_panel.py``).
+        recorded ``exec`` command would not match ``TraceIntoConditional 0,
+        7`` exactly, and the console message would not report a verified
+        7-step result. This gate also pins the command *name*: ``tic`` and
+        ``toc`` are not registered x64dbg commands or aliases (only
+        ``ticnd``/``tocnd`` and the full ``TraceIntoConditional``/
+        ``TraceOverConditional`` names exist), so reverting
+        ``X64DbgBridge.step_count`` (``bridges/x64dbg.py``) to the old
+        ``cmd = f"tic 0, {count}" if step_type == "into" else f"toc 0,
+        {count}"`` line - which a real plugin rejects as an unknown command -
+        fails this assertion. ``_on_step_count``
+        (``ui/panels/x64dbg_panel.py``) must forward ``step_type="into"``.
 
         Args:
             wired_panel: Panel/bridge pair fixture.
@@ -107,7 +112,7 @@ class TestStepCountButtonDrivesStepCountRpc:
         def responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
             if command == "exec":
                 assert params is not None
-                assert params.get("command") == "tic 0, 7"
+                assert params.get("command") == "TraceIntoConditional 0, 7"
                 return ok("")
             if command == "status":
                 return ok({"paused": True, "debugging": True})
@@ -128,7 +133,7 @@ class TestStepCountButtonDrivesStepCountRpc:
             pump_until(qapp, lambda: "Stepped 7 time(s)" in console_output.toPlainText())
 
             exec_cmds = [p["command"] for _, p in fake.sent if p and "command" in p]
-            assert "tic 0, 7" in exec_cmds
+            assert "TraceIntoConditional 0, 7" in exec_cmds
             assert "Stepped 7 time(s)" in console_output.toPlainText()
             assert step_count_btn.isEnabled()
         finally:
@@ -143,8 +148,8 @@ class TestStepCountButtonDrivesStepCountRpc:
 
         Falsifiable: if the ``int(count_text)`` guard in ``_on_step_count``
         were removed, this would either raise an uncaught ``ValueError`` or
-        dispatch a malformed ``tic`` command instead of leaving the fake
-        pipe untouched.
+        dispatch a malformed ``TraceIntoConditional`` command instead of
+        leaving the fake pipe untouched.
 
         Args:
             wired_panel: Panel/bridge pair fixture.
@@ -181,32 +186,37 @@ class TestAnimateStartButtonDrivesAnimateStartRpc:
     """Clicking Animate Start must drive ``bridge.animate_start(step_type="into")``."""
 
     @staticmethod
-    def test_animate_start_click_issues_animateinto_and_reports_verified(
+    def test_animate_start_click_issues_conditional_trace_and_reports_verified(
         wired_panel: tuple[X64DbgPanel, X64DbgBridge],
         qapp: QApplication,
     ) -> None:
-        """Clicking Animate Start must send ``AnimateInto`` and report a verified start.
+        """Clicking Animate Start must send the animate conditional trace and report verified.
 
         Falsifiable: if ``_on_animate_start`` called a different bridge
-        method, or the bridge sent a different console command than
-        ``AnimateInto``, the recorded ``exec`` command list would not
-        contain it, and the console would not report "Animation started"
-        with no unverified suffix. Broken production line: ``cmd =
-        "AnimateInto" if step_type == "into" else "AnimateOver"`` in
-        ``X64DbgBridge.animate_start`` and ``self._bridge.animate_start(
-        step_type="into")`` in ``_on_animate_start``
-        (``ui/panels/x64dbg_panel.py``).
+        method, or the bridge sent a different console command, the
+        recorded ``exec`` command list would not contain
+        ``TraceIntoConditional 0, <budget>`` and the console would not
+        report "Animation started" with no unverified suffix. This also
+        pins the command name: ``AnimateInto``/``AnimateOver`` are not
+        registered x64dbg commands (animation is GUI-only; the command
+        table registers only ``AnimateWait``), so reverting
+        ``X64DbgBridge.animate_start`` to ``cmd = "AnimateInto" if
+        step_type == "into" else "AnimateOver"`` - which a real x64dbg
+        rejects - reddens this gate. ``_on_animate_start``
+        (``ui/panels/x64dbg_panel.py``) must call
+        ``self._bridge.animate_start(step_type="into")``.
 
         Args:
             wired_panel: Panel/bridge pair fixture.
             qapp: Session QApplication fixture.
         """
         panel, bridge = wired_panel
+        expected_command = f"TraceIntoConditional 0, {X64DbgBridge.ANIMATE_MAX_STEPS}"
 
         def responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
             if command == "exec":
                 assert params is not None
-                assert params.get("command") == "AnimateInto"
+                assert params.get("command") == expected_command
                 return ok("")
             if command == "status":
                 return ok({"paused": False, "debugging": True})
@@ -225,7 +235,8 @@ class TestAnimateStartButtonDrivesAnimateStartRpc:
             pump_until(qapp, lambda: "Animation started" in console_output.toPlainText())
 
             exec_cmds = [p["command"] for _, p in fake.sent if p and "command" in p]
-            assert "AnimateInto" in exec_cmds
+            assert expected_command in exec_cmds
+            assert "AnimateInto" not in exec_cmds
             assert "Animation started" in console_output.toPlainText()
             assert "unverified" not in console_output.toPlainText()
             assert animate_start_btn.isEnabled()
@@ -237,20 +248,24 @@ class TestAnimateStopButtonDrivesAnimateStopRpc:
     """Clicking Animate Stop must drive ``bridge.animate_stop()``."""
 
     @staticmethod
-    def test_animate_stop_click_issues_animatestop_and_reports_verified(
+    def test_animate_stop_click_issues_pause_and_reports_verified(
         wired_panel: tuple[X64DbgPanel, X64DbgBridge],
         qapp: QApplication,
     ) -> None:
-        """Clicking Animate Stop must send ``AnimateStop`` and report a verified stop.
+        """Clicking Animate Stop must send ``pause`` and report a verified stop.
 
-        Falsifiable: if ``_on_animate_stop`` were wired to any other bridge
-        method, or the bridge sent a different console command than
-        ``AnimateStop``, the recorded ``exec`` command list would not
-        contain it, and the console would not report "Animation stopped"
-        with no unverified suffix. Broken production line: ``await
-        self._send_command("AnimateStop")`` in
-        ``X64DbgBridge.animate_stop`` and ``self._bridge.animate_stop()``
-        in ``_on_animate_stop`` (``ui/panels/x64dbg_panel.py``).
+        Falsifiable: if ``_on_animate_stop`` were wired to any other
+        bridge method, or the bridge sent a different console command
+        than ``pause``, the recorded ``exec`` command list would not
+        contain it and the console would not report "Animation stopped"
+        with no unverified suffix. This also pins the command name:
+        ``AnimateStop`` is not a registered x64dbg command (``pause`` is
+        documented as "Pause the debuggee or stop animation if animation
+        is in progress"), so reverting ``X64DbgBridge.animate_stop`` to
+        ``_await_run_completion("AnimateStop", ...)`` - which a real
+        x64dbg rejects - reddens this gate. ``_on_animate_stop``
+        (``ui/panels/x64dbg_panel.py``) must call
+        ``self._bridge.animate_stop()``.
 
         Args:
             wired_panel: Panel/bridge pair fixture.
@@ -261,7 +276,7 @@ class TestAnimateStopButtonDrivesAnimateStopRpc:
         def responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
             if command == "exec":
                 assert params is not None
-                assert params.get("command") == "AnimateStop"
+                assert params.get("command") == "pause"
                 return ok("")
             if command == "status":
                 return ok({"paused": True, "debugging": True})
@@ -280,7 +295,8 @@ class TestAnimateStopButtonDrivesAnimateStopRpc:
             pump_until(qapp, lambda: "Animation stopped" in console_output.toPlainText())
 
             exec_cmds = [p["command"] for _, p in fake.sent if p and "command" in p]
-            assert "AnimateStop" in exec_cmds
+            assert "pause" in exec_cmds
+            assert "AnimateStop" not in exec_cmds
             assert "Animation stopped" in console_output.toPlainText()
             assert "unverified" not in console_output.toPlainText()
             assert animate_stop_btn.isEnabled()

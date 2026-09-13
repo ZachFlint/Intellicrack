@@ -22,12 +22,14 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_warning
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, discard_worker, worker_is_running
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, discard_worker, run_bridge_coroutine, worker_is_running
 from intellicrack.ui.panels.hex_editor.widgets import CustomCrcDialog
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 _logger = get_logger(__name__)
 
@@ -45,13 +47,16 @@ GUI thread's event loop happens to process the worker's queued completion signal
 continue asynchronously exactly as before.
 """
 
-def _format_hash_result(document: object, algo: str) -> str:
+
+def _format_hash_result(bridge: HexEditorBridge | None, document: object, algo: str) -> str:
     """Compute the document hash and format it for display.
 
-    Runs on a background ``GenericCallableWorker`` thread so hashing a large document never blocks the Qt event loop.
+    Runs on a background ``GenericCallableWorker`` thread so hashing a large document never blocks the Qt event loop. Routes through
+    ``HexEditorBridge.calculate_hash`` when a bridge is attached; falls back to the document's ``compute_hash`` directly otherwise.
 
     Args:
-        document: Hex document exposing ``compute_hash``.
+        bridge: Attached HexEditorBridge, or None when no bridge is attached.
+        document: Hex document exposing ``compute_hash``, used as the fallback source.
         algo: Hash algorithm name selected in the UI.
 
     Returns:
@@ -63,6 +68,11 @@ def _format_hash_result(document: object, algo: str) -> str:
         ValueError: If the algorithm name is not recognised.
         AttributeError: If the document does not expose ``compute_hash``.
     """
+    if bridge is not None:
+        result = run_bridge_coroutine(bridge.calculate_hash(algo))
+        _logger.info("hash_calculated", algo=algo)
+        return f"{algo}: {result}"
+
     doc: Any = document
     try:
         result = doc.compute_hash(algo)
@@ -73,13 +83,16 @@ def _format_hash_result(document: object, algo: str) -> str:
     return f"{algo}: {result}"
 
 
-def _format_hash_range_result(document: object, start: int, end: int, algo: str) -> str:
+def _format_hash_range_result(bridge: HexEditorBridge | None, document: object, start: int, end: int, algo: str) -> str:
     """Compute the hash of a byte range and format it for display.
 
-    Runs on a background ``GenericCallableWorker`` thread so hashing a large selection never blocks the Qt event loop.
+    Runs on a background ``GenericCallableWorker`` thread so hashing a large selection never blocks the Qt event loop. Routes through
+    ``HexEditorBridge.calculate_hash_range`` when a bridge is attached; falls back to the document's ``compute_hash_range`` directly
+    otherwise.
 
     Args:
-        document: Hex document exposing ``compute_hash_range``.
+        bridge: Attached HexEditorBridge, or None when no bridge is attached.
+        document: Hex document exposing ``compute_hash_range``, used as the fallback source.
         start: Start byte offset of the range, inclusive.
         end: End byte offset of the range, exclusive.
         algo: Hash algorithm name selected in the UI.
@@ -93,6 +106,11 @@ def _format_hash_range_result(document: object, start: int, end: int, algo: str)
         ValueError: If the algorithm name is not recognised.
         AttributeError: If the document does not expose ``compute_hash_range``.
     """
+    if bridge is not None:
+        result = run_bridge_coroutine(bridge.calculate_hash_range(start, end, algo))
+        _logger.info("hash_selection_calculated", algo=algo, start=start, end=end)
+        return f"{algo} (0x{start:X}-0x{end:X}): {result}"
+
     doc: Any = document
     try:
         result = doc.compute_hash_range(start, end, algo)
@@ -101,6 +119,27 @@ def _format_hash_range_result(document: object, start: int, end: int, algo: str)
         raise
     _logger.info("hash_selection_calculated", algo=algo, start=start, end=end)
     return f"{algo} (0x{start:X}-0x{end:X}): {result}"
+
+
+def _verify_pe_checksum(bridge: HexEditorBridge | None, document: object) -> dict[str, Any]:
+    """Verify the PE optional header checksum.
+
+    Runs on a background ``GenericCallableWorker`` thread so scanning a large image never blocks the Qt event loop. Routes through
+    ``HexEditorBridge.verify_pe_checksum`` when a bridge is attached; falls back to the document's ``verify_pe_checksum`` directly
+    otherwise. Shared by the initial verification and the post-repair re-verification.
+
+    Args:
+        bridge: Attached HexEditorBridge, or None when no bridge is attached.
+        document: Hex document exposing ``verify_pe_checksum``, used as the fallback source.
+
+    Returns:
+        dict[str, Any]: Dict with stored, calculated, offset, valid.
+    """
+    if bridge is not None:
+        result: object = run_bridge_coroutine(bridge.verify_pe_checksum())
+        return result if isinstance(result, dict) else {}
+    doc: Any = document
+    return cast("dict[str, Any]", doc.verify_pe_checksum())
 
 
 class HashingMixin:
@@ -232,8 +271,10 @@ class HashingMixin:
     def _on_custom_crc(self) -> None:
         """Open the custom CRC dialog wired to the streaming worker.
 
-        The dialog never copies the document body onto the UI thread. It receives the file path (when one is resolvable) and the document
-        handle; clicking Calculate spawns a worker that streams the bytes through ``compute_streaming_custom_crc`` in bounded chunks.
+        The dialog never copies the document body onto the UI thread. It receives the file path (when one is resolvable), the document
+        handle, and the attached bridge (if any); clicking Calculate spawns a worker that computes the CRC via
+        ``HexEditorBridge.calculate_hash_custom_crc`` when a bridge is attached, or streams the bytes through
+        ``compute_streaming_custom_crc`` in bounded chunks otherwise.
         """
         document = self.document
         if document is None:
@@ -255,6 +296,7 @@ class HashingMixin:
             file_path=self._resolve_custom_crc_file_path(),
             document=document,
             length=doc_len,
+            bridge=getattr(self, "_bridge", None),
             parent=parent,
         )
         dlg.exec()
@@ -289,7 +331,7 @@ class HashingMixin:
         worker = self._spawn_hex_worker(
             getattr(self, "_hash_worker", None),
             _format_hash_result,
-            (self.document, algo),
+            (getattr(self, "_bridge", None), self.document, algo),
             self._on_hash_result_ready,
             self._on_hash_error,
         )
@@ -334,7 +376,7 @@ class HashingMixin:
         worker = self._spawn_hex_worker(
             getattr(self, "_hash_worker", None),
             _format_hash_range_result,
-            (self.document, sel_start, sel_end, algo),
+            (getattr(self, "_bridge", None), self.document, sel_start, sel_end, algo),
             self._on_hash_result_ready,
             self._on_hash_error,
         )
@@ -344,7 +386,7 @@ class HashingMixin:
         self._hash_result_label.setText(f"{algo} (0x{sel_start:X}-0x{sel_end:X}): Computing...")
 
     def _on_verify_pe_checksum(self) -> None:
-        """Verify the PE checksum via hexcore document.verify_pe_checksum.
+        """Verify the PE checksum, routing through the bridge when attached.
 
         The verification runs on a background worker thread so scanning a large image never blocks the Qt event loop.
         """
@@ -353,8 +395,8 @@ class HashingMixin:
 
         worker = self._spawn_hex_worker(
             getattr(self, "_pe_checksum_worker", None),
-            self.document.verify_pe_checksum,
-            (),
+            _verify_pe_checksum,
+            (getattr(self, "_bridge", None), self.document),
             self._apply_pe_checksum_verification,
             self._on_pe_checksum_verify_error,
         )
@@ -439,26 +481,31 @@ class HashingMixin:
         offset = e_lfanew + _PE_CHECKSUM_OFFSET_FROM_E_LFANEW
         return None if offset + _PE_CHECKSUM_LEN > total else offset
 
-    def _repair_pe_checksum_and_notify(self, checksum_offset: int | None) -> object:
+    def _repair_pe_checksum_and_notify(self, bridge: HexEditorBridge | None, checksum_offset: int | None) -> object:
         """Repair the PE checksum and notify state observers of the modified bytes.
 
         Runs on the background ``GenericCallableWorker`` thread dispatched by
-        ``_on_repair_pe_checksum``. The document write and the state-holder
-        notification run back-to-back on that thread, as plain synchronous
-        Python calls, so observers (the hex viewport, the bridge layer, the AI
-        tool registry) learn about the modified bytes the instant the write
-        completes instead of waiting for the GUI thread's event loop to
-        marshal a queued Qt signal. ``HexDocumentState`` is documented as
-        thread-safe and designed to be notified from any thread, so calling it
-        here rather than from the GUI-thread completion callback is safe.
+        ``_on_repair_pe_checksum``. Routes the repair itself through
+        ``HexEditorBridge.repair_pe_checksum`` when a bridge is attached, falling
+        back to the document's ``repair_pe_checksum`` directly otherwise. The
+        write and this panel's own state-holder notification still run
+        back-to-back on this thread, as plain synchronous Python calls
+        regardless of which path performed the write, so observers (the hex
+        viewport, the bridge layer, the AI tool registry) learn about the
+        modified bytes the instant the write completes instead of waiting for
+        the GUI thread's event loop to marshal a queued Qt signal.
+        ``HexDocumentState`` is documented as thread-safe and designed to be
+        notified from any thread, so calling it here rather than from the
+        GUI-thread completion callback is safe.
 
         Args:
+            bridge: Attached HexEditorBridge, or None when no bridge is attached.
             checksum_offset: Absolute byte offset of the four-byte ``CheckSum``
                 field resolved before dispatch, or ``None`` when the offset
                 could not be determined for the current document.
 
         Returns:
-            object: The (unused) return value of ``document.repair_pe_checksum``.
+            object: The (unused) return value of the repair call.
 
         Raises:
             RuntimeError: If the document became unavailable before the
@@ -468,7 +515,7 @@ class HashingMixin:
         if document is None:
             msg = "document became unavailable before the PE checksum repair could run"
             raise RuntimeError(msg)
-        result = document.repair_pe_checksum()
+        result: object = run_bridge_coroutine(bridge.repair_pe_checksum()) if bridge is not None else document.repair_pe_checksum()
         if checksum_offset is None:
             _logger.warning("pe_checksum_notify_skipped_unresolved_offset")
         else:
@@ -503,7 +550,7 @@ class HashingMixin:
         worker = self._spawn_hex_worker(
             getattr(self, "_pe_checksum_worker", None),
             self._repair_pe_checksum_and_notify,
-            (checksum_offset,),
+            (getattr(self, "_bridge", None), checksum_offset),
             self._on_pe_checksum_repaired,
             self._on_pe_checksum_repair_error,
         )
@@ -548,8 +595,8 @@ class HashingMixin:
 
         worker = self._spawn_hex_worker(
             getattr(self, "_pe_checksum_worker", None),
-            self.document.verify_pe_checksum,
-            (),
+            _verify_pe_checksum,
+            (getattr(self, "_bridge", None), self.document),
             self._apply_post_repair_verification,
             self._on_post_repair_verify_error,
         )

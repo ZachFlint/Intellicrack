@@ -24,7 +24,6 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
-    QToolBar,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -33,8 +32,10 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager
+from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.async_bridge import drain_bridge_workers_for, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import compute_toolbar_height
+from intellicrack.ui.panels.process_panel.tab_overflow import install_tab_overflow
 from intellicrack.ui.panels.process_panel.workers import TrackedRefreshWorker
 from intellicrack.ui.panels.qt_compat import set_sorting_enabled
 
@@ -143,6 +144,7 @@ class ProcessTab(QWidget):
         self._tabs.addTab(self._build_tracked_tab(), "Tracked")
         self._tabs.addTab(self._build_info_tab(), "Process Info")
         self._tabs.currentChanged.connect(self._on_tab_changed)
+        install_tab_overflow(self._tabs)
 
         layout.addWidget(self._tabs)
 
@@ -157,7 +159,7 @@ class ProcessTab(QWidget):
         tab_layout.setContentsMargins(_MARGIN, _SPACING, _MARGIN, _MARGIN)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("System Processes", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -239,7 +241,8 @@ class ProcessTab(QWidget):
         self._process_table.customContextMenuRequested.connect(self._on_process_context_menu)
         proc_h = self._process_table.horizontalHeader()
         if proc_h is not None:
-            proc_h.setSectionResizeMode(_COL_NAME, QHeaderView.ResizeMode.Stretch)
+            proc_h.setStretchLastSection(False)
+            proc_h.setSectionResizeMode(_COL_NAME, QHeaderView.ResizeMode.ResizeToContents)
 
         tab_layout.addWidget(self._process_table)
         return tab
@@ -255,7 +258,7 @@ class ProcessTab(QWidget):
         tab_layout.setContentsMargins(_MARGIN, _SPACING, _MARGIN, _MARGIN)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Tracked Processes", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -294,7 +297,8 @@ class ProcessTab(QWidget):
         set_sorting_enabled(self._tracked_table, enable=True)
         th = self._tracked_table.horizontalHeader()
         if th is not None:
-            th.setSectionResizeMode(_TR_COL_NAME, QHeaderView.ResizeMode.Stretch)
+            th.setStretchLastSection(False)
+            th.setSectionResizeMode(_TR_COL_NAME, QHeaderView.ResizeMode.ResizeToContents)
 
         tab_layout.addWidget(self._tracked_table)
         return tab
@@ -318,8 +322,9 @@ class ProcessTab(QWidget):
         self._info_tree.setMinimumHeight(_SPLIT_MIN_HEIGHT)
         info_h = self._info_tree.header()
         if info_h is not None:
+            info_h.setStretchLastSection(False)
             info_h.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            info_h.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            info_h.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         splitter.addWidget(self._info_tree)
 
         env_widget = QWidget()
@@ -334,7 +339,8 @@ class ProcessTab(QWidget):
         self._env_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         env_h = self._env_table.horizontalHeader()
         if env_h is not None:
-            env_h.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            env_h.setStretchLastSection(False)
+            env_h.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         env_layout.addWidget(self._env_table)
         splitter.addWidget(env_widget)
 

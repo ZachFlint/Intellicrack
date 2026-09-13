@@ -1148,28 +1148,28 @@ class HexEditorWidget(QAbstractScrollArea):
         padded = group_bytes + bytes(max(0, padded_size - n))
 
         if mode == "hex16_le":
-            return f"{cast('int', struct.unpack_from('<H', padded)[0]):04X}"
+            return f"{struct.unpack_from('<H', padded)[0]:04X}"
         if mode == "hex16_be":
-            return f"{cast('int', struct.unpack_from('>H', padded)[0]):04X}"
+            return f"{struct.unpack_from('>H', padded)[0]:04X}"
         if mode in {"hex32_le", "rgba8"}:
-            return f"{cast('int', struct.unpack_from('<I', padded)[0]):08X}"
+            return f"{struct.unpack_from('<I', padded)[0]:08X}"
         if mode == "hex32_be":
-            return f"{cast('int', struct.unpack_from('>I', padded)[0]):08X}"
+            return f"{struct.unpack_from('>I', padded)[0]:08X}"
         if mode == "hex64_le":
-            return f"{cast('int', struct.unpack_from('<Q', padded)[0]):016X}"
+            return f"{struct.unpack_from('<Q', padded)[0]:016X}"
         if mode == "hex64_be":
-            return f"{cast('int', struct.unpack_from('>Q', padded)[0]):016X}"
+            return f"{struct.unpack_from('>Q', padded)[0]:016X}"
         if mode == "dec_u16":
-            return f"{cast('int', struct.unpack_from('<H', padded)[0]):5d}"
+            return f"{struct.unpack_from('<H', padded)[0]:5d}"
         if mode == "dec_u32":
-            return f"{cast('int', struct.unpack_from('<I', padded)[0]):10d}"
+            return f"{struct.unpack_from('<I', padded)[0]:10d}"
         if mode == "dec_s16":
-            return f"{cast('int', struct.unpack_from('<h', padded)[0]):6d}"
+            return f"{struct.unpack_from('<h', padded)[0]:6d}"
         if mode == "dec_s32":
-            return f"{cast('int', struct.unpack_from('<i', padded)[0]):11d}"
+            return f"{struct.unpack_from('<i', padded)[0]:11d}"
         if mode == "float32":
             try:
-                val_f = cast("float", struct.unpack_from("<f", padded)[0])
+                val_f = struct.unpack_from("<f", padded)[0]
             except struct.error:
                 _logger.warning(
                     "hex_editor_float32_unpack_failed",
@@ -1184,7 +1184,7 @@ class HexEditorWidget(QAbstractScrollArea):
             return f"{val_f:13.6g}"
         if mode == "float64":
             try:
-                val_d = cast("float", struct.unpack_from("<d", padded)[0])
+                val_d = struct.unpack_from("<d", padded)[0]
             except struct.error:
                 _logger.warning(
                     "hex_editor_float64_unpack_failed",

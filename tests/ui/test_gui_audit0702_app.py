@@ -32,12 +32,23 @@ enumeration. The fix dispatches the call through a background
 warning) via its queued ``call_finished``/``call_error`` signals.
 
 M38 -- ``_apply_smart_window_size`` floored the window width at a fixed 800px
-even though ``_setup_ui`` gives the chat panel a 400px minimum and the tool
-panel a 500px minimum inside a ``childrenCollapsible(False)`` splitter (a
-900px effective floor). On a screen whose available width lands between 800
-and 900px, the pre-fix floor produced a window narrower than its own
-splitter panes can honour. The fix raises the floor to the panels' combined
-minimum width.
+even though ``_setup_ui`` gives the chat panel and tool panel each their own
+``setMinimumWidth`` inside a ``childrenCollapsible(False)`` splitter, whose
+combined effective floor exceeded that fixed 800px. On a screen whose
+available width lands between the old 800px floor and that combined panel
+minimum, the pre-fix floor produced a window narrower than its own splitter
+panes can honour. The fix raises the floor to the panels' combined minimum
+width (``_WINDOW_MIN_WIDTH``), read live from the panels rather than a
+hard-coded pixel count so it keeps gating correctly as those minimums are
+retuned.
+
+S20-D15 -- ``_apply_smart_window_size`` separately hard-capped the window at
+``min(1400, avail_w - 6) x min(900, avail_h - 8)`` regardless of how much
+larger the screen actually was, clipping roughly 45% of a 2560x1440 screen's
+usable area off-screen with no scrollbar to reach it. That cap is removed:
+on a screen with more available space than the old cap allowed, the window
+now sizes to the available geometry (minus the small margin) instead of
+freezing at the removed 1400x900 constant.
 
 Every test below drives the real ``MainWindow`` handlers (extracted, testable
 seams: ``_open_process_memory``, ``_apply_sandbox_settings``,
@@ -561,15 +572,15 @@ def test_m38_narrow_screen_window_not_narrower_than_splitter_minimum(
     patched_window: MainWindow,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """On a screen between 800px and the panes' true minimum, the window must not shrink below it.
+    """On a screen narrower than the panes' true minimum, the window must not shrink below it.
 
-    Pre-fix, ``min_w`` was a fixed 800px even though the chat panel
-    (``setMinimumWidth(400)``) and tool panel (``setMinimumWidth(500)``)
-    inside a ``childrenCollapsible(False)`` splitter give the central layout
-    an effective 900px minimum. On an available width of 850px, pre-fix
-    ``target_w = max(800, min(1400, 850-6)) = 844``, narrower than the
-    panes can honour. Post-fix the floor equals the panes' combined
-    minimum, so ``target_w`` never lands below it.
+    The chat panel and tool panel each carry their own ``setMinimumWidth``
+    inside a ``childrenCollapsible(False)`` splitter, giving the central
+    layout a combined minimum width read directly from those live widgets
+    below (not a hard-coded pixel count, since the panels' own minimums are
+    retuned independently of this test). ``_apply_smart_window_size`` floors
+    at that combined minimum, so on an available width below it the window
+    must still open at least as wide as the panes require.
 
     Args:
         patched_window: A constructed MainWindow with SandboxManager stubbed.
@@ -577,7 +588,7 @@ def test_m38_narrow_screen_window_not_narrower_than_splitter_minimum(
     """
     window = patched_window
     combined_pane_minimum = window._chat_panel.minimumWidth() + window.tool_panel.minimumWidth()
-    assert combined_pane_minimum == 900, "test premise: chat(400) + tool(500) panel minimums"
+    assert combined_pane_minimum > 0, "test premise: chat and tool panels report a real minimum width"
 
     narrow_avail_w = combined_pane_minimum - 50
     monkeypatch.setattr(
@@ -601,13 +612,13 @@ def test_m38_every_width_in_the_pre_fix_gap_still_floors_correctly(
     monkeypatch: pytest.MonkeyPatch,
     narrow_avail_w: int,
 ) -> None:
-    """Every available width in the old 800-900px gap must still floor at the panes' minimum.
+    """Every width swept here must still floor the window at the panes' combined minimum.
 
-    Pre-fix, any available width between the old 800px floor and the panes'
-    real 900px minimum passed straight through
-    ``max(800, min(1400, avail_w - 6))`` unmodified, producing a window
-    narrower than its own splitter contents require. This sweeps the whole
-    previously-broken range.
+    A prior regression let ``_apply_smart_window_size`` size the window
+    narrower than the chat and tool panels' combined ``setMinimumWidth``
+    inside a ``childrenCollapsible(False)`` splitter (see the M38 note in
+    this module's docstring). This sweeps a spread of available widths to
+    confirm the floor holds across all of them, not just one sample point.
 
     Args:
         patched_window: A constructed MainWindow with SandboxManager stubbed.
@@ -630,24 +641,43 @@ def test_m38_every_width_in_the_pre_fix_gap_still_floors_correctly(
     )
 
 
-def test_m38_wide_screen_still_caps_at_the_documented_maximum(
+def test_m38_wide_screen_sizes_to_available_geometry_not_the_old_fixed_cap(
     patched_window: MainWindow,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Raising the floor must not disturb the documented 1400x900 cap on large screens.
+    """On a large screen the window must fill the available geometry, not the removed 1400x900 cap.
+
+    ``_apply_smart_window_size`` used to hard-cap the window at
+    ``min(1400, avail_w - 6) x min(900, avail_h - 8)`` (S20-D15), clipping
+    roughly 45% of a 2560x1440 screen's usable area off-screen with no
+    scrollbar to reach it. That cap is removed: on a screen with more
+    available space than the old cap ever allowed, the window must size to
+    that available geometry (minus the small margin) rather than freezing
+    at the old 1400x900 constant.
 
     Args:
         patched_window: A constructed MainWindow with SandboxManager stubbed.
         monkeypatch: Pytest monkeypatch fixture.
     """
     window = patched_window
+    avail_w, avail_h = 2000, 1200
+    margin_w, margin_h = 6, 8
     monkeypatch.setattr(
         MainWindow,
         "_resolve_screen_geometry",
-        staticmethod(lambda: (0, 0, 2000, 1200)),
+        staticmethod(lambda: (0, 0, avail_w, avail_h)),
     )
 
     window._apply_smart_window_size()
 
-    assert window.width() == 1400
-    assert window.height() == 900
+    assert window.width() == avail_w - margin_w, (
+        f"window width {window.width()}px did not size to the available screen width "
+        f"({avail_w}px minus the {margin_w}px margin); a reintroduced cap would freeze it below that"
+    )
+    assert window.height() == avail_h - margin_h, (
+        f"window height {window.height()}px did not size to the available screen height "
+        f"({avail_h}px minus the {margin_h}px margin); a reintroduced cap would freeze it below that"
+    )
+    assert (window.width(), window.height()) != (1400, 900), (
+        "window sized to the removed 1400x900 cap instead of the available screen geometry"
+    )

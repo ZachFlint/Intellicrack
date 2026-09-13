@@ -245,13 +245,20 @@ class PatchesMixin:
         show_warning(parent, "Export Patches", f"Export failed:\n{exc}")
 
     def _on_import_patches(self) -> None:
-        """Import patches via :meth:`HexEditorBridge.import_patches`.
+        """Import patches, selecting the native-backend-aware bridge method by patch format.
 
-        The bridge inspects the patch magic bytes and dispatches to the correct format handler so IPS/IPS32/BPS/UPS all work through one
-        API. For BPS/UPS the bridge requires the original unmodified source file so it can rebuild the target deterministically; the panel
-        passes ``self.file_path`` when available. Dispatches through :func:`run_bridge_coroutine_logged` so BPS/UPS full-file diff/rebuild
-        work does not block the Qt main thread; the returned patch count is applied and the derived views refreshed by
-        :meth:`_on_import_patches_success`, which runs on the main thread once the bridge call completes.
+        BPS and UPS patches are routed to :meth:`HexEditorBridge.import_patches_bps` /
+        :meth:`HexEditorBridge.import_patches_ups` respectively so a native hexcore backend
+        performs the reconstruction directly instead of always falling through the generic
+        :meth:`HexEditorBridge.import_patches` dispatcher's pure-Python fallback path. IPS/IPS32
+        and any other extension still go through :meth:`HexEditorBridge.import_patches`, which
+        already dispatches those formats to their own native-aware handlers by magic bytes. For
+        BPS/UPS the bridge requires the original unmodified source file so it can rebuild the
+        target deterministically; the panel passes ``self.file_path`` when available. Dispatches
+        through :func:`run_bridge_coroutine_logged` so full-file diff/rebuild work does not block
+        the Qt main thread; the returned patch count or target size is applied and the derived
+        views refreshed by :meth:`_on_import_patches_success`, which runs on the main thread once
+        the bridge call completes.
         """
         if self.document is None:
             return
@@ -294,8 +301,16 @@ class PatchesMixin:
         patch_b64 = base64.b64encode(patch_bytes).decode("ascii")
         self._pending_import_patches_path = file_path_str
         self._pending_import_patches_suffix = suffix
+
+        if suffix == ".bps" and original_path is not None:
+            coro = bridge.import_patches_bps(patch_b64, original_path)
+        elif suffix == ".ups" and original_path is not None:
+            coro = bridge.import_patches_ups(patch_b64, original_path)
+        else:
+            coro = bridge.import_patches(patch_b64, original_path)
+
         run_bridge_coroutine_logged(
-            bridge.import_patches(patch_b64, original_path),
+            coro,
             on_success=self._on_import_patches_success,
             on_error=self._on_import_patches_error,
             parent=parent,
@@ -310,7 +325,13 @@ class PatchesMixin:
         """Apply the bridge-reported patch count and refresh derived hex-editor views.
 
         Args:
-            result: Number of patch records applied, returned by :meth:`HexEditorBridge.import_patches`.
+            result: The number of patch records applied, returned by
+                :meth:`HexEditorBridge.import_patches`, or a
+                ``{"target_size": int}`` dict returned by
+                :meth:`HexEditorBridge.import_patches_bps` /
+                :meth:`HexEditorBridge.import_patches_ups` -- both formats
+                reconstruct the whole target in a single pass, so they are
+                reported as one applied patch record.
         """
         parent = self if isinstance(self, QWidget) else None
         file_path_str = self._pending_import_patches_path
@@ -320,8 +341,12 @@ class PatchesMixin:
         if file_path_str is None:
             return
 
-        if not isinstance(result, int):
-            _logger.error("patches_import_unexpected_type", actual=type(result).__name__)
+        if isinstance(result, int):
+            count = result
+        elif isinstance(result, dict) and isinstance(cast("dict[str, int]", result).get("target_size"), int):
+            count = 1
+        else:
+            _logger.error("patches_import_unexpected_type", actual=type(cast("object", result)).__name__)
             show_warning(parent, "Import Patches", "Bridge returned an unexpected payload type.")
             return
 
@@ -330,8 +355,8 @@ class PatchesMixin:
             if callable(update_fn):
                 update_fn()
         self._on_data_changed()
-        _logger.info("patches_imported", path=file_path_str, count=result, suffix=suffix)
-        show_info(parent, "Import Patches", f"Applied {result} patch record(s).")
+        _logger.info("patches_imported", path=file_path_str, count=count, suffix=suffix)
+        show_info(parent, "Import Patches", f"Applied {count} patch record(s).")
 
     def _on_import_patches_error(self, exc: object) -> None:
         """Report a patch import failure raised by the bridge.

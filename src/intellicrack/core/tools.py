@@ -16,9 +16,10 @@ import asyncio
 import importlib
 import inspect
 import time
-from collections.abc import Callable
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, cast
+import types
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, fields, is_dataclass
+from typing import TYPE_CHECKING, Any, Union, cast, get_args, get_origin, get_type_hints
 
 from intellicrack.bridges.base import TOOL_CAPABILITY_MAP
 from intellicrack.bridges.cutter import CutterBridge
@@ -50,8 +51,12 @@ _ERR_NOT_CALLABLE = "not callable"
 _ERR_CALL_FAILED = "call failed"
 _ERR_MISSING_CAPABILITY = "missing capability"
 _ERR_INVALID_HEX_ARGUMENT = "invalid hex string argument"
+_ERR_UNKNOWN_DATACLASS_FIELD = "unknown field for dataclass tool parameter"
+_ERR_DATACLASS_CONSTRUCTION_FAILED = "cannot construct dataclass tool parameter"
 
 _BridgeMethod = Callable[..., Any]
+
+_ANNOTATION_RESOLUTION_ERRORS: tuple[type[Exception], ...] = (NameError, TypeError, AttributeError, SyntaxError)
 
 _LOCAL_INIT_TOOLS: frozenset[ToolName] = frozenset(
     {
@@ -130,6 +135,169 @@ def _coerce_hex_string_arguments(method: _BridgeMethod, arguments: dict[str, Any
             raise ToolError(_ERR_INVALID_HEX_ARGUMENT) from exc
 
     return coerced
+
+
+def _resolve_type_hints(target: _BridgeMethod | type[object]) -> dict[str, Any]:
+    """Resolve the real annotations of a bridge method or a dataclass type.
+
+    Wraps :func:`typing.get_type_hints`, which evaluates the string-form
+    annotations produced by ``from __future__ import annotations`` against
+    the defining module's own globals - the only place forward references
+    on a bound method or class can be resolved correctly. Resolution can
+    fail, for example when an annotation names a type imported only under
+    ``typing.TYPE_CHECKING`` and therefore absent at runtime; when that
+    happens every parameter or field is treated as unresolved rather than
+    raising, so a single unresolvable annotation degrades dispatch back to
+    today's un-hydrated behavior instead of breaking it outright.
+
+    Args:
+        target: A bound bridge method or a dataclass type whose annotations
+            should be resolved.
+
+    Returns:
+        dict[str, Any]: Mapping of parameter or field name to resolved
+        type. Empty if resolution failed.
+    """
+    try:
+        return get_type_hints(target)
+    except _ANNOTATION_RESOLUTION_ERRORS:
+        return {}
+
+
+def _dataclass_type_from_annotation(annotation: object) -> type[Any] | None:
+    """Return the dataclass type a resolved annotation targets, if any.
+
+    Matches a bare dataclass type directly, and a dataclass wrapped in an
+    ``Optional``/``| None`` union by discarding ``NoneType`` and requiring
+    exactly one dataclass type to remain. Any other shape - a plain
+    non-dataclass type, a union of more than one non-``None`` member, or a
+    typing construct that resolves to neither - is not a hydration target.
+
+    Args:
+        annotation: A resolved (non-string) annotation, as returned by
+            :func:`_resolve_type_hints`.
+
+    Returns:
+        type[Any] | None: The dataclass type the annotation targets, or
+        ``None`` if it does not target exactly one dataclass type.
+    """
+    if isinstance(annotation, type) and is_dataclass(annotation):
+        return annotation
+
+    origin = get_origin(annotation)
+    if origin is Union or origin is types.UnionType:
+        members = [member for member in get_args(annotation) if member is not type(None)]
+        if len(members) == 1 and isinstance(members[0], type) and is_dataclass(members[0]):
+            return members[0]
+
+    return None
+
+
+def _build_dataclass_instance(
+    dataclass_type: type[Any],
+    mapping: Mapping[str, Any],
+    *,
+    parameter_name: str,
+) -> object:
+    """Construct a dataclass instance from a tool-supplied mapping.
+
+    Recursively hydrates any field of ``dataclass_type`` whose own resolved
+    type targets a dataclass (bare, or as a ``| None`` union) when the
+    corresponding value in ``mapping`` is itself a mapping, so a nested
+    payload is converted all the way down before ``dataclass_type`` itself
+    is constructed. Field-name validation uses :func:`dataclasses.fields`,
+    which reports real field names independent of whether their types can
+    be resolved, so an unknown key is always caught even when nested-field
+    type resolution fails.
+
+    Args:
+        dataclass_type: Dataclass type to construct.
+        mapping: Field values supplied by the tool caller.
+        parameter_name: Dotted path identifying the tool parameter or
+            field being hydrated, used only to compose error messages.
+
+    Returns:
+        object: A new instance of ``dataclass_type``.
+
+    Raises:
+        ToolError: If ``mapping`` contains a key that is not a field of
+            ``dataclass_type``, or if the resolved fields cannot construct
+            a valid instance.
+    """
+    valid_names = {field.name for field in fields(dataclass_type)}
+    unknown = sorted(set(mapping) - valid_names)
+    if unknown:
+        msg = f"{_ERR_UNKNOWN_DATACLASS_FIELD} {parameter_name!r}: {unknown} not in {sorted(valid_names)}"
+        raise ToolError(msg)
+
+    field_hints = _resolve_type_hints(dataclass_type)
+    hydrated: dict[str, Any] = {}
+    for key, value in mapping.items():
+        nested_type = _dataclass_type_from_annotation(field_hints.get(key))
+        if nested_type is not None and isinstance(value, Mapping):
+            nested_mapping = cast("Mapping[str, Any]", value)
+            hydrated[key] = _build_dataclass_instance(nested_type, nested_mapping, parameter_name=f"{parameter_name}.{key}")
+        else:
+            hydrated[key] = value
+
+    try:
+        return dataclass_type(**hydrated)
+    except TypeError as exc:
+        msg = f"{_ERR_DATACLASS_CONSTRUCTION_FAILED} {parameter_name!r} ({dataclass_type.__name__}): {exc}"
+        raise ToolError(msg) from exc
+
+
+def _hydrate_dataclass_arguments(method: _BridgeMethod, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Construct real dataclass instances for dataclass-typed tool parameters.
+
+    Tool-call arguments arrive as plain JSON-decoded values, so a parameter
+    a bridge method annotates with a dataclass type (bare, or as
+    ``SomeDataclass | None``) is supplied by an AI/orchestrator caller as a
+    plain mapping rather than a real instance. Bridge methods perform
+    genuine attribute access on such parameters, so passing the mapping
+    straight through fails deep inside the call instead of at the dispatch
+    boundary. This inspects ``method``'s resolved parameter types and
+    converts any mapping bound to a dataclass-typed parameter into a real
+    instance of that dataclass - recursively, for dataclass-typed fields -
+    before dispatch.
+
+    Only parameters whose resolved type targets a dataclass (bare, or an
+    ``Optional``/``| None`` union naming exactly one dataclass type) are
+    considered, and only when the supplied value is a plain mapping; every
+    other parameter - including one already holding a real dataclass
+    instance - passes through unchanged. A method whose parameter
+    annotations cannot be resolved at all (for example, one naming a type
+    imported only under ``typing.TYPE_CHECKING``) is left entirely
+    un-hydrated, matching dispatch behavior prior to this function's
+    introduction. Propagates :class:`ToolError` from
+    :func:`_build_dataclass_instance` when a mapping supplied for a
+    dataclass-typed parameter names an unknown field or cannot construct
+    the dataclass.
+
+    Args:
+        method: The resolved bridge method about to be invoked.
+        arguments: Arguments already coerced by
+            :func:`_coerce_hex_string_arguments`.
+
+    Returns:
+        dict[str, Any]: A copy of ``arguments`` with mapping values bound to
+        dataclass-typed parameters replaced by real dataclass instances.
+    """
+    parameter_hints = _resolve_type_hints(method)
+    if not parameter_hints:
+        return arguments
+
+    hydrated = dict(arguments)
+    for name, value in arguments.items():
+        if not isinstance(value, Mapping):
+            continue
+        dataclass_type = _dataclass_type_from_annotation(parameter_hints.get(name))
+        if dataclass_type is None:
+            continue
+        nested_mapping = cast("Mapping[str, Any]", value)
+        hydrated[name] = _build_dataclass_instance(dataclass_type, nested_mapping, parameter_name=name)
+
+    return hydrated
 
 
 @dataclass
@@ -702,6 +870,7 @@ class ToolRegistry:
                 raise ToolError(missing_message)
 
         dispatch_arguments = _coerce_hex_string_arguments(method, arguments)
+        dispatch_arguments = _hydrate_dataclass_arguments(method, dispatch_arguments)
 
         start = time.monotonic()
         result: object = None

@@ -34,11 +34,12 @@ const TOKEN = resolveToken();
 
 /** A failure the server classified, or a transport failure dressed in the same shape. */
 export class DispatchError extends Error {
-  constructor(message, kind, status) {
+  constructor(message, kind, status, detail = null) {
     super(message);
     this.name = 'DispatchError';
     this.kind = kind;
     this.status = status;
+    this.detail = detail;
   }
 }
 
@@ -66,8 +67,10 @@ function headers(hasBody) {
  * The server's `_error_response` -> `_failure()` path (`api.py`, `dispatch.py`)
  * nests every classified failure - including a busy document, raised as
  * `registry.BusyError` and mapped through `_EXCEPTION_RULES` - under a single
- * `{"error": {"kind": ..., "status": ..., "message": ...}}` envelope. There is
- * no second, bare `{"busy": true}` shape for the server to ever send.
+ * `{"error": {"kind": ..., "status": ..., "message": ..., "detail": ...}}`
+ * envelope, where `detail` is the optional actionable second line the server
+ * sets only on a failure that has a next step to offer. There is no second,
+ * bare `{"busy": true}` shape for the server to ever send.
  *
  * @param {object|null} payload The parsed JSON body, or null when it wasn't JSON.
  * @param {number} status HTTP status code of the response.
@@ -76,8 +79,8 @@ function headers(hasBody) {
  */
 export function classifyFailure(payload, status, statusText) {
   if (payload && typeof payload === 'object' && payload.error) {
-    const { message, kind, status: payloadStatus } = payload.error;
-    return new DispatchError(message ?? statusText, kind ?? 'internal', payloadStatus ?? status);
+    const { message, kind, status: payloadStatus, detail } = payload.error;
+    return new DispatchError(message ?? statusText, kind ?? 'internal', payloadStatus ?? status, typeof detail === 'string' ? detail : null);
   }
   return new DispatchError(statusText || `HTTP ${status}`, 'transport', status);
 }

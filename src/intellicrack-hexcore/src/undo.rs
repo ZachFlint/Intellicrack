@@ -40,6 +40,19 @@ pub enum Operation {
         data_a: Vec<u8>,
         data_b: Vec<u8>,
     },
+    /// Whole-document replacement recorded by `replace_bytes`.
+    ///
+    /// `replace_bytes` rebuilds the entire document, so `old_data` and
+    /// `new_data` can differ in length. A length-preserving
+    /// [`Operation::Overwrite`] cannot undo that: its clamping overwrite at
+    /// offset 0 would leave the post-replace length in place and strand bytes
+    /// the replacement added or dropped, so undo would not restore the exact
+    /// original bytes and length. Recording both whole buffers lets undo/redo
+    /// rebuild the document by replacing every byte — see audit F-0080.
+    Replace {
+        old_data: Vec<u8>,
+        new_data: Vec<u8>,
+    },
 }
 
 /// Marks the undo-stack state that was last persisted to disk.
@@ -140,6 +153,14 @@ impl UndoManager {
                 doc.apply_overwrite(*offset_a, data_a);
                 doc.apply_overwrite(*offset_b, data_b);
             }
+            Operation::Replace {
+                old_data,
+                new_data: _,
+            } => {
+                let len = doc.document_size();
+                doc.apply_delete(0, len);
+                doc.apply_insert(0, old_data);
+            }
         }
 
         self.redo_stack.push(op);
@@ -196,6 +217,14 @@ impl UndoManager {
             } => {
                 doc.apply_overwrite(*offset_a, data_b);
                 doc.apply_overwrite(*offset_b, data_a);
+            }
+            Operation::Replace {
+                old_data: _,
+                new_data,
+            } => {
+                let len = doc.document_size();
+                doc.apply_delete(0, len);
+                doc.apply_insert(0, new_data);
             }
         }
 
@@ -271,6 +300,9 @@ impl UndoManager {
                 } => {
                     patches.push((*offset_a, data_b.clone()));
                     patches.push((*offset_b, data_a.clone()));
+                }
+                Operation::Replace { new_data, .. } => {
+                    patches.push((0, new_data.clone()));
                 }
                 Operation::Insert { .. } | Operation::Delete { .. } => {}
             }
@@ -651,6 +683,81 @@ mod tests {
 
         assert!(um.redo(&mut doc));
         assert_eq!(doc.read_all(), b"BBBBAAAA".to_vec());
+    }
+
+    /// F-0080 regression: `replace_bytes` records a whole-document
+    /// [`Operation::Replace`] because it rebuilds the document and the
+    /// before/after buffers can differ in length. Undoing it must delete the
+    /// entire current content and reinstate `old_data` exactly (bytes *and*
+    /// length), and redo must reinstate `new_data` exactly. The previous
+    /// length-preserving `Operation::Overwrite` undo could not do this.
+    ///
+    /// Mutation caught: replacing the `undo` arm's
+    /// `apply_delete(0, len); apply_insert(0, old_data)` with a clamping
+    /// `apply_overwrite(0, old_data)` leaves the grow-case document at
+    /// `b"foobarXXXX"` (length 10) instead of `b"foobar"` (length 6), failing
+    /// the first assertion.
+    #[test]
+    fn test_undo_redo_replace_restores_length_changing_content() {
+        // new_data LONGER than old_data. Mirror `replace_bytes`: the document
+        // already holds the rebuilt `new_data` when the Replace op is recorded.
+        let new_grow = b"foobarXXXX".to_vec();
+        let mut doc = MmapDocument::from_bytes(&new_grow);
+        let mut um = UndoManager::new();
+        um.record(Operation::Replace {
+            old_data: b"foobar".to_vec(),
+            new_data: new_grow.clone(),
+        });
+        assert_eq!(doc.read_all(), b"foobarXXXX".to_vec());
+        assert!(um.undo(&mut doc));
+        assert_eq!(
+            doc.read_all(),
+            b"foobar".to_vec(),
+            "undo of a length-growing Replace must restore the exact original bytes and length"
+        );
+        assert_eq!(doc.document_size(), 6);
+        assert!(um.redo(&mut doc));
+        assert_eq!(
+            doc.read_all(),
+            b"foobarXXXX".to_vec(),
+            "redo of a length-growing Replace must reinstate the replaced document exactly"
+        );
+        assert_eq!(doc.document_size(), 10);
+
+        // new_data SHORTER than old_data.
+        let mut doc2 = MmapDocument::from_bytes(b"X");
+        let mut um2 = UndoManager::new();
+        um2.record(Operation::Replace {
+            old_data: b"foobar".to_vec(),
+            new_data: b"X".to_vec(),
+        });
+        assert!(um2.undo(&mut doc2));
+        assert_eq!(
+            doc2.read_all(),
+            b"foobar".to_vec(),
+            "undo of a length-shrinking Replace must restore the exact original bytes and length"
+        );
+        assert_eq!(doc2.document_size(), 6);
+    }
+
+    /// F-0080 companion: `get_overwrite_patches` must flatten a `Replace` into a
+    /// single whole-document overwrite at offset 0 carrying `new_data`, so the
+    /// patch-export surface sees the same byte set the old `Overwrite`-based
+    /// recording produced.
+    ///
+    /// Mutation caught: dropping the `Replace` arm from `get_overwrite_patches`
+    /// (falling into the `Insert | Delete` no-op) yields an empty patch list,
+    /// failing the length assertion.
+    #[test]
+    fn test_get_overwrite_patches_includes_replace_new_data() {
+        let mut um = UndoManager::new();
+        um.record(Operation::Replace {
+            old_data: b"foobar".to_vec(),
+            new_data: vec![0x11, 0x22, 0x33],
+        });
+        let patches = um.get_overwrite_patches();
+        assert_eq!(patches.len(), 1);
+        assert_eq!(patches[0], (0usize, vec![0x11, 0x22, 0x33]));
     }
 
     #[test]
