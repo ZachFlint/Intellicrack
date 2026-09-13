@@ -997,6 +997,53 @@ def _run_captured_script(script: str, current_program: _FakeCurrentProgram) -> d
     return cast("dict[str, object]", value)
 
 
+class TestCreateProgramTree:
+    """L1/L2 gates for ``GhidraBridge.create_program_tree``."""
+
+    @staticmethod
+    def test_happy_path_creates_new_tree(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """create_program_tree must emit createRootModule and return the new root's name.
+
+        Falsifiable: if the implementation called ``getRootModule``
+        instead of ``createRootModule``, this assertion would fail.
+        """
+        fake.eval_response = {"already_exists": False, "created": True, "root_name": "NewTree"}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.create_program_tree("NewTree")),
+        )
+        assert result == {"tree_name": "NewTree", "root_name": "NewTree", "success": True}
+        assert "createRootModule" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_duplicate_tree_name_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """A duplicate tree name must raise a clear ToolError, not an opaque RPC failure."""
+        fake.eval_response = {"already_exists": True, "created": False, "root_name": None}
+        with pytest.raises(ToolError, match="already exists"):
+            run_async(connected_bridge.create_program_tree("Program Tree"))
+
+    @staticmethod
+    def test_tool_def_registered_with_matching_params(connected_bridge: GhidraBridge) -> None:
+        """The tool definition must declare exactly the real method's parameters."""
+        assert _tool_def_param_names(connected_bridge, "ghidra.create_program_tree") == {"tree_name"}
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """create_program_tree must be dispatchable through the real ToolRegistry."""
+        fake.eval_response = {"already_exists": False, "created": True, "root_name": "AuxTree"}
+        result = cast(
+            "dict[str, Any]",
+            run_async(registry.execute_tool_call("ghidra", "ghidra.create_program_tree", {"tree_name": "AuxTree"})),
+        )
+        assert result["success"] is True
+
+
 class TestEditProgramTree:
     """L1/L2 gates for the previously MISSING program-tree write API."""
 
@@ -1077,7 +1124,7 @@ class TestEditProgramTree:
 
     @staticmethod
     def test_tool_def_registered_with_matching_params(connected_bridge: GhidraBridge) -> None:
-        """ghidra.edit_program_tree's tool-def must declare all four real parameter names.
+        """ghidra.edit_program_tree's tool-def must declare all five real parameter names.
 
         Falsifiable: a parameter rename/removal in either the method
         signature or the ``ToolFunction`` entry desynchronizes this set.
@@ -1087,6 +1134,7 @@ class TestEditProgramTree:
             "operation",
             "parent_module",
             "child_name",
+            "new_name",
         }
 
     @staticmethod
@@ -1481,6 +1529,146 @@ class TestEditProgramTreeRealReparentSemantics:
 
         with pytest.raises(LookupError, match="not a child of"):
             new_parent.move_child("Payload", 0)
+
+
+class TestEditProgramTreeDeleteRename:
+    """Extends the existing TestEditProgramTree coverage with the new delete/rename operations."""
+
+    @staticmethod
+    def test_delete_emits_remove_child(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """edit_program_tree(delete) must emit parent.removeChild and return success.
+
+        Falsifiable: if the ``operation == 'delete'`` branch were
+        removed from the emitted Jython, ``ok = bool(parent.removeChild(``
+        would not appear in the script and this assertion would fail.
+        A bare ``"removeChild(" in ...`` check would NOT be falsifiable
+        here, since the pre-existing ``move_child`` branch's
+        ``extra_parent.removeChild(...)`` call is always present in the
+        same static script regardless of ``operation``.
+        """
+        fake.eval_response = {"tree_found": True, "parent_found": True, "child_found": True, "ok": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.edit_program_tree("Program Tree", "delete", "Root", "EmptyFrag")),
+        )
+        assert result["success"] is True
+        assert "ok = bool(parent.removeChild(" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_delete_non_empty_module_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """Deleting a non-empty module must raise a specific ToolError, not a generic failure."""
+        fake.eval_response = {"tree_found": True, "parent_found": True, "child_found": True, "ok": False}
+        with pytest.raises(ToolError, match="not empty"):
+            run_async(connected_bridge.edit_program_tree("Program Tree", "delete", "Root", "NonEmptyMod"))
+
+    @staticmethod
+    def test_rename_emits_set_name_with_new_name(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """edit_program_tree(rename) must emit setName with the new name and return it.
+
+        Falsifiable: if the ``operation == 'rename'`` branch were
+        removed, or ``new_name`` were not interpolated into the
+        emitted script, this assertion would fail.
+        """
+        fake.eval_response = {"tree_found": True, "parent_found": True, "child_found": True, "ok": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.edit_program_tree("Program Tree", "rename", "Root", "OldName", "NewName")),
+        )
+        assert result["success"] is True
+        assert "setName(" in fake.exec_calls[0]
+        assert "NewName" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_rename_without_new_name_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """Rename without new_name must raise before any RPC call is made."""
+        with pytest.raises(ToolError, match="new_name"):
+            run_async(connected_bridge.edit_program_tree("Program Tree", "rename", "Root", "OldName"))
+        assert fake.exec_calls == []
+
+    @staticmethod
+    def test_tool_def_operation_enum_includes_delete_and_rename(connected_bridge: GhidraBridge) -> None:
+        """The tool-def operation enum must offer the two new operations."""
+        defn = connected_bridge.tool_definition
+        func = next(f for f in defn.functions if f.name == "ghidra.edit_program_tree")
+        op_param = next(p for p in func.parameters if p.name == "operation")
+        assert op_param.enum is not None
+        assert {"delete", "rename"}.issubset(set(op_param.enum))
+
+
+class TestAssignFragmentRange:
+    """L1/L2 gates for ``GhidraBridge.assign_fragment_range``."""
+
+    @staticmethod
+    def test_happy_path_emits_fragment_move(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """assign_fragment_range must emit ProgramFragment.move, not a move_child-style reparent.
+
+        Falsifiable: if the method were (incorrectly) wired to reuse
+        ``move_child``'s reparent-based mutation, ``fragment.move(``
+        would not appear in the emitted script.
+        """
+        fake.eval_response = {"tree_found": True, "fragment_found": True, "ok": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.assign_fragment_range("Program Tree", "NewFrag", _TEST_ADDR, _TEST_ADDR2)),
+        )
+        assert result["success"] is True
+        assert "fragment.move(" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_fragment_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """A missing fragment must raise a specific ToolError."""
+        fake.eval_response = {"tree_found": True, "fragment_found": False, "ok": False}
+        with pytest.raises(ToolError, match="Fragment not found"):
+            run_async(connected_bridge.assign_fragment_range("Program Tree", "Ghost", _TEST_ADDR, _TEST_ADDR2))
+
+    @staticmethod
+    def test_tool_def_registered_with_matching_params(connected_bridge: GhidraBridge) -> None:
+        """The tool definition must declare exactly the real method's parameters."""
+        assert _tool_def_param_names(connected_bridge, "ghidra.assign_fragment_range") == {
+            "tree_name",
+            "fragment_name",
+            "start_address",
+            "end_address",
+        }
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """assign_fragment_range must be dispatchable through the real ToolRegistry."""
+        fake.eval_response = {"tree_found": True, "fragment_found": True, "ok": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.assign_fragment_range",
+                    {
+                        "tree_name": "Program Tree",
+                        "fragment_name": "NewFrag",
+                        "start_address": _TEST_ADDR,
+                        "end_address": _TEST_ADDR2,
+                    },
+                ),
+            ),
+        )
+        assert result["success"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -3199,3 +3387,62 @@ class TestNonDefaultMemoryBlockTypes:
             ),
         )
         assert result["success"] is True
+
+
+class TestAnalyzeConfigurableTimeout:
+    """L1/L2 gates for ``GhidraBridge.analyze``'s caller-configurable poll deadline."""
+
+    @staticmethod
+    def test_default_timeout_used_when_omitted(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """analyze() with no argument must still use the module's default deadline.
+
+        Falsifiable: if the ternary defaulting logic were inverted
+        (using ``timeout_seconds`` even when ``None``), this would
+        attempt an unbounded/None ``loop.time() + None`` and raise
+        ``TypeError`` instead of completing normally.
+        """
+        poll_calls = {"count": 0}
+
+        def _eval_responder(expr: str) -> object:
+            if "_ic_analysis_done" in expr:
+                poll_calls["count"] += 1
+                return True
+            if "_ic_analysis_error" in expr:
+                return None
+            return None
+
+        fake.set_eval_responder(_eval_responder)
+
+        run_async(connected_bridge.analyze())
+        assert poll_calls["count"] >= 1
+
+    @staticmethod
+    def test_custom_timeout_expires_faster_than_default(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """A small explicit timeout_seconds must raise well before the 1800s module default would.
+
+        Falsifiable: if ``timeout_seconds`` were accepted but never
+        actually substituted into the deadline computation, this call
+        would hang for (up to) 1800s instead of raising within a
+        couple of seconds.
+        """
+        fake.set_eval_responder(lambda expr: False if "_ic_analysis_done" in expr else None)
+
+        with pytest.raises(ToolError, match=r"did not complete within 0s|did not complete within 1s"):
+            run_async(connected_bridge.analyze(timeout_seconds=0.5))
+
+    @staticmethod
+    def test_tool_def_declares_timeout_seconds_parameter(connected_bridge: GhidraBridge) -> None:
+        """The tool definition must declare exactly the real method's new parameter."""
+        assert _tool_def_param_names(connected_bridge, "ghidra.analyze") == {"timeout_seconds"}
+
+    @staticmethod
+    def test_dispatchable_via_registry_with_timeout(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.analyze must accept timeout_seconds when dispatched via the real ToolRegistry."""
+        fake.set_eval_responder(lambda expr: True if "_ic_analysis_done" in expr else None)
+        run_async(registry.execute_tool_call("ghidra", "ghidra.analyze", {"timeout_seconds": 5}))

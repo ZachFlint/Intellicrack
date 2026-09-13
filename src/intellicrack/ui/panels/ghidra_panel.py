@@ -267,10 +267,12 @@ class GhidraPanel(AnalysisPanelBase):
             [
                 ToolMenuEntry(self.tr("Debug Info..."), self._on_import_debug_info),
                 ToolMenuEntry(self.tr("Diff..."), self._on_diff_programs),
+                ToolMenuEntry(self.tr("Headless Batch..."), self._on_run_headless_batch),
             ],
         )
         self._debug_info_btn = import_actions[self.tr("Debug Info...")]
         self._diff_btn = import_actions[self.tr("Diff...")]
+        self._headless_batch_btn = import_actions[self.tr("Headless Batch...")]
 
         self.status_label = self._add_toolbar_label(toolbar, self.tr("Not connected"))
 
@@ -1282,6 +1284,14 @@ class GhidraPanel(AnalysisPanelBase):
         )
         layout.addWidget(self._analyzer_options_input)
 
+        analyze_timeout_row = QHBoxLayout()
+        analyze_timeout_label = QLabel(self.tr("Analysis Timeout (s, blank = default):"))
+        analyze_timeout_row.addWidget(analyze_timeout_label)
+        self._analyze_timeout_input = QLineEdit()
+        self._analyze_timeout_input.setPlaceholderText("1800")
+        analyze_timeout_row.addWidget(self._analyze_timeout_input)
+        layout.addLayout(analyze_timeout_row)
+
         return make_scrollable(container, min_height=_SCRIPTING_TAB_SCROLL_MIN_HEIGHT)
 
     # ------------------------------------------------------------------
@@ -1832,14 +1842,26 @@ class GhidraPanel(AnalysisPanelBase):
         self._set_status("Analyzing...")
         self._analyze_btn.setEnabled(False)
 
+        timeout_text = self._analyze_timeout_input.text().strip()
+        timeout_seconds: float | None = None
+        if timeout_text:
+            try:
+                timeout_seconds = float(timeout_text)
+            except ValueError:
+                _logger.warning("ghidra_analyze_invalid_timeout", input_text=timeout_text)
+                self._set_status(f"Invalid analysis timeout: {timeout_text!r}")
+                self._analyze_btn.setEnabled(True)
+                return
+
         run_bridge_coroutine_logged(
-            bridge.analyze(),
+            bridge.analyze(timeout_seconds),
             on_success=lambda _: self._on_analysis_complete(),
             on_error=self._on_analysis_error,
             parent=self,
             event="ghidra_analyze",
             logger=_logger,
             level="info",
+            timeout_seconds=timeout_seconds,
         )
 
     def _on_analysis_complete(self) -> None:
@@ -1910,6 +1932,68 @@ class GhidraPanel(AnalysisPanelBase):
         self._set_status(f"Headless start failed: {exc}")
         _logger.warning("ghidra_headless_failed", error=str(exc))
         self._headless_btn.setEnabled(True)
+
+    def _on_run_headless_batch(self) -> None:
+        """Open a multi-file dialog and run a one-shot headless batch analysis."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+
+        ghidra_path = self._bridge.ghidra_path
+        if ghidra_path is None:
+            if path_str := QFileDialog.getExistingDirectory(
+                self,
+                self.tr("Select Ghidra Installation Directory"),
+            ):
+                self.set_ghidra_path(Path(path_str))
+            else:
+                return
+
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            self.tr("Select Binaries to Batch-Analyze"),
+            "",
+            self.tr("All Files (*)"),
+        )
+        if not files:
+            return
+
+        project_dir = Path(tempfile.gettempdir()) / "intellicrack_ghidra_batch"
+        self._headless_batch_btn.setEnabled(False)
+        self._set_status("Running headless batch...")
+        run_bridge_coroutine_logged(
+            self._bridge.run_headless_batch(project_dir, files),
+            on_success=self._on_headless_batch_complete,
+            on_error=self._on_headless_batch_error,
+            parent=self,
+            event="ghidra_run_headless_batch",
+            logger=_logger,
+            level="info",
+            project_dir=str(project_dir),
+            target_count=len(files),
+        )
+
+    def _on_headless_batch_complete(self, result: object) -> None:
+        """Handle successful headless batch completion.
+
+        Args:
+            result: Dict with project_dir, project_name, targets,
+                return_code, and success from the bridge.
+        """
+        self._headless_batch_btn.setEnabled(True)
+        return_code = cast("dict[str, object]", result).get("return_code") if isinstance(result, dict) else None
+        self._set_status(f"Headless batch complete (exit code {return_code})")
+        _logger.info("ghidra_headless_batch_complete", bridge_type="ghidra", return_code=return_code)
+
+    def _on_headless_batch_error(self, exc: object) -> None:
+        """Handle headless batch failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._set_status(f"Headless batch failed: {exc}")
+        _logger.warning("ghidra_headless_batch_failed", error=str(exc))
+        self._headless_batch_btn.setEnabled(True)
 
     # ------------------------------------------------------------------
     # Undo / Redo

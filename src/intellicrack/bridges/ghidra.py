@@ -824,7 +824,14 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                 ToolFunction(
                     name="ghidra.analyze",
                     description="Run full Ghidra analysis on loaded binary",
-                    parameters=[],
+                    parameters=[
+                        ToolParameter(
+                            name="timeout_seconds",
+                            type="number",
+                            description="Maximum seconds to poll for analysis completion before raising (default: 1800s)",
+                            required=False,
+                        ),
+                    ],
                     returns="Analysis completion status",
                 ),
                 ToolFunction(
@@ -1086,6 +1093,75 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ),
                     ],
                     returns="None",
+                ),
+                ToolFunction(
+                    name="ghidra.run_headless_batch",
+                    description="Run a one-shot analyzeHeadless batch: import/process multiple binaries with pre/post-analysis scripts",
+                    parameters=[
+                        ToolParameter(name="project_dir", type="string", description="Directory for the Ghidra project", required=True),
+                        ToolParameter(
+                            name="targets",
+                            type="array",
+                            description="Files and/or directories to import",
+                            required=True,
+                            items_type="string",
+                        ),
+                        ToolParameter(
+                            name="project_name",
+                            type="string",
+                            description="Name of the project",
+                            required=False,
+                            default="intellicrack",
+                        ),
+                        ToolParameter(
+                            name="pre_scripts",
+                            type="array",
+                            description="Scripts to run before analysis (list of {name, args})",
+                            required=False,
+                            items_type="object",
+                            item_properties=[
+                                ToolParameter(name="name", type="string", description="Script filename with extension", required=True),
+                                ToolParameter(
+                                    name="args",
+                                    type="array",
+                                    description="Arguments passed to the script",
+                                    required=False,
+                                    items_type="string",
+                                ),
+                            ],
+                        ),
+                        ToolParameter(
+                            name="post_scripts",
+                            type="array",
+                            description="Scripts to run after analysis (list of {name, args})",
+                            required=False,
+                            items_type="object",
+                            item_properties=[
+                                ToolParameter(name="name", type="string", description="Script filename with extension", required=True),
+                                ToolParameter(
+                                    name="args",
+                                    type="array",
+                                    description="Arguments passed to the script",
+                                    required=False,
+                                    items_type="string",
+                                ),
+                            ],
+                        ),
+                        ToolParameter(
+                            name="recursive",
+                            type="boolean",
+                            description="Recurse into imported directories",
+                            required=False,
+                            default=False,
+                        ),
+                        ToolParameter(
+                            name="analysis_timeout_seconds",
+                            type="integer",
+                            description="Per-file analysis timeout in seconds (-analysisTimeoutPerFile)",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dict with project_dir, project_name, targets, return_code, and success",
                 ),
                 ToolFunction(
                     name="ghidra.get_function",
@@ -1864,6 +1940,14 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="List of comment dicts with address, type, and comment text",
                 ),
                 ToolFunction(
+                    name="ghidra.create_program_tree",
+                    description="Create an additional named program tree beyond the program's existing tree(s)",
+                    parameters=[
+                        ToolParameter(name="tree_name", type="string", description="Name for the new program tree", required=True),
+                    ],
+                    returns="Dict with tree_name, root_name, and success",
+                ),
+                ToolFunction(
                     name="ghidra.get_program_tree",
                     description="Get the program tree module/fragment hierarchy",
                     parameters=[],
@@ -1871,7 +1955,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                 ),
                 ToolFunction(
                     name="ghidra.edit_program_tree",
-                    description="Create a module/fragment in a program tree, or move an existing child under a new parent",
+                    description="Create, delete, rename, or move a module/fragment in a program tree",
                     parameters=[
                         ToolParameter(name="tree_name", type="string", description="Name of the program tree to modify", required=True),
                         ToolParameter(
@@ -1879,7 +1963,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                             type="string",
                             description="Operation to perform",
                             required=True,
-                            enum=["create_module", "create_fragment", "move_child"],
+                            enum=["create_module", "create_fragment", "move_child", "delete", "rename"],
                         ),
                         ToolParameter(
                             name="parent_module",
@@ -1890,11 +1974,48 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ToolParameter(
                             name="child_name",
                             type="string",
-                            description="Name of the module/fragment to create or move",
+                            description="Name of the module/fragment to create, move, delete, or rename",
                             required=True,
+                        ),
+                        ToolParameter(
+                            name="new_name",
+                            type="string",
+                            description="New name for the child when operation is 'rename'; unused otherwise",
+                            required=False,
                         ),
                     ],
                     returns="Dict with tree_name, operation, child_name, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.assign_fragment_range",
+                    description="Move a code-unit address range into an existing (typically newly created, empty) fragment",
+                    parameters=[
+                        ToolParameter(
+                            name="tree_name",
+                            type="string",
+                            description="Name of the program tree containing the fragment",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="fragment_name",
+                            type="string",
+                            description="Name of the fragment to receive the range",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="start_address",
+                            type="integer",
+                            description="Start of the code-unit range (must be a code unit start)",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="end_address",
+                            type="integer",
+                            description="End of the code-unit range (must be a code unit end, inclusive)",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with tree_name, fragment_name, start, end, and success",
                 ),
                 ToolFunction(
                     name="ghidra.get_properties",
@@ -3347,7 +3468,7 @@ metadata
                 return queried
         return header_arch, header_is_64
 
-    async def analyze(self) -> None:
+    async def analyze(self, timeout_seconds: float | None = None) -> None:
         """Run full Ghidra auto-analysis, polling to completion without a blocking RPC.
 
         ``GhidraScript.analyzeAll`` schedules every pending analyser and
@@ -3364,6 +3485,11 @@ metadata
         bounded overall deadline elapses. Any exception raised by
         ``analyzeAll`` is captured on the server and re-raised on the client,
         so callers only return once Ghidra reports the program fully analysed.
+
+        Args:
+            timeout_seconds: Maximum seconds to poll for analysis
+                completion before raising. When ``None``, uses the
+                module default (``_GHIDRA_ANALYZE_DEADLINE_SECONDS``).
 
         Raises:
             ToolError: If Ghidra is not connected, the analysis worker
@@ -3416,7 +3542,8 @@ metadata
             raise ToolError(error_message) from exc
 
         loop = asyncio.get_running_loop()
-        deadline = loop.time() + _GHIDRA_ANALYZE_DEADLINE_SECONDS
+        effective_timeout = _GHIDRA_ANALYZE_DEADLINE_SECONDS if timeout_seconds is None else timeout_seconds
+        deadline = loop.time() + effective_timeout
 
         while True:
             try:
@@ -3435,9 +3562,9 @@ metadata
             if loop.time() >= deadline:
                 _logger.warning(
                     "ghidra_analysis_timeout",
-                    deadline_seconds=_GHIDRA_ANALYZE_DEADLINE_SECONDS,
+                    deadline_seconds=effective_timeout,
                 )
-                error_message = f"Ghidra analysis did not complete within {_GHIDRA_ANALYZE_DEADLINE_SECONDS:.0f}s"
+                error_message = f"Ghidra analysis did not complete within {effective_timeout:.0f}s"
                 raise ToolError(error_message)
 
             await asyncio.sleep(_GHIDRA_ANALYZE_POLL_INTERVAL_SECONDS)
@@ -7390,6 +7517,218 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
 
+    async def assign_fragment_range(
+        self,
+        tree_name: str,
+        fragment_name: str,
+        start_address: int,
+        end_address: int,
+    ) -> dict[str, Any]:
+        """Move a code-unit address range into an existing fragment.
+
+        Wraps ``ProgramFragment.move(Address min, Address max)``, which
+        moves every code unit in the range ``[start_address,
+        end_address]`` into the named fragment. This is the operation
+        needed to populate a fragment created empty by
+        ``edit_program_tree(operation="create_fragment")``.
+
+        Args:
+            tree_name: Name of the program tree containing the fragment.
+            fragment_name: Name of the fragment to receive the range.
+            start_address: Start of the code-unit range (must be a
+                code unit start).
+            end_address: End of the code-unit range (must be a code
+                unit end, inclusive).
+
+        Returns:
+            dict[str, Any]: Dict with tree_name, fragment_name, start,
+            end, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, the tree or
+                fragment does not exist, or the move otherwise fails
+                (e.g. an address does not align to a code unit
+                boundary or does not exist in program memory).
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info(
+            "fragment_range_assigning",
+            tree_name=tree_name,
+            fragment_name=fragment_name,
+            start_address=hex(start_address),
+            end_address=hex(end_address),
+        )
+        try:
+            result = await self._execute_remote(f"""
+                listing = currentProgram.getListing()
+                root = listing.getRootModule({json.dumps(tree_name)})
+                tree_found = root is not None
+                fragment = listing.getFragment({json.dumps(tree_name)}, {json.dumps(fragment_name)}) if tree_found else None
+                fragment_found = fragment is not None
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.assign_fragment_range')
+                try:
+                    if fragment_found:
+                        fragment.move(toAddr({start_address}), toAddr({end_address}))
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'tree_found': tree_found, 'fragment_found': fragment_found, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception(
+                "ghidra_assign_fragment_range_failed",
+                tree_name=tree_name,
+                fragment_name=fragment_name,
+            )
+            msg = f"Assign fragment range failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("tree_found", False)):
+            msg = f"Program tree not found: {tree_name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("fragment_found", False)):
+            msg = f"Fragment not found: {fragment_name!r} in tree {tree_name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Assign fragment range failed: {hex(start_address)}-{hex(end_address)} into {fragment_name!r}"
+            raise ToolError(msg)
+        return {
+            "tree_name": tree_name,
+            "fragment_name": fragment_name,
+            "start": hex(start_address),
+            "end": hex(end_address),
+            "success": True,
+        }
+
+    async def run_headless_batch(
+        self,
+        project_dir: Path,
+        targets: list[str],
+        project_name: str = "intellicrack",
+        pre_scripts: list[dict[str, Any]] | None = None,
+        post_scripts: list[dict[str, Any]] | None = None,
+        *,
+        recursive: bool = False,
+        analysis_timeout_seconds: int | None = None,
+    ) -> dict[str, Any]:
+        """Run a one-shot ``analyzeHeadless`` batch importing/analyzing multiple binaries.
+
+        Unlike :meth:`start_headless`, which deploys its own bridge script
+        and keeps the JVM alive indefinitely as an RPC server, this method
+        runs ``analyzeHeadless`` as a one-shot batch job that is awaited to
+        completion and does not touch ``self._bridge``,
+        ``self.state.connected``, or ``self._project_path`` -- those
+        describe a separate, already-open interactive session (if any)
+        that this batch run must not disturb.
+
+        Args:
+            project_dir: Directory for the Ghidra project used for this
+                batch run.
+            targets: Files and/or directories to import.
+            project_name: Name of the project.
+            pre_scripts: Scripts to run before analysis, each a dict with
+                ``name`` (script filename with extension) and optional
+                ``args`` (list of string arguments).
+            post_scripts: Scripts to run after analysis, in the same
+                ``{"name": ..., "args": [...]}`` shape as ``pre_scripts``.
+            recursive: Recurse into imported directories.
+            analysis_timeout_seconds: Per-file analysis timeout in
+                seconds, passed as ``-analysisTimeoutPerFile``.
+
+        Returns:
+            dict[str, Any]: Dict with project_dir, project_name, targets,
+            return_code, and success.
+
+        Raises:
+            ToolError: If the Ghidra path is not set, the headless
+                launcher is missing for this platform, or the batch
+                process exits with a non-zero return code.
+        """
+        if self._ghidra_path is None:
+            error_message = "Ghidra path not set"
+            raise ToolError(error_message)
+
+        _ = await asyncio.to_thread(self._resolve_headless_executable, self._ghidra_path)
+
+        cmd = [
+            sys.executable,
+            "-m",
+            "pyghidra.ghidra_launch",
+            "--install-dir",
+            str(self._ghidra_path),
+            "-D",
+            "java.awt.headless=true",
+            "ghidra.app.util.headless.AnalyzeHeadless",
+            str(project_dir),
+            project_name,
+            "-import",
+            *targets,
+        ]
+        for script in pre_scripts or []:
+            cmd += ["-preScript", script["name"], *[str(a) for a in script.get("args", [])]]
+        for script in post_scripts or []:
+            cmd += ["-postScript", script["name"], *[str(a) for a in script.get("args", [])]]
+        if recursive:
+            cmd.append("-recursive")
+        if analysis_timeout_seconds is not None:
+            cmd += ["-analysisTimeoutPerFile", str(analysis_timeout_seconds)]
+
+        env = self._scrubbed_environment()
+        jdk_home = await asyncio.to_thread(self._discover_jdk, self._ghidra_path)
+        if jdk_home is not None:
+            env["JAVA_HOME"] = str(jdk_home)
+        cwd = str(self._ghidra_path)
+        creation_flags = CREATE_NO_WINDOW if os.name == "nt" else 0
+
+        _logger.info(
+            "ghidra_headless_batch_starting",
+            command=" ".join(cmd),
+            cwd=cwd,
+            target_count=len(targets),
+        )
+
+        def _start_process() -> Popen[bytes]:
+            """Launch the analyzeHeadless batch subprocess.
+
+            Returns:
+                Popen[bytes]: Handle for the spawned batch process.
+            """
+            return Popen(
+                cmd,
+                stdout=PIPE,
+                stderr=PIPE,
+                cwd=cwd,
+                env=env,
+                creationflags=creation_flags,
+            )
+
+        process = await asyncio.to_thread(_start_process)
+        job_handle = await asyncio.to_thread(_create_kill_on_close_job_object)
+        if job_handle is not None:
+            await asyncio.to_thread(_assign_process_to_job_object, job_handle, process.pid)
+        self._start_drain_threads(process)
+        return_code = await asyncio.to_thread(process.wait)
+        if job_handle is not None:
+            await asyncio.to_thread(_close_job_object_handle, job_handle)
+        await self._join_drain_threads()
+
+        if return_code != 0:
+            msg = self._format_with_stderr_tail(f"Headless batch failed with exit code {return_code}")
+            raise ToolError(msg)
+        return {
+            "project_dir": str(project_dir),
+            "project_name": project_name,
+            "targets": targets,
+            "return_code": return_code,
+            "success": True,
+        }
+
 
 class GhidraBridge(_GhidraBridgeAnalysisMixin):
     """Bridge for Ghidra reverse engineering suite.
@@ -8920,6 +9259,60 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
 
         return cast("list[dict[str, Any]]", result) if result else []
 
+    async def create_program_tree(self, tree_name: str) -> dict[str, Any]:
+        """Create an additional named program tree.
+
+        Wraps ``Listing.createRootModule(treeName)``. The new root
+        module's own name defaults to the program's name (not
+        ``tree_name``) per the Ghidra API -- ``tree_name`` is purely the
+        tree's identifier as used by ``Listing.getRootModule``/
+        ``getTreeNames`` elsewhere in this bridge.
+
+        Args:
+            tree_name: Name for the new program tree.
+
+        Returns:
+            dict[str, Any]: Dict with tree_name, root_name, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, a tree with this
+                name already exists, or tree creation otherwise fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("program_tree_creating", tree_name=tree_name)
+        try:
+            result = await self._execute_remote(f"""
+                listing = currentProgram.getListing()
+                tree_name = {json.dumps(tree_name)}
+                existing_names = list(listing.getTreeNames())
+                already_exists = tree_name in existing_names
+                root = None
+                tx_id = currentProgram.startTransaction('intellicrack.create_program_tree')
+                try:
+                    if not already_exists:
+                        root = listing.createRootModule(tree_name)
+                finally:
+                    currentProgram.endTransaction(tx_id, root is not None or already_exists)
+                {{'already_exists': already_exists, 'created': root is not None, 'root_name': (root.getName() if root is not None else None)}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_create_program_tree_failed", tree_name=tree_name)
+            msg = f"Create program tree failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if bool(info.get("already_exists", False)):
+            msg = f"Program tree already exists: {tree_name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("created", False)):
+            msg = f"Failed to create program tree: {tree_name!r}"
+            raise ToolError(msg)
+        return {"tree_name": tree_name, "root_name": info.get("root_name"), "success": True}
+
     async def get_program_tree(self) -> dict[str, Any]:
         """Get the program tree module and fragment hierarchy.
 
@@ -9025,12 +9418,14 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
         operation: str,
         parent_module: str,
         child_name: str,
+        new_name: str | None = None,
     ) -> dict[str, Any]:
-        """Create or reparent a module/fragment in a program tree.
+        """Create, delete, rename, or reparent a module/fragment in a program tree.
 
         Wraps ``ProgramModule.createModule``, ``ProgramModule.createFragment``,
-        and ``ProgramModule.reparent`` to give write access to the program
-        tree hierarchy that :meth:`get_program_tree` only reads.
+        ``ProgramModule.reparent``, ``ProgramModule.removeChild``, and
+        ``Group.setName`` to give write access to the program tree
+        hierarchy that :meth:`get_program_tree` only reads.
         ``move_child`` is implemented with ``ProgramModule.reparent``, not
         ``ProgramModule.moveChild``: the latter only reorders a child that
         is already directly under the module it is called on and never
@@ -9041,39 +9436,53 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             tree_name: Name of the program tree to modify (as returned
                 by ``get_program_tree``'s ``trees[].name``).
             operation: One of ``create_module``, ``create_fragment``,
-                or ``move_child``. ``create_module``/``create_fragment``
-                create ``child_name`` as a new child of
-                ``parent_module``. ``move_child`` looks up every module
-                that currently parents the existing module or fragment
-                named ``child_name`` (a child may legitimately have more
-                than one parent in a program tree) and reparents it
-                under ``parent_module``, removing it from each of those
-                other parents so it ends up a direct child of
-                ``parent_module`` and nowhere else.
+                ``move_child``, ``delete``, or ``rename``.
+                ``create_module``/``create_fragment`` create
+                ``child_name`` as a new child of ``parent_module``.
+                ``move_child`` looks up every module that currently
+                parents the existing module or fragment named
+                ``child_name`` (a child may legitimately have more than
+                one parent in a program tree) and reparents it under
+                ``parent_module``, removing it from each of those other
+                parents so it ends up a direct child of
+                ``parent_module`` and nowhere else. ``delete`` removes
+                the existing module or fragment named ``child_name``
+                from its direct parent ``parent_module``. ``rename``
+                renames the existing module or fragment named
+                ``child_name`` to ``new_name``.
             parent_module: Name of the existing module that will
-                contain (or already contains, for ``move_child``) the
-                child.
-            child_name: Name of the module/fragment to create or move.
+                contain (or already contains, for ``move_child``/
+                ``delete``) the child.
+            child_name: Name of the module/fragment to create, move,
+                delete, or rename.
+            new_name: New name for the child when ``operation`` is
+                ``rename``; required for ``rename``, unused otherwise.
 
         Returns:
             dict[str, Any]: Dict with tree_name, operation, child_name,
-            and success.
+            and success. Also includes ``new_name`` when ``operation``
+            is ``rename``.
 
         Raises:
             ToolError: If Ghidra is not connected, ``operation`` is
-                unrecognized, the tree does not exist, ``parent_module``
-                does not exist or names a fragment rather than a module,
-                ``move_child``'s ``child_name`` does not exist, names
-                ``parent_module`` itself, would create a cycle by moving
-                a module under one of its own descendants, names the
-                tree's parentless root module, or the mutation fails.
+                unrecognized, ``new_name`` is missing for ``rename``,
+                the tree does not exist, ``parent_module`` does not
+                exist or names a fragment rather than a module,
+                ``child_name`` does not exist, names ``parent_module``
+                itself, would create a cycle by moving a module under
+                one of its own descendants, names the tree's
+                parentless root module, ``delete`` targets a
+                non-empty module, or the mutation otherwise fails.
         """
         if self._bridge is None:
             raise ToolError(_ERR_NOT_CONNECTED)
 
-        valid_operations = {"create_module", "create_fragment", "move_child"}
+        valid_operations = {"create_module", "create_fragment", "move_child", "delete", "rename"}
         if operation not in valid_operations:
             msg = f"Unknown operation {operation!r}: must be one of {sorted(valid_operations)}"
+            raise ToolError(msg)
+        if operation == "rename" and not new_name:
+            msg = "new_name is required when operation is 'rename'"
             raise ToolError(msg)
 
         _logger.info(
@@ -9083,6 +9492,7 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             parent_module=parent_module,
             child_name=child_name,
         )
+        new_name_literal = json.dumps(new_name) if new_name else "None"
         try:
             result = await self._execute_remote(f"""
                 listing = currentProgram.getListing()
@@ -9135,6 +9545,22 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
                                             ok = True
                                         elif already_there:
                                             ok = True
+                        elif operation == 'delete':
+                            child = listing.getModule({json.dumps(tree_name)}, {json.dumps(child_name)})
+                            is_module_child = child is not None
+                            if child is None:
+                                child = listing.getFragment({json.dumps(tree_name)}, {json.dumps(child_name)})
+                            child_found = child is not None
+                            if child_found:
+                                ok = bool(parent.removeChild({json.dumps(child_name)}))
+                        elif operation == 'rename':
+                            child = listing.getModule({json.dumps(tree_name)}, {json.dumps(child_name)})
+                            if child is None:
+                                child = listing.getFragment({json.dumps(tree_name)}, {json.dumps(child_name)})
+                            child_found = child is not None
+                            if child_found:
+                                child.setName({new_name_literal})
+                                ok = True
                 finally:
                     currentProgram.endTransaction(tx_id, ok)
                 {{
@@ -9181,15 +9607,21 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
         if bool(info.get("no_prior_parent", False)):
             msg = f"Cannot move {child_name!r}: it is the root of tree {tree_name!r} and has no parent to remove it from"
             raise ToolError(msg)
+        if operation == "delete" and bool(info.get("child_found", True)) and not bool(info.get("ok", False)):
+            msg = f"Cannot delete {child_name!r}: module is not empty"
+            raise ToolError(msg)
         if not bool(info.get("ok", False)):
             msg = f"Edit program tree failed: {operation} {child_name!r} under {parent_module!r}"
             raise ToolError(msg)
-        return {
+        result_info: dict[str, Any] = {
             "tree_name": tree_name,
             "operation": operation,
             "child_name": child_name,
             "success": True,
         }
+        if operation == "rename":
+            result_info["new_name"] = new_name
+        return result_info
 
     async def get_properties(self, address: int) -> dict[str, Any]:
         """Get user-defined properties stored at an address.
