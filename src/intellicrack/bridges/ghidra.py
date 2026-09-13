@@ -348,6 +348,24 @@ def _map_ghidra_ref_type(raw_type: str) -> _XRefRefType:
     return "read" if "READ" in upper else "data"
 
 
+def _tri_bool_literal(*, value: bool | None) -> str:
+    """Render a tri-state bool as a Jython literal: 'True', 'False', or 'None'.
+
+    A ``bool | None`` flag needs a three-way literal rather than a plain
+    truthiness check, since ``False`` is itself a meaningful value
+    distinct from "leave unchanged" (``None``).
+
+    Args:
+        value: The tri-state flag to render.
+
+    Returns:
+        str: The literal text ``"True"``, ``"False"``, or ``"None"``.
+    """
+    if value is None:
+        return "None"
+    return "True" if value else "False"
+
+
 def _resolve_debug_info_path(path: str) -> Path:
     r"""Canonicalise and validate a debug-info path before passing it to Ghidra.
 
@@ -801,6 +819,34 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Disassembly text",
                 ),
                 ToolFunction(
+                    name="ghidra.disassemble_range",
+                    description="Convert undefined bytes into instructions over an address range (Ghidra's Disassemble action)",
+                    parameters=[
+                        ToolParameter(name="start_address", type="integer", description="Start of the range to disassemble", required=True),
+                        ToolParameter(
+                            name="end_address",
+                            type="integer",
+                            description="End of the range to disassemble (inclusive)",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with start, end, instructions_created, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.clear_code_bytes",
+                    description="Undefine instructions back to raw bytes over an address range (Ghidra's Clear Code Bytes action)",
+                    parameters=[
+                        ToolParameter(name="start_address", type="integer", description="Start of the range to clear", required=True),
+                        ToolParameter(
+                            name="end_address",
+                            type="integer",
+                            description="End of the range to clear (inclusive)",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with start, end, and success",
+                ),
+                ToolFunction(
                     name="ghidra.get_xrefs_to",
                     description="Get all cross-references pointing to an address",
                     parameters=[
@@ -1069,6 +1115,27 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Updated function info",
                 ),
                 ToolFunction(
+                    name="ghidra.set_function_flags",
+                    description="Set a function's no-return, var-args, and/or inline property flags",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Function entry address", required=True),
+                        ToolParameter(
+                            name="no_return",
+                            type="boolean",
+                            description="Function never returns (e.g. ExitProcess-style wrapper)",
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="var_args",
+                            type="boolean",
+                            description="Function accepts a variable argument list (e.g. printf-style)",
+                            required=False,
+                        ),
+                        ToolParameter(name="is_inline", type="boolean", description="Function is inline", required=False),
+                    ],
+                    returns="Dict with name, address, no_return, var_args, and is_inline",
+                ),
+                ToolFunction(
                     name="ghidra.set_function_variable_type",
                     description="Change the data type of a local variable in a function",
                     parameters=[
@@ -1077,6 +1144,16 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ToolParameter(name="new_type", type="string", description="New data type", required=True),
                     ],
                     returns="Variable retype result",
+                ),
+                ToolFunction(
+                    name="ghidra.rename_function_variable",
+                    description="Rename a function parameter or local variable, distinct from retyping it",
+                    parameters=[
+                        ToolParameter(name="func_address", type="integer", description="Function entry address", required=True),
+                        ToolParameter(name="var_name", type="string", description="Current variable name", required=True),
+                        ToolParameter(name="new_name", type="string", description="New variable name", required=True),
+                    ],
+                    returns="Dict with var_name, new_name, and success",
                 ),
                 ToolFunction(
                     name="ghidra.define_structure",
@@ -1252,6 +1329,22 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Dict with address, register name, value, and has_value flag",
                 ),
                 ToolFunction(
+                    name="ghidra.set_register_value",
+                    description="Set the context-tracked register value over an address range (Ghidra's Set Register Values action)",
+                    parameters=[
+                        ToolParameter(name="start_address", type="integer", description="Start of the range to set", required=True),
+                        ToolParameter(name="end_address", type="integer", description="End of the range to set (inclusive)", required=True),
+                        ToolParameter(name="register", type="string", description="Register name (e.g. TMode, EAX)", required=True),
+                        ToolParameter(
+                            name="value",
+                            type="integer",
+                            description="Value to assign to the register over the range",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with start, end, register, value, and success",
+                ),
+                ToolFunction(
                     name="ghidra.import_debug_info",
                     description="Import debug symbols from a PDB or DWARF file",
                     parameters=[
@@ -1382,6 +1475,14 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ToolParameter(name="address", type="integer", description="Instruction address", required=True),
                     ],
                     returns="Dict with address, mnemonic, flow_type, fall_through, and flows",
+                ),
+                ToolFunction(
+                    name="ghidra.get_instruction_pcode",
+                    description="Get raw per-instruction P-code ops, independent of decompilation",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Instruction address", required=True),
+                    ],
+                    returns="Dict with address, mnemonic, and list of raw P-code operations",
                 ),
                 ToolFunction(
                     name="ghidra.create_data_type",
@@ -4747,6 +4848,96 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
 
+    async def set_function_flags(
+        self,
+        address: int,
+        *,
+        no_return: bool | None = None,
+        var_args: bool | None = None,
+        is_inline: bool | None = None,
+    ) -> dict[str, Any]:
+        """Set a function's no-return, var-args, and/or inline property flags.
+
+        Each flag is applied only when its argument is not ``None`` --
+        ``False`` is a meaningful value distinct from "leave unchanged"
+        and is always applied when passed explicitly.
+
+        Args:
+            address: Function entry address.
+            no_return: Function never returns (e.g. an ExitProcess-style
+                wrapper). Left unchanged when ``None``.
+            var_args: Function accepts a variable argument list (e.g.
+                printf-style). Left unchanged when ``None``.
+            is_inline: Function is inline. Left unchanged when ``None``.
+
+        Returns:
+            dict[str, Any]: Dict with name, address, no_return, var_args,
+            and is_inline reflecting the function's post-write state.
+
+        Raises:
+            ToolError: If Ghidra is not connected or no function exists
+                at ``address``.
+        """
+        if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.info(
+            "function_flags_setting",
+            address=hex(address),
+            no_return=no_return,
+            var_args=var_args,
+            is_inline=is_inline,
+        )
+        set_lines: list[str] = []
+        if no_return is not None:
+            set_lines.append(f"func.setNoReturn({_tri_bool_literal(value=no_return)})")
+        if var_args is not None:
+            set_lines.append(f"func.setVarArgs({_tri_bool_literal(value=var_args)})")
+        if is_inline is not None:
+            set_lines.append(f"func.setInline({_tri_bool_literal(value=is_inline)})")
+        set_block = "\n                        ".join(set_lines) if set_lines else "pass"
+
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                _sff_result = None
+                if func is None:
+                    _sff_result = None
+                else:
+                    tx_id = currentProgram.startTransaction('intellicrack.set_function_flags')
+                    try:
+                        {set_block}
+                    finally:
+                        currentProgram.endTransaction(tx_id, True)
+
+                    _sff_result = {{
+                        'name': func.getName(),
+                        'address': func.getEntryPoint().getOffset(),
+                        'no_return': bool(func.hasNoReturn()),
+                        'var_args': bool(func.hasVarArgs()),
+                        'is_inline': bool(func.isInline()),
+                    }}
+            """)
+        except Exception as e:
+            _logger.warning(
+                "ghidra_set_function_flags_failed",
+                address=hex(address),
+                no_return=no_return,
+                var_args=var_args,
+                is_inline=is_inline,
+                error=str(e),
+            )
+            error_message = f"Set function flags failed: {e}"
+            raise ToolError(error_message) from e
+
+        if result is None:
+            error_message = f"No function at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
+
     async def set_function_variable_type(self, func_address: int, var_name: str, new_type: str) -> dict[str, Any]:
         """Change the data type of a local variable in a function.
 
@@ -4804,6 +4995,61 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             error_message = f"Variable {var_name!r} not found in function at {hex(func_address)}"
             raise ToolError(error_message)
         return {"var_name": var_name, "new_type": new_type, "success": True}
+
+    async def rename_function_variable(self, func_address: int, var_name: str, new_name: str) -> dict[str, Any]:
+        """Rename a function parameter or local variable, distinct from retyping it.
+
+        Args:
+            func_address: Function entry address.
+            var_name: Current variable name.
+            new_name: New variable name.
+
+        Returns:
+            dict[str, Any]: Dict with var_name, new_name, and success status.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the rename fails.
+        """
+        if self._bridge is None:
+            _logger.error("ghidra_not_connected")
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("variable_renaming", func_address=hex(func_address), var_name=var_name, new_name=new_name)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.symbol import SourceType
+
+                addr = toAddr({func_address})
+                func = getFunctionContaining(addr)
+                found = False
+                if func is not None:
+                    tx_id = currentProgram.startTransaction('intellicrack.rename_function_variable')
+                    try:
+                        for var in func.getAllVariables():
+                            if var.getName() == {json.dumps(var_name)}:
+                                var.setName({json.dumps(new_name)}, SourceType.USER_DEFINED)
+                                found = True
+                                break
+                    finally:
+                        currentProgram.endTransaction(tx_id, found)
+                found
+            """)
+        except Exception as e:
+            _logger.warning(
+                "ghidra_rename_function_variable_failed",
+                func_address=hex(func_address),
+                var_name=var_name,
+                new_name=new_name,
+                error=str(e),
+            )
+            error_message = f"Rename variable failed: {e}"
+            raise ToolError(error_message) from e
+
+        if not result:
+            error_message = f"Variable {var_name!r} not found in function at {hex(func_address)}"
+            raise ToolError(error_message)
+        return {"var_name": var_name, "new_name": new_name, "success": True}
 
     async def define_structure(self, name: str, fields: list[dict[str, Any]]) -> dict[str, Any]:
         """Define a new struct data type with named fields.
@@ -5804,6 +6050,108 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
 
+    async def set_register_value(
+        self,
+        start_address: int,
+        end_address: int,
+        register: str,
+        value: int,
+    ) -> dict[str, Any]:
+        """Set the context-tracked register value over an address range.
+
+        Programmatic form of Ghidra's "Set Register Values" action.
+        After ``ProgramContext.setRegisterValue`` returns, the bridge
+        re-queries the same register/address pair via ``remote_eval``
+        and verifies the stored value matches ``value``.
+
+        Args:
+            start_address: Start of the range to set.
+            end_address: End of the range to set (inclusive).
+            register: Register name (e.g. TMode, EAX).
+            value: Value to assign to the register over the range.
+
+        Returns:
+            dict[str, Any]: Dict with start, end, register, value, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, the register name is
+                unknown, the write fails, or the readback does not
+                match the requested value.
+        """
+        if self._bridge is None:
+            _logger.error("ghidra_not_connected")
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug(
+            "register_value_setting",
+            start=hex(start_address),
+            end=hex(end_address),
+            register=register,
+            value=hex(value),
+        )
+        register_literal = json.dumps(register)
+        try:
+            result = await self._execute_remote(
+                f"""
+                from java.math import BigInteger
+                from ghidra.program.model.lang import RegisterValue
+
+                start = toAddr({start_address})
+                end = toAddr({end_address})
+                ctx = currentProgram.getProgramContext()
+                reg = ctx.getRegister({register_literal})
+                if reg is None:
+                    _set_reg_result = {{'set': False, 'reason': 'unknown_register'}}
+                else:
+                    rv = RegisterValue(reg, BigInteger(str({value})))
+                    tx_id = currentProgram.startTransaction('intellicrack.set_register_value')
+                    try:
+                        ctx.setRegisterValue(start, end, rv)
+                        _set_reg_result = {{'set': True, 'reason': None}}
+                    finally:
+                        currentProgram.endTransaction(tx_id, _set_reg_result['set'])
+                _set_reg_result
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_set_register_value_failed", start=hex(start_address), register=register)
+            error_message = f"Set register value failed for {register!r}: {exc}"
+            raise ToolError(error_message) from exc
+
+        write_info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if write_info.get("set") is False:
+            reason = write_info.get("reason", "unknown")
+            error_message = f"Set register value failed for {register!r}: {reason}"
+            raise ToolError(error_message)
+
+        try:
+            readback = await self._execute_remote_eval(
+                "(lambda ctx, reg, addr: (lambda v: int(v.getUnsignedValue()) if v is not None else None)"
+                "(ctx.getRegisterValue(reg, addr)))"
+                f"(currentProgram.getProgramContext(), currentProgram.getProgramContext().getRegister({register_literal}), toAddr({start_address}))",
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_set_register_value_readback_failed", start=hex(start_address), register=register)
+            error_message = f"Set register value readback failed for {register!r}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(readback, int) or readback != value:
+            error_message = f"Register value verification failed at {hex(start_address)}: expected {value}, observed {readback!r}"
+            raise ToolError(error_message)
+
+        return {
+            "start": hex(start_address),
+            "end": hex(end_address),
+            "register": register,
+            "value": value,
+            "success": True,
+        }
+
     async def import_debug_info(self, path: str) -> dict[str, Any]:
         """Import debug symbols from a PDB or DWARF file.
 
@@ -6742,6 +7090,187 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             error_message = f"Get instruction flow returned no payload at {hex(address)}"
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
+
+    async def get_instruction_pcode(self, address: int) -> dict[str, Any]:
+        """Get raw per-instruction P-code ops, independent of decompilation.
+
+        Reads P-code directly off the ``Instruction`` object in the
+        ``Listing`` via ``Instruction.getPcode()``, so it is available
+        even when full decompilation fails, times out, or the function
+        has no recognized boundaries at all.
+
+        Args:
+            address: Instruction address.
+
+        Returns:
+            dict[str, Any]: Dict with address, mnemonic, and a list of
+            raw P-code operation dicts (opcode, mnemonic, output, inputs).
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("instruction_pcode_fetching", address=hex(address))
+        try:
+            result = await self._execute_remote(
+                f"""
+                addr = toAddr({address})
+                listing = currentProgram.getListing()
+                instr = listing.getInstructionAt(addr)
+                if instr is None:
+                    _instr_pcode_payload = {{'address': None, 'mnemonic': None, 'pcode_ops': []}}
+                else:
+                    ops = []
+                    for op in instr.getPcode():
+                        out_vn = op.getOutput()
+                        if out_vn is not None:
+                            out_dict = {{
+                                'space': out_vn.getAddress().getAddressSpace().getName(),
+                                'offset': out_vn.getAddress().getOffset(),
+                                'size': out_vn.getSize(),
+                            }}
+                        else:
+                            out_dict = None
+                        inputs = []
+                        for i in range(op.getNumInputs()):
+                            ivn = op.getInput(i)
+                            inputs.append({{
+                                'space': ivn.getAddress().getAddressSpace().getName(),
+                                'offset': ivn.getAddress().getOffset(),
+                                'size': ivn.getSize(),
+                            }})
+                        ops.append({{
+                            'opcode': int(op.getOpcode()),
+                            'mnemonic': op.getMnemonic(),
+                            'output': out_dict,
+                            'inputs': inputs,
+                        }})
+                    _instr_pcode_payload = {{'address': addr.getOffset(), 'mnemonic': instr.getMnemonicString(), 'pcode_ops': ops}}
+                _instr_pcode_payload
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("get_instruction_pcode_failed", address=hex(address))
+            error_message = f"Get instruction pcode failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get instruction pcode returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
+
+    async def disassemble_range(self, start_address: int, end_address: int) -> dict[str, Any]:
+        """Convert undefined bytes into instructions over an address range.
+
+        Wraps Ghidra's ``DisassembleCommand``, the programmatic form of
+        the Listing's "Disassemble" (D) action, following flows the
+        same way the GUI action does.
+
+        Args:
+            start_address: Start of the range to disassemble.
+            end_address: End of the range to disassemble (inclusive).
+
+        Returns:
+            dict[str, Any]: Dict with start, end, instructions_created,
+            and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the command is
+                rejected by Ghidra.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("disassemble_range_running", start=hex(start_address), end=hex(end_address))
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.app.cmd.disassemble import DisassembleCommand
+                from ghidra.program.model.address import AddressSet
+
+                start = toAddr({start_address})
+                end = toAddr({end_address})
+                before = currentProgram.getListing().getNumInstructions()
+                tx_id = currentProgram.startTransaction('intellicrack.disassemble_range')
+                applied = False
+                try:
+                    cmd = DisassembleCommand(AddressSet(start, end), None, True)
+                    applied = cmd.applyTo(currentProgram, monitor)
+                finally:
+                    currentProgram.endTransaction(tx_id, applied)
+                after = currentProgram.getListing().getNumInstructions()
+                {{'applied': bool(applied), 'instructions_created': int(after - before)}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_disassemble_range_failed", start=hex(start_address), end=hex(end_address))
+            error_message = f"Disassemble range failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("applied", False)):
+            error_message = f"Disassemble command rejected for range {hex(start_address)}-{hex(end_address)}"
+            raise ToolError(error_message)
+        return {
+            "start": hex(start_address),
+            "end": hex(end_address),
+            "instructions_created": int(cast("int", info.get("instructions_created", 0))),
+            "success": True,
+        }
+
+    async def clear_code_bytes(self, start_address: int, end_address: int) -> dict[str, Any]:
+        """Undefine instructions back to raw bytes over an address range.
+
+        Wraps ``Listing.clearCodeUnits``, the programmatic form of the
+        Listing's "Clear Code Bytes" (C) action. Clearing an
+        already-undefined range is a harmless no-op in Ghidra, so this
+        still reports success in that case.
+
+        Args:
+            start_address: Start of the range to clear.
+            end_address: End of the range to clear (inclusive).
+
+        Returns:
+            dict[str, Any]: Dict with start, end, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the remote call fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("clear_code_bytes_running", start=hex(start_address), end=hex(end_address))
+        try:
+            result = await self._execute_remote(f"""
+                start = toAddr({start_address})
+                end = toAddr({end_address})
+                listing = currentProgram.getListing()
+                had_code = listing.getCodeUnitAt(start) is not None
+                tx_id = currentProgram.startTransaction('intellicrack.clear_code_bytes')
+                try:
+                    listing.clearCodeUnits(start, end, False)
+                    cleared = True
+                finally:
+                    currentProgram.endTransaction(tx_id, cleared)
+                {{'had_code': bool(had_code), 'cleared': bool(cleared)}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_clear_code_bytes_failed", start=hex(start_address), end=hex(end_address))
+            error_message = f"Clear code bytes failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Clear code bytes returned no payload for range {hex(start_address)}-{hex(end_address)}"
+            raise ToolError(error_message)
+        return {"start": hex(start_address), "end": hex(end_address), "success": True}
 
     async def create_data_type(
         self,
