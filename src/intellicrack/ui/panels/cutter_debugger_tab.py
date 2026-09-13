@@ -11,7 +11,7 @@ registers, memory read/write, memory regions, threads, and loaded modules) drive
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, Literal
 
 from PyQt6.QtCore import QSignalBlocker, Qt
 from PyQt6.QtWidgets import (
@@ -55,6 +55,15 @@ _BP_COLUMNS: Final[list[str]] = ["Address", "Type", "Condition", "Hits", "Enable
 _MEMORY_REGION_COLUMNS: Final[list[str]] = ["Base", "Size", "Protection", "State", "Type", "Module"]
 _THREAD_COLUMNS: Final[list[str]] = ["TID", "Start", "PC", "State"]
 _MODULE_COLUMNS: Final[list[str]] = ["Name", "Base", "Size", "Entry Point", "Path"]
+_BACKTRACE_COLUMNS: Final[list[str]] = [
+    "Index",
+    "Address",
+    "Return Address",
+    "Frame Pointer",
+    "Stack Pointer",
+    "Function",
+    "Module",
+]
 
 _GENERAL_REGS: Final[list[str]] = [
     "rax",
@@ -149,6 +158,17 @@ class DebuggerTab(QWidget):
         self._continue_btn.setObjectName("tool_button")
         self._continue_btn.clicked.connect(self._on_continue)
         attach_row.addWidget(self._continue_btn)
+        self._continue_until_mode_combo = QComboBox()
+        self._continue_until_mode_combo.addItems(["syscall", "call", "address"])
+        attach_row.addWidget(self._continue_until_mode_combo)
+        self._continue_until_target_input = QLineEdit()
+        self._continue_until_target_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._continue_until_target_input.setPlaceholderText("target (optional/required by mode)")
+        attach_row.addWidget(self._continue_until_target_input)
+        self._continue_until_btn = QPushButton(self.tr("Continue Until"))
+        self._continue_until_btn.setObjectName("tool_button")
+        self._continue_until_btn.clicked.connect(self._on_continue_until)
+        attach_row.addWidget(self._continue_until_btn)
         self._refresh_btn = QPushButton(self.tr("Refresh"))
         self._refresh_btn.setObjectName("secondary_button")
         self._refresh_btn.clicked.connect(self._refresh_all)
@@ -199,7 +219,7 @@ class DebuggerTab(QWidget):
         return container
 
     def _create_bottom_tabs(self) -> QTabWidget:
-        """Create breakpoints, memory, memory-regions, threads, and modules sub-tabs.
+        """Create breakpoints, memory, memory-regions, threads, backtrace, and modules sub-tabs.
 
         Returns:
             QTabWidget: Tab widget with the debugger detail views.
@@ -209,6 +229,7 @@ class DebuggerTab(QWidget):
         tabs.addTab(self._build_memory_tab(), self.tr("Memory"))
         tabs.addTab(self._build_regions_tab(), self.tr("Memory Regions"))
         tabs.addTab(self._build_threads_tab(), self.tr("Threads"))
+        tabs.addTab(self._build_backtrace_tab(), self.tr("Backtrace"))
         tabs.addTab(self._build_modules_tab(), self.tr("Modules"))
         return tabs
 
@@ -358,6 +379,25 @@ class DebuggerTab(QWidget):
         vlayout.addWidget(self._threads_table)
         return container
 
+    def _build_backtrace_tab(self) -> QWidget:
+        """Build the call-stack / backtrace enumeration sub-tab.
+
+        Returns:
+            QWidget: Backtrace tab container.
+        """
+        container = QWidget()
+        vlayout = QVBoxLayout(container)
+        vlayout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        self._backtrace_table = QTableWidget(0, len(_BACKTRACE_COLUMNS))
+        self._backtrace_table.setHorizontalHeaderLabels(_BACKTRACE_COLUMNS)
+        self._backtrace_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._backtrace_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        bt_h = self._backtrace_table.horizontalHeader()
+        if bt_h is not None:
+            bt_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        vlayout.addWidget(self._backtrace_table)
+        return container
+
     def _build_modules_tab(self) -> QWidget:
         """Build the loaded-modules enumeration sub-tab.
 
@@ -468,6 +508,7 @@ class DebuggerTab(QWidget):
         self._bp_table.setRowCount(0)
         self._regions_table.setRowCount(0)
         self._threads_table.setRowCount(0)
+        self._backtrace_table.setRowCount(0)
         self._modules_table.setRowCount(0)
         self._mem_dump.clear()
 
@@ -562,6 +603,49 @@ class DebuggerTab(QWidget):
         self._set_status(f"Continue failed: {exc}")
         _logger.warning("cutter_debug_run_failed", error=str(exc))
         self._continue_btn.setEnabled(True)
+
+    def _on_continue_until(self) -> None:
+        """Continue debugger execution until the selected mode's condition is met."""
+        if self._bridge is None:
+            return
+        mode_text = self._continue_until_mode_combo.currentText()
+        mode: Literal["syscall", "call", "address"] = "syscall" if mode_text == "syscall" else "call" if mode_text == "call" else "address"
+        raw_target = self._continue_until_target_input.text().strip()
+        target: str | int | None = raw_target or None
+        if mode == "address":
+            parsed = _parse_address(raw_target)
+            if parsed is None:
+                self._set_status(self.tr("Invalid target address"))
+                return
+            target = parsed
+
+        self._continue_until_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.continue_until(mode, target),
+            on_success=lambda _: self._on_continue_until_success(),
+            on_error=self._on_continue_until_error,
+            parent=self,
+            event="cutter_debug_continue_until",
+            logger=_logger,
+            level="info",
+            mode=mode,
+        )
+
+    def _on_continue_until_success(self) -> None:
+        """Handle successful conditional-continue completion by refreshing debugger state."""
+        self._set_status(self.tr("Stopped"))
+        self._continue_until_btn.setEnabled(True)
+        self._refresh_all()
+
+    def _on_continue_until_error(self, exc: object) -> None:
+        """Handle conditional-continue failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._set_status(f"Continue-until failed: {exc}")
+        _logger.warning("cutter_debug_continue_until_failed", error=str(exc))
+        self._continue_until_btn.setEnabled(True)
 
     def _on_register_edited(self, row: int, column: int) -> None:
         """Handle in-place register value edits by writing the new value to the debuggee.
@@ -777,11 +861,12 @@ class DebuggerTab(QWidget):
         self._mem_write_btn.setEnabled(True)
 
     def _refresh_all(self) -> None:
-        """Refresh registers, breakpoints, memory regions, threads, and modules."""
+        """Refresh registers, breakpoints, memory regions, threads, backtrace, and modules."""
         self._refresh_registers()
         self._refresh_breakpoints()
         self._refresh_regions()
         self._refresh_threads()
+        self._refresh_backtrace()
         self._refresh_modules()
 
     def _refresh_registers(self) -> None:
@@ -906,6 +991,38 @@ class DebuggerTab(QWidget):
             self._threads_table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(th, 'start_address', 0):X}"))
             self._threads_table.setItem(row, 2, QTableWidgetItem(f"0x{getattr(th, 'current_pc', 0):X}"))
             self._threads_table.setItem(row, 3, QTableWidgetItem(getattr(th, "state", "")))
+
+    def _refresh_backtrace(self) -> None:
+        """Refresh the call-stack / backtrace table from the bridge."""
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.get_backtrace(),
+            on_success=self._apply_backtrace,
+            on_error=lambda e: _logger.warning("cutter_debug_get_backtrace_failed", error=str(e)),
+            parent=self,
+            event="cutter_debug_get_backtrace",
+            logger=_logger,
+        )
+
+    def _apply_backtrace(self, result: object) -> None:
+        """Populate the backtrace table.
+
+        Args:
+            result: List of StackFrame from the bridge.
+        """
+        items: list[object] = [*result] if isinstance(result, list) else []
+        self._backtrace_table.setRowCount(0)
+        for frame in items:
+            row = self._backtrace_table.rowCount()
+            self._backtrace_table.insertRow(row)
+            self._backtrace_table.setItem(row, 0, QTableWidgetItem(str(getattr(frame, "index", 0))))
+            self._backtrace_table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(frame, 'address', 0):X}"))
+            self._backtrace_table.setItem(row, 2, QTableWidgetItem(f"0x{getattr(frame, 'return_address', 0):X}"))
+            self._backtrace_table.setItem(row, 3, QTableWidgetItem(f"0x{getattr(frame, 'frame_pointer', 0):X}"))
+            self._backtrace_table.setItem(row, 4, QTableWidgetItem(f"0x{getattr(frame, 'stack_pointer', 0):X}"))
+            self._backtrace_table.setItem(row, 5, QTableWidgetItem(getattr(frame, "function_name", None) or ""))
+            self._backtrace_table.setItem(row, 6, QTableWidgetItem(getattr(frame, "module_name", None) or ""))
 
     def _refresh_modules(self) -> None:
         """Refresh the loaded-modules table from the bridge."""

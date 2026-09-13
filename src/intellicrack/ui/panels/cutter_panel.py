@@ -11,7 +11,7 @@ cross-references, and a raw r2 command console -- all powered by the CutterBridg
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast, override
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, override
 
 from PyQt6.QtCore import QPoint, QSettings, Qt, QTimer
 from PyQt6.QtGui import QAction, QClipboard
@@ -164,6 +164,11 @@ class CutterPanel(AnalysisPanelBase):
         toolbar.addWidget(self._analysis_level_combo)
 
         self._analyze_btn = self._add_tool_button(toolbar, "Analyze", self._on_analyze)
+
+        self._decompiler_backend_combo = QComboBox()
+        self._decompiler_backend_combo.addItems(["pdg", "pdd"])
+        self._decompiler_backend_combo.setToolTip("Decompiler backend: pdg (rz-ghidra) or pdd (jsdec)")
+        toolbar.addWidget(self._decompiler_backend_combo)
         self._decompile_btn = self._add_tool_button(toolbar, "Decompile", self._on_decompile_selected)
         self._graph_btn = self._add_tool_button(toolbar, "Graph", self._on_graph_selected)
 
@@ -1001,14 +1006,17 @@ class CutterPanel(AnalysisPanelBase):
             return
 
         binary_path = str(self._current_binary) if self._current_binary is not None else "unset"
+        backend_text = self._decompiler_backend_combo.currentText()
+        backend: Literal["pdg", "pdd"] = "pdd" if backend_text == "pdd" else "pdg"
         _logger.info(
             "cutter_decompile_requested",
             binary_path=binary_path,
             offset=hex(address),
+            backend=backend,
         )
 
         run_bridge_coroutine_logged(
-            self._bridge.decompile(address),
+            self._bridge.decompile(address, backend=backend),
             on_success=self._apply_decompiled,
             on_error=self._on_decompile_error,
             parent=self,

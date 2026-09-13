@@ -53,16 +53,17 @@ L3 gates for the remediated GUI gaps in this slice:
 from __future__ import annotations
 
 import asyncio
+import shutil
 import time
 from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Final, cast
 
 import pytest
-from PyQt6.QtWidgets import QComboBox, QLabel, QLineEdit, QPlainTextEdit, QTableWidget, QTabWidget, QTreeWidget
+from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QLineEdit, QPlainTextEdit, QTableWidget, QTabWidget, QTreeWidget
 
 from intellicrack.bridges.cutter import CutterBridge
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import RelocationInfo, ResourceInfo, ToolName
+from intellicrack.core.types import RelocationInfo, ResourceInfo, ToolError, ToolName
 from intellicrack.ui.panels.cutter_panel import CutterPanel
 from intellicrack.ui.panels.cutter_static_extra_tab import (
     BasicBlocksTab,
@@ -77,6 +78,7 @@ from intellicrack.ui.panels.cutter_static_extra_tab import (
     ZignaturesTab,
 )
 from intellicrack.ui.panels.cutter_tabs import ConfigTab, ESILConsoleTab, FlagsTab, HexdumpTab
+from tests._helpers.real_binaries import load_real_elf
 from tests.bridges.completeness.cutter.conftest import CommandRecorder, as_r2pipe, priv
 
 
@@ -84,6 +86,19 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from PyQt6.QtWidgets import QApplication
+
+
+_RIZIN_BINARY: Final[str | None] = shutil.which("rizin")
+_requires_rizin = pytest.mark.skipif(
+    _RIZIN_BINARY is None,
+    reason=(
+        "rizin backend not installed on PATH; the FLIRT 'Fs'/'Fa'/'Fc' command family is "
+        "rizin-specific and does not exist in radare2 (empirically confirmed: radare2 5.9.8's "
+        "'F?' help is empty and 'Fc <path>' silently no-ops with no file written -- its FLIRT "
+        "support lives only under 'zf' (zfd/zfs/zfz), none of which can create a signature "
+        "file), so the real-backend FLIRT round-trip requires rizin specifically, not radare2"
+    ),
+)
 
 
 _MAX_WAIT_S: Final[float] = 5.0
@@ -1325,3 +1340,425 @@ class TestDisassembleRange:
         assert _pump_until(qapp, lambda: "pDj 8" in recorder.commands)
         assert _pump_until(qapp, lambda: "nop" in output.toPlainText())
         assert "ret" in output.toPlainText()
+
+
+@pytest.mark.usefixtures("qapp")
+class TestDecompileAlternateBackend:
+    """L1/L2/L3 gate: the jsdec 'pdd' alternate decompiler backend must be real and reachable.
+
+    Falsified by: changing the ``backend == "pdd"`` branch in
+    ``CutterBridge.decompile`` to always fall through to the ``pdg`` path
+    turns ``test_pdd_backend_issues_pdd_and_skips_sleighhome`` red
+    immediately ('pdd' disappears from ``recorder.commands``, 'pdg' appears
+    instead), and the combo-box L3 test red the same way.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_default_backend_still_issues_pdg(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """Omitting ``backend`` must still issue rizin's 'pdg', not jsdec's 'pdd'.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        recorder.responses["pdg"] = "void fn() { return; }"
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+
+        result = await bridge_with_recorder.decompile(0x400000)
+
+        assert "pdg" in recorder.commands
+        assert "pdd" not in recorder.commands
+        assert "return" in result
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_pdd_backend_issues_pdd_and_skips_sleighhome(
+        bridge_with_recorder: CutterBridge,
+        recorder: CommandRecorder,
+    ) -> None:
+        """``backend="pdd"`` must issue jsdec's 'pdd' and must not configure rz-ghidra's SLEIGH home.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        recorder.responses["pdd"] = "function fcn_400000() { return; }"
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+
+        result = await bridge_with_recorder.decompile(0x400000, backend="pdd")
+
+        assert "pdd" in recorder.commands
+        assert "pdg" not in recorder.commands
+        assert not any(cmd.startswith("e ghidra.sleighhome") for cmd in recorder.commands)
+        assert "fcn_400000" in result
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_pdd_backend_raises_on_unavailable(
+        bridge_with_recorder: CutterBridge,
+        recorder: CommandRecorder,
+    ) -> None:
+        """``backend="pdd"`` must still raise via the shared failure-detection guard when jsdec is unavailable.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        recorder.responses["pdd"] = "Cannot find (jsdec) core plugin"
+        await bridge_with_recorder.analyze("quick")
+
+        with pytest.raises(ToolError, match="decompilation not available"):
+            await bridge_with_recorder.decompile(0x400000, backend="pdd")
+
+    @staticmethod
+    def test_backend_combo_selection_threads_pdd_into_bridge_call(qapp: QApplication) -> None:
+        """Selecting 'pdd' in the toolbar combo and clicking Decompile must issue 'pdd', not 'pdg'.
+
+        Falsifiable: if ``CutterPanel._on_decompile_selected`` ignored
+        ``self._decompiler_backend_combo.currentText()``, the bridge would
+        always decompile with the default 'pdg' backend regardless of the
+        combo box selection, and this assertion (checking 'pdd' is issued
+        and 'pdg' is not) would fail. Broken production line: the
+        ``backend = ...`` / ``self._bridge.decompile(address, backend=backend)``
+        call in ``CutterPanel._on_decompile_selected`` (``cutter_panel.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop while
+                the real background bridge-call worker thread runs.
+        """
+        recorder = CommandRecorder({
+            "aflj": '[{"name":"fcn.00400000","offset":4194304,"size":16}]',
+            "pdd": "function fcn_400000() { return; }",
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        asyncio.run(bridge.analyze("quick"))
+        recorder.commands.clear()
+
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        on_refresh_functions = cast(Callable[[], None], getattr(panel, "_on_refresh_functions"))
+        func_tree = cast(QTreeWidget, getattr(panel, "_func_tree"))
+        on_refresh_functions()
+        assert _pump_until(qapp, lambda: func_tree.topLevelItemCount() > 0)
+        item = func_tree.topLevelItem(0)
+        assert item is not None
+        item.setSelected(True)
+        backend_combo = cast(QComboBox, getattr(panel, "_decompiler_backend_combo"))
+        backend_combo.setCurrentText("pdd")
+        on_decompile = cast(Callable[[], None], getattr(panel, "_on_decompile_selected"))
+
+        on_decompile()
+
+        assert _pump_until(qapp, lambda: "pdd" in recorder.commands)
+        assert "pdd" in recorder.commands
+        assert "pdg" not in recorder.commands
+
+
+class TestFlirtRoundTrip:
+    """Real round trip: Fc-export a signature this session creates, then Fs-apply it elsewhere.
+
+    Applies the exported signature to a fresh session and asserts the
+    function is named -- never an external vendor .sig download. Gates both
+    work order 03-27 (the ``Fs``-apply half, session B) and work order 03-28
+    (the ``Fc``-export half, session A) in a single shared integration
+    test, per the stream-wide FLIRT hazard note that the round trip must
+    use only signatures the test itself creates.
+    """
+
+    @staticmethod
+    @_requires_rizin
+    @pytest.mark.asyncio
+    async def test_export_then_apply_flirt_signature_renames_function(tmp_path: Path) -> None:
+        """Export a FLIRT signature from one session, apply it in a fresh session, confirm the rename sticks.
+
+        Falsifiable (03-27, the ``Fs`` half): if ``apply_flirt_signatures``
+        issued a no-op instead of ``f"Fs {path}"``, session B's
+        ``functions_after`` would never regain the marker name. Falsifiable
+        (03-28, the ``Fc`` half): if ``create_flirt_signatures`` issued a
+        no-op instead of ``f"Fc {path}"``, ``sig_path.is_file()`` would be
+        ``False`` and the method's own defensive verification would raise
+        ``ToolError`` before session B ever runs.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory for the
+                session-A-exported signature file.
+        """
+        binary_path = load_real_elf()
+        sig_path = tmp_path / "roundtrip.sig"
+        marker_name = "flirt_roundtrip_marker_fn"
+
+        bridge_a = CutterBridge()
+        await bridge_a.initialize()
+        try:
+            await bridge_a.load_binary(binary_path)
+            await bridge_a.analyze("normal")
+            functions = await bridge_a.get_functions()
+            assert functions, "fixture binary must yield at least one analyzed function"
+            target_address = functions[0].address
+            await bridge_a.rename_function(target_address, marker_name)
+            created = await bridge_a.create_flirt_signatures(str(sig_path))
+            assert created is True
+            assert sig_path.is_file()
+            assert sig_path.stat().st_size > 0
+        finally:
+            await bridge_a.shutdown()
+
+        bridge_b = CutterBridge()
+        await bridge_b.initialize()
+        try:
+            await bridge_b.load_binary(binary_path)
+            await bridge_b.analyze("normal")
+            await bridge_b.apply_flirt_signatures(str(sig_path))
+            functions_after = await bridge_b.get_functions()
+            matched = [f for f in functions_after if f.address == target_address]
+            assert matched, "target address must still resolve to an analyzed function"
+            assert marker_name in matched[0].name
+        finally:
+            await bridge_b.shutdown()
+
+
+class TestCreateFlirtSignaturesFileVerification:
+    """L1 gate: ``create_flirt_signatures`` must not trust 'Fc' command output alone."""
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_create_flirt_signatures_raises_when_file_not_written(
+        bridge_with_recorder: CutterBridge,
+        recorder: CommandRecorder,
+        tmp_path: Path,
+    ) -> None:
+        """``create_flirt_signatures`` must raise when rizin accepts 'Fc' but writes no file.
+
+        Falsifiable: if the ``is_file()`` verification were removed and the
+        method returned ``True`` unconditionally after issuing ``Fc``, this
+        test would fail (no ``ToolError`` raised even though the file was
+        never written).
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+            tmp_path: Pytest-provided temporary directory.
+        """
+        target = tmp_path / "never_written.sig"
+        recorder.responses["Fc "] = ""
+
+        with pytest.raises(ToolError):
+            await bridge_with_recorder.create_flirt_signatures(str(target))
+        assert not target.exists()
+
+
+@pytest.mark.usefixtures("qapp")
+class TestApplyFlirtSignaturesDispatch:
+    """L1 gate: ``apply_flirt_signatures`` dispatch (rizin 'Fs'/'Fa') must issue the real command.
+
+    This unit-level gate runs unconditionally (no real rizin backend required) because it
+    exercises only the bridge's own command-building/dispatch logic against a
+    ``CommandRecorder`` double -- the genuine external-process boundary this sandbox
+    substitutes throughout this test suite. ``TestFlirtRoundTrip`` above additionally proves the
+    ``Fs``/``Fc`` dispatch is correct against an actual rizin process wherever one is installed.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_path_given_issues_fs(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """Supplying ``path`` must issue rizin's 'Fs <path>', not 'Fa'.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        result = await bridge_with_recorder.apply_flirt_signatures(path="C:/sigs/libc.sig")
+
+        assert "Fs C:/sigs/libc.sig" in recorder.commands
+        assert not any(cmd.startswith("Fa") for cmd in recorder.commands)
+        assert not result
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_no_path_issues_bare_fa(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """Omitting ``path`` must issue the bare rizin 'Fa', applying from the configured sigdb.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        await bridge_with_recorder.apply_flirt_signatures()
+
+        assert "Fa" in recorder.commands
+        assert not any(cmd.startswith("Fs") for cmd in recorder.commands)
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_no_path_with_filter_issues_fa_filter(
+        bridge_with_recorder: CutterBridge,
+        recorder: CommandRecorder,
+    ) -> None:
+        """Omitting ``path`` with a ``sigdb_filter`` must issue 'Fa <filter>'.
+
+        Args:
+            bridge_with_recorder: Real ``CutterBridge`` wired to ``recorder``.
+            recorder: The command recorder backing the bridge's ``r2`` pipe.
+        """
+        await bridge_with_recorder.apply_flirt_signatures(sigdb_filter="libc")
+
+        assert "Fa libc" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_without_binary_raises() -> None:
+        """Calling without a loaded binary must raise ``ToolError`` rather than issue a command."""
+        bridge = CutterBridge()
+
+        with pytest.raises(ToolError):
+            await bridge.apply_flirt_signatures()
+
+
+@pytest.mark.usefixtures("qapp")
+class TestZignaturesTabFlirtButtonsL3:
+    """L3 gate: the 'Apply FLIRT File...'/'Export FLIRT File...' buttons must invoke the real bridge methods."""
+
+    @staticmethod
+    def test_apply_flirt_button_issues_fs_with_chosen_path(
+        qapp: QApplication,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Clicking 'Apply FLIRT File...' must issue rizin's 'Fs <chosen path>'.
+
+        Falsifiable: if ``_on_apply_flirt`` never called
+        ``self._bridge.apply_flirt_signatures(file_path)``, 'Fs' would
+        never appear in the recorder regardless of the dialog's return
+        value. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.apply_flirt_signatures(file_path), ...)``
+        call in ``ZignaturesTab._on_apply_flirt`` (``cutter_static_extra_tab.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+            monkeypatch: Pytest monkeypatch fixture for stubbing the modal file dialog.
+            tmp_path: Pytest-provided temporary directory for the chosen signature path.
+        """
+        chosen = tmp_path / "chosen.sig"
+
+        def _open_chosen(*_args: object, **_kwargs: object) -> tuple[str, str]:
+            return (str(chosen), "")
+
+        monkeypatch.setattr(QFileDialog, "getOpenFileName", _open_chosen)
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        tab = ZignaturesTab()
+        setattr(tab, "_bridge", bridge)
+        on_apply_flirt = cast(Callable[[], None], getattr(tab, "_on_apply_flirt"))
+        status_label = cast(QLabel, getattr(tab, "_status_label"))
+
+        on_apply_flirt()
+
+        assert _pump_until(qapp, lambda: f"Fs {chosen}" in recorder.commands)
+        assert f"Fs {chosen}" in recorder.commands
+        assert _pump_until(qapp, lambda: status_label.text() != "Ready")
+
+    @staticmethod
+    def test_apply_flirt_button_no_op_when_dialog_cancelled(
+        qapp: QApplication,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Cancelling the file dialog (empty path) must not issue any 'Fs' command.
+
+        Args:
+            qapp: Qt application fixture (unused directly but required so a
+                QWidget can be constructed).
+            monkeypatch: Pytest monkeypatch fixture for stubbing the modal file dialog.
+        """
+        del qapp
+
+        def _cancelled(*_args: object, **_kwargs: object) -> tuple[str, str]:
+            return ("", "")
+
+        monkeypatch.setattr(QFileDialog, "getOpenFileName", _cancelled)
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        tab = ZignaturesTab()
+        setattr(tab, "_bridge", bridge)
+        on_apply_flirt = cast(Callable[[], None], getattr(tab, "_on_apply_flirt"))
+
+        on_apply_flirt()
+
+        assert not any(cmd.startswith("Fs") for cmd in recorder.commands)
+
+    @staticmethod
+    def test_export_flirt_button_issues_fc_with_chosen_path(
+        qapp: QApplication,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Clicking 'Export FLIRT File...' must issue rizin's 'Fc <chosen path>' and report success.
+
+        Falsifiable: if ``_on_export_flirt`` never called
+        ``self._bridge.create_flirt_signatures(file_path)``, 'Fc' would
+        never appear in the recorder. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.create_flirt_signatures(file_path), ...)``
+        call in ``ZignaturesTab._on_export_flirt`` (``cutter_static_extra_tab.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+            monkeypatch: Pytest monkeypatch fixture for stubbing the modal file dialog.
+            tmp_path: Pytest-provided temporary directory for the chosen signature path.
+        """
+        chosen = tmp_path / "chosen_export.sig"
+        chosen.write_bytes(b"pre-existing so the bridge's own file-existence verification passes")
+
+        def _save_chosen(*_args: object, **_kwargs: object) -> tuple[str, str]:
+            return (str(chosen), "")
+
+        monkeypatch.setattr(QFileDialog, "getSaveFileName", _save_chosen)
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        tab = ZignaturesTab()
+        setattr(tab, "_bridge", bridge)
+        on_export_flirt = cast(Callable[[], None], getattr(tab, "_on_export_flirt"))
+        status_label = cast(QLabel, getattr(tab, "_status_label"))
+
+        on_export_flirt()
+
+        assert _pump_until(qapp, lambda: f"Fc {chosen}" in recorder.commands)
+        assert f"Fc {chosen}" in recorder.commands
+        assert _pump_until(qapp, lambda: "exported" in status_label.text())
+
+    @staticmethod
+    def test_export_flirt_button_no_op_when_dialog_cancelled(
+        qapp: QApplication,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Cancelling the save dialog (empty path) must not issue any 'Fc' command.
+
+        Args:
+            qapp: Qt application fixture (unused directly but required so a
+                QWidget can be constructed).
+            monkeypatch: Pytest monkeypatch fixture for stubbing the modal file dialog.
+        """
+        del qapp
+
+        def _cancelled(*_args: object, **_kwargs: object) -> tuple[str, str]:
+            return ("", "")
+
+        monkeypatch.setattr(QFileDialog, "getSaveFileName", _cancelled)
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        tab = ZignaturesTab()
+        setattr(tab, "_bridge", bridge)
+        on_export_flirt = cast(Callable[[], None], getattr(tab, "_on_export_flirt"))
+
+        on_export_flirt()
+
+        assert not any(cmd.startswith("Fc") for cmd in recorder.commands)

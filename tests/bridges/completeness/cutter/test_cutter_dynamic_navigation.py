@@ -47,6 +47,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.bridges.cutter import CutterBridge
+from intellicrack.core.types import ToolError
 from intellicrack.ui.panels.cutter_debugger_tab import DebuggerTab
 from intellicrack.ui.panels.cutter_project_tab import ProjectTab
 from intellicrack.ui.panels.cutter_search_tab import SearchTab
@@ -121,6 +122,29 @@ def _attached_bridge(recorder: CommandRecorder, pid: int = 4242) -> CutterBridge
     bridge = CutterBridge()
     bridge.r2 = as_r2pipe(recorder)
     asyncio.run(bridge.attach(pid))
+    recorder.commands.clear()
+    return bridge
+
+
+async def _attached_bridge_async(recorder: CommandRecorder, pid: int = 4242) -> CutterBridge:
+    """Build a real ``CutterBridge`` in the attached state from within a running event loop.
+
+    Mirrors :func:`_attached_bridge` exactly, but ``await``s ``attach()``
+    directly instead of driving it through ``asyncio.run()`` -- the latter
+    raises ``RuntimeError: asyncio.run() cannot be called from a running
+    event loop`` when invoked from inside an ``async def`` test already
+    running under ``pytest.mark.asyncio``.
+
+    Args:
+        recorder: Command recorder to install as the r2 pipe.
+        pid: Process id to attach to.
+
+    Returns:
+        CutterBridge: A bridge with ``state.process_attached`` True.
+    """
+    bridge = CutterBridge()
+    bridge.r2 = as_r2pipe(recorder)
+    await bridge.attach(pid)
     recorder.commands.clear()
     return bridge
 
@@ -1029,3 +1053,245 @@ class TestSearchTabCompare:
         assert _pump_until(qapp, lambda: bool(compare_output.toPlainText()))
         assert "diff-line-1" in compare_output.toPlainText()
         assert '{"match": true}' in compare_output.toPlainText()
+
+
+@pytest.mark.usefixtures("qapp")
+class TestConditionalContinue:
+    """L1/L2/L3 gate: conditional continue (rizin 'dcs'/'dcc'/'dcu') must be real and reachable.
+
+    Falsified by: changing the "address" branch to issue ``f"dc {resolved_address}"`` instead of
+    ``f"dcu {resolved_address}"`` turns ``test_address_mode_issues_dcu`` red immediately, because
+    ``"dcu 4198400"`` no longer appears in ``recorder.commands``. Independently, deleting the
+    ``mode == "address" and target is None`` guard makes ``test_address_mode_without_target_raises``
+    red (no exception is raised).
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_syscall_mode_bare_issues_dcs() -> None:
+        """``mode="syscall"`` with no target must issue bare rizin 'dcs'."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        await bridge.continue_until("syscall")
+
+        assert "dcs" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_syscall_mode_with_target_issues_dcs_name() -> None:
+        """``mode="syscall"`` with a name filter must issue 'dcs <name>'."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        await bridge.continue_until("syscall", "open")
+
+        assert "dcs open" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_call_mode_issues_dcc() -> None:
+        """``mode="call"`` must issue rizin's 'dcc', not the bare 'dc'."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        await bridge.continue_until("call")
+
+        assert "dcc" in recorder.commands
+        assert "dc" not in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_address_mode_issues_dcu() -> None:
+        """``mode="address"`` with a native ``int`` target must issue 'dcu <address>'."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        await bridge.continue_until("address", 0x401000)
+
+        assert "dcu 4198400" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_address_mode_with_string_target_issues_dcu() -> None:
+        """``mode="address"`` must also parse a hex-string target before issuing 'dcu'."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        await bridge.continue_until("address", "0x401000")
+
+        assert "dcu 4198400" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_address_mode_without_target_raises() -> None:
+        """``mode="address"`` without a target must raise ``ToolError`` rather than issue a command."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        with pytest.raises(ToolError):
+            await bridge.continue_until("address")
+        assert not any(cmd.startswith("dcu") for cmd in recorder.commands)
+
+    @staticmethod
+    def test_continue_until_button_issues_dcc_in_call_mode(qapp: QApplication) -> None:
+        """Selecting 'call' mode and clicking Continue Until must issue rizin's 'dcc'.
+
+        Falsifiable: if ``_on_continue_until`` ignored the mode combo or
+        never called ``self._bridge.continue_until``, 'dcc' would never
+        appear in the recorder. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.continue_until(mode, target), ...)``
+        call in ``DebuggerTab._on_continue_until`` (``cutter_debugger_tab.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop while
+                the real background bridge-call worker thread runs.
+        """
+        recorder = CommandRecorder({
+            "dbj": "[]",
+            "dmj": "[]",
+            "dptj": "[]",
+            "dbtj": "[]",
+            "dmIj": "[]",
+            "drj": "{}",
+        })
+        bridge = _attached_bridge(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        mode_combo = cast(QComboBox, getattr(tab, "_continue_until_mode_combo"))
+        mode_combo.setCurrentText("call")
+        on_continue_until = cast(Callable[[], None], getattr(tab, "_on_continue_until"))
+
+        on_continue_until()
+
+        assert _pump_until(qapp, lambda: "dcc" in recorder.commands)
+        assert "dcc" in recorder.commands
+
+    @staticmethod
+    def test_continue_until_address_mode_requires_valid_target(qapp: QApplication) -> None:
+        """Selecting 'address' mode with an unparseable target must not issue 'dcu' or crash.
+
+        Falsifiable: if ``_on_continue_until`` forwarded the raw, unparsed
+        target text straight to the bridge instead of validating it via
+        ``_parse_address`` first, a malformed target would either raise an
+        uncaught exception or silently issue a bogus 'dcu' command.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        del qapp
+        recorder = CommandRecorder()
+        bridge = _attached_bridge(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        mode_combo = cast(QComboBox, getattr(tab, "_continue_until_mode_combo"))
+        target_input = cast(QLineEdit, getattr(tab, "_continue_until_target_input"))
+        mode_combo.setCurrentText("address")
+        target_input.setText("not-an-address")
+        on_continue_until = cast(Callable[[], None], getattr(tab, "_on_continue_until"))
+
+        on_continue_until()
+
+        assert not any(cmd.startswith("dcu") for cmd in recorder.commands)
+
+
+@pytest.mark.usefixtures("qapp")
+class TestGetBacktrace:
+    """L1/L2/L3 gate: the call-stack / backtrace listing (rizin 'dbt'/'dbtj') must be real and reachable."""
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_dbtj_and_parses_frames() -> None:
+        """``get_backtrace`` must issue rizin's 'dbtj' and parse the real returned frames.
+
+        Falsifiable: if the issued command dropped the 'j' JSON-output
+        suffix (issuing plain 'dbt' instead), the recorder's JSON payload
+        would never be returned and ``_extract_rizin_json`` would fail to
+        parse rizin's plain human-readable backtrace text.
+        """
+        recorder = CommandRecorder({
+            "dbtj": (
+                '[{"n":0,"pc":4198400,"sp":6295552,"fname":"main"},'
+                '{"n":1,"pc":4198464,"ret":4198464,"sp":6295584,"fname":"__libc_start_main"}]'
+            ),
+        })
+        bridge = await _attached_bridge_async(recorder)
+
+        frames = await bridge.get_backtrace()
+
+        assert "dbtj" in recorder.commands
+        assert [f.function_name for f in frames] == ["main", "__libc_start_main"]
+        assert frames[0].address == 0x401000
+        assert frames[1].return_address == 4198464
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_empty_list_returns_no_frames_without_raising() -> None:
+        """``get_backtrace`` must return an empty list, not raise, when rizin reports no frames."""
+        recorder = CommandRecorder({"dbtj": "[]"})
+        bridge = await _attached_bridge_async(recorder)
+
+        frames = await bridge.get_backtrace()
+
+        assert frames == []
+
+    @staticmethod
+    def test_refresh_backtrace_populates_table(qapp: QApplication) -> None:
+        """The Backtrace tab's refresh must issue 'dbtj' and render the real function name.
+
+        Falsifiable: if ``_refresh_backtrace`` never called
+        ``self._bridge.get_backtrace()``, 'dbtj' would never be recorded
+        and the table would stay empty. Broken production line: the
+        ``self._bridge.get_backtrace()`` call in
+        ``DebuggerTab._refresh_backtrace`` (``cutter_debugger_tab.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({
+            "dbtj": '[{"n":0,"pc":4198400,"sp":6295552,"fname":"main"}]',
+        })
+        bridge = _attached_bridge(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        backtrace_table = cast(QTableWidget, getattr(tab, "_backtrace_table"))
+        refresh_backtrace = cast(Callable[[], None], getattr(tab, "_refresh_backtrace"))
+
+        refresh_backtrace()
+
+        assert _pump_until(qapp, lambda: backtrace_table.rowCount() > 0)
+        assert "dbtj" in recorder.commands
+        assert backtrace_table.rowCount() == 1
+        assert _item_text(backtrace_table, 0, 1) == f"0x{4198400:X}"
+        assert _item_text(backtrace_table, 0, 5) == "main"
+
+    @staticmethod
+    def test_detach_clears_backtrace_table(qapp: QApplication) -> None:
+        """Detaching must clear the backtrace table along with the other debugger views.
+
+        Falsifiable: if ``_on_detach_success`` omitted the
+        ``self._backtrace_table.setRowCount(0)`` line, the backtrace rows
+        populated before detach would still be visible afterward.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({
+            "dbtj": '[{"n":0,"pc":4198400,"sp":6295552,"fname":"main"}]',
+        })
+        bridge = _attached_bridge(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        backtrace_table = cast(QTableWidget, getattr(tab, "_backtrace_table"))
+        refresh_backtrace = cast(Callable[[], None], getattr(tab, "_refresh_backtrace"))
+        refresh_backtrace()
+        assert _pump_until(qapp, lambda: backtrace_table.rowCount() > 0)
+        on_detach_success = cast(Callable[[], None], getattr(tab, "_on_detach_success"))
+
+        on_detach_success()
+
+        assert backtrace_table.rowCount() == 0

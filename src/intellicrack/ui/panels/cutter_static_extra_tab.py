@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6 import sip
 from PyQt6.QtWidgets import (
+    QFileDialog,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -573,6 +574,18 @@ class ZignaturesTab(QWidget):
         action_row.addWidget(self._status_label)
         layout.addLayout(action_row)
 
+        flirt_row = QHBoxLayout()
+        self._apply_flirt_btn = QPushButton(self.tr("Apply FLIRT File..."))
+        self._apply_flirt_btn.setObjectName("secondary_button")
+        self._apply_flirt_btn.clicked.connect(self._on_apply_flirt)
+        flirt_row.addWidget(self._apply_flirt_btn)
+        self._export_flirt_btn = QPushButton(self.tr("Export FLIRT File..."))
+        self._export_flirt_btn.setObjectName("secondary_button")
+        self._export_flirt_btn.clicked.connect(self._on_export_flirt)
+        flirt_row.addWidget(self._export_flirt_btn)
+        flirt_row.addStretch()
+        layout.addLayout(flirt_row)
+
         self._table = _make_table(_ZIGNATURE_COLUMNS)
         layout.addWidget(self._table)
 
@@ -775,6 +788,102 @@ class ZignaturesTab(QWidget):
             bytes_val = zig.get("bytes", zig.get("body", ""))
             self._table.setItem(row, 1, QTableWidgetItem(str(bytes_val)))
             self._table.setItem(row, 2, QTableWidgetItem(str(zig.get("realname", zig.get("function", "")))))
+
+    def _on_apply_flirt(self) -> None:
+        """Open a FLIRT signature file and apply it to the loaded binary."""
+        if self._bridge is None:
+            self._status_label.setText(self.tr("No bridge configured"))
+            return
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Apply FLIRT Signature File",
+            "",
+            "FLIRT signatures (*.sig *.pat);;All Files (*)",
+        )
+        if not file_path:
+            return
+        self._apply_flirt_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.apply_flirt_signatures(file_path),
+            on_success=self._on_apply_flirt_success,
+            on_error=self._on_apply_flirt_error,
+            parent=self,
+            event="cutter_apply_flirt_signatures",
+            logger=_logger,
+            level="info",
+            path=file_path,
+        )
+
+    def _on_apply_flirt_success(self, result: object) -> None:
+        """Handle successful FLIRT signature application.
+
+        Args:
+            result: Raw command output returned by the bridge.
+        """
+        if not _widget_is_alive(self):
+            return
+        self._apply_flirt_btn.setEnabled(True)
+        self._status_label.setText(str(result).strip() or self.tr("FLIRT signatures applied"))
+
+    def _on_apply_flirt_error(self, exc: object) -> None:
+        """Handle FLIRT signature application failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        if not _widget_is_alive(self):
+            return
+        self._apply_flirt_btn.setEnabled(True)
+        self._status_label.setText(f"Apply FLIRT failed: {exc}")
+        _logger.warning("cutter_apply_flirt_signatures_failed", error=str(exc))
+
+    def _on_export_flirt(self) -> None:
+        """Export the currently analyzed functions to a FLIRT signature file."""
+        if self._bridge is None:
+            self._status_label.setText(self.tr("No bridge configured"))
+            return
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export FLIRT Signature File",
+            "",
+            "FLIRT sig (*.sig);;FLIRT pat (*.pat)",
+        )
+        if not file_path:
+            return
+        self._export_flirt_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.create_flirt_signatures(file_path),
+            on_success=lambda _: self._on_export_flirt_success(file_path),
+            on_error=self._on_export_flirt_error,
+            parent=self,
+            event="cutter_create_flirt_signatures",
+            logger=_logger,
+            level="info",
+            path=file_path,
+        )
+
+    def _on_export_flirt_success(self, file_path: str) -> None:
+        """Handle successful FLIRT signature export.
+
+        Args:
+            file_path: Path the signature file was written to.
+        """
+        if not _widget_is_alive(self):
+            return
+        self._export_flirt_btn.setEnabled(True)
+        self._status_label.setText(f"FLIRT signatures exported to {file_path}")
+
+    def _on_export_flirt_error(self, exc: object) -> None:
+        """Handle FLIRT signature export failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        if not _widget_is_alive(self):
+            return
+        self._export_flirt_btn.setEnabled(True)
+        self._status_label.setText(f"Export FLIRT failed: {exc}")
+        _logger.warning("cutter_create_flirt_signatures_failed", error=str(exc))
 
 
 class BasicBlocksTab(QWidget):
