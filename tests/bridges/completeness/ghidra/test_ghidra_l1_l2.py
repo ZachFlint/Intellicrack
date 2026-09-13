@@ -2163,6 +2163,73 @@ class TestCreateDataType:
         assert result["kind"] == "union"
 
 
+class TestGetDataTypeTree:
+    """L1/L2 gates for get_data_type_tree (slice 6, work order 06-DT7)."""
+
+    @staticmethod
+    def test_happy_path_returns_every_kind_not_only_structures(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """get_data_type_tree must emit Category.getCategories, never DataTypeManager.getAllStructures.
+
+        Falsifiable: if the implementation were (incorrectly) built by
+        reusing ``get_structures``'s ``getAllStructures()`` iterator
+        instead of walking the category tree, this would only ever
+        surface structures -- defeating the entire point of this item.
+        """
+        fake.eval_response = {
+            "name": "/",
+            "path": "/",
+            "subcategories": [
+                {
+                    "name": "MyTypes",
+                    "path": "/MyTypes",
+                    "subcategories": [],
+                    "data_types": [
+                        {"name": "Color", "kind": "EnumDataType", "size": 4},
+                        {"name": "Point", "kind": "UnionDataType", "size": 8},
+                    ],
+                },
+            ],
+            "data_types": [{"name": "MyStruct", "kind": "StructureDB", "size": 16}],
+        }
+        result = cast("dict[str, Any]", run_async(connected_bridge.get_data_type_tree()))
+        kinds = {dt["kind"] for dt in result["subcategories"][0]["data_types"]}
+        assert kinds == {"EnumDataType", "UnionDataType"}
+        assert "getAllStructures" not in fake.exec_calls[0]
+        assert "getCategories" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_category_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """get_data_type_tree must raise ToolError when the named category path does not exist.
+
+        Falsifiable: if the ``result is None`` not-found guard were
+        removed, this would return a malformed payload instead of
+        raising.
+        """
+        fake.eval_response = None
+        with pytest.raises(ToolError, match="Category not found"):
+            run_async(connected_bridge.get_data_type_tree("/NoSuchCategory"))
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.get_data_type_tree must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here.
+        """
+        fake.eval_response = {"name": "/", "path": "/", "subcategories": [], "data_types": []}
+        result = cast(
+            "dict[str, Any]",
+            run_async(registry.execute_tool_call("ghidra", "ghidra.get_data_type_tree", {})),
+        )
+        assert result["path"] == "/"
+
+
 class TestGetInstructionPcode:
     """L1/L2 gates for get_instruction_pcode (slice 5, row 09 -- work order 05-1)."""
 
