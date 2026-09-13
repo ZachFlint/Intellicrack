@@ -1659,6 +1659,14 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="List of ModuleInfo objects",
                 ),
                 ToolFunction(
+                    name="x64dbg.load_library",
+                    description="Load an additional DLL into the debuggee's process memory",
+                    parameters=[
+                        ToolParameter(name="path", type="string", description="Name or path of the module to load", required=True),
+                    ],
+                    returns="Dict with success, path, base_address",
+                ),
+                ToolFunction(
                     name="x64dbg.get_breakpoints",
                     description="List all breakpoints including those set in the x64dbg GUI",
                     parameters=[],
@@ -6456,6 +6464,44 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         for module in modules:
             module.entry_point = await self._read_module_entry_point(module.base_address, module.name)
         return modules
+
+    async def load_library(self, path: str) -> dict[str, Any]:
+        """Load an additional DLL into the debuggee's process memory.
+
+        Queues the ``loadlib`` console command and reads the resulting
+        base address back via x64dbg's ``$result`` pseudo-variable, the
+        same pseudo-variable readback mechanism :meth:`_await_debuggee_pid`
+        already uses for ``$pid``. x64dbg sets ``$result`` to the loaded
+        module's base address on success, or to ``0`` (or an unparseable
+        value) when the load failed.
+
+        Args:
+            path: Name or path of the module to load.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``path``, and
+            ``base_address`` (hex string of the loaded module's base
+            address).
+
+        Raises:
+            ToolError: If ``$result`` is ``0`` or unparseable after
+                ``loadlib``, indicating the load failed.
+        """
+        await self._send_command(f'loadlib "{path}"')
+        result = await self._send_pipe_command("reg_get", {"name": "$result"})
+        base: int | None = None
+        if isinstance(result, str):
+            base = safe_int_from_str(result, base=0, context="x64dbg_load_library")
+        elif isinstance(result, int):
+            base = result
+        if not base:
+            msg = f"load_library verification failed: $result is {result!r} after loadlib {path!r} (0 or unparseable means the load failed)"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_REMOTE, "path": path},
+            )
+        return {"success": True, "path": path, "base_address": hex(base)}
 
     async def _read_module_entry_point(self, base_address: int, module_name: str) -> int:
         """Read the PE ``AddressOfEntryPoint`` for a loaded module.

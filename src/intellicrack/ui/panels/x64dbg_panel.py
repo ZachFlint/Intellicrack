@@ -641,6 +641,10 @@ class X64DbgPanel(AnalysisPanelBase):
         self._mod_exports_btn.setObjectName("tool_button")
         self._mod_exports_btn.clicked.connect(self._on_show_module_exports)
         mod_btn_row.addWidget(self._mod_exports_btn)
+        self._load_lib_btn = QPushButton(self.tr("Load DLL..."))
+        self._load_lib_btn.setObjectName("tool_button")
+        self._load_lib_btn.clicked.connect(self._on_load_library)
+        mod_btn_row.addWidget(self._load_lib_btn)
         mod_btn_row.addStretch()
         mod_vlayout.addLayout(mod_btn_row)
         self._mod_detail_table = QTableWidget(0, len(_SECTION_DETAIL_COLUMNS))
@@ -2651,6 +2655,43 @@ class X64DbgPanel(AnalysisPanelBase):
             logger=_logger,
             module=module_name,
         )
+
+    def _on_load_library(self) -> None:
+        """Open a file dialog and load the selected DLL into the debuggee."""
+        if self._bridge is None:
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load DLL",
+            "",
+            "DLL Files (*.dll);;All Files (*)",
+        )
+        if not path:
+            return
+        self._load_lib_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.load_library(path),
+            on_success=self._on_load_library_success,
+            on_error=lambda e: self._on_generic_error("Load Library", e, self._load_lib_btn),
+            parent=self,
+            event="x64dbg_load_library",
+            logger=_logger,
+            level="info",
+            path=path,
+        )
+
+    def _on_load_library_success(self, result: object) -> None:
+        """Handle a successful DLL load by reporting the base address and refreshing the module list.
+
+        Args:
+            result: Bridge result dict containing ``base_address``.
+        """
+        self._load_lib_btn.setEnabled(True)
+        base_address: object = ""
+        if isinstance(result, dict):
+            base_address = cast("dict[str, object]", result).get("base_address", "")
+        self._console_output.appendPlainText(f"[+] Library loaded at {base_address}")
+        self._refresh_modules()
 
     def _apply_module_exports(self, result: object) -> None:
         """Populate the detail table with export data.
