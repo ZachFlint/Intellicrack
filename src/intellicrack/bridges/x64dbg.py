@@ -1762,6 +1762,14 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="List of comments",
                 ),
                 ToolFunction(
+                    name="x64dbg.delete_comment",
+                    description="Delete the comment at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address of the comment to delete", required=True),
+                    ],
+                    returns="Dict with address, success, verified",
+                ),
+                ToolFunction(
                     name="x64dbg.enable_breakpoint",
                     description="Enable a breakpoint at an address",
                     parameters=[
@@ -7930,6 +7938,40 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
                     if start <= addr <= end:
                         comments.append({"address": addr_str, "text": text})
         return comments
+
+    async def delete_comment(self, address: int) -> dict[str, Any]:
+        """Delete the comment at an address and verify it is actually gone.
+
+        Mirrors :meth:`set_comment`'s ``commentdel``-then-readback shape,
+        but asserts absence via :meth:`_lookup_comment_text` (an empty
+        string means no comment remains) rather than a matching value.
+
+        Args:
+            address: Address of the comment to delete.
+
+        Returns:
+            dict[str, Any]: Dict with ``address``, ``success``, and
+            ``verified``. ``verified`` is ``True`` when the plugin
+            readback confirmed no comment remains at ``address``;
+            ``False`` only when the plugin lacks ``cmt_list`` so a
+            readback cannot be performed.
+
+        Raises:
+            ToolError: If the readback still observes a comment at
+                ``address`` after ``commentdel``.
+        """
+        await self._send_pipe_command("exec", {"command": f"commentdel {hex(address)}"})
+        observed = await self._lookup_comment_text(address)
+        if observed is None:
+            return {"address": hex(address), "success": True, "verified": False}
+        if observed:
+            msg = f"delete_comment verification failed: comment at {hex(address)} is still {observed!r} after commentdel"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_REMOTE, "address": hex(address), "observed": observed},
+            )
+        return {"address": hex(address), "success": True, "verified": True}
 
     async def enable_breakpoint(self, address: int) -> dict[str, Any]:
         """Enable a breakpoint at an address and verify the debugger applied it.
