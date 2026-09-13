@@ -923,6 +923,36 @@ class ModuleInfo:
 
 
 @dataclass
+class ModuleSectionInfo:
+    """A module's binary section (Module.enumerateSections).
+
+    Attributes:
+        id: Section index/segment/name identifier, exactly as Frida formats it.
+        name: Section name.
+        address: Absolute address of the section.
+        size: Size in bytes.
+    """
+
+    id: str
+    name: str
+    address: int
+    size: int
+
+
+@dataclass
+class ModuleDependencyInfo:
+    """A module's shared-library dependency (Module.enumerateDependencies).
+
+    Attributes:
+        name: Dependency module name.
+        type: One of 'regular', 'weak', 'reexport', 'upward'.
+    """
+
+    name: str
+    type: str
+
+
+@dataclass
 class ProcessInfo:
     """Running process information.
 
@@ -955,6 +985,9 @@ class HookInfo:
         address: Resolved address if known.
         script_id: ID of the script containing the hook.
         active: Whether the hook is currently active.
+        original_trampoline: Pointer to the original implementation's
+            trampoline, when installed via Interceptor.replaceFast (None
+            for every other hook kind).
     """
 
     id: str
@@ -962,6 +995,7 @@ class HookInfo:
     address: int | None
     script_id: str
     active: bool
+    original_trampoline: int | None = None
 
 
 @dataclass
@@ -1252,6 +1286,23 @@ class StalkerTrace:
     thread_id: int
     events: list[StalkerEvent]
     event_count: int
+    duration_ms: float
+
+
+@dataclass
+class StalkerCallSummary:
+    """Aggregated Stalker call-target counts for a thread (Stalker.follow onCallSummary mode).
+
+    Attributes:
+        thread_id: Thread that was traced.
+        counts: Mapping of call target address (hex string, as Frida
+            formats it) to number of calls observed, accumulated across
+            the whole trace duration.
+        duration_ms: Trace duration in milliseconds.
+    """
+
+    thread_id: int
+    counts: dict[str, int]
     duration_ms: float
 
 

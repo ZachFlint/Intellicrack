@@ -103,6 +103,25 @@ def _invoke(widget: object, method_name: str) -> None:
     handler()
 
 
+def _call_config(panel: SandboxPanel) -> dict[str, object]:
+    """Build the create-config mapping using the panel's own production builder.
+
+    Deriving the expected keyword arguments from the real builder keeps the
+    wiring assertions strict about dropped or extra keys while remaining correct
+    as new ``SandboxConfig`` fields are added, instead of hard-coding a key list
+    that silently rots.
+
+    Args:
+        panel: Panel whose configuration builder is invoked.
+
+    Returns:
+        dict[str, object]: The mapping ``_on_create`` splats into ``bridge.create``.
+    """
+    builder = _get_private(panel, "_sandbox_create_config")
+    assert callable(builder), "SandboxPanel._sandbox_create_config must be callable"
+    return cast("dict[str, object]", builder())
+
+
 class TestSandboxConfigRowExistsL3:
     """S2: the toolbar exposes real timeout/network/memory controls, not just the sandbox-type combo."""
 
@@ -182,12 +201,14 @@ class TestSandboxCreateConfigWiringL3:
         assert dispatch_args[0][0] is mock_bridge.create.return_value, (
             f"first positional arg must be the coroutine from bridge.create; got {dispatch_args[0][0]!r}"
         )
-        mock_bridge.create.assert_called_once_with(
-            sandbox_type="windows",
-            qemu_config=None,
-            timeout_seconds=9999,
-            network_enabled=True,
-            memory_limit_mb=65536,
+        mock_bridge.create.assert_called_once()
+        kwargs = cast("dict[str, object]", mock_bridge.create.call_args.kwargs)
+        assert kwargs["timeout_seconds"] == 9999
+        assert kwargs["network_enabled"] is True
+        assert kwargs["memory_limit_mb"] == 65536
+        expected = {"sandbox_type": "windows", "qemu_config": None, **_call_config(panel)}
+        assert kwargs == expected, (
+            f"_on_create must forward exactly the panel's config; mismatched keys: {sorted(set(expected) ^ set(kwargs))}"
         )
 
     def test_on_create_passes_default_config_values_unmodified(
@@ -215,12 +236,14 @@ class TestSandboxCreateConfigWiringL3:
         _invoke(panel, "_on_create")
 
         assert dispatch_args
-        mock_bridge.create.assert_called_once_with(
-            sandbox_type="windows",
-            qemu_config=None,
-            timeout_seconds=300,
-            network_enabled=False,
-            memory_limit_mb=2048,
+        mock_bridge.create.assert_called_once()
+        kwargs = cast("dict[str, object]", mock_bridge.create.call_args.kwargs)
+        assert kwargs["timeout_seconds"] == 300
+        assert kwargs["network_enabled"] is False
+        assert kwargs["memory_limit_mb"] == 2048
+        expected = {"sandbox_type": "windows", "qemu_config": None, **_call_config(panel)}
+        assert kwargs == expected, (
+            f"_on_create must forward exactly the panel's default config; mismatched keys: {sorted(set(expected) ^ set(kwargs))}"
         )
 
     def test_on_create_no_dispatch_without_bridge(

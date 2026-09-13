@@ -11,6 +11,7 @@ debugging via the X64DbgBridge backend.
 from __future__ import annotations
 
 import ctypes
+import string
 import sys
 import threading
 from ctypes import wintypes
@@ -65,8 +66,16 @@ from intellicrack.ui.win32_embed import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Literal
 
-    from intellicrack.bridges.x64dbg import BreakpointType, MemoryProtection, X64DbgBridge
+    from intellicrack.bridges.x64dbg import (
+        BreakpointOpcodeType,
+        BreakpointType,
+        MemoryProtection,
+        MemoryRangeAccess,
+        PageRights,
+        X64DbgBridge,
+    )
     from intellicrack.core.types import ModuleInfo
 
 _logger = get_logger(__name__)
@@ -308,6 +317,37 @@ def _resolve_debugger_window_hwnd(pid: int) -> int | None:
     return find_window_by_pid(pid)
 
 
+def _extended_register_hex_width(widths: dict[str, int], name: str) -> int | None:
+    """Resolve the expected hex-string length for an extended register name.
+
+    Args:
+        widths: Byte-width mapping from ``X64DbgBridge.EXTENDED_REGISTER_WIDTHS``.
+        name: Register name, e.g. ``xmm3``, ``ymm0``, ``st5``, ``mmx2``, ``mxcsr``.
+
+    Returns:
+        int | None: Expected hex-character count, or ``None`` when the
+        register name is not recognized.
+    """
+    lower = name.strip().lower()
+    if lower == "mxcsr":
+        return 8
+    prefix = lower.rstrip(string.digits)
+    byte_width = widths.get(prefix)
+    return None if byte_width is None else byte_width * 2
+
+
+def _is_hex_string(value: str) -> bool:
+    """Check whether ``value`` consists solely of hexadecimal digits.
+
+    Args:
+        value: Candidate string.
+
+    Returns:
+        bool: True when non-empty and every character is 0-9/a-f/A-F.
+    """
+    return bool(value) and all(c in string.hexdigits for c in value)
+
+
 class X64DbgPanel(AnalysisPanelBase):
     """Native Qt panel for x64dbg interactive debugging.
 
@@ -329,6 +369,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._bridge: X64DbgBridge | None = None
         self._is_64bit: bool = True
         self._modules: list[ModuleInfo] = []
+        self._ext_reg_values: dict[str, str] = {}
         self.embedded_container: QWidget | None = None
         self._embed_cancelled: bool = False
         self._embed_timer: QTimer | None = None
@@ -368,6 +409,18 @@ class X64DbgPanel(AnalysisPanelBase):
         self._step_into_btn = self._add_tool_button(toolbar, "Step Into", self._on_step_into)
         self._step_over_btn = self._add_tool_button(toolbar, "Step Over", self._on_step_over)
         self._step_out_btn = self._add_tool_button(toolbar, "Step Out", self._on_step_out)
+        self._step_user_btn = self._add_tool_button(toolbar, "Step User", self._on_step_into_user_code)
+        self._step_system_btn = self._add_tool_button(toolbar, "Step System", self._on_step_into_system_code)
+        self._step_ext_type_combo = QComboBox()
+        self._step_ext_type_combo.addItem("Into", "into")
+        self._step_ext_type_combo.addItem("Over", "over")
+        self._step_ext_type_combo.addItem("Out", "out")
+        self._step_ext_mode_combo = QComboBox()
+        self._step_ext_mode_combo.addItem("Pass Exception", "pass")
+        self._step_ext_mode_combo.addItem("Swallow Exception", "swallow")
+        self._step_ext_btn = self._add_tool_button(toolbar, "Step Ext", self._on_step_extended)
+        toolbar.addWidget(self._step_ext_type_combo)
+        toolbar.addWidget(self._step_ext_mode_combo)
 
         toolbar.addSeparator()
         self._add_toolbar_label(toolbar, "Steps:")
@@ -402,6 +455,12 @@ class X64DbgPanel(AnalysisPanelBase):
         self._run_to_btn = self._add_tool_button(toolbar, "Go", self._on_run_to)
         self._til_ret_btn = self._add_tool_button(toolbar, "Til Ret", self._on_til_ret)
         self._skip_btn = self._add_tool_button(toolbar, "Skip", self._on_skip)
+        self._undo_btn = self._add_tool_button(toolbar, "Undo", self._on_instr_undo)
+        self._run_to_user_btn = self._add_tool_button(toolbar, "User Code", self._on_run_to_user_code)
+        self._add_toolbar_label(toolbar, "Party:")
+        self._run_to_party_input = self._add_toolbar_input(toolbar, "0", max_width=40)
+        self._run_to_party_input.setValidator(QIntValidator(0, 1, self._run_to_party_input))
+        self._run_to_party_btn = self._add_tool_button(toolbar, "Run To Party", self._on_run_to_party)
         toolbar.addSeparator()
         self._add_toolbar_label(toolbar, "IP:")
         self._set_ip_input = self._add_toolbar_input(toolbar, "0x...", max_width=120)
@@ -585,6 +644,26 @@ class X64DbgPanel(AnalysisPanelBase):
         connect_cell_changed(self._reg_table, self._on_register_edited)
         tabs.addTab(self._reg_table, self.tr("Registers"))
 
+        self._dr_table = QTableWidget(0, len(_REG_COLUMNS))
+        self._dr_table.setHorizontalHeaderLabels(_REG_COLUMNS)
+        self._dr_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._dr_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        dr_h = self._dr_table.horizontalHeader()
+        if dr_h is not None:
+            dr_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        connect_cell_changed(self._dr_table, self._on_register_edited)
+        tabs.addTab(self._dr_table, self.tr("Debug Registers"))
+
+        self._ext_reg_table = QTableWidget(0, len(_REG_COLUMNS))
+        self._ext_reg_table.setHorizontalHeaderLabels(_REG_COLUMNS)
+        self._ext_reg_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._ext_reg_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        ext_reg_h = self._ext_reg_table.horizontalHeader()
+        if ext_reg_h is not None:
+            ext_reg_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        connect_cell_changed(self._ext_reg_table, self._on_extended_register_edited)
+        tabs.addTab(self._ext_reg_table, self.tr("FPU / SIMD"))
+
         self._stack_table = QTableWidget(0, len(_STACK_COLUMNS))
         self._stack_table.setHorizontalHeaderLabels(_STACK_COLUMNS)
         self._stack_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -615,6 +694,10 @@ class X64DbgPanel(AnalysisPanelBase):
         self._mod_exports_btn.setObjectName("tool_button")
         self._mod_exports_btn.clicked.connect(self._on_show_module_exports)
         mod_btn_row.addWidget(self._mod_exports_btn)
+        self._load_lib_btn = QPushButton(self.tr("Load DLL..."))
+        self._load_lib_btn.setObjectName("tool_button")
+        self._load_lib_btn.clicked.connect(self._on_load_library)
+        mod_btn_row.addWidget(self._load_lib_btn)
         mod_btn_row.addStretch()
         mod_vlayout.addLayout(mod_btn_row)
         self._mod_detail_table = QTableWidget(0, len(_SECTION_DETAIL_COLUMNS))
@@ -657,6 +740,18 @@ class X64DbgPanel(AnalysisPanelBase):
         self._rename_thread_btn.setObjectName("tool_button")
         self._rename_thread_btn.clicked.connect(self._on_rename_thread)
         thread_btn_row.addWidget(self._rename_thread_btn)
+        self._create_thread_addr_input = QLineEdit()
+        self._create_thread_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._create_thread_addr_input.setPlaceholderText("0x... entry")
+        thread_btn_row.addWidget(self._create_thread_addr_input)
+        self._create_thread_btn = QPushButton(self.tr("Create"))
+        self._create_thread_btn.setObjectName("tool_button")
+        self._create_thread_btn.clicked.connect(self._on_create_thread)
+        thread_btn_row.addWidget(self._create_thread_btn)
+        self._kill_thread_btn = QPushButton(self.tr("Kill"))
+        self._kill_thread_btn.setObjectName("tool_button")
+        self._kill_thread_btn.clicked.connect(self._on_kill_thread)
+        thread_btn_row.addWidget(self._kill_thread_btn)
         thread_btn_row.addStretch()
         thread_vlayout.addLayout(thread_btn_row)
         tabs.addTab(thread_container, self.tr("Threads"))
@@ -754,6 +849,31 @@ class X64DbgPanel(AnalysisPanelBase):
         self._remove_bp_btn.setObjectName("tool_button")
         self._remove_bp_btn.clicked.connect(self._on_remove_breakpoint)
         bp_toolbar.addWidget(self._remove_bp_btn)
+        self._bp_range_size_input = QLineEdit()
+        self._bp_range_size_input.setMaximumWidth(_SIZE_INPUT_MAX_WIDTH)
+        self._bp_range_size_input.setPlaceholderText("size")
+        bp_toolbar.addWidget(self._bp_range_size_input)
+        self._bp_range_access_combo = QComboBox()
+        self._bp_range_access_combo.addItem("Read", "read")
+        self._bp_range_access_combo.addItem("Write", "write")
+        self._bp_range_access_combo.addItem("Execute", "execute")
+        self._bp_range_access_combo.addItem("All", "all")
+        bp_toolbar.addWidget(self._bp_range_access_combo)
+        self._bp_range_singleshot_check = QCheckBox(self.tr("Singleshot"))
+        bp_toolbar.addWidget(self._bp_range_singleshot_check)
+        self._add_range_bp_btn = QPushButton(self.tr("Range BP"))
+        self._add_range_bp_btn.setObjectName("tool_button")
+        self._add_range_bp_btn.clicked.connect(self._on_add_range_breakpoint)
+        bp_toolbar.addWidget(self._add_range_bp_btn)
+        self._bp_default_type_combo = QComboBox()
+        self._bp_default_type_combo.addItem("Short (CC)", "short")
+        self._bp_default_type_combo.addItem("Long (CD03)", "long")
+        self._bp_default_type_combo.addItem("UD2 (0F0B)", "ud2")
+        bp_toolbar.addWidget(self._bp_default_type_combo)
+        self._set_default_bp_type_btn = QPushButton(self.tr("Set Default Type"))
+        self._set_default_bp_type_btn.setObjectName("tool_button")
+        self._set_default_bp_type_btn.clicked.connect(self._on_set_default_breakpoint_type)
+        bp_toolbar.addWidget(self._set_default_bp_type_btn)
         bp_mod_label = QLabel(self.tr("Module:"))
         bp_mod_label.setFont(fm.get_ui_font(9))
         bp_toolbar.addWidget(bp_mod_label)
@@ -924,6 +1044,18 @@ class X64DbgPanel(AnalysisPanelBase):
         self._exc_set_btn.setObjectName("tool_button")
         self._exc_set_btn.clicked.connect(self._on_set_exception_config)
         eval_row.addWidget(self._exc_set_btn)
+        self._exc_remove_btn = QPushButton(self.tr("Remove"))
+        self._exc_remove_btn.setObjectName("tool_button")
+        self._exc_remove_btn.clicked.connect(self._on_remove_exception_config)
+        eval_row.addWidget(self._exc_remove_btn)
+        self._exc_enable_btn = QPushButton(self.tr("Enable"))
+        self._exc_enable_btn.setObjectName("tool_button")
+        self._exc_enable_btn.clicked.connect(self._on_enable_exception_config)
+        eval_row.addWidget(self._exc_enable_btn)
+        self._exc_disable_btn = QPushButton(self.tr("Disable"))
+        self._exc_disable_btn.setObjectName("tool_button")
+        self._exc_disable_btn.clicked.connect(self._on_disable_exception_config)
+        eval_row.addWidget(self._exc_disable_btn)
         eval_row.addStretch()
         console_layout.addWidget(self._make_control_row(eval_row))
         return console_container
@@ -1106,6 +1238,33 @@ class X64DbgPanel(AnalysisPanelBase):
         self._trace_over_btn.setObjectName("tool_button")
         self._trace_over_btn.clicked.connect(self._on_trace_over)
         trace_toolbar.addWidget(self._trace_over_btn)
+        trace_coverage_label = QLabel(self.tr("Coverage:"))
+        trace_coverage_label.setFont(fm.get_ui_font(9))
+        trace_toolbar.addWidget(trace_coverage_label)
+        self._trace_coverage_combo = QComboBox()
+        self._trace_coverage_combo.addItem(self.tr("Beyond (into)"), "trace_into_beyond_coverage")
+        self._trace_coverage_combo.addItem(self.tr("Beyond (over)"), "trace_over_beyond_coverage")
+        self._trace_coverage_combo.addItem(self.tr("Within (into)"), "trace_into_within_coverage")
+        self._trace_coverage_combo.addItem(self.tr("Within (over)"), "trace_over_within_coverage")
+        trace_toolbar.addWidget(self._trace_coverage_combo)
+        self._trace_coverage_btn = QPushButton(self.tr("Coverage Trace"))
+        self._trace_coverage_btn.setObjectName("tool_button")
+        self._trace_coverage_btn.clicked.connect(self._on_trace_coverage)
+        trace_toolbar.addWidget(self._trace_coverage_btn)
+        trace_logfile_label = QLabel(self.tr("Log File:"))
+        trace_logfile_label.setFont(fm.get_ui_font(9))
+        trace_toolbar.addWidget(trace_logfile_label)
+        self._trace_logfile_input = QLineEdit()
+        self._trace_logfile_input.setMinimumWidth(150)
+        trace_toolbar.addWidget(self._trace_logfile_input)
+        self._trace_logfile_browse_btn = QPushButton(self.tr("Browse"))
+        self._trace_logfile_browse_btn.setObjectName("tool_button")
+        self._trace_logfile_browse_btn.clicked.connect(self._on_browse_trace_logfile)
+        trace_toolbar.addWidget(self._trace_logfile_browse_btn)
+        self._trace_logfile_btn = QPushButton(self.tr("Set Log File"))
+        self._trace_logfile_btn.setObjectName("tool_button")
+        self._trace_logfile_btn.clicked.connect(self._on_set_trace_log_file)
+        trace_toolbar.addWidget(self._trace_logfile_btn)
         trace_toolbar.addStretch()
         trace_layout.addWidget(self._make_control_row(trace_toolbar))
         trace_record_toolbar = QHBoxLayout()
@@ -1198,6 +1357,10 @@ class X64DbgPanel(AnalysisPanelBase):
         self._lbl_refresh_btn.setObjectName("tool_button")
         self._lbl_refresh_btn.clicked.connect(self._on_refresh_labels)
         lbl_toolbar.addWidget(self._lbl_refresh_btn)
+        self._lbl_delete_btn = QPushButton(self.tr("Delete"))
+        self._lbl_delete_btn.setObjectName("tool_button")
+        self._lbl_delete_btn.clicked.connect(self._on_delete_label)
+        lbl_toolbar.addWidget(self._lbl_delete_btn)
         lbl_toolbar.addStretch()
         lbl_layout.addWidget(self._make_control_row(lbl_toolbar))
         self._lbl_table = QTableWidget(0, len(_ANNOT_COLUMNS))
@@ -1246,6 +1409,10 @@ class X64DbgPanel(AnalysisPanelBase):
         self._cmt_refresh_btn.setObjectName("tool_button")
         self._cmt_refresh_btn.clicked.connect(self._on_refresh_comments)
         cmt_toolbar.addWidget(self._cmt_refresh_btn)
+        self._cmt_delete_btn = QPushButton(self.tr("Delete"))
+        self._cmt_delete_btn.setObjectName("tool_button")
+        self._cmt_delete_btn.clicked.connect(self._on_delete_comment)
+        cmt_toolbar.addWidget(self._cmt_delete_btn)
         cmt_toolbar.addStretch()
         cmt_layout.addWidget(self._make_control_row(cmt_toolbar))
         self._cmt_table = QTableWidget(0, len(_ANNOT_COLUMNS))
@@ -1314,6 +1481,29 @@ class X64DbgPanel(AnalysisPanelBase):
         self._free_btn.setObjectName("tool_button")
         self._free_btn.clicked.connect(self._on_free_memory)
         mmap_toolbar.addWidget(self._free_btn)
+        protect_addr_label = QLabel(self.tr("Protect:"))
+        protect_addr_label.setFont(fm.get_ui_font(9))
+        mmap_toolbar.addWidget(protect_addr_label)
+        self._protect_addr_input = QLineEdit()
+        self._protect_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._protect_addr_input.setValidator(hex_validator)
+        mmap_toolbar.addWidget(self._protect_addr_input)
+        self._protect_rights_combo = QComboBox()
+        self._protect_rights_combo.addItem("Execute", "execute")
+        self._protect_rights_combo.addItem("ExecuteRead", "execute_read")
+        self._protect_rights_combo.addItem("ExecuteReadWrite", "execute_readwrite")
+        self._protect_rights_combo.addItem("ExecuteWriteCopy", "execute_writecopy")
+        self._protect_rights_combo.addItem("NoAccess", "no_access")
+        self._protect_rights_combo.addItem("ReadOnly", "read_only")
+        self._protect_rights_combo.addItem("ReadWrite", "read_write")
+        self._protect_rights_combo.addItem("WriteCopy", "write_copy")
+        mmap_toolbar.addWidget(self._protect_rights_combo)
+        self._protect_guard_check = QCheckBox(self.tr("Guard"))
+        mmap_toolbar.addWidget(self._protect_guard_check)
+        self._protect_btn = QPushButton(self.tr("Set Protection"))
+        self._protect_btn.setObjectName("tool_button")
+        self._protect_btn.clicked.connect(self._on_set_memory_protection)
+        mmap_toolbar.addWidget(self._protect_btn)
         mmap_toolbar.addStretch()
         mmap_layout.addWidget(self._make_control_row(mmap_toolbar))
         self._mmap_table = QTableWidget(0, len(_MEMMAP_COLUMNS))
@@ -1940,6 +2130,98 @@ class X64DbgPanel(AnalysisPanelBase):
         self._step_over_btn.setEnabled(True)
         self._step_out_btn.setEnabled(True)
 
+    def _on_step_into_user_code(self) -> None:
+        """Step into repeatedly until reaching user-module code.
+
+        Does not disable ``_step_user_btn`` before dispatch: the shared
+        ``_on_step_success``/``_on_step_error`` handlers this reuses for
+        console-message formatting only re-enable ``_step_into_btn``/
+        ``_step_over_btn``/``_step_out_btn``, so disabling a button they
+        never re-enable would leave it permanently disabled after the
+        first click.
+        """
+        if self._bridge is None:
+            return
+
+        run_bridge_coroutine_logged(
+            self._bridge.step_into_user_code(),
+            on_success=lambda r: self._on_step_success("user", r),
+            on_error=lambda e: self._on_step_error("user", e),
+            parent=self,
+            event="x64dbg_step_into_user_code",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_step_into_system_code(self) -> None:
+        """Step into repeatedly until reaching system-module code.
+
+        Does not disable ``_step_system_btn`` before dispatch, for the
+        same reason :meth:`_on_step_into_user_code` does not disable
+        ``_step_user_btn``.
+        """
+        if self._bridge is None:
+            return
+
+        run_bridge_coroutine_logged(
+            self._bridge.step_into_system_code(),
+            on_success=lambda r: self._on_step_success("system", r),
+            on_error=lambda e: self._on_step_error("system", e),
+            parent=self,
+            event="x64dbg_step_into_system_code",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_step_extended(self) -> None:
+        """Single-step using the selected direction and exception-passthrough mode."""
+        if self._bridge is None:
+            return
+
+        type_data = self._step_ext_type_combo.currentData()
+        step_type = cast(
+            "Literal['into', 'over', 'out']",
+            type_data if type_data in {"into", "over", "out"} else "into",
+        )
+        mode_data = self._step_ext_mode_combo.currentData()
+        exception_mode = cast(
+            "Literal['pass', 'swallow']",
+            mode_data if mode_data in {"pass", "swallow"} else "pass",
+        )
+        self._step_ext_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.step_extended(step_type, exception_mode, 1),
+            on_success=self._on_step_extended_success,
+            on_error=self._on_step_extended_error,
+            parent=self,
+            event="x64dbg_step_extended",
+            logger=_logger,
+            level="info",
+            step_type=step_type,
+            exception_mode=exception_mode,
+        )
+
+    def _on_step_extended_success(self, result: object) -> None:
+        """Handle a successful extended-step operation.
+
+        Args:
+            result: New instruction pointer or None.
+        """
+        if isinstance(result, int):
+            self._console_output.appendPlainText(f"[+] Step Ext -> 0x{result:X}")
+        self._step_ext_btn.setEnabled(True)
+        self._refresh_state()
+
+    def _on_step_extended_error(self, exc: object) -> None:
+        """Handle an extended-step failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Step Ext failed: {exc}")
+        _logger.warning("x64dbg_step_extended_failed", error=str(exc))
+        self._step_ext_btn.setEnabled(True)
+
     def _on_step_count(self) -> None:
         """Execute a fixed number of single steps via the Step N control."""
         if self._bridge is None:
@@ -2148,6 +2430,99 @@ class X64DbgPanel(AnalysisPanelBase):
         _logger.warning("x64dbg_bp_set_failed", error=str(exc))
         self._add_bp_btn.setEnabled(True)
 
+    def _on_add_range_breakpoint(self) -> None:
+        """Add a memory-range (guard-page) breakpoint over an address span."""
+        if self._bridge is None:
+            self._console_output.appendPlainText("[!] No bridge configured")
+            return
+
+        addr_text = self._bp_addr_input.text().strip()
+        if not addr_text:
+            return
+
+        try:
+            start = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text, 0)
+        except ValueError:
+            _logger.warning("invalid_range_breakpoint_address", input_text=addr_text)
+            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            return
+
+        size_text = self._bp_range_size_input.text().strip()
+        if not size_text:
+            return
+
+        try:
+            size = int(size_text, 16) if size_text.startswith("0x") else int(size_text, 0)
+        except ValueError:
+            _logger.warning("invalid_range_breakpoint_size", input_text=size_text)
+            self._console_output.appendPlainText(f"[!] Invalid size: {size_text}")
+            return
+
+        access_data = self._bp_range_access_combo.currentData()
+        access = cast(
+            "MemoryRangeAccess",
+            access_data if access_data in {"read", "write", "execute", "all"} else "all",
+        )
+        singleshot = self._bp_range_singleshot_check.isChecked()
+        self._add_range_bp_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.set_memory_range_breakpoint(start, size, access, singleshot=singleshot),
+            on_success=lambda r: self._on_range_bp_added(start, size, r),
+            on_error=self._on_range_bp_add_error,
+            parent=self,
+            event="x64dbg_set_memory_range_breakpoint",
+            logger=_logger,
+            level="info",
+            start=hex(start),
+            size=hex(size),
+            access=access,
+            singleshot=singleshot,
+        )
+
+    def _on_range_bp_added(self, start: int, size: int, result: object) -> None:
+        """Handle successful memory-range breakpoint addition.
+
+        Args:
+            start: The range breakpoint's start address.
+            size: The range breakpoint's size in bytes.
+            result: Result dict from the bridge, containing ``verified``.
+        """
+        verified = bool(cast("dict[str, object]", result).get("verified", False)) if isinstance(result, dict) else False
+        suffix = "" if verified else " (unverified)"
+        self._console_output.appendPlainText(f"[+] Memory range breakpoint set at 0x{start:X}, size 0x{size:X}{suffix}")
+        _logger.info("x64dbg_range_bp_set", start=hex(start), size=hex(size), verified=verified)
+        self._add_range_bp_btn.setEnabled(True)
+        self._refresh_breakpoints()
+
+    def _on_range_bp_add_error(self, exc: object) -> None:
+        """Handle memory-range breakpoint addition failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Failed to set memory range breakpoint: {exc}")
+        _logger.warning("x64dbg_range_bp_set_failed", error=str(exc))
+        self._add_range_bp_btn.setEnabled(True)
+
+    def _on_set_default_breakpoint_type(self) -> None:
+        """Set the default opcode style x64dbg uses for future breakpoints."""
+        if self._bridge is None:
+            return
+        data = self._bp_default_type_combo.currentData()
+        bp_opcode_type = cast(
+            "BreakpointOpcodeType",
+            data if data in {"short", "long", "ud2"} else "short",
+        )
+        run_bridge_coroutine_logged(
+            self._bridge.set_default_breakpoint_type(bp_opcode_type),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Default breakpoint type set to {bp_opcode_type}"),
+            on_error=lambda e: self._on_generic_error("Set Default BP Type", e),
+            parent=self,
+            event="x64dbg_set_default_breakpoint_type",
+            logger=_logger,
+            level="info",
+        )
+
     def _on_remove_breakpoint(self) -> None:
         """Remove the selected breakpoint."""
         row = self._bp_table.currentRow()
@@ -2354,6 +2729,43 @@ class X64DbgPanel(AnalysisPanelBase):
             module=module_name,
         )
 
+    def _on_load_library(self) -> None:
+        """Open a file dialog and load the selected DLL into the debuggee."""
+        if self._bridge is None:
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load DLL",
+            "",
+            "DLL Files (*.dll);;All Files (*)",
+        )
+        if not path:
+            return
+        self._load_lib_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.load_library(path),
+            on_success=self._on_load_library_success,
+            on_error=lambda e: self._on_generic_error("Load Library", e, self._load_lib_btn),
+            parent=self,
+            event="x64dbg_load_library",
+            logger=_logger,
+            level="info",
+            path=path,
+        )
+
+    def _on_load_library_success(self, result: object) -> None:
+        """Handle a successful DLL load by reporting the base address and refreshing the module list.
+
+        Args:
+            result: Bridge result dict containing ``base_address``.
+        """
+        self._load_lib_btn.setEnabled(True)
+        base_address: object = ""
+        if isinstance(result, dict):
+            base_address = cast("dict[str, object]", result).get("base_address", "")
+        self._console_output.appendPlainText(f"[+] Library loaded at {base_address}")
+        self._refresh_modules()
+
     def _apply_module_exports(self, result: object) -> None:
         """Populate the detail table with export data.
 
@@ -2389,7 +2801,13 @@ class X64DbgPanel(AnalysisPanelBase):
         _logger.warning("x64dbg_module_detail_failed", detail_type=detail_type, error=str(exc))
 
     def _on_register_edited(self, row: int, column: int) -> None:
-        """Handle register value edit in table.
+        """Handle a register value edit in the GPR or debug-register table.
+
+        Resolves the originating table from the emitting signal's sender
+        rather than a hardcoded widget, so this one handler is correct
+        for both ``_reg_table`` and ``_dr_table`` (DR0-DR7 are plain
+        registers as far as ``set_register``/``reg_set`` are concerned,
+        with no allowlist).
 
         Args:
             row: Table row index.
@@ -2398,8 +2816,11 @@ class X64DbgPanel(AnalysisPanelBase):
         if column != 1 or self._bridge is None:
             return
 
-        reg_item = self._reg_table.item(row, 0)
-        val_item = self._reg_table.item(row, 1)
+        sender = self.sender()
+        table = sender if isinstance(sender, QTableWidget) else self._reg_table
+
+        reg_item = table.item(row, 0)
+        val_item = table.item(row, 1)
         if reg_item is None or val_item is None:
             return
 
@@ -2413,11 +2834,11 @@ class X64DbgPanel(AnalysisPanelBase):
             self._console_output.appendPlainText(f"[!] Invalid value for {reg_name}: {val_text}")
             return
 
-        self._reg_table.setEnabled(False)
+        table.setEnabled(False)
         run_bridge_coroutine_logged(
             self._bridge.set_register(reg_name, value),
-            on_success=lambda _: self._on_reg_set_success(reg_name, value),
-            on_error=lambda e: self._on_reg_set_error(reg_name, e),
+            on_success=lambda _: self._on_reg_set_success(table, reg_name, value),
+            on_error=lambda e: self._on_reg_set_error(table, reg_name, e),
             parent=self,
             event="x64dbg_set_register",
             logger=_logger,
@@ -2426,26 +2847,106 @@ class X64DbgPanel(AnalysisPanelBase):
             value=hex(value),
         )
 
-    def _on_reg_set_success(self, reg_name: str, value: int) -> None:
+    def _on_reg_set_success(self, table: QTableWidget, reg_name: str, value: int) -> None:
         """Handle successful register set.
 
         Args:
+            table: The register table the edit originated from.
             reg_name: The register name.
             value: The new register value.
         """
         self._console_output.appendPlainText(f"[+] {reg_name} = 0x{value:X}")
-        self._reg_table.setEnabled(True)
+        table.setEnabled(True)
 
-    def _on_reg_set_error(self, reg_name: str, exc: object) -> None:
+    def _on_reg_set_error(self, table: QTableWidget, reg_name: str, exc: object) -> None:
         """Handle register set failure.
 
         Args:
+            table: The register table the edit originated from.
             reg_name: The register that failed to set.
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Failed to set {reg_name}: {exc}")
         _logger.warning("x64dbg_set_register_failed", register=reg_name, error=str(exc))
-        self._reg_table.setEnabled(True)
+        table.setEnabled(True)
+
+    def _on_extended_register_edited(self, row: int, column: int) -> None:
+        """Handle an FPU/SIMD register value edit in the extended-register table.
+
+        Unlike :meth:`_on_register_edited`, the new value is a raw hex
+        byte string (up to 256 bits) rather than an integer, so it is
+        validated against the target register's exact byte width
+        before being dispatched. An edit that fails validation, or
+        whose write the debugger rejects, reverts the cell to its last
+        known-good value rather than keeping a value the CPU never
+        accepted.
+
+        Args:
+            row: Table row index.
+            column: Table column index.
+        """
+        if column != 1 or self._bridge is None:
+            return
+
+        name_item = self._ext_reg_table.item(row, 0)
+        val_item = self._ext_reg_table.item(row, 1)
+        if name_item is None or val_item is None:
+            return
+
+        reg_name = name_item.text()
+        hex_text = val_item.text().strip()
+        previous = self._ext_reg_values.get(reg_name, "")
+
+        expected_chars = _extended_register_hex_width(self._bridge.EXTENDED_REGISTER_WIDTHS, reg_name)
+        if expected_chars is None or len(hex_text) != expected_chars or not _is_hex_string(hex_text):
+            _logger.warning(
+                "invalid_extended_register_value",
+                register=reg_name,
+                input_text=hex_text,
+                expected_chars=expected_chars,
+            )
+            self._console_output.appendPlainText(f"[!] Invalid value for {reg_name}: {hex_text}")
+            with QSignalBlocker(self._ext_reg_table):
+                val_item.setText(previous)
+            return
+
+        self._ext_reg_table.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.set_extended_register(reg_name, hex_text),
+            on_success=lambda _: self._on_ext_reg_set_success(reg_name, hex_text),
+            on_error=lambda e: self._on_ext_reg_set_error(reg_name, e, previous, val_item),
+            parent=self,
+            event="x64dbg_set_extended_register",
+            logger=_logger,
+            level="info",
+            register=reg_name,
+        )
+
+    def _on_ext_reg_set_success(self, reg_name: str, hex_text: str) -> None:
+        """Handle a successful extended-register write.
+
+        Args:
+            reg_name: The register name.
+            hex_text: The newly written hex value.
+        """
+        self._ext_reg_values[reg_name] = hex_text
+        self._console_output.appendPlainText(f"[+] {reg_name} = {hex_text}")
+        self._ext_reg_table.setEnabled(True)
+
+    def _on_ext_reg_set_error(self, reg_name: str, exc: object, previous: str, val_item: QTableWidgetItem) -> None:
+        """Handle a failed extended-register write by reverting the cell.
+
+        Args:
+            reg_name: The register that failed to set.
+            exc: The exception that occurred.
+            previous: The last known-good hex value to restore.
+            val_item: The table cell to revert.
+        """
+        with QSignalBlocker(self._ext_reg_table):
+            val_item.setText(previous)
+        self._console_output.appendPlainText(f"[-] Failed to set {reg_name}: {exc}")
+        _logger.warning("x64dbg_set_extended_register_failed", register=reg_name, error=str(exc))
+        self._ext_reg_table.setEnabled(True)
 
     def _on_read_memory(self) -> None:
         """Read memory at the specified address and display hex dump."""
@@ -2550,6 +3051,8 @@ class X64DbgPanel(AnalysisPanelBase):
     def _refresh_state(self) -> None:
         """Refresh registers, modules, threads, and state after change."""
         self._refresh_registers()
+        self._refresh_debug_registers()
+        self._refresh_extended_registers()
         self._refresh_breakpoints()
         self._refresh_stack()
         self._refresh_modules()
@@ -2653,6 +3156,142 @@ class X64DbgPanel(AnalysisPanelBase):
 
         if rip := getattr(regs, "rip", 0):
             self._refresh_disassembly(rip)
+
+    def _refresh_debug_registers(self) -> None:
+        """Refresh the Debug Registers table (DR0-DR3, DR6, DR7) from the bridge."""
+        if self._bridge is None:
+            return
+
+        run_bridge_coroutine_logged(
+            self._bridge.get_debug_registers(),
+            on_success=self._apply_debug_registers,
+            on_error=lambda exc: self._on_view_refresh_failed(
+                exc,
+                event="x64dbg_refresh_debug_registers_failed",
+                clear_view=self._clear_debug_registers_view,
+            ),
+            parent=self,
+            event="x64dbg_get_debug_registers",
+            logger=_logger,
+        )
+
+    def _clear_debug_registers_view(self) -> None:
+        """Clear the Debug Registers table, used when a dead session is detected."""
+        with QSignalBlocker(self._dr_table):
+            self._dr_table.setRowCount(0)
+
+    def _apply_debug_registers(self, result: object) -> None:
+        """Apply debug-register data to the Debug Registers table.
+
+        Args:
+            result: ``dr0``..``dr7`` dict from the bridge, or ``None``
+                to clear the table.
+        """
+        if not isinstance(result, dict):
+            with QSignalBlocker(self._dr_table):
+                self._dr_table.setRowCount(0)
+            return
+
+        data = cast("dict[str, object]", result)
+        with QSignalBlocker(self._dr_table):
+            self._dr_table.setRowCount(0)
+            for name, value in data.items():
+                if not isinstance(value, int):
+                    continue
+                row = self._dr_table.rowCount()
+                self._dr_table.insertRow(row)
+
+                name_item = QTableWidgetItem(name)
+                name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self._dr_table.setItem(row, 0, name_item)
+
+                val_item = QTableWidgetItem(f"0x{value:016X}" if self._is_64bit else f"0x{value:08X}")
+                self._dr_table.setItem(row, 1, val_item)
+
+    def _refresh_extended_registers(self) -> None:
+        """Refresh the FPU/SIMD table (x87/MMX/XMM/YMM/MXCSR) from the bridge."""
+        if self._bridge is None:
+            return
+
+        run_bridge_coroutine_logged(
+            self._bridge.get_extended_registers(),
+            on_success=self._apply_extended_registers,
+            on_error=lambda exc: self._on_view_refresh_failed(
+                exc,
+                event="x64dbg_refresh_extended_registers_failed",
+                clear_view=self._clear_extended_registers_view,
+            ),
+            parent=self,
+            event="x64dbg_get_extended_registers",
+            logger=_logger,
+        )
+
+    def _clear_extended_registers_view(self) -> None:
+        """Clear the FPU/SIMD table, used when a dead session is detected."""
+        with QSignalBlocker(self._ext_reg_table):
+            self._ext_reg_table.setRowCount(0)
+        self._ext_reg_values.clear()
+
+    def _apply_extended_registers(self, result: object) -> None:
+        """Apply x87/MMX/XMM/YMM register data to the FPU/SIMD table.
+
+        XMM, YMM, ST, MMX, and MXCSR rows are editable and tracked in
+        ``self._ext_reg_values`` so a rejected edit can be reverted;
+        the x87 control/status/tag words are read-only status, so
+        those rows are rendered non-editable.
+
+        Args:
+            result: Extended-register dict from the bridge, or
+                ``None`` to clear the table.
+        """
+        if not isinstance(result, dict):
+            with QSignalBlocker(self._ext_reg_table):
+                self._ext_reg_table.setRowCount(0)
+            self._ext_reg_values.clear()
+            return
+
+        data = cast("dict[str, object]", result)
+
+        def add_row(name: str, text: str, *, editable: bool) -> None:
+            """Append one register row to the FPU/SIMD table.
+
+            Args:
+                name: Register display name, used as the row key.
+                text: Cell text for the value column.
+                editable: Whether the value cell accepts edits.
+            """
+            row = self._ext_reg_table.rowCount()
+            self._ext_reg_table.insertRow(row)
+            name_item = QTableWidgetItem(name)
+            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self._ext_reg_table.setItem(row, 0, name_item)
+            val_item = QTableWidgetItem(text)
+            if not editable:
+                val_item.setFlags(val_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self._ext_reg_table.setItem(row, 1, val_item)
+            if editable:
+                self._ext_reg_values[name] = text
+
+        with QSignalBlocker(self._ext_reg_table):
+            self._ext_reg_table.setRowCount(0)
+            self._ext_reg_values.clear()
+
+            for key in ("xmm", "ymm", "st", "mmx"):
+                values = data.get(key)
+                if not isinstance(values, list):
+                    continue
+                for i, value in enumerate(cast("list[object]", values)):
+                    if isinstance(value, str):
+                        add_row(f"{key}{i}", value, editable=True)
+
+            mxcsr = data.get("mxcsr")
+            if isinstance(mxcsr, str):
+                add_row("mxcsr", mxcsr, editable=True)
+
+            for label in ("x87control", "x87status", "x87tag"):
+                value = data.get(label)
+                if isinstance(value, int):
+                    add_row(label, f"0x{value:04X}", editable=False)
 
     def _refresh_disassembly(self, address: int) -> None:
         """Refresh disassembly view at the given address.
@@ -2982,6 +3621,102 @@ class X64DbgPanel(AnalysisPanelBase):
             self._console_output.appendPlainText(f"[+] Skipped {old_ip} -> {new_ip}")
         self._refresh_state()
 
+    def _on_instr_undo(self) -> None:
+        """Reverse the last stepped instruction."""
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.instr_undo(),
+            on_success=self._on_instr_undo_success,
+            on_error=lambda e: self._on_generic_error("Undo", e),
+            parent=self,
+            event="x64dbg_instr_undo",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_instr_undo_success(self, result: object) -> None:
+        """Handle a successful instruction undo.
+
+        Args:
+            result: Undo result dict from bridge.
+        """
+        if isinstance(result, dict):
+            r = cast("dict[str, object]", result)
+            old_ip: object = r.get("old_ip", "?")
+            new_ip: object = r.get("new_ip", "?")
+            self._console_output.appendPlainText(f"[+] Undo {old_ip} -> {new_ip}")
+        self._refresh_state()
+
+    def _on_run_to_user_code(self) -> None:
+        """Run until execution reaches user-module code."""
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.run_to_user_code(),
+            on_success=self._on_run_to_user_code_success,
+            on_error=lambda e: self._on_generic_error("Run To User Code", e),
+            parent=self,
+            event="x64dbg_run_to_user_code",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_run_to_user_code_success(self, result: object) -> None:
+        """Handle a successful Run To User Code completion.
+
+        Args:
+            result: Result dict from the bridge, containing ``reached_ip``.
+        """
+        reached_ip = "?"
+        if isinstance(result, dict):
+            r = cast("dict[str, object]", result)
+            value = r.get("reached_ip")
+            if isinstance(value, str):
+                reached_ip = value
+        self._console_output.appendPlainText(f"[+] Ran to user code, IP={reached_ip}")
+
+    def _on_run_to_party(self) -> None:
+        """Run until execution reaches a memory page owned by the entered party number."""
+        if self._bridge is None:
+            return
+        party_text = self._run_to_party_input.text().strip()
+        try:
+            party = int(party_text)
+        except ValueError:
+            self._invalid_input(
+                "x64dbg_run_to_party_invalid_party",
+                input_text=party_text,
+                console_msg=f"[!] Invalid party: {party_text}",
+                logger=_logger,
+            )
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.run_to_party(party),
+            on_success=lambda r: self._on_run_to_party_success(party, r),
+            on_error=lambda e: self._on_generic_error("Run To Party", e),
+            parent=self,
+            event="x64dbg_run_to_party",
+            logger=_logger,
+            level="info",
+            party=party,
+        )
+
+    def _on_run_to_party_success(self, party: int, result: object) -> None:
+        """Handle a successful Run To Party completion.
+
+        Args:
+            party: Party number that was run to.
+            result: Result dict from the bridge, containing ``reached_ip``.
+        """
+        reached_ip = "?"
+        if isinstance(result, dict):
+            r = cast("dict[str, object]", result)
+            value = r.get("reached_ip")
+            if isinstance(value, str):
+                reached_ip = value
+        self._console_output.appendPlainText(f"[+] Ran to party {party}, IP={reached_ip}")
+
     def _on_set_ip(self) -> None:
         """Set the instruction pointer to a specific address."""
         if self._bridge is None:
@@ -3302,6 +4037,49 @@ class X64DbgPanel(AnalysisPanelBase):
             condition=condition,
         )
 
+    def _on_trace_coverage(self) -> None:
+        """Run the coverage-boundary trace variant selected in the Coverage combo."""
+        if self._bridge is None:
+            return
+        condition = self._trace_cond_input.text().strip() or None
+        method_data = self._trace_coverage_combo.currentData()
+        method_name = method_data if isinstance(method_data, str) else "trace_into_beyond_coverage"
+        method = getattr(self._bridge, method_name)
+        run_bridge_coroutine_logged(
+            method(condition=condition),
+            on_success=lambda _: self._trace_output.appendPlainText(f"[+] {method_name} started"),
+            on_error=lambda e: self._on_generic_error("Coverage Trace", e),
+            parent=self,
+            event=f"x64dbg_{method_name}",
+            logger=_logger,
+            level="info",
+            condition=condition,
+        )
+
+    def _on_browse_trace_logfile(self) -> None:
+        """Open a file dialog to choose the trace-log destination file."""
+        path, _ = QFileDialog.getSaveFileName(self, self.tr("Select Trace Log File"), "", "Log Files (*.log *.txt);;All Files (*)")
+        if path:
+            self._trace_logfile_input.setText(path)
+
+    def _on_set_trace_log_file(self) -> None:
+        """Redirect trace-log output to the path entered in the Log File field."""
+        if self._bridge is None:
+            return
+        path = self._trace_logfile_input.text().strip()
+        if not path:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.set_trace_log_file(path),
+            on_success=lambda _: self._trace_output.appendPlainText(f"[+] Trace log file set to {path}"),
+            on_error=lambda e: self._on_generic_error("Set Log File", e),
+            parent=self,
+            event="x64dbg_set_trace_log_file",
+            logger=_logger,
+            level="info",
+            path=path,
+        )
+
     def _on_get_trace_record(self) -> None:
         """Query the trace-record hit count at the specified address."""
         if self._bridge is None:
@@ -3483,6 +4261,34 @@ class X64DbgPanel(AnalysisPanelBase):
         self._lbl_addr_input.setText(f"0x{address:X}")
         self._lbl_text_input.setText(text_item.text())
 
+    def _on_delete_label(self) -> None:
+        """Delete the label at the selected row's address."""
+        if self._bridge is None:
+            return
+        row = self._lbl_table.currentRow()
+        if row < 0:
+            return
+        addr_item = self._lbl_table.item(row, 0)
+        if addr_item is None:
+            return
+        address = cast("int", addr_item.data(Qt.ItemDataRole.UserRole))
+        self._lbl_delete_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.delete_label(address),
+            on_success=lambda _: self._on_delete_label_success(),
+            on_error=lambda e: self._on_generic_error("Delete Label", e, self._lbl_delete_btn),
+            parent=self,
+            event="x64dbg_delete_label",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+        )
+
+    def _on_delete_label_success(self) -> None:
+        """Handle successful label deletion by re-enabling the button and refreshing the table."""
+        self._lbl_delete_btn.setEnabled(True)
+        self._on_refresh_labels()
+
     def _on_set_comment_btn(self) -> None:
         """Set a comment at the specified address."""
         if self._bridge is None:
@@ -3570,6 +4376,34 @@ class X64DbgPanel(AnalysisPanelBase):
         address = cast("int", addr_item.data(Qt.ItemDataRole.UserRole))
         self._cmt_addr_input.setText(f"0x{address:X}")
         self._cmt_text_input.setText(text_item.text())
+
+    def _on_delete_comment(self) -> None:
+        """Delete the comment at the selected row's address."""
+        if self._bridge is None:
+            return
+        row = self._cmt_table.currentRow()
+        if row < 0:
+            return
+        addr_item = self._cmt_table.item(row, 0)
+        if addr_item is None:
+            return
+        address = cast("int", addr_item.data(Qt.ItemDataRole.UserRole))
+        self._cmt_delete_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.delete_comment(address),
+            on_success=lambda _: self._on_delete_comment_success(),
+            on_error=lambda e: self._on_generic_error("Delete Comment", e, self._cmt_delete_btn),
+            parent=self,
+            event="x64dbg_delete_comment",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+        )
+
+    def _on_delete_comment_success(self) -> None:
+        """Handle successful comment deletion by re-enabling the button and refreshing the table."""
+        self._cmt_delete_btn.setEnabled(True)
+        self._on_refresh_comments()
 
     @staticmethod
     def _parse_annot_address(raw_address: object) -> int:
@@ -3725,6 +4559,61 @@ class X64DbgPanel(AnalysisPanelBase):
             level="info",
             address=hex(address),
         )
+
+    def _on_set_memory_protection(self) -> None:
+        """Change a memory page's protection rights using the entered address, rights, and guard flag."""
+        if self._bridge is None:
+            return
+        addr_text = self._protect_addr_input.text().strip()
+        if not addr_text:
+            return
+        try:
+            address = int(addr_text, 0)
+        except ValueError:
+            self._invalid_input(
+                "x64dbg_set_memory_protection_invalid_address",
+                input_text=addr_text,
+                console_msg=f"[!] Invalid address: {addr_text}",
+                logger=_logger,
+            )
+            return
+        rights_data = self._protect_rights_combo.currentData()
+        rights_text = rights_data if isinstance(rights_data, str) else "read_only"
+        valid_rights = {
+            "execute",
+            "execute_read",
+            "execute_readwrite",
+            "execute_writecopy",
+            "no_access",
+            "read_only",
+            "read_write",
+            "write_copy",
+        }
+        rights = cast("PageRights", rights_text if rights_text in valid_rights else "read_only")
+        guard = self._protect_guard_check.isChecked()
+        run_bridge_coroutine_logged(
+            self._bridge.set_memory_protection(address, rights, guard=guard),
+            on_success=lambda r: self._on_set_memory_protection_success(address, r),
+            on_error=lambda e: self._on_generic_error("Set Protection", e),
+            parent=self,
+            event="x64dbg_set_memory_protection",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            rights=rights,
+            guard=guard,
+        )
+
+    def _on_set_memory_protection_success(self, address: int, result: object) -> None:
+        """Report a successful protection change and refresh the memory map table.
+
+        Args:
+            address: The address whose page protection was changed.
+            result: Result dict from the bridge; unused beyond confirming success.
+        """
+        del result
+        self._console_output.appendPlainText(f"[+] Protection set at {hex(address)}")
+        self._on_refresh_memmap()
 
     def _on_refresh_patches(self) -> None:
         """Refresh the patches table from the bridge."""
@@ -4162,6 +5051,84 @@ class X64DbgPanel(AnalysisPanelBase):
         self._console_output.appendPlainText(f"[+] Thread {tid} renamed to {name!r}")
         self._refresh_state()
 
+    def _on_create_thread(self) -> None:
+        """Create a new thread in the debuggee at the entered entry address."""
+        if self._bridge is None:
+            return
+        entry_text = self._create_thread_addr_input.text().strip()
+        if not entry_text:
+            return
+        try:
+            entry = int(entry_text, 0)
+        except ValueError:
+            self._invalid_input(
+                "x64dbg_create_thread_invalid_entry",
+                input_text=entry_text,
+                console_msg=f"[!] Invalid address: {entry_text}",
+                logger=_logger,
+            )
+            return
+        self._create_thread_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.create_thread(entry),
+            on_success=self._on_create_thread_success,
+            on_error=lambda e: self._on_generic_error("Create Thread", e, self._create_thread_btn),
+            parent=self,
+            event="x64dbg_create_thread",
+            logger=_logger,
+            level="info",
+            entry=hex(entry),
+        )
+
+    def _on_create_thread_success(self, result: object) -> None:
+        """Handle a successful thread creation by reporting the new tid and refreshing state.
+
+        Args:
+            result: Bridge result dict containing ``tid``.
+        """
+        self._create_thread_btn.setEnabled(True)
+        self._create_thread_addr_input.clear()
+        tid: object = None
+        if isinstance(result, dict):
+            tid = cast("dict[str, object]", result).get("tid")
+        self._console_output.appendPlainText(f"[+] Thread created: tid={tid}")
+        self._refresh_state()
+
+    def _on_kill_thread(self) -> None:
+        """Kill the selected thread."""
+        if self._bridge is None:
+            return
+        row = self._thread_table.currentRow()
+        if row < 0:
+            return
+        tid_item = self._thread_table.item(row, 0)
+        if tid_item is None:
+            return
+        try:
+            tid = int(tid_item.text())
+        except ValueError:
+            _logger.warning("x64dbg_kill_thread_invalid_tid", input_text=tid_item.text())
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.kill_thread(tid),
+            on_success=lambda _: self._on_kill_thread_success(tid),
+            on_error=lambda e: self._on_generic_error("Kill Thread", e),
+            parent=self,
+            event="x64dbg_kill_thread",
+            logger=_logger,
+            level="info",
+            tid=tid,
+        )
+
+    def _on_kill_thread_success(self, tid: int) -> None:
+        """Handle successful thread termination by reporting and refreshing thread state.
+
+        Args:
+            tid: Thread ID that was killed.
+        """
+        self._console_output.appendPlainText(f"[+] Thread {tid} killed")
+        self._refresh_state()
+
     def _on_eval_expression(self) -> None:
         """Evaluate an expression."""
         if self._bridge is None:
@@ -4208,6 +5175,96 @@ class X64DbgPanel(AnalysisPanelBase):
             level="info",
             exception_code=hex(code),
             handling=handling,
+        )
+
+    def _on_remove_exception_config(self) -> None:
+        """Remove an exception breakpoint by code, or all exception breakpoints if the code field is empty."""
+        if self._bridge is None:
+            return
+        code_text = self._exc_code_input.text().strip()
+        code: int | None = None
+        if code_text:
+            try:
+                code = int(code_text, 0)
+            except ValueError:
+                self._invalid_input(
+                    "x64dbg_remove_exception_config_invalid_code",
+                    input_text=code_text,
+                    console_msg=f"[!] Invalid exception code: {code_text}",
+                    logger=_logger,
+                )
+                return
+        run_bridge_coroutine_logged(
+            self._bridge.remove_exception_config(code),
+            on_success=lambda _: self._console_output.appendPlainText(
+                f"[+] Exception breakpoint(s) removed{f' ({hex(code)})' if code is not None else ' (all)'}",
+            ),
+            on_error=lambda e: self._on_generic_error("Remove Exception BP", e),
+            parent=self,
+            event="x64dbg_remove_exception_config",
+            logger=_logger,
+            level="info",
+            exception_code=hex(code) if code is not None else "all",
+        )
+
+    def _on_enable_exception_config(self) -> None:
+        """Enable an exception breakpoint by code, or all exception breakpoints if the code field is empty."""
+        if self._bridge is None:
+            return
+        code_text = self._exc_code_input.text().strip()
+        code: int | None = None
+        if code_text:
+            try:
+                code = int(code_text, 0)
+            except ValueError:
+                self._invalid_input(
+                    "x64dbg_enable_exception_config_invalid_code",
+                    input_text=code_text,
+                    console_msg=f"[!] Invalid exception code: {code_text}",
+                    logger=_logger,
+                )
+                return
+        run_bridge_coroutine_logged(
+            self._bridge.enable_exception_config(code),
+            on_success=lambda _: self._console_output.appendPlainText(
+                f"[+] Exception breakpoint(s) enabled{f' ({hex(code)})' if code is not None else ' (all)'}",
+            ),
+            on_error=lambda e: self._on_generic_error("Enable Exception BP", e),
+            parent=self,
+            event="x64dbg_enable_exception_config",
+            logger=_logger,
+            level="info",
+            exception_code=hex(code) if code is not None else "all",
+        )
+
+    def _on_disable_exception_config(self) -> None:
+        """Disable an exception breakpoint by code, or all exception breakpoints if the code field is empty."""
+        if self._bridge is None:
+            return
+        code_text = self._exc_code_input.text().strip()
+        code: int | None = None
+        if code_text:
+            try:
+                code = int(code_text, 0)
+            except ValueError:
+                self._invalid_input(
+                    "x64dbg_disable_exception_config_invalid_code",
+                    input_text=code_text,
+                    console_msg=f"[!] Invalid exception code: {code_text}",
+                    logger=_logger,
+                )
+                return
+        run_bridge_coroutine_logged(
+            self._bridge.disable_exception_config(code),
+            on_success=lambda _: self._console_output.appendPlainText(
+                f"[+] Exception breakpoint(s) disabled{f' ({hex(code)})' if code is not None else ' (all)'}",
+            ),
+            on_error=lambda e: self._on_generic_error("Disable Exception BP", e),
+            parent=self,
+            event="x64dbg_disable_exception_config",
+            logger=_logger,
+            level="info",
+            exception_code=hex(code) if code is not None else "all",
         )
 
     def _refresh_watchpoints(self) -> None:

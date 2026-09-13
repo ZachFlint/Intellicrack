@@ -14,18 +14,22 @@ from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QComboBox,
+    QFileDialog,
     QHBoxLayout,
     QInputDialog,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.qt_compat import set_header_labels, tree_add_child
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -70,6 +74,37 @@ class DataTypeManagerWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
+
+        browse_title = QLabel(self.tr("Browse Data Types"))
+        browse_title.setFont(fm.get_ui_font_bold(9))
+        layout.addWidget(browse_title)
+
+        browse_row = QHBoxLayout()
+        self._browse_refresh_btn = QPushButton(self.tr("Refresh Tree"))
+        self._browse_refresh_btn.clicked.connect(self._on_refresh_data_type_tree)
+        browse_row.addWidget(self._browse_refresh_btn)
+        browse_row.addStretch()
+        layout.addLayout(browse_row)
+
+        self._data_type_tree = QTreeWidget()
+        set_header_labels(self._data_type_tree, ["Name", "Kind", "Size"])
+        layout.addWidget(self._data_type_tree)
+
+        interchange_title = QLabel(self.tr("Bulk Interchange"))
+        interchange_title.setFont(fm.get_ui_font_bold(9))
+        layout.addWidget(interchange_title)
+
+        interchange_row = QHBoxLayout()
+        self._import_header_btn = QPushButton(self.tr("Import C Header..."))
+        self._import_header_btn.clicked.connect(self._on_import_c_header)
+        interchange_row.addWidget(self._import_header_btn)
+        self._export_gdt_btn = QPushButton(self.tr("Export .gdt..."))
+        self._export_gdt_btn.clicked.connect(self._on_export_data_type_archive)
+        interchange_row.addWidget(self._export_gdt_btn)
+        self._import_gdt_btn = QPushButton(self.tr("Import .gdt..."))
+        self._import_gdt_btn.clicked.connect(self._on_import_data_type_archive)
+        interchange_row.addWidget(self._import_gdt_btn)
+        layout.addLayout(interchange_row)
 
         title = QLabel(self.tr("Create Type"))
         title.setFont(fm.get_ui_font_bold(9))
@@ -237,3 +272,179 @@ class DataTypeManagerWidget(QWidget):
         self._create_btn.setEnabled(True)
         self._result_view.setPlainText(f"Error: {exc}")
         _logger.warning("ghidra_create_data_type_gui_failed", error=str(exc))
+
+    def _on_refresh_data_type_tree(self) -> None:
+        """Fetch and render the full Data Type Manager tree from the bridge."""
+        if self._bridge is None:
+            self._result_view.setPlainText("No bridge configured")
+            return
+        if not self._bridge.state.is_ready():
+            self._result_view.setPlainText("Ghidra not connected")
+            return
+
+        self._browse_refresh_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.get_data_type_tree(),
+            on_success=self._apply_data_type_tree,
+            on_error=self._on_refresh_tree_error,
+            parent=self,
+            event="ghidra_get_data_type_tree",
+            logger=_logger,
+        )
+
+    def _apply_data_type_tree(self, result: object) -> None:
+        """Render the fetched Data Type Manager tree into the browse tree widget.
+
+        Args:
+            result: Recursive category dict from
+                ``GhidraBridge.get_data_type_tree``, with ``name``,
+                ``path``, ``subcategories``, and ``data_types``.
+        """
+        self._browse_refresh_btn.setEnabled(True)
+        self._data_type_tree.clear()
+        if not isinstance(result, dict):
+            self._result_view.setPlainText(str(result))
+            return
+
+        data = cast("dict[str, Any]", result)
+        root_item = QTreeWidgetItem([str(data.get("name", "")), "category", ""])
+        self._data_type_tree.addTopLevelItem(root_item)
+        self._populate_data_type_node(data, root_item)
+
+        self._data_type_tree.expandAll()
+        self._result_view.setPlainText(f"Loaded data type tree at '{data.get('path', '/')}'")
+
+    def _populate_data_type_node(self, node: dict[str, Any], parent_item: QTreeWidgetItem) -> None:
+        """Recursively populate the browse tree from a category node.
+
+        Args:
+            node: Category node dict with ``subcategories`` (nested
+                category dicts) and ``data_types`` (leaf data type
+                dicts with ``name``, ``kind``, and ``size``).
+            parent_item: Parent tree widget item to attach children to.
+        """
+        subcategories = node.get("subcategories", [])
+        if isinstance(subcategories, list):
+            for subcat in cast("list[dict[str, Any]]", subcategories):
+                subcat_item = QTreeWidgetItem([str(subcat.get("name", "")), "category", ""])
+                tree_add_child(parent_item, subcat_item)
+                self._populate_data_type_node(subcat, subcat_item)
+
+        data_types = node.get("data_types", [])
+        if isinstance(data_types, list):
+            for dt in cast("list[dict[str, Any]]", data_types):
+                dt_item = QTreeWidgetItem([str(dt.get("name", "")), str(dt.get("kind", "")), str(dt.get("size", ""))])
+                tree_add_child(parent_item, dt_item)
+
+    def _on_refresh_tree_error(self, exc: object) -> None:
+        """Handle Data Type Manager tree retrieval failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._browse_refresh_btn.setEnabled(True)
+        self._result_view.setPlainText(f"Error: {exc}")
+        _logger.warning("ghidra_get_data_type_tree_gui_failed", error=str(exc))
+
+    def _on_import_c_header(self) -> None:
+        """Prompt for a C header file and import its declared types into the program."""
+        if self._bridge is None or not self._bridge.state.is_ready():
+            self._result_view.setPlainText("Ghidra not connected")
+            return
+        file_path, _ = QFileDialog.getOpenFileName(self, self.tr("Select C Header"), "", self.tr("Header Files (*.h);;All Files (*)"))
+        if not file_path:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.import_c_header(file_path),
+            on_success=self._apply_import_c_header,
+            on_error=lambda e: self._result_view.setPlainText(f"Import header failed: {e}"),
+            parent=self,
+            event="ghidra_import_c_header",
+            logger=_logger,
+            level="info",
+            header_path=file_path,
+        )
+
+    def _apply_import_c_header(self, result: object) -> None:
+        """Render the result of a successful C header import.
+
+        Args:
+            result: Dict with path, types_added, and success from the bridge.
+        """
+        if not isinstance(result, dict):
+            self._result_view.setPlainText(str(result))
+            return
+        info = cast("dict[str, Any]", result)
+        self._result_view.setPlainText(f"Imported {info.get('types_added', 0)} type(s)")
+
+    def _on_export_data_type_archive(self) -> None:
+        """Prompt for a destination .gdt path and export every program data type to it."""
+        if self._bridge is None or not self._bridge.state.is_ready():
+            self._result_view.setPlainText("Ghidra not connected")
+            return
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Export Data Type Archive"),
+            "",
+            self.tr("Ghidra Data Type Archives (*.gdt)"),
+        )
+        if not file_path:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.export_data_type_archive(file_path),
+            on_success=self._apply_export_data_type_archive,
+            on_error=lambda e: self._result_view.setPlainText(f"Export archive failed: {e}"),
+            parent=self,
+            event="ghidra_export_data_type_archive",
+            logger=_logger,
+            level="info",
+            archive_path=file_path,
+        )
+
+    def _apply_export_data_type_archive(self, result: object) -> None:
+        """Render the result of a successful data type archive export.
+
+        Args:
+            result: Dict with path, types_exported, and success from the bridge.
+        """
+        if not isinstance(result, dict):
+            self._result_view.setPlainText(str(result))
+            return
+        info = cast("dict[str, Any]", result)
+        self._result_view.setPlainText(f"Exported {info.get('types_exported', 0)} type(s)")
+
+    def _on_import_data_type_archive(self) -> None:
+        """Prompt for a source .gdt path and import every data type it contains into the program."""
+        if self._bridge is None or not self._bridge.state.is_ready():
+            self._result_view.setPlainText("Ghidra not connected")
+            return
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("Import Data Type Archive"),
+            "",
+            self.tr("Ghidra Data Type Archives (*.gdt)"),
+        )
+        if not file_path:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.import_data_type_archive(file_path),
+            on_success=self._apply_import_data_type_archive,
+            on_error=lambda e: self._result_view.setPlainText(f"Import archive failed: {e}"),
+            parent=self,
+            event="ghidra_import_data_type_archive",
+            logger=_logger,
+            level="info",
+            archive_path=file_path,
+        )
+
+    def _apply_import_data_type_archive(self, result: object) -> None:
+        """Render the result of a successful data type archive import.
+
+        Args:
+            result: Dict with path, types_imported, and success from the bridge.
+        """
+        if not isinstance(result, dict):
+            self._result_view.setPlainText(str(result))
+            return
+        info = cast("dict[str, Any]", result)
+        self._result_view.setPlainText(f"Imported {info.get('types_imported', 0)} type(s)")
