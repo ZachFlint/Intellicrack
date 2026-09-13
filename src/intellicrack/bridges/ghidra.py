@@ -1540,6 +1540,26 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     returns="Dict with name, kind, size, and success",
                 ),
                 ToolFunction(
+                    name="ghidra.get_data_type_tree",
+                    description="Browse the full Data Type Manager tree: categories and every data type kind (enums, unions, typedefs, function-defs, structures)",
+                    parameters=[
+                        ToolParameter(
+                            name="category_path",
+                            type="string",
+                            description="Category path to root the browse at (e.g. /MyTypes); omit for the DTM root category",
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="max_depth",
+                            type="integer",
+                            description="Maximum recursion depth into subcategories",
+                            required=False,
+                            default=32,
+                        ),
+                    ],
+                    returns="Recursive dict of categories, subcategories, and data types of every kind",
+                ),
+                ToolFunction(
                     name="ghidra.create_data",
                     description="Create a data item at an address using a named data type",
                     parameters=[
@@ -7517,6 +7537,79 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             )
             error_message = f"Create data type failed: {e}"
             raise ToolError(error_message) from e
+
+    async def get_data_type_tree(self, category_path: str | None = None, max_depth: int = 32) -> dict[str, Any]:
+        """Browse the full Data Type Manager tree: categories and every data type kind.
+
+        Unlike :meth:`get_structures`, which only surfaces structures
+        via ``DataTypeManager.getAllStructures()``, this walks the
+        category tree itself (``Category.getCategories()``/
+        ``Category.getDataTypes()``) so enums, unions, typedefs, and
+        function-definitions are included alongside structures.
+
+        Args:
+            category_path: Category path to root the browse at (e.g.
+                /MyTypes); omit for the DTM root category.
+            max_depth: Maximum recursion depth into subcategories.
+
+        Returns:
+            dict[str, Any]: Recursive dict of categories,
+            subcategories, and data types of every kind.
+
+        Raises:
+            ToolError: If Ghidra is not connected or ``category_path``
+                does not name an existing category.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        category_path_literal = json.dumps(category_path) if category_path is not None else "None"
+        _logger.debug("data_type_tree_fetching", category_path=category_path, max_depth=max_depth)
+        try:
+            result = await self._execute_remote(f"""
+                MAX_DEPTH = {max_depth}
+
+                def build_data_type(dt):
+                    return {{
+                        'name': dt.getName(),
+                        'kind': dt.getClass().getSimpleName(),
+                        'size': int(dt.getLength()) if dt.getLength() >= 0 else 0,
+                    }}
+
+                def build_category(cat, depth, visited):
+                    key = str(cat.getCategoryPath())
+                    if depth >= MAX_DEPTH or key in visited:
+                        return {{'name': cat.getName(), 'path': key, 'subcategories': [], 'data_types': [], 'truncated': True}}
+                    visited = set(visited)
+                    visited.add(key)
+                    subcats = [build_category(c, depth + 1, visited) for c in cat.getCategories()]
+                    dtypes = [build_data_type(dt) for dt in cat.getDataTypes()]
+                    return {{'name': cat.getName(), 'path': key, 'subcategories': subcats, 'data_types': dtypes}}
+
+                dtm = currentProgram.getDataTypeManager()
+                category_path = {category_path_literal}
+                if category_path is not None:
+                    from ghidra.program.model.data import CategoryPath
+                    root_cat = dtm.getCategory(CategoryPath(category_path))
+                else:
+                    root_cat = dtm.getRootCategory()
+                _dt_tree_payload = None if root_cat is None else build_category(root_cat, 0, set())
+                _dt_tree_payload
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_get_data_type_tree_failed", category_path=category_path)
+            msg = f"Get data type tree failed: {exc}"
+            raise ToolError(msg) from exc
+
+        if result is None:
+            msg = f"Category not found: {category_path!r}"
+            raise ToolError(msg)
+        if not isinstance(result, dict):
+            msg = f"Get data type tree returned no payload for {category_path!r}"
+            raise ToolError(msg)
+        return cast("dict[str, Any]", result)
 
     async def create_data(self, address: int, data_type: str) -> dict[str, Any]:
         """Create a data item at an address using a named data type.
