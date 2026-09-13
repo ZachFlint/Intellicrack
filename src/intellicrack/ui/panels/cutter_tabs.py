@@ -11,14 +11,18 @@ asynchronously queries the bridge and populates the view.
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
+from PyQt6.QtCore import QPoint, Qt
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QHeaderView,
+    QInputDialog,
     QLabel,
     QLineEdit,
+    QMenu,
     QPlainTextEdit,
     QPushButton,
     QTableWidget,
@@ -490,12 +494,35 @@ class FlagsTab(QWidget):
         resolve_row.addStretch()
         layout.addLayout(resolve_row)
 
+        flagspace_row = QHBoxLayout()
+        flagspace_row.addWidget(QLabel("Flagspace:"))
+        self._flagspace_combo = QComboBox()
+        self._flagspace_combo.setEditable(True)
+        flagspace_row.addWidget(self._flagspace_combo)
+        self._add_flagspace_btn = QPushButton("Add/Select")
+        self._add_flagspace_btn.setObjectName("tool_button")
+        flagspace_row.addWidget(self._add_flagspace_btn)
+        self._remove_flagspace_btn = QPushButton("Remove")
+        self._remove_flagspace_btn.setObjectName("tool_button")
+        flagspace_row.addWidget(self._remove_flagspace_btn)
+        self._refresh_flagspaces_btn = QPushButton("Refresh List")
+        self._refresh_flagspaces_btn.setObjectName("secondary_button")
+        flagspace_row.addWidget(self._refresh_flagspaces_btn)
+        flagspace_row.addStretch()
+        layout.addLayout(flagspace_row)
+
         self._table = _make_table(["Name", "Address", "Size"])
         layout.addWidget(self._table)
+
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table.customContextMenuRequested.connect(self._on_flag_context_menu)
 
         self._add_btn.clicked.connect(self._on_add_flag)
         self._resolve_btn.clicked.connect(self._on_resolve_flag)
         self._resolve_addr_input.returnPressed.connect(self._on_resolve_flag)
+        self._add_flagspace_btn.clicked.connect(self._on_add_flagspace)
+        self._remove_flagspace_btn.clicked.connect(self._on_remove_flagspace)
+        self._refresh_flagspaces_btn.clicked.connect(self._on_refresh_flagspaces)
 
     def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
@@ -506,6 +533,7 @@ class FlagsTab(QWidget):
         """
         self._bridge = bridge
         self._fetch_flags()
+        self._on_refresh_flagspaces()
 
     def _fetch_flags(self) -> None:
         """Query the bridge for the current flag list and populate the table."""
@@ -637,6 +665,179 @@ class FlagsTab(QWidget):
         self._resolve_btn.setEnabled(True)
         _logger.warning("cutter_resolve_flag_failed", error=str(exc))
         self._resolve_result_label.setText(f"Resolve failed: {exc}")
+
+    def _on_flag_context_menu(self, pos: QPoint) -> None:
+        """Show a context menu for the flag under the cursor in the flags table.
+
+        Args:
+            pos: Click position from the signal, in the table's viewport coordinates.
+        """
+        row = self._table.rowAt(pos.y())
+        if row < 0:
+            return
+        name_item = self._table.item(row, 0)
+        if name_item is None:
+            return
+        name = name_item.text()
+
+        viewport = self._table.viewport()
+        if viewport is None:
+            return
+
+        menu = QMenu(self)
+        remove_action = QAction("Remove", self)
+        remove_action.triggered.connect(lambda: self._ctx_remove_flag(name))
+        menu.addAction(remove_action)
+        rename_action = QAction("Rename...", self)
+        rename_action.triggered.connect(lambda: self._ctx_rename_flag(name))
+        menu.addAction(rename_action)
+        menu.exec(viewport.mapToGlobal(pos))
+
+    def _ctx_remove_flag(self, name: str) -> None:
+        """Remove a flag by name via the bridge and refresh the table on success.
+
+        Args:
+            name: Flag name to remove.
+        """
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.remove_flag(name),
+            on_success=lambda _: self._on_remove_flag_success(name),
+            on_error=self._on_remove_flag_error,
+            parent=self,
+            event="cutter_remove_flag",
+            logger=_logger,
+            level="info",
+            flag_name=name,
+        )
+
+    def _on_remove_flag_success(self, name: str) -> None:
+        """Report successful flag removal and refresh the flag table.
+
+        Args:
+            name: Name of the flag that was removed.
+        """
+        self._add_result_label.setText(f"Removed flag '{name}'")
+        self._fetch_flags()
+
+    def _on_remove_flag_error(self, exc: object) -> None:
+        """Handle flag removal failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        _logger.warning("cutter_remove_flag_failed", error=str(exc))
+        self._add_result_label.setText(f"Remove failed: {exc}")
+
+    def _ctx_rename_flag(self, old_name: str) -> None:
+        """Prompt for a new name and rename a flag via the bridge.
+
+        Args:
+            old_name: Current flag name to rename.
+        """
+        if self._bridge is None:
+            return
+        new_name, ok = QInputDialog.getText(self, "Rename Flag", "New name:", text=old_name)
+        if not ok or not new_name or new_name == old_name:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.rename_flag(old_name, new_name),
+            on_success=lambda _: self._on_rename_flag_success(old_name, new_name),
+            on_error=self._on_rename_flag_error,
+            parent=self,
+            event="cutter_rename_flag",
+            logger=_logger,
+            level="info",
+            old_name=old_name,
+            new_name=new_name,
+        )
+
+    def _on_rename_flag_success(self, old_name: str, new_name: str) -> None:
+        """Report successful flag rename and refresh the flag table.
+
+        Args:
+            old_name: Flag name prior to the rename.
+            new_name: Flag name after the rename.
+        """
+        self._add_result_label.setText(f"Renamed '{old_name}' -> '{new_name}'")
+        self._fetch_flags()
+
+    def _on_rename_flag_error(self, exc: object) -> None:
+        """Handle flag rename failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        _logger.warning("cutter_rename_flag_failed", error=str(exc))
+        self._add_result_label.setText(f"Rename failed: {exc}")
+
+    def _on_add_flagspace(self) -> None:
+        """Create or select the flagspace named in the flagspace combo box."""
+        if self._bridge is None:
+            return
+        name = self._flagspace_combo.currentText().strip()
+        if not name:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.add_flagspace(name),
+            on_success=lambda _: self._on_refresh_flagspaces(),
+            on_error=lambda e: _logger.warning("cutter_add_flagspace_failed", error=str(e)),
+            parent=self,
+            event="cutter_add_flagspace",
+            logger=_logger,
+            level="info",
+            flagspace_name=name,
+        )
+
+    def _on_remove_flagspace(self) -> None:
+        """Remove the flagspace named in the flagspace combo box."""
+        if self._bridge is None:
+            return
+        name = self._flagspace_combo.currentText().strip()
+        if not name:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.remove_flagspace(name),
+            on_success=lambda _: self._on_refresh_flagspaces(),
+            on_error=lambda e: _logger.warning("cutter_remove_flagspace_failed", error=str(e)),
+            parent=self,
+            event="cutter_remove_flagspace",
+            logger=_logger,
+            level="info",
+            flagspace_name=name,
+        )
+
+    def _on_refresh_flagspaces(self) -> None:
+        """Query the bridge for the current flagspace list and populate the combo box."""
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.list_flagspaces(),
+            on_success=self._apply_flagspaces,
+            on_error=lambda e: _logger.warning("cutter_list_flagspaces_failed", error=str(e)),
+            parent=self,
+            event="cutter_list_flagspaces",
+            logger=_logger,
+        )
+
+    def _apply_flagspaces(self, result: object) -> None:
+        """Populate the flagspace combo box with the queried flagspace names.
+
+        Args:
+            result: List of flagspace dictionaries from the bridge.
+        """
+        items: list[object] = [*result] if isinstance(result, list) else []
+        current = self._flagspace_combo.currentText()
+        self._flagspace_combo.clear()
+        for entry in items:
+            if isinstance(entry, dict):
+                entry_dict = cast("dict[str, Any]", entry)
+                name = str(entry_dict.get("name", ""))
+                if name:
+                    self._flagspace_combo.addItem(name)
+        if current:
+            self._flagspace_combo.setEditText(current)
 
 
 class ROPGadgetsTab(QWidget):
@@ -923,6 +1124,21 @@ class ESILConsoleTab(QWidget):
         until_row.addWidget(self._step_until_btn)
         layout.addLayout(until_row)
 
+        watch_row = QHBoxLayout()
+        self._watch_perm_combo = QComboBox()
+        self._watch_perm_combo.addItems(["r", "w", "rw"])
+        watch_row.addWidget(self._watch_perm_combo)
+        self._watch_kind_combo = QComboBox()
+        self._watch_kind_combo.addItems(["reg", "mem"])
+        watch_row.addWidget(self._watch_kind_combo)
+        self._watch_expr_input = QLineEdit()
+        self._watch_expr_input.setPlaceholderText("register name or memory expression...")
+        watch_row.addWidget(self._watch_expr_input)
+        self._add_watchpoint_btn = QPushButton("Add Watchpoint")
+        self._add_watchpoint_btn.setObjectName("tool_button")
+        watch_row.addWidget(self._add_watchpoint_btn)
+        layout.addLayout(watch_row)
+
         self._bridge: CutterBridge | None = None
         self._esil_initialised: bool = False
         self._eval_btn.clicked.connect(self._on_eval)
@@ -934,6 +1150,7 @@ class ESILConsoleTab(QWidget):
         self._set_pc_btn.clicked.connect(self._on_set_pc)
         self._addr_input.returnPressed.connect(self._on_emulate_function)
         self._step_until_btn.clicked.connect(self._on_step_until)
+        self._add_watchpoint_btn.clicked.connect(self._on_add_watchpoint)
 
     def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Store bridge reference, emit a welcome banner and auto-initialise ESIL memory.
@@ -1141,6 +1358,30 @@ class ESILConsoleTab(QWidget):
             logger=_logger,
             level="info",
             mode=mode,
+        )
+
+    def _on_add_watchpoint(self) -> None:
+        """Add an ESIL watchpoint from the watch-row perm/kind/expression inputs."""
+        if self._bridge is None:
+            return
+        expression = self._watch_expr_input.text().strip()
+        if not expression:
+            return
+        perm = self._watch_perm_combo.currentText()
+        kind_text = self._watch_kind_combo.currentText()
+        kind: Literal["reg", "mem"] = "reg" if kind_text == "reg" else "mem"
+        self._output.appendPlainText(f"> de {perm} {kind} {expression}")
+        run_bridge_coroutine_logged(
+            self._bridge.add_esil_watchpoint(perm, kind, expression),
+            on_success=lambda _: self._output.appendPlainText("[ok] ESIL watchpoint added"),
+            on_error=lambda e: self._output.appendPlainText(f"[error] {e}"),
+            parent=self,
+            event="cutter_add_esil_watchpoint",
+            logger=_logger,
+            level="info",
+            perm=perm,
+            kind=kind,
+            expression=expression,
         )
 
 
