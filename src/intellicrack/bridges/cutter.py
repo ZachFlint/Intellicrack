@@ -701,6 +701,38 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Analysis completion status",
         ),
         _tf(
+            "analyze_basic_blocks",
+            "Run a standalone basic-block analysis pass (Nucleus algorithm, rizin 'aab'), independent of the full aa/aaa/aaaa sweep",
+            [],
+            "None",
+        ),
+        _tf(
+            "analyze_function_calls",
+            "Run a standalone function-call analysis pass (rizin 'aac'), independent of the full aa/aaa/aaaa sweep",
+            [],
+            "None",
+        ),
+        _tf(
+            "analyze_references",
+            "Run a standalone data/code cross-reference analysis pass (rizin 'aar'), independent of the full aa/aaa/aaaa sweep",
+            [
+                _tp(
+                    "n_bytes",
+                    "integer",
+                    "Optional byte-length window to scan instead of the current section",
+                    required=False,
+                ),
+            ],
+            "None",
+        ),
+        _tf(
+            "autoname_functions",
+            "Run a standalone function autoname pass (rizin 'aan'): renames already-discovered functions "
+            "based on referenced strings or callees, independent of the full aa/aaa/aaaa sweep",
+            [],
+            "None",
+        ),
+        _tf(
             "get_functions",
             "Get list of all functions",
             [
@@ -722,6 +754,15 @@ def _build_tool_functions() -> list[ToolFunction]:
             [
                 _tp("address", "integer", "Start address"),
                 _tp("count", "integer", "Number of instructions", required=False, default=20),
+            ],
+            "Disassembly listing",
+        ),
+        _tf(
+            "disassemble_range",
+            "Disassemble a fixed number of bytes starting at an address (rizin 'pD'), rather than a fixed instruction count",
+            [
+                _tp("address", "integer", "Start address"),
+                _tp("length", "integer", "Number of bytes to disassemble"),
             ],
             "Disassembly listing",
         ),
@@ -1964,6 +2005,88 @@ class CutterAnalysisMixin(_CutterBridgeBase):
         self._analyzed = True
         _logger.info("analysis_complete", bridge="cutter", level=level)
 
+    async def analyze_basic_blocks(self) -> None:
+        """Run a standalone basic-block analysis pass (rizin 'aab').
+
+        Runs rizin's Nucleus function/basic-block discovery pass alone,
+        independent of the composite ``aa``/``aaa``/``aaaa`` sweep. Unlike
+        :meth:`analyze`, this targeted sub-pass does not populate the
+        complete function/xref state the :attr:`_analyzed` flag represents
+        elsewhere in this bridge, so it deliberately leaves that flag
+        untouched.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("analyze_basic_blocks_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd("aab", command_timeout=_ANALYSIS_TIMEOUT["quick"])
+        _logger.info("basic_block_analysis_complete", bridge="cutter")
+
+    async def analyze_function_calls(self) -> None:
+        """Run a standalone function-call analysis pass (rizin 'aac').
+
+        Walks the binary for call-class instructions and links
+        caller/callee relationships, independent of the composite
+        ``aa``/``aaa``/``aaaa`` sweep. Like :meth:`analyze_basic_blocks`,
+        this targeted sub-pass does not satisfy the "full analysis ran"
+        contract :attr:`_analyzed` represents, so it leaves that flag
+        untouched.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("analyze_function_calls_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd("aac", command_timeout=_ANALYSIS_TIMEOUT["quick"])
+        _logger.info("function_call_analysis_complete", bridge="cutter")
+
+    async def analyze_references(self, n_bytes: int | None = None) -> None:
+        """Run a standalone data/code cross-reference analysis pass (rizin 'aar').
+
+        Scans the current section (or, when ``n_bytes`` is given, a
+        byte-length window instead of the whole section) for data and code
+        cross-references, independent of the composite ``aa``/``aaa``/
+        ``aaaa`` sweep. Like :meth:`analyze_basic_blocks`, this targeted
+        sub-pass leaves :attr:`_analyzed` untouched.
+
+        Args:
+            n_bytes: Optional byte-length window to scan instead of the
+                current section.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("analyze_references_without_binary", n_bytes=n_bytes)
+            raise ToolError(_ERR_NO_BINARY)
+
+        cmd = f"aar {n_bytes}" if n_bytes is not None else "aar"
+        await self._r2_cmd(cmd, command_timeout=_ANALYSIS_TIMEOUT["quick"])
+        _logger.info("reference_analysis_complete", bridge="cutter", n_bytes=n_bytes)
+
+    async def autoname_functions(self) -> None:
+        """Run a standalone function autoname pass (rizin 'aan').
+
+        Heuristically renames already-discovered functions based on
+        referenced strings or callees, independent of the composite
+        ``aa``/``aaa``/``aaaa`` sweep. Like :meth:`analyze_basic_blocks`,
+        this targeted sub-pass leaves :attr:`_analyzed` untouched.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("autoname_functions_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd("aan", command_timeout=_ANALYSIS_TIMEOUT["quick"])
+        _logger.info("function_autoname_complete", bridge="cutter")
+
     async def get_functions(
         self,
         filter_pattern: str | None = None,
@@ -2261,6 +2384,57 @@ class CutterAnalysisMixin(_CutterBridgeBase):
         _logger.debug("disassemble_requested", address=hex(address), count=count)
         await self._r2_cmd(f"s {address}")
         insns = await self._cmd_json(f"pdj {count}")
+
+        result: list[DisassemblyLine] = []
+        for insn in insns:
+            hex_bytes = _get_str(insn, "bytes")
+            opcode = _get_str(insn, "opcode")
+            opcode_parts = opcode.split() if opcode else []
+            mnemonic = opcode_parts[0] if opcode_parts else ""
+            operands = " ".join(opcode_parts[1:]) if len(opcode_parts) > 1 else ""
+            result.append(
+                DisassemblyLine(
+                    address=_get_int(insn, "offset"),
+                    bytes_str=hex_bytes,
+                    mnemonic=mnemonic,
+                    operands=operands,
+                    comment=_get_optional_str(insn, "comment"),
+                ),
+            )
+
+        return result
+
+    async def disassemble_range(
+        self,
+        address: int,
+        length: int,
+    ) -> list[DisassemblyLine]:
+        """Disassemble a fixed number of bytes starting at an address.
+
+        Unlike :meth:`disassemble`, which disassembles a fixed instruction
+        count (rizin ``pdj``), this disassembles until exactly ``length``
+        bytes of the binary have been consumed (rizin ``pDj``).
+
+        Args:
+            address: Start address.
+            length: Number of bytes to disassemble.
+
+        Returns:
+            list[DisassemblyLine]: List of disassembly lines.
+
+        Raises:
+            ToolError: If disassembly fails.
+        """
+        if self._r2 is None:
+            _logger.warning("disassemble_range_without_binary", address=hex(address), length=length)
+            raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            _logger.warning("disassemble_range_without_analysis", address=hex(address), length=length)
+            raise ToolError(_ERR_NOT_ANALYZED)
+
+        _logger.debug("disassemble_range_requested", address=hex(address), length=length)
+        await self._r2_cmd(f"s {address}")
+        insns = await self._cmd_json(f"pDj {length}")
 
         result: list[DisassemblyLine] = []
         for insn in insns:
