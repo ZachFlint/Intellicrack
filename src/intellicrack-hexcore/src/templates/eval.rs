@@ -119,7 +119,11 @@ impl<'a> TemplateEvaluator<'a> {
                         field.name
                     ))
                 })?;
-                if self.current_offset + size > self.data.len() {
+                if self
+                    .current_offset
+                    .checked_add(size)
+                    .is_none_or(|end| end > self.data.len())
+                {
                     return Err(TemplateError::InsufficientData {
                         offset: self.current_offset,
                         needed: size,
@@ -237,7 +241,11 @@ impl<'a> TemplateEvaluator<'a> {
             TemplateError::ExpressionError(format!("DynamicArray '{name}' size overflow"))
         })?;
 
-        if self.current_offset + total_size > self.data.len() {
+        if self
+            .current_offset
+            .checked_add(total_size)
+            .is_none_or(|end| end > self.data.len())
+        {
             return Err(TemplateError::InsufficientData {
                 offset: self.current_offset,
                 needed: total_size,
@@ -380,7 +388,11 @@ impl<'a> TemplateEvaluator<'a> {
                 "Pointer '{name}' pointer_type has no static size"
             ))
         })?;
-        if self.current_offset + ptr_size > self.data.len() {
+        if self
+            .current_offset
+            .checked_add(ptr_size)
+            .is_none_or(|end| end > self.data.len())
+        {
             return Err(TemplateError::InsufficientData {
                 offset: self.current_offset,
                 needed: ptr_size,
@@ -491,7 +503,11 @@ impl<'a> TemplateEvaluator<'a> {
                 "Enum '{name}' backing_type has no static size"
             ))
         })?;
-        if self.current_offset + size > self.data.len() {
+        if self
+            .current_offset
+            .checked_add(size)
+            .is_none_or(|end| end > self.data.len())
+        {
             return Err(TemplateError::InsufficientData {
                 offset: self.current_offset,
                 needed: size,
@@ -543,7 +559,11 @@ impl<'a> TemplateEvaluator<'a> {
                 "Bitfield '{name}' backing_type has no static size"
             ))
         })?;
-        if self.current_offset + size > self.data.len() {
+        if self
+            .current_offset
+            .checked_add(size)
+            .is_none_or(|end| end > self.data.len())
+        {
             return Err(TemplateError::InsufficientData {
                 offset: self.current_offset,
                 needed: size,
@@ -2715,6 +2735,49 @@ mod tests {
         assert!(
             matches!(err, TemplateError::CircularReference(_)),
             "got {err:?}"
+        );
+    }
+
+    /// F-0081 regression: the sized-field bounds check computed
+    /// `self.current_offset + size > self.data.len()` with a raw `+`. `size`
+    /// comes from `field_size`, which returns `Bytes(n)`/`FixedString(n)`/
+    /// `Padding(n)` verbatim with no upper bound, and `register_json` accepts
+    /// any `n` up to `usize::MAX`. Once a prior field advanced `current_offset`
+    /// past zero, `current_offset + usize::MAX` overflowed: a debug build
+    /// panicked ("attempt to add with overflow") and a release build wrapped
+    /// below `data.len()`, defeating the `InsufficientData` guard and then
+    /// panicking on the reversed slice `data[current_offset..wrapped_end]`. The
+    /// check must use `checked_add` and surface `InsufficientData`, never panic.
+    ///
+    /// Mutation caught: reverting the guard to
+    /// `if self.current_offset + size > self.data.len()` makes this input panic
+    /// with "attempt to add with overflow" under the debug overflow checks
+    /// `cargo test` runs with, so the `InsufficientData` assertion is never
+    /// reached.
+    #[test]
+    fn test_sized_field_offset_overflow_is_insufficient_data_not_panic() {
+        let reg = TemplateRegistry::new();
+        // A one-byte field advances current_offset to 1, then a byte field
+        // whose declared size is usize::MAX makes `1 + usize::MAX` overflow.
+        let fields = vec![
+            fld("head", FieldType::UInt8),
+            fld("huge", FieldType::Bytes(usize::MAX)),
+        ];
+        let data = [0u8; 4];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = eval
+            .evaluate_fields(&fields)
+            .expect_err("an overflowing field size must error, never panic");
+        assert!(
+            matches!(
+                err,
+                TemplateError::InsufficientData {
+                    offset: 1,
+                    needed: usize::MAX,
+                    available: 3
+                }
+            ),
+            "expected InsufficientData{{offset:1, needed:usize::MAX, available:3}}, got {err:?}"
         );
     }
 }

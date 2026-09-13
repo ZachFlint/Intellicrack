@@ -21,7 +21,6 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
-    QToolBar,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -29,8 +28,10 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import compute_toolbar_height
+from intellicrack.ui.panels.process_panel.tab_overflow import install_tab_overflow
 from intellicrack.ui.panels.qt_compat import set_header_labels
 
 
@@ -97,6 +98,7 @@ class ModulesTab(QWidget):
         self._tabs.addTab(self._build_handles(), "Handles")
         self._tabs.addTab(self._build_heaps(), "Heap")
         self._tabs.addTab(self._build_com_net(), "COM/.NET")
+        install_tab_overflow(self._tabs)
         layout.addWidget(self._tabs)
 
     def _build_module_list(self) -> QWidget:
@@ -110,7 +112,7 @@ class ModulesTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Modules", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -135,10 +137,11 @@ class ModulesTab(QWidget):
         set_header_labels(self._mod_tree, ["Module", "Base Address", "Size", "Path", "Entry Point"])
         mod_header = self._mod_tree.header()
         if mod_header is not None:
+            mod_header.setStretchLastSection(False)
             mod_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
             mod_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
             mod_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-            mod_header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+            mod_header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
             mod_header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._mod_tree)
         return tab
@@ -179,7 +182,7 @@ class ModulesTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("DLL Injection", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -204,9 +207,10 @@ class ModulesTab(QWidget):
         self._inject_log.setHorizontalHeaderLabels(["DLL Path", "Status", "Details"])
         ilh = self._inject_log.horizontalHeader()
         if ilh is not None:
-            ilh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            ilh.setStretchLastSection(False)
+            ilh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
             ilh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-            ilh.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+            ilh.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._inject_log)
         return tab
 
@@ -221,7 +225,7 @@ class ModulesTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Module Handles", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -242,8 +246,9 @@ class ModulesTab(QWidget):
         self._handle_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         handle_header = self._handle_table.horizontalHeader()
         if handle_header is not None:
+            handle_header.setStretchLastSection(False)
             handle_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            handle_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            handle_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
             handle_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
             handle_header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._handle_table)
@@ -260,14 +265,21 @@ class ModulesTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Heaps", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
         enum_btn = QPushButton("Enumerate Heaps")
         enum_btn.setObjectName("tool_button")
+        enum_btn.setToolTip("List heap IDs only (Toolhelp32 Heap32ListFirst/Next)")
         enum_btn.clicked.connect(self._refresh_heaps)
         toolbar.addWidget(enum_btn)
+
+        walk_btn = QPushButton("Walk Heap Blocks")
+        walk_btn.setObjectName("tool_button")
+        walk_btn.setToolTip("Walk each heap block-by-block (Heap32First/Next); distinct from Enumerate Heaps, which lists heap IDs only")
+        walk_btn.clicked.connect(self._refresh_heap_blocks)
+        toolbar.addWidget(walk_btn)
 
         tab_layout.addWidget(toolbar)
 
@@ -275,8 +287,21 @@ class ModulesTab(QWidget):
         self._heap_table.setHorizontalHeaderLabels(["Heap ID", "Flags", "Default"])
         hh = self._heap_table.horizontalHeader()
         if hh is not None:
-            hh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            hh.setStretchLastSection(False)
+            hh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._heap_table)
+
+        tab_layout.addWidget(QLabel("Per-Block Heap Walk"))
+
+        self._heap_blocks_tree = QTreeWidget()
+        set_header_labels(self._heap_blocks_tree, ["Heap / Block", "Address", "Size", "Flags"])
+        bh = self._heap_blocks_tree.header()
+        if bh is not None:
+            bh.setStretchLastSection(False)
+            bh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            bh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            bh.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        tab_layout.addWidget(self._heap_blocks_tree)
         return tab
 
     def _build_com_net(self) -> QWidget:
@@ -290,7 +315,7 @@ class ModulesTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("COM/Network", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(compute_toolbar_height(self))
 
@@ -310,9 +335,10 @@ class ModulesTab(QWidget):
         self._com_table.setHorizontalHeaderLabels(["CLSID", "DLL Path", "Loaded Path"])
         ch = self._com_table.horizontalHeader()
         if ch is not None:
+            ch.setStretchLastSection(False)
             ch.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            ch.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-            ch.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+            ch.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            ch.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._com_table)
 
         tab_layout.addWidget(QLabel(".NET CLR Detection"))
@@ -574,6 +600,67 @@ class ModulesTab(QWidget):
             on_error=_on_error,
             parent=self,
             event="process_get_heaps",
+            logger=_logger,
+            pid=self._attached_pid,
+        )
+
+    def _refresh_heap_blocks(self) -> None:
+        """Refresh the per-block heap walk from bridge."""
+        if self._bridge is None or self._attached_pid is None:
+            return
+
+        def _on_success(result: object) -> None:
+            """Rebuild the heap-block tree from ``enumerate_heaps``.
+
+            Each top-level node is one heap (id, block count, flags); its
+            children are the individual blocks walked from that heap
+            (address, size, flags).
+
+            Args:
+                result: Heap-with-blocks list returned by ``enumerate_heaps``.
+            """
+            if not isinstance(result, list):
+                return
+            self._heap_blocks_tree.clear()
+            for heap in cast("list[object]", result):
+                if not isinstance(heap, dict):
+                    continue
+                typed_heap = cast("dict[str, object]", heap)
+                heap_id_raw = typed_heap.get("id", 0)
+                heap_id = heap_id_raw if isinstance(heap_id_raw, int) else 0
+                blocks_raw = typed_heap.get("blocks", [])
+                blocks = cast("list[object]", blocks_raw) if isinstance(blocks_raw, list) else []
+                heap_item = QTreeWidgetItem(
+                    self._heap_blocks_tree,
+                    [f"Heap 0x{heap_id:X} ({len(blocks)} blocks)", "", "", str(typed_heap.get("flags", 0))],
+                )
+                for block in blocks:
+                    if not isinstance(block, dict):
+                        continue
+                    typed_block = cast("dict[str, object]", block)
+                    addr_raw = typed_block.get("address", 0)
+                    addr = addr_raw if isinstance(addr_raw, int) else 0
+                    QTreeWidgetItem(
+                        heap_item,
+                        ["", f"0x{addr:X}", str(typed_block.get("size", 0)), str(typed_block.get("flags", 0))],
+                    )
+                heap_item.setExpanded(True)
+
+        def _on_error(exc: object) -> None:
+            """Log ``heap_blocks_enumerate_failed`` for the attached PID and show Heap Block Walk Error.
+
+            Args:
+                exc: Failure from ``enumerate_heaps`` while rebuilding the heap-block tree.
+            """
+            _logger.warning("heap_blocks_enumerate_failed", pid=self._attached_pid, error=str(exc))
+            QMessageBox.warning(self, "Heap Block Walk Error", str(exc))
+
+        run_bridge_coroutine_logged(
+            self._bridge.enumerate_heaps(self._attached_pid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_enumerate_heaps",
             logger=_logger,
             pid=self._attached_pid,
         )

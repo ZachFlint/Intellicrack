@@ -910,9 +910,18 @@ class _ToolOutputPanelBase(QFrame):
         self.tab_widget = QTabWidget()
         self.tab_widget.setObjectName("analysis_tabs")
         self.tab_widget.setTabsClosable(True)
+        self.tab_widget.setUsesScrollButtons(True)
         tab_bar = self.tab_widget.tabBar()
         if tab_bar is not None:
             tab_bar.setMovable(True)
+            # With every embedded tool open at once (Analysis/Scripts/Stack plus
+            # x64dbg/Cutter/Ghidra/Hex Editor/Frida/Process/Sandbox) the strip
+            # outgrows any reasonable panel width; ElideRight plus the scroll
+            # buttons enabled above means a clipped tab degrades to a legible
+            # "Analysi..." with a nav arrow to reach it, instead of Qt's default
+            # of silently shrinking labels with no indication more tabs exist (D16).
+            tab_bar.setElideMode(Qt.TextElideMode.ElideRight)
+            tab_bar.setUsesScrollButtons(True)
             tab_bar.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             tab_bar.customContextMenuRequested.connect(self._on_tab_context_menu)
         self.tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
@@ -1893,6 +1902,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
             HexEditorPanelProtocol | None: The created HexEditorPanel or None on failure.
         """
         if self._hex_editor_panel is not None:
+            self.tab_widget.setCurrentWidget(cast("QWidget", self._hex_editor_panel))
             return self._hex_editor_panel
 
         try:
@@ -1914,6 +1924,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
         self._hex_editor_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("hex_editor"))
         self._hex_editor_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hex_editor"))
         self.tab_widget.addTab(qwidget, "Hex Editor")
+        self.tab_widget.setCurrentWidget(qwidget)
         self.embedded_tools["hex_editor"] = qwidget
 
         self._wire_hex_editor_state(raw_widget)
@@ -1931,6 +1942,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
             X64DbgWidgetProtocol | None: The created X64DbgPanel or None if creation failed.
         """
         if self._x64dbg_widget is not None:
+            self.tab_widget.setCurrentWidget(cast("QWidget", self._x64dbg_widget))
             return self._x64dbg_widget
 
         try:
@@ -1956,6 +1968,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
         self._x64dbg_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("x64dbg"))
         tab_name = "x64dbg" if is_64bit else "x32dbg"
         self.tab_widget.addTab(qwidget, tab_name)
+        self.tab_widget.setCurrentWidget(qwidget)
         self.embedded_tools["x64dbg"] = qwidget
 
         bridge = self._resolve_x64dbg_bridge()
@@ -2000,6 +2013,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
             CutterWidgetProtocol | None: The created CutterPanel or None if creation failed.
         """
         if self._cutter_widget is not None:
+            self.tab_widget.setCurrentWidget(cast("QWidget", self._cutter_widget))
             return self._cutter_widget
 
         try:
@@ -2021,6 +2035,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
         self._cutter_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("cutter"))
         self._cutter_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("cutter"))
         self.tab_widget.addTab(qwidget, "Cutter")
+        self.tab_widget.setCurrentWidget(qwidget)
         self.embedded_tools["cutter"] = qwidget
 
         bridge = self._resolve_cutter_bridge()
@@ -2064,6 +2079,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
             GhidraWidgetProtocol | None: The created GhidraPanel or None if creation failed.
         """
         if self._ghidra_widget is not None:
+            self.tab_widget.setCurrentWidget(cast("QWidget", self._ghidra_widget))
             return self._ghidra_widget
 
         try:
@@ -2085,6 +2101,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
         self._ghidra_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("ghidra"))
         self._ghidra_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("ghidra"))
         self.tab_widget.addTab(qwidget, "Ghidra")
+        self.tab_widget.setCurrentWidget(qwidget)
         self.embedded_tools["ghidra"] = qwidget
 
         bridge = self._resolve_ghidra_bridge()
@@ -2128,6 +2145,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
             FridaPanelProtocol | None: The created FridaPanel or None if creation failed.
         """
         if self._frida_panel is not None:
+            self.tab_widget.setCurrentWidget(cast("QWidget", self._frida_panel))
             return self._frida_panel
 
         try:
@@ -2149,6 +2167,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
         self._frida_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("frida"))
         self._frida_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("frida"))
         self.tab_widget.addTab(qwidget, "Frida")
+        self.tab_widget.setCurrentWidget(qwidget)
         self.panels["frida"] = qwidget
 
         bridge = self._resolve_frida_bridge()
@@ -2198,6 +2217,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
             ProcessPanelProtocol | None: The created ProcessPanel or None if creation failed.
         """
         if self._process_panel is not None:
+            self.tab_widget.setCurrentWidget(cast("QWidget", self._process_panel))
             return self._process_panel
 
         try:
@@ -2219,6 +2239,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
         self._process_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("process"))
         self._process_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("process"))
         self.tab_widget.addTab(qwidget, "Process")
+        self.tab_widget.setCurrentWidget(qwidget)
         self.panels["process"] = qwidget
 
         bridge = self._resolve_process_bridge()
@@ -2264,6 +2285,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
             SandboxPanelProtocol | None: The created SandboxPanel or None if creation failed.
         """
         if self.sandbox_panel is not None:
+            self.tab_widget.setCurrentWidget(cast("QWidget", self.sandbox_panel))
             return self.sandbox_panel
 
         try:
@@ -2291,6 +2313,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
         self.sandbox_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("sandbox"))
         self.sandbox_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("sandbox"))
         self.tab_widget.addTab(qwidget, "Sandbox")
+        self.tab_widget.setCurrentWidget(qwidget)
         self.panels["sandbox"] = qwidget
 
         if self._pending_sandbox_bridge is not None:

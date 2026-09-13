@@ -578,3 +578,41 @@ class TestReplaceBytes:
         count: int = doc.replace_bytes(b"\xde\xad\xbe\xef", b"\x11\x22\x33\x44")
         assert count == 1
         assert doc.read(5, 4) == b"\x11\x22\x33\x44"
+
+    def test_undo_restores_length_growing_replacement(self, hexcore: types.ModuleType) -> None:
+        """Verify undo after a length-growing replace restores the exact original bytes.
+
+        F-0080: ``replace_bytes`` rebuilds the whole document, so a replacement
+        longer or shorter than the matched pattern changes the document length.
+        The undo record used to be a length-preserving clamping overwrite, which
+        left the extra tail bytes behind (grow) or dropped them (shrink). Undo
+        must restore the byte-exact original document, length included.
+
+        Args:
+            hexcore: The native module fixture.
+        """
+        original = b"foobar"
+        doc = hexcore.HexDocument.open_bytes(original)
+        count: int = doc.replace_bytes(b"o", b"XXX")
+        assert count == 2
+        assert doc.read(0, doc.length()) == b"fXXXXXXbar"
+        assert doc.undo()
+        assert doc.length() == len(original)
+        assert doc.read(0, doc.length()) == original
+
+    def test_undo_restores_length_shrinking_replacement(self, hexcore: types.ModuleType) -> None:
+        """Verify undo after a length-shrinking replace restores the exact original bytes.
+
+        Args:
+            hexcore: The native module fixture.
+        """
+        original = b"foobar"
+        doc = hexcore.HexDocument.open_bytes(original)
+        count: int = doc.replace_bytes(b"oo", b"_")
+        assert count == 1
+        assert doc.read(0, doc.length()) == b"f_bar"
+        assert doc.undo()
+        assert doc.length() == len(original)
+        assert doc.read(0, doc.length()) == original
+        assert doc.redo()
+        assert doc.read(0, doc.length()) == b"f_bar"

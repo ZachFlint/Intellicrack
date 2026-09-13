@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast, override
 
 from PyQt6.QtCore import QRegularExpression, QSignalBlocker, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QAction, QIntValidator, QRegularExpressionValidator
+from PyQt6.QtGui import QAction, QIntValidator, QPixmap, QRegularExpressionValidator
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -54,7 +54,13 @@ from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
 from intellicrack.ui.panels.qt_compat import connect_cell_changed, set_max_block_count
 from intellicrack.ui.panels.x64dbg_advanced_tab import X64DbgAdvancedTab
 from intellicrack.ui.resources.font_manager import FontManager
-from intellicrack.ui.win32_embed import GW_OWNER, MAX_TITLE_LEN, embed_window, find_window_by_pid
+from intellicrack.ui.win32_embed import (
+    GW_OWNER,
+    MAX_TITLE_LEN,
+    capture_window_image,
+    embed_window,
+    find_window_by_pid,
+)
 
 
 if TYPE_CHECKING:
@@ -133,6 +139,9 @@ _SEGMENT_REGS: Final[list[str]] = ["cs", "ds", "es", "fs", "gs", "ss"]
 
 _EMBED_POLL_INTERVAL_MS: Final[int] = 500
 _EMBED_MAX_RETRIES: Final[int] = 20
+_MIRROR_REFRESH_INTERVAL_MS: Final[int] = 250
+_MIRROR_MIN_WIDTH: Final[int] = 200
+_MIRROR_MIN_HEIGHT: Final[int] = 150
 _CLEANUP_STOP_TIMEOUT_S: Final[float] = 5.0
 _MIN_PANE_WIDTH: Final[int] = 150
 _MIN_PANE_HEIGHT: Final[int] = 80
@@ -324,6 +333,9 @@ class X64DbgPanel(AnalysisPanelBase):
         self._embed_cancelled: bool = False
         self._embed_timer: QTimer | None = None
         self._embed_attempts: int = 0
+        self._mirror_timer: QTimer | None = None
+        self._mirror_hwnd: int | None = None
+        self._mirror_label: QLabel | None = None
         super().__init__(parent)
         self._debug_event_received.connect(self._on_debug_event_refresh)
 
@@ -516,6 +528,9 @@ class X64DbgPanel(AnalysisPanelBase):
         """Unregister event callback and stop the x64dbg bridge."""
         self._embed_cancelled = True
         self._stop_embed_timer()
+        self._stop_mirror_timer()
+        self._mirror_hwnd = None
+        self._mirror_label = None
         if self.embedded_container is not None:
             self.embedded_container.setParent(None)
             self.embedded_container = None
@@ -1423,7 +1438,22 @@ class X64DbgPanel(AnalysisPanelBase):
         timer.start()
 
     def _poll_embed_tick(self, pid: int) -> None:
-        """Poll once for the debugger window and embed it when found.
+        """Poll once for the debugger window and embed or mirror it when found.
+
+        x64dbg's window lives on a dedicated hidden Win32 desktop (see
+        :mod:`intellicrack.core.win32_desktop_process`) whenever Intellicrack
+        spawned it itself. ``SetParent`` always fails with
+        ``ERROR_INVALID_PARAMETER`` when the child and new-parent windows
+        belong to different desktops, so :func:`embed_window` can never
+        succeed for that window no matter how many times it is retried
+        (S20-D01) - retrying it just burns the whole poll budget and leaves
+        the "x64dbg Window" tab empty. Once the window is found on a
+        registered hidden desktop, this switches straight to a live
+        ``PrintWindow``-based mirror via :func:`_start_mirror_capture`
+        instead of attempting the reparent. A window found on the calling
+        thread's own (default) desktop - for example x64dbg attached to an
+        externally running process - is not subject to that restriction, so
+        the real native embed is still attempted there first.
 
         Args:
             pid: Process ID of the x64dbg instance whose window to capture.
@@ -1433,8 +1463,13 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._embed_attempts += 1
+        on_hidden_desktop = get_desktop_handle_for_pid(pid) is not None
         hwnd = _resolve_debugger_window_hwnd(pid)
         if hwnd is not None:
+            if on_hidden_desktop:
+                self._stop_embed_timer()
+                self._start_mirror_capture(hwnd, pid)
+                return
             container = embed_window(hwnd, self.embed_host)
             if container is not None:
                 self._stop_embed_timer()
@@ -1444,6 +1479,88 @@ class X64DbgPanel(AnalysisPanelBase):
         if self._embed_attempts >= _EMBED_MAX_RETRIES:
             self._stop_embed_timer()
             _logger.warning("x64dbg_embed_polling_exhausted", pid=pid, attempts=self._embed_attempts)
+
+    def _start_mirror_capture(self, hwnd: int, pid: int) -> None:
+        """Show a live ``PrintWindow``-based mirror of the debugger window.
+
+        x64dbg's window is deliberately kept on a hidden desktop that is
+        never made the input desktop, so it can be located via
+        ``EnumDesktopWindows`` but never reparented into this process's Qt
+        hierarchy via ``SetParent`` (S20-D01). ``PrintWindow`` is not
+        desktop-scoped, so this periodically renders the window's live
+        content into a ``QImage`` via
+        :func:`intellicrack.ui.win32_embed.capture_window_image` and paints
+        it into the "x64dbg Window" tab, which is the closest genuine
+        equivalent of embedding available for a window that can never be
+        reparented across desktops. The debug session itself is driven
+        entirely over the named-pipe bridge, so this view is read-only by
+        construction - no interaction path with the mirrored window is
+        implied or needed.
+
+        Args:
+            hwnd: Native window handle of the debugger window to mirror.
+            pid: Process ID of the mirrored x64dbg instance.
+        """
+        if self._embed_cancelled:
+            return
+
+        self._stop_mirror_timer()
+
+        layout = self.embed_host.layout()
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget() if item is not None else None
+                if widget is not None:
+                    widget.setParent(None)
+
+            label = QLabel()
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setMinimumSize(_MIRROR_MIN_WIDTH, _MIRROR_MIN_HEIGHT)
+            layout.addWidget(label)
+            self._mirror_label = label
+
+        self._mirror_hwnd = hwnd
+        timer = QTimer(self)
+        timer.setInterval(_MIRROR_REFRESH_INTERVAL_MS)
+        timer.timeout.connect(self._refresh_mirror_frame)
+        self._mirror_timer = timer
+        timer.start()
+        self._refresh_mirror_frame()
+        self._main_tabs.setCurrentWidget(self.embed_host)
+        _logger.info("x64dbg_window_mirrored", pid=pid, hwnd=hex(hwnd))
+
+    def _refresh_mirror_frame(self) -> None:
+        """Capture and display the current frame of the mirrored debugger window.
+
+        Invoked on the mirror-refresh timer. A single capture failure (for
+        example a transient state while the debugger window repaints, or a
+        momentary ``PrintWindow`` rejection) leaves the last successfully
+        rendered frame on screen rather than clearing it, since one failed
+        poll does not mean the window is gone; the timer only stops once
+        the mirror itself is torn down via :meth:`_stop_mirror_timer`.
+        """
+        if self._mirror_hwnd is None or self._mirror_label is None:
+            self._stop_mirror_timer()
+            return
+
+        image = capture_window_image(self._mirror_hwnd)
+        if image is None:
+            return
+
+        pixmap = QPixmap.fromImage(image)
+        scaled = pixmap.scaled(
+            self._mirror_label.size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        self._mirror_label.setPixmap(scaled)
+
+    def _stop_mirror_timer(self) -> None:
+        """Stop and discard the mirror-refresh timer if one is running."""
+        if self._mirror_timer is not None:
+            self._mirror_timer.stop()
+            self._mirror_timer = None
 
     def _embed_window_ready(self, container: QWidget, pid: int) -> None:
         """Install the embedded debugger window container into the embed host.
@@ -1677,6 +1794,9 @@ class X64DbgPanel(AnalysisPanelBase):
             self._reg_table.setRowCount(0)
 
         self._stop_embed_timer()
+        self._stop_mirror_timer()
+        self._mirror_hwnd = None
+        self._mirror_label = None
         if self.embedded_container is not None:
             self.embedded_container.setParent(None)
             self.embedded_container = None
@@ -3101,7 +3221,7 @@ class X64DbgPanel(AnalysisPanelBase):
         log_text = self._trace_log_input.text().strip() or None
         run_bridge_coroutine_logged(
             self._bridge.trace_start(condition=condition, log_text=log_text),
-            on_success=lambda _: self._trace_output.appendPlainText("[+] Trace started"),
+            on_success=self._on_trace_start_complete,
             on_error=lambda e: self._on_generic_error("Trace Start", e),
             parent=self,
             event="x64dbg_trace_start",
@@ -3109,6 +3229,32 @@ class X64DbgPanel(AnalysisPanelBase):
             level="info",
             condition=condition,
         )
+
+    def _on_trace_start_complete(self, result: object) -> None:
+        """Report the trace file and applied log settings after trace_start succeeds.
+
+        The Condition/Log fields only take effect once ``trace_start``
+        returns ``log_text``/``log_condition`` back (see
+        ``X64DbgBridge.trace_start``), so surfacing them here confirms to
+        the operator that a typed condition genuinely applied instead of
+        being silently dropped.
+
+        Args:
+            result: Result dict from ``X64DbgBridge.trace_start``.
+        """
+        trace_file = ""
+        log_note = ""
+        if isinstance(result, dict):
+            result_map = cast("dict[str, object]", result)
+            trace_file = str(result_map.get("trace_file", ""))
+            applied_log_text = result_map.get("log_text")
+            if applied_log_text is not None:
+                applied_condition = result_map.get("log_condition")
+                if applied_condition is not None:
+                    log_note = f" (log {applied_log_text!r} when {applied_condition!r})"
+                else:
+                    log_note = f" (log {applied_log_text!r})"
+        self._trace_output.appendPlainText(f"[+] Trace started -> {trace_file}{log_note}")
 
     def _on_trace_stop(self) -> None:
         """Stop trace recording."""

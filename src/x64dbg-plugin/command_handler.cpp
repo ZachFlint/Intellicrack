@@ -317,6 +317,7 @@ void CommandHandler::register_commands() {
     m_commands["trace_record"] = [](const PipeMessage& m) { return cmd_trace_record(m); };
     m_commands["trace_record_set"] = [](const PipeMessage& m) { return cmd_trace_record_set(m); };
     m_commands["plugin_list"] = [](const PipeMessage& m) { return cmd_plugin_list(m); };
+    m_commands["script_abort"] = [](const PipeMessage& m) { return cmd_script_abort(m); };
     m_commands["thread_detail"] = [](const PipeMessage& m) { return cmd_thread_detail(m); };
 }
 
@@ -1899,21 +1900,34 @@ PipeResponse CommandHandler::cmd_watch_add(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t expr_pos = msg.params.find("\"expression\"");
-    if (expr_pos == std::string::npos) {
+    // Extract with the escape-aware helper (not the positional scan) so an
+    // embedded escaped quote is decoded rather than left to terminate the
+    // value early or throw from a substr(npos) on a malformed params object.
+    std::string expr;
+    if (!extract_json_string(msg.params, "expression", expr) || expr.empty()) {
         response.success = false;
-        response.error = "Missing 'expression' parameter";
+        response.error = "Missing or invalid 'expression' parameter";
         return response;
     }
 
-    size_t start = msg.params.find('"', expr_pos + 12);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-    std::string expr = msg.params.substr(start, end - start);
+    // The expression is interpolated into an `AddWatch "<expr>"` command line.
+    // A double quote would close the quoted argument and let the remainder
+    // inject further debugger commands (which drive full write access to the
+    // debuggee); a control character (newline/carriage return especially) can
+    // terminate or corrupt the command line the same way. A legitimate x64dbg
+    // watch expression contains neither, so reject them before dispatch.
+    bool expr_invalid =
+        std::ranges::any_of(expr, [](char c) { return c == '"' || static_cast<unsigned char>(c) < 0x20; });
+    if (expr_invalid) {
+        response.success = false;
+        response.error = "Invalid 'expression' parameter";
+        return response;
+    }
 
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd), "AddWatch \"%s\"", expr.c_str());
-    bool result = DbgCmdExec(cmd);
+    // Build the command in a std::string so a long expression cannot be
+    // silently truncated by a fixed buffer into a different, wrong command.
+    std::string command = "AddWatch \"" + expr + "\"";
+    bool result = DbgCmdExec(command.c_str());
 
     response.success = result;
     response.result = result ? "true" : "false";
@@ -2085,15 +2099,86 @@ PipeResponse CommandHandler::cmd_trace_record_set(const PipeMessage& msg) {
 }
 
 PipeResponse CommandHandler::cmd_plugin_list(const PipeMessage& msg) {
-    // Fire-and-forget: `pluglist` writes the loaded-plugin roster to x64dbg's
-    // own log. The SDK exposes no enumeration of loaded plugins to marshal back
-    // over the pipe, so the response reports only that the command was accepted.
+    // x64dbg registers no `pluglist` command - its plugin section exposes only
+    // plugload/plugunload/plugreload - and the SDK offers no enumeration of
+    // loaded plugins. The roster is therefore read from the directory x64dbg
+    // loads its plugins from, which is the directory holding this module.
     PipeResponse response;
     response.id = msg.id;
 
-    bool result = DbgCmdExec("pluglist");
-    response.success = result;
-    response.result = result ? "true" : "false";
+    HMODULE self = nullptr;
+    if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           reinterpret_cast<LPCSTR>(&CommandHandler::cmd_plugin_list), &self) == 0) {
+        response.success = false;
+        response.error = "Unable to resolve the bridge plugin module handle";
+        return response;
+    }
+
+    char module_path[MAX_PATH] = {};
+    const DWORD length = GetModuleFileNameA(self, module_path, static_cast<DWORD>(sizeof(module_path)));
+    if (length == 0 || length >= sizeof(module_path)) {
+        response.success = false;
+        response.error = "Unable to resolve the bridge plugin module path";
+        return response;
+    }
+
+    std::string directory(module_path, length);
+    const size_t separator = directory.find_last_of("\\/");
+    if (separator == std::string::npos) {
+        response.success = false;
+        response.error = "Bridge plugin module path has no directory component";
+        return response;
+    }
+    directory.erase(separator);
+
+#ifdef _WIN64
+    const std::string pattern = directory + "\\*.dp64";
+#else
+    const std::string pattern = directory + "\\*.dp32";
+#endif
+
+    WIN32_FIND_DATAA find_data = {};
+    HANDLE find = FindFirstFileA(pattern.c_str(), &find_data);
+    if (find == INVALID_HANDLE_VALUE) {
+        response.success = true;
+        response.result = "[]";
+        return response;
+    }
+
+    std::ostringstream ss;
+    ss << "[";
+    bool first = true;
+    do {
+        if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+            continue;
+        }
+        const std::string file_name(find_data.cFileName);
+        const size_t dot = file_name.find_last_of('.');
+        const std::string stem = (dot == std::string::npos) ? file_name : file_name.substr(0, dot);
+        if (!first) {
+            ss << ",";
+        }
+        first = false;
+        ss << "{\"name\":\"" << escape_json(stem) << "\",\"file\":\"" << escape_json(file_name) << "\"}";
+    } while (FindNextFileA(find, &find_data) != 0);
+    FindClose(find);
+    ss << "]";
+
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_script_abort(const PipeMessage& msg) {
+    // x64dbg registers no `scriptabort` console command; the bridge SDK exposes
+    // the abort entry point directly, which is what the GUI's stop button uses.
+    PipeResponse response;
+    response.id = msg.id;
+
+    DbgScriptAbort();
+
+    response.success = true;
+    response.result = "true";
     return response;
 }
 

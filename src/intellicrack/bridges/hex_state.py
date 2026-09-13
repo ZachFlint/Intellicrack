@@ -36,6 +36,7 @@ Re-entrant emissions triggered from inside a callback are queued and dispatched 
 ordering across observers).  The cap aborts genuinely runaway callback chains while still allowing legitimate downstream events to flow.
 """
 
+
 class HexDocumentEvent(enum.Enum):
     """Event types emitted by HexDocumentState.
 

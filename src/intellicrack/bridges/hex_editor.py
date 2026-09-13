@@ -5997,6 +5997,21 @@ class HexEditorSelectionMixin(HexEditorEditMixin):
         _logger.debug("get_cursor_position_started", cursor_offset=hex(self._cursor_offset))
         return self._cursor_offset
 
+    def update_cursor_from_gui(self, offset: int) -> None:
+        """Synchronously update the stored cursor offset from a GUI-driven change.
+
+        Called by the panel when the user moves the caret via mouse or
+        keyboard navigation in the hex widget so that bridge callers (AI
+        tools, CLI scripts) see the current cursor position without going
+        through an async round-trip. Does not fire any state-holder event;
+        the panel's ``_on_cursor_moved`` handler already dispatches
+        ``CURSOR_MOVED`` via the state holder before calling this.
+
+        Args:
+            offset: New cursor byte offset.
+        """
+        self._cursor_offset = offset
+
     async def get_alignment_grid(self) -> int:
         """Get the current alignment grid size used by the visual display.
 
@@ -6093,6 +6108,22 @@ class HexEditorSelectionMixin(HexEditorEditMixin):
         if self.state_holder is not None:
             self.state_holder.notify_alignment_grid_changed(size, source="bridge")
         return True
+
+    def update_alignment_grid_from_gui(self, size: int) -> None:
+        """Synchronously update the stored alignment grid size from a GUI-driven change.
+
+        Called by the panel when the user picks an alignment grid size
+        from the toolbar combo box so that bridge callers (AI tools, CLI
+        scripts) see the grid size the user actually picked without going
+        through an async round-trip. Does not fire any state-holder
+        event; the panel's ``_on_alignment_changed`` handler already
+        dispatches ``ALIGNMENT_GRID_CHANGED`` via the state holder before
+        calling this.
+
+        Args:
+            size: New alignment grid size in bytes, or ``0`` for disabled.
+        """
+        self._alignment_grid_size = size
 
 
 class HexEditorSearchMixin(HexEditorSelectionMixin):
@@ -8721,6 +8752,22 @@ class HexEditorDisplayMixin(HexEditorExportMixin):
         _logger.debug("get_display_mode_started", mode=self._display_mode)
         return self._display_mode
 
+    def update_display_mode_from_gui(self, mode: str) -> None:
+        """Synchronously update the stored display mode from a GUI-driven change.
+
+        Called by the panel when the user picks a display mode from the
+        toolbar combo box so that bridge callers (AI tools, CLI scripts)
+        see the mode the user actually picked without going through an
+        async round-trip. Does not fire any state-holder event; the
+        panel's ``_on_display_mode_changed`` handler already dispatches
+        ``DISPLAY_MODE_CHANGED`` via the state holder before calling
+        this.
+
+        Args:
+            mode: New display mode string (e.g. ``"hex8"``, ``"hex16_le"``).
+        """
+        self._display_mode = mode
+
     async def set_chunk_size(self, size_bytes: int) -> bool:
         """Set the chunk size hint for large file I/O.
 
@@ -8835,6 +8882,21 @@ class HexEditorDisplayMixin(HexEditorExportMixin):
         """
         _logger.debug("get_color_mode_started", mode=self._color_mode)
         return self._color_mode
+
+    def update_color_mode_from_gui(self, mode: str) -> None:
+        """Synchronously update the stored color mode from a GUI-driven change.
+
+        Called by the panel when the user picks a color mode from the
+        toolbar combo box so that bridge callers (AI tools, CLI scripts)
+        see the mode the user actually picked without going through an
+        async round-trip. Does not fire any state-holder event; the
+        panel's ``_on_color_mode_changed`` handler already dispatches
+        ``COLOR_MODE_CHANGED`` via the state holder before calling this.
+
+        Args:
+            mode: New color mode string (e.g. ``"none"``, ``"entropy"``).
+        """
+        self._color_mode = mode
 
 
 class HexEditorPEMixin(HexEditorDisplayMixin):

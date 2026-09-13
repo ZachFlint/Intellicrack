@@ -339,25 +339,25 @@ class MainWindow(QMainWindow):
         self._run_async(create())
 
     def _apply_smart_window_size(self) -> None:
-        """Size and center the window based on available screen geometry.
+        """Size and center the window to fill the available screen geometry.
 
-        Detects the primary monitor's usable area (excluding taskbar) and sizes the window slightly smaller with a small margin. Caps at
-        1400x900 on large screens and floors at the splitter panes' combined minimum width (900px) by 600px minimum. Falls back to 1400x900
-        if screen detection fails.
+        Detects the primary monitor's usable area (excluding taskbar) and sizes the window to that full area, minus a small margin, so
+        the 3-column layout and every embedded tool panel get the entire screen to work with rather than being clamped to a fixed size on
+        large monitors. Floors at the splitter panes' combined minimum width (:data:`_WINDOW_MIN_WIDTH`) by 600px minimum so the window
+        never opens smaller than the layout can support. Falls back to that same minimum-viable size if screen detection fails.
         """
-        max_w, max_h = 1400, 900
         min_w, min_h = _WINDOW_MIN_WIDTH, 600
         margin_w, margin_h = 6, 8
 
         geometry = self._resolve_screen_geometry()
         if geometry is None:
-            self.resize(max_w, max_h)
+            self.resize(min_w, min_h)
             return
 
         try:
             avail_x, avail_y, avail_w, avail_h = geometry
-            target_w = max(min_w, min(max_w, avail_w - margin_w))
-            target_h = max(min_h, min(max_h, avail_h - margin_h))
+            target_w = max(min_w, avail_w - margin_w)
+            target_h = max(min_h, avail_h - margin_h)
 
             self.resize(target_w, target_h)
             move_widget(
@@ -367,7 +367,7 @@ class MainWindow(QMainWindow):
             )
         except (AttributeError, RuntimeError, ValueError):
             _logger.debug("screen_detection_failed_using_default_size", exc_info=True)
-            self.resize(max_w, max_h)
+            self.resize(min_w, min_h)
 
     @staticmethod
     def _resolve_screen_geometry() -> tuple[int, int, int, int] | None:
@@ -719,6 +719,11 @@ class MainWindow(QMainWindow):
 
         self._splitter.setSizes([500, 900])
         self._splitter.setChildrenCollapsible(False)
+        chat_pane_collapsible = True
+        self._splitter.setCollapsible(0, chat_pane_collapsible)
+        self._splitter.setStretchFactor(0, 0)
+        self._splitter.setStretchFactor(1, 1)
+        self._chat_panel_expanded_width: int = _CHAT_PANEL_MIN_WIDTH
 
         layout.addWidget(self._splitter)
 
@@ -791,6 +796,7 @@ class MainWindow(QMainWindow):
         self._add_menu_action(view_menu, "Stack Viewer", self._on_view_stack)
         view_menu.addSeparator()
         self._add_menu_action(view_menu, "Detach Current Panel", self._on_detach_current, "Ctrl+Shift+D")
+        self._add_menu_action(view_menu, "Toggle Chat Panel", self._on_toggle_chat_panel, "Ctrl+Shift+C")
 
     def _on_view_analysis(self) -> None:
         """Show the bridge analysis panel."""
@@ -819,6 +825,39 @@ class MainWindow(QMainWindow):
         """Detach the currently active tool panel into a floating window."""
         self.tool_panel.detach_current_tab()
 
+    def _on_toggle_chat_panel(self) -> None:
+        """Collapse the Chat pane to give the tool panel the full width, or restore it.
+
+        The Chat pane is the only collapsible splitter child (:meth:`_setup_ui` sets
+        ``setCollapsible(0, True)``), so a user can also collapse it by dragging the
+        splitter handle to the left edge -- but a fully collapsed pane has no visible
+        control of its own to reopen it (D14/D16). This toggle is that control: it
+        remembers the pane's last non-collapsed width in :attr:`_chat_panel_expanded_width`
+        and restores exactly that width, rather than an arbitrary default, when invoked
+        again.
+
+        ``QSplitter.setCollapsible`` only stops the splitter from refusing a
+        requested size of 0 in its own bookkeeping -- it does not override a
+        child widget's own ``minimumWidth``, so ``setSizes([0, ...])`` alone
+        leaves :attr:`_chat_panel` clamped to :data:`_CHAT_PANEL_MIN_WIDTH` on
+        screen even though ``sizes()`` reports 0. The pane's minimum width is
+        therefore cleared before collapsing and restored before expanding, so
+        the actual widget geometry matches the splitter's logical sizes.
+        """
+        sizes = self._splitter.sizes()
+        if len(sizes) != _SPLITTER_PANE_COUNT:
+            return
+        chat_width, tool_width = sizes
+        if chat_width > 0:
+            self._chat_panel_expanded_width = chat_width
+            self._chat_panel.setMinimumWidth(0)
+            self._splitter.setSizes([0, chat_width + tool_width])
+        else:
+            total = chat_width + tool_width
+            restored = min(self._chat_panel_expanded_width, max(total - _TOOL_PANEL_MIN_WIDTH, _CHAT_PANEL_MIN_WIDTH))
+            self._chat_panel.setMinimumWidth(_CHAT_PANEL_MIN_WIDTH)
+            self._splitter.setSizes([restored, total - restored])
+
     def _setup_tools_menu(self, menubar: QMenuBar) -> None:
         """Set up the Tools menu.
 
@@ -846,6 +885,9 @@ class MainWindow(QMainWindow):
         self._add_menu_action(embedded_menu, "Open x64dbg Debugger", self._on_open_x64dbg)
         self._add_menu_action(embedded_menu, "Open Cutter Analysis", self._on_open_cutter)
         self._add_menu_action(embedded_menu, "Open Hex Editor", self._on_open_hex_editor)
+        self._add_menu_action(embedded_menu, "Open Frida Instrumentation", self._on_open_frida)
+        self._add_menu_action(embedded_menu, "Open Process Manager", self._on_open_process)
+        self._add_menu_action(embedded_menu, "Open Sandbox Panel", self._on_open_sandbox_panel)
         embedded_menu.addSeparator()
         self._add_menu_action(embedded_menu, "Debug Current Binary...", self._on_debug_current_binary)
         self._add_menu_action(embedded_menu, "Analyze Current Binary...", self._on_analyze_current_binary)

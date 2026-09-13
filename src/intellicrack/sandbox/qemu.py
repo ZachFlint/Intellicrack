@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import ctypes
 import json
 import platform
 import secrets
@@ -427,11 +428,17 @@ _QGA_SHUTDOWN_MODE: Final[str] = "powerdown"
 _QEMU_QUIT_SETTLE_S: Final[float] = 2.0
 
 # Windows releases a dead process's file handles asynchronously, so QEMU's disk
-# overlay can stay open for a moment after the process itself is gone. These
-# bound how long removing an instance's temporary tree keeps retrying before the
-# failure is reported rather than discarded.
-_TEMP_TREE_REMOVE_ATTEMPTS: Final[int] = 5
-_TEMP_TREE_REMOVE_BACKOFF_S: Final[float] = 0.5
+# overlay - or a multi-gigabyte guest memory dump written into the same tree -
+# can stay open for a moment after the process itself is gone. These bound how
+# long removing an instance's temporary tree keeps retrying before the failure
+# is reported rather than discarded. Measured live: a ~4.1GB memory dump's
+# handle outlasted the previous 5-attempt/0.5s-step budget (about 7.5s total),
+# so the ceiling here is generous enough to cover that without blocking
+# indefinitely.
+_TEMP_TREE_REMOVE_ATTEMPTS: Final[int] = 10
+_TEMP_TREE_REMOVE_BACKOFF_S: Final[float] = 1.0
+_TEMP_TREE_REMOVE_BACKOFF_CAP_S: Final[float] = 10.0
+_MOVEFILE_DELAY_UNTIL_REBOOT: Final[int] = 0x4
 
 # QEMU exposes the guest-agent virtio-serial chardev one port above the
 # Intellicrack agent's hostfwd port; see the -chardev argument built by
@@ -6363,15 +6370,77 @@ class QEMUSandbox(SandboxBase):
         self._qemu_pid = None
 
     @staticmethod
-    async def _remove_temp_tree(temp_dir: Path) -> None:
+    def _schedule_delete_on_reboot(path: Path) -> bool:
+        """Ask Windows to delete ``path`` the next time the machine reboots.
+
+        Used as the last resort when a file or directory in a destroyed
+        sandbox's temp tree still resists removal after every retry -
+        typically because the OS has not yet released a dead process's handle
+        on a multi-gigabyte memory dump. ``MoveFileExW`` with
+        ``MOVEFILE_DELAY_UNTIL_REBOOT`` records the deletion in the registry's
+        pending file-rename-operations list so the space is reclaimed on the
+        next boot instead of the directory being left as a silent, permanent
+        leak.
+
+        Args:
+            path: File or directory to schedule for deferred deletion.
+
+        Returns:
+            bool: True if Windows accepted the scheduling request.
+        """
+        if not _IS_WINDOWS:
+            return False
+        try:
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.MoveFileExW.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32]
+            kernel32.MoveFileExW.restype = ctypes.c_bool
+            accepted = kernel32.MoveFileExW(str(path), None, _MOVEFILE_DELAY_UNTIL_REBOOT)
+        except OSError as err:
+            _logger.debug("schedule_delete_on_reboot_failed", path=str(path), error=str(err))
+            return False
+        return bool(accepted)
+
+    @classmethod
+    def _schedule_temp_tree_delete_on_reboot(cls, temp_dir: Path) -> bool:
+        """Schedule every remaining entry of a stuck temp tree for deferred deletion.
+
+        Walks ``temp_dir`` bottom-up so files are scheduled before the
+        directories that contain them, since Windows applies pending rename
+        operations in the order they were recorded and a non-empty directory
+        cannot be scheduled for deletion.
+
+        Args:
+            temp_dir: The instance's temporary directory that ``rmtree``
+                could not fully remove.
+
+        Returns:
+            bool: True when the root directory itself was successfully
+            scheduled (the strongest available guarantee that the space will
+            eventually be reclaimed).
+        """
+        if not _IS_WINDOWS or not temp_dir.exists():
+            return False
+        for current_root, dir_names, file_names in temp_dir.walk(top_down=False):
+            for name in file_names:
+                cls._schedule_delete_on_reboot(current_root / name)
+            for name in dir_names:
+                cls._schedule_delete_on_reboot(current_root / name)
+        return cls._schedule_delete_on_reboot(temp_dir)
+
+    @classmethod
+    async def _remove_temp_tree(cls, temp_dir: Path) -> None:
         """Remove one instance's temporary tree, waiting out lingering handles.
 
         Windows releases a dead process's file handles asynchronously, so the
-        disk overlay can still be open for a moment after QEMU exits and a
-        single attempt loses the race. Every failure is retried and the last one
-        is reported: the removal this replaced passed ``ignore_errors=True``,
-        which cannot fail and cannot log, and that is how 48 abandoned overlays
-        accumulated without one line about them anywhere.
+        disk overlay - or a multi-gigabyte guest memory dump left in the same
+        tree - can still be open for a moment after QEMU exits and a single
+        attempt loses the race. Every failure is retried with backoff and the
+        last one is reported: the removal this replaced passed
+        ``ignore_errors=True``, which cannot fail and cannot log, and that is
+        how 48 abandoned overlays accumulated without one line about them
+        anywhere. If every retry still fails, the remaining entries are
+        scheduled for deletion on the next reboot as a last resort, so the
+        space is reclaimed later instead of being leaked silently forever.
 
         Args:
             temp_dir: The instance's temporary directory.
@@ -6387,7 +6456,17 @@ class QEMUSandbox(SandboxBase):
             else:
                 return
             if attempt < _TEMP_TREE_REMOVE_ATTEMPTS:
-                await asyncio.sleep(_TEMP_TREE_REMOVE_BACKOFF_S * attempt)
+                backoff = min(_TEMP_TREE_REMOVE_BACKOFF_S * attempt, _TEMP_TREE_REMOVE_BACKOFF_CAP_S)
+                await asyncio.sleep(backoff)
+
+        if await asyncio.to_thread(cls._schedule_temp_tree_delete_on_reboot, temp_dir):
+            _logger.warning(
+                "temp_dir_cleanup_deferred_to_reboot",
+                path=str(temp_dir),
+                attempts=_TEMP_TREE_REMOVE_ATTEMPTS,
+                error=str(last_error),
+            )
+            return
 
         _logger.warning(
             "temp_dir_cleanup_failed",

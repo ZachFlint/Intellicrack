@@ -20,7 +20,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Final
+from typing import TYPE_CHECKING, ClassVar, Final, NoReturn
 
 from intellicrack.core.subprocess_compat import (
     DEVNULL,
@@ -30,6 +30,8 @@ from intellicrack.core.subprocess_compat import (
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine, Generator
+
+    import frida
 
     from intellicrack.bridges.frida_bridge import FridaBridge
 
@@ -54,6 +56,8 @@ from intellicrack.core.types import (
 
 
 try:
+    import frida
+
     from intellicrack.bridges.frida_bridge import FridaBridge
 
     _frida_available: bool = True
@@ -66,7 +70,6 @@ _logger = logging.getLogger(__name__)
 _ADDR: Final[int] = 0x00401000
 _ADDR2: Final[int] = 0x00402000
 _PID: Final[int] = 1234
-_PARENT_PID: Final[int] = 5678
 _LINE_NUMBER: Final[int] = 100
 _TIMESTAMP: Final[float] = 1700000000.0
 _DURATION: Final[float] = 42.5
@@ -81,6 +84,8 @@ _TRACE_EVENT_COUNT: Final[int] = 2
 _KERNEL32_MIN_IMPORTS: Final[int] = 10
 _NOTEPAD_MIN_REGIONS: Final[int] = 20
 _NTDLL_BASE_MIN: Final[int] = 0x70000000
+_NOT_SUPPORTED_SPAWN_ENUMERATION_MESSAGE: Final[str] = "not yet supported on this OS"
+_EXPECTED_CHILD_GATING_NOT_SUPPORTED_REASON: Final[str] = "child gating is not supported on this OS"
 
 _FRIDA_PREFIX: Final[str] = "frida."
 
@@ -239,27 +244,41 @@ def test_symbol_info_address_hex_decimal_parsing(self_attached_bridge: FridaBrid
 
 
 class _MockFridaDevice:
-    """Minimal Frida device double that captures registered callbacks.
+    """Minimal Frida device double that captures registered callbacks and pending spawns.
 
     This is a transport-boundary double: it replaces the external Frida device
-    so that bridge code exercising ``device.on(event, callback)`` and
-    ``device.enable_spawn_gating()`` can run without a real Frida agent.
-    Only the external transport API is mocked; ALL bridge parsing/field-mapping
-    logic runs unchanged.
+    so that bridge code exercising ``device.on(event, callback)``,
+    ``device.off(event, callback)``, ``device.enable_spawn_gating()``,
+    ``device.disable_spawn_gating()``, ``device.enumerate_pending_spawn()``,
+    and ``device.resume(pid)`` can run without a real Frida agent. Only the
+    external transport API is mocked; ALL bridge parsing/field-mapping logic
+    runs unchanged.
     """
 
     def __init__(self) -> None:
-        """Initialise with an empty callback registry."""
+        """Initialise with an empty callback registry and no pending spawns."""
         self._callbacks: dict[str, list[object]] = {}
+        self._pending_spawns: dict[int, object] = {}
 
     def on(self, event: str, callback: object) -> None:
         """Register an event callback, mirroring ``frida.core.Device.on``.
 
         Args:
-            event: Event name string (e.g. ``"process-crashed"``).
+            event: Event name string (e.g. ``"spawn-added"``).
             callback: Callable to invoke when the event fires.
         """
         self._callbacks.setdefault(event, []).append(callback)
+
+    def off(self, event: str, callback: object) -> None:
+        """Unregister an event callback, mirroring ``frida.core.Device.off``.
+
+        Args:
+            event: Event name whose callback should be removed.
+            callback: The exact callback object previously passed to :meth:`on`.
+        """
+        callbacks = self._callbacks.get(event)
+        if callbacks is not None and callback in callbacks:
+            callbacks.remove(callback)
 
     def enable_spawn_gating(self) -> None:
         """No-op stub for ``Device.enable_spawn_gating`` on this transport double."""
@@ -267,13 +286,40 @@ class _MockFridaDevice:
     def disable_spawn_gating(self) -> None:
         """No-op stub for ``Device.disable_spawn_gating`` on this transport double."""
 
+    def enumerate_pending_spawn(self) -> list[object]:
+        """Return the currently pending spawns, mirroring ``Device.enumerate_pending_spawn``.
+
+        Returns:
+            list[object]: Raw Spawn-shaped objects most recently fired via a
+            ``spawn-added`` event and not yet fired via ``spawn-removed`` or
+            dropped by :meth:`resume`.
+        """
+        return list(self._pending_spawns.values())
+
+    def resume(self, pid: int) -> None:
+        """Resume a pending spawn, mirroring ``Device.resume``.
+
+        Args:
+            pid: PID of the spawn to resume; dropped from the pending set.
+        """
+        self._pending_spawns.pop(pid, None)
+
     def fire(self, event: str, payload: object) -> None:
         """Invoke every registered callback for an event with the given payload.
+
+        For ``spawn-added`` / ``spawn-removed`` this also updates the
+        pending-spawn set backing :meth:`enumerate_pending_spawn`, mirroring
+        how a real Frida device's pending-spawn state and its
+        spawn-added / spawn-removed signals describe the same underlying set.
 
         Args:
             event: Event name whose callbacks should be invoked.
             payload: Argument forwarded to each registered callback.
         """
+        if event == "spawn-added":
+            self._pending_spawns[int(getattr(payload, "pid", 0))] = payload
+        elif event == "spawn-removed":
+            self._pending_spawns.pop(int(getattr(payload, "pid", 0)), None)
         for cb in self._callbacks.get(event, []):
             if isinstance(cb, collections.abc.Callable):
                 cb(payload)
@@ -283,10 +329,15 @@ class _TestableFridaBridge(FridaBridge):
     """FridaBridge subclass exposing internal state-injection and parsing for unit testing.
 
     This subclass provides test-only methods to drive the bridge's internal
-    callback-parsing code (``on_process_crashed``, ``on_child_added``) via a
+    callback-parsing code (``on_process_crashed``, ``on_spawn_added``) via a
     transport-boundary double, and to pre-populate and read the bridge's
     accumulation buffers, all without editing the production source.
     """
+
+    def __init__(self) -> None:
+        """Initialize the testable bridge with no mock child-gating device installed."""
+        super().__init__()
+        self._mock_child_gating_device: _MockFridaDevice | None = None
 
     def trigger_crash_via_parsing_callback(self, raw_crash: object) -> None:
         """Drive the bridge's ``on_process_crashed`` closure with a raw crash object.
@@ -307,24 +358,34 @@ class _TestableFridaBridge(FridaBridge):
         _run_async(self.enable_crash_reporting())
         mock_device.fire("process-crashed", raw_crash)
 
-    def trigger_child_via_gating_callback(self, raw_child: object) -> None:
-        """Drive the bridge's ``on_child_added`` closure with a raw child object.
+    def trigger_child_via_gating_callback(self, raw_spawn: object) -> None:
+        """Drive the bridge's ``on_spawn_added`` closure with a raw Spawn-shaped object.
 
-        Installs a transport-boundary mock device, calls ``enable_child_gating``
-        so the real bridge closure is registered, then fires the registered
-        callback with *raw_child*.  All parsing/field-mapping logic inside the
-        closure runs unchanged.
+        Installs a transport-boundary mock device -- reusing the one already
+        installed by an earlier call on this bridge instance, if any, so
+        repeated calls accumulate onto a single device and mirror one real
+        Frida device gating several processes at once -- calls
+        ``enable_child_gating`` so the real bridge closure is registered
+        against it, then fires the device's ``spawn-added`` signal with
+        *raw_spawn*.  Firing the signal both invokes the bridge's registered
+        closure and marks *raw_spawn* as pending on the mock device, so a
+        subsequent ``device.enumerate_pending_spawn()`` query -- as used by
+        ``get_pending_children`` -- observes it too.  All parsing/
+        field-mapping logic inside the closure runs unchanged.
 
         Args:
-            raw_child: Object whose attributes (``pid``, ``parent_pid``,
-                ``origin``, ``identifier``, ``path``, ``argv``) the bridge's
-                closure will read via ``getattr`` to construct a ``ChildProcessInfo``.
+            raw_spawn: Object exposing only ``pid`` and ``identifier`` -- the
+                complete attribute set a real Frida ``Spawn`` provides --
+                which the bridge's closure and ``get_pending_children`` read
+                via ``getattr`` to construct a ``ChildProcessInfo``.
         """
-        mock_device = _MockFridaDevice()
-        setattr(self, "_device", mock_device)
-        self._child_gating_enabled = False
+        device = self._mock_child_gating_device
+        if device is None:
+            device = _MockFridaDevice()
+            self._mock_child_gating_device = device
+            setattr(self, "_device", device)
         _run_async(self.enable_child_gating())
-        mock_device.fire("child-added", raw_child)
+        device.fire("spawn-added", raw_spawn)
 
     def inject_stalker_events(self, tid: int, events: list[StalkerEvent]) -> None:
         """Pre-populate the stalker trace buffer for a thread ID.
@@ -402,94 +463,101 @@ def test_crash_info_bridge_internal_accumulation() -> None:
 
 
 def test_child_process_info_bridge_accumulation_full_fields() -> None:
-    """Verify the bridge's on_child_added closure parses all non-None raw attributes into ChildProcessInfo.
+    """Verify on_spawn_added and get_pending_children parse a populated Spawn into ChildProcessInfo.
 
-    Drives the bridge's real ``on_child_added`` callback closure (registered by
-    ``enable_child_gating``) with a raw Frida-shaped object whose attributes the
-    bridge reads via ``getattr``.  The bridge must construct a ``ChildProcessInfo``
-    from those raw attributes and accumulate it so ``get_pending_children()`` returns
-    the correctly parsed record.  Expected values are derived independently from the
-    raw input's attributes -- not from re-running the production function.
+    Drives the bridge's real ``on_spawn_added`` callback closure (registered
+    by ``enable_child_gating``) with a raw Frida ``Spawn``-shaped object that
+    exposes only ``pid`` and ``identifier`` -- the complete attribute set a
+    real ``frida.core.Spawn`` provides -- then calls ``get_pending_children``,
+    which independently re-derives the same result from the mock device's
+    ``enumerate_pending_spawn``.  Because a Spawn carries no parent/origin/
+    path/argv information, the bridge must synthesize fixed values for those
+    fields (parent_pid=0, origin="spawn", path=None, argv=[]) rather than
+    inventing or reading them from attributes that do not exist on the real
+    object.  Expected values are derived independently from the raw input's
+    attributes -- not from re-running the production function.
 
-    Falsifiable: if the closure reads the wrong attribute for ``parent_pid``
-    (e.g. ignores it), the ``== _PARENT_PID`` assertion fails.  If ``argv`` is
-    stored as a tuple rather than via ``list()``, the ``isinstance(list)`` check fails.
-    If ``origin`` is not cast through ``str()``, returning the raw object, the
-    exact equality fails.
+    Falsifiable: if the bridge stops hard-coding ``parent_pid`` to 0 and
+    instead reads a nonexistent attribute, the ``== 0`` assertion fails.  If
+    ``origin`` is derived from the raw object instead of fixed to
+    ``"spawn"``, the equality fails.  If ``path`` or ``argv`` are populated
+    from thin air instead of staying ``None``/``[]``, those assertions fail.
+    If the bridge reads the wrong attribute for ``pid`` (e.g. ignores it),
+    the ``== _PID`` assertion fails.  If ``identifier`` is dropped or
+    replaced with a stringified sentinel instead of the raw ``getattr``
+    result, the exact equality fails.
     """
     bridge = _TestableFridaBridge()
 
-    class _RawChild:
+    class _RawSpawn:
         pid: int = _PID
-        parent_pid: int = _PARENT_PID
-        origin: str = "spawn"
         identifier: str = "com.example.app"
-        path: str = "C:\\Windows\\System32\\notepad.exe"
-        argv: ClassVar[list[str]] = ["notepad.exe", "--flag", "file.txt"]
 
-    bridge.trigger_child_via_gating_callback(_RawChild())
+    bridge.trigger_child_via_gating_callback(_RawSpawn())
 
     children: list[ChildProcessInfo] = _run_async(bridge.get_pending_children())
 
     assert len(children) == 1, f"get_pending_children must return the one parsed entry, got {len(children)}"
     child = children[0]
     assert child.pid == _PID, f"pid mismatch: expected {_PID}, got {child.pid}"
-    assert child.parent_pid == _PARENT_PID, f"parent_pid mismatch: expected {_PARENT_PID}, got {child.parent_pid}"
+    assert child.parent_pid == 0, f"parent_pid must be 0 (a real Spawn carries no parent_pid), got {child.parent_pid}"
     assert child.origin == "spawn", f"origin mismatch: expected 'spawn', got {child.origin!r}"
     assert child.identifier == "com.example.app", f"identifier mismatch: got {child.identifier!r}"
-    assert child.path == "C:\\Windows\\System32\\notepad.exe", f"path mismatch: got {child.path!r}"
-    assert child.argv == ["notepad.exe", "--flag", "file.txt"], f"argv mismatch: got {child.argv!r}"
-    assert isinstance(child.argv, list), f"argv must be a list (bridge must call list()), got {type(child.argv)}"
+    assert child.path is None, f"path must be None (a real Spawn carries no path), got {child.path!r}"
+    assert isinstance(child.argv, list), f"argv must be a list, got {type(child.argv)}"
+    assert child.argv == [], f"argv must be [] (a real Spawn carries no argv), got {child.argv!r}"
 
 
 def test_child_process_info_bridge_accumulation_none_fields() -> None:
-    """Verify the bridge's on_child_added closure preserves None for optional identifier and path.
+    """Verify on_spawn_added and get_pending_children preserve None for an absent Spawn identifier.
 
-    Drives the bridge's real ``on_child_added`` callback closure twice via the
-    transport-boundary mock device: once with a fork-origin child (identifier=None,
-    path=None, argv=[]) and once with an exec-origin child (identifier set,
-    path=None).  The bridge reads these attributes via ``getattr`` and must
-    preserve ``None`` rather than coercing it to an empty string or zero.
+    Drives the bridge's real ``on_spawn_added`` callback closure twice via
+    the transport-boundary mock device -- reusing the same mock device
+    across both calls so both pending spawns are simultaneously visible to a
+    single ``get_pending_children`` query, mirroring one real Frida device
+    gating several processes at once -- once with an identifier-less raw
+    Spawn (``identifier=None``, the shape of a bare OS-level spawn with no
+    application identifier) and once with an identifier set.  A real Spawn
+    exposes only ``pid`` and ``identifier``, so the bridge must preserve
+    ``None`` rather than coercing it to an empty string, and must still
+    synthesize the fixed parent_pid=0/origin="spawn"/path=None/argv=[]
+    values for both entries.
 
     Falsifiable: if the bridge coerces ``identifier=None`` to ``""`` via
-    ``str(getattr(child, "identifier", None))`` instead of the raw ``getattr``
-    result, the ``is None`` assertion fails.  If ``argv`` is not wrapped in
-    ``list()``, an empty-but-wrong type would fail ``== []`` strict equality.
+    ``str(getattr(spawn, "identifier", None))`` instead of the raw
+    ``getattr`` result, the ``is None`` assertion fails.  If the two pending
+    spawns are not both retained (e.g. the second overwrites the first
+    instead of accumulating), the ``len(children) == 2`` assertion fails.
+    If ``argv`` is not synthesized as ``[]`` for both entries, the equality
+    fails.
     """
     bridge = _TestableFridaBridge()
 
-    class _RawForkChild:
+    class _RawSpawnNoIdentifier:
         pid: int = _PID
-        parent_pid: int = _PARENT_PID
-        origin: str = "fork"
         identifier: None = None
-        path: None = None
-        argv: ClassVar[list[str]] = []
 
-    class _RawExecChild:
+    class _RawSpawnWithIdentifier:
         pid: int = _PID + 1
-        parent_pid: int = _PARENT_PID
-        origin: str = "exec"
         identifier: str = "com.bundle.id"
-        path: None = None
-        argv: ClassVar[list[str]] = ["cmd.exe"]
 
-    bridge.trigger_child_via_gating_callback(_RawForkChild())
-    setattr(bridge, "_child_gating_enabled", False)
-    bridge.trigger_child_via_gating_callback(_RawExecChild())
+    bridge.trigger_child_via_gating_callback(_RawSpawnNoIdentifier())
+    bridge.trigger_child_via_gating_callback(_RawSpawnWithIdentifier())
 
     children: list[ChildProcessInfo] = _run_async(bridge.get_pending_children())
 
     assert len(children) == 2, f"must return both parsed entries, got {len(children)}"
-    fork_result = next((c for c in children if c.origin == "fork"), None)
-    exec_result = next((c for c in children if c.origin == "exec"), None)
-    assert fork_result is not None, "fork-origin child must appear in results"
-    assert exec_result is not None, "exec-origin child must appear in results"
-    assert fork_result.identifier is None, f"fork child identifier must be None (not coerced), got {fork_result.identifier!r}"
-    assert fork_result.path is None, f"fork child path must be None (not coerced), got {fork_result.path!r}"
-    assert fork_result.argv == [], f"fork child argv must be [], got {fork_result.argv!r}"
-    assert exec_result.identifier == "com.bundle.id", f"exec child identifier mismatch: got {exec_result.identifier!r}"
-    assert exec_result.path is None, f"exec child path must be None, got {exec_result.path!r}"
+    no_id_result = next((c for c in children if c.pid == _PID), None)
+    with_id_result = next((c for c in children if c.pid == _PID + 1), None)
+    assert no_id_result is not None, "identifier-less spawn must appear in results"
+    assert with_id_result is not None, "identifier-bearing spawn must appear in results"
+    assert no_id_result.identifier is None, f"identifier must be None (not coerced), got {no_id_result.identifier!r}"
+    assert no_id_result.parent_pid == 0, f"parent_pid must be 0, got {no_id_result.parent_pid}"
+    assert no_id_result.origin == "spawn", f"origin must be 'spawn', got {no_id_result.origin!r}"
+    assert no_id_result.path is None, f"path must be None, got {no_id_result.path!r}"
+    assert no_id_result.argv == [], f"argv must be [], got {no_id_result.argv!r}"
+    assert with_id_result.identifier == "com.bundle.id", f"identifier mismatch: got {with_id_result.identifier!r}"
+    assert with_id_result.path is None, f"path must be None, got {with_id_result.path!r}"
 
 
 def test_parse_stalker_batch_call_event() -> None:
@@ -1322,44 +1390,102 @@ def test_child_gating_not_supported_on_windows(frida_bridge: FridaBridge) -> Non
         _run_async(frida_bridge.enable_child_gating())
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
-def test_get_pending_children_empty(frida_bridge: FridaBridge) -> None:
+def test_get_pending_children_empty() -> None:
     """Verify get_pending_children returns an empty list when no children have been gated.
 
     First confirms the accumulation buffer is operationally non-empty when a child
     IS added via the parsing callback (positive arm using a transport-boundary
-    double), establishing that the retrieval machinery works.  Then confirms the
-    live notepad bridge -- which has had no child-gating enabled and no children
-    spawned -- returns an empty list.  The positive arm makes the empty-state
-    assertion meaningful: if ``get_pending_children`` always returned ``[]``,
-    the positive arm would fail.
+    double), establishing that the retrieval machinery works. Then confirms a
+    second bridge, backed by a fresh instance of the same transport-boundary
+    double with no spawn ever fired, returns an empty list. Both arms drive the
+    real ``get_pending_children`` logic against the file's ``_MockFridaDevice``
+    double rather than the host's real local Frida device, so the result is
+    deterministic regardless of whether the current platform supports spawn
+    gating at all -- unlike the real device, whose ``enumerate_pending_spawn``
+    raises ``frida.NotSupportedError`` on platforms without that support (see
+    ``test_child_gating_not_supported_on_windows`` and
+    ``test_get_pending_children_not_supported_raises_tool_error`` for that
+    condition and its mapping to ``ToolError``). The positive arm makes the
+    empty-state assertion meaningful: if ``get_pending_children`` always
+    returned ``[]``, the positive arm would fail.
 
     Falsifiable: if ``get_pending_children`` always returns ``[]``, the
-    positive-arm ``len == 1`` assertion fails.  If the live bridge accumulates
-    a spurious child entry, the ``len(children) == 0`` assertion fails.
-
-    Args:
-        frida_bridge: Bridge fixture attached to the spawned notepad process.
+    positive-arm ``len == 1`` assertion fails. If a bridge with no gated
+    children accumulates a spurious child entry, the ``len(children) == 0``
+    assertion fails.
     """
     positive_bridge = _TestableFridaBridge()
 
-    class _RawChild:
+    class _RawSpawn:
         pid: int = _PID
-        parent_pid: int = _PARENT_PID
-        origin: str = "spawn"
         identifier: str = "com.example.pos"
-        path: str = "C:\\Windows\\System32\\notepad.exe"
-        argv: ClassVar[list[str]] = []
 
-    positive_bridge.trigger_child_via_gating_callback(_RawChild())
+    positive_bridge.trigger_child_via_gating_callback(_RawSpawn())
     positive_children: list[ChildProcessInfo] = _run_async(positive_bridge.get_pending_children())
     assert len(positive_children) == 1, (
         f"positive arm: get_pending_children must return 1 entry after callback, got {len(positive_children)}"
     )
 
-    children: list[ChildProcessInfo] = _run_async(frida_bridge.get_pending_children())
+    empty_bridge = _TestableFridaBridge()
+    setattr(empty_bridge, "_device", _MockFridaDevice())
+    children: list[ChildProcessInfo] = _run_async(empty_bridge.get_pending_children())
     assert isinstance(children, list), f"get_pending_children must return a list, got {type(children)}"
-    assert not children, f"live notepad bridge must have 0 gated children, got {len(children)}: {children!r}"
+    assert not children, f"bridge with no gated children must return an empty list, got {len(children)}: {children!r}"
+
+
+class _NotSupportedSpawnEnumerationDevice:
+    """Device double whose enumerate_pending_spawn raises frida.NotSupportedError.
+
+    Mirrors the real local Frida device on a platform without spawn-gating
+    support -- Windows among them, per ``test_child_gating_not_supported_on_windows``
+    -- where ``Device.enumerate_pending_spawn`` raises the real
+    ``frida.NotSupportedError`` exception class instead of returning a list.
+    """
+
+    def enumerate_pending_spawn(self) -> NoReturn:
+        """Raise ``frida.NotSupportedError``, mirroring an unsupported platform.
+
+        Raises:
+            frida.NotSupportedError: Always, with the real Frida message text.
+        """
+        raise frida.NotSupportedError(_NOT_SUPPORTED_SPAWN_ENUMERATION_MESSAGE)
+
+
+def test_get_pending_children_not_supported_raises_tool_error() -> None:
+    """Verify get_pending_children maps frida.NotSupportedError to a ToolError.
+
+    Drives the real ``FridaBridge.get_pending_children`` against a device
+    double whose ``enumerate_pending_spawn`` raises the real
+    ``frida.NotSupportedError`` -- the exact exception Frida raises when
+    spawn gating has no underlying OS support, as on Windows (see
+    ``test_child_gating_not_supported_on_windows``). The bridge must classify
+    this the same way its ``enable_child_gating`` and ``disable_child_gating``
+    siblings already do: catch it distinctly and raise ``ToolError`` carrying
+    the stable unsupported-platform reason, rather than letting the raw
+    third-party exception escape through a bridge API documented to only
+    raise ``ToolError``.
+
+    Falsifiable: if the ``except frida.NotSupportedError`` branch is removed
+    from ``get_pending_children``, the raw ``frida.NotSupportedError``
+    propagates uncaught instead of ``ToolError``, so
+    ``pytest.raises(ToolError)`` fails on that unhandled exception. If the
+    branch were collapsed into the generic ``_ERR_CHILD_GATING_FAILED``
+    classification instead of keeping the distinct not-supported reason, the
+    ``reason ==`` assertion fails.
+    """
+    bridge = _TestableFridaBridge()
+    setattr(bridge, "_device", _NotSupportedSpawnEnumerationDevice())
+
+    with pytest.raises(ToolError) as exc_info:
+        _run_async(bridge.get_pending_children())
+
+    reason = exc_info.value.details.get("reason")
+    assert reason == _EXPECTED_CHILD_GATING_NOT_SUPPORTED_REASON, (
+        f"expected the stable not-supported reason {_EXPECTED_CHILD_GATING_NOT_SUPPORTED_REASON!r}, got {reason!r}"
+    )
+    assert reason != _NOT_SUPPORTED_SPAWN_ENUMERATION_MESSAGE, (
+        "reason must not be the raw, fragile frida.NotSupportedError text -- classification must produce a stable, distinct message"
+    )
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")

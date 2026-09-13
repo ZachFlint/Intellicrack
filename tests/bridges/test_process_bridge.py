@@ -503,12 +503,12 @@ class TestInitialization:
         assert await process_bridge.is_available() is True
 
     async def test_tool_definition_count(self, process_bridge: ProcessBridge) -> None:
-        """Verify tool definition has 66 functions.
+        """Verify tool definition has 67 functions.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        assert len(process_bridge.tool_definition.functions) == 66
+        assert len(process_bridge.tool_definition.functions) == 67
 
 
 class TestProcessListing:
