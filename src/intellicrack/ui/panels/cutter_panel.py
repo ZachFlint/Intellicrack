@@ -11,7 +11,7 @@ cross-references, and a raw r2 command console -- all powered by the CutterBridg
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast, override
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, override
 
 from PyQt6.QtCore import QPoint, QSettings, Qt, QTimer
 from PyQt6.QtGui import QAction, QClipboard
@@ -146,6 +146,7 @@ class CutterPanel(AnalysisPanelBase):
         self._bridge: CutterBridge | None = None
         self._current_binary: Path | None = None
         self._outer_splitter: QSplitter | None = None
+        self._xrefs_current_address: int | None = None
         super().__init__(parent)
 
     @override
@@ -164,8 +165,28 @@ class CutterPanel(AnalysisPanelBase):
         toolbar.addWidget(self._analysis_level_combo)
 
         self._analyze_btn = self._add_tool_button(toolbar, "Analyze", self._on_analyze)
+
+        self._decompiler_backend_combo = QComboBox()
+        self._decompiler_backend_combo.addItems(["pdg", "pdd"])
+        self._decompiler_backend_combo.setToolTip("Decompiler backend: pdg (rz-ghidra) or pdd (jsdec)")
+        toolbar.addWidget(self._decompiler_backend_combo)
         self._decompile_btn = self._add_tool_button(toolbar, "Decompile", self._on_decompile_selected)
         self._graph_btn = self._add_tool_button(toolbar, "Graph", self._on_graph_selected)
+
+        analysis_pass_actions = self._add_tool_menu(
+            toolbar,
+            "Analysis Passes",
+            [
+                ToolMenuEntry("Basic Blocks (aab)", self._on_analyze_basic_blocks),
+                ToolMenuEntry("Function Calls (aac)", self._on_analyze_function_calls),
+                ToolMenuEntry("Data/Code Refs (aar)", self._on_analyze_references),
+                ToolMenuEntry("Autoname Functions (aan)", self._on_autoname_functions),
+            ],
+        )
+        self._analyze_basic_blocks_btn = analysis_pass_actions["Basic Blocks (aab)"]
+        self._analyze_function_calls_btn = analysis_pass_actions["Function Calls (aac)"]
+        self._analyze_references_btn = analysis_pass_actions["Data/Code Refs (aar)"]
+        self._autoname_functions_btn = analysis_pass_actions["Autoname Functions (aan)"]
 
         toolbar.addSeparator()
 
@@ -186,6 +207,11 @@ class CutterPanel(AnalysisPanelBase):
         self._goto_btn = self._add_tool_button(toolbar, "Go", self._on_goto_address)
         self._find_func_input = self._add_toolbar_input(toolbar, "Function name...", max_width=140)
         self._find_func_btn = self._add_tool_button(toolbar, "Find", self._on_find_function)
+        self._seek_delta_input = self._add_toolbar_input(toolbar, "Delta bytes...", max_width=70)
+        self._seek_back_btn = self._add_tool_button(toolbar, "Seek -", self._on_seek_relative_back)
+        self._seek_fwd_btn = self._add_tool_button(toolbar, "Seek +", self._on_seek_relative_forward)
+        self._seek_back_history_btn = self._add_tool_button(toolbar, "Back", self._on_seek_undo)
+        self._seek_fwd_history_btn = self._add_tool_button(toolbar, "Forward", self._on_seek_redo)
 
         toolbar.addSeparator()
 
@@ -457,6 +483,8 @@ class CutterPanel(AnalysisPanelBase):
         set_header_labels(self._xrefs_tree, _XREF_COLUMNS)
         set_selection_mode(self._xrefs_tree, QAbstractItemView.SelectionMode.SingleSelection)
         tabs.addTab(self._xrefs_tree, "XRefs")
+        self._xrefs_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._xrefs_tree.customContextMenuRequested.connect(self._on_xrefs_context_menu)
 
         self._all_strings_tab = AllStringsTab()
         tabs.addTab(self._all_strings_tab, "All Strings")
@@ -780,6 +808,91 @@ class CutterPanel(AnalysisPanelBase):
         _logger.warning("cutter_analysis_failed", error=str(exc))
         self._analyze_btn.setEnabled(True)
 
+    def _on_analysis_pass_complete(self, message: str) -> None:
+        """Report completion of a standalone analysis sub-pass and refresh the functions list.
+
+        Args:
+            message: Status message describing which sub-pass completed.
+        """
+        self._set_status(message)
+        self._on_refresh_functions()
+
+    def _on_analyze_basic_blocks(self) -> None:
+        """Run a standalone basic-block analysis pass (rizin 'aab')."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        if not self._bridge.state.binary_loaded:
+            self._set_status("No binary loaded - load a binary first")
+            return
+        self._set_status("Running basic-block analysis (aab)...")
+        run_bridge_coroutine_logged(
+            self._bridge.analyze_basic_blocks(),
+            on_success=lambda _: self._on_analysis_pass_complete("Basic-block analysis complete"),
+            on_error=lambda e: self._set_status(f"Basic-block analysis failed: {e}"),
+            parent=self,
+            event="cutter_analyze_basic_blocks",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_analyze_function_calls(self) -> None:
+        """Run a standalone function-call analysis pass (rizin 'aac')."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        if not self._bridge.state.binary_loaded:
+            self._set_status("No binary loaded - load a binary first")
+            return
+        self._set_status("Running function-call analysis (aac)...")
+        run_bridge_coroutine_logged(
+            self._bridge.analyze_function_calls(),
+            on_success=lambda _: self._on_analysis_pass_complete("Function-call analysis complete"),
+            on_error=lambda e: self._set_status(f"Function-call analysis failed: {e}"),
+            parent=self,
+            event="cutter_analyze_function_calls",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_analyze_references(self) -> None:
+        """Run a standalone data/code cross-reference analysis pass (rizin 'aar')."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        if not self._bridge.state.binary_loaded:
+            self._set_status("No binary loaded - load a binary first")
+            return
+        self._set_status("Running reference analysis (aar)...")
+        run_bridge_coroutine_logged(
+            self._bridge.analyze_references(),
+            on_success=lambda _: self._on_analysis_pass_complete("Reference analysis complete"),
+            on_error=lambda e: self._set_status(f"Reference analysis failed: {e}"),
+            parent=self,
+            event="cutter_analyze_references",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_autoname_functions(self) -> None:
+        """Run a standalone function autoname pass (rizin 'aan') and refresh the functions tree."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        if not self._bridge.state.binary_loaded:
+            self._set_status("No binary loaded - load a binary first")
+            return
+        self._set_status("Running function autoname (aan)...")
+        run_bridge_coroutine_logged(
+            self._bridge.autoname_functions(),
+            on_success=lambda _: self._on_analysis_pass_complete("Function autoname complete"),
+            on_error=lambda e: self._set_status(f"Autoname failed: {e}"),
+            parent=self,
+            event="cutter_autoname_functions",
+            logger=_logger,
+            level="info",
+        )
+
     def _on_refresh_functions(self) -> None:
         """Refresh the functions list from bridge."""
         if self._bridge is None:
@@ -901,14 +1014,17 @@ class CutterPanel(AnalysisPanelBase):
             return
 
         binary_path = str(self._current_binary) if self._current_binary is not None else "unset"
+        backend_text = self._decompiler_backend_combo.currentText()
+        backend: Literal["pdg", "pdd"] = "pdd" if backend_text == "pdd" else "pdg"
         _logger.info(
             "cutter_decompile_requested",
             binary_path=binary_path,
             offset=hex(address),
+            backend=backend,
         )
 
         run_bridge_coroutine_logged(
-            self._bridge.decompile(address),
+            self._bridge.decompile(address, backend=backend),
             on_success=self._apply_decompiled,
             on_error=self._on_decompile_error,
             parent=self,
@@ -1266,6 +1382,7 @@ class CutterPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
+        self._xrefs_current_address = address
         self._xrefs_tree.clear()
 
         run_bridge_coroutine_logged(
@@ -1327,6 +1444,102 @@ class CutterPanel(AnalysisPanelBase):
             added += 1
         if added == 0:
             self._xrefs_tree.addTopLevelItem(QTreeWidgetItem(["From", "—", "—", "(no callees)"]))
+
+    def _on_xrefs_context_menu(self, pos: QPoint) -> None:
+        """Show the add/remove cross-reference context menu for the XRefs tree.
+
+        Reachable regardless of row selection: adding an xref operates on the
+        address that last populated the tree via :meth:`_show_xrefs`, not on a
+        clicked row.
+
+        Args:
+            pos: Click position from the signal.
+        """
+        if self._xrefs_current_address is None:
+            return
+        menu = QMenu(self)
+        add_code_action = QAction("Add Code Xref...", self)
+        add_code_action.triggered.connect(lambda: self._ctx_add_xref("code"))
+        menu.addAction(add_code_action)
+        add_call_action = QAction("Add Call Xref...", self)
+        add_call_action.triggered.connect(lambda: self._ctx_add_xref("call"))
+        menu.addAction(add_call_action)
+        add_data_action = QAction("Add Data Xref...", self)
+        add_data_action.triggered.connect(lambda: self._ctx_add_xref("data"))
+        menu.addAction(add_data_action)
+        menu.addSeparator()
+        remove_xref_action = QAction("Remove This Xref", self)
+        remove_xref_action.triggered.connect(lambda: self._ctx_remove_xref(pos))
+        menu.addAction(remove_xref_action)
+        menu.exec(self._xrefs_tree.mapToGlobal(pos))
+
+    def _ctx_add_xref(self, xref_type: str) -> None:
+        """Prompt for a target address and add a cross-reference from the current xref address.
+
+        Args:
+            xref_type: Cross-reference kind to add ("code", "call", or "data").
+        """
+        if self._bridge is None or self._xrefs_current_address is None:
+            return
+        target_text, ok = QInputDialog.getText(self, "Add Xref", "Target address (hex):")
+        if not ok or not target_text:
+            return
+        target_address = self._parse_address(target_text)
+        if target_address is None:
+            self._set_status("Invalid target address")
+            return
+        source_address = self._xrefs_current_address
+        run_bridge_coroutine_logged(
+            self._bridge.add_xref(source_address, target_address, cast("Literal['code', 'call', 'data']", xref_type)),
+            on_success=lambda _: self._show_xrefs(source_address),
+            on_error=lambda e: self._set_status(f"Add xref failed: {e}"),
+            parent=self,
+            event="cutter_add_xref",
+            logger=_logger,
+            level="info",
+            from_address=hex(source_address),
+            to_address=hex(target_address),
+            xref_type=xref_type,
+        )
+
+    def _ctx_remove_xref(self, pos: QPoint) -> None:
+        """Remove the cross-reference represented by the clicked row in the XRefs tree.
+
+        Reads the clicked row's "Direction" column ("To"/"From") and its
+        "From/To" column (the *other* endpoint's address) to determine the
+        exact ``to_address``/``from_address`` pair to remove, since
+        :meth:`_apply_xrefs_to`/:meth:`_apply_xrefs_from` only ever render one
+        endpoint explicitly -- the other is always :attr:`_xrefs_current_address`.
+
+        Args:
+            pos: Position of the row that was right-clicked.
+        """
+        if self._bridge is None or self._xrefs_current_address is None:
+            return
+        item = self._xrefs_tree.itemAt(pos)
+        if item is None:
+            return
+        direction = item.text(0)
+        other_address = self._parse_address(item.text(1))
+        if other_address is None:
+            self._set_status("Cannot resolve xref address for removal")
+            return
+        current = self._xrefs_current_address
+        if direction == "To":
+            to_address, from_address = current, other_address
+        else:
+            to_address, from_address = other_address, current
+        run_bridge_coroutine_logged(
+            self._bridge.remove_xref(to_address, from_address),
+            on_success=lambda _: self._show_xrefs(current),
+            on_error=lambda e: self._set_status(f"Remove xref failed: {e}"),
+            parent=self,
+            event="cutter_remove_xref",
+            logger=_logger,
+            level="info",
+            to_address=hex(to_address),
+            from_address=hex(from_address),
+        )
 
     def _on_run_command(self) -> None:
         """Execute a raw r2 command from the console input."""
@@ -1511,6 +1724,128 @@ class CutterPanel(AnalysisPanelBase):
             event="cutter_disassemble",
             logger=_logger,
             address=hex(address),
+        )
+
+    def _on_seek_relative_back(self) -> None:
+        """Step backward by the typed delta and refresh the disassembly view."""
+        self._do_seek_relative(negate=True)
+
+    def _on_seek_relative_forward(self) -> None:
+        """Step forward by the typed delta and refresh the disassembly view."""
+        self._do_seek_relative(negate=False)
+
+    def _do_seek_relative(self, *, negate: bool) -> None:
+        """Parse the delta input and issue a relative seek in the requested direction.
+
+        Args:
+            negate: True to step backward (negate the parsed delta before seeking), False to
+                step forward (seek by the parsed delta unchanged).
+        """
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        delta_text = self._seek_delta_input.text().strip()
+        try:
+            delta = int(delta_text, 0) if delta_text else 0
+        except ValueError:
+            self._set_status("Invalid delta")
+            return
+        if delta == 0:
+            return
+        signed_delta = -delta if negate else delta
+        run_bridge_coroutine_logged(
+            self._bridge.seek_relative(signed_delta),
+            on_success=lambda _: self._on_seek_relative_complete(),
+            on_error=lambda e: self._set_status(f"Seek failed: {e}"),
+            parent=self,
+            event="cutter_seek_relative",
+            logger=_logger,
+            delta=signed_delta,
+        )
+
+    def _on_seek_relative_complete(self) -> None:
+        """Report the relative seek as complete and resolve the new current address."""
+        if self._bridge is None:
+            return
+        self._set_status("Seeked")
+        binary_path = str(self._current_binary) if self._current_binary is not None else "unset"
+        _logger.info("cutter_seek_relative_complete", binary_path=binary_path)
+        run_bridge_coroutine_logged(
+            self._bridge.execute_command("s"),
+            on_success=self._on_seek_relative_address_resolved,
+            on_error=lambda _: None,
+            parent=self,
+            event="cutter_seek_query_current",
+            logger=_logger,
+        )
+
+    def _on_seek_relative_address_resolved(self, result: object) -> None:
+        """Parse the resolved current address and refresh the disassembly view at it.
+
+        Args:
+            result: Raw text output of rizin's bare 's' command, which prints the current offset.
+        """
+        if self._bridge is None:
+            return
+        text = str(result).strip() if result is not None else ""
+        address = self._parse_address(text)
+        if address is not None:
+            run_bridge_coroutine_logged(
+                self._bridge.disassemble(address),
+                on_success=self._apply_disassembly,
+                on_error=lambda _: _logger.warning("cutter_disassemble_failed", address=hex(address)),
+                parent=self,
+                event="cutter_disassemble",
+                logger=_logger,
+                address=hex(address),
+            )
+
+    def _on_seek_undo(self) -> None:
+        """Move back one entry in the seek history and refresh the disassembly view."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.seek_undo(),
+            on_success=self._on_seek_history_navigated,
+            on_error=lambda e: self._set_status(f"Seek undo failed: {e}"),
+            parent=self,
+            event="cutter_seek_undo",
+            logger=_logger,
+        )
+
+    def _on_seek_redo(self) -> None:
+        """Move forward one entry in the seek history and refresh the disassembly view."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.seek_redo(),
+            on_success=self._on_seek_history_navigated,
+            on_error=lambda e: self._set_status(f"Seek redo failed: {e}"),
+            parent=self,
+            event="cutter_seek_redo",
+            logger=_logger,
+        )
+
+    def _on_seek_history_navigated(self, result: object) -> None:
+        """Print seek-history navigation output and resolve the new current address.
+
+        Args:
+            result: Raw text output of the 'shu'/'shr' command that just ran.
+        """
+        if self._bridge is None:
+            return
+        if result is not None and (text := str(result).rstrip()):
+            self.console_output.appendPlainText(text)
+        self._set_status("Seeked")
+        run_bridge_coroutine_logged(
+            self._bridge.execute_command("s"),
+            on_success=self._on_seek_relative_address_resolved,
+            on_error=lambda _: None,
+            parent=self,
+            event="cutter_seek_query_current",
+            logger=_logger,
         )
 
     def _on_find_function(self) -> None:

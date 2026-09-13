@@ -22,6 +22,8 @@ from PyQt6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QHBoxLayout,
     QHeaderView,
@@ -265,10 +267,12 @@ class GhidraPanel(AnalysisPanelBase):
             [
                 ToolMenuEntry(self.tr("Debug Info..."), self._on_import_debug_info),
                 ToolMenuEntry(self.tr("Diff..."), self._on_diff_programs),
+                ToolMenuEntry(self.tr("Headless Batch..."), self._on_run_headless_batch),
             ],
         )
         self._debug_info_btn = import_actions[self.tr("Debug Info...")]
         self._diff_btn = import_actions[self.tr("Diff...")]
+        self._headless_batch_btn = import_actions[self.tr("Headless Batch...")]
 
         self.status_label = self._add_toolbar_label(toolbar, self.tr("Not connected"))
 
@@ -326,7 +330,26 @@ class GhidraPanel(AnalysisPanelBase):
         self._disasm_view.setFont(fm.get_code_font(10))
         self._disasm_view.setReadOnly(True)
         set_max_block_count(self._disasm_view, 50000)
-        tabs.addTab(self._disasm_view, self.tr("Disassembly"))
+
+        disasm_container = QWidget()
+        disasm_layout = QVBoxLayout(disasm_container)
+        disasm_layout.setContentsMargins(0, 0, 0, 0)
+        disasm_toolbar = QHBoxLayout()
+        self._disasm_range_start_input = QLineEdit()
+        self._disasm_range_start_input.setPlaceholderText("Start (hex)")
+        disasm_toolbar.addWidget(self._disasm_range_start_input)
+        self._disasm_range_end_input = QLineEdit()
+        self._disasm_range_end_input.setPlaceholderText("End (hex)")
+        disasm_toolbar.addWidget(self._disasm_range_end_input)
+        self._disasm_range_btn = QPushButton(self.tr("Disassemble Range"))
+        self._disasm_range_btn.clicked.connect(self._on_disassemble_range)
+        disasm_toolbar.addWidget(self._disasm_range_btn)
+        self._clear_code_btn = QPushButton(self.tr("Clear Code Bytes"))
+        self._clear_code_btn.clicked.connect(self._on_clear_code_bytes)
+        disasm_toolbar.addWidget(self._clear_code_btn)
+        disasm_layout.addLayout(disasm_toolbar)
+        disasm_layout.addWidget(self._disasm_view)
+        tabs.addTab(disasm_container, self.tr("Disassembly"))
 
         self._pcode_view = QPlainTextEdit()
         self._pcode_view.setFont(fm.get_code_font(10))
@@ -772,14 +795,27 @@ class GhidraPanel(AnalysisPanelBase):
         self._block_perms_input = QLineEdit()
         self._block_perms_input.setPlaceholderText("rwx")
         self._block_perms_input.setText("rwx")
+        self._block_type_combo = QComboBox()
+        self._block_type_combo.addItems(["initialized", "uninitialized", "byte_mapped", "bit_mapped"])
         self._create_block_btn = QPushButton(self.tr("Create"))
         self._create_block_btn.clicked.connect(self._on_create_memory_block)
         block_row.addWidget(self._block_name_input)
         block_row.addWidget(self._block_start_input)
         block_row.addWidget(self._block_size_spin)
         block_row.addWidget(self._block_perms_input)
+        block_row.addWidget(self._block_type_combo)
         block_row.addWidget(self._create_block_btn)
         layout.addLayout(block_row)
+
+        mapped_row = QHBoxLayout()
+        self._block_mapped_addr_label = QLabel(self.tr("Mapped address (hex):"))
+        self._block_mapped_addr_input = QLineEdit()
+        self._block_mapped_addr_input.setPlaceholderText("Mapped address (hex)")
+        mapped_row.addWidget(self._block_mapped_addr_label)
+        mapped_row.addWidget(self._block_mapped_addr_input)
+        layout.addLayout(mapped_row)
+        self._block_type_combo.currentTextChanged.connect(self._on_block_type_changed)
+        self._on_block_type_changed(self._block_type_combo.currentText())
 
         self._build_memory_block_ops_rows(layout)
 
@@ -806,7 +842,7 @@ class GhidraPanel(AnalysisPanelBase):
         Args:
             layout: Parent layout to append the form rows to.
         """
-        block_ops_label = QLabel(self.tr("Remove / Split / Join Memory Block"))
+        block_ops_label = QLabel(self.tr("Remove / Split / Join / Move Memory Block"))
         layout.addWidget(block_ops_label)
 
         remove_row = QHBoxLayout()
@@ -841,6 +877,39 @@ class GhidraPanel(AnalysisPanelBase):
         join_row.addWidget(self._block_join_name2_input)
         join_row.addWidget(self._join_blocks_btn)
         layout.addLayout(join_row)
+
+        move_row = QHBoxLayout()
+        self._block_move_name_input = QLineEdit()
+        self._block_move_name_input.setPlaceholderText("Block name to move")
+        self._block_move_start_input = QLineEdit()
+        self._block_move_start_input.setPlaceholderText("New start (hex)")
+        self._move_block_btn = QPushButton(self.tr("Move"))
+        self._move_block_btn.clicked.connect(self._on_move_memory_block)
+        move_row.addWidget(self._block_move_name_input)
+        move_row.addWidget(self._block_move_start_input)
+        move_row.addWidget(self._move_block_btn)
+        layout.addLayout(move_row)
+
+        rename_comment_label = QLabel(self.tr("Rename / Set Comment"))
+        layout.addWidget(rename_comment_label)
+
+        rename_comment_row = QHBoxLayout()
+        self._block_meta_name_input = QLineEdit()
+        self._block_meta_name_input.setPlaceholderText("Block name")
+        self._block_new_name_input = QLineEdit()
+        self._block_new_name_input.setPlaceholderText("New name")
+        self._rename_block_btn = QPushButton(self.tr("Rename"))
+        self._rename_block_btn.clicked.connect(self._on_rename_memory_block)
+        self._block_comment_input = QLineEdit()
+        self._block_comment_input.setPlaceholderText("Comment")
+        self._set_block_comment_btn = QPushButton(self.tr("Set Comment"))
+        self._set_block_comment_btn.clicked.connect(self._on_set_memory_block_comment)
+        rename_comment_row.addWidget(self._block_meta_name_input)
+        rename_comment_row.addWidget(self._block_new_name_input)
+        rename_comment_row.addWidget(self._rename_block_btn)
+        rename_comment_row.addWidget(self._block_comment_input)
+        rename_comment_row.addWidget(self._set_block_comment_btn)
+        layout.addLayout(rename_comment_row)
 
     # ------------------------------------------------------------------
     # Tab 8: Segments / Program
@@ -978,6 +1047,9 @@ class GhidraPanel(AnalysisPanelBase):
         self._add_cmt_btn = QPushButton(self.tr("Add Comment"))
         self._add_cmt_btn.clicked.connect(self._on_add_comment)
         cmt_btns.addWidget(self._add_cmt_btn)
+        self._remove_cmt_btn = QPushButton(self.tr("Remove Comment"))
+        self._remove_cmt_btn.clicked.connect(self._on_remove_comment)
+        cmt_btns.addWidget(self._remove_cmt_btn)
         cmt_btns.addStretch()
         layout.addLayout(cmt_btns)
 
@@ -1211,6 +1283,14 @@ class GhidraPanel(AnalysisPanelBase):
             _text_edit_min_height(self._analyzer_options_input, _TEXT_MIN_VISIBLE_LINES_COMPACT),
         )
         layout.addWidget(self._analyzer_options_input)
+
+        analyze_timeout_row = QHBoxLayout()
+        analyze_timeout_label = QLabel(self.tr("Analysis Timeout (s, blank = default):"))
+        analyze_timeout_row.addWidget(analyze_timeout_label)
+        self._analyze_timeout_input = QLineEdit()
+        self._analyze_timeout_input.setPlaceholderText("1800")
+        analyze_timeout_row.addWidget(self._analyze_timeout_input)
+        layout.addLayout(analyze_timeout_row)
 
         return make_scrollable(container, min_height=_SCRIPTING_TAB_SCROLL_MIN_HEIGHT)
 
@@ -1762,14 +1842,26 @@ class GhidraPanel(AnalysisPanelBase):
         self._set_status("Analyzing...")
         self._analyze_btn.setEnabled(False)
 
+        timeout_text = self._analyze_timeout_input.text().strip()
+        timeout_seconds: float | None = None
+        if timeout_text:
+            try:
+                timeout_seconds = float(timeout_text)
+            except ValueError:
+                _logger.warning("ghidra_analyze_invalid_timeout", input_text=timeout_text)
+                self._set_status(f"Invalid analysis timeout: {timeout_text!r}")
+                self._analyze_btn.setEnabled(True)
+                return
+
         run_bridge_coroutine_logged(
-            bridge.analyze(),
+            bridge.analyze(timeout_seconds),
             on_success=lambda _: self._on_analysis_complete(),
             on_error=self._on_analysis_error,
             parent=self,
             event="ghidra_analyze",
             logger=_logger,
             level="info",
+            timeout_seconds=timeout_seconds,
         )
 
     def _on_analysis_complete(self) -> None:
@@ -1840,6 +1932,68 @@ class GhidraPanel(AnalysisPanelBase):
         self._set_status(f"Headless start failed: {exc}")
         _logger.warning("ghidra_headless_failed", error=str(exc))
         self._headless_btn.setEnabled(True)
+
+    def _on_run_headless_batch(self) -> None:
+        """Open a multi-file dialog and run a one-shot headless batch analysis."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+
+        ghidra_path = self._bridge.ghidra_path
+        if ghidra_path is None:
+            if path_str := QFileDialog.getExistingDirectory(
+                self,
+                self.tr("Select Ghidra Installation Directory"),
+            ):
+                self.set_ghidra_path(Path(path_str))
+            else:
+                return
+
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            self.tr("Select Binaries to Batch-Analyze"),
+            "",
+            self.tr("All Files (*)"),
+        )
+        if not files:
+            return
+
+        project_dir = Path(tempfile.gettempdir()) / "intellicrack_ghidra_batch"
+        self._headless_batch_btn.setEnabled(False)
+        self._set_status("Running headless batch...")
+        run_bridge_coroutine_logged(
+            self._bridge.run_headless_batch(project_dir, files),
+            on_success=self._on_headless_batch_complete,
+            on_error=self._on_headless_batch_error,
+            parent=self,
+            event="ghidra_run_headless_batch",
+            logger=_logger,
+            level="info",
+            project_dir=str(project_dir),
+            target_count=len(files),
+        )
+
+    def _on_headless_batch_complete(self, result: object) -> None:
+        """Handle successful headless batch completion.
+
+        Args:
+            result: Dict with project_dir, project_name, targets,
+                return_code, and success from the bridge.
+        """
+        self._headless_batch_btn.setEnabled(True)
+        return_code = cast("dict[str, object]", result).get("return_code") if isinstance(result, dict) else None
+        self._set_status(f"Headless batch complete (exit code {return_code})")
+        _logger.info("ghidra_headless_batch_complete", bridge_type="ghidra", return_code=return_code)
+
+    def _on_headless_batch_error(self, exc: object) -> None:
+        """Handle headless batch failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._set_status(f"Headless batch failed: {exc}")
+        _logger.warning("ghidra_headless_batch_failed", error=str(exc))
+        self._headless_batch_btn.setEnabled(True)
 
     # ------------------------------------------------------------------
     # Undo / Redo
@@ -2319,6 +2473,57 @@ class GhidraPanel(AnalysisPanelBase):
             address=hex(address),
         )
 
+    def _on_disassemble_range(self) -> None:
+        """Disassemble undefined bytes into instructions over the entered address range."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        start = self._parse_address(self._disasm_range_start_input.text())
+        if start is None:
+            self._set_status("Invalid start address for disassemble range")
+            return
+        end = self._parse_address(self._disasm_range_end_input.text())
+        if end is None:
+            self._set_status("Invalid end address for disassemble range")
+            return
+        run_bridge_coroutine_logged(
+            bridge.disassemble_range(start, end),
+            on_success=lambda _, addr=start: self._on_cfg_block_clicked(addr),
+            on_error=lambda e: self._set_status(f"Disassemble range failed: {e}"),
+            parent=self,
+            event="ghidra_disassemble_range",
+            logger=_logger,
+            level="info",
+            start=hex(start),
+            end=hex(end),
+        )
+
+    def _on_clear_code_bytes(self) -> None:
+        """Clear code bytes (undefine instructions back to raw bytes) over the entered address range."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        start = self._parse_address(self._disasm_range_start_input.text())
+        if start is None:
+            self._set_status("Invalid start address for clear code bytes")
+            return
+        end = self._parse_address(self._disasm_range_end_input.text())
+        if end is None:
+            self._set_status("Invalid end address for clear code bytes")
+            return
+        status_msg = f"Cleared code bytes 0x{start:X}-0x{end:X}"
+        run_bridge_coroutine_logged(
+            bridge.clear_code_bytes(start, end),
+            on_success=lambda _, msg=status_msg: self._set_status(msg),
+            on_error=lambda e: self._set_status(f"Clear code bytes failed: {e}"),
+            parent=self,
+            event="ghidra_clear_code_bytes",
+            logger=_logger,
+            level="info",
+            start=hex(start),
+            end=hex(end),
+        )
+
     def _show_function_body_info(self, result: object) -> None:
         """Display function body info including thunk status.
 
@@ -2420,8 +2625,10 @@ class GhidraPanel(AnalysisPanelBase):
         raw_actions: dict[str, QAction | None] = {
             "rename": menu.addAction(self.tr("Rename Function")),
             "edit_sig": menu.addAction(self.tr("Edit Signature")),
+            "flags": menu.addAction(self.tr("Set Function Flags")),
             "add_cmt": menu.addAction(self.tr("Add Comment")),
             "set_var": menu.addAction(self.tr("Set Variable Type")),
+            "rename_var": menu.addAction(self.tr("Rename Variable")),
             "call_graph": menu.addAction(self.tr("Show Call Graph")),
             "stack": menu.addAction(self.tr("Get Stack Frame")),
             "body": menu.addAction(self.tr("Get Function Body")),
@@ -2481,6 +2688,9 @@ class GhidraPanel(AnalysisPanelBase):
         elif chosen is actions["edit_sig"]:
             self._handle_edit_signature(address, func_name, bridge)
 
+        elif chosen is actions["flags"]:
+            self._handle_set_function_flags(address, bridge)
+
         elif chosen is actions["add_cmt"]:
             cmt_text, ok = QInputDialog.getText(self, self.tr("Add Comment"), self.tr("Comment:"))
             if ok and cmt_text.strip():
@@ -2516,6 +2726,27 @@ class GhidraPanel(AnalysisPanelBase):
                     address=hex(address),
                     variable_name=var_name.strip(),
                     variable_type=var_type.strip(),
+                )
+
+        elif chosen is actions["rename_var"]:
+            var_info, ok = QInputDialog.getText(
+                self,
+                self.tr("Rename Variable"),
+                self.tr("Variable name:new_name (e.g. myVar:newName):"),
+            )
+            if ok and ":" in var_info:
+                var_name, new_name = var_info.split(":", 1)
+                run_bridge_coroutine_logged(
+                    bridge.rename_function_variable(address, var_name.strip(), new_name.strip()),
+                    on_success=lambda _: self._set_status("Variable renamed"),
+                    on_error=lambda e: self._set_status(f"Rename variable failed: {e}"),
+                    parent=self,
+                    event="ghidra_rename_function_variable",
+                    logger=_logger,
+                    level="info",
+                    address=hex(address),
+                    variable_name=var_name.strip(),
+                    new_variable_name=new_name.strip(),
                 )
 
         elif chosen is actions["call_graph"]:
@@ -2647,6 +2878,64 @@ class GhidraPanel(AnalysisPanelBase):
                 calling_convention=cc,
                 new_name=new_sig_name,
             )
+
+    def _handle_set_function_flags(self, address: int, bridge: GhidraBridge) -> None:
+        """Prompt the user to set a function's no-return/var-args/inline flags and apply them.
+
+        Args:
+            address: Function address to modify.
+            bridge: Connected GhidraBridge instance.
+        """
+        dialog = QDialog(self)
+        dialog.setWindowTitle(self.tr("Set Function Flags"))
+        layout = QVBoxLayout(dialog)
+        no_return_box = QCheckBox(self.tr("No Return"))
+        no_return_box.setTristate(True)
+        var_args_box = QCheckBox(self.tr("Var Args"))
+        var_args_box.setTristate(True)
+        inline_box = QCheckBox(self.tr("Inline"))
+        inline_box.setTristate(True)
+        for box in (no_return_box, var_args_box, inline_box):
+            box.setCheckState(Qt.CheckState.PartiallyChecked)
+            layout.addWidget(box)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        def _tri(box: QCheckBox) -> bool | None:
+            """Convert a tri-state checkbox to a tri-state bool.
+
+            Args:
+                box: The checkbox to read.
+
+            Returns:
+                bool | None: True/False when checked/unchecked, None
+                when left partially checked ("don't change").
+            """
+            state = box.checkState()
+            if state == Qt.CheckState.PartiallyChecked:
+                return None
+            return state == Qt.CheckState.Checked
+
+        no_return = _tri(no_return_box)
+        var_args = _tri(var_args_box)
+        is_inline = _tri(inline_box)
+        run_bridge_coroutine_logged(
+            bridge.set_function_flags(address, no_return=no_return, var_args=var_args, is_inline=is_inline),
+            on_success=lambda r: self._set_status(f"Flags updated: {r}"),
+            on_error=lambda e: self._set_status(f"Set function flags failed: {e}"),
+            parent=self,
+            event="ghidra_set_function_flags",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            no_return=no_return,
+            var_args=var_args,
+            is_inline=is_inline,
+        )
 
     # ------------------------------------------------------------------
     # Imports / Exports
@@ -3050,7 +3339,7 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _on_label_context_menu(self, pos: QPoint) -> None:
-        """Show a context menu with a Remove Label action for the labels table.
+        """Show a context menu with Remove Label and Promote to Primary actions.
 
         Args:
             pos: Position where the right-click occurred, in table viewport coordinates.
@@ -3062,12 +3351,36 @@ class GhidraPanel(AnalysisPanelBase):
 
         menu = QMenu(self)
         remove_action = menu.addAction(self.tr("Remove Label"))
-        if remove_action is None:
+        promote_action = menu.addAction(self.tr("Promote to Primary"))
+        if remove_action is None or promote_action is None:
             return
 
         chosen = menu.exec(self._labels_table.mapToGlobal(pos))
         if chosen is remove_action:
             self._on_remove_label()
+        elif chosen is promote_action:
+            self._on_promote_symbol_to_primary()
+
+    def _on_promote_symbol_to_primary(self) -> None:
+        """Promote the symbol selected in the labels table to primary."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        selected = self._selected_label_row()
+        if selected is None:
+            return
+        addr, name = selected
+        run_bridge_coroutine_logged(
+            bridge.promote_symbol_to_primary(addr, name),
+            on_success=lambda _: self._on_refresh_labels(),
+            on_error=lambda e: self._set_status(f"Promote symbol failed: {e}"),
+            parent=self,
+            event="ghidra_promote_symbol_to_primary",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            name=name,
+        )
 
     def _on_create_bookmark(self) -> None:
         """Create a bookmark at the specified address."""
@@ -3425,8 +3738,25 @@ class GhidraPanel(AnalysisPanelBase):
             byte_count=len(clean_hex) // 2,
         )
 
+    def _on_block_type_changed(self, kind: str) -> None:
+        """Adjust the Create Memory Block form controls for the selected block type.
+
+        Args:
+            kind: Selected block type (initialized, uninitialized, byte_mapped, or bit_mapped).
+        """
+        needs_mapped_addr = kind in {"byte_mapped", "bit_mapped"}
+        self._block_mapped_addr_label.setVisible(needs_mapped_addr)
+        self._block_mapped_addr_input.setVisible(needs_mapped_addr)
+        self._block_perms_input.setEnabled(kind == "initialized")
+
     def _on_create_memory_block(self) -> None:
-        """Create a new memory block in the program."""
+        """Create a new memory block in the program.
+
+        Dispatches to ``create_memory_block`` for the default
+        "initialized" block type, or to ``create_uninitialized_block``,
+        ``create_byte_mapped_block``, or ``create_bit_mapped_block``
+        depending on the selected block type.
+        """
         bridge = self._require_connected()
         if bridge is None:
             return
@@ -3439,19 +3769,73 @@ class GhidraPanel(AnalysisPanelBase):
             self._set_status("Invalid start address for memory block")
             return
         size = self._block_size_spin.value()
-        perms = self._block_perms_input.text().strip()
+        block_type = self._block_type_combo.currentText()
+
+        if block_type == "initialized":
+            perms = self._block_perms_input.text().strip()
+            run_bridge_coroutine_logged(
+                bridge.create_memory_block(name, start, size, perms),
+                on_success=lambda _: self._on_refresh_memory_map(),
+                on_error=lambda e: self._set_status(f"Create memory block failed: {e}"),
+                parent=self,
+                event="ghidra_create_memory_block",
+                logger=_logger,
+                level="info",
+                name=name,
+                start=hex(start),
+                size=size,
+                permissions=perms,
+            )
+            return
+
+        if block_type == "uninitialized":
+            run_bridge_coroutine_logged(
+                bridge.create_uninitialized_block(name, start, size),
+                on_success=lambda _: self._on_refresh_memory_map(),
+                on_error=lambda e: self._set_status(f"Create uninitialized block failed: {e}"),
+                parent=self,
+                event="ghidra_create_uninitialized_block",
+                logger=_logger,
+                level="info",
+                name=name,
+                start=hex(start),
+                size=size,
+            )
+            return
+
+        mapped_address = self._parse_address(self._block_mapped_addr_input.text())
+        if mapped_address is None:
+            self._set_status("Invalid mapped address for memory block")
+            return
+
+        if block_type == "byte_mapped":
+            run_bridge_coroutine_logged(
+                bridge.create_byte_mapped_block(name, start, mapped_address, size),
+                on_success=lambda _: self._on_refresh_memory_map(),
+                on_error=lambda e: self._set_status(f"Create byte-mapped block failed: {e}"),
+                parent=self,
+                event="ghidra_create_byte_mapped_block",
+                logger=_logger,
+                level="info",
+                name=name,
+                start=hex(start),
+                mapped_address=hex(mapped_address),
+                length=size,
+            )
+            return
+
         run_bridge_coroutine_logged(
-            bridge.create_memory_block(name, start, size, perms),
+            bridge.create_bit_mapped_block(name, start, mapped_address, size),
             on_success=lambda _: self._on_refresh_memory_map(),
-            on_error=lambda e: self._set_status(f"Create memory block failed: {e}"),
+            on_error=lambda e: self._set_status(f"Create bit-mapped block failed: {e}"),
             parent=self,
-            event="ghidra_create_memory_block",
+            event="ghidra_create_bit_mapped_block",
             logger=_logger,
             level="info",
             name=name,
             start=hex(start),
-            size=size,
-            permissions=perms,
+            mapped_address=hex(mapped_address),
+            length=size,
         )
 
     def _on_remove_memory_block(self) -> None:
@@ -3497,6 +3881,77 @@ class GhidraPanel(AnalysisPanelBase):
             level="info",
             name=name,
             split_address=hex(split_address),
+        )
+
+    def _on_move_memory_block(self) -> None:
+        """Move a memory block to a different start address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._block_move_name_input.text().strip()
+        if not name:
+            self._set_status("Block name required for move")
+            return
+        new_start = self._parse_address(self._block_move_start_input.text())
+        if new_start is None:
+            self._set_status("Invalid new start address for memory block")
+            return
+        run_bridge_coroutine_logged(
+            bridge.move_memory_block(name, new_start),
+            on_success=lambda _: self._on_refresh_memory_map(),
+            on_error=lambda e: self._set_status(f"Move memory block failed: {e}"),
+            parent=self,
+            event="ghidra_move_memory_block",
+            logger=_logger,
+            level="info",
+            name=name,
+            new_start=hex(new_start),
+        )
+
+    def _on_rename_memory_block(self) -> None:
+        """Rename an existing memory block."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._block_meta_name_input.text().strip()
+        if not name:
+            self._set_status("Block name required for rename")
+            return
+        new_name = self._block_new_name_input.text().strip()
+        if not new_name:
+            self._set_status("New name required for rename")
+            return
+        run_bridge_coroutine_logged(
+            bridge.rename_memory_block(name, new_name),
+            on_success=lambda _: self._on_refresh_memory_map(),
+            on_error=lambda e: self._set_status(f"Rename memory block failed: {e}"),
+            parent=self,
+            event="ghidra_rename_memory_block",
+            logger=_logger,
+            level="info",
+            name=name,
+            new_name=new_name,
+        )
+
+    def _on_set_memory_block_comment(self) -> None:
+        """Set or replace the comment on an existing memory block."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._block_meta_name_input.text().strip()
+        if not name:
+            self._set_status("Block name required for comment")
+            return
+        comment = self._block_comment_input.text()
+        run_bridge_coroutine_logged(
+            bridge.set_memory_block_comment(name, comment),
+            on_success=lambda _: self._on_refresh_memory_map(),
+            on_error=lambda e: self._set_status(f"Set memory block comment failed: {e}"),
+            parent=self,
+            event="ghidra_set_memory_block_comment",
+            logger=_logger,
+            level="info",
+            name=name,
         )
 
     def _on_join_memory_blocks(self) -> None:
@@ -3801,6 +4256,28 @@ class GhidraPanel(AnalysisPanelBase):
             address=hex(addr),
             comment_type=cmt_type,
             comment_length=len(cmt_text),
+        )
+
+    def _on_remove_comment(self) -> None:
+        """Clear the comment of the selected type at the specified address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._cmt_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for remove comment")
+            return
+        cmt_type = self._cmt_type_combo.currentText()
+        run_bridge_coroutine_logged(
+            bridge.remove_comment(addr, cmt_type),
+            on_success=lambda _: self._on_refresh_comments(),
+            on_error=lambda e: self._set_status(f"Remove comment failed: {e}"),
+            parent=self,
+            event="ghidra_remove_comment",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            comment_type=cmt_type,
         )
 
     def _on_refresh_comments(self) -> None:

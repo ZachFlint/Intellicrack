@@ -43,6 +43,7 @@ parameter schema whose names match the real method signature.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
@@ -53,14 +54,14 @@ from tests.bridges.completeness.ghidra.conftest import FakeGhidraBridge, run_asy
 
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from intellicrack.bridges.ghidra import GhidraBridge
     from intellicrack.core.types import FunctionInfo
 
 
 _TEST_ADDR = 0x401000
 _TEST_ADDR2 = 0x402000
+_FIXTURES_DIR = Path(__file__).parent / "fixtures"
+HEADER_FIXTURE = _FIXTURES_DIR / "sample_header.h"
 
 
 @pytest.fixture
@@ -185,6 +186,94 @@ class TestAddCommentRepeatableRegression:
         assert "CodeUnit.REPEATABLE_COMMENT" in fake.exec_calls[0]
 
 
+class TestRemoveComment:
+    """L1/L2 gates for remove_comment (slice 6, work order 06-CB4)."""
+
+    @staticmethod
+    def test_happy_path_clears_comment_verified_by_readback(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """remove_comment must emit setComment(type, None) and verify the readback is empty.
+
+        Falsifiable: reverting to a MISSING implementation would raise
+        AttributeError; dropping the ``None`` argument from the emitted
+        ``setComment`` call would fail the containment assertion.
+        """
+        fake.eval_response = None
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.remove_comment(_TEST_ADDR, "EOL")),
+        )
+        assert result == {"address": hex(_TEST_ADDR), "comment_type": "EOL", "success": True}
+        assert "setComment(CodeUnit.EOL_COMMENT, None)" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_repeatable_type_emits_repeatable_constant(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """remove_comment(comment_type='REPEATABLE') must emit CodeUnit.REPEATABLE_COMMENT.
+
+        Falsifiable: if ``remove_comment`` hand-rolled its own
+        diverging comment-type map instead of reusing ``add_comment``'s,
+        a REPEATABLE request could silently clear the wrong slot.
+        """
+        fake.eval_response = None
+        run_async(connected_bridge.remove_comment(_TEST_ADDR, "REPEATABLE"))
+        assert "CodeUnit.REPEATABLE_COMMENT" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_unknown_comment_type_raises_before_dispatch(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """remove_comment must raise ToolError for an unrecognized comment_type before any RPC call.
+
+        Falsifiable: if the ``ghidra_type is None`` guard were removed,
+        this would dispatch an RPC call instead of raising, leaving
+        ``fake.exec_calls`` non-empty.
+        """
+        with pytest.raises(ToolError, match="Unknown comment_type"):
+            run_async(connected_bridge.remove_comment(_TEST_ADDR, "BOGUS"))
+        assert len(fake.exec_calls) == 0
+
+    @staticmethod
+    def test_readback_still_present_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """remove_comment must raise ToolError when the post-clear readback still reports a value.
+
+        Falsifiable: if the post-clear readback verification were
+        dropped, a silently-failed clear would still report
+        ``success: True`` instead of raising.
+        """
+        fake.eval_response = "stubborn comment"
+        with pytest.raises(ToolError, match="verification failed"):
+            run_async(connected_bridge.remove_comment(_TEST_ADDR, "EOL"))
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.remove_comment must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here.
+        """
+        fake.eval_response = None
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.remove_comment",
+                    {"address": _TEST_ADDR, "comment_type": "PLATE"},
+                ),
+            ),
+        )
+        assert result["success"] is True
+
+
 # ---------------------------------------------------------------------------
 # remove_memory_block / split_memory_block / join_memory_blocks (MISSING -> real)
 # ---------------------------------------------------------------------------
@@ -301,6 +390,160 @@ class TestMemoryBlockOps:
 
         with pytest.raises(ToolError, match="not found"):
             run_async(connected_bridge.join_memory_blocks(".block_a", ".missing"))
+
+    @staticmethod
+    def test_move_memory_block_happy_path(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """move_memory_block must emit Memory.moveBlock and return the exact hex new start.
+
+        Falsifiable: if ``memory.moveBlock`` were (incorrectly) swapped
+        for ``Memory.split``/``Memory.join`` (its nearest siblings by
+        file position), the ``"memory.moveBlock(" in fake.exec_calls[0]``
+        containment check fails immediately.
+        """
+        fake.eval_response = {"found": True, "ok": True}
+
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.move_memory_block(".custom", 0x500000)),
+        )
+
+        assert result == {"name": ".custom", "new_start": hex(0x500000), "success": True}
+        assert len(fake.exec_calls) == 1
+        assert "memory.moveBlock(" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_move_memory_block_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """move_memory_block must raise ToolError when the named block does not exist.
+
+        Falsifiable: if the ``found`` guard were removed, this would
+        return a success dict instead of raising.
+        """
+        fake.eval_response = {"found": False, "ok": False}
+
+        with pytest.raises(ToolError, match="not found"):
+            run_async(connected_bridge.move_memory_block("nonexistent", 0x500000))
+
+    @staticmethod
+    def test_move_memory_block_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.move_memory_block must dispatch via ToolRegistry and perform the real move.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here before move_memory_block ever ran.
+        """
+        fake.eval_response = {"found": True, "ok": True}
+
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.move_memory_block",
+                    {"name": ".text", "new_start": 0x500000},
+                ),
+            ),
+        )
+        assert result["success"] is True
+
+    @staticmethod
+    def test_rename_memory_block_happy_path(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """rename_memory_block must emit MemoryBlock.setName and return the new/previous names.
+
+        Falsifiable: if ``block.setName`` were (incorrectly) replaced
+        by re-running ``create_memory_block``'s constructor path, the
+        ``"block.setName(" in fake.exec_calls[0]`` containment check
+        fails immediately.
+        """
+        fake.eval_response = {"found": True, "ok": True}
+
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.rename_memory_block(".old", ".new")),
+        )
+
+        assert result == {"name": ".new", "previous_name": ".old", "success": True}
+        assert "block.setName(" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_rename_memory_block_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """rename_memory_block must raise ToolError when the named block does not exist.
+
+        Falsifiable: if the ``found`` guard were removed, this would
+        return a success dict instead of raising.
+        """
+        fake.eval_response = {"found": False, "ok": False}
+
+        with pytest.raises(ToolError, match="not found"):
+            run_async(connected_bridge.rename_memory_block("nonexistent", ".new"))
+
+    @staticmethod
+    def test_set_memory_block_comment_happy_path(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """set_memory_block_comment must emit MemoryBlock.setComment and return the comment text.
+
+        Falsifiable: if ``block.setComment`` were (incorrectly) replaced
+        by re-running ``create_memory_block``'s constructor path, the
+        ``"block.setComment(" in fake.exec_calls[0]`` containment check
+        fails immediately.
+        """
+        fake.eval_response = {"found": True, "ok": True}
+
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.set_memory_block_comment(".text", "manually mapped overlay")),
+        )
+
+        assert result == {"name": ".text", "comment": "manually mapped overlay", "success": True}
+        assert "block.setComment(" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_set_memory_block_comment_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """set_memory_block_comment must raise ToolError when the named block does not exist.
+
+        Falsifiable: if the ``found`` guard were removed, this would
+        return a success dict instead of raising.
+        """
+        fake.eval_response = {"found": False, "ok": False}
+
+        with pytest.raises(ToolError, match="not found"):
+            run_async(connected_bridge.set_memory_block_comment("nonexistent", "x"))
+
+    @staticmethod
+    def test_rename_memory_block_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.rename_memory_block must dispatch via ToolRegistry and perform the real rename.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here before rename_memory_block ever ran.
+        """
+        fake.eval_response = {"found": True, "ok": True}
+
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.rename_memory_block",
+                    {"name": ".old", "new_name": ".new"},
+                ),
+            ),
+        )
+        assert result["success"] is True
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -754,6 +997,53 @@ def _run_captured_script(script: str, current_program: _FakeCurrentProgram) -> d
     return cast("dict[str, object]", value)
 
 
+class TestCreateProgramTree:
+    """L1/L2 gates for ``GhidraBridge.create_program_tree``."""
+
+    @staticmethod
+    def test_happy_path_creates_new_tree(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """create_program_tree must emit createRootModule and return the new root's name.
+
+        Falsifiable: if the implementation called ``getRootModule``
+        instead of ``createRootModule``, this assertion would fail.
+        """
+        fake.eval_response = {"already_exists": False, "created": True, "root_name": "NewTree"}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.create_program_tree("NewTree")),
+        )
+        assert result == {"tree_name": "NewTree", "root_name": "NewTree", "success": True}
+        assert "createRootModule" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_duplicate_tree_name_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """A duplicate tree name must raise a clear ToolError, not an opaque RPC failure."""
+        fake.eval_response = {"already_exists": True, "created": False, "root_name": None}
+        with pytest.raises(ToolError, match="already exists"):
+            run_async(connected_bridge.create_program_tree("Program Tree"))
+
+    @staticmethod
+    def test_tool_def_registered_with_matching_params(connected_bridge: GhidraBridge) -> None:
+        """The tool definition must declare exactly the real method's parameters."""
+        assert _tool_def_param_names(connected_bridge, "ghidra.create_program_tree") == {"tree_name"}
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """create_program_tree must be dispatchable through the real ToolRegistry."""
+        fake.eval_response = {"already_exists": False, "created": True, "root_name": "AuxTree"}
+        result = cast(
+            "dict[str, Any]",
+            run_async(registry.execute_tool_call("ghidra", "ghidra.create_program_tree", {"tree_name": "AuxTree"})),
+        )
+        assert result["success"] is True
+
+
 class TestEditProgramTree:
     """L1/L2 gates for the previously MISSING program-tree write API."""
 
@@ -834,7 +1124,7 @@ class TestEditProgramTree:
 
     @staticmethod
     def test_tool_def_registered_with_matching_params(connected_bridge: GhidraBridge) -> None:
-        """ghidra.edit_program_tree's tool-def must declare all four real parameter names.
+        """ghidra.edit_program_tree's tool-def must declare all five real parameter names.
 
         Falsifiable: a parameter rename/removal in either the method
         signature or the ``ToolFunction`` entry desynchronizes this set.
@@ -844,6 +1134,7 @@ class TestEditProgramTree:
             "operation",
             "parent_module",
             "child_name",
+            "new_name",
         }
 
     @staticmethod
@@ -1238,6 +1529,146 @@ class TestEditProgramTreeRealReparentSemantics:
 
         with pytest.raises(LookupError, match="not a child of"):
             new_parent.move_child("Payload", 0)
+
+
+class TestEditProgramTreeDeleteRename:
+    """Extends the existing TestEditProgramTree coverage with the new delete/rename operations."""
+
+    @staticmethod
+    def test_delete_emits_remove_child(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """edit_program_tree(delete) must emit parent.removeChild and return success.
+
+        Falsifiable: if the ``operation == 'delete'`` branch were
+        removed from the emitted Jython, ``ok = bool(parent.removeChild(``
+        would not appear in the script and this assertion would fail.
+        A bare ``"removeChild(" in ...`` check would NOT be falsifiable
+        here, since the pre-existing ``move_child`` branch's
+        ``extra_parent.removeChild(...)`` call is always present in the
+        same static script regardless of ``operation``.
+        """
+        fake.eval_response = {"tree_found": True, "parent_found": True, "child_found": True, "ok": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.edit_program_tree("Program Tree", "delete", "Root", "EmptyFrag")),
+        )
+        assert result["success"] is True
+        assert "ok = bool(parent.removeChild(" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_delete_non_empty_module_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """Deleting a non-empty module must raise a specific ToolError, not a generic failure."""
+        fake.eval_response = {"tree_found": True, "parent_found": True, "child_found": True, "ok": False}
+        with pytest.raises(ToolError, match="not empty"):
+            run_async(connected_bridge.edit_program_tree("Program Tree", "delete", "Root", "NonEmptyMod"))
+
+    @staticmethod
+    def test_rename_emits_set_name_with_new_name(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """edit_program_tree(rename) must emit setName with the new name and return it.
+
+        Falsifiable: if the ``operation == 'rename'`` branch were
+        removed, or ``new_name`` were not interpolated into the
+        emitted script, this assertion would fail.
+        """
+        fake.eval_response = {"tree_found": True, "parent_found": True, "child_found": True, "ok": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.edit_program_tree("Program Tree", "rename", "Root", "OldName", "NewName")),
+        )
+        assert result["success"] is True
+        assert "setName(" in fake.exec_calls[0]
+        assert "NewName" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_rename_without_new_name_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """Rename without new_name must raise before any RPC call is made."""
+        with pytest.raises(ToolError, match="new_name"):
+            run_async(connected_bridge.edit_program_tree("Program Tree", "rename", "Root", "OldName"))
+        assert fake.exec_calls == []
+
+    @staticmethod
+    def test_tool_def_operation_enum_includes_delete_and_rename(connected_bridge: GhidraBridge) -> None:
+        """The tool-def operation enum must offer the two new operations."""
+        defn = connected_bridge.tool_definition
+        func = next(f for f in defn.functions if f.name == "ghidra.edit_program_tree")
+        op_param = next(p for p in func.parameters if p.name == "operation")
+        assert op_param.enum is not None
+        assert {"delete", "rename"}.issubset(set(op_param.enum))
+
+
+class TestAssignFragmentRange:
+    """L1/L2 gates for ``GhidraBridge.assign_fragment_range``."""
+
+    @staticmethod
+    def test_happy_path_emits_fragment_move(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """assign_fragment_range must emit ProgramFragment.move, not a move_child-style reparent.
+
+        Falsifiable: if the method were (incorrectly) wired to reuse
+        ``move_child``'s reparent-based mutation, ``fragment.move(``
+        would not appear in the emitted script.
+        """
+        fake.eval_response = {"tree_found": True, "fragment_found": True, "ok": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.assign_fragment_range("Program Tree", "NewFrag", _TEST_ADDR, _TEST_ADDR2)),
+        )
+        assert result["success"] is True
+        assert "fragment.move(" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_fragment_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """A missing fragment must raise a specific ToolError."""
+        fake.eval_response = {"tree_found": True, "fragment_found": False, "ok": False}
+        with pytest.raises(ToolError, match="Fragment not found"):
+            run_async(connected_bridge.assign_fragment_range("Program Tree", "Ghost", _TEST_ADDR, _TEST_ADDR2))
+
+    @staticmethod
+    def test_tool_def_registered_with_matching_params(connected_bridge: GhidraBridge) -> None:
+        """The tool definition must declare exactly the real method's parameters."""
+        assert _tool_def_param_names(connected_bridge, "ghidra.assign_fragment_range") == {
+            "tree_name",
+            "fragment_name",
+            "start_address",
+            "end_address",
+        }
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """assign_fragment_range must be dispatchable through the real ToolRegistry."""
+        fake.eval_response = {"tree_found": True, "fragment_found": True, "ok": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.assign_fragment_range",
+                    {
+                        "tree_name": "Program Tree",
+                        "fragment_name": "NewFrag",
+                        "start_address": _TEST_ADDR,
+                        "end_address": _TEST_ADDR2,
+                    },
+                ),
+            ),
+        )
+        assert result["success"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -2073,3 +2504,945 @@ class TestCreateDataType:
             ),
         )
         assert result["kind"] == "union"
+
+
+class TestGetDataTypeTree:
+    """L1/L2 gates for get_data_type_tree (slice 6, work order 06-DT7)."""
+
+    @staticmethod
+    def test_happy_path_returns_every_kind_not_only_structures(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """get_data_type_tree must emit Category.getCategories, never DataTypeManager.getAllStructures.
+
+        Falsifiable: if the implementation were (incorrectly) built by
+        reusing ``get_structures``'s ``getAllStructures()`` iterator
+        instead of walking the category tree, this would only ever
+        surface structures -- defeating the entire point of this item.
+        """
+        fake.eval_response = {
+            "name": "/",
+            "path": "/",
+            "subcategories": [
+                {
+                    "name": "MyTypes",
+                    "path": "/MyTypes",
+                    "subcategories": [],
+                    "data_types": [
+                        {"name": "Color", "kind": "EnumDataType", "size": 4},
+                        {"name": "Point", "kind": "UnionDataType", "size": 8},
+                    ],
+                },
+            ],
+            "data_types": [{"name": "MyStruct", "kind": "StructureDB", "size": 16}],
+        }
+        result = cast("dict[str, Any]", run_async(connected_bridge.get_data_type_tree()))
+        kinds = {dt["kind"] for dt in result["subcategories"][0]["data_types"]}
+        assert kinds == {"EnumDataType", "UnionDataType"}
+        assert "getAllStructures" not in fake.exec_calls[0]
+        assert "getCategories" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_category_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """get_data_type_tree must raise ToolError when the named category path does not exist.
+
+        Falsifiable: if the ``result is None`` not-found guard were
+        removed, this would return a malformed payload instead of
+        raising.
+        """
+        fake.eval_response = None
+        with pytest.raises(ToolError, match="Category not found"):
+            run_async(connected_bridge.get_data_type_tree("/NoSuchCategory"))
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.get_data_type_tree must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here.
+        """
+        fake.eval_response = {"name": "/", "path": "/", "subcategories": [], "data_types": []}
+        result = cast(
+            "dict[str, Any]",
+            run_async(registry.execute_tool_call("ghidra", "ghidra.get_data_type_tree", {})),
+        )
+        assert result["path"] == "/"
+
+
+class TestImportCHeader:
+    """L1/L2 gates for import_c_header (slice 6, work order 06-DT11)."""
+
+    @staticmethod
+    def test_happy_path_reports_types_added(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """import_c_header must dispatch CParserUtils.parseHeaderFiles and report types_added.
+
+        Falsifiable: if the ``CParserUtils.parseHeaderFiles`` call were
+        removed or replaced with a different API, the
+        ``"parseHeaderFiles" in fake.exec_calls[0]`` containment check
+        fails immediately.
+        """
+        fake.eval_response = {"success": True, "types_added": 3, "error": None}
+
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.import_c_header(str(HEADER_FIXTURE))),
+        )
+
+        assert result == {"path": str(HEADER_FIXTURE), "types_added": 3, "success": True}
+        assert "parseHeaderFiles" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_parse_failure_raises(connected_bridge: GhidraBridge, fake: FakeGhidraBridge) -> None:
+        """import_c_header must raise ToolError surfacing Ghidra's parse error text on failure.
+
+        Falsifiable: if the ``results.successful()`` check were
+        replaced by treating "no exception raised" as success, this
+        would return a success dict instead of raising.
+        """
+        fake.eval_response = {"success": False, "types_added": 0, "error": "syntax error"}
+
+        with pytest.raises(ToolError, match="syntax error"):
+            run_async(connected_bridge.import_c_header(str(HEADER_FIXTURE)))
+
+    @staticmethod
+    def test_unresolvable_path_raises_before_any_rpc_call(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """import_c_header must raise ToolError for a nonexistent header path without contacting Ghidra.
+
+        Falsifiable: if the path-existence check were removed, a
+        nonexistent path would be forwarded straight into the remote
+        script instead of raising here, and ``fake.exec_calls`` would
+        be non-empty.
+        """
+        with pytest.raises(ToolError, match="not found"):
+            run_async(connected_bridge.import_c_header(str(HEADER_FIXTURE.parent / "does_not_exist.h")))
+        assert fake.exec_calls == []
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.import_c_header must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here before import_c_header ever ran.
+        """
+        fake.eval_response = {"success": True, "types_added": 2, "error": None}
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.import_c_header",
+                    {"header_path": str(HEADER_FIXTURE)},
+                ),
+            ),
+        )
+        assert result["success"] is True
+        assert result["types_added"] == 2
+
+
+class TestDataTypeArchiveRoundTrip:
+    """L1/L2 gates for export_data_type_archive / import_data_type_archive (06-DT11)."""
+
+    @staticmethod
+    def test_export_then_import_round_trips_type_count(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+        tmp_path: Path,
+    ) -> None:
+        """Round-trip gate required by the mission brief: export N types, re-import, assert equality.
+
+        Falsifiable: if either half of the round trip silently dropped
+        or duplicated types, ``types_imported`` would diverge from
+        ``types_exported``.
+        """
+        archive = tmp_path / "roundtrip.gdt"
+        fake.eval_response = {"path": str(archive), "types_exported": 5}
+        export_result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.export_data_type_archive(str(archive))),
+        )
+        assert export_result["types_exported"] == 5
+        assert "createFileArchive" in fake.exec_calls[0]
+
+        fake.eval_response = {"types_imported": 5}
+        import_result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.import_data_type_archive(str(archive))),
+        )
+        assert import_result["types_imported"] == export_result["types_exported"]
+        assert "openFileArchive" in fake.exec_calls[1]
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge, tmp_path: Path) -> None:
+        """ghidra.export_data_type_archive must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here before export_data_type_archive ever ran.
+        """
+        fake.eval_response = {"path": str(tmp_path / "x.gdt"), "types_exported": 1}
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.export_data_type_archive",
+                    {"archive_path": str(tmp_path / "x.gdt")},
+                ),
+            ),
+        )
+        assert result["success"] is True
+
+
+class TestGetInstructionPcode:
+    """L1/L2 gates for get_instruction_pcode (slice 5, row 09 -- work order 05-1)."""
+
+    @staticmethod
+    def test_happy_path_returns_ops_from_real_pcode_shape(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """get_instruction_pcode must read Instruction.getPcode(), never DecompInterface.
+
+        Falsifiable: this is the exact defect get_pcode already has (it
+        returns an empty ops list whenever decompilation fails); routing
+        this method through DecompInterface instead of
+        listing.getInstructionAt(...).getPcode() would make the
+        'DecompInterface not in exec_calls' assertion fail immediately.
+        """
+        fake.eval_response = {
+            "address": _TEST_ADDR,
+            "mnemonic": "MOV",
+            "pcode_ops": [
+                {
+                    "opcode": 1,
+                    "mnemonic": "COPY",
+                    "output": {"space": "register", "offset": 0, "size": 4},
+                    "inputs": [{"space": "const", "offset": 305419896, "size": 4}],
+                },
+            ],
+        }
+        result = cast("dict[str, Any]", run_async(connected_bridge.get_instruction_pcode(_TEST_ADDR)))
+        assert result["pcode_ops"][0]["opcode"] == 1
+        assert result["pcode_ops"][0]["output"]["offset"] == 0
+        assert "getInstructionAt" in fake.exec_calls[0]
+        assert "DecompInterface" not in fake.exec_calls[0]
+
+    @staticmethod
+    def test_no_instruction_returns_empty_ops(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """get_instruction_pcode must return an empty ops list when no instruction exists.
+
+        Falsifiable: a missing 'instr is None' guard would raise an
+        AttributeError on the remote side instead of this empty payload.
+        """
+        fake.eval_response = {"address": None, "mnemonic": None, "pcode_ops": []}
+        result = cast("dict[str, Any]", run_async(connected_bridge.get_instruction_pcode(_TEST_ADDR)))
+        assert result["pcode_ops"] == []
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.get_instruction_pcode must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here.
+        """
+        fake.eval_response = {"address": _TEST_ADDR, "mnemonic": "NOP", "pcode_ops": []}
+        result = cast(
+            "dict[str, Any]",
+            run_async(registry.execute_tool_call("ghidra", "ghidra.get_instruction_pcode", {"address": _TEST_ADDR})),
+        )
+        assert result["mnemonic"] == "NOP"
+
+
+class TestDisassembleRange:
+    """L1/L2 gates for disassemble_range (slice 5, row 10 -- work order 05-2)."""
+
+    @staticmethod
+    def test_happy_path_returns_instructions_created(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """disassemble_range must emit DisassembleCommand and report the instruction delta.
+
+        Falsifiable: a fake "declare success without doing anything"
+        regression that never calls DisassembleCommand would fail the
+        containment assertion immediately.
+        """
+        fake.eval_response = {"applied": True, "instructions_created": 3}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.disassemble_range(_TEST_ADDR, _TEST_ADDR2)),
+        )
+        assert result == {
+            "start": hex(_TEST_ADDR),
+            "end": hex(_TEST_ADDR2),
+            "instructions_created": 3,
+            "success": True,
+        }
+        assert "DisassembleCommand" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_command_rejected_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """disassemble_range must raise ToolError when Ghidra rejects the command.
+
+        Falsifiable: dropping the applied-guard would silently report
+        success instead of raising.
+        """
+        fake.eval_response = {"applied": False, "instructions_created": 0}
+        with pytest.raises(ToolError):
+            run_async(connected_bridge.disassemble_range(_TEST_ADDR, _TEST_ADDR2))
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.disassemble_range must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here.
+        """
+        fake.eval_response = {"applied": True, "instructions_created": 1}
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.disassemble_range",
+                    {"start_address": _TEST_ADDR, "end_address": _TEST_ADDR2},
+                ),
+            ),
+        )
+        assert result["success"] is True
+
+
+class TestClearCodeBytes:
+    """L1/L2 gates for clear_code_bytes (slice 5, row 10 -- work order 05-2)."""
+
+    @staticmethod
+    def test_happy_path_emits_clear_code_units(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """clear_code_bytes must emit Listing.clearCodeUnits over the requested range.
+
+        Falsifiable: swapping the mutating call for a different (or
+        no-op) Ghidra API call would fail the containment assertion.
+        """
+        fake.eval_response = {"had_code": True, "cleared": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.clear_code_bytes(_TEST_ADDR, _TEST_ADDR2)),
+        )
+        assert result == {"start": hex(_TEST_ADDR), "end": hex(_TEST_ADDR2), "success": True}
+        assert "clearCodeUnits" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.clear_code_bytes must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here.
+        """
+        fake.eval_response = {"had_code": False, "cleared": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.clear_code_bytes",
+                    {"start_address": _TEST_ADDR, "end_address": _TEST_ADDR2},
+                ),
+            ),
+        )
+        assert result["success"] is True
+
+
+class TestSetRegisterValue:
+    """L1/L2 gates for set_register_value (slice 5, row 11 -- work order 05-3)."""
+
+    @staticmethod
+    def test_happy_path_verifies_readback(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """set_register_value must emit setRegisterValue and verify the write via readback.
+
+        Falsifiable: swapping the mutating call for the read-only
+        getRegisterValue would fail the containment assertion.
+        """
+        fake.set_eval_responder(
+            lambda expr: {"set": True, "reason": None} if "startTransaction" in expr or "setRegisterValue" in expr else 0x1,
+        )
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.set_register_value(_TEST_ADDR, _TEST_ADDR2, "TMode", 1)),
+        )
+        assert result == {
+            "start": hex(_TEST_ADDR),
+            "end": hex(_TEST_ADDR2),
+            "register": "TMode",
+            "value": 1,
+            "success": True,
+        }
+        assert "setRegisterValue" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_readback_mismatch_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """set_register_value must raise ToolError when the readback does not match.
+
+        Falsifiable: removing the post-write verification step would
+        let a silently-rejected write report success=True instead.
+        """
+        fake.set_eval_responder(lambda expr: 0 if "getUnsignedValue" in expr or "getRegisterValue" in expr else {"set": True})
+        with pytest.raises(ToolError, match="verification failed"):
+            run_async(connected_bridge.set_register_value(_TEST_ADDR, _TEST_ADDR2, "TMode", 1))
+
+    @staticmethod
+    def test_unknown_register_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """set_register_value must raise ToolError for an unknown register name, never silently no-op."""
+        fake.eval_response = {"set": False, "reason": "unknown_register"}
+        with pytest.raises(ToolError):
+            run_async(connected_bridge.set_register_value(_TEST_ADDR, _TEST_ADDR2, "NOSUCHREG", 1))
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.set_register_value must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here.
+        """
+        fake.set_eval_responder(lambda expr: {"set": True} if "setRegisterValue" in expr else 1)
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.set_register_value",
+                    {"start_address": _TEST_ADDR, "end_address": _TEST_ADDR2, "register": "TMode", "value": 1},
+                ),
+            ),
+        )
+        assert result["success"] is True
+
+
+class TestRenameFunctionVariable:
+    """L1/L2 gates for rename_function_variable (slice 5, row 12 -- work order 05-4)."""
+
+    @staticmethod
+    def test_happy_path_emits_set_name_not_set_data_type(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """rename_function_variable must emit Variable.setName, never setDataType.
+
+        Falsifiable: this is precisely the rename-vs-retype confusion
+        this item exists to resolve. If the implementation were
+        accidentally copied from set_function_variable_type without
+        changing the mutating call, the second assertion fails
+        immediately.
+        """
+        fake.eval_response = True
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.rename_function_variable(_TEST_ADDR, "oldVar", "newVar")),
+        )
+        assert result == {"var_name": "oldVar", "new_name": "newVar", "success": True}
+        assert "setName(" in fake.exec_calls[0]
+        assert "setDataType(" not in fake.exec_calls[0]
+
+    @staticmethod
+    def test_variable_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """rename_function_variable must raise ToolError when the named variable does not exist."""
+        fake.eval_response = False
+        with pytest.raises(ToolError, match="not found"):
+            run_async(connected_bridge.rename_function_variable(_TEST_ADDR, "ghostVar", "newVar"))
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.rename_function_variable must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here.
+        """
+        fake.eval_response = True
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.rename_function_variable",
+                    {"func_address": _TEST_ADDR, "var_name": "oldVar", "new_name": "newVar"},
+                ),
+            ),
+        )
+        assert result["success"] is True
+
+
+class TestSetFunctionFlags:
+    """L1/L2 gates for set_function_flags (slice 5, row 13 -- work order 05-5)."""
+
+    @staticmethod
+    def test_happy_path_sets_all_three_flags(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """set_function_flags must emit setNoReturn(True) and only that call when only no_return is passed.
+
+        Falsifiable: if every flag setter were always emitted
+        regardless of which arguments were passed, the negative
+        containment assertions for setVarArgs/setInline would fail.
+        """
+        fake.eval_response = {
+            "name": "ExitWrapper",
+            "address": _TEST_ADDR,
+            "no_return": True,
+            "var_args": False,
+            "is_inline": False,
+        }
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.set_function_flags(_TEST_ADDR, no_return=True)),
+        )
+        assert result["no_return"] is True
+        assert "setNoReturn(True)" in fake.exec_calls[0]
+        assert "setVarArgs(" not in fake.exec_calls[0]
+        assert "setInline(" not in fake.exec_calls[0]
+
+    @staticmethod
+    def test_false_is_not_treated_as_unset(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """A caller passing var_args=False must still emit setVarArgs(False), not skip it.
+
+        Falsifiable: an `if var_args:` (truthiness) check instead of
+        `if var_args is not None:` would drop this call entirely for a
+        False value, silently leaving the existing flag untouched.
+        """
+        fake.eval_response = {"name": "f", "address": _TEST_ADDR, "no_return": False, "var_args": False, "is_inline": False}
+        run_async(connected_bridge.set_function_flags(_TEST_ADDR, var_args=False))
+        assert "setVarArgs(False)" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_function_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """set_function_flags must raise ToolError when no function exists at the address."""
+        fake.eval_response = None
+        with pytest.raises(ToolError, match="No function at"):
+            run_async(connected_bridge.set_function_flags(_TEST_ADDR, is_inline=True))
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.set_function_flags must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here.
+        """
+        fake.eval_response = {"name": "f", "address": _TEST_ADDR, "no_return": True, "var_args": False, "is_inline": False}
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.set_function_flags",
+                    {"address": _TEST_ADDR, "no_return": True},
+                ),
+            ),
+        )
+        assert result["no_return"] is True
+
+
+class TestFunctionTags:
+    """L1/L2 gates for create_function_tag / set_function_tags / get_function_tags (slice 5, work order 05-6)."""
+
+    @staticmethod
+    def test_create_function_tag_happy_path(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """create_function_tag must emit createFunctionTag and echo back the requested name/comment.
+
+        Falsifiable: reverting to a MISSING implementation would raise
+        AttributeError; dropping the ``createFunctionTag`` call from the
+        emitted script would fail the containment assertion.
+        """
+        fake.eval_response = {"name": "Deprecated", "comment": "legacy code", "success": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.create_function_tag("Deprecated", "legacy code")),
+        )
+        assert result == {"name": "Deprecated", "comment": "legacy code", "success": True}
+        assert "createFunctionTag" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_set_function_tags_unknown_operation_raises_before_dispatch(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """set_function_tags must raise ToolError for an unrecognized operation before any RPC call.
+
+        Falsifiable: if the ``valid_operations`` guard were removed, this
+        would dispatch an RPC call instead of raising, leaving
+        ``fake.exec_calls`` non-empty.
+        """
+        with pytest.raises(ToolError, match="Unknown operation"):
+            run_async(connected_bridge.set_function_tags(_TEST_ADDR, "Deprecated", "toggle"))
+        assert len(fake.exec_calls) == 0
+
+    @staticmethod
+    def test_set_function_tags_add_emits_add_tag(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """operation='add' must emit Function.addTag and never Function.removeTag.
+
+        Falsifiable: if both branches were always emitted in one script
+        regardless of ``operation``, the negative containment assertion
+        (``"removeTag(" not in ...``) would fail.
+        """
+        fake.eval_response = {"found": True, "applied": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.set_function_tags(_TEST_ADDR, "Deprecated", "add")),
+        )
+        assert result["success"] is True
+        assert "addTag(" in fake.exec_calls[0]
+        assert "removeTag(" not in fake.exec_calls[0]
+
+    @staticmethod
+    def test_set_function_tags_remove_emits_remove_tag(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """operation='remove' must emit Function.removeTag and never Function.addTag.
+
+        Falsifiable: companion to the 'add' case above -- if
+        ``set_function_tags`` were (incorrectly) changed to always call
+        ``addTag`` regardless of ``operation``, this is the test that
+        catches it (the 'add'-case test alone cannot, since a broken
+        always-addTag implementation never emits 'removeTag(' for either
+        operation).
+        """
+        fake.eval_response = {"found": True, "applied": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.set_function_tags(_TEST_ADDR, "Deprecated", "remove")),
+        )
+        assert result["success"] is True
+        assert "removeTag(" in fake.exec_calls[0]
+        assert "addTag(" not in fake.exec_calls[0]
+
+    @staticmethod
+    def test_set_function_tags_function_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """set_function_tags must raise ToolError when no function exists at the address.
+
+        Falsifiable: if the ``found`` guard were removed, this would
+        report success despite no function existing at the address.
+        """
+        fake.eval_response = {"found": False, "applied": False}
+        with pytest.raises(ToolError, match="Function not found"):
+            run_async(connected_bridge.set_function_tags(_TEST_ADDR, "Deprecated", "remove"))
+
+    @staticmethod
+    def test_get_function_tags_all_when_address_omitted(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """get_function_tags() with no address must emit getAllFunctionTags and return every tag.
+
+        Falsifiable: if the ``addr_literal is None`` branch were removed,
+        this would fail to emit ``getAllFunctionTags`` for an
+        address-less call.
+        """
+        fake.eval_response = [{"name": "Deprecated", "comment": ""}, {"name": "Reviewed", "comment": ""}]
+        result = cast("list[dict[str, Any]]", run_async(connected_bridge.get_function_tags()))
+        assert len(result) == 2
+        assert "getAllFunctionTags" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.set_function_tags must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here.
+        """
+        fake.eval_response = {"found": True, "applied": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.set_function_tags",
+                    {"address": _TEST_ADDR, "tag_name": "Deprecated", "operation": "add"},
+                ),
+            ),
+        )
+        assert result["success"] is True
+
+
+class TestPromoteSymbolToPrimary:
+    """L1/L2 gates for promote_symbol_to_primary (slice 5, work order 05-7)."""
+
+    @staticmethod
+    def test_happy_path_promotes_non_primary_symbol(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """promote_symbol_to_primary must emit Symbol.setPrimary() and never re-create via createLabel.
+
+        Falsifiable: if the implementation re-created the label (via
+        ``createLabel``) with ``primary=True`` instead of looking up and
+        promoting the already-existing symbol, the negative containment
+        assertion (``"createLabel" not in ...``) would fail.
+        """
+        fake.eval_response = {"promoted": True, "already_primary": False}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.promote_symbol_to_primary(_TEST_ADDR, "secondary_label")),
+        )
+        assert result == {
+            "address": hex(_TEST_ADDR),
+            "name": "secondary_label",
+            "already_primary": False,
+            "success": True,
+        }
+        assert "setPrimary()" in fake.exec_calls[0]
+        assert "createLabel" not in fake.exec_calls[0]
+
+    @staticmethod
+    def test_already_primary_reports_true_without_error(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """An already-primary symbol must report already_primary=True without raising.
+
+        Falsifiable: if the ``already_primary`` short-circuit were
+        removed and ``setPrimary()`` called unconditionally, this test
+        would still pass by coincidence -- but it documents the intended
+        telemetry distinction between 'already primary' and 'just
+        promoted'.
+        """
+        fake.eval_response = {"promoted": True, "already_primary": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.promote_symbol_to_primary(_TEST_ADDR, "already_primary_label")),
+        )
+        assert result["already_primary"] is True
+        assert result["success"] is True
+
+    @staticmethod
+    def test_symbol_not_found_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """promote_symbol_to_primary must raise ToolError when no symbol with that name exists.
+
+        Falsifiable: if the ``promoted`` not-found guard were removed,
+        this would return a success dict instead of raising.
+        """
+        fake.eval_response = {"promoted": False, "already_primary": False}
+        with pytest.raises(ToolError, match="No symbol named"):
+            run_async(connected_bridge.promote_symbol_to_primary(_TEST_ADDR, "ghost_label"))
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.promote_symbol_to_primary must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here.
+        """
+        fake.eval_response = {"promoted": True, "already_primary": False}
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.promote_symbol_to_primary",
+                    {"address": _TEST_ADDR, "name": "secondary_label"},
+                ),
+            ),
+        )
+        assert result["success"] is True
+
+
+class TestNonDefaultMemoryBlockTypes:
+    """L1/L2 gates for create_uninitialized_block / create_byte_mapped_block / create_bit_mapped_block (06-MM9)."""
+
+    @staticmethod
+    def test_create_uninitialized_block_happy_path(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """create_uninitialized_block must emit Memory.createUninitializedBlock and report success.
+
+        Falsifiable: if the wrong Memory API were (incorrectly) called
+        for this block kind, the containment assertion below fails
+        immediately.
+        """
+        fake.eval_response = {"name": ".bss", "start": 0x600000, "size": 4096, "success": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.create_uninitialized_block(".bss", 0x600000, 4096)),
+        )
+        assert result["success"] is True
+        assert "createUninitializedBlock(" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_create_byte_mapped_block_happy_path(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """create_byte_mapped_block must emit Memory.createByteMappedBlock, never createBitMappedBlock.
+
+        Falsifiable: if create_byte_mapped_block were accidentally wired
+        to Memory.createBitMappedBlock (its nearest sibling by argument
+        count), the positive containment check fails and the negative
+        one catches the swap directly.
+        """
+        fake.eval_response = {"name": ".mapped", "success": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.create_byte_mapped_block(".mapped", 0x700000, _TEST_ADDR, 256)),
+        )
+        assert result["success"] is True
+        assert "createByteMappedBlock(" in fake.exec_calls[0]
+        assert "createBitMappedBlock(" not in fake.exec_calls[0]
+
+    @staticmethod
+    def test_create_bit_mapped_block_happy_path(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """create_bit_mapped_block must emit Memory.createBitMappedBlock and report success.
+
+        Falsifiable: if the wrong Memory API were (incorrectly) called
+        for this block kind, the containment assertion below fails
+        immediately.
+        """
+        fake.eval_response = {"name": ".bits", "success": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(connected_bridge.create_bit_mapped_block(".bits", 0x800000, _TEST_ADDR, 32)),
+        )
+        assert result["success"] is True
+        assert "createBitMappedBlock(" in fake.exec_calls[0]
+
+    @staticmethod
+    def test_creation_failure_raises(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """create_uninitialized_block must raise ToolError instead of silently returning success=False.
+
+        Falsifiable: a create_memory_block-style silent
+        ``success: False`` return (instead of raising) would leave this
+        ``pytest.raises`` block unsatisfied.
+        """
+        fake.eval_response = {"name": None, "success": False}
+        with pytest.raises(ToolError):
+            run_async(connected_bridge.create_uninitialized_block(".bad", 0x900000, 4096))
+
+    @staticmethod
+    def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.create_uninitialized_block must dispatch via ToolRegistry.
+
+        Falsifiable: a missing or misnamed ToolFunction entry would
+        raise ToolError here before create_uninitialized_block ever ran.
+        """
+        fake.eval_response = {"name": ".bss", "start": 0x600000, "size": 4096, "success": True}
+        result = cast(
+            "dict[str, Any]",
+            run_async(
+                registry.execute_tool_call(
+                    "ghidra",
+                    "ghidra.create_uninitialized_block",
+                    {"name": ".bss", "start": 0x600000, "size": 4096},
+                ),
+            ),
+        )
+        assert result["success"] is True
+
+
+class TestAnalyzeConfigurableTimeout:
+    """L1/L2 gates for ``GhidraBridge.analyze``'s caller-configurable poll deadline."""
+
+    @staticmethod
+    def test_default_timeout_used_when_omitted(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """analyze() with no argument must still use the module's default deadline.
+
+        Falsifiable: if the ternary defaulting logic were inverted
+        (using ``timeout_seconds`` even when ``None``), this would
+        attempt an unbounded/None ``loop.time() + None`` and raise
+        ``TypeError`` instead of completing normally.
+        """
+        poll_calls = {"count": 0}
+
+        def _eval_responder(expr: str) -> object:
+            if "_ic_analysis_done" in expr:
+                poll_calls["count"] += 1
+                return True
+            if "_ic_analysis_error" in expr:
+                return None
+            return None
+
+        fake.set_eval_responder(_eval_responder)
+
+        run_async(connected_bridge.analyze())
+        assert poll_calls["count"] >= 1
+
+    @staticmethod
+    def test_custom_timeout_expires_faster_than_default(
+        connected_bridge: GhidraBridge,
+        fake: FakeGhidraBridge,
+    ) -> None:
+        """A small explicit timeout_seconds must raise well before the 1800s module default would.
+
+        Falsifiable: if ``timeout_seconds`` were accepted but never
+        actually substituted into the deadline computation, this call
+        would hang for (up to) 1800s instead of raising within a
+        couple of seconds.
+        """
+        fake.set_eval_responder(lambda expr: False if "_ic_analysis_done" in expr else None)
+
+        with pytest.raises(ToolError, match=r"did not complete within 0s|did not complete within 1s"):
+            run_async(connected_bridge.analyze(timeout_seconds=0.5))
+
+    @staticmethod
+    def test_tool_def_declares_timeout_seconds_parameter(connected_bridge: GhidraBridge) -> None:
+        """The tool definition must declare exactly the real method's new parameter."""
+        assert _tool_def_param_names(connected_bridge, "ghidra.analyze") == {"timeout_seconds"}
+
+    @staticmethod
+    def test_dispatchable_via_registry_with_timeout(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
+        """ghidra.analyze must accept timeout_seconds when dispatched via the real ToolRegistry."""
+        fake.set_eval_responder(lambda expr: True if "_ic_analysis_done" in expr else None)
+        run_async(registry.execute_tool_call("ghidra", "ghidra.analyze", {"timeout_seconds": 5}))

@@ -31,6 +31,7 @@ from intellicrack.bridges.base import (
     BridgeCapabilities,
     BridgeState,
     DisassemblyLine,
+    StackFrame,
     StaticAnalysisBridge,
 )
 from intellicrack.core.logging import get_logger
@@ -701,6 +702,38 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Analysis completion status",
         ),
         _tf(
+            "analyze_basic_blocks",
+            "Run a standalone basic-block analysis pass (Nucleus algorithm, rizin 'aab'), independent of the full aa/aaa/aaaa sweep",
+            [],
+            "None",
+        ),
+        _tf(
+            "analyze_function_calls",
+            "Run a standalone function-call analysis pass (rizin 'aac'), independent of the full aa/aaa/aaaa sweep",
+            [],
+            "None",
+        ),
+        _tf(
+            "analyze_references",
+            "Run a standalone data/code cross-reference analysis pass (rizin 'aar'), independent of the full aa/aaa/aaaa sweep",
+            [
+                _tp(
+                    "n_bytes",
+                    "integer",
+                    "Optional byte-length window to scan instead of the current section",
+                    required=False,
+                ),
+            ],
+            "None",
+        ),
+        _tf(
+            "autoname_functions",
+            "Run a standalone function autoname pass (rizin 'aan'): renames already-discovered functions "
+            "based on referenced strings or callees, independent of the full aa/aaa/aaaa sweep",
+            [],
+            "None",
+        ),
+        _tf(
             "get_functions",
             "Get list of all functions",
             [
@@ -713,6 +746,15 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Decompile a function to pseudocode",
             [
                 _tp("address", "integer", "Function address to decompile"),
+                _tp(
+                    "backend",
+                    "string",
+                    "Decompiler backend: 'pdg' (rz-ghidra, default) or 'pdd' (jsdec, alternate backend "
+                    "for when pdg fails or is not preferred)",
+                    required=False,
+                    default="pdg",
+                    enum=["pdg", "pdd"],
+                ),
             ],
             "Decompiled C-like pseudocode",
         ),
@@ -722,6 +764,15 @@ def _build_tool_functions() -> list[ToolFunction]:
             [
                 _tp("address", "integer", "Start address"),
                 _tp("count", "integer", "Number of instructions", required=False, default=20),
+            ],
+            "Disassembly listing",
+        ),
+        _tf(
+            "disassemble_range",
+            "Disassemble a fixed number of bytes starting at an address (rizin 'pD'), rather than a fixed instruction count",
+            [
+                _tp("address", "integer", "Start address"),
+                _tp("length", "integer", "Number of bytes to disassemble"),
             ],
             "Disassembly listing",
         ),
@@ -740,6 +791,37 @@ def _build_tool_functions() -> list[ToolFunction]:
                 _tp("address", "integer", "Source address"),
             ],
             "List of cross-references",
+        ),
+        _tf(
+            "add_xref",
+            "Manually add a cross-reference from one address to another (code, call, or data)",
+            [
+                _tp("from_address", "integer", "Source address (the xref origin; rizin seeks here first)"),
+                _tp("to_address", "integer", "Target address being referenced"),
+                _tp(
+                    "xref_type",
+                    "string",
+                    "Cross-reference kind",
+                    required=False,
+                    default="code",
+                    enum=["code", "call", "data"],
+                ),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "remove_xref",
+            "Remove a cross-reference to an address, optionally scoped to one specific source address",
+            [
+                _tp("to_address", "integer", "Target address whose xref(s) should be removed"),
+                _tp(
+                    "from_address",
+                    "integer",
+                    "Optional specific source address to limit removal to; when omitted, removes every xref to to_address",
+                    required=False,
+                ),
+            ],
+            "Success status",
         ),
         _tf(
             "search_strings",
@@ -837,6 +919,27 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Output of seek command",
         ),
         _tf(
+            "seek_relative",
+            "Seek to an address relative to the current offset by a signed byte delta (rizin 'sd')",
+            [
+                _tp("delta", "integer", "Signed byte offset relative to the current address (e.g. -16 or 32)"),
+            ],
+            "Output of seek command",
+        ),
+        _tf("seek_history", "List the recorded seek history", [], "Raw seek-history listing text"),
+        _tf(
+            "seek_undo",
+            "Move back one entry in the seek history (undo the last seek)",
+            [],
+            "Output of the seek-undo command",
+        ),
+        _tf(
+            "seek_redo",
+            "Move forward one entry in the seek history (redo the last undo)",
+            [],
+            "Output of the seek-redo command",
+        ),
+        _tf(
             "get_function_address",
             "Get address of a function by name",
             [
@@ -901,6 +1004,40 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Success status",
         ),
         _tf(
+            "remove_flag",
+            "Remove a named flag",
+            [
+                _tp("name", "string", "Flag name to remove"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "rename_flag",
+            "Rename an existing flag",
+            [
+                _tp("old_name", "string", "Current flag name"),
+                _tp("new_name", "string", "New flag name"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "add_flagspace",
+            "Create (or select, if it already exists) a flagspace namespace for organizing flags",
+            [
+                _tp("name", "string", "Flagspace name"),
+            ],
+            "Success status",
+        ),
+        _tf("list_flagspaces", "List all flagspaces with their flag counts", [], "List of flagspace dictionaries"),
+        _tf(
+            "remove_flagspace",
+            "Remove a flagspace namespace",
+            [
+                _tp("name", "string", "Flagspace name to remove"),
+            ],
+            "Success status",
+        ),
+        _tf(
             "resolve_flag",
             "Resolve a flag name from an address",
             [
@@ -939,6 +1076,26 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Step output",
         ),
         _tf(
+            "esil_step_until",
+            "Step the ESIL emulator until a target address or ESIL boolean expression is met (exactly one of "
+            "address/expression must be given)",
+            [
+                _tp(
+                    "address",
+                    "integer",
+                    "Target address to step until (mutually exclusive with expression)",
+                    required=False,
+                ),
+                _tp(
+                    "expression",
+                    "string",
+                    "ESIL boolean expression to step until true (mutually exclusive with address)",
+                    required=False,
+                ),
+            ],
+            "Step output",
+        ),
+        _tf(
             "esil_emulate_function",
             "Emulate a function using ESIL",
             [
@@ -946,12 +1103,29 @@ def _build_tool_functions() -> list[ToolFunction]:
             ],
             "Emulation output",
         ),
+        _tf(
+            "esil_init_state",
+            "Initialize the ESIL VM state/registers (rizin 'aei'), distinct from esil_init_memory's memory/stack initialization "
+            "(rizin 'aeim')",
+            [],
+            "Success status",
+        ),
         _tf("esil_init_memory", "Initialize ESIL emulation memory stack", [], "Success status"),
         _tf(
             "esil_set_pc",
             "Set the ESIL program counter",
             [
                 _tp("address", "integer", "Address to set the PC to"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "add_esil_watchpoint",
+            "Add an ESIL watchpoint that halts emulation on register/memory access (rizin 'de')",
+            [
+                _tp("perm", "string", "Access permission to watch for", enum=["r", "w", "rw"]),
+                _tp("kind", "string", "Watchpoint kind", enum=["reg", "mem"]),
+                _tp("expression", "string", "Register name or memory-address expression to watch"),
             ],
             "Success status",
         ),
@@ -974,6 +1148,38 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Success status",
         ),
         _tf("search_zignatures", "Search for matching zignatures", [], "List of match dictionaries"),
+        _tf(
+            "apply_flirt_signatures",
+            "Apply FLIRT signatures to the loaded binary from a .sig/.pat file (rizin 'Fs') or from the "
+            "configured sigdb (rizin 'Fa') when no file path is given",
+            [
+                _tp(
+                    "path",
+                    "string",
+                    "Path to a .sig/.pat FLIRT signature file to apply; when omitted, applies from the configured flirt.sigdb.path instead",
+                    required=False,
+                ),
+                _tp(
+                    "sigdb_filter",
+                    "string",
+                    "Optional name filter forwarded to 'Fa' when path is omitted",
+                    required=False,
+                ),
+            ],
+            "Raw command output describing signatures applied/matched",
+        ),
+        _tf(
+            "create_flirt_signatures",
+            "Create/export a FLIRT signature file (.sig or .pat) from the currently analyzed functions (rizin 'Fc')",
+            [
+                _tp(
+                    "path",
+                    "string",
+                    "Output file path for the FLIRT signature file; extension (.sig or .pat) selects the on-disk format",
+                ),
+            ],
+            "Success status",
+        ),
         _tf(
             "save_project",
             "Save the current analysis as a Rizin project",
@@ -1157,6 +1363,12 @@ def _build_tool_functions() -> list[ToolFunction]:
             "List of BlockInfo objects",
         ),
         _tf(
+            "list_attachable_processes",
+            "Discover OS processes that can be attached to via attach(), before the target PID is known (rizin 'dpl')",
+            [],
+            "List of process dictionaries (at least a 'pid' field; other fields vary by platform)",
+        ),
+        _tf(
             "attach",
             "Attach the rizin debugger to a running process",
             [
@@ -1220,6 +1432,26 @@ def _build_tool_functions() -> list[ToolFunction]:
             "None",
         ),
         _tf(
+            "continue_until",
+            "Continue debugger execution until a syscall, a call instruction, or a specific address is reached",
+            [
+                _tp(
+                    "mode",
+                    "string",
+                    "Continue-until mode",
+                    enum=["syscall", "call", "address"],
+                ),
+                _tp(
+                    "target",
+                    "string",
+                    "For mode='syscall': optional syscall name/number filter. For mode='address': "
+                    "required target address (decimal or 0x-prefixed hex). Ignored for mode='call'.",
+                    required=False,
+                ),
+            ],
+            "None",
+        ),
+        _tf(
             "get_registers",
             "Read the full CPU register state of the attached process",
             [],
@@ -1231,6 +1463,14 @@ def _build_tool_functions() -> list[ToolFunction]:
             [
                 _tp("register", "string", "Register name (e.g. rax, rbx, rip)"),
                 _tp("value", "integer", "Numeric value to write into the register"),
+            ],
+            "True on success",
+        ),
+        _tf(
+            "send_signal",
+            "Send a signal to the attached debuggee process",
+            [
+                _tp("signal", "integer", "Signal number to send (e.g. 9 for SIGKILL, 11 for SIGSEGV)"),
             ],
             "True on success",
         ),
@@ -1263,6 +1503,12 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Enumerate threads of the attached process",
             [],
             "List of ThreadInfo objects",
+        ),
+        _tf(
+            "get_backtrace",
+            "Get the call stack / backtrace of the attached thread",
+            [],
+            "List of StackFrame objects",
         ),
         _tf(
             "get_modules",
@@ -1964,6 +2210,88 @@ class CutterAnalysisMixin(_CutterBridgeBase):
         self._analyzed = True
         _logger.info("analysis_complete", bridge="cutter", level=level)
 
+    async def analyze_basic_blocks(self) -> None:
+        """Run a standalone basic-block analysis pass (rizin 'aab').
+
+        Runs rizin's Nucleus function/basic-block discovery pass alone,
+        independent of the composite ``aa``/``aaa``/``aaaa`` sweep. Unlike
+        :meth:`analyze`, this targeted sub-pass does not populate the
+        complete function/xref state the :attr:`_analyzed` flag represents
+        elsewhere in this bridge, so it deliberately leaves that flag
+        untouched.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("analyze_basic_blocks_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd("aab", command_timeout=_ANALYSIS_TIMEOUT["quick"])
+        _logger.info("basic_block_analysis_complete", bridge="cutter")
+
+    async def analyze_function_calls(self) -> None:
+        """Run a standalone function-call analysis pass (rizin 'aac').
+
+        Walks the binary for call-class instructions and links
+        caller/callee relationships, independent of the composite
+        ``aa``/``aaa``/``aaaa`` sweep. Like :meth:`analyze_basic_blocks`,
+        this targeted sub-pass does not satisfy the "full analysis ran"
+        contract :attr:`_analyzed` represents, so it leaves that flag
+        untouched.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("analyze_function_calls_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd("aac", command_timeout=_ANALYSIS_TIMEOUT["quick"])
+        _logger.info("function_call_analysis_complete", bridge="cutter")
+
+    async def analyze_references(self, n_bytes: int | None = None) -> None:
+        """Run a standalone data/code cross-reference analysis pass (rizin 'aar').
+
+        Scans the current section (or, when ``n_bytes`` is given, a
+        byte-length window instead of the whole section) for data and code
+        cross-references, independent of the composite ``aa``/``aaa``/
+        ``aaaa`` sweep. Like :meth:`analyze_basic_blocks`, this targeted
+        sub-pass leaves :attr:`_analyzed` untouched.
+
+        Args:
+            n_bytes: Optional byte-length window to scan instead of the
+                current section.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("analyze_references_without_binary", n_bytes=n_bytes)
+            raise ToolError(_ERR_NO_BINARY)
+
+        cmd = f"aar {n_bytes}" if n_bytes is not None else "aar"
+        await self._r2_cmd(cmd, command_timeout=_ANALYSIS_TIMEOUT["quick"])
+        _logger.info("reference_analysis_complete", bridge="cutter", n_bytes=n_bytes)
+
+    async def autoname_functions(self) -> None:
+        """Run a standalone function autoname pass (rizin 'aan').
+
+        Heuristically renames already-discovered functions based on
+        referenced strings or callees, independent of the composite
+        ``aa``/``aaa``/``aaaa`` sweep. Like :meth:`analyze_basic_blocks`,
+        this targeted sub-pass leaves :attr:`_analyzed` untouched.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("autoname_functions_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd("aan", command_timeout=_ANALYSIS_TIMEOUT["quick"])
+        _logger.info("function_autoname_complete", bridge="cutter")
+
     async def get_functions(
         self,
         filter_pattern: str | None = None,
@@ -2196,18 +2524,24 @@ class CutterAnalysisMixin(_CutterBridgeBase):
         self._ghidra_sleighhome_applied = True
         _logger.debug("ghidra_sleighhome_configured", sleighhome=str(sleighhome))
 
-    async def decompile(self, address: int) -> str:
+    async def decompile(self, address: int, backend: Literal["pdg", "pdd"] = "pdg") -> str:
         """Decompile function at address.
 
-        Uses rz-ghidra's ``pdg`` command exclusively -- rizin 0.9.1 ships no
+        Uses rz-ghidra's ``pdg`` command by default -- rizin 0.9.1 ships no
         native ``pdc`` decompiler, so a prior fallback to it always failed
         and masked genuine ``pdg`` failures. The SLEIGH specifications
         ``pdg`` depends on are loaded lazily on first use within a session,
         which can exceed the default per-command timeout, so this call uses
-        an extended timeout specific to ``pdg``.
+        an extended timeout specific to ``pdg``. Passing ``backend="pdd"``
+        instead uses the bundled jsdec plugin, an alternate heuristic
+        decompiler that does not depend on SLEIGH specifications, useful
+        when ``pdg`` fails for an architecture or a user simply prefers
+        jsdec's output style.
 
         Args:
             address: Function address.
+            backend: Decompiler backend -- ``"pdg"`` (rz-ghidra, default) or
+                ``"pdd"`` (jsdec, alternate backend).
 
         Returns:
             str: Decompiled C-like pseudocode.
@@ -2222,14 +2556,22 @@ class CutterAnalysisMixin(_CutterBridgeBase):
             _logger.warning("decompile_without_analysis", address=hex(address))
             raise ToolError(_ERR_NOT_ANALYZED)
 
-        _logger.debug("decompile_requested", address=hex(address))
-        await self._configure_ghidra_sleighhome()
+        _logger.debug("decompile_requested", address=hex(address), backend=backend)
         await self._r2_cmd(f"s {address}")
-        result = await self._r2_cmd("pdg", command_timeout=_PDG_DECOMPILE_TIMEOUT)
+        if backend == "pdd":
+            result = await self._r2_cmd("pdd", command_timeout=_PDG_DECOMPILE_TIMEOUT)
+        else:
+            await self._configure_ghidra_sleighhome()
+            result = await self._r2_cmd("pdg", command_timeout=_PDG_DECOMPILE_TIMEOUT)
 
         stripped = result.strip() if result else ""
         if not stripped or stripped.startswith("Cannot ") or "Decompiler Error" in stripped:
-            _logger.warning("decompile_unavailable", address=hex(address), response_prefix=stripped[:120])
+            _logger.warning(
+                "decompile_unavailable",
+                address=hex(address),
+                backend=backend,
+                response_prefix=stripped[:120],
+            )
             raise ToolError(_ERR_DECOMPILE_NA)
 
         return result
@@ -2261,6 +2603,57 @@ class CutterAnalysisMixin(_CutterBridgeBase):
         _logger.debug("disassemble_requested", address=hex(address), count=count)
         await self._r2_cmd(f"s {address}")
         insns = await self._cmd_json(f"pdj {count}")
+
+        result: list[DisassemblyLine] = []
+        for insn in insns:
+            hex_bytes = _get_str(insn, "bytes")
+            opcode = _get_str(insn, "opcode")
+            opcode_parts = opcode.split() if opcode else []
+            mnemonic = opcode_parts[0] if opcode_parts else ""
+            operands = " ".join(opcode_parts[1:]) if len(opcode_parts) > 1 else ""
+            result.append(
+                DisassemblyLine(
+                    address=_get_int(insn, "offset"),
+                    bytes_str=hex_bytes,
+                    mnemonic=mnemonic,
+                    operands=operands,
+                    comment=_get_optional_str(insn, "comment"),
+                ),
+            )
+
+        return result
+
+    async def disassemble_range(
+        self,
+        address: int,
+        length: int,
+    ) -> list[DisassemblyLine]:
+        """Disassemble a fixed number of bytes starting at an address.
+
+        Unlike :meth:`disassemble`, which disassembles a fixed instruction
+        count (rizin ``pdj``), this disassembles until exactly ``length``
+        bytes of the binary have been consumed (rizin ``pDj``).
+
+        Args:
+            address: Start address.
+            length: Number of bytes to disassemble.
+
+        Returns:
+            list[DisassemblyLine]: List of disassembly lines.
+
+        Raises:
+            ToolError: If disassembly fails.
+        """
+        if self._r2 is None:
+            _logger.warning("disassemble_range_without_binary", address=hex(address), length=length)
+            raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            _logger.warning("disassemble_range_without_analysis", address=hex(address), length=length)
+            raise ToolError(_ERR_NOT_ANALYZED)
+
+        _logger.debug("disassemble_range_requested", address=hex(address), length=length)
+        await self._r2_cmd(f"s {address}")
+        insns = await self._cmd_json(f"pDj {length}")
 
         result: list[DisassemblyLine] = []
         for insn in insns:
@@ -2374,6 +2767,77 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
 
         _logger.debug("xrefs_from_queried", address=hex(address), result_count=len(result))
         return result
+
+    async def add_xref(
+        self,
+        from_address: int,
+        to_address: int,
+        xref_type: Literal["code", "call", "data"] = "code",
+    ) -> bool:
+        """Manually add a cross-reference from one address to another.
+
+        Seeks to ``from_address`` first because rizin's ``axc``/``axC``/``axd`` commands each add the cross-reference from the
+        current seek rather than from an explicit source-address argument.
+
+        Args:
+            from_address: Source address; the xref origin that rizin seeks to first.
+            to_address: Target address being referenced.
+            xref_type: Cross-reference kind -- "code" for a generic code xref (rizin 'axc'), "call" for a call-type xref (rizin
+                'axC'), or "data" for a data xref (rizin 'axd').
+
+        Returns:
+            bool: True if the cross-reference was added.
+
+        Raises:
+            ToolError: If no binary is loaded or the binary has not been analyzed.
+        """
+        if self._r2 is None:
+            _logger.warning("add_xref_without_binary", from_address=hex(from_address), to_address=hex(to_address))
+            raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            _logger.warning("add_xref_without_analysis", from_address=hex(from_address), to_address=hex(to_address))
+            raise ToolError(_ERR_NOT_ANALYZED)
+
+        xref_cmd_map: dict[str, str] = {"code": "axc", "call": "axC", "data": "axd"}
+        cmd = xref_cmd_map.get(xref_type, "axc")
+        await self._r2_cmd(f"s {from_address}")
+        await self._r2_cmd(f"{cmd} {to_address}")
+        _logger.info("xref_added", from_address=hex(from_address), to_address=hex(to_address), xref_type=xref_type)
+        return True
+
+    async def remove_xref(self, to_address: int, from_address: int | None = None) -> bool:
+        """Remove a cross-reference to an address, optionally scoped to one specific source address.
+
+        Uses rizin's 'ax-' command, which deletes every recorded xref to ``to_address`` unless
+        ``from_address`` is given, in which case only the single edge from ``from_address`` to
+        ``to_address`` is removed.
+
+        Args:
+            to_address: Target address whose xref(s) should be removed.
+            from_address: Optional specific source address to limit removal to; when omitted,
+                removes every xref to ``to_address``.
+
+        Returns:
+            bool: True if the removal command was issued.
+
+        Raises:
+            ToolError: If no binary is loaded or the binary has not been analyzed.
+        """
+        if self._r2 is None:
+            _logger.warning("remove_xref_without_binary", to_address=hex(to_address))
+            raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            _logger.warning("remove_xref_without_analysis", to_address=hex(to_address))
+            raise ToolError(_ERR_NOT_ANALYZED)
+
+        cmd = f"ax- {to_address} {from_address}" if from_address is not None else f"ax- {to_address}"
+        await self._r2_cmd(cmd)
+        _logger.info(
+            "xref_removed",
+            to_address=hex(to_address),
+            from_address=hex(from_address) if from_address is not None else None,
+        )
+        return True
 
     async def search_strings(self, pattern: str) -> list[StringInfo]:
         """Search for strings matching pattern.
@@ -2719,6 +3183,50 @@ class CutterCommandMixin(CutterEditingMixin):
         """
         _logger.debug("seek_to_address", address=hex(address))
         return await self.execute_command(f"s {address}")
+
+    async def seek_relative(self, delta: int) -> str:
+        """Seek to an address relative to the current offset by a signed byte delta.
+
+        Uses rizin's 'sd' command, which seeks by an explicit signed delta independent of the
+        session's configured block size -- unlike 's++'/'s--', which step by blocksize (a
+        session-configured value not directly controlled by the caller) and are therefore not
+        used here; 'sd' is the deterministic, scriptable choice for a caller-specified byte offset.
+
+        Args:
+            delta: Signed byte offset relative to the current address (e.g. -16 or 32).
+
+        Returns:
+            str: Output of the seek command.
+        """
+        _logger.debug("seek_relative_requested", delta=delta)
+        return await self.execute_command(f"sd {delta}")
+
+    async def seek_history(self) -> str:
+        """List the recorded seek history.
+
+        Returns:
+            str: Raw seek-history listing text from rizin ('sh').
+        """
+        _logger.debug("seek_history_requested")
+        return await self.execute_command("sh")
+
+    async def seek_undo(self) -> str:
+        """Move back one entry in the seek history (undo the last seek).
+
+        Returns:
+            str: Output of the seek-undo command.
+        """
+        _logger.debug("seek_undo_requested")
+        return await self.execute_command("shu")
+
+    async def seek_redo(self) -> str:
+        """Move forward one entry in the seek history (redo the last undo).
+
+        Returns:
+            str: Output of the seek-redo command.
+        """
+        _logger.debug("seek_redo_requested")
+        return await self.execute_command("shr")
 
     async def get_function_graph(self, address: int) -> list[dict[str, Any]]:
         """Get function control flow graph data for graph rendering.
@@ -3422,6 +3930,109 @@ class CutterAnnotationMixin(CutterRopMixin):
         _logger.info("flag_added", flag_name=name, address=hex(address))
         return True
 
+    async def remove_flag(self, name: str) -> bool:
+        """Remove a named flag.
+
+        Args:
+            name: Flag name to remove.
+
+        Returns:
+            bool: True if the flag was removed.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("remove_flag_without_binary", flag_name=name)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(name, field="remove_flag name")
+        await self._r2_cmd(f"f- {name}")
+        _logger.info("flag_removed", flag_name=name)
+        return True
+
+    async def rename_flag(self, old_name: str, new_name: str) -> bool:
+        """Rename an existing flag.
+
+        Args:
+            old_name: Current flag name.
+            new_name: New flag name.
+
+        Returns:
+            bool: True if the flag was renamed.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("rename_flag_without_binary", old_name=old_name, new_name=new_name)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(old_name, field="rename_flag old_name")
+        validate_r2_argument(new_name, field="rename_flag new_name")
+        await self._r2_cmd(f"fr {old_name} {new_name}")
+        _logger.info("flag_renamed", old_name=old_name, new_name=new_name)
+        return True
+
+    async def add_flagspace(self, name: str) -> bool:
+        """Create (or select, if it already exists) a flagspace namespace for organizing flags.
+
+        Args:
+            name: Flagspace name.
+
+        Returns:
+            bool: True if the flagspace was created/selected.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("add_flagspace_without_binary", flagspace_name=name)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(name, field="add_flagspace name")
+        await self._r2_cmd(f"fs {name}")
+        _logger.info("flagspace_added", flagspace_name=name)
+        return True
+
+    async def list_flagspaces(self) -> list[dict[str, Any]]:
+        """List all flagspaces with their flag counts.
+
+        Returns:
+            list[dict[str, Any]]: List of flagspace dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("list_flagspaces_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("fslj")
+        _logger.debug("flagspaces_queried", result_count=len(result))
+        return result
+
+    async def remove_flagspace(self, name: str) -> bool:
+        """Remove a flagspace namespace.
+
+        Args:
+            name: Flagspace name to remove.
+
+        Returns:
+            bool: True if the flagspace was removed.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("remove_flagspace_without_binary", flagspace_name=name)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(name, field="remove_flagspace name")
+        await self._r2_cmd(f"fs- {name}")
+        _logger.info("flagspace_removed", flagspace_name=name)
+        return True
+
     async def resolve_flag(self, address: int) -> str | None:
         """Resolve a flag name from an address.
 
@@ -3658,6 +4269,51 @@ class CutterEsilMixin(CutterTypesMixin):
         _logger.debug("esil_stepped", count=count)
         return result
 
+    async def esil_step_until(self, address: int | None = None, expression: str | None = None) -> str:
+        """Step the ESIL emulator until a target address or ESIL boolean expression is met.
+
+        Exactly one of ``address``/``expression`` must be given: ``address`` repeatedly single-steps until the program counter reaches
+        it (rizin 'aesu'), while ``expression`` repeatedly single-steps until the given ESIL boolean expression evaluates true (rizin
+        'aesue').
+
+        Args:
+            address: Target address to step until. Mutually exclusive with ``expression``.
+            expression: ESIL boolean expression to step until true. Mutually exclusive with ``address``.
+
+        Returns:
+            str: Step output.
+
+        Raises:
+            ToolError: If no binary is loaded, if neither or both of ``address``/``expression`` are given, or if ``expression``
+                contains rizin command-control characters.
+        """
+        if self._r2 is None:
+            _logger.warning(
+                "esil_step_until_without_binary",
+                address=hex(address) if address is not None else None,
+                expression=expression,
+            )
+            raise ToolError(_ERR_NO_BINARY)
+        if address is not None and expression is not None:
+            msg = "esil_step_until: address and expression are mutually exclusive"
+            raise ToolError(msg)
+
+        if address is not None:
+            result = await self._r2_cmd(f"aesu {hex(address)}")
+        elif expression is not None:
+            validate_r2_argument(expression, field="esil_step_until expression")
+            result = await self._r2_cmd(f"aesue {expression}")
+        else:
+            msg = "esil_step_until: exactly one of address or expression must be given"
+            raise ToolError(msg)
+
+        _logger.debug(
+            "esil_stepped_until",
+            address=hex(address) if address is not None else None,
+            expression=expression,
+        )
+        return result
+
     async def esil_emulate_function(self, address: int) -> str:
         """Emulate a function using ESIL.
 
@@ -3677,6 +4333,26 @@ class CutterEsilMixin(CutterTypesMixin):
         result = await self._r2_cmd(f"aef @ {address}")
         _logger.debug("esil_function_emulated", address=hex(address))
         return result
+
+    async def esil_init_state(self) -> bool:
+        """Initialize the ESIL VM state (registers, flags, PC).
+
+        Distinct from :meth:`esil_init_memory`, which initializes the ESIL VM's memory/stack region (rizin 'aeim'). This method
+        initializes the VM's own state (rizin 'aei').
+
+        Returns:
+            bool: True if initialization succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("esil_init_state_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd("aei")
+        _logger.debug("esil_state_initialized")
+        return True
 
     async def esil_init_memory(self) -> bool:
         """Initialize ESIL emulation memory stack.
@@ -3713,6 +4389,31 @@ class CutterEsilMixin(CutterTypesMixin):
 
         await self._r2_cmd(f"aepc {address}")
         _logger.debug("esil_pc_set", address=hex(address))
+        return True
+
+    async def add_esil_watchpoint(self, perm: str, kind: Literal["reg", "mem"], expression: str) -> bool:
+        """Add an ESIL watchpoint that halts emulation on register/memory access.
+
+        Args:
+            perm: Access permission to watch for (e.g. ``"r"``, ``"w"``, ``"rw"``).
+            kind: Watchpoint kind, either ``"reg"`` (register) or ``"mem"`` (memory address).
+            expression: Register name or memory-address expression to watch.
+
+        Returns:
+            bool: True if the watchpoint was added.
+
+        Raises:
+            ToolError: If no binary is loaded, or if ``perm``/``expression`` contain rizin
+                command-control characters.
+        """
+        if self._r2 is None:
+            _logger.warning("add_esil_watchpoint_without_binary", perm=perm, kind=kind, expression=expression)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(perm, field="add_esil_watchpoint perm")
+        validate_r2_argument(expression, field="add_esil_watchpoint expression")
+        await self._r2_cmd(f"de {perm} {kind} {expression}")
+        _logger.info("esil_watchpoint_added", perm=perm, kind=kind, expression=expression)
         return True
 
 
@@ -3797,6 +4498,87 @@ class CutterZignatureMixin(CutterEsilMixin):
         result = await self._cmd_json("z/j")
         _logger.debug("zignatures_searched", result_count=len(result))
         return result
+
+    async def apply_flirt_signatures(self, path: str | None = None, sigdb_filter: str | None = None) -> str:
+        """Apply FLIRT signatures to the loaded binary.
+
+        Dispatches to rizin's ``Fs <path>`` when ``path`` is given (opens a
+        FLIRT ``.sig``/``.pat`` file and applies its signatures), or to
+        ``Fa [<sigdb_filter>]`` when ``path`` is omitted (applies signatures
+        from the configured ``flirt.sigdb.path`` sigdb location, optionally
+        filtered by name). Per the Rizin Handbook, matched signatures are
+        recorded in the ``flirt`` flag space; this method deliberately does
+        not switch the globally-selected rizin flag space to enumerate
+        them, since that is a side effect that could corrupt
+        :meth:`get_flags`'s behavior for the rest of the session. Callers
+        that want to see which functions were renamed should call
+        :meth:`get_functions` afterward.
+
+        Args:
+            path: Path to a ``.sig``/``.pat`` FLIRT signature file to
+                apply. When ``None``, signatures are applied from the
+                configured sigdb instead.
+            sigdb_filter: Optional name filter forwarded to ``Fa`` when
+                ``path`` is omitted. Ignored when ``path`` is given.
+
+        Returns:
+            str: Raw rizin command output describing the signatures
+            applied/matched.
+
+        Raises:
+            ToolError: If no binary is loaded, or ``path``/``sigdb_filter``
+                contains rizin command-control characters.
+        """
+        if self._r2 is None:
+            _logger.warning("apply_flirt_signatures_without_binary", path=path)
+            raise ToolError(_ERR_NO_BINARY)
+
+        if path is not None:
+            validate_r2_argument(path, field="apply_flirt_signatures path")
+            result = await self._r2_cmd(f"Fs {path}")
+        else:
+            if sigdb_filter is not None:
+                validate_r2_argument(sigdb_filter, field="apply_flirt_signatures sigdb_filter")
+            cmd = f"Fa {sigdb_filter}" if sigdb_filter else "Fa"
+            result = await self._r2_cmd(cmd)
+
+        _logger.info("flirt_signatures_applied", path=path, sigdb_filter=sigdb_filter)
+        return result
+
+    async def create_flirt_signatures(self, path: str) -> bool:
+        """Create/export a FLIRT signature file from the currently analyzed functions.
+
+        Issues rizin's ``Fc <path>`` and verifies the file actually landed
+        on disk -- like :meth:`save_project`'s ``Ps`` command, rizin's
+        signature-family commands can silently no-op on some failure modes
+        instead of reporting an error through command output, so a passing
+        command response alone is not sufficient evidence of success.
+
+        Args:
+            path: Output file path for the FLIRT signature file. The
+                extension (``.sig`` or ``.pat``) selects the on-disk
+                format.
+
+        Returns:
+            bool: True if the signature file was created.
+
+        Raises:
+            ToolError: If no binary is loaded, ``path`` contains rizin
+                command-control characters, or the file was not written to
+                disk.
+        """
+        if self._r2 is None:
+            _logger.warning("create_flirt_signatures_without_binary", path=path)
+            raise ToolError(_ERR_NO_BINARY)
+
+        validate_r2_argument(path, field="create_flirt_signatures path")
+        await self._r2_cmd(f"Fc {path}")
+        if not await asyncio.to_thread(Path(path).is_file):
+            _logger.warning("flirt_signature_creation_verification_failed", path=path)
+            msg = f"failed to create FLIRT signature file: {path} was not written"
+            raise ToolError(msg)
+        _logger.info("flirt_signatures_created", path=path)
+        return True
 
 
 class CutterProjectConfigMixin(CutterZignatureMixin):
@@ -4486,6 +5268,30 @@ class CutterDebugMixin(CutterDisplayMixin):
             return None
         return _extract_rizin_json(result, command)
 
+    async def list_attachable_processes(self) -> list[dict[str, Any]]:
+        """Discover OS processes that rizin's debug backend can attach to.
+
+        Issues rizin's ``dplj`` ("list all attachable pids") command so a caller can choose a target PID before calling :meth:`attach`,
+        rather than requiring the PID to already be known out-of-band. Unlike every other method in this mixin, this call does not require
+        an existing debug session -- it is the discovery step that precedes one.
+
+        Returns:
+            list[dict[str, Any]]: Process dictionaries, each containing at least a ``pid`` key (other fields vary by platform and rizin
+            version). Bare-integer entries -- if rizin ever emits a flat pid list instead of objects -- are normalized into
+            ``{"pid": <int>}`` dicts so callers always see a consistent shape.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("list_attachable_processes_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        raw: list[Any] = await self._cmd_json("dplj", command_timeout=_METADATA_LISTING_TIMEOUT)
+        normalized: list[dict[str, Any]] = [cast("dict[str, Any]", entry) if isinstance(entry, dict) else {"pid": entry} for entry in raw]
+        _logger.debug("attachable_processes_queried", result_count=len(normalized))
+        return normalized
+
     async def attach(self, pid: int) -> None:
         """Attach the rizin debugger to a running process.
 
@@ -4726,6 +5532,50 @@ class CutterDebugMixin(CutterDisplayMixin):
         await self._r2_cmd("dc")
         _logger.info("cutter_execution_continued")
 
+    async def continue_until(
+        self,
+        mode: Literal["syscall", "call", "address"],
+        target: str | int | None = None,
+    ) -> None:
+        """Continue debugger execution until a syscall, call, or address.
+
+        Dispatches to rizin's ``dcs`` (continue until syscall, optionally
+        filtered to a specific syscall name/number), ``dcc`` (continue
+        until the next ``call`` instruction, implemented internally via
+        repeated step-into), or ``dcu <address>`` (continue until a
+        specific address is reached). These are alternates to the plain
+        ``dc`` already issued by :meth:`run`.
+
+        Args:
+            mode: Continue-until mode -- ``"syscall"``, ``"call"``, or
+                ``"address"``.
+            target: For ``mode="syscall"``, an optional syscall name/
+                number filter. For ``mode="address"``, the required
+                target address (a native ``int``, or a decimal/
+                ``0x``-prefixed hex string). Ignored for ``mode="call"``.
+
+        Raises:
+            ToolError: If no process is attached, or ``mode="address"``
+                is given without a ``target``.
+        """
+        self._require_attached("continue_until")
+        _logger.info("cutter_conditional_continue", mode=mode, target=target)
+        if mode == "syscall":
+            if target is not None:
+                validate_r2_argument(str(target), field="continue_until target")
+                await self._r2_cmd(f"dcs {target}")
+            else:
+                await self._r2_cmd("dcs")
+        elif mode == "call":
+            await self._r2_cmd("dcc")
+        else:
+            if target is None:
+                msg = "continue_until: mode='address' requires a target address"
+                raise ToolError(msg, tool_name="cutter")
+            resolved_address = int(target, 0) if isinstance(target, str) else target
+            await self._r2_cmd(f"dcu {resolved_address}")
+        _logger.info("cutter_conditional_continue_complete", mode=mode)
+
     async def get_registers(self) -> RegisterState:
         """Read the full CPU register state of the attached process.
 
@@ -4815,6 +5665,22 @@ class CutterDebugMixin(CutterDisplayMixin):
         validate_r2_argument(register, field="set_register register")
         await self._r2_cmd(f"dr {register}={value}")
         _logger.info("cutter_register_set", register=register, value=hex(value))
+        return True
+
+    async def send_signal(self, signal: int) -> bool:
+        """Send a signal to the attached debuggee process.
+
+        Propagates ``ToolError`` from :meth:`_require_attached` when no process is attached.
+
+        Args:
+            signal: Signal number to send (e.g. 9 for SIGKILL, 11 for SIGSEGV).
+
+        Returns:
+            bool: ``True`` after the signal has been sent.
+        """
+        self._require_attached("send_signal")
+        await self._r2_cmd(f"dk {signal}")
+        _logger.info("cutter_signal_sent", signal=signal)
         return True
 
     async def read_memory(self, address: int, size: int) -> bytes:
@@ -4965,6 +5831,56 @@ class CutterDebugMixin(CutterDisplayMixin):
         self._threads = thread_map
         _logger.debug("cutter_threads_queried", count=len(threads))
         return threads
+
+    async def get_backtrace(self) -> list[StackFrame]:
+        """Get the call stack / backtrace of the attached thread.
+
+        Issues rizin's ``dbtj`` (the JSON output mode of ``dbt``, the same
+        ``j``-suffix convention already used throughout this mixin for
+        ``dbj``/``drj``/``dmj``/``dptj``/``dmIj``) and parses each frame
+        defensively with multiple candidate key names, since rizin's public
+        documentation enumerates ``dbt``'s command syntax but not ``dbtj``'s
+        exact JSON field names. Unrecognized keys degrade to ``0``/``None``
+        rather than raising, so the method never crashes on an unexpected
+        schema.
+
+        Propagates ``ToolError`` from :meth:`_require_attached` when no
+        process is attached, and from :meth:`_debug_cmd_json` when rizin
+        returns malformed JSON.
+
+        Returns:
+            list[StackFrame]: Stack frames reported by rizin's ``dbtj``
+            command, ordered from the innermost (top) frame outward.
+        """
+        self._require_attached("get_backtrace")
+        parsed = await self._debug_cmd_json("dbtj")
+        frames: list[StackFrame] = []
+        if not isinstance(parsed, list):
+            _logger.debug("get_backtrace_empty")
+            return frames
+        for index, entry in enumerate(cast("list[object]", parsed)):
+            if not isinstance(entry, dict):
+                continue
+            entry_dict = cast("dict[str, Any]", entry)
+            pc = _get_int(entry_dict, "pc", _get_int(entry_dict, "addr", _get_int(entry_dict, "offset")))
+            ret_addr = _get_int(entry_dict, "ret", _get_int(entry_dict, "return", pc))
+            frame_ptr = _get_int(entry_dict, "fp", _get_int(entry_dict, "bp"))
+            stack_ptr = _get_int(entry_dict, "sp")
+            fn_name = _get_optional_str(entry_dict, "fname") or _get_optional_str(entry_dict, "name")
+            module_name = _get_optional_str(entry_dict, "module") or _get_optional_str(entry_dict, "lib")
+            frames.append(
+                StackFrame(
+                    index=_get_int(entry_dict, "n", index),
+                    address=pc,
+                    return_address=ret_addr,
+                    frame_pointer=frame_ptr,
+                    stack_pointer=stack_ptr,
+                    function_name=fn_name,
+                    module_name=module_name,
+                ),
+            )
+        _logger.debug("cutter_backtrace_queried", count=len(frames))
+        return frames
 
     async def get_modules(self) -> list[ModuleInfo]:
         """Enumerate loaded modules of the attached process.

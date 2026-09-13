@@ -32,30 +32,36 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Callable, Coroutine
+from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast
 
 import pytest
+from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import (
     QComboBox,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
     QPlainTextEdit,
+    QPushButton,
     QTableWidget,
     QTableWidgetItem,
+    QTreeWidget,
 )
 
 from intellicrack.bridges.cutter import CutterBridge
+from intellicrack.core.types import ToolError
 from intellicrack.ui.panels.cutter_debugger_tab import DebuggerTab
+from intellicrack.ui.panels.cutter_panel import CutterPanel
 from intellicrack.ui.panels.cutter_project_tab import ProjectTab
 from intellicrack.ui.panels.cutter_search_tab import SearchTab
+from intellicrack.ui.panels.cutter_tabs import FlagsTab
 from tests.bridges.completeness.cutter.conftest import CommandRecorder, as_r2pipe
 
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from PyQt6.QtWidgets import QApplication
 
 
@@ -125,6 +131,29 @@ def _attached_bridge(recorder: CommandRecorder, pid: int = 4242) -> CutterBridge
     return bridge
 
 
+async def _attached_bridge_async(recorder: CommandRecorder, pid: int = 4242) -> CutterBridge:
+    """Build a real ``CutterBridge`` in the attached state from within a running event loop.
+
+    Mirrors :func:`_attached_bridge` exactly, but ``await``s ``attach()``
+    directly instead of driving it through ``asyncio.run()`` -- the latter
+    raises ``RuntimeError: asyncio.run() cannot be called from a running
+    event loop`` when invoked from inside an ``async def`` test already
+    running under ``pytest.mark.asyncio``.
+
+    Args:
+        recorder: Command recorder to install as the r2 pipe.
+        pid: Process id to attach to.
+
+    Returns:
+        CutterBridge: A bridge with ``state.process_attached`` True.
+    """
+    bridge = CutterBridge()
+    bridge.r2 = as_r2pipe(recorder)
+    await bridge.attach(pid)
+    recorder.commands.clear()
+    return bridge
+
+
 def _find_register_row(reg_table: QTableWidget, register_name: str) -> int:
     """Find the row index whose first-column text matches the given register name.
 
@@ -177,6 +206,73 @@ def _list_item_text(list_widget: QListWidget, row: int) -> str:
     item = list_widget.item(row)
     assert item is not None
     return item.text()
+
+
+@pytest.mark.usefixtures("qapp")
+class TestListAttachableProcesses:
+    """L1/L2/L3 gate: process discovery before attach (rizin 'dpl'/'dplj') must be real and reachable."""
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_dplj_and_returns_dicts() -> None:
+        """``list_attachable_processes`` must issue rizin's 'dplj' and return dict-shaped entries."""
+        recorder = CommandRecorder({"dplj": '[{"pid":1234,"path":"/usr/bin/target"},{"pid":5678,"path":"/bin/other"}]'})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        processes = await bridge.list_attachable_processes()
+
+        assert "dplj" in recorder.commands
+        assert [p["pid"] for p in processes] == [1234, 5678]
+        assert bridge.state.process_attached is False
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_normalizes_bare_int_entries() -> None:
+        """``list_attachable_processes`` must normalize a bare-integer pid list into pid dicts."""
+        recorder = CommandRecorder({"dplj": "[1234, 5678]"})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        processes = await bridge.list_attachable_processes()
+
+        assert [p["pid"] for p in processes] == [1234, 5678]
+
+    @staticmethod
+    def test_discover_button_populates_table_and_double_click_fills_pid(qapp: QApplication) -> None:
+        """Clicking Refresh must issue 'dplj' and populate the table; double-clicking a row must fill the PID input.
+
+        Falsifiable: if ``_on_discover_processes`` never called
+        ``self._bridge.list_attachable_processes``, 'dplj' would never be
+        recorded and the table would stay empty. Broken production line:
+        the ``run_bridge_coroutine_logged(self._bridge.list_attachable_processes(), ...)``
+        call in ``DebuggerTab._on_discover_processes`` (``cutter_debugger_tab.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({"dplj": '[{"pid":1234,"path":"/usr/bin/target"},{"pid":5678,"path":"/bin/other"}]'})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        attachable_table = cast(QTableWidget, getattr(tab, "_attachable_table"))
+        discover_btn = cast(QPushButton, getattr(tab, "_discover_btn"))
+        pid_input = cast(QLineEdit, getattr(tab, "_pid_input"))
+
+        assert discover_btn.isEnabled(), "_discover_btn must be enabled to drive discovery via a real click"
+        discover_btn.click()
+
+        assert _pump_until(qapp, lambda: "dplj" in recorder.commands)
+        assert "dplj" in recorder.commands
+        assert _pump_until(qapp, lambda: attachable_table.rowCount() == 2)
+
+        row0_item = attachable_table.item(0, 0)
+        assert row0_item is not None
+        attachable_table.itemDoubleClicked.emit(row0_item)
+
+        assert pid_input.text() == "1234"
 
 
 @pytest.mark.usefixtures("qapp")
@@ -396,6 +492,62 @@ class TestDebuggerTabSteppingAndContinue:
 
 
 @pytest.mark.usefixtures("qapp")
+class TestSendSignal:
+    """L1/L2/L3 gate: signal delivery to the debuggee (rizin 'dk') must be real and reachable."""
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_dk_command() -> None:
+        """``send_signal`` must issue rizin's 'dk <signal>' and return True."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        result = await bridge.send_signal(9)
+
+        assert "dk 9" in recorder.commands
+        assert result is True
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_requires_attachment() -> None:
+        """``send_signal`` on an unattached bridge must raise ``ToolError`` rather than issue a command."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        with pytest.raises(ToolError, match="not attached"):
+            await bridge.send_signal(9)
+
+    @staticmethod
+    def test_send_signal_button_issues_dk(qapp: QApplication) -> None:
+        """Typing a signal number and clicking Send must issue rizin's 'dk <signal>'.
+
+        Falsifiable: if ``_on_send_signal`` never called
+        ``self._bridge.send_signal``, 'dk 11' would never appear in the
+        recorder. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.send_signal(signal), ...)``
+        call in ``DebuggerTab._on_send_signal`` (``cutter_debugger_tab.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({"dbj": "[]", "dmj": "[]", "dptj": "[]", "dbtj": "[]", "dmIj": "[]", "drj": "{}"})
+        bridge = _attached_bridge(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        signal_input = cast(QLineEdit, getattr(tab, "_signal_input"))
+        send_signal_btn = cast(QPushButton, getattr(tab, "_send_signal_btn"))
+        signal_input.setText("11")
+
+        assert send_signal_btn.isEnabled(), "_send_signal_btn must be enabled to deliver the signal via a real click"
+        send_signal_btn.click()
+
+        assert _pump_until(qapp, lambda: "dk 11" in recorder.commands)
+        assert "dk 11" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
 class TestDebuggerTabRegisters:
     """L3 gate: rows 9-10 -- register table refresh and in-place register editing."""
 
@@ -610,24 +762,53 @@ class TestDebuggerTabRegionsThreadsModules:
         assert _item_text(modules_table, 0, 1) == f"0x{1996488704:X}"
 
 
+class _SideEffectingSaveRecorder(CommandRecorder):
+    """Command recorder that mimics rizin's real ``Ps <path>`` on-disk file-write side effect.
+
+    ``CutterBridge.save_project`` issues ``Ps <path>`` against a real rizin process and then verifies the project file actually landed on
+    disk, because rizin's ``Ps`` silently no-ops on some failure modes instead of reporting an error through its command output. The base
+    :class:`CommandRecorder` only records the command string and returns a canned response -- it never touches the filesystem -- so a save
+    driven against it alone would always fail that disk-existence check. This subclass stays faithful to the real external tool by writing
+    the target file whenever it sees a ``Ps <path>`` command, so the verification step it feeds exercises genuine on-disk behaviour instead
+    of vacuously failing or being bypassed.
+    """
+
+    def cmd(self, command: str) -> str:
+        """Record ``command``, write the real project file for ``Ps <path>``, and return the canned response.
+
+        Args:
+            command: The r2 command string issued by the bridge.
+
+        Returns:
+            str: The response produced by :meth:`CommandRecorder.cmd`.
+        """
+        response = super().cmd(command)
+        if command.startswith("Ps "):
+            Path(command.removeprefix("Ps ")).write_bytes(b"")
+        return response
+
+
 @pytest.mark.usefixtures("qapp")
 class TestProjectTabSaveOpenList:
     """L3 gate: rows 43-45 -- Save/Open/Refresh project controls."""
 
     @staticmethod
-    def test_save_button_issues_ps_command_and_refreshes_list(qapp: QApplication) -> None:
-        """Clicking Save with a project name must issue rizin's ``Ps <name>`` and then re-list projects.
+    def test_save_button_issues_ps_command_and_refreshes_list(qapp: QApplication, tmp_path: Path) -> None:
+        """Clicking Save must issue rizin's fully-qualified ``Ps <dir>/<name>.rzdb`` and then re-list real projects.
 
-        Falsifiable: if ``_on_save`` never called
-        ``self._bridge.save_project``, 'Ps license_analysis' would never be
-        recorded. Broken production line: the
-        ``run_bridge_coroutine_logged(self._bridge.save_project(name), ...)``
-        call in ``ProjectTab._on_save`` (``cutter_project_tab.py``).
+        Falsifiable: if ``_on_save`` never called ``self._bridge.save_project``, the fully-qualified ``Ps`` command below would never be
+        recorded. Broken production line: the ``run_bridge_coroutine_logged(self._bridge.save_project(name), ...)`` call in
+        ``ProjectTab._on_save`` (``cutter_project_tab.py``). This also falsifies ``CutterBridge.save_project`` itself (``cutter.py``): it
+        resolves ``dir.projects`` to a real directory and builds an explicit ``<dir>/<name>.rzdb`` path rather than the bare ``Ps <name>``
+        rizin no longer accepts, then verifies that exact file exists on disk before reporting success --
+        :class:`_SideEffectingSaveRecorder` mimics that real disk write so the verification step is genuinely exercised rather than
+        trivially satisfied by a double that never touches the filesystem.
 
         Args:
             qapp: Qt application fixture used to pump the event loop.
+            tmp_path: Pytest-managed temporary directory used as the real ``dir.projects`` rizin project storage location.
         """
-        recorder = CommandRecorder({"Ps license_analysis": "", "Pl": "license_analysis\n"})
+        recorder = _SideEffectingSaveRecorder({"e dir.projects": str(tmp_path)})
         bridge = CutterBridge()
         bridge.r2 = as_r2pipe(recorder)
 
@@ -640,9 +821,9 @@ class TestProjectTabSaveOpenList:
 
         on_save()
 
-        assert _pump_until(qapp, lambda: "Ps license_analysis" in recorder.commands)
-        assert "Ps license_analysis" in recorder.commands
-        assert _pump_until(qapp, lambda: "Pl" in recorder.commands)
+        expected_path = tmp_path / "license_analysis.rzdb"
+        assert _pump_until(qapp, lambda: f"Ps {expected_path}" in recorder.commands)
+        assert f"Ps {expected_path}" in recorder.commands
         assert _pump_until(qapp, lambda: project_list.count() > 0)
         assert _list_item_text(project_list, 0) == "license_analysis"
 
@@ -675,17 +856,21 @@ class TestProjectTabSaveOpenList:
         assert _pump_until(qapp, lambda: status_label.text() == "Opened project 'license_analysis'")
 
     @staticmethod
-    def test_refresh_lists_real_multiple_projects(qapp: QApplication) -> None:
-        """Refresh must issue rizin's ``Pl`` and split its multi-line text output into real list entries.
+    def test_refresh_lists_real_multiple_projects(qapp: QApplication, tmp_path: Path) -> None:
+        """Refresh must scan the real ``dir.projects`` directory and list every real ``.rzdb`` file found there.
 
-        Falsifiable: if ``_on_refresh`` never called
-        ``self._bridge.list_projects()`` or mis-parsed its line-based
-        output, the list widget would not contain both real project names.
+        Falsifiable: if ``CutterBridge.list_projects`` mis-scanned or mis-parsed the directory (it no longer issues rizin's withdrawn
+        ``Pl`` command at all -- only ``_list_rzdb_project_names``'s ``*.rzdb`` glob over the ``_resolve_projects_dir``-resolved directory,
+        both in ``cutter.py``), or ``ProjectTab._on_refresh`` failed to dispatch ``list_projects`` at all, the list widget would not end up
+        containing both real project names pre-created on disk below.
 
         Args:
             qapp: Qt application fixture used to pump the event loop.
+            tmp_path: Pytest-managed temporary directory used as the real ``dir.projects`` rizin project storage location.
         """
-        recorder = CommandRecorder({"Pl": "alpha_target\nbeta_target\n"})
+        (tmp_path / "alpha_target.rzdb").write_bytes(b"")
+        (tmp_path / "beta_target.rzdb").write_bytes(b"")
+        recorder = CommandRecorder({"e dir.projects": str(tmp_path)})
         bridge = CutterBridge()
         bridge.r2 = as_r2pipe(recorder)
 
@@ -698,16 +883,19 @@ class TestProjectTabSaveOpenList:
         assert names == {"alpha_target", "beta_target"}
 
     @staticmethod
-    def test_double_click_project_opens_it(qapp: QApplication) -> None:
-        """Double-clicking a listed project must open it via the real bridge call.
+    def test_double_click_project_opens_it(qapp: QApplication, tmp_path: Path) -> None:
+        """Double-clicking a real listed project must open it via rizin's ``Po <name>``.
 
-        Falsifiable: if ``_on_item_double_clicked`` never invoked
-        ``_open_project``, 'Po beta_target' would never be recorded.
+        Falsifiable: if ``_on_item_double_clicked`` never invoked ``_open_project``, 'Po beta_target' would never be recorded. The listed
+        entry itself comes from a real ``beta_target.rzdb`` file pre-created on disk below and discovered by the same directory-scan
+        ``CutterBridge.list_projects`` uses in production, not from the withdrawn ``Pl`` command the old version of this test asserted.
 
         Args:
             qapp: Qt application fixture used to pump the event loop.
+            tmp_path: Pytest-managed temporary directory used as the real ``dir.projects`` rizin project storage location.
         """
-        recorder = CommandRecorder({"Pl": "beta_target\n", "Po beta_target": ""})
+        (tmp_path / "beta_target.rzdb").write_bytes(b"")
+        recorder = CommandRecorder({"e dir.projects": str(tmp_path), "Po beta_target": ""})
         bridge = CutterBridge()
         bridge.r2 = as_r2pipe(recorder)
 
@@ -1029,3 +1217,822 @@ class TestSearchTabCompare:
         assert _pump_until(qapp, lambda: bool(compare_output.toPlainText()))
         assert "diff-line-1" in compare_output.toPlainText()
         assert '{"match": true}' in compare_output.toPlainText()
+
+
+@pytest.mark.usefixtures("qapp")
+class TestConditionalContinue:
+    """L1/L2/L3 gate: conditional continue (rizin 'dcs'/'dcc'/'dcu') must be real and reachable.
+
+    Falsified by: changing the "address" branch to issue ``f"dc {resolved_address}"`` instead of
+    ``f"dcu {resolved_address}"`` turns ``test_address_mode_issues_dcu`` red immediately, because
+    ``"dcu 4198400"`` no longer appears in ``recorder.commands``. Independently, deleting the
+    ``mode == "address" and target is None`` guard makes ``test_address_mode_without_target_raises``
+    red (no exception is raised).
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_syscall_mode_bare_issues_dcs() -> None:
+        """``mode="syscall"`` with no target must issue bare rizin 'dcs'."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        await bridge.continue_until("syscall")
+
+        assert "dcs" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_syscall_mode_with_target_issues_dcs_name() -> None:
+        """``mode="syscall"`` with a name filter must issue 'dcs <name>'."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        await bridge.continue_until("syscall", "open")
+
+        assert "dcs open" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_call_mode_issues_dcc() -> None:
+        """``mode="call"`` must issue rizin's 'dcc', not the bare 'dc'."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        await bridge.continue_until("call")
+
+        assert "dcc" in recorder.commands
+        assert "dc" not in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_address_mode_issues_dcu() -> None:
+        """``mode="address"`` with a native ``int`` target must issue 'dcu <address>'."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        await bridge.continue_until("address", 0x401000)
+
+        assert "dcu 4198400" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_address_mode_with_string_target_issues_dcu() -> None:
+        """``mode="address"`` must also parse a hex-string target before issuing 'dcu'."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        await bridge.continue_until("address", "0x401000")
+
+        assert "dcu 4198400" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_address_mode_without_target_raises() -> None:
+        """``mode="address"`` without a target must raise ``ToolError`` rather than issue a command."""
+        recorder = CommandRecorder()
+        bridge = await _attached_bridge_async(recorder)
+
+        with pytest.raises(ToolError):
+            await bridge.continue_until("address")
+        assert not any(cmd.startswith("dcu") for cmd in recorder.commands)
+
+    @staticmethod
+    def test_continue_until_button_issues_dcc_in_call_mode(qapp: QApplication) -> None:
+        """Selecting 'call' mode and clicking Continue Until must issue rizin's 'dcc'.
+
+        Falsifiable: if ``_on_continue_until`` ignored the mode combo or
+        never called ``self._bridge.continue_until``, 'dcc' would never
+        appear in the recorder. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.continue_until(mode, target), ...)``
+        call in ``DebuggerTab._on_continue_until`` (``cutter_debugger_tab.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop while
+                the real background bridge-call worker thread runs.
+        """
+        recorder = CommandRecorder({
+            "dbj": "[]",
+            "dmj": "[]",
+            "dptj": "[]",
+            "dbtj": "[]",
+            "dmIj": "[]",
+            "drj": "{}",
+        })
+        bridge = _attached_bridge(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        mode_combo = cast(QComboBox, getattr(tab, "_continue_until_mode_combo"))
+        mode_combo.setCurrentText("call")
+        continue_until_btn = cast(QPushButton, getattr(tab, "_continue_until_btn"))
+
+        assert continue_until_btn.isEnabled(), "_continue_until_btn must be enabled to continue via a real click"
+        continue_until_btn.click()
+
+        assert _pump_until(qapp, lambda: "dcc" in recorder.commands)
+        assert "dcc" in recorder.commands
+
+    @staticmethod
+    def test_continue_until_address_mode_requires_valid_target(qapp: QApplication) -> None:
+        """Selecting 'address' mode with an unparseable target must not issue 'dcu' or crash.
+
+        Falsifiable: if ``_on_continue_until`` forwarded the raw, unparsed
+        target text straight to the bridge instead of validating it via
+        ``_parse_address`` first, a malformed target would either raise an
+        uncaught exception or silently issue a bogus 'dcu' command.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        del qapp
+        recorder = CommandRecorder()
+        bridge = _attached_bridge(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        mode_combo = cast(QComboBox, getattr(tab, "_continue_until_mode_combo"))
+        target_input = cast(QLineEdit, getattr(tab, "_continue_until_target_input"))
+        mode_combo.setCurrentText("address")
+        target_input.setText("not-an-address")
+        continue_until_btn = cast(QPushButton, getattr(tab, "_continue_until_btn"))
+
+        assert continue_until_btn.isEnabled(), "_continue_until_btn must be enabled to drive validation via a real click"
+        continue_until_btn.click()
+
+        assert not any(cmd.startswith("dcu") for cmd in recorder.commands)
+
+
+@pytest.mark.usefixtures("qapp")
+class TestGetBacktrace:
+    """L1/L2/L3 gate: the call-stack / backtrace listing (rizin 'dbt'/'dbtj') must be real and reachable."""
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_dbtj_and_parses_frames() -> None:
+        """``get_backtrace`` must issue rizin's 'dbtj' and parse the real returned frames.
+
+        Falsifiable: if the issued command dropped the 'j' JSON-output
+        suffix (issuing plain 'dbt' instead), the recorder's JSON payload
+        would never be returned and ``_extract_rizin_json`` would fail to
+        parse rizin's plain human-readable backtrace text.
+        """
+        recorder = CommandRecorder({
+            "dbtj": (
+                '[{"n":0,"pc":4198400,"sp":6295552,"fname":"main"},'
+                '{"n":1,"pc":4198464,"ret":4198464,"sp":6295584,"fname":"__libc_start_main"}]'
+            ),
+        })
+        bridge = await _attached_bridge_async(recorder)
+
+        frames = await bridge.get_backtrace()
+
+        assert "dbtj" in recorder.commands
+        assert [f.function_name for f in frames] == ["main", "__libc_start_main"]
+        assert frames[0].address == 0x401000
+        assert frames[1].return_address == 4198464
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_empty_list_returns_no_frames_without_raising() -> None:
+        """``get_backtrace`` must return an empty list, not raise, when rizin reports no frames."""
+        recorder = CommandRecorder({"dbtj": "[]"})
+        bridge = await _attached_bridge_async(recorder)
+
+        frames = await bridge.get_backtrace()
+
+        assert frames == []
+
+    @staticmethod
+    def test_refresh_backtrace_populates_table(qapp: QApplication) -> None:
+        """The Backtrace tab's refresh must issue 'dbtj' and render the real function name.
+
+        Falsifiable: if ``_refresh_backtrace`` never called
+        ``self._bridge.get_backtrace()``, 'dbtj' would never be recorded
+        and the table would stay empty. Broken production line: the
+        ``self._bridge.get_backtrace()`` call in
+        ``DebuggerTab._refresh_backtrace`` (``cutter_debugger_tab.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({
+            "dbtj": '[{"n":0,"pc":4198400,"sp":6295552,"fname":"main"}]',
+        })
+        bridge = _attached_bridge(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        backtrace_table = cast(QTableWidget, getattr(tab, "_backtrace_table"))
+        refresh_backtrace = cast(Callable[[], None], getattr(tab, "_refresh_backtrace"))
+
+        refresh_backtrace()
+
+        assert _pump_until(qapp, lambda: backtrace_table.rowCount() > 0)
+        assert "dbtj" in recorder.commands
+        assert backtrace_table.rowCount() == 1
+        assert _item_text(backtrace_table, 0, 1) == f"0x{4198400:X}"
+        assert _item_text(backtrace_table, 0, 5) == "main"
+
+    @staticmethod
+    def test_detach_clears_backtrace_table(qapp: QApplication) -> None:
+        """Detaching must clear the backtrace table along with the other debugger views.
+
+        Falsifiable: if ``_on_detach_success`` omitted the
+        ``self._backtrace_table.setRowCount(0)`` line, the backtrace rows
+        populated before detach would still be visible afterward.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({
+            "dbtj": '[{"n":0,"pc":4198400,"sp":6295552,"fname":"main"}]',
+        })
+        bridge = _attached_bridge(recorder)
+
+        tab = DebuggerTab()
+        tab.set_bridge(bridge)
+        backtrace_table = cast(QTableWidget, getattr(tab, "_backtrace_table"))
+        refresh_backtrace = cast(Callable[[], None], getattr(tab, "_refresh_backtrace"))
+        refresh_backtrace()
+        assert _pump_until(qapp, lambda: backtrace_table.rowCount() > 0)
+        on_detach_success = cast(Callable[[], None], getattr(tab, "_on_detach_success"))
+
+        on_detach_success()
+
+        assert backtrace_table.rowCount() == 0
+
+
+@pytest.mark.usefixtures("qapp")
+class TestRemoveFlag:
+    """L1/L2/L3 gate: flag removal (rizin 'f-') must be real and reachable.
+
+    Falsifiable: changing the issued command from ``"f- {name}"`` to ``"f
+    {name}"`` (a plausible one-character typo that would instead try to
+    *add* a flag named ``name`` with no size/address) turns
+    ``test_issues_f_dash_command`` red immediately.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_f_dash_command() -> None:
+        """``remove_flag`` must issue rizin's 'f- <name>'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        result = await bridge.remove_flag("my_flag")
+        assert "f- my_flag" in recorder.commands
+        assert result is True
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_rejects_command_injection() -> None:
+        """``remove_flag`` must reject a ``name`` containing rizin command-control characters."""
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(CommandRecorder())
+        with pytest.raises(ToolError):
+            await bridge.remove_flag("my_flag; wx 9090")
+
+    @staticmethod
+    def test_context_menu_remove_action_issues_f_dash(qapp: QApplication) -> None:
+        """Triggering the flag table's "Remove" context-menu action must issue rizin's 'f- <name>'.
+
+        Falsifiable: if ``_ctx_remove_flag`` never called
+        ``self._bridge.remove_flag(name)``, 'f- my_flag' would never appear
+        in the recorder and the flags table would not shrink back to zero
+        rows. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.remove_flag(name), ...)``
+        call in ``FlagsTab._ctx_remove_flag`` (``cutter_tabs.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({
+            "fj": '[{"name":"my_flag","offset":4198400,"size":1}]',
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        tab = FlagsTab()
+        tab.refresh(bridge, _no_op_run_async)
+        table = cast(QTableWidget, getattr(tab, "_table"))
+        assert _pump_until(qapp, lambda: table.rowCount() == 1)
+        ctx_remove_flag = cast(Callable[[str], None], getattr(tab, "_ctx_remove_flag"))
+        recorder.responses["fj"] = "[]"
+
+        ctx_remove_flag("my_flag")
+
+        assert _pump_until(qapp, lambda: "f- my_flag" in recorder.commands)
+        assert "f- my_flag" in recorder.commands
+        assert _pump_until(qapp, lambda: table.rowCount() == 0)
+
+
+@pytest.mark.usefixtures("qapp")
+class TestRenameFlag:
+    """L1/L2/L3 gate: flag rename (rizin 'fr') must be real and reachable.
+
+    Falsifiable: swapping the argument order (``f"fr {new_name}
+    {old_name}"``) turns ``test_issues_fr_command_with_correct_order`` red
+    immediately, because the recorded command becomes ``"fr new_flag
+    old_flag"`` instead of the asserted ``"fr old_flag new_flag"``.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_fr_command_with_correct_order() -> None:
+        """``rename_flag`` must issue rizin's 'fr <old_name> <new_name>' in that exact order."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        result = await bridge.rename_flag("old_flag", "new_flag")
+        assert "fr old_flag new_flag" in recorder.commands
+        assert result is True
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_rejects_command_injection_in_either_name() -> None:
+        """``rename_flag`` must reject command-control characters in either ``old_name`` or ``new_name``."""
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(CommandRecorder())
+        with pytest.raises(ToolError):
+            await bridge.rename_flag("old_flag", "new; wx 9090")
+        with pytest.raises(ToolError):
+            await bridge.rename_flag("old; wx 9090", "new_flag")
+
+    @staticmethod
+    def test_context_menu_rename_action_issues_fr(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Triggering the flag table's "Rename..." context-menu action must issue rizin's 'fr <old> <new>'.
+
+        Drives the real ``_ctx_rename_flag`` handler with
+        ``QInputDialog.getText`` patched to supply a deterministic new name
+        instead of blocking on a real modal dialog.
+
+        Falsifiable: if ``_ctx_rename_flag`` never called
+        ``self._bridge.rename_flag(old_name, new_name)``, 'fr old_flag
+        new_flag' would never appear in the recorder and the flags table
+        would keep showing the old name. Broken production line: the
+        ``run_bridge_coroutine_logged(self._bridge.rename_flag(old_name, new_name), ...)``
+        call in ``FlagsTab._ctx_rename_flag`` (``cutter_tabs.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+            monkeypatch: Pytest monkeypatch fixture used to stub the modal
+                ``QInputDialog.getText`` prompt with a deterministic response.
+        """
+        recorder = CommandRecorder({
+            "fj": '[{"name":"old_flag","offset":4198400,"size":1}]',
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        def fake_get_text(*_args: object, **_kwargs: object) -> tuple[str, bool]:
+            """Return a deterministic ("new_flag", True) response for ``QInputDialog.getText``.
+
+            Args:
+                *_args: Ignored positional arguments Qt would pass.
+                **_kwargs: Ignored keyword arguments Qt would pass.
+
+            Returns:
+                tuple[str, bool]: The scripted response.
+            """
+            return ("new_flag", True)
+
+        monkeypatch.setattr(QInputDialog, "getText", staticmethod(fake_get_text))
+
+        tab = FlagsTab()
+        tab.refresh(bridge, _no_op_run_async)
+        table = cast(QTableWidget, getattr(tab, "_table"))
+        assert _pump_until(qapp, lambda: table.rowCount() == 1)
+        ctx_rename_flag = cast(Callable[[str], None], getattr(tab, "_ctx_rename_flag"))
+        recorder.responses["fj"] = '[{"name":"new_flag","offset":4198400,"size":1}]'
+
+        ctx_rename_flag("old_flag")
+
+        assert _pump_until(qapp, lambda: "fr old_flag new_flag" in recorder.commands)
+        assert "fr old_flag new_flag" in recorder.commands
+        assert _pump_until(qapp, lambda: _item_text(table, 0, 0) == "new_flag")
+
+
+@pytest.mark.usefixtures("qapp")
+class TestFlagspaceManagement:
+    """L1/L2/L3 gate: flagspace create/list/remove (rizin 'fs'/'fslj'/'fs-') must be real and reachable.
+
+    Falsifiable: each test below asserts a distinct exact command string
+    (``"fs my_space"``, ``"fslj"``, ``"fs- my_space"``), so a regression in
+    any one of ``add_flagspace``/``list_flagspaces``/``remove_flagspace`` is
+    caught by exactly one test, not silently masked by the other two.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_add_flagspace_issues_fs() -> None:
+        """``add_flagspace`` must issue rizin's 'fs <name>'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        result = await bridge.add_flagspace("my_space")
+        assert "fs my_space" in recorder.commands
+        assert result is True
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_list_flagspaces_issues_fslj_and_returns_dicts() -> None:
+        """``list_flagspaces`` must issue rizin's 'fslj' and return its parsed dicts unmodified."""
+        recorder = CommandRecorder({"fslj": '[{"name":"sections","count":5},{"name":"my_space","count":0}]'})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        spaces = await bridge.list_flagspaces()
+        assert "fslj" in recorder.commands
+        assert [s["name"] for s in spaces] == ["sections", "my_space"]
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_remove_flagspace_issues_fs_dash() -> None:
+        """``remove_flagspace`` must issue rizin's 'fs- <name>'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        result = await bridge.remove_flagspace("my_space")
+        assert "fs- my_space" in recorder.commands
+        assert result is True
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_rejects_command_injection_in_either_method() -> None:
+        """Both ``add_flagspace`` and ``remove_flagspace`` must reject rizin command-control characters."""
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(CommandRecorder())
+        with pytest.raises(ToolError):
+            await bridge.add_flagspace("my_space; wx 9090")
+        with pytest.raises(ToolError):
+            await bridge.remove_flagspace("my_space; wx 9090")
+
+    @staticmethod
+    def test_refresh_populates_flagspace_combo(qapp: QApplication) -> None:
+        """Opening the flags tab must query 'fslj' and populate the flagspace combo box in order.
+
+        Falsifiable: if ``_on_refresh_flagspaces`` never called
+        ``self._bridge.list_flagspaces()``, 'fslj' would never appear in
+        the recorder and the combo box would stay empty. Broken production
+        line: the
+        ``run_bridge_coroutine_logged(self._bridge.list_flagspaces(), ...)``
+        call in ``FlagsTab._on_refresh_flagspaces`` (``cutter_tabs.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({
+            "fslj": '[{"name":"sections","count":5},{"name":"my_space","count":0}]',
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        tab = FlagsTab()
+        tab.refresh(bridge, _no_op_run_async)
+        combo = cast(QComboBox, getattr(tab, "_flagspace_combo"))
+
+        assert _pump_until(qapp, lambda: combo.count() == 2)
+        assert "fslj" in recorder.commands
+        assert combo.itemText(0) == "sections"
+        assert combo.itemText(1) == "my_space"
+
+
+@pytest.mark.usefixtures("qapp")
+class TestAddXref:
+    """L1/L2/L3 gate: manually adding a cross-reference (rizin 'axc'/'axC'/'axd') must be real and reachable.
+
+    Falsifiable: each L1 test below asserts a distinct exact command for a
+    distinct ``xref_type`` branch, so confusing ``axc``/``axC``/``axd`` with
+    one another, or dropping the mandatory seek-first step, is caught by a
+    specific assertion rather than a generic "some ax command ran" check.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_code_xref_seeks_then_issues_axc(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``add_xref`` with the default "code" type must seek to ``from_address``, then issue 'axc <to_address>'.
+
+        Args:
+            bridge_with_recorder: Real bridge wired to the recorder fixture.
+            recorder: Command recorder backing the bridge's r2 pipe.
+        """
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+        await bridge_with_recorder.add_xref(0x401000, 0x402000, "code")
+        assert recorder.commands == ["s 4198400", "axc 4202496"]
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_call_xref_issues_call_type_command(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``add_xref`` with ``xref_type="call"`` must issue the call-specific 'axC', not generic 'axc'.
+
+        Args:
+            bridge_with_recorder: Real bridge wired to the recorder fixture.
+            recorder: Command recorder backing the bridge's r2 pipe.
+        """
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+        await bridge_with_recorder.add_xref(0x401000, 0x402000, "call")
+        assert "axC 4202496" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_data_xref_issues_axd(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``add_xref`` with ``xref_type="data"`` must issue 'axd'.
+
+        Args:
+            bridge_with_recorder: Real bridge wired to the recorder fixture.
+            recorder: Command recorder backing the bridge's r2 pipe.
+        """
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+        await bridge_with_recorder.add_xref(0x401000, 0x402000, "data")
+        assert "axd 4202496" in recorder.commands
+
+    @staticmethod
+    def test_context_menu_add_call_xref_issues_call_type_command(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Triggering the XRefs context menu's "Add Call Xref..." action must issue 'axC' for the viewed address.
+
+        Drives the real ``_ctx_add_xref`` handler with ``QInputDialog.getText``
+        patched to supply a deterministic target address instead of blocking
+        on a real modal dialog.
+
+        Falsifiable: if ``_ctx_add_xref`` never called
+        ``self._bridge.add_xref(from_address, to_address, xref_type)``,
+        'axC 4202496' would never appear in the recorder. Broken production
+        line: the ``run_bridge_coroutine_logged(self._bridge.add_xref(...), ...)``
+        call in ``CutterPanel._ctx_add_xref`` (``cutter_panel.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+            monkeypatch: Pytest monkeypatch fixture used to stub the modal
+                ``QInputDialog.getText`` prompt with a deterministic response.
+        """
+        recorder = CommandRecorder({
+            "axtj @ 4198400": "[]",
+            "axfj @ 4198400": "[]",
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        asyncio.run(bridge.analyze("quick"))
+        recorder.commands.clear()
+
+        def fake_get_text(*_args: object, **_kwargs: object) -> tuple[str, bool]:
+            """Return a deterministic ("0x402000", True) response for ``QInputDialog.getText``.
+
+            Args:
+                *_args: Ignored positional arguments Qt would pass.
+                **_kwargs: Ignored keyword arguments Qt would pass.
+
+            Returns:
+                tuple[str, bool]: The scripted response.
+            """
+            return ("0x402000", True)
+
+        monkeypatch.setattr(QInputDialog, "getText", staticmethod(fake_get_text))
+
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        show_xrefs = cast(Callable[[int], None], getattr(panel, "_show_xrefs"))
+        show_xrefs(0x401000)
+        ctx_add_xref = cast(Callable[[str], None], getattr(panel, "_ctx_add_xref"))
+
+        ctx_add_xref("call")
+
+        assert _pump_until(qapp, lambda: "axC 4202496" in recorder.commands)
+        assert "axC 4202496" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
+class TestRemoveXref:
+    """L1/L2/L3 gate: removing a cross-reference (rizin 'ax-') must be real and reachable.
+
+    Falsifiable: the scoped-removal test asserts the exact two-argument
+    command string, so dropping ``from_address`` from the issued command
+    when it was supplied is caught directly rather than by a looser
+    "some ax- command ran" check.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_removes_all_xrefs_to_address(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``remove_xref`` with no ``from_address`` must issue the unscoped rizin 'ax- <to_address>'.
+
+        Args:
+            bridge_with_recorder: Real bridge wired to the recorder fixture.
+            recorder: Command recorder backing the bridge's r2 pipe.
+        """
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+        await bridge_with_recorder.remove_xref(0x402000)
+        assert "ax- 4202496" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_removes_one_scoped_xref(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
+        """``remove_xref`` with ``from_address`` must issue the scoped rizin 'ax- <to_address> <from_address>'.
+
+        Args:
+            bridge_with_recorder: Real bridge wired to the recorder fixture.
+            recorder: Command recorder backing the bridge's r2 pipe.
+        """
+        await bridge_with_recorder.analyze("quick")
+        recorder.commands.clear()
+        await bridge_with_recorder.remove_xref(0x402000, from_address=0x401000)
+        assert "ax- 4202496 4198400" in recorder.commands
+
+    @staticmethod
+    def test_context_menu_remove_to_row_issues_correctly_ordered_ax_dash(qapp: QApplication) -> None:
+        """Triggering "Remove This Xref" on a "To"-direction row must issue the correctly-ordered scoped 'ax-'.
+
+        Populates the XRefs tree with a real ``_show_xrefs`` call against a
+        recorder seeded with one "To"-direction xref, then drives
+        ``_ctx_remove_xref`` with the position of that row -- exercising the
+        real direction bookkeeping rather than asserting a fixed argument
+        order.
+
+        Falsifiable: if ``_ctx_remove_xref`` swapped ``to_address``/
+        ``from_address`` for the "To" direction branch, the recorder would
+        see 'ax- 4194304 4198400' instead of the asserted 'ax- 4198400
+        4194304'. Broken production line: the
+        ``if direction == "To": to_address, from_address = current, other_address``
+        branch in ``CutterPanel._ctx_remove_xref`` (``cutter_panel.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder({
+            "axtj @ 4198400": '[{"from":4194304,"type":"CALL"}]',
+            "axfj @ 4198400": "[]",
+        })
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        asyncio.run(bridge.analyze("quick"))
+
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        show_xrefs = cast(Callable[[int], None], getattr(panel, "_show_xrefs"))
+        show_xrefs(0x401000)
+        xrefs_tree = cast(QTreeWidget, getattr(panel, "_xrefs_tree"))
+        # One real "To" row plus one "(no callees)" "From" placeholder row (the
+        # seeded "axfj" response is empty), so the tree settles at exactly two entries.
+        assert _pump_until(qapp, lambda: xrefs_tree.topLevelItemCount() == 2)
+        recorder.commands.clear()
+        to_item = None
+        for row in range(xrefs_tree.topLevelItemCount()):
+            candidate = xrefs_tree.topLevelItem(row)
+            if candidate is not None and candidate.text(0) == "To":
+                to_item = candidate
+                break
+        assert to_item is not None
+        row_center = xrefs_tree.visualItemRect(to_item).center()
+        ctx_remove_xref = cast(Callable[[QPoint], None], getattr(panel, "_ctx_remove_xref"))
+
+        ctx_remove_xref(row_center)
+
+        assert _pump_until(qapp, lambda: "ax- 4198400 4194304" in recorder.commands)
+        assert "ax- 4198400 4194304" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
+class TestSeekRelative:
+    """L1/L2/L3 gate: relative seek stepping (rizin 'sd') must be real and reachable.
+
+    Falsifiable: both L1 tests assert the exact signed delta in the issued
+    command, so a sign error (e.g. always issuing a positive delta) is
+    caught directly rather than by a looser "some sd command ran" check.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_sd_with_signed_delta() -> None:
+        """``seek_relative`` with a negative delta must issue rizin's 'sd -16'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        await bridge.seek_relative(-16)
+        assert "sd -16" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_issues_sd_with_positive_delta() -> None:
+        """``seek_relative`` with a positive delta must issue rizin's 'sd 32'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        await bridge.seek_relative(32)
+        assert "sd 32" in recorder.commands
+
+    @staticmethod
+    def test_back_button_issues_sd_with_negated_delta(qapp: QApplication) -> None:
+        """Typing "16" and clicking the back button must issue rizin's 'sd -16', negating the typed delta.
+
+        Falsifiable: if ``_do_seek_relative`` ignored the ``negate`` flag (or
+        applied it to the wrong sign), 'sd -16' would never appear in the
+        recorder -- either the unnegated 'sd 16' would appear instead, or no
+        'sd' command at all. Broken production line: the
+        ``signed_delta = -delta if negate else delta`` line in
+        ``CutterPanel._do_seek_relative`` (``cutter_panel.py``).
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        seek_delta_input = cast(QLineEdit, getattr(panel, "_seek_delta_input"))
+        seek_delta_input.setText("16")
+        seek_back_btn = cast(QPushButton, getattr(panel, "_seek_back_btn"))
+
+        assert seek_back_btn.isEnabled(), "_seek_back_btn must be enabled to seek via a real click"
+        seek_back_btn.click()
+
+        assert _pump_until(qapp, lambda: "sd -16" in recorder.commands)
+        assert "sd -16" in recorder.commands
+
+
+@pytest.mark.usefixtures("qapp")
+class TestSeekHistory:
+    """L1/L2/L3 gate: seek-history navigation (rizin 'sh'/'shu'/'shr') must be real and reachable.
+
+    Falsifiable: ``test_seek_undo_issues_shu`` and ``test_seek_redo_issues_shr``
+    assert direction-specific exact command strings, so swapping the two
+    (undo issuing 'shr', redo issuing 'shu') fails both immediately rather
+    than being masked by a single generic "some history command ran" check.
+    """
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_seek_history_issues_sh() -> None:
+        """``seek_history`` must issue rizin's 'sh' and return its raw listing text."""
+        recorder = CommandRecorder({"sh": "0x00001100\n0x00000080\n"})
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        result = await bridge.seek_history()
+        assert "sh" in recorder.commands
+        assert "0x00001100" in result
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_seek_undo_issues_shu() -> None:
+        """``seek_undo`` must issue rizin's 'shu', not the redo command 'shr'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        await bridge.seek_undo()
+        assert "shu" in recorder.commands
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_seek_redo_issues_shr() -> None:
+        """``seek_redo`` must issue rizin's 'shr', not the undo command 'shu'."""
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+        await bridge.seek_redo()
+        assert "shr" in recorder.commands
+
+    @staticmethod
+    def test_back_button_issues_shu(qapp: QApplication) -> None:
+        """Clicking the "Back" history button must issue rizin's 'shu'.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        seek_back_history_btn = cast(QPushButton, getattr(panel, "_seek_back_history_btn"))
+
+        assert seek_back_history_btn.isEnabled(), "_seek_back_history_btn must be enabled to undo the seek via a real click"
+        seek_back_history_btn.click()
+
+        assert _pump_until(qapp, lambda: "shu" in recorder.commands)
+        assert "shu" in recorder.commands
+
+    @staticmethod
+    def test_forward_button_issues_shr(qapp: QApplication) -> None:
+        """Clicking the "Forward" history button must issue rizin's 'shr'.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+        recorder = CommandRecorder()
+        bridge = CutterBridge()
+        bridge.r2 = as_r2pipe(recorder)
+
+        panel = CutterPanel()
+        panel.set_bridge(bridge)
+        seek_fwd_history_btn = cast(QPushButton, getattr(panel, "_seek_fwd_history_btn"))
+
+        assert seek_fwd_history_btn.isEnabled(), "_seek_fwd_history_btn must be enabled to redo the seek via a real click"
+        seek_fwd_history_btn.click()
+
+        assert _pump_until(qapp, lambda: "shr" in recorder.commands)
+        assert "shr" in recorder.commands
