@@ -38,6 +38,7 @@ pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="x64dbg is a Win
 _RESIDUAL_REFRESH_RPCS = frozenset(
     {
         "reg_get",
+        "reg_extended",
         "register_list",
         "bp_list",
         "thread_list",
