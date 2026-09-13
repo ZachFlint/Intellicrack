@@ -504,6 +504,11 @@ class FridaPanel(AnalysisPanelBase):
         self._replace_fn_btn.clicked.connect(self._on_replace_function)
         hooks_header.addWidget(self._replace_fn_btn)
 
+        self._replace_fast_btn = QPushButton("Replace Fn (Fast)")
+        self._replace_fast_btn.setObjectName("tool_button")
+        self._replace_fast_btn.clicked.connect(self._on_replace_function_fast)
+        hooks_header.addWidget(self._replace_fast_btn)
+
         self._refresh_hooks_btn = QPushButton("Refresh")
         self._refresh_hooks_btn.setObjectName("tool_button")
         self._refresh_hooks_btn.clicked.connect(self._on_refresh_hooks)
@@ -622,6 +627,14 @@ class FridaPanel(AnalysisPanelBase):
         limit_row.addStretch()
         layout.addLayout(limit_row)
 
+        transform_row = QVBoxLayout()
+        transform_row.addWidget(QLabel("Transform code (optional, per-instruction):"))
+        self._stalker_transform_input = QPlainTextEdit()
+        self._stalker_transform_input.setPlaceholderText("iterator.keep();")
+        self._stalker_transform_input.setMaximumHeight(60)
+        transform_row.addWidget(self._stalker_transform_input)
+        layout.addLayout(transform_row)
+
         btn_row = QHBoxLayout()
         self._stalker_start_btn = QPushButton("Start Trace")
         self._stalker_start_btn.setObjectName("tool_button")
@@ -633,6 +646,12 @@ class FridaPanel(AnalysisPanelBase):
         self._stalker_stop_btn.setEnabled(False)
         self._stalker_stop_btn.clicked.connect(self._on_stalker_stop)
         btn_row.addWidget(self._stalker_stop_btn)
+
+        self._stalker_flush_btn = QPushButton("Flush")
+        self._stalker_flush_btn.setObjectName("tool_button")
+        self._stalker_flush_btn.setEnabled(False)
+        self._stalker_flush_btn.clicked.connect(self._on_stalker_flush)
+        btn_row.addWidget(self._stalker_flush_btn)
         btn_row.addStretch()
         layout.addLayout(btn_row)
 
@@ -1298,6 +1317,34 @@ class FridaPanel(AnalysisPanelBase):
         self._console.appendPlainText(f"[-] Replace function failed: {exc}")
         _logger.warning("frida_replace_function_failed", error=str(exc))
 
+    def _on_replace_function_fast_installed(self, pending_key: str, target: str, result: object) -> None:
+        """Handle successful Replace-Fn-Fast installation by tracking it in the Active Hooks table.
+
+        Args:
+            pending_key: Sentinel key stored in the pending hook row.
+            target: The original replacement target string.
+            result: HookInfo returned by the bridge, with original_trampoline set.
+        """
+        row_found, addr_str, hook_id = self._apply_hook_install_result(pending_key, target, result)
+        if not row_found:
+            _logger.info("frida_replace_function_fast_row_missing", target=target, hook_id=hook_id)
+        self._console.appendPlainText(f"[+] Function replaced (fast): {target} at {addr_str}")
+        trampoline = getattr(result, "original_trampoline", None)
+        if trampoline is not None:
+            self._console.appendPlainText(f"[+] Original trampoline: 0x{trampoline:X}")
+        _logger.info("frida_function_replaced_fast", target=target, hook_id=hook_id)
+
+    def _on_replace_function_fast_error(self, pending_key: str, exc: object) -> None:
+        """Handle Replace-Fn-Fast installation failure by removing the pending row.
+
+        Args:
+            pending_key: Sentinel key stored in the pending hook row.
+            exc: The exception that occurred.
+        """
+        self._remove_pending_hook_row(pending_key)
+        self._console.appendPlainText(f"[-] Replace function (fast) failed: {exc}")
+        _logger.warning("frida_replace_function_fast_failed", error=str(exc))
+
     def _on_remove_hook(self) -> None:
         """Remove the selected hook."""
         selected = self._hooks_table.currentRow()
@@ -1906,15 +1953,30 @@ class FridaPanel(AnalysisPanelBase):
 
         events = self._get_stalker_events_string()
         limit = self._stalker_limit_spin.value()
+        transform_code = self._stalker_transform_input.toPlainText().strip()
 
         self._stalker_start_btn.setEnabled(False)
-        self._console.appendPlainText(f"[*] Starting Stalker trace (tid={thread_id or 'current'}, events={events}, limit={limit})")
+        if transform_code:
+            self._console.appendPlainText(
+                f"[*] Starting Stalker trace with transform (tid={thread_id or 'current'}, events={events}, limit={limit})",
+            )
+            coro = self._bridge.stalker_follow_with_transform(
+                thread_id=thread_id,
+                events=events,
+                limit=limit,
+                transform_code=transform_code,
+            )
+            event_name = "frida_stalker_follow_with_transform"
+        else:
+            self._console.appendPlainText(f"[*] Starting Stalker trace (tid={thread_id or 'current'}, events={events}, limit={limit})")
+            coro = self._bridge.stalker_follow(thread_id=thread_id, events=events, limit=limit)
+            event_name = "frida_stalker_follow"
         run_bridge_coroutine_logged(
-            self._bridge.stalker_follow(thread_id=thread_id, events=events, limit=limit),
+            coro,
             on_success=self._on_stalker_started,
             on_error=self._on_stalker_start_error,
             parent=self,
-            event="frida_stalker_follow",
+            event=event_name,
             logger=_logger,
             level="info",
             thread_id=thread_id,
@@ -1931,6 +1993,7 @@ class FridaPanel(AnalysisPanelBase):
         self._console.appendPlainText(f"[+] Stalker tracing started (trace_id={result})")
         self._stalker_start_btn.setEnabled(False)
         self._stalker_stop_btn.setEnabled(True)
+        self._stalker_flush_btn.setEnabled(True)
 
     def _on_stalker_start_error(self, exc: object) -> None:
         """Handle Stalker start failure.
@@ -1955,10 +2018,12 @@ class FridaPanel(AnalysisPanelBase):
             except ValueError:
                 self._console.appendPlainText(f"[-] Invalid thread ID: {tid_text}")
                 self._stalker_stop_btn.setEnabled(True)
+                self._stalker_flush_btn.setEnabled(True)
                 _logger.warning("frida_stalker_stop_invalid_tid", tid_text=tid_text)
                 return
 
         self._stalker_stop_btn.setEnabled(False)
+        self._stalker_flush_btn.setEnabled(False)
         run_bridge_coroutine_logged(
             self._bridge.stalker_unfollow(thread_id=thread_id),
             on_success=self._on_stalker_stopped,
@@ -1992,6 +2057,7 @@ class FridaPanel(AnalysisPanelBase):
             self._console.appendPlainText(f"  ... and {len(events) - display_limit} more events")
         self._stalker_start_btn.setEnabled(True)
         self._stalker_stop_btn.setEnabled(False)
+        self._stalker_flush_btn.setEnabled(False)
 
     def _on_stalker_stop_error(self, exc: object) -> None:
         """Handle Stalker stop failure.
@@ -2003,6 +2069,37 @@ class FridaPanel(AnalysisPanelBase):
         _logger.warning("frida_stalker_stop_failed", error=str(exc))
         self._stalker_start_btn.setEnabled(True)
         self._stalker_stop_btn.setEnabled(False)
+        self._stalker_flush_btn.setEnabled(False)
+
+    def _on_stalker_flush(self) -> None:
+        """Flush buffered Stalker events for the active trace without stopping it."""
+        if self._bridge is None:
+            return
+
+        tid_text = self._stalker_tid_input.text().strip()
+        thread_id: int | None = None
+        if tid_text:
+            try:
+                thread_id = int(tid_text)
+            except ValueError:
+                self._invalid_input(
+                    "frida_stalker_flush_invalid_tid",
+                    input_text=tid_text,
+                    console_msg=f"[-] Invalid thread ID: {tid_text}",
+                    logger=_logger,
+                )
+                return
+
+        run_bridge_coroutine_logged(
+            self._bridge.stalker_flush(thread_id),
+            on_success=lambda _: self._console.appendPlainText("[+] Stalker events flushed"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Stalker flush failed: {e}"),
+            parent=self,
+            event="frida_stalker_flush",
+            logger=_logger,
+            level="info",
+            thread_id=thread_id,
+        )
 
     def refresh_devices(self) -> None:
         """Refresh the device selector combo box."""
@@ -2234,6 +2331,40 @@ class FridaPanel(AnalysisPanelBase):
             on_error=lambda e: self._on_replace_function_error(pending_key, e),
             parent=self,
             event="frida_replace_function",
+            logger=_logger,
+            level="info",
+            target=target,
+            replacement_size=len(code.strip()),
+        )
+
+    def _on_replace_function_fast(self) -> None:
+        """Replace a function via Interceptor.replaceFast and track it in the Active Hooks table."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+
+        target, accepted = QInputDialog.getText(self, "Replace Function (Fast)", "Target (address or module!func):")
+        if not accepted or not target.strip():
+            return
+        target = target.strip()
+
+        code, code_accepted = QInputDialog.getMultiLineText(
+            self,
+            "Replacement Code",
+            "JavaScript NativeCallback expression:",
+        )
+        if not code_accepted or not code.strip():
+            return
+
+        pending_key = self._next_pending_hook_key()
+        self._insert_pending_hook_row(pending_key, target)
+
+        run_bridge_coroutine_logged(
+            self._bridge.replace_function_fast(target, code.strip()),
+            on_success=lambda result: self._on_replace_function_fast_installed(pending_key, target, result),
+            on_error=lambda e: self._on_replace_function_fast_error(pending_key, e),
+            parent=self,
+            event="frida_replace_function_fast",
             logger=_logger,
             level="info",
             target=target,
@@ -2628,6 +2759,26 @@ class FridaPanel(AnalysisPanelBase):
         write_row.addWidget(self._mem_write_btn)
         rw_layout.addLayout(write_row)
 
+        copy_row = QHBoxLayout()
+        copy_row.addWidget(QLabel("Copy src:"))
+        self._mem_copy_src = QLineEdit()
+        self._mem_copy_src.setPlaceholderText("0x401000")
+        copy_row.addWidget(self._mem_copy_src)
+        copy_row.addWidget(QLabel("dst:"))
+        self._mem_copy_dst = QLineEdit()
+        self._mem_copy_dst.setPlaceholderText("0x402000")
+        copy_row.addWidget(self._mem_copy_dst)
+        copy_row.addWidget(QLabel("Size:"))
+        self._mem_copy_size = QSpinBox()
+        self._mem_copy_size.setRange(1, 1048576)
+        self._mem_copy_size.setValue(256)
+        copy_row.addWidget(self._mem_copy_size)
+        self._mem_copy_btn = QPushButton("Copy")
+        self._mem_copy_btn.setObjectName("tool_button")
+        self._mem_copy_btn.clicked.connect(self._on_copy_memory)
+        copy_row.addWidget(self._mem_copy_btn)
+        rw_layout.addLayout(copy_row)
+
         alloc_row = QHBoxLayout()
         alloc_row.addWidget(QLabel("Allocate:"))
         self._mem_alloc_size = QSpinBox()
@@ -2726,6 +2877,10 @@ class FridaPanel(AnalysisPanelBase):
         self._mem_prot_set_btn.setObjectName("tool_button")
         self._mem_prot_set_btn.clicked.connect(self._on_set_protection)
         prot_row.addWidget(self._mem_prot_set_btn)
+        self._mem_prot_query_btn = QPushButton("Query")
+        self._mem_prot_query_btn.setObjectName("tool_button")
+        self._mem_prot_query_btn.clicked.connect(self._on_query_protection)
+        prot_row.addWidget(self._mem_prot_query_btn)
         self._mem_prot_result = QLabel("")
         prot_row.addWidget(self._mem_prot_result)
         prot_row.addStretch()
@@ -2797,6 +2952,29 @@ class FridaPanel(AnalysisPanelBase):
             level="info",
             address=hex(addr),
             size=len(data),
+        )
+
+    def _on_copy_memory(self) -> None:
+        """Copy bytes natively, in-process, between two addresses in the target process."""
+        if self._bridge is None:
+            return
+        src = self._parse_hex_address(self._mem_copy_src.text())
+        dst = self._parse_hex_address(self._mem_copy_dst.text())
+        if src is None or dst is None:
+            self._console.appendPlainText("[-] Invalid source or destination address")
+            return
+        size = self._mem_copy_size.value()
+        run_bridge_coroutine_logged(
+            self._bridge.copy_memory(dst, src, size),
+            on_success=lambda _: self._console.appendPlainText(f"[+] Copied {size} bytes: 0x{src:X} -> 0x{dst:X}"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Copy failed: {e}"),
+            parent=self,
+            event="frida_copy_memory",
+            logger=_logger,
+            level="info",
+            src=hex(src),
+            dst=hex(dst),
+            size=size,
         )
 
     def _on_allocate_memory(self) -> None:
@@ -2941,6 +3119,24 @@ class FridaPanel(AnalysisPanelBase):
             address=hex(addr),
             size=size,
             protection=protection,
+        )
+
+    def _on_query_protection(self) -> None:
+        """Query the current live memory protection for a region."""
+        if self._bridge is None:
+            return
+        addr = self._parse_hex_address(self._mem_prot_addr.text())
+        if addr is None:
+            self._console.appendPlainText("[-] Invalid address")
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.query_memory_protection(addr),
+            on_success=lambda r: self._mem_prot_result.setText(f"Current: {r}"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Query protection failed: {e}"),
+            parent=self,
+            event="frida_query_memory_protection",
+            logger=_logger,
+            address=hex(addr),
         )
 
     @staticmethod

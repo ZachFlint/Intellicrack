@@ -28,9 +28,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import ctypes
 import json
 import os
 import sys
+import threading
 import time
 from typing import TYPE_CHECKING, Final, cast
 
@@ -852,3 +854,270 @@ class TestWriteMemoryHexCoercionRegression:
 
         raw = _run_async(self_attached_bridge.read_memory(target_addr, 4))
         assert raw == b"\xca\xfe\xba\xbe"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestReplaceFunctionFastA6:
+    """L1/L2 gates for Interceptor.replaceFast (``frida.replace_function_fast``)."""
+
+    @staticmethod
+    def test_replace_function_fast_installs_and_the_trampoline_still_calls_the_real_original(
+        self_attached_bridge: FridaBridge,
+    ) -> None:
+        """Interceptor.replaceFast must patch the target AND return a genuinely working original-call trampoline.
+
+        Falsifiable: if replace_function_fast used Interceptor.replace
+        instead (a plausible copy-paste mistake), the trampoline pointer
+        would be None (replace() returns nothing), failing the first
+        assertion. If it fabricated a fake/zero trampoline instead of
+        reading the real one Frida returned, calling it would either crash
+        the target process or return a bogus value equal to the sentinel
+        424242 (proving it silently points at the *replacement*, not the
+        original) - both are ruled out below by calling the real pointer
+        through a real NativeFunction and checking it behaves like the
+        genuine, unpatched GetTickCount.
+
+        Args:
+            self_attached_bridge: Bridge fixture attached to the current process.
+        """
+        hook = _run_async(
+            self_attached_bridge.replace_function_fast(
+                "kernel32.dll!GetTickCount",
+                "new NativeCallback(function () { return 424242; }, 'uint32', [])",
+            ),
+        )
+        assert hook.original_trampoline is not None
+        assert hook.original_trampoline != hook.address
+
+        replaced_result = _run_async(
+            self_attached_bridge.execute_script(
+                "var f = new NativeFunction(Process.findModuleByName('kernel32.dll').getExportByName('GetTickCount'), 'uint32', []); "
+                "send({ type: 'result', value: f() });",
+            ),
+        )
+        assert "'value': 424242" in replaced_result, f"replaced GetTickCount must return the sentinel: {replaced_result}"
+
+        original_result = _run_async(
+            self_attached_bridge.execute_script(
+                f"var f = new NativeFunction(ptr('{hook.original_trampoline}'), 'uint32', []); send({{ type: 'result', value: f() }});",
+            ),
+        )
+        assert "'value': 424242" not in original_result, (
+            f"the trampoline must still call the real original GetTickCount, not the replacement: {original_result}"
+        )
+
+    @staticmethod
+    def test_replace_function_fast_is_registered_in_the_tool_definition(
+        self_attached_bridge: FridaBridge,
+    ) -> None:
+        """``frida.replace_function_fast`` must be registered as a ToolFunction (L2).
+
+        Falsifiable: if the ``ToolFunction`` entry were never added to
+        ``_FRIDA_FUNCTIONS``, this name would be absent from the bridge's
+        advertised tool definition even though the L1 method exists.
+
+        Args:
+            self_attached_bridge: Bridge fixture attached to the current process.
+        """
+        names = {f.name for f in self_attached_bridge.tool_definition.functions}
+        assert "frida.replace_function_fast" in names
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestStalkerTransformB3:
+    """L1/L2/L3 gate for Stalker.follow's custom transform callback (``StalkerTransformer``)."""
+
+    @staticmethod
+    def test_transform_putcallout_runs_for_real_traced_blocks(self_attached_bridge: FridaBridge) -> None:
+        """``frida.stalker_follow_with_transform``'s transform_code must run for real, via iterator.putCallout.
+
+        Falsifiable: if the ``transform`` option were never wired into the
+        ``Stalker.follow`` call (e.g. silently dropped), the callout would
+        never fire, the marker byte would stay 0, and the final assertion
+        fails. If every instruction were unconditionally kept without
+        threading ``transform_code`` into the loop, the callout still would
+        never install. Broken production line: the ``transform: function
+        (iterator) { while (...) { {transform_code} } }`` wiring inside
+        ``FridaBridge.stalker_follow_with_transform`` (frida_bridge.py).
+
+        A genuinely separate, real OS thread drives the traced call -- not
+        Frida's own internal script-execution thread (which Gum's Stalker
+        cannot safely follow) and not a continuously-spinning thread (whose
+        CPython interpreter overhead would flood every instruction with a
+        callout). The worker parks on an event until tracing is already
+        installed, then makes a small, bounded number of real native calls
+        before the main thread unfollows it.
+
+        Args:
+            self_attached_bridge: Bridge fixture attached to the current process.
+        """
+        ready = threading.Event()
+        go = threading.Event()
+        finished = threading.Event()
+        tid_box: list[int] = []
+
+        def bounded_worker() -> None:
+            """Report the real OS thread id, then make a few bounded native calls on request."""
+            tid_box.append(ctypes.windll.kernel32.GetCurrentThreadId())
+            ready.set()
+            go.wait(timeout=5)
+            get_tick_count = ctypes.windll.kernel32.GetTickCount
+            for _ in range(5):
+                get_tick_count()
+            finished.set()
+
+        worker = threading.Thread(target=bounded_worker, daemon=True)
+        worker.start()
+        try:
+            assert ready.wait(timeout=5), "worker thread must report its real OS thread id"
+            tid = tid_box[0]
+
+            marker_addr = _run_async(self_attached_bridge.allocate_memory(1))
+
+            transform_code = f"""
+            iterator.putCallout(function (context) {{
+                ptr('{marker_addr}').writeU8(1);
+            }});
+            iterator.keep();
+            """
+            _run_async(
+                self_attached_bridge.stalker_follow_with_transform(
+                    thread_id=tid,
+                    events="call",
+                    limit=100000,
+                    transform_code=transform_code,
+                ),
+            )
+
+            go.set()
+            assert finished.wait(timeout=5), "worker thread must finish its bounded native calls"
+            worker.join(timeout=2)
+
+            _run_async(self_attached_bridge.stalker_unfollow(tid))
+
+            marker_bytes = _run_async(self_attached_bridge.read_memory(marker_addr, 1))
+            assert marker_bytes == b"\x01", "the transform's putCallout must have run for at least one real traced block"
+        finally:
+            go.set()
+            worker.join(timeout=2)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestStalkerFlushB5:
+    """L1/L2/L3 gate for an independently callable ``Stalker.flush()`` (``frida.stalker_flush``)."""
+
+    @staticmethod
+    def test_flush_acks_for_real_and_leaves_the_trace_running(self_attached_bridge: FridaBridge) -> None:
+        """``frida.stalker_flush`` must really call ``Stalker.flush()`` and must not stop the trace.
+
+        Falsifiable: if ``stalker_flush`` were a stub that never posted into
+        the script (or posted the wrong message type the script doesn't
+        recognize), no ``stalker_flushed`` ack would ever arrive and the
+        polling loop times out. If it accidentally called ``stopStalker()``
+        instead of the new flush-only handler, the subsequent
+        ``stalker_unfollow`` would find no active trace at that tid. Broken
+        production lines: the ``recv('stalker_flush_request', ...)`` handler
+        inside ``stalker_follow``'s script template, and the
+        ``script.post({...})`` call inside ``FridaBridge.stalker_flush``
+        (frida_bridge.py).
+
+        Args:
+            self_attached_bridge: Bridge fixture attached to the current process.
+        """
+        tid = threading.get_ident()
+        received: list[dict[str, object]] = []
+        self_attached_bridge.set_message_handler(received.append)
+
+        _run_async(self_attached_bridge.stalker_follow(thread_id=tid, events="call", limit=100000))
+
+        script_id = _run_async(
+            self_attached_bridge.execute_persistent_script(
+                "var f = new NativeFunction(Process.findModuleByName('kernel32.dll').getExportByName('GetTickCount'), 'uint32', []); "
+                "for (var i = 0; i < 50; i++) { f(); }",
+            ),
+        )
+        _run_async(self_attached_bridge.unload_script(script_id))
+
+        _run_async(self_attached_bridge.stalker_flush(tid))
+
+        deadline = time.monotonic() + _ATTACH_WAIT_S
+
+        def _flush_acked() -> bool:
+            return any(
+                isinstance(m.get("payload"), dict) and cast("dict[str, object]", m["payload"]).get("type") == "stalker_flushed"
+                for m in received
+            )
+
+        while not _flush_acked() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert _flush_acked(), f"stalker_flush never acked; received={received!r}"
+
+        trace = _run_async(self_attached_bridge.stalker_unfollow(tid))
+        assert trace.event_count >= 0
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestQueryMemoryProtectionC5:
+    """L1/L2/L3 gate for ``Memory.queryProtection`` (``frida.query_memory_protection``)."""
+
+    @staticmethod
+    def test_query_reflects_a_real_protection_change(self_attached_bridge: FridaBridge) -> None:
+        """``frida.query_memory_protection`` must report the real, current, live page protection.
+
+        Falsifiable: if the method returned a hardcoded/cached string
+        instead of a real ``Memory.queryProtection`` call, the "before"/
+        "after" values would be identical even though ``protect_memory``
+        genuinely changed the page. Broken production line: the
+        ``Memory.queryProtection(ptr(...))`` call inside
+        ``FridaBridge.query_memory_protection`` (frida_bridge.py).
+
+        Args:
+            self_attached_bridge: Bridge fixture attached to the current process.
+        """
+        addr = _run_async(self_attached_bridge.allocate_memory(4096))
+
+        before = _run_async(self_attached_bridge.query_memory_protection(addr))
+        assert before, "must return a non-empty protection string for freshly allocated memory"
+
+        changed = _run_async(self_attached_bridge.protect_memory(addr, 4096, "r--"))
+        assert changed is True
+
+        after = _run_async(self_attached_bridge.query_memory_protection(addr))
+        assert after == "r--", f"query must reflect the real change just made, got {after!r}"
+        assert after != before or before == "r--", (
+            f"before/after must genuinely differ when the protection was changed: {before!r} -> {after!r}"
+        )
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestCopyMemoryC9:
+    """L1/L2/L3 gate for ``Memory.copy`` (``frida.copy_memory``)."""
+
+    @staticmethod
+    def test_copy_memory_moves_real_bytes_natively(self_attached_bridge: FridaBridge) -> None:
+        """``frida.copy_memory`` must genuinely move bytes between two real, independently allocated regions.
+
+        Falsifiable: if ``copy_memory`` were a stub that never called the
+        real ``Memory.copy``, the destination block would still read back
+        as its original (non-matching) content. Broken production line:
+        the ``Memory.copy(ptr(dst), ptr(src), size)`` call inside
+        ``FridaBridge.copy_memory`` (frida_bridge.py).
+
+        Args:
+            self_attached_bridge: Bridge fixture attached to the current process.
+        """
+        size = 64
+        src = _run_async(self_attached_bridge.allocate_memory(size))
+        dst = _run_async(self_attached_bridge.allocate_memory(size))
+
+        pattern = bytes(range(size))
+        _run_async(self_attached_bridge.write_memory(src, pattern))
+
+        before = _run_async(self_attached_bridge.read_memory(dst, size))
+        assert before != pattern, "destination must not already coincidentally match the pattern before the copy"
+
+        result = _run_async(self_attached_bridge.copy_memory(dst, src, size))
+        assert result is True
+
+        after = _run_async(self_attached_bridge.read_memory(dst, size))
+        assert after == pattern, f"destination must contain the exact source pattern after Memory.copy, got {after!r}"
