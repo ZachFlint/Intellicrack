@@ -1352,6 +1352,10 @@ class X64DbgPanel(AnalysisPanelBase):
         self._cmt_refresh_btn.setObjectName("tool_button")
         self._cmt_refresh_btn.clicked.connect(self._on_refresh_comments)
         cmt_toolbar.addWidget(self._cmt_refresh_btn)
+        self._cmt_delete_btn = QPushButton(self.tr("Delete"))
+        self._cmt_delete_btn.setObjectName("tool_button")
+        self._cmt_delete_btn.clicked.connect(self._on_delete_comment)
+        cmt_toolbar.addWidget(self._cmt_delete_btn)
         cmt_toolbar.addStretch()
         cmt_layout.addWidget(self._make_control_row(cmt_toolbar))
         self._cmt_table = QTableWidget(0, len(_ANNOT_COLUMNS))
@@ -4060,6 +4064,34 @@ class X64DbgPanel(AnalysisPanelBase):
         address = cast("int", addr_item.data(Qt.ItemDataRole.UserRole))
         self._cmt_addr_input.setText(f"0x{address:X}")
         self._cmt_text_input.setText(text_item.text())
+
+    def _on_delete_comment(self) -> None:
+        """Delete the comment at the selected row's address."""
+        if self._bridge is None:
+            return
+        row = self._cmt_table.currentRow()
+        if row < 0:
+            return
+        addr_item = self._cmt_table.item(row, 0)
+        if addr_item is None:
+            return
+        address = cast("int", addr_item.data(Qt.ItemDataRole.UserRole))
+        self._cmt_delete_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.delete_comment(address),
+            on_success=lambda _: self._on_delete_comment_success(),
+            on_error=lambda e: self._on_generic_error("Delete Comment", e, self._cmt_delete_btn),
+            parent=self,
+            event="x64dbg_delete_comment",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+        )
+
+    def _on_delete_comment_success(self) -> None:
+        """Handle successful comment deletion by re-enabling the button and refreshing the table."""
+        self._cmt_delete_btn.setEnabled(True)
+        self._on_refresh_comments()
 
     @staticmethod
     def _parse_annot_address(raw_address: object) -> int:
