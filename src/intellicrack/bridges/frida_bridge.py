@@ -44,7 +44,10 @@ from intellicrack.core.types import (
     ImportInfo,
     InstructionInfo,
     MemoryRegion,
+    ModuleDependencyInfo,
     ModuleInfo,
+    ModuleSectionInfo,
+    StalkerCallSummary,
     StalkerEvent,
     StalkerTrace,
     SymbolInfo,
@@ -161,6 +164,38 @@ _VALID_PROTECTION_FLAGS: frozenset[str] = frozenset({
     "rwx",
 })
 _VALID_SOCKET_FAMILIES: frozenset[str] = frozenset({"ipv4", "ipv6", "unix"})
+_TYPED_VALUE_TYPES: frozenset[str] = frozenset({
+    "pointer",
+    "cstring",
+    "utf8",
+    "u8",
+    "u16",
+    "u32",
+    "u64",
+    "s8",
+    "s16",
+    "s32",
+    "s64",
+    "float",
+    "double",
+})
+_TYPED_STRING_RESULT_TYPES: frozenset[str] = frozenset({"cstring", "utf8"})
+_TYPED_INT64_RESULT_TYPES: frozenset[str] = frozenset({"u64", "s64"})
+_TYPED_READ_ACCESSORS: dict[str, str] = {
+    "pointer": "readPointer()",
+    "cstring": "readCString()",
+    "utf8": "readUtf8String()",
+    "u8": "readU8()",
+    "u16": "readU16()",
+    "u32": "readU32()",
+    "u64": "readU64()",
+    "s8": "readS8()",
+    "s16": "readS16()",
+    "s32": "readS32()",
+    "s64": "readS64()",
+    "float": "readFloat()",
+    "double": "readDouble()",
+}
 _SCAN_CONTEXT_BYTES: int = 16
 _SCAN_CHUNK_BYTES: int = 4 * 1024 * 1024
 _SCAN_CHUNK_TIMEOUT: float = 5.0
@@ -306,6 +341,22 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="List of import names and addresses",
     ),
     ToolFunction(
+        name="frida.enumerate_module_sections",
+        description="List a module's binary sections",
+        parameters=[
+            ToolParameter(name="module_name", type="string", description="Name of the module", required=True),
+        ],
+        returns="List of ModuleSectionInfo (id, name, address, size)",
+    ),
+    ToolFunction(
+        name="frida.enumerate_module_dependencies",
+        description="List a module's shared-library dependencies",
+        parameters=[
+            ToolParameter(name="module_name", type="string", description="Name of the module", required=True),
+        ],
+        returns="List of ModuleDependencyInfo (name, type)",
+    ),
+    ToolFunction(
         name="frida.enumerate_threads",
         description="List all threads in the attached process",
         parameters=[],
@@ -374,6 +425,42 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ToolParameter(name="dst_address", type="integer", description="Destination base address", required=True),
             ToolParameter(name="src_address", type="integer", description="Source base address", required=True),
             ToolParameter(name="size", type="integer", description="Number of bytes to copy", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.read_typed_value",
+        description="Read a single typed value from memory (NativePointer typed accessors), selected by value_type",
+        parameters=[
+            ToolParameter(name="address", type="integer", description="Memory address to read from", required=True),
+            ToolParameter(
+                name="value_type",
+                type="string",
+                required=True,
+                description="Value type to read",
+                enum=["pointer", "cstring", "utf8", "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "float", "double"],
+            ),
+        ],
+        returns="The decoded value (int, float, or string depending on value_type)",
+    ),
+    ToolFunction(
+        name="frida.write_typed_value",
+        description="Write a single typed value to memory (NativePointer typed accessors), selected by value_type",
+        parameters=[
+            ToolParameter(name="address", type="integer", description="Memory address to write to", required=True),
+            ToolParameter(
+                name="value_type",
+                type="string",
+                required=True,
+                description="Value type to write ('cstring' is read-only; use 'utf8' to write a string)",
+                enum=["pointer", "utf8", "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "float", "double"],
+            ),
+            ToolParameter(
+                name="value",
+                type="string",
+                description="Value to write, as a string (e.g. '42', '3.5', '0x1000', or text for utf8)",
+                required=True,
+            ),
         ],
         returns="Success status",
     ),
@@ -529,6 +616,20 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ),
         ],
         returns="List of memory regions",
+    ),
+    ToolFunction(
+        name="frida.enumerate_module_ranges",
+        description="Get a module's memory ranges, optionally filtered by protection",
+        parameters=[
+            ToolParameter(name="module_name", type="string", description="Name of the module", required=True),
+            ToolParameter(
+                name="protection",
+                type="string",
+                description="Filter by protection (e.g., 'r-x', '---' for all)",
+                required=False,
+            ),
+        ],
+        returns="List of memory regions scoped to the module",
     ),
     ToolFunction(
         name="frida.allocate_memory",
@@ -742,6 +843,27 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ),
         ],
         returns="StalkerTrace with collected events and duration",
+    ),
+    ToolFunction(
+        name="frida.stalker_follow_call_summary",
+        description="Start Stalker call-summary tracing on a thread (aggregated call-target counts, lower overhead than per-event streaming)",
+        parameters=[
+            ToolParameter(name="thread_id", type="integer", description="Thread ID to trace (null for current thread)", required=False),
+        ],
+        returns="Trace ID for later retrieval via stalker_unfollow_call_summary",
+    ),
+    ToolFunction(
+        name="frida.stalker_unfollow_call_summary",
+        description="Stop Stalker call-summary tracing and retrieve the aggregated call-target counts",
+        parameters=[
+            ToolParameter(
+                name="thread_id",
+                type="integer",
+                description="Thread ID to stop tracing (null for current thread)",
+                required=False,
+            ),
+        ],
+        returns="StalkerCallSummary with aggregated counts and duration",
     ),
     ToolFunction(
         name="frida.stalker_flush",
@@ -1016,6 +1138,20 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ToolParameter(name="address", type="integer", description="Address to look up", required=True),
         ],
         returns="ModuleInfo or null if not found",
+    ),
+    ToolFunction(
+        name="frida.find_export_by_name",
+        description="Find a single export's address by name, without a full module export dump",
+        parameters=[
+            ToolParameter(name="export_name", type="string", description="Name of the export to look up", required=True),
+            ToolParameter(
+                name="module_name",
+                type="string",
+                required=False,
+                description="Module to scope the lookup to; omit for a global (slower) lookup across every loaded module",
+            ),
+        ],
+        returns="The export's absolute address, or null if not found",
     ),
     ToolFunction(
         name="frida.find_functions_matching",
@@ -1570,6 +1706,9 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._stalker_traces: dict[int, list[StalkerEvent]] = {}
         self._stalker_traces_lock: threading.Lock = threading.Lock()
         self._stalker_scripts: dict[int, str] = {}
+        self._stalker_summary_scripts: dict[int, str] = {}
+        self._stalker_summaries: dict[int, dict[str, int]] = {}
+        self._stalker_summaries_lock: threading.Lock = threading.Lock()
         self._child_gating_enabled: bool = False
         self._gated_children: list[ChildProcessInfo] = []
         self._gated_children_lock: threading.Lock = threading.Lock()
@@ -2610,6 +2749,166 @@ class _FridaBridgeBase(InstrumentationBridge):
         _logger.info("memory_copied", dst=hex(validated_dst), src=hex(validated_src), size=validated_size)
         return True
 
+    async def read_typed_value(self, address: int, value_type: str) -> int | float | str | None:
+        """Read a single typed value from memory via NativePointer's typed accessors.
+
+        One coherent entry point for every NativePointer typed read
+        (readPointer/readCString/readUtf8String/readU8..readU64/readS8..readS64/
+        readFloat/readDouble), selected by value_type - distinct from the raw
+        byte-array read_memory/write_memory pair.
+
+        Args:
+            address: Memory address to read from.
+            value_type: One of 'pointer', 'cstring', 'utf8', 'u8', 'u16',
+                'u32', 'u64', 's8', 's16', 's32', 's64', 'float', 'double'.
+
+        Returns:
+            int | float | str | None: int for pointer/u8..u64/s8..s64, float
+                for float/double, str for cstring/utf8 (None only if the
+                target address holds a null pointer, per Frida's own
+                readCString/readUtf8String contract).
+
+        Raises:
+            ToolError: If not attached, value_type is unsupported, or the
+                read fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        if value_type not in _TYPED_VALUE_TYPES:
+            raise ToolError(
+                _ERR_READ_FAILED,
+                details={"reason": f"unsupported value_type: {value_type}", "allowed": sorted(_TYPED_VALUE_TYPES)},
+            )
+
+        validated_address = self._validate_js_int(address, name="address")
+        accessor = _TYPED_READ_ACCESSORS[value_type]
+        read_expr = f"ptr({validated_address}).{accessor}"
+        if value_type == "pointer" or value_type in _TYPED_INT64_RESULT_TYPES:
+            read_expr = f"({read_expr}).toString()"
+
+        script_code = f"""
+        try {{
+            var v = {read_expr};
+            send({{ type: 'typed_read', success: true, value: v }});
+        }} catch (e) {{
+            send({{ type: 'typed_read', success: false, error: e.message }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+        if "error" in result:
+            raise ToolError(_ERR_READ_FAILED)
+        if not result.get("success", False):
+            raise ToolError(_ERR_READ_FAILED, details={"reason": str(result.get("error", ""))})
+
+        raw_value = result.get("value")
+        if value_type in _TYPED_STRING_RESULT_TYPES:
+            return None if raw_value is None else str(raw_value)
+        if value_type == "pointer":
+            s = str(raw_value)
+            return int(s, 16) if s.startswith("0x") else int(s)
+        if value_type in _TYPED_INT64_RESULT_TYPES:
+            return int(str(raw_value))
+        if value_type in {"float", "double"}:
+            return float(cast("float", raw_value))
+        return int(cast("int", raw_value))
+
+    async def write_typed_value(self, address: int, value_type: str, value: float | str) -> bool:
+        """Write a single typed value to memory via NativePointer's typed accessors.
+
+        Companion to :meth:`read_typed_value`; the same value_type enum
+        selects which NativePointer write* accessor is used.
+
+        Args:
+            address: Memory address to write to.
+            value_type: One of 'pointer', 'utf8', 'u8', 'u16', 'u32', 'u64',
+                's8', 's16', 's32', 's64', 'float', 'double' ('cstring' is
+                read-only here - see hazards).
+            value: int for pointer (or a '0x...' hex string)/u8..u64/s8..s64,
+                float for float/double, str for utf8.
+
+        Returns:
+            bool: True if the write succeeded.
+
+        Raises:
+            ToolError: If not attached, value_type is unsupported, value is
+                the wrong shape for value_type, or the write fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        if value_type not in _TYPED_VALUE_TYPES:
+            raise ToolError(
+                _ERR_WRITE_FAILED,
+                details={"reason": f"unsupported value_type: {value_type}", "allowed": sorted(_TYPED_VALUE_TYPES)},
+            )
+
+        validated_address = self._validate_js_int(address, name="address")
+        write_call = self._build_typed_write_call(value_type, value)
+
+        script_code = f"""
+        try {{
+            ptr({validated_address}).{write_call};
+            send({{ type: 'typed_write', success: true }});
+        }} catch (e) {{
+            send({{ type: 'typed_write', success: false, error: e.message }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+        if "error" in result:
+            raise ToolError(_ERR_WRITE_FAILED)
+        if not result.get("success", False):
+            raise ToolError(_ERR_WRITE_FAILED, details={"reason": str(result.get("error", ""))})
+        return True
+
+    def _build_typed_write_call(self, value_type: str, value: float | str) -> str:
+        """Build the NativePointer write*(...) call fragment for a typed write.
+
+        Args:
+            value_type: One of the values in _TYPED_VALUE_TYPES (except
+                'cstring', which is read-only).
+            value: The Python value to encode into the JS call.
+
+        Returns:
+            str: A JS fragment like "writeU32(42)", safe to append after
+                "ptr(ADDR).".
+
+        Raises:
+            ToolError: If value_type is 'cstring', or value is the wrong
+                shape for value_type.
+        """
+        if value_type == "cstring":
+            raise ToolError(
+                _ERR_WRITE_FAILED,
+                details={"reason": "cstring has no dedicated write accessor; use value_type='utf8' to write"},
+            )
+        if value_type == "pointer":
+            if isinstance(value, str):
+                hex_value = value if value.startswith("0x") else hex(int(value, 0))
+            elif isinstance(value, int):
+                hex_value = hex(value)
+            else:
+                raise ToolError(_ERR_WRITE_FAILED, details={"reason": "pointer value must be an int or hex string"})
+            return f"writePointer(ptr('{hex_value}'))"
+        if value_type == "utf8":
+            if not isinstance(value, str):
+                raise ToolError(_ERR_WRITE_FAILED, details={"reason": "utf8 value must be a string"})
+            return f"writeUtf8String('{self._escape_js_string(value)}')"
+        if value_type in {"u64", "s64"}:
+            if not isinstance(value, int):
+                raise ToolError(_ERR_WRITE_FAILED, details={"reason": f"{value_type} value must be an int"})
+            ctor = "uint64" if value_type == "u64" else "int64"
+            write_fn = "writeU64" if value_type == "u64" else "writeS64"
+            return f"{write_fn}({ctor}('{value}'))"
+        if value_type in {"float", "double"}:
+            if not isinstance(value, (int, float)):
+                raise ToolError(_ERR_WRITE_FAILED, details={"reason": f"{value_type} value must be a number"})
+            write_fn = "writeFloat" if value_type == "float" else "writeDouble"
+            return f"{write_fn}({float(value)})"
+        validated_int = self._validate_js_int(value, name="value")
+        write_fn = f"write{value_type[0].upper()}{value_type[1:]}"
+        return f"{write_fn}({validated_int})"
+
     async def get_memory_regions(self, protection: str = "---") -> list[MemoryRegion]:
         """Get process memory map.
 
@@ -2671,6 +2970,72 @@ class _FridaBridgeBase(InstrumentationBridge):
                 )
 
         _logger.debug("memory_regions_enumerated", count=len(regions))
+        return regions
+
+    async def enumerate_module_ranges(self, module_name: str, protection: str = "---") -> list[MemoryRegion]:
+        """Get a module's memory ranges, optionally filtered by protection.
+
+        Args:
+            module_name: Name of the module.
+            protection: Protection filter (e.g., 'r-x', '---' for all).
+
+        Returns:
+            list[MemoryRegion]: List of memory regions scoped to the module.
+
+        Raises:
+            ToolError: If not attached, the module is not found, or the
+                operation fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        self._validate_protection(protection)
+        escaped_module = self._escape_js_string(module_name)
+        escaped_protection = self._escape_js_string(protection)
+
+        script_code = f"""
+        var mod = Process.findModuleByName('{escaped_module}');
+        if (!mod) {{
+            send({{ type: 'module_ranges', error: 'module_not_found', data: [] }});
+        }} else {{
+            var ranges = mod.enumerateRanges('{escaped_protection}');
+            var result = ranges.map(function(r) {{
+                return {{ base: r.base.toString(), size: r.size, protection: r.protection }};
+            }});
+            send({{ type: 'module_ranges', data: result }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if result.get("error") == "module_not_found":
+            raise ToolError(_ERR_MODULE_NOT_FOUND, details={"module": module_name})
+        if "error" in result:
+            raise ToolError(_ERR_READ_FAILED)
+
+        regions: list[MemoryRegion] = []
+        range_data = result.get("data", [])
+        if isinstance(range_data, list):
+            for raw_item in cast("list[object]", range_data):
+                if not isinstance(raw_item, dict):
+                    continue
+                r = cast("dict[str, object]", raw_item)
+                base_str = str(r.get("base", "0"))
+                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+                size_val = r.get("size", 0)
+                protection_val = r.get("protection", "")
+                regions.append(
+                    MemoryRegion(
+                        base_address=base,
+                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                        protection=str(protection_val) if protection_val else "",
+                        state="committed",
+                        type="image",
+                        module_name=module_name,
+                    ),
+                )
+
+        _logger.debug("module_ranges_enumerated", module_name=module_name, count=len(regions))
         return regions
 
     async def scan_memory(
@@ -4171,6 +4536,118 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         _logger.debug("imports_enumerated", module_name=module_name, count=len(imports))
         return imports
+
+    async def enumerate_module_sections(self, module_name: str) -> list[ModuleSectionInfo]:
+        """List a module's binary sections.
+
+        Args:
+            module_name: Name of the module.
+
+        Returns:
+            list[ModuleSectionInfo]: List of section information.
+
+        Raises:
+            ToolError: If not attached, the module is not found, or the
+                operation fails.
+        """
+        _logger.debug("frida_enumerate_module_sections_started", module_name=module_name)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        escaped_module = self._escape_js_string(module_name)
+        script_code = f"""
+        var mod = Process.findModuleByName('{escaped_module}');
+        if (!mod) {{
+            send({{ type: 'sections', error: 'module_not_found', data: [] }});
+        }} else {{
+            var sections = mod.enumerateSections();
+            var result = sections.map(function(s) {{
+                return {{ id: s.id, name: s.name, address: s.address.toString(), size: s.size }};
+            }});
+            send({{ type: 'sections', data: result }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if result.get("error") == "module_not_found":
+            raise ToolError(_ERR_MODULE_NOT_FOUND, details={"module": module_name})
+        if "error" in result:
+            raise ToolError(_ERR_READ_FAILED)
+
+        sections: list[ModuleSectionInfo] = []
+        section_data = result.get("data", [])
+        if isinstance(section_data, list):
+            for raw_section in cast("list[object]", section_data):
+                if not isinstance(raw_section, dict):
+                    continue
+                entry = cast("dict[str, object]", raw_section)
+                addr_str = str(entry.get("address", "0"))
+                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+                size_val = entry.get("size", 0)
+                sections.append(
+                    ModuleSectionInfo(
+                        id=str(entry.get("id", "")),
+                        name=str(entry.get("name", "")),
+                        address=addr,
+                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    ),
+                )
+
+        _logger.debug("module_sections_enumerated", module_name=module_name, count=len(sections))
+        return sections
+
+    async def enumerate_module_dependencies(self, module_name: str) -> list[ModuleDependencyInfo]:
+        """List a module's shared-library dependencies.
+
+        Args:
+            module_name: Name of the module.
+
+        Returns:
+            list[ModuleDependencyInfo]: List of dependency information.
+
+        Raises:
+            ToolError: If not attached, the module is not found, or the
+                operation fails.
+        """
+        _logger.debug("frida_enumerate_module_dependencies_started", module_name=module_name)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        escaped_module = self._escape_js_string(module_name)
+        script_code = f"""
+        var mod = Process.findModuleByName('{escaped_module}');
+        if (!mod) {{
+            send({{ type: 'dependencies', error: 'module_not_found', data: [] }});
+        }} else {{
+            var deps = mod.enumerateDependencies();
+            var result = deps.map(function(d) {{
+                return {{ name: d.name, type: d.type }};
+            }});
+            send({{ type: 'dependencies', data: result }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if result.get("error") == "module_not_found":
+            raise ToolError(_ERR_MODULE_NOT_FOUND, details={"module": module_name})
+        if "error" in result:
+            raise ToolError(_ERR_READ_FAILED)
+
+        dependencies: list[ModuleDependencyInfo] = []
+        dep_data = result.get("data", [])
+        if isinstance(dep_data, list):
+            for raw_dep in cast("list[object]", dep_data):
+                if not isinstance(raw_dep, dict):
+                    continue
+                entry = cast("dict[str, object]", raw_dep)
+                dependencies.append(
+                    ModuleDependencyInfo(name=str(entry.get("name", "")), type=str(entry.get("type", ""))),
+                )
+
+        _logger.debug("module_dependencies_enumerated", module_name=module_name, count=len(dependencies))
+        return dependencies
 
     @override
     async def enumerate_threads(self) -> list[ThreadInfo]:
@@ -8146,6 +8623,255 @@ class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
 
         _logger.info("stalker_flush_requested", thread_id=effective_tid)
         return True
+
+    async def stalker_follow_call_summary(self, thread_id: int | None = None) -> str:
+        """Start Stalker call-summary tracing on a thread (aggregated call-target counts).
+
+        Lower overhead than :meth:`stalker_follow`'s per-event streaming:
+        instead of every individual call/ret/exec event, Frida aggregates
+        call counts per target address in the current time window via
+        Stalker's ``onCallSummary`` callback. Counts from every summary
+        callback firing are accumulated for the life of the trace.
+
+        Args:
+            thread_id: Thread ID to trace. None for current thread.
+
+        Returns:
+            str: Trace ID for later retrieval via
+                :meth:`stalker_unfollow_call_summary`.
+
+        Raises:
+            ToolError: If Stalker fails to start.
+        """
+        _logger.info("frida_stalker_follow_call_summary_started", thread_id=thread_id)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        effective_tid = thread_id if thread_id is not None else 0
+        with self._stalker_summaries_lock:
+            self._stalker_summaries[effective_tid] = {}
+
+        tid_js = str(thread_id) if thread_id is not None else "Process.getCurrentThreadId()"
+
+        script_code = f"""
+        var tid = {tid_js};
+        var stopped = false;
+
+        function stopStalker() {{
+            if (stopped) return;
+            stopped = true;
+            try {{
+                Stalker.unfollow(tid);
+                Stalker.flush();
+            }} catch (e) {{
+                send({{ type: 'stalker_summary_unfollow_error', error: e.message, tid: tid }});
+                return;
+            }}
+            send({{ type: 'stalker_summary_unfollowed', tid: tid }});
+        }}
+
+        recv('stalker_summary_unfollow_request', function(msg) {{
+            stopStalker();
+        }});
+
+        Stalker.follow(tid, {{
+            events: {{ call: true }},
+            onCallSummary: function(summary) {{
+                send({{ type: 'stalker_call_summary', tid: tid, summary: summary }});
+            }}
+        }});
+        send({{ type: 'stalker_summary_started', tid: tid }});
+        """
+
+        script = await asyncio.to_thread(self._session.create_script, script_code)
+
+        captured_tid = effective_tid
+        started_event = asyncio.Event()
+        start_status: dict[str, object] = {}
+
+        def on_summary_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Accumulate call-summary payloads and forward messages downstream.
+
+            Args:
+                message: Message payload emitted by the Stalker script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            if message["type"] == "send":
+                payload = message.get("payload", {})
+                if isinstance(payload, dict):
+                    payload_dict = cast("dict[str, object]", payload)
+                    inner_type = payload_dict.get("type")
+                    if inner_type == "stalker_call_summary":
+                        raw_summary = payload_dict.get("summary")
+                        if isinstance(raw_summary, dict):
+                            with self._stalker_summaries_lock:
+                                bucket = self._stalker_summaries.setdefault(captured_tid, {})
+                                for key, value in cast("dict[str, object]", raw_summary).items():
+                                    if isinstance(value, (int, float)):
+                                        bucket[key] = bucket.get(key, 0) + int(value)
+                    elif inner_type == "stalker_summary_started":
+                        start_status["started"] = True
+                        self._set_event_threadsafe(started_event)
+            elif message["type"] == "error":
+                start_status["error"] = message["description"]
+                self._set_event_threadsafe(started_event)
+            self._dispatch_message(dict(cast("dict[str, object]", message)))
+
+        script.on("message", on_summary_message)
+        await asyncio.to_thread(script.load)
+
+        try:
+            await asyncio.wait_for(started_event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            raise ToolError(_ERR_STALKER_FAILED) from e
+        if "error" in start_status or not start_status.get("started"):
+            await asyncio.to_thread(script.unload)
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(start_status.get("error", ""))})
+
+        script_id = str(uuid.uuid4())[:8]
+        self._scripts[script_id] = script
+        self._stalker_summary_scripts[effective_tid] = script_id
+        _logger.info("stalker_follow_call_summary_started", thread_id=effective_tid)
+        return script_id
+
+    async def _await_stalker_summary_unfollow_ack(self, script: frida.Script, tid: int) -> None:
+        """Post the call-summary unfollow request and wait for the script to ack it.
+
+        ``onCallSummary`` buffers its aggregated counts until the followed
+        thread is unfollowed (unlike ``onReceive``, which streams batches
+        continuously while the trace runs) -- unloading the owning script
+        immediately after posting the unfollow request, without waiting for
+        an acknowledgement, races the script's own in-flight
+        ``Stalker.unfollow``/``Stalker.flush`` call and can tear the script
+        down before the final ``stalker_call_summary`` payload reaches
+        :meth:`stalker_follow_call_summary`'s accumulation closure.
+
+        Args:
+            script: The script that owns the active Stalker call-summary trace.
+            tid: Effective thread id whose trace is being torn down.
+        """
+        ack_event = asyncio.Event()
+
+        def on_unfollow_ack(message: ScriptMessage, data: bytes | None) -> None:
+            """Release the waiter once the script acknowledges the unfollow request.
+
+            Args:
+                message: Message payload emitted by the Stalker script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            if message["type"] == "send":
+                payload = message.get("payload", {})
+                if isinstance(payload, dict):
+                    inner_type = cast("dict[str, object]", payload).get("type")
+                    if inner_type in {"stalker_summary_unfollowed", "stalker_summary_unfollow_error"}:
+                        self._set_event_threadsafe(ack_event)
+            elif message["type"] == "error":
+                self._set_event_threadsafe(ack_event)
+
+        script.on("message", on_unfollow_ack)
+        try:
+            await asyncio.to_thread(script.post, {"type": "stalker_summary_unfollow_request", "tid": tid})
+            try:
+                await asyncio.wait_for(ack_event.wait(), timeout=5.0)
+            except TimeoutError:
+                _logger.warning("stalker_summary_unfollow_ack_timeout", thread_id=tid)
+        except Exception:
+            _logger.exception("stalker_summary_unfollow_request_failed", thread_id=tid)
+        finally:
+            script.off("message", on_unfollow_ack)
+
+    async def stalker_unfollow_call_summary(self, thread_id: int | None = None) -> StalkerCallSummary:
+        """Stop Stalker call-summary tracing and retrieve the aggregated counts.
+
+        Args:
+            thread_id: Thread ID to stop tracing. None for current thread.
+
+        Returns:
+            StalkerCallSummary: Aggregated call-target counts and duration.
+
+        Raises:
+            ToolError: If unfollow fails.
+        """
+        _logger.info("frida_stalker_unfollow_call_summary_started", thread_id=thread_id)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        effective_tid = thread_id if thread_id is not None else 0
+        start_time = time.monotonic()
+
+        script_id = self._stalker_summary_scripts.pop(effective_tid, None)
+        if script_id is not None:
+            script = self._scripts.get(script_id)
+            if script is not None:
+                await self._await_stalker_summary_unfollow_ack(script, effective_tid)
+            await self._unload_script(script_id)
+
+        with self._stalker_summaries_lock:
+            counts = self._stalker_summaries.pop(effective_tid, {})
+        duration = (time.monotonic() - start_time) * 1000
+
+        _logger.info("stalker_unfollow_call_summary_complete", thread_id=effective_tid, target_count=len(counts))
+        return StalkerCallSummary(thread_id=effective_tid, counts=counts, duration_ms=duration)
+
+    async def find_export_by_name(self, export_name: str, module_name: str | None = None) -> int | None:
+        """Find a single export's address by name, without a full module dump.
+
+        Args:
+            export_name: Name of the export to look up.
+            module_name: Module to scope the lookup to. If None, performs a
+                global lookup across every loaded module (a more costly
+                search, per Frida's own documentation - prefer supplying
+                module_name when it is known).
+
+        Returns:
+            int | None: The export's absolute address, or None if no such
+                export could be found (module-not-found is also reported as
+                None, matching find_module_by_address's own not-found
+                convention).
+
+        Raises:
+            ToolError: If not attached or the lookup itself fails.
+        """
+        _logger.debug("frida_find_export_by_name_started", export_name=export_name, module_name=module_name)
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        escaped_export = self._escape_js_string(export_name)
+        if module_name is not None:
+            escaped_module = self._escape_js_string(module_name)
+            lookup_stmt = (
+                f"var mod = Process.findModuleByName('{escaped_module}');\n"
+                f"        var addr = mod ? mod.findExportByName('{escaped_export}') : null;"
+            )
+        else:
+            lookup_stmt = f"var addr = Module.findGlobalExportByName('{escaped_export}');"
+
+        script_code = f"""
+        try {{
+            {lookup_stmt}
+            send({{ type: 'export_lookup', address: addr ? addr.toString() : null }});
+        }} catch (e) {{
+            send({{ type: 'export_lookup', error: e.message }});
+        }}
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+
+        if "error" in result:
+            raise ToolError(_ERR_EXPORT_NOT_FOUND, details={"reason": str(result.get("error", ""))})
+
+        addr_val = result.get("address")
+        if addr_val is None:
+            _logger.debug("export_not_found", export_name=export_name, module_name=module_name)
+            return None
+
+        s = str(addr_val)
+        address = int(s, 16) if s.startswith("0x") else int(s)
+        _logger.debug("export_found", export_name=export_name, module_name=module_name, address=hex(address))
+        return address
 
 
 class FridaBridge(_FridaBridgeStalkerTransformMixin):
