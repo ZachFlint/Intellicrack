@@ -11,6 +11,7 @@ debugging via the X64DbgBridge backend.
 from __future__ import annotations
 
 import ctypes
+import string
 import sys
 import threading
 from ctypes import wintypes
@@ -316,6 +317,37 @@ def _resolve_debugger_window_hwnd(pid: int) -> int | None:
     return find_window_by_pid(pid)
 
 
+def _extended_register_hex_width(widths: dict[str, int], name: str) -> int | None:
+    """Resolve the expected hex-string length for an extended register name.
+
+    Args:
+        widths: Byte-width mapping from ``X64DbgBridge.EXTENDED_REGISTER_WIDTHS``.
+        name: Register name, e.g. ``xmm3``, ``ymm0``, ``st5``, ``mmx2``, ``mxcsr``.
+
+    Returns:
+        int | None: Expected hex-character count, or ``None`` when the
+        register name is not recognized.
+    """
+    lower = name.strip().lower()
+    if lower == "mxcsr":
+        return 8
+    prefix = lower.rstrip(string.digits)
+    byte_width = widths.get(prefix)
+    return None if byte_width is None else byte_width * 2
+
+
+def _is_hex_string(value: str) -> bool:
+    """Check whether ``value`` consists solely of hexadecimal digits.
+
+    Args:
+        value: Candidate string.
+
+    Returns:
+        bool: True when non-empty and every character is 0-9/a-f/A-F.
+    """
+    return bool(value) and all(c in string.hexdigits for c in value)
+
+
 class X64DbgPanel(AnalysisPanelBase):
     """Native Qt panel for x64dbg interactive debugging.
 
@@ -337,6 +369,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._bridge: X64DbgBridge | None = None
         self._is_64bit: bool = True
         self._modules: list[ModuleInfo] = []
+        self._ext_reg_values: dict[str, str] = {}
         self.embedded_container: QWidget | None = None
         self._embed_cancelled: bool = False
         self._embed_timer: QTimer | None = None
@@ -610,6 +643,26 @@ class X64DbgPanel(AnalysisPanelBase):
             reg_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         connect_cell_changed(self._reg_table, self._on_register_edited)
         tabs.addTab(self._reg_table, self.tr("Registers"))
+
+        self._dr_table = QTableWidget(0, len(_REG_COLUMNS))
+        self._dr_table.setHorizontalHeaderLabels(_REG_COLUMNS)
+        self._dr_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._dr_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        dr_h = self._dr_table.horizontalHeader()
+        if dr_h is not None:
+            dr_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        connect_cell_changed(self._dr_table, self._on_register_edited)
+        tabs.addTab(self._dr_table, self.tr("Debug Registers"))
+
+        self._ext_reg_table = QTableWidget(0, len(_REG_COLUMNS))
+        self._ext_reg_table.setHorizontalHeaderLabels(_REG_COLUMNS)
+        self._ext_reg_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._ext_reg_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        ext_reg_h = self._ext_reg_table.horizontalHeader()
+        if ext_reg_h is not None:
+            ext_reg_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        connect_cell_changed(self._ext_reg_table, self._on_extended_register_edited)
+        tabs.addTab(self._ext_reg_table, self.tr("FPU / SIMD"))
 
         self._stack_table = QTableWidget(0, len(_STACK_COLUMNS))
         self._stack_table.setHorizontalHeaderLabels(_STACK_COLUMNS)
@@ -2748,7 +2801,13 @@ class X64DbgPanel(AnalysisPanelBase):
         _logger.warning("x64dbg_module_detail_failed", detail_type=detail_type, error=str(exc))
 
     def _on_register_edited(self, row: int, column: int) -> None:
-        """Handle register value edit in table.
+        """Handle a register value edit in the GPR or debug-register table.
+
+        Resolves the originating table from the emitting signal's sender
+        rather than a hardcoded widget, so this one handler is correct
+        for both ``_reg_table`` and ``_dr_table`` (DR0-DR7 are plain
+        registers as far as ``set_register``/``reg_set`` are concerned,
+        with no allowlist).
 
         Args:
             row: Table row index.
@@ -2757,8 +2816,11 @@ class X64DbgPanel(AnalysisPanelBase):
         if column != 1 or self._bridge is None:
             return
 
-        reg_item = self._reg_table.item(row, 0)
-        val_item = self._reg_table.item(row, 1)
+        sender = self.sender()
+        table = sender if isinstance(sender, QTableWidget) else self._reg_table
+
+        reg_item = table.item(row, 0)
+        val_item = table.item(row, 1)
         if reg_item is None or val_item is None:
             return
 
@@ -2772,11 +2834,11 @@ class X64DbgPanel(AnalysisPanelBase):
             self._console_output.appendPlainText(f"[!] Invalid value for {reg_name}: {val_text}")
             return
 
-        self._reg_table.setEnabled(False)
+        table.setEnabled(False)
         run_bridge_coroutine_logged(
             self._bridge.set_register(reg_name, value),
-            on_success=lambda _: self._on_reg_set_success(reg_name, value),
-            on_error=lambda e: self._on_reg_set_error(reg_name, e),
+            on_success=lambda _: self._on_reg_set_success(table, reg_name, value),
+            on_error=lambda e: self._on_reg_set_error(table, reg_name, e),
             parent=self,
             event="x64dbg_set_register",
             logger=_logger,
@@ -2785,26 +2847,106 @@ class X64DbgPanel(AnalysisPanelBase):
             value=hex(value),
         )
 
-    def _on_reg_set_success(self, reg_name: str, value: int) -> None:
+    def _on_reg_set_success(self, table: QTableWidget, reg_name: str, value: int) -> None:
         """Handle successful register set.
 
         Args:
+            table: The register table the edit originated from.
             reg_name: The register name.
             value: The new register value.
         """
         self._console_output.appendPlainText(f"[+] {reg_name} = 0x{value:X}")
-        self._reg_table.setEnabled(True)
+        table.setEnabled(True)
 
-    def _on_reg_set_error(self, reg_name: str, exc: object) -> None:
+    def _on_reg_set_error(self, table: QTableWidget, reg_name: str, exc: object) -> None:
         """Handle register set failure.
 
         Args:
+            table: The register table the edit originated from.
             reg_name: The register that failed to set.
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Failed to set {reg_name}: {exc}")
         _logger.warning("x64dbg_set_register_failed", register=reg_name, error=str(exc))
-        self._reg_table.setEnabled(True)
+        table.setEnabled(True)
+
+    def _on_extended_register_edited(self, row: int, column: int) -> None:
+        """Handle an FPU/SIMD register value edit in the extended-register table.
+
+        Unlike :meth:`_on_register_edited`, the new value is a raw hex
+        byte string (up to 256 bits) rather than an integer, so it is
+        validated against the target register's exact byte width
+        before being dispatched. An edit that fails validation, or
+        whose write the debugger rejects, reverts the cell to its last
+        known-good value rather than keeping a value the CPU never
+        accepted.
+
+        Args:
+            row: Table row index.
+            column: Table column index.
+        """
+        if column != 1 or self._bridge is None:
+            return
+
+        name_item = self._ext_reg_table.item(row, 0)
+        val_item = self._ext_reg_table.item(row, 1)
+        if name_item is None or val_item is None:
+            return
+
+        reg_name = name_item.text()
+        hex_text = val_item.text().strip()
+        previous = self._ext_reg_values.get(reg_name, "")
+
+        expected_chars = _extended_register_hex_width(self._bridge.EXTENDED_REGISTER_WIDTHS, reg_name)
+        if expected_chars is None or len(hex_text) != expected_chars or not _is_hex_string(hex_text):
+            _logger.warning(
+                "invalid_extended_register_value",
+                register=reg_name,
+                input_text=hex_text,
+                expected_chars=expected_chars,
+            )
+            self._console_output.appendPlainText(f"[!] Invalid value for {reg_name}: {hex_text}")
+            with QSignalBlocker(self._ext_reg_table):
+                val_item.setText(previous)
+            return
+
+        self._ext_reg_table.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.set_extended_register(reg_name, hex_text),
+            on_success=lambda _: self._on_ext_reg_set_success(reg_name, hex_text),
+            on_error=lambda e: self._on_ext_reg_set_error(reg_name, e, previous, val_item),
+            parent=self,
+            event="x64dbg_set_extended_register",
+            logger=_logger,
+            level="info",
+            register=reg_name,
+        )
+
+    def _on_ext_reg_set_success(self, reg_name: str, hex_text: str) -> None:
+        """Handle a successful extended-register write.
+
+        Args:
+            reg_name: The register name.
+            hex_text: The newly written hex value.
+        """
+        self._ext_reg_values[reg_name] = hex_text
+        self._console_output.appendPlainText(f"[+] {reg_name} = {hex_text}")
+        self._ext_reg_table.setEnabled(True)
+
+    def _on_ext_reg_set_error(self, reg_name: str, exc: object, previous: str, val_item: QTableWidgetItem) -> None:
+        """Handle a failed extended-register write by reverting the cell.
+
+        Args:
+            reg_name: The register that failed to set.
+            exc: The exception that occurred.
+            previous: The last known-good hex value to restore.
+            val_item: The table cell to revert.
+        """
+        with QSignalBlocker(self._ext_reg_table):
+            val_item.setText(previous)
+        self._console_output.appendPlainText(f"[-] Failed to set {reg_name}: {exc}")
+        _logger.warning("x64dbg_set_extended_register_failed", register=reg_name, error=str(exc))
+        self._ext_reg_table.setEnabled(True)
 
     def _on_read_memory(self) -> None:
         """Read memory at the specified address and display hex dump."""
@@ -2909,6 +3051,8 @@ class X64DbgPanel(AnalysisPanelBase):
     def _refresh_state(self) -> None:
         """Refresh registers, modules, threads, and state after change."""
         self._refresh_registers()
+        self._refresh_debug_registers()
+        self._refresh_extended_registers()
         self._refresh_breakpoints()
         self._refresh_stack()
         self._refresh_modules()
@@ -3012,6 +3156,142 @@ class X64DbgPanel(AnalysisPanelBase):
 
         if rip := getattr(regs, "rip", 0):
             self._refresh_disassembly(rip)
+
+    def _refresh_debug_registers(self) -> None:
+        """Refresh the Debug Registers table (DR0-DR3, DR6, DR7) from the bridge."""
+        if self._bridge is None:
+            return
+
+        run_bridge_coroutine_logged(
+            self._bridge.get_debug_registers(),
+            on_success=self._apply_debug_registers,
+            on_error=lambda exc: self._on_view_refresh_failed(
+                exc,
+                event="x64dbg_refresh_debug_registers_failed",
+                clear_view=self._clear_debug_registers_view,
+            ),
+            parent=self,
+            event="x64dbg_get_debug_registers",
+            logger=_logger,
+        )
+
+    def _clear_debug_registers_view(self) -> None:
+        """Clear the Debug Registers table, used when a dead session is detected."""
+        with QSignalBlocker(self._dr_table):
+            self._dr_table.setRowCount(0)
+
+    def _apply_debug_registers(self, result: object) -> None:
+        """Apply debug-register data to the Debug Registers table.
+
+        Args:
+            result: ``dr0``..``dr7`` dict from the bridge, or ``None``
+                to clear the table.
+        """
+        if not isinstance(result, dict):
+            with QSignalBlocker(self._dr_table):
+                self._dr_table.setRowCount(0)
+            return
+
+        data = cast("dict[str, object]", result)
+        with QSignalBlocker(self._dr_table):
+            self._dr_table.setRowCount(0)
+            for name, value in data.items():
+                if not isinstance(value, int):
+                    continue
+                row = self._dr_table.rowCount()
+                self._dr_table.insertRow(row)
+
+                name_item = QTableWidgetItem(name)
+                name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self._dr_table.setItem(row, 0, name_item)
+
+                val_item = QTableWidgetItem(f"0x{value:016X}" if self._is_64bit else f"0x{value:08X}")
+                self._dr_table.setItem(row, 1, val_item)
+
+    def _refresh_extended_registers(self) -> None:
+        """Refresh the FPU/SIMD table (x87/MMX/XMM/YMM/MXCSR) from the bridge."""
+        if self._bridge is None:
+            return
+
+        run_bridge_coroutine_logged(
+            self._bridge.get_extended_registers(),
+            on_success=self._apply_extended_registers,
+            on_error=lambda exc: self._on_view_refresh_failed(
+                exc,
+                event="x64dbg_refresh_extended_registers_failed",
+                clear_view=self._clear_extended_registers_view,
+            ),
+            parent=self,
+            event="x64dbg_get_extended_registers",
+            logger=_logger,
+        )
+
+    def _clear_extended_registers_view(self) -> None:
+        """Clear the FPU/SIMD table, used when a dead session is detected."""
+        with QSignalBlocker(self._ext_reg_table):
+            self._ext_reg_table.setRowCount(0)
+        self._ext_reg_values.clear()
+
+    def _apply_extended_registers(self, result: object) -> None:
+        """Apply x87/MMX/XMM/YMM register data to the FPU/SIMD table.
+
+        XMM, YMM, ST, MMX, and MXCSR rows are editable and tracked in
+        ``self._ext_reg_values`` so a rejected edit can be reverted;
+        the x87 control/status/tag words are read-only status, so
+        those rows are rendered non-editable.
+
+        Args:
+            result: Extended-register dict from the bridge, or
+                ``None`` to clear the table.
+        """
+        if not isinstance(result, dict):
+            with QSignalBlocker(self._ext_reg_table):
+                self._ext_reg_table.setRowCount(0)
+            self._ext_reg_values.clear()
+            return
+
+        data = cast("dict[str, object]", result)
+
+        def add_row(name: str, text: str, *, editable: bool) -> None:
+            """Append one register row to the FPU/SIMD table.
+
+            Args:
+                name: Register display name, used as the row key.
+                text: Cell text for the value column.
+                editable: Whether the value cell accepts edits.
+            """
+            row = self._ext_reg_table.rowCount()
+            self._ext_reg_table.insertRow(row)
+            name_item = QTableWidgetItem(name)
+            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self._ext_reg_table.setItem(row, 0, name_item)
+            val_item = QTableWidgetItem(text)
+            if not editable:
+                val_item.setFlags(val_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self._ext_reg_table.setItem(row, 1, val_item)
+            if editable:
+                self._ext_reg_values[name] = text
+
+        with QSignalBlocker(self._ext_reg_table):
+            self._ext_reg_table.setRowCount(0)
+            self._ext_reg_values.clear()
+
+            for key in ("xmm", "ymm", "st", "mmx"):
+                values = data.get(key)
+                if not isinstance(values, list):
+                    continue
+                for i, value in enumerate(cast("list[object]", values)):
+                    if isinstance(value, str):
+                        add_row(f"{key}{i}", value, editable=True)
+
+            mxcsr = data.get("mxcsr")
+            if isinstance(mxcsr, str):
+                add_row("mxcsr", mxcsr, editable=True)
+
+            for label in ("x87control", "x87status", "x87tag"):
+                value = data.get(label)
+                if isinstance(value, int):
+                    add_row(label, f"0x{value:04X}", editable=False)
 
     def _refresh_disassembly(self, address: int) -> None:
         """Refresh disassembly view at the given address.

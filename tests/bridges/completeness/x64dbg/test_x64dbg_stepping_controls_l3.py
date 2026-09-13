@@ -41,6 +41,7 @@ _RESIDUAL_REFRESH_RPCS = frozenset(
     {
         "reg_all",
         "reg_get",
+        "reg_extended",
         "register_list",
         "bp_list",
         "thread_list",

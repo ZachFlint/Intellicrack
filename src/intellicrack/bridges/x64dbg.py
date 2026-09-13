@@ -1397,6 +1397,37 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="Success status",
                 ),
                 ToolFunction(
+                    name="x64dbg.get_debug_registers",
+                    description="Read the hardware debug registers DR0-DR3 (breakpoint addresses), DR6 (status), and DR7 (control/enable)",
+                    parameters=[],
+                    returns="Dict mapping dr0..dr7 (excluding reserved dr4/dr5) to their integer values",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_extended_registers",
+                    description="Read the x87 FPU (ST0-ST7), MMX, SSE (XMM) and AVX (YMM) register file plus MXCSR and the x87 control/status/tag words",
+                    parameters=[],
+                    returns="Dict with xmm/ymm/st/mmx hex-string arrays, mxcsr, and x87control/x87status/x87tag",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_extended_register",
+                    description="Write an x87 (st0-st7), MMX (mmx0-mmx7), SSE (xmm0-xmm15) or AVX (ymm0-ymm15) register, or mxcsr, from a raw hex byte string",
+                    parameters=[
+                        ToolParameter(
+                            name="register",
+                            type="string",
+                            description="Register name, e.g. xmm3, ymm0, st5, mmx2, mxcsr",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="value",
+                            type="string",
+                            description="Raw little-endian bytes as hex; length must match the register width (32 chars xmm, 64 ymm, 20 st, 16 mmx, 8 mxcsr)",
+                            required=True,
+                        ),
+                    ],
+                    returns="True when the thread context write succeeded",
+                ),
+                ToolFunction(
                     name="x64dbg.read_memory",
                     description="Read memory",
                     parameters=[
@@ -2632,6 +2663,12 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     description="Abort the running script",
                     parameters=[],
                     returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.script_step",
+                    description="Single-step the currently loaded script by one line",
+                    parameters=[],
+                    returns="Dict with success and verified",
                 ),
                 ToolFunction(
                     name="x64dbg.plugin_load",
@@ -8561,6 +8598,70 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
             "entry_point_va": hex(entry_va),
         }
 
+    DEBUG_REGISTER_NAMES: Final[tuple[str, ...]] = ("dr0", "dr1", "dr2", "dr3", "dr6", "dr7")
+
+    async def get_debug_registers(self) -> dict[str, int]:
+        """Read the hardware debug registers DR0-DR3, DR6, and DR7.
+
+        Each register is read individually through the generic ``reg_get``
+        RPC (``DbgValFromString``), which accepts any register mnemonic,
+        including the debug registers.
+
+        Returns:
+            dict[str, int]: Mapping of ``dr0``..``dr7`` (excluding the
+            reserved ``dr4``/``dr5``) to their integer values.
+        """
+        values: dict[str, int] = {}
+        for name in self.DEBUG_REGISTER_NAMES:
+            result = await self._send_pipe_command("reg_get", {"name": name})
+            if isinstance(result, str):
+                values[name] = int(result, 0)
+            elif isinstance(result, int):
+                values[name] = result
+            else:
+                values[name] = 0
+        return values
+
+    async def get_extended_registers(self) -> dict[str, Any]:
+        """Read the x87 FPU, MMX, SSE (XMM), and AVX (YMM) register file.
+
+        Also returns MXCSR and the x87 control/status/tag words. Backed
+        by the plugin's ``reg_extended`` RPC, which serializes
+        ``DbgGetRegDumpEx``'s vector/FPU state that ``reg_all`` never
+        exposes.
+
+        Returns:
+            dict[str, Any]: Dict with ``xmm``/``ymm``/``st``/``mmx``
+            hex-string arrays, ``mxcsr``, and
+            ``x87control``/``x87status``/``x87tag``.
+
+        Raises:
+            ToolError: If the plugin's ``reg_extended`` response is not
+                a JSON object.
+        """
+        result = await self._send_pipe_command("reg_extended")
+        if not isinstance(result, dict):
+            msg = "reg_extended returned a non-object response"
+            raise ToolError(msg, tool_name="x64dbg", details={"x64dbg_error_code": _X64DBG_ERR_REMOTE})
+        return result
+
+    EXTENDED_REGISTER_WIDTHS: Final[dict[str, int]] = {"xmm": 16, "ymm": 32, "st": 10, "mmx": 8}
+
+    async def set_extended_register(self, register: str, value: str) -> bool:
+        """Write an x87, MMX, SSE (XMM), or AVX (YMM) register, or MXCSR.
+
+        Args:
+            register: Register name, e.g. ``xmm3``, ``ymm0``, ``st5``,
+                ``mmx2``, ``mxcsr``.
+            value: Raw little-endian bytes as a hex string; its length
+                must match the target register's width.
+
+        Returns:
+            bool: True when the thread-context write succeeded.
+        """
+        result = await self._send_pipe_command("reg_set_extended", {"name": register, "value": value})
+        return bool(result)
+
 
 class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
     """Tracing, patching, navigation, database, threads, PEB/TEB, watches, animation.
@@ -11219,6 +11320,41 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
                     "x64dbg_error_code": _X64DBG_ERR_REMOTE,
                     "script_iserror": True,
                 },
+            )
+        return {"success": True, "verified": True}
+
+    async def script_step(self) -> dict[str, Any]:
+        """Single-step the currently loaded script by one line.
+
+        Dispatches the plugin's dedicated ``script_step`` RPC, which
+        calls the bridge SDK's ``DbgScriptStep()`` directly -
+        ``scriptstep`` is not a registered x64dbg console command, so
+        the generic ``exec`` RPC cannot reach it (mirrors the
+        ``script_abort``/``DbgScriptAbort()`` precedent). Then queries
+        the ``script.iserror()`` register via the expression evaluator
+        and raises ``ToolError`` when it is set.
+
+        Returns:
+            dict[str, Any]: Dict with ``success`` and ``verified``.
+            ``verified`` is ``True`` when ``script.iserror()`` returned
+            ``0``; ``False`` only when the expression evaluator is
+            unavailable.
+
+        Raises:
+            ToolError: If ``script.iserror()`` reports a non-zero
+                value (stepping raised an error inside the script
+                interpreter).
+        """
+        await self._send_pipe_command("script_step")
+        error_flag = await self._query_script_error()
+        if error_flag is None:
+            return {"success": True, "verified": False}
+        if error_flag:
+            msg = "script_step verification failed: script.iserror() is set after stepping"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_REMOTE, "script_iserror": True},
             )
         return {"success": True, "verified": True}
 

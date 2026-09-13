@@ -56,6 +56,8 @@ private:
     static PipeResponse cmd_reg_all(const PipeMessage& msg);
     static PipeResponse cmd_reg_get(const PipeMessage& msg);
     static PipeResponse cmd_reg_set(const PipeMessage& msg);
+    static PipeResponse cmd_reg_extended(const PipeMessage& msg);
+    static PipeResponse cmd_reg_set_extended(const PipeMessage& msg);
 
     static PipeResponse cmd_mem_read(const PipeMessage& msg);
     static PipeResponse cmd_mem_write(const PipeMessage& msg);
@@ -93,10 +95,13 @@ private:
     static PipeResponse cmd_plugin_list(const PipeMessage& msg);
     static PipeResponse cmd_script_abort(const PipeMessage& msg);
     static PipeResponse cmd_thread_detail(const PipeMessage& msg);
+    static PipeResponse cmd_script_step(const PipeMessage& msg);
 
     static uint64_t parse_address(const std::string& addr_str);
     static std::string format_address(uint64_t addr);
     static std::string escape_json(const std::string& s);
+    static std::string bytes_to_hex(const BYTE* data, size_t len);
+    static bool hex_to_bytes(const std::string& hex, BYTE* out, size_t len);
 };
 
 extern CommandHandler g_command_handler;
