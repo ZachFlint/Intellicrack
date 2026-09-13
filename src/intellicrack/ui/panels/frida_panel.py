@@ -48,6 +48,7 @@ from intellicrack.ui.panels.frida_instrumentation_tab import (
     InstructionDisassembleControls,
     InterceptorLifecycleControls,
     MemoryPatchStringControls,
+    PrecompiledScriptControls,
     ScriptMessagingControls,
     StalkerCallProbeControls,
     StalkerConfigControls,
@@ -79,6 +80,7 @@ _SPACING_STALKER: Final[int] = 4
 _CONSOLE_MAX_BLOCK_COUNT: Final[int] = 5000
 _CONSOLE_DRAIN_INTERVAL_MS: Final[int] = 50
 _CONSOLE_DRAIN_BATCH_SIZE: Final[int] = 200
+_STDIO_FD_STDERR: Final[int] = 2
 # Derived from the console's own font metrics so the Console Output pane
 # always shows a legible number of lines instead of being squeezed to a
 # sliver by the taller top_splitter above it (D20): a plain QPlainTextEdit
@@ -359,6 +361,10 @@ class FridaPanel(AnalysisPanelBase):
         self._refresh_procs_btn.setObjectName("tool_button")
         self._refresh_procs_btn.clicked.connect(self._on_refresh_processes)
         header.addWidget(self._refresh_procs_btn)
+        self._kill_process_btn = QPushButton("Kill Selected")
+        self._kill_process_btn.setObjectName("tool_button")
+        self._kill_process_btn.clicked.connect(self._on_kill_process)
+        header.addWidget(self._kill_process_btn)
         layout.addLayout(header)
 
         self._process_table = QTableWidget(0, 2)
@@ -665,6 +671,7 @@ class FridaPanel(AnalysisPanelBase):
         self._syscall_controls.set_bridge(bridge)
         self._script_messaging.set_bridge(bridge)
         self._cancellable_controls.set_bridge(bridge)
+        self._precompiled_script_controls.set_bridge(bridge)
         _logger.info("frida_bridge_set", bridge_type=type(bridge).__name__)
 
     def get_bridge(self) -> FridaBridge | None:
@@ -693,15 +700,23 @@ class FridaPanel(AnalysisPanelBase):
         msg_type = str(message.get("type", ""))
         if msg_type == "send":
             payload = message.get("payload", "")
-            self._console.appendPlainText(f"[send] {payload}")
-            if isinstance(payload, dict):
+            if isinstance(payload, dict) and cast("dict[str, object]", payload).get("type") == "process_output":
                 typed_payload = cast("dict[str, object]", payload)
-                if typed_payload.get("type") == "device_list_changed":
-                    self.refresh_devices()
-                elif typed_payload.get("type") == "device_lost":
-                    self._set_status("Device lost")
-                    with QSignalBlocker(self._device_lost_cb):
-                        self._device_lost_cb.setChecked(False)
+                out_pid = typed_payload.get("pid")
+                out_fd = typed_payload.get("fd")
+                out_data = typed_payload.get("data", "")
+                stream = "stderr" if out_fd == _STDIO_FD_STDERR else "stdout"
+                self._console.appendPlainText(f"[pid {out_pid} {stream}] {out_data}")
+            else:
+                self._console.appendPlainText(f"[send] {payload}")
+                if isinstance(payload, dict):
+                    typed_payload = cast("dict[str, object]", payload)
+                    if typed_payload.get("type") == "device_list_changed":
+                        self.refresh_devices()
+                    elif typed_payload.get("type") == "device_lost":
+                        self._set_status("Device lost")
+                        with QSignalBlocker(self._device_lost_cb):
+                            self._device_lost_cb.setChecked(False)
         elif msg_type == "log":
             level = str(message.get("level", "info"))
             payload = message.get("payload", "")
@@ -1638,6 +1653,54 @@ class FridaPanel(AnalysisPanelBase):
         self._target_input.setText(pid_text)
         self._on_attach()
 
+    def _on_kill_process(self) -> None:
+        """Kill the process currently selected in the process browser table, via ``frida.kill``."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+        row = self._process_table.currentRow()
+        if row < 0:
+            self._console.appendPlainText("[!] Select a process to kill")
+            return
+        pid_item = self._process_table.item(row, _PROCESS_COL_PID)
+        if pid_item is None:
+            return
+        try:
+            pid = int(pid_item.text())
+        except ValueError:
+            return
+        self._kill_process_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.kill(pid),
+            on_success=lambda _: self._on_kill_process_success(pid),
+            on_error=lambda e: self._on_kill_process_error(pid, e),
+            parent=self,
+            event="frida_kill",
+            logger=_logger,
+            level="info",
+            pid=pid,
+        )
+
+    def _on_kill_process_success(self, pid: int) -> None:
+        """Handle a successful process kill by refreshing the process table.
+
+        Args:
+            pid: PID of the process that was killed.
+        """
+        self._kill_process_btn.setEnabled(True)
+        self._console.appendPlainText(f"[+] Killed PID {pid}")
+        self._on_refresh_processes()
+
+    def _on_kill_process_error(self, pid: int, exc: object) -> None:
+        """Handle a failed process kill.
+
+        Args:
+            pid: PID of the process that failed to be killed.
+            exc: The exception that occurred.
+        """
+        self._kill_process_btn.setEnabled(True)
+        self._console.appendPlainText(f"[-] Kill PID {pid} failed: {exc}")
+
     def _on_refresh_applications(self) -> None:
         """Refresh the application browser table."""
         if self._bridge is None:
@@ -2020,10 +2083,27 @@ class FridaPanel(AnalysisPanelBase):
                 key, _, value = stripped.partition("=")
                 spawn_env[key.strip()] = value
 
+        stdio_choice, stdio_accepted = QInputDialog.getItem(
+            self,
+            "Stdio",
+            "Capture stdio as:",
+            ["inherit", "pipe"],
+            current=0,
+            editable=False,
+        )
+        spawn_stdio: str | None = stdio_choice if stdio_accepted and stdio_choice == "pipe" else None
+
         self._spawn_btn.setEnabled(False)
         cancellable_id = self._cancellable_controls.last_cancellable_id()
         run_bridge_coroutine_logged(
-            self._bridge.spawn(Path(path_str.strip()), spawn_args, env=spawn_env, cwd=spawn_cwd, cancellable_id=cancellable_id),
+            self._bridge.spawn(
+                Path(path_str.strip()),
+                spawn_args,
+                env=spawn_env,
+                cwd=spawn_cwd,
+                stdio=spawn_stdio,
+                cancellable_id=cancellable_id,
+            ),
             on_success=lambda pid: self._on_spawn_success(int(pid) if isinstance(pid, (int, float)) else 0),
             on_error=self._on_spawn_error,
             parent=self,
@@ -2034,6 +2114,7 @@ class FridaPanel(AnalysisPanelBase):
             spawn_args=spawn_args,
             spawn_env=spawn_env,
             spawn_cwd=spawn_cwd,
+            spawn_stdio=spawn_stdio,
             cancellable_id=cancellable_id,
         )
 
@@ -3138,6 +3219,9 @@ class FridaPanel(AnalysisPanelBase):
         self._cancellable_controls = CancellableControls()
         layout.addWidget(self._cancellable_controls)
 
+        self._precompiled_script_controls = PrecompiledScriptControls()
+        layout.addWidget(self._precompiled_script_controls)
+
         child_title = QLabel("Child Gating")
         child_title.setFont(FontManager.get_instance().get_ui_font_bold(9))
         layout.addWidget(child_title)
@@ -3169,6 +3253,38 @@ class FridaPanel(AnalysisPanelBase):
         if ch_h is not None:
             ch_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self._adv_children_table)
+
+        session_child_title = QLabel("Session Child Gating")
+        session_child_title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(session_child_title)
+
+        session_child_btn_row = QHBoxLayout()
+        self._adv_enable_session_child_btn = QPushButton("Enable")
+        self._adv_enable_session_child_btn.setObjectName("tool_button")
+        self._adv_enable_session_child_btn.clicked.connect(self._on_enable_session_child_gating)
+        session_child_btn_row.addWidget(self._adv_enable_session_child_btn)
+        self._adv_disable_session_child_btn = QPushButton("Disable")
+        self._adv_disable_session_child_btn.setObjectName("tool_button")
+        self._adv_disable_session_child_btn.clicked.connect(self._on_disable_session_child_gating)
+        session_child_btn_row.addWidget(self._adv_disable_session_child_btn)
+        self._adv_refresh_session_children_btn = QPushButton("Refresh")
+        self._adv_refresh_session_children_btn.setObjectName("tool_button")
+        self._adv_refresh_session_children_btn.clicked.connect(self._on_refresh_session_children)
+        session_child_btn_row.addWidget(self._adv_refresh_session_children_btn)
+        self._adv_resume_session_child_btn = QPushButton("Resume Selected")
+        self._adv_resume_session_child_btn.setObjectName("tool_button")
+        self._adv_resume_session_child_btn.clicked.connect(self._on_resume_session_child)
+        session_child_btn_row.addWidget(self._adv_resume_session_child_btn)
+        session_child_btn_row.addStretch()
+        layout.addLayout(session_child_btn_row)
+
+        self._adv_session_children_table = QTableWidget(0, len(_CHILD_COLUMNS))
+        self._adv_session_children_table.setHorizontalHeaderLabels(_CHILD_COLUMNS)
+        self._adv_session_children_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        sch_h = self._adv_session_children_table.horizontalHeader()
+        if sch_h is not None:
+            sch_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        layout.addWidget(self._adv_session_children_table)
 
         crash_title = QLabel("Crash Reporting")
         crash_title.setFont(FontManager.get_instance().get_ui_font_bold(9))
@@ -3357,6 +3473,106 @@ class FridaPanel(AnalysisPanelBase):
             on_error=lambda e: self._console.appendPlainText(f"[-] Resume child failed: {e}"),
             parent=self,
             event="frida_resume_child",
+            logger=_logger,
+            level="info",
+            pid=pid,
+        )
+
+    def _on_enable_session_child_gating(self) -> None:
+        """Enable session-scoped child process gating."""
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.enable_session_child_gating(),
+            on_success=lambda _: self._console.appendPlainText("[+] Session child gating enabled"),
+            on_error=self._on_enable_session_child_gating_error,
+            parent=self,
+            event="frida_enable_session_child_gating",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_enable_session_child_gating_error(self, exc: object) -> None:
+        """Surface the underlying Frida failure reason when session child gating cannot be enabled.
+
+        Args:
+            exc: The exception raised by the bridge while enabling session child gating.
+        """
+        reason = str(exc)
+        if isinstance(exc, ToolError):
+            detail_reason = exc.details.get("reason")
+            if isinstance(detail_reason, str) and detail_reason:
+                reason = detail_reason
+        self._console.appendPlainText(f"[-] Enable session child gating failed: {reason}")
+
+    def _on_disable_session_child_gating(self) -> None:
+        """Disable session-scoped child process gating."""
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.disable_session_child_gating(),
+            on_success=lambda _: self._console.appendPlainText("[+] Session child gating disabled"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Disable session child gating failed: {e}"),
+            parent=self,
+            event="frida_disable_session_child_gating",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_refresh_session_children(self) -> None:
+        """Refresh the pending session-gated children table."""
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.get_pending_session_children(),
+            on_success=self._populate_session_children_table,
+            on_error=lambda e: self._console.appendPlainText(f"[-] Refresh session children failed: {e}"),
+            parent=self,
+            event="frida_get_pending_session_children",
+            logger=_logger,
+        )
+
+    def _populate_session_children_table(self, result: object) -> None:
+        """Populate the session-gated children table from results.
+
+        Args:
+            result: List of ChildProcessInfo from the bridge.
+        """
+        self._adv_session_children_table.setRowCount(0)
+        if isinstance(result, list):
+            for child in cast("list[object]", result):
+                pid = getattr(child, "pid", 0)
+                parent = getattr(child, "parent_pid", 0)
+                origin = str(getattr(child, "origin", ""))
+                path = str(getattr(child, "path", "") or "")
+                row = self._adv_session_children_table.rowCount()
+                self._adv_session_children_table.insertRow(row)
+                self._adv_session_children_table.setItem(row, 0, QTableWidgetItem(str(pid)))
+                self._adv_session_children_table.setItem(row, 1, QTableWidgetItem(str(parent)))
+                self._adv_session_children_table.setItem(row, 2, QTableWidgetItem(origin))
+                self._adv_session_children_table.setItem(row, 3, QTableWidgetItem(path))
+
+    def _on_resume_session_child(self) -> None:
+        """Resume the selected session-gated child process."""
+        if self._bridge is None:
+            return
+        row = self._adv_session_children_table.currentRow()
+        if row < 0:
+            return
+        pid_item = self._adv_session_children_table.item(row, 0)
+        if pid_item is None:
+            return
+        try:
+            pid = int(pid_item.text())
+        except ValueError:
+            _logger.warning("frida_resume_session_child_pid_parse_failed", input_text=pid_item.text())
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.resume_session_child(pid),
+            on_success=lambda _: self._console.appendPlainText(f"[+] Session child {pid} resumed"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Resume session child failed: {e}"),
+            parent=self,
+            event="frida_resume_session_child",
             logger=_logger,
             level="info",
             pid=pid,

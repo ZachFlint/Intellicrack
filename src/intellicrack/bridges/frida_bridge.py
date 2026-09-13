@@ -72,6 +72,7 @@ _ERR_ATTACH_FAILED = "failed to attach to process"
 _ERR_NOT_ATTACHED = "not attached to a process"
 _ERR_NO_SESSION = "no active session"
 _ERR_RESUME_FAILED = "failed to resume process"
+_ERR_KILL_FAILED = "failed to kill process"
 _ERR_DETACH_FAILED = "failed to detach from process"
 _ERR_UNKNOWN_CANCELLABLE = "unknown cancellable token"
 _ERR_READ_FAILED = "memory read failed"
@@ -108,6 +109,7 @@ _ERR_FILE_FAILED = "file operation failed"
 _ERR_SQLITE_FAILED = "SQLite operation failed"
 _ERR_CODE_WRITER_FAILED = "code writing failed"
 _ERR_COMPILE_FAILED = "TypeScript compilation failed"
+_ERR_SCRIPT_COMPILE_FAILED = "script precompilation failed"
 _ERR_MONITOR_FAILED = "file monitoring failed"
 _ERR_PROBE_FAILED = "call probe operation failed"
 _ERR_INVALID_JSON_MESSAGE = "invalid JSON message"
@@ -144,6 +146,7 @@ _VALID_CALLING_CONVENTIONS: frozenset[str] = frozenset({
     "win64",
 })
 _VALID_STRING_ENCODINGS: frozenset[str] = frozenset({"utf8", "ansi", "utf16"})
+_VALID_STDIO_MODES: frozenset[str] = frozenset({"inherit", "pipe"})
 _VALID_BACKTRACER_TYPES: frozenset[str] = frozenset({"accurate", "fuzzy"})
 _VALID_RESOLVER_TYPES: frozenset[str] = frozenset({"module", "objc", "swift"})
 _VALID_CODE_ARCHITECTURES: frozenset[str] = frozenset({"x86", "arm", "arm64", "thumb", "mips"})
@@ -216,6 +219,13 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
                 required=False,
             ),
             ToolParameter(name="cwd", type="string", description="Working directory for the spawned process", required=False),
+            ToolParameter(
+                name="stdio",
+                type="string",
+                description="Stdio mode for the spawned process: 'inherit' (default) or 'pipe' to capture stdout/stderr via process_output messages",
+                required=False,
+                enum=["inherit", "pipe"],
+            ),
             ToolParameter(name="cancellable_id", type="string", description="Cancellation token from create_cancellable", required=False),
         ],
         returns="Process ID of spawned process",
@@ -261,6 +271,14 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         name="frida.resume",
         description="Resume a spawned process that was paused",
         parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.kill",
+        description="Kill an arbitrary process on the current device, independent of any attach/spawn",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="Process ID to kill", required=True),
+        ],
         returns="Success status",
     ),
     ToolFunction(
@@ -400,6 +418,27 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         description="Unload every active persistent script",
         parameters=[],
         returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.compile_script",
+        description="Precompile Frida script source to bytecode without creating a script instance",
+        parameters=[
+            ToolParameter(name="source", type="string", description="JavaScript source to compile", required=True),
+        ],
+        returns="Hex-encoded compiled bytecode",
+    ),
+    ToolFunction(
+        name="frida.load_compiled_script",
+        description="Create and load a persistent script from precompiled bytecode",
+        parameters=[
+            ToolParameter(
+                name="bytecode_hex",
+                type="string",
+                description="Hex-encoded bytecode from frida.compile_script",
+                required=True,
+            ),
+        ],
+        returns="Script ID for later unloading via frida.unload_script",
     ),
     ToolFunction(
         name="frida.intercept_return",
@@ -617,6 +656,35 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         description="Resume a process suspended by device-wide spawn gating",
         parameters=[
             ToolParameter(name="pid", type="integer", description="PID of the suspended process to resume", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.enable_session_child_gating",
+        description=(
+            "Enable session-scoped child gating: processes spawned as true children of the attached target "
+            "launch suspended until resumed via frida.resume_session_child (distinct from device-wide spawn gating)"
+        ),
+        parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.disable_session_child_gating",
+        description="Disable session-scoped child gating",
+        parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.get_pending_session_children",
+        description="Get the true children currently suspended by session-scoped gating, queried directly from the device",
+        parameters=[],
+        returns="List of ChildProcessInfo",
+    ),
+    ToolFunction(
+        name="frida.resume_session_child",
+        description="Resume a true child process suspended by session-scoped gating",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="PID of the suspended child to resume", required=True),
         ],
         returns="Success status",
     ),
@@ -1342,6 +1410,11 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._gated_children_lock: threading.Lock = threading.Lock()
         self._spawn_added_handler: Callable[[object], None] | None = None
         self._spawn_removed_handler: Callable[[object], None] | None = None
+        self._session_child_gating_enabled: bool = False
+        self._session_gated_children: list[ChildProcessInfo] = []
+        self._session_gated_children_lock: threading.Lock = threading.Lock()
+        self._child_added_handler: Callable[[object], None] | None = None
+        self._child_removed_handler: Callable[[object], None] | None = None
         self._crashes: list[CrashInfo] = []
         self._crashes_lock: threading.Lock = threading.Lock()
         self._alloc_scripts: dict[int, str] = {}
@@ -1351,6 +1424,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._file_monitors: dict[str, object] = {}
         self._crash_handler: Callable[[object], None] | None = None
         self._crash_reporting_enabled: bool = False
+        self._output_handler: Callable[[int, int, bytes], None] | None = None
         self._device_manager_changed_handler: Callable[[], None] | None = None
         self._device_change_notifications_enabled: bool = False
         self._device_lost_handler: Callable[[], None] | None = None
@@ -1429,6 +1503,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
         await self._shutdown_stalker_scripts()
         await self._shutdown_child_gating()
+        await self._shutdown_session_child_gating()
+        self._detach_output_handler()
         self._teardown_crash_handler()
         self._teardown_device_change_notifications()
         self._teardown_device_lost_notifications()
@@ -1463,6 +1539,15 @@ class _FridaBridgeBase(InstrumentationBridge):
                 _logger.exception("child_gating_disable_failed_during_shutdown")
             self._detach_spawn_gating_handlers()
             self._child_gating_enabled = False
+
+    async def _shutdown_session_child_gating(self) -> None:
+        """Disable session-scoped child gating on the active session, if it was enabled."""
+        if self._session_child_gating_enabled and self._session is not None:
+            try:
+                await asyncio.to_thread(self._session.disable_child_gating)
+            except Exception:
+                _logger.exception("session_child_gating_disable_failed_during_shutdown")
+        self._reset_session_child_gating_state()
 
     def _register_spawn_gating_handlers(
         self,
@@ -1521,6 +1606,126 @@ class _FridaBridgeBase(InstrumentationBridge):
                         _logger.exception("spawn_removed_handler_detach_failed")
         self._spawn_added_handler = None
         self._spawn_removed_handler = None
+
+    def _register_session_child_gating_handlers(
+        self,
+        device: frida.Device,
+        on_child_added: Callable[[object], None],
+        on_child_removed: Callable[[object], None],
+    ) -> None:
+        """Register and record the device's true child-gating signal handlers.
+
+        Args:
+            device: Frida device to register the handlers on.
+            on_child_added: Callback for the device's ``child-added`` signal.
+            on_child_removed: Callback for the device's ``child-removed`` signal.
+        """
+        device.on("child-added", on_child_added)
+        self._child_added_handler = on_child_added
+        device.on("child-removed", on_child_removed)
+        self._child_removed_handler = on_child_removed
+
+    def _remove_session_gated_child(self, pid: int) -> None:
+        """Drop a single pending child from the in-memory session-gated-children record.
+
+        Args:
+            pid: PID of the process to remove from the tracked list.
+        """
+        with self._session_gated_children_lock:
+            self._session_gated_children = [c for c in self._session_gated_children if c.pid != pid]
+
+    def _clear_session_gated_children(self) -> None:
+        """Clear the in-memory record of session-gated child processes."""
+        with self._session_gated_children_lock:
+            self._session_gated_children.clear()
+
+    def _detach_session_child_gating_handlers(self) -> None:
+        """Detach and forget any registered child-added/child-removed signal handlers.
+
+        Best-effort: a device that is already lost or torn down simply has
+        nothing to detach from. Safe to call whether or not gating was ever
+        successfully enabled.
+        """
+        device = self._device
+        added_handler = self._child_added_handler
+        removed_handler = self._child_removed_handler
+        if device is not None:
+            off_fn = getattr(device, "off", None)
+            if callable(off_fn):
+                if added_handler is not None:
+                    try:
+                        off_fn("child-added", added_handler)
+                    except Exception:
+                        _logger.exception("child_added_handler_detach_failed")
+                if removed_handler is not None:
+                    try:
+                        off_fn("child-removed", removed_handler)
+                    except Exception:
+                        _logger.exception("child_removed_handler_detach_failed")
+        self._child_added_handler = None
+        self._child_removed_handler = None
+
+    def _reset_session_child_gating_state(self) -> None:
+        """Best-effort reset of session-child-gating bookkeeping when a session is torn down.
+
+        Called from both the explicit ``detach()`` path and the
+        ``session.on("detached", ...)`` listener so a leaked device-level
+        ``"child-added"``/``"child-removed"`` handler never outlives its
+        session.
+        """
+        self._detach_session_child_gating_handlers()
+        self._session_child_gating_enabled = False
+        self._clear_session_gated_children()
+
+    def _ensure_output_handler_registered(self, device: frida.Device) -> None:
+        """Register the device's ``"output"`` signal handler if not already active.
+
+        Idempotent: safe to call before every pipe-stdio spawn. Forwards every
+        captured stdout/stderr chunk as a ``process_output`` dispatch message.
+
+        Args:
+            device: Frida device the spawned process will run on.
+        """
+        if self._output_handler is not None:
+            return
+
+        def on_output(pid: int, fd: int, data: bytes) -> None:
+            """Forward a captured stdio chunk as a dispatch message.
+
+            Args:
+                pid: PID of the process that produced the output.
+                fd: POSIX-numbered stream (1 = stdout, 2 = stderr).
+                data: Raw captured bytes.
+            """
+            self._dispatch_message({
+                "type": "send",
+                "payload": {
+                    "type": "process_output",
+                    "pid": pid,
+                    "fd": fd,
+                    "data": data.decode("utf-8", errors="replace"),
+                },
+            })
+
+        device.on("output", on_output)
+        self._output_handler = on_output
+
+    def _detach_output_handler(self) -> None:
+        """Detach the registered ``"output"`` handler, if any.
+
+        Best-effort: a device that is already lost or torn down simply has
+        nothing to detach from.
+        """
+        device = self._device
+        handler = self._output_handler
+        if device is not None and handler is not None:
+            off_fn = getattr(device, "off", None)
+            if callable(off_fn):
+                try:
+                    off_fn("output", handler)
+                except Exception:
+                    _logger.exception("output_handler_detach_failed")
+        self._output_handler = None
 
     async def _shutdown_file_monitors(self) -> None:
         """Disable any registered Frida file monitors and clear the registry."""
@@ -1710,6 +1915,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             """
             _logger.warning("frida_session_detached", pid=pid, reason=reason, has_crash=crash is not None)
             self._session = None
+            self._reset_session_child_gating_state()
             self._pid = None
             self.state.process_attached = False
             self.state.target_pid = None
@@ -1851,6 +2057,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         *,
         env: dict[str, str] | None = None,
         cwd: str | None = None,
+        stdio: str | None = None,
         cancellable_id: str | None = None,
     ) -> int:
         """Spawn a new process with Frida instrumentation.
@@ -1861,6 +2068,9 @@ class _FridaBridgeBase(InstrumentationBridge):
             env: Environment variables to merge onto the inherited
                 environment of the spawned process.
             cwd: Working directory for the spawned process.
+            stdio: Stdio mode for the spawned process: ``"inherit"``
+                (default) or ``"pipe"`` to capture stdout/stderr via
+                ``process_output`` dispatch messages.
             cancellable_id: Optional cancellation token identifier returned by
                 :meth:`create_cancellable`. When supplied, the token is passed
                 through to the underlying Frida spawn and attach calls so the
@@ -1870,7 +2080,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             int: PID of spawned process.
 
         Raises:
-            ToolError: If the bridge is not initialised or the spawn fails.
+            ToolError: If the bridge is not initialised, ``stdio`` is not a
+                valid mode, or the spawn fails.
         """
         device = self._device
         if device is None:
@@ -1878,6 +2089,11 @@ class _FridaBridgeBase(InstrumentationBridge):
                 _ERR_DEVICE_FAILED,
                 details={"reason": "bridge not initialised; call initialize() first"},
             )
+
+        if stdio is not None and stdio not in _VALID_STDIO_MODES:
+            raise ToolError(_ERR_ATTACH_FAILED, details={"reason": f"invalid stdio mode: {stdio}"})
+        if stdio == "pipe":
+            self._ensure_output_handler_registered(device)
 
         cancellable = self._resolve_cancellable(cancellable_id)
 
@@ -1894,6 +2110,7 @@ class _FridaBridgeBase(InstrumentationBridge):
                 cancellable,
                 env=env,
                 cwd=cwd,
+                stdio=stdio,
             )
         except (
             frida.ExecutableNotFoundError,
@@ -2054,6 +2271,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             await self._unload_script(script_id)
 
         await asyncio.to_thread(session.detach)
+        self._reset_session_child_gating_state()
         self._session = None
 
         if kill_spawned and self._spawned_pid is not None and self._device is not None:
@@ -2076,6 +2294,31 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._publish_tool_state()
 
         _logger.info("process_detached", bridge="frida")
+
+    async def kill(self, pid: int) -> bool:
+        """Kill an arbitrary process on the current device, independent of attach/spawn.
+
+        Args:
+            pid: Process ID to kill.
+
+        Returns:
+            bool: True if the kill request succeeded.
+
+        Raises:
+            ToolError: If no device is available or the kill fails.
+        """
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        try:
+            await asyncio.to_thread(device.kill, pid)
+        except (frida.ProcessNotFoundError, frida.PermissionDeniedError, frida.TransportError, OSError) as e:
+            _logger.warning("frida_kill_failed", pid=pid, error=str(e), error_type=type(e).__name__)
+            raise ToolError(_ERR_KILL_FAILED, details=self._frida_error_details(e, pid=pid)) from e
+
+        _logger.info("frida_process_killed", pid=pid)
+        return True
 
     async def read_memory(self, address: int, size: int) -> bytes:
         """Read memory from the target process.
@@ -2882,6 +3125,79 @@ class _FridaBridgeBase(InstrumentationBridge):
         await self._unload_script(script_id)
         _logger.info("script_unloaded", script_id=script_id)
         return True
+
+    async def compile_script(self, source: str) -> str:
+        """Precompile Frida script source to bytecode without creating a script instance.
+
+        Args:
+            source: JavaScript (or TypeScript, if the runtime supports it)
+                source to compile.
+
+        Returns:
+            str: Hex-encoded compiled bytecode, loadable via
+                :meth:`load_compiled_script`.
+
+        Raises:
+            ToolError: If not attached or compilation fails.
+        """
+        if self._session is None:
+            _logger.error("frida_not_attached", operation="compile_script")
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        try:
+            bytecode: bytes = await asyncio.to_thread(self._session.compile_script, source)
+        except Exception as e:
+            _logger.warning("frida_compile_script_failed", error=str(e))
+            raise ToolError(_ERR_SCRIPT_COMPILE_FAILED, details=self._frida_error_details(e)) from e
+
+        _logger.info("script_compiled", source_length=len(source), bytecode_length=len(bytecode))
+        return bytecode.hex()
+
+    async def load_compiled_script(self, bytecode_hex: str) -> str:
+        """Create and load a persistent script from precompiled bytecode.
+
+        Args:
+            bytecode_hex: Hex-encoded bytecode produced by :meth:`compile_script`.
+
+        Returns:
+            str: Script ID for later unloading via :meth:`unload_script`.
+
+        Raises:
+            ToolError: If not attached, ``bytecode_hex`` is not valid hex, or
+                loading fails.
+        """
+        if self._session is None:
+            _logger.error("frida_not_attached", operation="load_compiled_script")
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        try:
+            data = bytes.fromhex(bytecode_hex)
+        except ValueError as e:
+            raise ToolError(_ERR_SCRIPT_COMPILE_FAILED, details={"reason": "invalid hex bytecode"}) from e
+
+        script_id = str(uuid.uuid4())[:8]
+        try:
+            script = await asyncio.to_thread(self._session.create_script_from_bytes, data)
+        except Exception as e:
+            _logger.warning("frida_load_compiled_script_failed", error=str(e))
+            raise ToolError(_ERR_SCRIPT_COMPILE_FAILED, details=self._frida_error_details(e)) from e
+
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Forward compiled-script messages to the bridge dispatcher.
+
+            Args:
+                message: Message payload emitted by the compiled script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            self._dispatch_message(dict(cast("dict[str, object]", message)))
+
+        script.on("message", on_message)
+        await asyncio.to_thread(script.load)
+
+        self._scripts[script_id] = script
+        _logger.info("compiled_script_loaded", script_id=script_id)
+        return script_id
 
     async def intercept_return(self, target: str, return_value: int) -> HookInfo:
         """Intercept a function and replace its return value.
@@ -4431,6 +4747,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         *,
         env: dict[str, str] | None = None,
         cwd: str | None = None,
+        stdio: str | None = None,
     ) -> int:
         """Invoke ``Device.spawn`` honoring an optional cancellation token.
 
@@ -4442,14 +4759,15 @@ class _FridaBridgeBase(InstrumentationBridge):
                 thread-local cancellable scope around the call when provided.
             env: Environment variables to merge onto the inherited environment.
             cwd: Working directory for the spawned process.
+            stdio: Stdio mode for the spawned process ("inherit" or "pipe").
 
         Returns:
             int: PID of the spawned process.
         """
         if cancellable is not None:
             with cancellable:
-                return device.spawn(program, argv=list(argv), env=env, cwd=cwd)
-        return device.spawn(program, argv=list(argv), env=env, cwd=cwd)
+                return device.spawn(program, argv=list(argv), env=env, cwd=cwd, stdio=stdio)
+        return device.spawn(program, argv=list(argv), env=env, cwd=cwd, stdio=stdio)
 
     @staticmethod
     def _create_script_with_cancellable(
@@ -4615,7 +4933,227 @@ class _FridaBridgeBase(InstrumentationBridge):
         return 0
 
 
-class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
+class _FridaBridgeSessionChildGatingMixin(_FridaBridgeBase):
+    """Session-scoped (``Session.enable_child_gating``) true child-process gating for the Frida bridge.
+
+    Kept as a separate mixin from :class:`_FridaBridgeAnalysisMixin` purely
+    to keep each class's own public method count under this project's
+    ``too-many-public-methods`` lint ceiling; the four methods below are
+    still reachable as ordinary ``FridaBridge`` methods via the normal
+    method-resolution order.
+    """
+
+    async def enable_session_child_gating(self) -> None:
+        """Enable session-scoped child-process gating.
+
+        Unlike :meth:`enable_child_gating` (device-wide: every new process
+        the *device* observes launches suspended), this calls
+        :meth:`frida.Session.enable_child_gating`, which gates only
+        processes spawned as true children of the currently attached
+        session's target. Pending children are reported through the
+        device's ``"child-added"``/``"child-removed"`` signals - the same
+        pairing the official frida-python example uses alongside
+        session-scoped gating - and can be queried directly at any time
+        with :meth:`get_pending_session_children`.
+
+        Raises:
+            ToolError: If not attached, no device is available, or gating
+                cannot be enabled.
+        """
+        _logger.info("frida_enable_session_child_gating_started")
+        session = self._session
+        if session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        if self._session_child_gating_enabled:
+            return
+
+        def on_child_added(child: object) -> None:
+            """Record a pending true child reported by the device.
+
+            Extracts identifying attributes from the Frida ``Child`` object,
+            appends a ``ChildProcessInfo`` record to the session-gated-
+            children list (unless it is already tracked), and publishes a
+            ``session_child_added`` dispatch message.
+
+            Args:
+                child: Frida ``Child`` object describing the pending process.
+            """
+            child_pid = int(getattr(child, "pid", 0))
+            info = ChildProcessInfo(
+                pid=child_pid,
+                parent_pid=int(getattr(child, "parent_pid", 0) or 0),
+                origin=str(getattr(child, "origin", "")),
+                identifier=getattr(child, "identifier", None),
+                path=getattr(child, "path", None),
+                argv=list(getattr(child, "argv", []) or []),
+            )
+            _logger.info("session_child_gating_pending_child_added", pid=child_pid)
+            with self._session_gated_children_lock:
+                if not any(existing.pid == child_pid for existing in self._session_gated_children):
+                    self._session_gated_children.append(info)
+            self._dispatch_message({
+                "type": "send",
+                "payload": {
+                    "type": "session_child_added",
+                    "pid": child_pid,
+                },
+            })
+
+        def on_child_removed(child: object) -> None:
+            """Drop a pending true child once the device reports it is no longer gated.
+
+            Fires whether the child was removed by
+            :meth:`resume_session_child`, by some other Frida client acting
+            on the same device, or because the process exited while
+            suspended, so the tracked list never goes stale.
+
+            Args:
+                child: Frida ``Child`` object describing the removed process.
+            """
+            child_pid = int(getattr(child, "pid", 0))
+            self._remove_session_gated_child(child_pid)
+            _logger.info("session_child_gating_pending_child_removed", pid=child_pid)
+            self._dispatch_message({
+                "type": "send",
+                "payload": {
+                    "type": "session_child_removed",
+                    "pid": child_pid,
+                },
+            })
+
+        try:
+            self._register_session_child_gating_handlers(device, on_child_added, on_child_removed)
+            await asyncio.to_thread(session.enable_child_gating)
+            self._session_child_gating_enabled = True
+            _logger.info("session_child_gating_enabled")
+        except frida.NotSupportedError as e:
+            self._detach_session_child_gating_handlers()
+            _logger.warning("session_child_gating_enable_not_supported", error=str(e))
+            raise ToolError(
+                _ERR_CHILD_GATING_NOT_SUPPORTED,
+                details={"reason": _ERR_CHILD_GATING_NOT_SUPPORTED},
+            ) from e
+        except Exception as e:
+            self._detach_session_child_gating_handlers()
+            reason = str(e) or type(e).__name__
+            _logger.warning("session_child_gating_enable_failed", error=reason)
+            raise ToolError(_ERR_CHILD_GATING_FAILED, details={"reason": reason}) from e
+
+    async def disable_session_child_gating(self) -> None:
+        """Disable session-scoped child-process gating.
+
+        Raises:
+            ToolError: If not attached or gating cannot be disabled.
+        """
+        _logger.info("frida_disable_session_child_gating_started")
+        session = self._session
+        if session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        if self._device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        if not self._session_child_gating_enabled:
+            return
+
+        try:
+            await asyncio.to_thread(session.disable_child_gating)
+            self._reset_session_child_gating_state()
+            _logger.info("session_child_gating_disabled")
+        except frida.NotSupportedError as e:
+            _logger.warning("session_child_gating_disable_not_supported", error=str(e))
+            raise ToolError(
+                _ERR_CHILD_GATING_NOT_SUPPORTED,
+                details={"reason": _ERR_CHILD_GATING_NOT_SUPPORTED},
+            ) from e
+        except Exception as e:
+            _logger.warning("session_child_gating_disable_failed", error=str(e))
+            raise ToolError(_ERR_CHILD_GATING_FAILED) from e
+
+    async def get_pending_session_children(self) -> list[ChildProcessInfo]:
+        """Get the true children currently suspended by session-scoped gating.
+
+        Queries the device directly via ``enumerate_pending_children`` (the
+        session-scoped counterpart of ``enumerate_pending_spawn``) rather
+        than relying solely on the cached ``"child-added"``/
+        ``"child-removed"`` event cache, so the returned list is correct
+        even if a device event was missed. The in-memory cache used by
+        :meth:`resume_session_child` is resynchronized to this authoritative
+        result.
+
+        Returns:
+            list[ChildProcessInfo]: List of pending true-child information.
+
+        Raises:
+            ToolError: If not attached, no Frida device is available,
+                session-scoped gating is not supported on this OS, or
+                enumeration otherwise fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        try:
+            pending = await asyncio.to_thread(device.enumerate_pending_children)
+        except frida.NotSupportedError as e:
+            _logger.warning("pending_session_children_query_not_supported", error=str(e))
+            raise ToolError(
+                _ERR_CHILD_GATING_NOT_SUPPORTED,
+                details={"reason": _ERR_CHILD_GATING_NOT_SUPPORTED},
+            ) from e
+        except (frida.ServerNotRunningError, frida.TransportError, frida.InvalidOperationError, OSError) as e:
+            _logger.warning("pending_session_children_query_failed", error=str(e))
+            raise ToolError(_ERR_CHILD_GATING_FAILED, details=self._frida_error_details(e)) from e
+
+        result = [
+            ChildProcessInfo(
+                pid=int(getattr(child, "pid", 0)),
+                parent_pid=int(getattr(child, "parent_pid", 0) or 0),
+                origin=str(getattr(child, "origin", "")),
+                identifier=getattr(child, "identifier", None),
+                path=getattr(child, "path", None),
+                argv=list(getattr(child, "argv", []) or []),
+            )
+            for child in pending
+        ]
+
+        with self._session_gated_children_lock:
+            self._session_gated_children = list(result)
+
+        _logger.debug("pending_session_children_queried", count=len(result))
+        return result
+
+    async def resume_session_child(self, pid: int) -> None:
+        """Resume a true child process suspended by session-scoped gating.
+
+        Args:
+            pid: PID of the suspended child to resume, as reported by
+                :meth:`get_pending_session_children`.
+
+        Raises:
+            ToolError: If not attached, no device is available, or resume fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        device = self._device
+        if device is None:
+            raise ToolError(_ERR_NO_DEVICE)
+
+        try:
+            await asyncio.to_thread(device.resume, pid)
+            self._remove_session_gated_child(pid)
+            _logger.info("session_child_resumed", pid=pid)
+        except Exception as e:
+            _logger.warning("session_child_resume_failed", pid=pid, error=str(e))
+            raise ToolError(_ERR_CHILD_GATING_FAILED) from e
+
+
+class _FridaBridgeAnalysisMixin(_FridaBridgeSessionChildGatingMixin):
     """Stalker tracing, child gating, crash reporting, and Objective-C surface for the Frida bridge."""
 
     async def stalker_follow(

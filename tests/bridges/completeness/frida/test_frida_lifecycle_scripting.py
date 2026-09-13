@@ -38,6 +38,7 @@ import asyncio
 import contextlib
 import json
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -52,7 +53,7 @@ if TYPE_CHECKING:
     import frida
 
     from intellicrack.bridges.frida_bridge import FridaBridge
-    from intellicrack.core.subprocess_compat import Popen
+    from intellicrack.core.types import ChildProcessInfo
 
 try:
     import frida
@@ -63,6 +64,7 @@ try:
 except ImportError:
     _frida_available = False
 
+from intellicrack.core.subprocess_compat import DEVNULL, Popen
 from intellicrack.core.tools import ToolRegistry
 from intellicrack.core.types import ToolError, ToolName
 
@@ -919,3 +921,279 @@ class TestSpawnEnvCwdB2:
         param_names = {p.name for p in spawn_func.parameters}
         assert "env" in param_names
         assert "cwd" in param_names
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestSpawnStdioCaptureB3:
+    """Regression tests for work order 07-B3 (frida.spawn stdio='pipe' capture)."""
+
+    @staticmethod
+    def test_pipe_stdio_delivers_output_via_dispatch(bridge: _TestableFridaBridge) -> None:
+        """``frida.spawn(stdio='pipe')`` must really capture the child's stdout via ``Device.on('output')``.
+
+        Falsifiable: if ``stdio`` were never forwarded to ``device.spawn``
+        (pre-fix state), or the ``"output"`` handler were never registered,
+        the process still runs (``echo`` always succeeds) but no
+        ``process_output`` message ever arrives - the polling loop times out
+        and the containment assertion fails. Broken production lines: the
+        ``if stdio == "pipe": self._ensure_output_handler_registered(device)``
+        guard in ``FridaBridge.spawn`` and the ``stdio=stdio`` keyword
+        forwarded through ``_spawn_with_cancellable`` to the real
+        ``device.spawn`` call (``frida_bridge.py``).
+
+        Args:
+            bridge: Initialized FridaBridge fixture.
+        """
+        received: list[dict[str, object]] = []
+        bridge.set_message_handler(received.append)
+
+        cmd_path = Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "cmd.exe"
+        _run_async(bridge.spawn(cmd_path, ["/c", "echo IC_GATE_STDIO_MARKER_B3"], stdio="pipe"))
+        _run_async(bridge.resume())
+
+        deadline = time.monotonic() + _ATTACH_WAIT_S
+
+        def _marker_seen() -> bool:
+            """Report whether the echoed marker has arrived in a captured ``process_output`` message.
+
+            Returns:
+                bool: True once a ``process_output`` payload containing the marker has been received.
+            """
+            return any(
+                isinstance(m.get("payload"), dict)
+                and "IC_GATE_STDIO_MARKER_B3" in str(cast("dict[str, object]", m["payload"]).get("data", ""))
+                for m in received
+            )
+
+        while not _marker_seen() and time.monotonic() < deadline:
+            time.sleep(0.1)
+        assert _marker_seen(), f"process_output never delivered the echoed marker; received={received!r}"
+
+    @staticmethod
+    def test_tool_def_declares_stdio_parameter(bridge: _TestableFridaBridge) -> None:
+        """The registered ``frida.spawn`` tool-def must declare a ``stdio`` parameter.
+
+        Falsifiable: if the ``ToolParameter`` entry were never added to the
+        ``frida.spawn`` ``ToolFunction`` in ``_FRIDA_FUNCTIONS``, this fails.
+
+        Args:
+            bridge: Initialized FridaBridge fixture.
+        """
+        defn = bridge.tool_definition
+        spawn_func = next(f for f in defn.functions if f.name == "frida.spawn")
+        param_names = {p.name for p in spawn_func.parameters}
+        assert "stdio" in param_names
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestKillArbitraryProcessB8:
+    """Regression tests for work order 07-B8 (frida.kill an arbitrary process)."""
+
+    @staticmethod
+    def test_kill_dispatchable_and_terminates_the_real_process(
+        registry: ToolRegistry,
+        notepad_process: Popen[bytes],
+    ) -> None:
+        """``frida.kill`` must dispatch and actually terminate a process this bridge never attached to or spawned.
+
+        Falsifiable: ``execute_tool_call`` dispatches purely by
+        ``getattr(bridge, "kill")`` (``core/tools.py``, off-limits here), so
+        if ``FridaBridge.kill`` were a no-op stub instead of really calling
+        ``device.kill``, ``notepad_process.poll()`` would still be ``None``
+        (still running) after the call and this assertion would time out.
+        Broken production line: the real ``await
+        asyncio.to_thread(device.kill, pid)`` call inside
+        ``FridaBridge.kill`` (``frida_bridge.py``).
+
+        This bridge only calls ``initialize()`` (device resolved), never
+        attaching to ``notepad_process`` - proving ``kill`` works
+        "independent of any attach/spawn", exactly the gap this item closes.
+
+        Args:
+            registry: ToolRegistry with a real, initialized (not attached) bridge.
+            notepad_process: Dedicated spawned notepad target this bridge never touched.
+        """
+        _run_async(registry.execute_tool_call("frida", "frida.kill", {"pid": notepad_process.pid}))
+
+        deadline = time.monotonic() + _ATTACH_WAIT_S
+        while notepad_process.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert notepad_process.poll() is not None, "frida.kill must actually terminate the target process"
+
+    @staticmethod
+    def test_tool_def_registered(bridge: _TestableFridaBridge) -> None:
+        """``frida.kill`` must have a real ``ToolFunction`` entry.
+
+        Falsifiable: removing the ``ToolFunction`` entry from
+        ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes this fail.
+
+        Args:
+            bridge: Initialized FridaBridge fixture.
+        """
+        names = {f.name for f in bridge.tool_definition.functions}
+        assert "frida.kill" in names
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestSessionChildGatingC1:
+    """Regression tests for work order 07-C1 (session-scoped true child-process gating)."""
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "expected_name",
+        [
+            "frida.enable_session_child_gating",
+            "frida.disable_session_child_gating",
+            "frida.get_pending_session_children",
+            "frida.resume_session_child",
+        ],
+    )
+    def test_tool_def_registered(bridge: _TestableFridaBridge, expected_name: str) -> None:
+        """Each new session-child-gating method must have a real ToolFunction entry.
+
+        Falsifiable: removing any of these four ``ToolFunction`` entries from
+        ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes the containment
+        check fail.
+
+        Args:
+            bridge: Initialized FridaBridge fixture.
+            expected_name: Fully-qualified tool function name under test.
+        """
+        names = {f.name for f in bridge.tool_definition.functions}
+        assert expected_name in names
+
+    @staticmethod
+    def test_session_scoped_gating_reports_and_resumes_a_real_child(bridge: _TestableFridaBridge) -> None:
+        """Session-scoped gating must catch and release a real child of the self-attached target.
+
+        Self-attaches the bridge to the current test process
+        (``bridge.attach(os.getpid())``) and has the test code itself spawn a
+        real child process via ``Popen`` while session gating is enabled.
+        Since the gated target *is* the pytest process, any process it
+        spawns via any API is a genuine child Frida's child-gating
+        instrumentation observes - no synthetic/mocked ``Child`` object is
+        needed at all.
+
+        Falsifiable: if ``enable_session_child_gating`` mirrored the
+        device-wide feature's signal/scope (called
+        ``device.enable_spawn_gating`` and/or listened on ``"spawn-added"``
+        instead of ``session.enable_child_gating`` + ``"child-added"``), or
+        ``get_pending_session_children`` queried
+        ``enumerate_pending_spawn`` instead of ``enumerate_pending_children``,
+        the spawned child would never appear in
+        ``get_pending_session_children()`` and the first polling assertion
+        times out and fails. Broken production lines: the exact call/signal
+        pairing inside
+        ``_FridaBridgeSessionChildGatingMixin.enable_session_child_gating``
+        (``frida_bridge.py``).
+
+        Args:
+            bridge: Initialized FridaBridge fixture.
+        """
+        _run_async(bridge.attach(os.getpid()))
+        _run_async(bridge.enable_session_child_gating())
+
+        notepad_path = shutil.which("notepad.exe") or str(
+            Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe",
+        )
+        child = Popen([notepad_path], stdout=DEVNULL, stderr=DEVNULL)
+        try:
+            deadline = time.monotonic() + _ATTACH_WAIT_S
+            pending: list[ChildProcessInfo] = []
+            while time.monotonic() < deadline:
+                pending = _run_async(bridge.get_pending_session_children())
+                if any(getattr(c, "pid", None) == child.pid for c in pending):
+                    break
+                time.sleep(0.1)
+            assert any(getattr(c, "pid", None) == child.pid for c in pending), (
+                f"child {child.pid} never reported as session-gated: {pending!r}"
+            )
+
+            _run_async(bridge.resume_session_child(child.pid))
+
+            deadline = time.monotonic() + _ATTACH_WAIT_S
+            while time.monotonic() < deadline:
+                pending = _run_async(bridge.get_pending_session_children())
+                if not any(getattr(c, "pid", None) == child.pid for c in pending):
+                    break
+                time.sleep(0.1)
+            assert not any(getattr(c, "pid", None) == child.pid for c in pending), (
+                "resume_session_child must clear the child from the pending list"
+            )
+        finally:
+            with contextlib.suppress(ToolError):
+                _run_async(bridge.disable_session_child_gating())
+            child.terminate()
+            child.wait(timeout=5)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
+class TestPrecompiledScriptD6:
+    """Regression tests for work order 07-D6 (precompile a script to bytecode / load from precompiled bytes)."""
+
+    @staticmethod
+    def test_compile_then_load_from_bytecode_round_trip(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
+        """``frida.compile_script`` + ``frida.load_compiled_script`` must produce a real, runnable script.
+
+        Falsifiable: if ``compile_script`` returned a stub/empty value
+        instead of real ``Session.compile_script`` bytecode,
+        ``create_script_from_bytes`` would raise on the malformed data (or
+        load a script that never sends anything). Broken production lines:
+        the two ``ToolFunction`` registrations plus
+        ``FridaBridge.compile_script`` / ``FridaBridge.load_compiled_script``
+        bodies (``frida_bridge.py``).
+
+        Args:
+            registry: ToolRegistry with the bridge registered.
+            bridge: Initialized FridaBridge fixture.
+        """
+        _run_async(registry.execute_tool_call("frida", "frida.attach", {"pid": str(os.getpid())}))
+
+        bytecode_hex = _run_async(
+            registry.execute_tool_call(
+                "frida",
+                "frida.compile_script",
+                {"source": "send({ type: 'compiled_ok' });"},
+            ),
+        )
+        assert isinstance(bytecode_hex, str)
+        assert len(bytecode_hex) > 0
+        bytes.fromhex(bytecode_hex)  # must be genuinely valid hex, not a placeholder string
+
+        received: list[dict[str, object]] = []
+        bridge.set_message_handler(received.append)
+
+        script_id = _run_async(
+            registry.execute_tool_call("frida", "frida.load_compiled_script", {"bytecode_hex": bytecode_hex}),
+        )
+        assert isinstance(script_id, str)
+        assert bridge.has_script(script_id)
+
+        deadline = time.monotonic() + _ATTACH_WAIT_S
+        while not received and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert any(
+            isinstance(m.get("payload"), dict) and cast("dict[str, object]", m["payload"]).get("type") == "compiled_ok" for m in received
+        ), f"compiled script never ran; received={received!r}"
+
+        _run_async(registry.execute_tool_call("frida", "frida.unload_script", {"script_id": script_id}))
+        assert not bridge.has_script(script_id)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "expected_name",
+        ["frida.compile_script", "frida.load_compiled_script"],
+    )
+    def test_tool_def_registered(bridge: _TestableFridaBridge, expected_name: str) -> None:
+        """Each new precompiled-script method must have a real ToolFunction entry.
+
+        Falsifiable: removing either ``ToolFunction`` entry from
+        ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes the containment
+        check fail.
+
+        Args:
+            bridge: Initialized FridaBridge fixture.
+            expected_name: Fully-qualified tool function name under test.
+        """
+        names = {f.name for f in bridge.tool_definition.functions}
+        assert expected_name in names
