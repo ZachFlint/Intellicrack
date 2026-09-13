@@ -1704,6 +1704,45 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="Exception config result",
                 ),
                 ToolFunction(
+                    name="x64dbg.remove_exception_config",
+                    description="Remove an exception breakpoint by code, or all exception breakpoints if no code is given",
+                    parameters=[
+                        ToolParameter(
+                            name="code",
+                            type="integer",
+                            description="Exception code (e.g. 0xC0000005); omit to remove all",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dict with success and code",
+                ),
+                ToolFunction(
+                    name="x64dbg.enable_exception_config",
+                    description="Enable an exception breakpoint by code, or all exception breakpoints if no code is given",
+                    parameters=[
+                        ToolParameter(
+                            name="code",
+                            type="integer",
+                            description="Exception code; omit to enable all",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dict with success and code",
+                ),
+                ToolFunction(
+                    name="x64dbg.disable_exception_config",
+                    description="Disable an exception breakpoint by code, or all exception breakpoints if no code is given",
+                    parameters=[
+                        ToolParameter(
+                            name="code",
+                            type="integer",
+                            description="Exception code; omit to disable all",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dict with success and code",
+                ),
+                ToolFunction(
                     name="x64dbg.spawn",
                     description="Spawn a process for debugging",
                     parameters=[
@@ -7905,6 +7944,74 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
             await self._send_pipe_command("exec", {"command": f"SetExceptionBreakpointFastResume {hex(code)}, 1"})
 
         return {"success": True, "code": hex(code), "handling": handling}
+
+    async def remove_exception_config(self, code: int | None = None) -> dict[str, Any]:
+        """Remove an exception breakpoint, or all exception breakpoints if no code is given.
+
+        ``DeleteExceptionBPX`` takes an optional exception code; per the
+        docs, omitting the argument entirely removes every active
+        exception breakpoint, which is distinct from passing an
+        empty-string or literal ``None`` argument, so ``code is None``
+        sends the bare command with no argument at all. This bridge
+        exposes no RPC that lists exception breakpoints, so there is no
+        readback to verify the removal against.
+
+        Args:
+            code: Exception code to remove; omit to remove all exception breakpoints.
+
+        Returns:
+            dict[str, Any]: Dict with success status and code (hex string, or None for "all").
+        """
+        _logger.debug("x64dbg_command_queued", command="remove_exception_config", code=code)
+        cmd = "DeleteExceptionBPX" if code is None else f"DeleteExceptionBPX {hex(code)}"
+        await self._send_command(cmd)
+        return {"success": True, "code": hex(code) if code is not None else None}
+
+    async def enable_exception_config(self, code: int | None = None) -> dict[str, Any]:
+        """Enable an exception breakpoint, or all exception breakpoints if no code is given.
+
+        ``EnableExceptionBPX`` takes an optional exception code; per
+        the docs, omitting the argument entirely enables every
+        previously configured exception breakpoint, which is distinct
+        from passing an empty-string or literal ``None`` argument, so
+        ``code is None`` sends the bare command with no argument at
+        all. This bridge exposes no RPC that lists exception
+        breakpoints, so there is no readback to verify the change
+        against.
+
+        Args:
+            code: Exception code to enable; omit to enable all exception breakpoints.
+
+        Returns:
+            dict[str, Any]: Dict with success status and code (hex string, or None for "all").
+        """
+        _logger.debug("x64dbg_command_queued", command="enable_exception_config", code=code)
+        cmd = "EnableExceptionBPX" if code is None else f"EnableExceptionBPX {hex(code)}"
+        await self._send_command(cmd)
+        return {"success": True, "code": hex(code) if code is not None else None}
+
+    async def disable_exception_config(self, code: int | None = None) -> dict[str, Any]:
+        """Disable an exception breakpoint, or all exception breakpoints if no code is given.
+
+        ``DisableExceptionBPX`` takes an optional exception code; per
+        the docs, omitting the argument entirely disables every
+        previously configured exception breakpoint, which is distinct
+        from passing an empty-string or literal ``None`` argument, so
+        ``code is None`` sends the bare command with no argument at
+        all. This bridge exposes no RPC that lists exception
+        breakpoints, so there is no readback to verify the change
+        against.
+
+        Args:
+            code: Exception code to disable; omit to disable all exception breakpoints.
+
+        Returns:
+            dict[str, Any]: Dict with success status and code (hex string, or None for "all").
+        """
+        _logger.debug("x64dbg_command_queued", command="disable_exception_config", code=code)
+        cmd = "DisableExceptionBPX" if code is None else f"DisableExceptionBPX {hex(code)}"
+        await self._send_command(cmd)
+        return {"success": True, "code": hex(code) if code is not None else None}
 
     async def patch_instruction(self, address: int, instruction: str) -> dict[str, Any]:
         """Assemble and write an instruction at address, then verify the patch.
