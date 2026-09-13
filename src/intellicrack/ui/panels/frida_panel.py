@@ -170,6 +170,35 @@ class FridaPanel(AnalysisPanelBase):
 
         self._refresh_devices_btn = self._add_secondary_button(toolbar, "Refresh Devices", self.refresh_devices)
         self._add_remote_device_btn = self._add_secondary_button(toolbar, "Add Remote Device", self._on_add_remote_device)
+        self._remove_remote_device_btn = self._add_secondary_button(toolbar, "Remove Remote Device", self._on_remove_remote_device)
+
+        self._live_devices_cb = QCheckBox("Live")
+        self._live_devices_cb.setToolTip("Notify and auto-refresh when the device list changes")
+
+        def _live_devices_slot(c: int) -> None:
+            """Toggle live device-list-changed notifications via the checkbox.
+
+            Args:
+                c: Qt ``toggled`` payload; nonzero enables live notifications.
+            """
+            self._on_toggle_live_devices(checked=bool(c))
+
+        self._live_devices_cb.toggled.connect(_live_devices_slot)
+        toolbar.addWidget(self._live_devices_cb)
+
+        self._device_lost_cb = QCheckBox("Notify Lost")
+        self._device_lost_cb.setToolTip("Reset connection state and notify if the current device is lost")
+
+        def _device_lost_slot(c: int) -> None:
+            """Toggle device-lost notifications via the checkbox.
+
+            Args:
+                c: Qt ``toggled`` payload; nonzero enables device-lost notifications.
+            """
+            self._on_toggle_device_lost_notifications(checked=bool(c))
+
+        self._device_lost_cb.toggled.connect(_device_lost_slot)
+        toolbar.addWidget(self._device_lost_cb)
 
         toolbar.addSeparator()
 
@@ -371,6 +400,11 @@ class FridaPanel(AnalysisPanelBase):
         self._refresh_apps_btn.setObjectName("tool_button")
         self._refresh_apps_btn.clicked.connect(self._on_refresh_applications)
         header.addWidget(self._refresh_apps_btn)
+
+        self._frontmost_btn = QPushButton("Frontmost")
+        self._frontmost_btn.setObjectName("tool_button")
+        self._frontmost_btn.clicked.connect(self._on_get_frontmost_application)
+        header.addWidget(self._frontmost_btn)
         layout.addLayout(header)
 
         self._application_table = QTableWidget(0, len(_APPLICATION_COLUMNS))
@@ -660,6 +694,14 @@ class FridaPanel(AnalysisPanelBase):
         if msg_type == "send":
             payload = message.get("payload", "")
             self._console.appendPlainText(f"[send] {payload}")
+            if isinstance(payload, dict):
+                typed_payload = cast("dict[str, object]", payload)
+                if typed_payload.get("type") == "device_list_changed":
+                    self.refresh_devices()
+                elif typed_payload.get("type") == "device_lost":
+                    self._set_status("Device lost")
+                    with QSignalBlocker(self._device_lost_cb):
+                        self._device_lost_cb.setChecked(False)
         elif msg_type == "log":
             level = str(message.get("level", "info"))
             payload = message.get("payload", "")
@@ -1449,6 +1491,87 @@ class FridaPanel(AnalysisPanelBase):
             self._device_combo.setCurrentIndex(idx)
         self._console.appendPlainText(f"[+] Connected to device: {getattr(result, 'name', entry_text)}")
 
+    def _on_remove_remote_device(self) -> None:
+        """Remove the remote device currently selected in the device combo."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+        raw_data = self._device_combo.currentData()
+        if not isinstance(raw_data, dict):
+            self._console.appendPlainText("[!] Select a remote device in the Device list to remove it")
+            return
+        data = cast("dict[str, object]", raw_data)
+        if data.get("type") != "remote":
+            self._console.appendPlainText("[!] Select a remote device in the Device list to remove it")
+            return
+        host = str(data.get("id", ""))
+        run_bridge_coroutine_logged(
+            self._bridge.remove_remote_device(host),
+            on_success=lambda _: self._on_remote_device_removed(host),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Remove remote device failed: {e}"),
+            parent=self,
+            event="frida_remove_remote_device",
+            logger=_logger,
+            level="info",
+            host=host,
+        )
+
+    def _on_remote_device_removed(self, host: str) -> None:
+        """Drop the now-stale remote device entry from the device combo.
+
+        Args:
+            host: The ``host:port`` of the device that was just removed.
+        """
+        entry_text = f"remote:{host}"
+        with QSignalBlocker(self._device_combo):
+            idx = self._device_combo.findText(entry_text)
+            if idx >= 0:
+                self._device_combo.removeItem(idx)
+            self._device_combo.setCurrentIndex(0)
+        self._console.appendPlainText(f"[+] Removed remote device: {host}")
+
+    def _on_toggle_live_devices(self, *, checked: bool) -> None:
+        """Enable or disable live device-list-changed notifications.
+
+        Args:
+            checked: True to enable notifications, False to disable them.
+        """
+        if self._bridge is None:
+            self._live_devices_cb.setChecked(False)
+            return
+        coro = self._bridge.enable_device_change_notifications() if checked else self._bridge.disable_device_change_notifications()
+        run_bridge_coroutine_logged(
+            coro,
+            on_success=lambda _: None,
+            on_error=lambda e: self._console.appendPlainText(f"[-] Live devices toggle failed: {e}"),
+            parent=self,
+            event="frida_toggle_live_devices",
+            logger=_logger,
+            level="info",
+            enabled=checked,
+        )
+
+    def _on_toggle_device_lost_notifications(self, *, checked: bool) -> None:
+        """Enable or disable device-lost notifications.
+
+        Args:
+            checked: True to enable notifications, False to disable them.
+        """
+        if self._bridge is None:
+            self._device_lost_cb.setChecked(False)
+            return
+        coro = self._bridge.enable_device_lost_notifications() if checked else self._bridge.disable_device_lost_notifications()
+        run_bridge_coroutine_logged(
+            coro,
+            on_success=lambda _: None,
+            on_error=lambda e: self._console.appendPlainText(f"[-] Device-lost toggle failed: {e}"),
+            parent=self,
+            event="frida_toggle_device_lost_notifications",
+            logger=_logger,
+            level="info",
+            enabled=checked,
+        )
+
     def _on_refresh_processes(self) -> None:
         """Refresh the process browser table."""
         if self._bridge is None:
@@ -1559,6 +1682,46 @@ class FridaPanel(AnalysisPanelBase):
         self._console.appendPlainText(f"[-] Enumerate applications failed: {exc}")
         _logger.warning("frida_application_enum_failed", error=str(exc))
         self._refresh_apps_btn.setEnabled(True)
+
+    def _on_get_frontmost_application(self) -> None:
+        """Query and display the frontmost/foreground application."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+        self._frontmost_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.get_frontmost_application(),
+            on_success=self._on_frontmost_application_result,
+            on_error=self._on_frontmost_application_error,
+            parent=self,
+            event="frida_get_frontmost_application",
+            logger=_logger,
+        )
+
+    def _on_frontmost_application_result(self, result: object) -> None:
+        """Display the frontmost application returned by the bridge.
+
+        Args:
+            result: FridaApplicationInfo from the bridge, or None if no
+                application is frontmost.
+        """
+        self._frontmost_btn.setEnabled(True)
+        if result is None:
+            self._console.appendPlainText("[*] No frontmost application")
+            return
+        identifier = getattr(result, "identifier", "")
+        name = getattr(result, "name", "")
+        pid = getattr(result, "pid", 0)
+        self._console.appendPlainText(f"[+] Frontmost: {name} ({identifier}), pid {pid}")
+
+    def _on_frontmost_application_error(self, exc: object) -> None:
+        """Handle a frontmost-application query failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._frontmost_btn.setEnabled(True)
+        self._console.appendPlainText(f"[-] Get frontmost application failed: {exc}")
 
     def _on_application_double_click(self) -> None:
         """Target the double-clicked application.
@@ -1839,10 +2002,28 @@ class FridaPanel(AnalysisPanelBase):
         if args_accepted and args_str.strip():
             spawn_args = args_str.strip().split()
 
+        cwd_str, cwd_accepted = QInputDialog.getText(self, "Working Directory", "Working directory (optional):")
+        spawn_cwd: str | None = cwd_str.strip() if cwd_accepted and cwd_str.strip() else None
+
+        env_str, env_accepted = QInputDialog.getMultiLineText(
+            self,
+            "Environment",
+            "Environment overrides, one KEY=VALUE per line (optional):",
+        )
+        spawn_env: dict[str, str] | None = None
+        if env_accepted and env_str.strip():
+            spawn_env = {}
+            for line in env_str.splitlines():
+                stripped = line.strip()
+                if not stripped or "=" not in stripped:
+                    continue
+                key, _, value = stripped.partition("=")
+                spawn_env[key.strip()] = value
+
         self._spawn_btn.setEnabled(False)
         cancellable_id = self._cancellable_controls.last_cancellable_id()
         run_bridge_coroutine_logged(
-            self._bridge.spawn(Path(path_str.strip()), spawn_args, cancellable_id=cancellable_id),
+            self._bridge.spawn(Path(path_str.strip()), spawn_args, env=spawn_env, cwd=spawn_cwd, cancellable_id=cancellable_id),
             on_success=lambda pid: self._on_spawn_success(int(pid) if isinstance(pid, (int, float)) else 0),
             on_error=self._on_spawn_error,
             parent=self,
@@ -1851,6 +2032,8 @@ class FridaPanel(AnalysisPanelBase):
             level="info",
             target_path=path_str.strip(),
             spawn_args=spawn_args,
+            spawn_env=spawn_env,
+            spawn_cwd=spawn_cwd,
             cancellable_id=cancellable_id,
         )
 
