@@ -990,12 +990,39 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Step output",
         ),
         _tf(
+            "esil_step_until",
+            "Step the ESIL emulator until a target address or ESIL boolean expression is met (exactly one of "
+            "address/expression must be given)",
+            [
+                _tp(
+                    "address",
+                    "integer",
+                    "Target address to step until (mutually exclusive with expression)",
+                    required=False,
+                ),
+                _tp(
+                    "expression",
+                    "string",
+                    "ESIL boolean expression to step until true (mutually exclusive with address)",
+                    required=False,
+                ),
+            ],
+            "Step output",
+        ),
+        _tf(
             "esil_emulate_function",
             "Emulate a function using ESIL",
             [
                 _tp("address", "integer", "Function address to emulate"),
             ],
             "Emulation output",
+        ),
+        _tf(
+            "esil_init_state",
+            "Initialize the ESIL VM state/registers (rizin 'aei'), distinct from esil_init_memory's memory/stack initialization "
+            "(rizin 'aeim')",
+            [],
+            "Success status",
         ),
         _tf("esil_init_memory", "Initialize ESIL emulation memory stack", [], "Success status"),
         _tf(
@@ -3928,6 +3955,51 @@ class CutterEsilMixin(CutterTypesMixin):
         _logger.debug("esil_stepped", count=count)
         return result
 
+    async def esil_step_until(self, address: int | None = None, expression: str | None = None) -> str:
+        """Step the ESIL emulator until a target address or ESIL boolean expression is met.
+
+        Exactly one of ``address``/``expression`` must be given: ``address`` repeatedly single-steps until the program counter reaches
+        it (rizin 'aesu'), while ``expression`` repeatedly single-steps until the given ESIL boolean expression evaluates true (rizin
+        'aesue').
+
+        Args:
+            address: Target address to step until. Mutually exclusive with ``expression``.
+            expression: ESIL boolean expression to step until true. Mutually exclusive with ``address``.
+
+        Returns:
+            str: Step output.
+
+        Raises:
+            ToolError: If no binary is loaded, if neither or both of ``address``/``expression`` are given, or if ``expression``
+                contains rizin command-control characters.
+        """
+        if self._r2 is None:
+            _logger.warning(
+                "esil_step_until_without_binary",
+                address=hex(address) if address is not None else None,
+                expression=expression,
+            )
+            raise ToolError(_ERR_NO_BINARY)
+        if address is not None and expression is not None:
+            msg = "esil_step_until: address and expression are mutually exclusive"
+            raise ToolError(msg)
+
+        if address is not None:
+            result = await self._r2_cmd(f"aesu {hex(address)}")
+        elif expression is not None:
+            validate_r2_argument(expression, field="esil_step_until expression")
+            result = await self._r2_cmd(f"aesue {expression}")
+        else:
+            msg = "esil_step_until: exactly one of address or expression must be given"
+            raise ToolError(msg)
+
+        _logger.debug(
+            "esil_stepped_until",
+            address=hex(address) if address is not None else None,
+            expression=expression,
+        )
+        return result
+
     async def esil_emulate_function(self, address: int) -> str:
         """Emulate a function using ESIL.
 
@@ -3947,6 +4019,26 @@ class CutterEsilMixin(CutterTypesMixin):
         result = await self._r2_cmd(f"aef @ {address}")
         _logger.debug("esil_function_emulated", address=hex(address))
         return result
+
+    async def esil_init_state(self) -> bool:
+        """Initialize the ESIL VM state (registers, flags, PC).
+
+        Distinct from :meth:`esil_init_memory`, which initializes the ESIL VM's memory/stack region (rizin 'aeim'). This method
+        initializes the VM's own state (rizin 'aei').
+
+        Returns:
+            bool: True if initialization succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("esil_init_state_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd("aei")
+        _logger.debug("esil_state_initialized")
+        return True
 
     async def esil_init_memory(self) -> bool:
         """Initialize ESIL emulation memory stack.
