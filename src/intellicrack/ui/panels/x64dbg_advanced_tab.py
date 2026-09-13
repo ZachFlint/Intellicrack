@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Final, cast
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QHBoxLayout,
@@ -746,6 +747,35 @@ class X64DbgAdvancedTab(QWidget):
 
     # -- Breakpoint property configuration -----------------------------------
 
+    def _bpcfg_row(self, *widgets: QWidget, label: str | None = None, stretch: bool = False) -> QHBoxLayout:
+        """Build one horizontal row for the breakpoint-configuration sub-tab.
+
+        Factored out of :meth:`_build_breakpoint_config_tab` so each
+        property row it adds (address, condition, log text/condition,
+        command/condition, flags, DLL) contributes no additional local
+        variable to that function's scope - only a single expression
+        statement handing the built row straight to ``layout.addLayout``.
+
+        Args:
+            *widgets: Widgets to place in the row, in order, after the
+                optional label.
+            label: Optional label text placed before ``widgets``.
+            stretch: Whether to append a trailing stretch to the row.
+
+        Returns:
+            QHBoxLayout: The populated row layout.
+        """
+        row = QHBoxLayout()
+        if label is not None:
+            row_label = QLabel(self.tr(label))
+            row_label.setFont(FontManager.get_instance().get_ui_font(9))
+            row.addWidget(row_label)
+        for widget in widgets:
+            row.addWidget(widget)
+        if stretch:
+            row.addStretch()
+        return row
+
     def _build_breakpoint_config_tab(self) -> QWidget:
         """Build the breakpoint-configuration sub-tab.
 
@@ -787,6 +817,13 @@ class X64DbgAdvancedTab(QWidget):
         log_row.addWidget(self._bpcfg_log_input)
         layout.addLayout(log_row)
 
+        self._bpcfg_logcond_input = QLineEdit()
+        self._bpcfg_logcond_input.setPlaceholderText("eax == 1")
+        self._bpcfg_logcond_btn = QPushButton(self.tr("Set Log Condition"))
+        self._bpcfg_logcond_btn.setObjectName("tool_button")
+        self._bpcfg_logcond_btn.clicked.connect(self._on_set_breakpoint_log_condition)
+        layout.addLayout(self._bpcfg_row(self._bpcfg_logcond_input, self._bpcfg_logcond_btn, label="Log Condition:"))
+
         cmd_row = QHBoxLayout()
         cmd_label = QLabel(self.tr("Command:"))
         cmd_label.setFont(fm.get_ui_font(9))
@@ -795,6 +832,13 @@ class X64DbgAdvancedTab(QWidget):
         self._bpcfg_cmd_input.setPlaceholderText('log "hit"')
         cmd_row.addWidget(self._bpcfg_cmd_input)
         layout.addLayout(cmd_row)
+
+        self._bpcfg_cmdcond_input = QLineEdit()
+        self._bpcfg_cmdcond_input.setPlaceholderText("eax == 1")
+        self._bpcfg_cmdcond_btn = QPushButton(self.tr("Set Command Condition"))
+        self._bpcfg_cmdcond_btn.setObjectName("tool_button")
+        self._bpcfg_cmdcond_btn.clicked.connect(self._on_set_breakpoint_command_condition)
+        layout.addLayout(self._bpcfg_row(self._bpcfg_cmdcond_input, self._bpcfg_cmdcond_btn, label="Command Condition:"))
 
         fast_row = QHBoxLayout()
         self._bpcfg_fast_resume_combo = QComboBox()
@@ -806,6 +850,24 @@ class X64DbgAdvancedTab(QWidget):
         fast_row.addWidget(self._bpcfg_apply_btn)
         fast_row.addStretch()
         layout.addLayout(fast_row)
+
+        self._bpcfg_singleshot_check = QCheckBox(self.tr("Singleshot"))
+        self._bpcfg_singleshot_btn = QPushButton(self.tr("Apply Singleshot"))
+        self._bpcfg_singleshot_btn.setObjectName("tool_button")
+        self._bpcfg_singleshot_btn.clicked.connect(self._on_set_breakpoint_singleshot)
+        self._bpcfg_silent_check = QCheckBox(self.tr("Silent"))
+        self._bpcfg_silent_btn = QPushButton(self.tr("Apply Silent"))
+        self._bpcfg_silent_btn.setObjectName("tool_button")
+        self._bpcfg_silent_btn.clicked.connect(self._on_set_breakpoint_silent)
+        layout.addLayout(
+            self._bpcfg_row(
+                self._bpcfg_singleshot_check,
+                self._bpcfg_singleshot_btn,
+                self._bpcfg_silent_check,
+                self._bpcfg_silent_btn,
+                stretch=True,
+            ),
+        )
 
         log_bp_row = QHBoxLayout()
         self._bpcfg_logging_btn = QPushButton(self.tr("Set Logging BP (non-stopping)"))
@@ -905,6 +967,94 @@ class X64DbgAdvancedTab(QWidget):
             logger=_logger,
             level="info",
             address=hex(address),
+        )
+
+    def _on_set_breakpoint_log_condition(self) -> None:
+        """Set the logging condition of a breakpoint, gating when its log fires."""
+        if self._bridge is None:
+            return
+        address = self._bpcfg_address()
+        if address is None:
+            return
+        condition = self._bpcfg_logcond_input.text().strip()
+        if not condition:
+            QMessageBox.warning(self, self.tr("Breakpoint Log Condition"), self.tr("Log condition is required."))
+            return
+        self._bpcfg_logcond_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.set_breakpoint_log_condition(address, condition),
+            on_success=lambda _: self._on_bpcfg_success(f"Log condition set at 0x{address:X}", self._bpcfg_logcond_btn),
+            on_error=lambda e: self._on_bpcfg_error("set_breakpoint_log_condition", e, self._bpcfg_logcond_btn),
+            parent=self,
+            event="x64dbg_set_breakpoint_log_condition",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+        )
+
+    def _on_set_breakpoint_command_condition(self) -> None:
+        """Set the condition gating whether a breakpoint's on-hit command executes."""
+        if self._bridge is None:
+            return
+        address = self._bpcfg_address()
+        if address is None:
+            return
+        condition = self._bpcfg_cmdcond_input.text().strip()
+        if not condition:
+            QMessageBox.warning(self, self.tr("Breakpoint Command Condition"), self.tr("Command condition is required."))
+            return
+        self._bpcfg_cmdcond_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.set_breakpoint_command_condition(address, condition),
+            on_success=lambda _: self._on_bpcfg_success(f"Command condition set at 0x{address:X}", self._bpcfg_cmdcond_btn),
+            on_error=lambda e: self._on_bpcfg_error("set_breakpoint_command_condition", e, self._bpcfg_cmdcond_btn),
+            parent=self,
+            event="x64dbg_set_breakpoint_command_condition",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+        )
+
+    def _on_set_breakpoint_singleshot(self) -> None:
+        """Apply the Singleshot checkbox's state to a breakpoint."""
+        if self._bridge is None:
+            return
+        address = self._bpcfg_address()
+        if address is None:
+            return
+        enabled = self._bpcfg_singleshot_check.isChecked()
+        self._bpcfg_singleshot_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.set_breakpoint_singleshot(address, enabled=enabled),
+            on_success=lambda _: self._on_bpcfg_success(f"Singleshot set to {enabled} at 0x{address:X}", self._bpcfg_singleshot_btn),
+            on_error=lambda e: self._on_bpcfg_error("set_breakpoint_singleshot", e, self._bpcfg_singleshot_btn),
+            parent=self,
+            event="x64dbg_set_breakpoint_singleshot",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            enabled=enabled,
+        )
+
+    def _on_set_breakpoint_silent(self) -> None:
+        """Apply the Silent checkbox's state to a breakpoint."""
+        if self._bridge is None:
+            return
+        address = self._bpcfg_address()
+        if address is None:
+            return
+        enabled = self._bpcfg_silent_check.isChecked()
+        self._bpcfg_silent_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.set_breakpoint_silent(address, enabled=enabled),
+            on_success=lambda _: self._on_bpcfg_success(f"Silent set to {enabled} at 0x{address:X}", self._bpcfg_silent_btn),
+            on_error=lambda e: self._on_bpcfg_error("set_breakpoint_silent", e, self._bpcfg_silent_btn),
+            parent=self,
+            event="x64dbg_set_breakpoint_silent",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            enabled=enabled,
         )
 
     def _on_set_dll_breakpoint(self) -> None:
