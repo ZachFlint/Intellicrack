@@ -887,6 +887,10 @@ class ESILConsoleTab(QWidget):
         self._step_btn.setObjectName("tool_button")
         input_row.addWidget(self._step_btn)
 
+        self._init_state_btn = QPushButton("Init VM")
+        self._init_state_btn.setObjectName("tool_button")
+        input_row.addWidget(self._init_state_btn)
+
         self._init_btn = QPushButton("Init Mem")
         self._init_btn.setObjectName("tool_button")
         input_row.addWidget(self._init_btn)
@@ -907,15 +911,29 @@ class ESILConsoleTab(QWidget):
         addr_row.addWidget(self._set_pc_btn)
         layout.addLayout(addr_row)
 
+        until_row = QHBoxLayout()
+        self._until_mode_combo = QComboBox()
+        self._until_mode_combo.addItems(["address", "expression"])
+        until_row.addWidget(self._until_mode_combo)
+        self._until_target_input = QLineEdit()
+        self._until_target_input.setPlaceholderText("0x401000 or ESIL expression...")
+        until_row.addWidget(self._until_target_input)
+        self._step_until_btn = QPushButton("Step Until")
+        self._step_until_btn.setObjectName("tool_button")
+        until_row.addWidget(self._step_until_btn)
+        layout.addLayout(until_row)
+
         self._bridge: CutterBridge | None = None
         self._esil_initialised: bool = False
         self._eval_btn.clicked.connect(self._on_eval)
         self._expr_input.returnPressed.connect(self._on_eval)
         self._step_btn.clicked.connect(self._on_step)
+        self._init_state_btn.clicked.connect(self._on_init_state)
         self._init_btn.clicked.connect(self._on_init_mem)
         self._emulate_btn.clicked.connect(self._on_emulate_function)
         self._set_pc_btn.clicked.connect(self._on_set_pc)
         self._addr_input.returnPressed.connect(self._on_emulate_function)
+        self._step_until_btn.clicked.connect(self._on_step_until)
 
     def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Store bridge reference, emit a welcome banner and auto-initialise ESIL memory.
@@ -1000,6 +1018,21 @@ class ESILConsoleTab(QWidget):
             level="info",
         )
 
+    def _on_init_state(self) -> None:
+        """Initialize ESIL VM state (registers/flags/PC), distinct from memory init."""
+        if self._bridge is None:
+            return
+        self._output.appendPlainText("> aei")
+        run_bridge_coroutine_logged(
+            self._bridge.esil_init_state(),
+            on_success=lambda _: self._output.appendPlainText("[ok] ESIL VM state initialized"),
+            on_error=lambda e: self._output.appendPlainText(f"[error] {e}"),
+            parent=self,
+            event="cutter_esil_init_state",
+            logger=_logger,
+            level="info",
+        )
+
     def _on_init_mem(self) -> None:
         """Initialize ESIL emulation memory."""
         if self._bridge is None:
@@ -1076,6 +1109,38 @@ class ESILConsoleTab(QWidget):
             logger=_logger,
             level="info",
             address=hex(address),
+        )
+
+    def _on_step_until(self) -> None:
+        """Step the ESIL emulator until the target address or ESIL expression from the until-row inputs is met."""
+        if self._bridge is None:
+            return
+        mode = self._until_mode_combo.currentText()
+        target_text = self._until_target_input.text().strip()
+        if not target_text:
+            return
+        coro: Coroutine[Any, Any, str]
+        if mode == "address":
+            try:
+                address = int(target_text, 16) if target_text.startswith("0x") else int(target_text)
+            except ValueError:
+                _logger.warning("cutter_esil_invalid_step_until_address", address_text=target_text)
+                self._output.appendPlainText(f"[error] Invalid address: {target_text}")
+                return
+            self._output.appendPlainText(f"> aesu 0x{address:X}")
+            coro = self._bridge.esil_step_until(address=address)
+        else:
+            self._output.appendPlainText(f"> aesue {target_text}")
+            coro = self._bridge.esil_step_until(expression=target_text)
+        run_bridge_coroutine_logged(
+            coro,
+            on_success=self._apply_result,
+            on_error=lambda e: self._output.appendPlainText(f"[error] {e}"),
+            parent=self,
+            event="cutter_esil_step_until",
+            logger=_logger,
+            level="info",
+            mode=mode,
         )
 
 
