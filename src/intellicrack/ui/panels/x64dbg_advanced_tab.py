@@ -1631,6 +1631,10 @@ class X64DbgAdvancedTab(QWidget):
         self._script_run_btn.setObjectName("tool_button")
         self._script_run_btn.clicked.connect(self._on_script_run)
         ctrl_row.addWidget(self._script_run_btn)
+        self._script_step_btn = QPushButton(self.tr("Step"))
+        self._script_step_btn.setObjectName("tool_button")
+        self._script_step_btn.clicked.connect(self._on_script_step)
+        ctrl_row.addWidget(self._script_step_btn)
         self._script_abort_btn = QPushButton(self.tr("Abort"))
         self._script_abort_btn.setObjectName("tool_button")
         self._script_abort_btn.clicked.connect(self._on_script_abort)
@@ -1693,6 +1697,21 @@ class X64DbgAdvancedTab(QWidget):
             on_error=lambda e: self._on_script_error("run", e, self._script_run_btn),
             parent=self,
             event="x64dbg_script_run",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_script_step(self) -> None:
+        """Single-step the currently loaded script by one line."""
+        if self._bridge is None:
+            return
+        self._script_step_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.script_step(),
+            on_success=lambda r: self._on_script_success("step", r, self._script_step_btn),
+            on_error=lambda e: self._on_script_error("step", e, self._script_step_btn),
+            parent=self,
+            event="x64dbg_script_step",
             logger=_logger,
             level="info",
         )
