@@ -1,8 +1,9 @@
 # Intellicrack Commands
 # Configure shell for Windows
 
-set unstable := true
-set windows-shell := ["pwsh.exe", "-NoLogo", "-NoProfile", "-Command"]
+set unstable
+[windows]
+set shell := ["pwsh.exe", "-NoLogo", "-NoProfile", "-Command"]
 
 pixi := "pixi run"
 src := "src/intellicrack"
@@ -67,6 +68,16 @@ build-intellicrack:
     {{ pixi }} pyinstaller --noconfirm --distpath dist/intellicrack --workpath build/intellicrack Intellicrack.spec
     @$folder = 'dist/intellicrack/Intellicrack/Intellicrack.exe'; $single = 'dist/intellicrack/Intellicrack.exe'; $exe = if (Test-Path $folder) { $folder } elseif (Test-Path $single) { $single } else { Write-Host 'Build produced no Intellicrack.exe' -ForegroundColor Red; exit 1 }; Write-Host "==> $exe" -ForegroundColor Green
 
+[doc('Build x64dbg bridge plugin from source and deploy to x64dbg plugins directory')]
+[group('build')]
+build-x64dbg-plugin:
+    @& scripts/install-x64dbg-plugin.ps1
+
+[doc('Delete x64dbg bridge plugin build artifacts (build*/ trees and bin/ binaries)')]
+[group('build')]
+clean-x64dbg-plugin:
+    @$dirs = @(Get-ChildItem 'src/x64dbg-plugin' -Directory -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'build*' -or $_.Name -eq 'bin' }); if (-not $dirs) { Write-Host '==> already clean: no build*/ or bin/ under src/x64dbg-plugin' -ForegroundColor DarkGray } else { foreach ($d in $dirs) { $mb = [math]::Round((Get-ChildItem $d.FullName -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum / 1MB, 1); Remove-Item $d.FullName -Recurse -Force; Write-Host "==> removed src/x64dbg-plugin/$($d.Name) ($mb MB)" -ForegroundColor Green } }
+
 [doc('Run the Hexbench quality gates (lint, types, docstrings, tests)')]
 [group('test')]
 test-hexbench:
@@ -125,11 +136,6 @@ install-x64dbg:
 [group('install')]
 install-cutter:
     @& scripts/install-cutter.ps1
-
-[doc('Build x64dbg bridge plugin from source and deploy to x64dbg plugins directory')]
-[group('install')]
-install-x64dbg-plugin:
-    @& scripts/install-x64dbg-plugin.ps1
 
 # Clean all build artifacts (Python, test caches)
 [group('cleanup')]
@@ -567,6 +573,15 @@ cmake-format *FLAGS:
 cmake-lint *FLAGS:
     @& scripts/run-lint-tool.ps1 -ToolName cmake-lint -DisplayName CmakeLint -Command "{{ pixi }} cmake-lint --suppress-decorations -c src/x64dbg-plugin/.cmake-format.yaml -- src/x64dbg-plugin/CMakeLists.txt" -TextMode -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}" -PassthruExe "{{ pixi }} cmake-lint -c src/x64dbg-plugin/.cmake-format.yaml -- src/x64dbg-plugin/CMakeLists.txt"
 
+# Run MegaLinter (Docker) on src/. Switches Docker Desktop to Linux containers,
+# runs mega-linter-runner (auto-removing its container after), saves findings to
+# reports/megalinter, then restores Docker Desktop to its original engine.
+# Refuses to run while a QEMU/Windows Sandbox VM is up -- see scripts/run-megalinter.ps1.
+[doc('Run MegaLinter (Docker) on src/ -- see scripts/run-megalinter.ps1 for the full lifecycle')]
+[group('lint')]
+megalint *FLAGS:
+    @& scripts/run-megalinter.ps1 -Flags "{{ FLAGS }}"
+
 [doc('Generate unified HTML lint dashboard from all tool findings')]
 [group('reports')]
 lint-dashboard:
@@ -606,6 +621,9 @@ alias powershell := psscriptanalyzer
 alias pwsh := psscriptanalyzer
 
 alias dashboard := lint-dashboard
+
+alias mega-lint := megalint
+alias mega_lint := megalint
 
 alias rustanalysis := rust-code-analysis
 alias rust-analysis := rust-code-analysis

@@ -37,6 +37,7 @@ from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.types import ProviderError, ToolDefinition
 from intellicrack.providers.grok import GrokProvider
 from intellicrack.providers.openrouter import OpenRouterProvider
+from intellicrack.providers.tool_names import to_wire_name
 
 
 def _real_bridge_tool_definitions() -> list[ToolDefinition]:
@@ -83,6 +84,11 @@ def _wire_function_names(wire_tools: list[dict[str, object]]) -> list[str]:
 _REAL_TOOL_DEFINITIONS: list[ToolDefinition] = _real_bridge_tool_definitions()
 _REAL_FLATTENED_FUNCTION_COUNT: int = sum(len(definition.functions) for definition in _REAL_TOOL_DEFINITIONS)
 
+assert GrokProvider.TOOL_COUNT_CAP is not None
+assert OpenRouterProvider.TOOL_COUNT_CAP is not None
+_GROK_CAP: int = GrokProvider.TOOL_COUNT_CAP
+_OPENROUTER_CAP: int = OpenRouterProvider.TOOL_COUNT_CAP
+
 
 def test_real_bridge_surface_exceeds_both_provider_caps() -> None:
     """Guard against the suite becoming vacuous if the bridge surface shrinks.
@@ -93,13 +99,13 @@ def test_real_bridge_surface_exceeds_both_provider_caps() -> None:
     assertions below would no longer be exercised and would pass trivially
     -- this test makes that condition loud and explicit instead of silent.
     """
-    assert _REAL_FLATTENED_FUNCTION_COUNT > GrokProvider.TOOL_COUNT_CAP, (
+    assert _REAL_FLATTENED_FUNCTION_COUNT > _GROK_CAP, (
         f"real flattened tool surface ({_REAL_FLATTENED_FUNCTION_COUNT}) no longer exceeds "
-        f"the Grok cap ({GrokProvider.TOOL_COUNT_CAP}); the trimming tests below would be vacuous"
+        f"the Grok cap ({_GROK_CAP}); the trimming tests below would be vacuous"
     )
-    assert _REAL_FLATTENED_FUNCTION_COUNT > OpenRouterProvider.TOOL_COUNT_CAP, (
+    assert _REAL_FLATTENED_FUNCTION_COUNT > _OPENROUTER_CAP, (
         f"real flattened tool surface ({_REAL_FLATTENED_FUNCTION_COUNT}) no longer exceeds "
-        f"the OpenRouter cap ({OpenRouterProvider.TOOL_COUNT_CAP}); the trimming tests below would be vacuous"
+        f"the OpenRouter cap ({_OPENROUTER_CAP}); the trimming tests below would be vacuous"
     )
 
 
@@ -118,7 +124,7 @@ def test_grok_conversion_path_trims_real_tool_surface_to_cap() -> None:
 
     wire_tools = provider.convert_tools_to_provider_format(_REAL_TOOL_DEFINITIONS)
 
-    assert len(wire_tools) <= GrokProvider.TOOL_COUNT_CAP
+    assert len(wire_tools) <= _GROK_CAP
     assert len(wire_tools) > 0
 
 
@@ -135,7 +141,7 @@ def test_openrouter_conversion_path_trims_real_tool_surface_to_cap() -> None:
 
     wire_tools = provider.convert_tools_to_provider_format(_REAL_TOOL_DEFINITIONS)
 
-    assert len(wire_tools) <= OpenRouterProvider.TOOL_COUNT_CAP
+    assert len(wire_tools) <= _OPENROUTER_CAP
     assert len(wire_tools) > 0
 
 
@@ -153,11 +159,13 @@ def test_grok_wire_payload_keeps_leading_functions_in_order() -> None:
     wire_tools = provider.convert_tools_to_provider_format(_REAL_TOOL_DEFINITIONS)
     wire_names = _wire_function_names(wire_tools)
 
-    all_function_names = [function.name for definition in _REAL_TOOL_DEFINITIONS for function in definition.functions]
+    all_function_names = [
+        to_wire_name(function.name) for definition in _REAL_TOOL_DEFINITIONS for function in definition.functions
+    ]
     expected_prefix = all_function_names[: len(wire_names)]
 
     assert wire_names == expected_prefix
-    assert len(wire_names) == GrokProvider.TOOL_COUNT_CAP
+    assert len(wire_names) == _GROK_CAP
 
 
 def test_wire_payload_within_cap_includes_every_function() -> None:
@@ -169,12 +177,12 @@ def test_wire_payload_within_cap_includes_every_function() -> None:
     """
     single_bridge = [CutterBridge().tool_definition]
     function_count = len(single_bridge[0].functions)
-    assert function_count < GrokProvider.TOOL_COUNT_CAP
+    assert function_count < _GROK_CAP
 
     provider = GrokProvider()
     wire_tools = provider.convert_tools_to_provider_format(single_bridge)
 
-    expected_names = [function.name for function in single_bridge[0].functions]
+    expected_names = [to_wire_name(function.name) for function in single_bridge[0].functions]
     assert _wire_function_names(wire_tools) == expected_names
 
 

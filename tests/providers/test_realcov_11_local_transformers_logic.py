@@ -27,6 +27,7 @@ from intellicrack.core.types import (
     ToolParameter,
 )
 from intellicrack.providers.local_transformers import LocalTransformersProvider
+from intellicrack.providers.tool_names import to_wire_name
 from intellicrack.providers.xpu_utils import is_xpu_available
 
 
@@ -345,7 +346,7 @@ class TestBuildChatMessages:
             [_binary_tool()],
         )
         assert built[0]["role"] == "system"
-        assert "binary.get_file_size" in built[0]["content"]
+        assert to_wire_name("binary.get_file_size") in built[0]["content"]
         assert '"tool_call"' in built[0]["content"]
         assert built[-1] == {"role": "user", "content": "Inspect kernel32.dll"}
 

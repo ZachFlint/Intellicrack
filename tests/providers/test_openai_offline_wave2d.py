@@ -22,7 +22,7 @@ quota, transport, passthrough, unrelated propagation).  It is omitted here
 to avoid duplication.
 
 All tests are fully offline.  The seam is a real
-``httpx.AsyncBaseTransport`` subclass that feeds pre-built SSE bytes
+``httpx2.AsyncBaseTransport`` subclass that feeds pre-built SSE bytes
 into the real ``openai.AsyncOpenAI`` SDK so every deserialisation and
 parsing layer executes without substitution.  No ``MagicMock`` or
 ``AsyncMock`` is used anywhere in this module.
@@ -34,7 +34,7 @@ import json
 import time
 from typing import TYPE_CHECKING, Any, override
 
-import httpx
+import httpx2
 import openai
 import pytest
 
@@ -58,11 +58,11 @@ _is_chat_model: Any = getattr(OpenAIProvider, _IS_CHAT_MODEL_ATTR)
 _infer_context_window: Any = getattr(OpenAIProvider, _INFER_CTX_ATTR)
 
 
-def _build_sdk_client(transport: httpx.AsyncBaseTransport) -> openai.AsyncOpenAI:
+def _build_sdk_client(transport: httpx2.AsyncBaseTransport) -> openai.AsyncOpenAI:
     """Construct a real ``openai.AsyncOpenAI`` backed by a stub transport.
 
     Args:
-        transport: The ``httpx.AsyncBaseTransport`` that intercepts every
+        transport: The ``httpx2.AsyncBaseTransport`` that intercepts every
             HTTP request the SDK would otherwise send to the network.
 
     Returns:
@@ -71,11 +71,11 @@ def _build_sdk_client(transport: httpx.AsyncBaseTransport) -> openai.AsyncOpenAI
     """
     return openai.AsyncOpenAI(
         api_key="offline-test-key",
-        http_client=httpx.AsyncClient(transport=transport),
+        http_client=httpx2.AsyncClient(transport=transport),
     )
 
 
-def _make_provider_with_client(transport: httpx.AsyncBaseTransport) -> OpenAIProvider:
+def _make_provider_with_client(transport: httpx2.AsyncBaseTransport) -> OpenAIProvider:
     """Return a pre-connected ``OpenAIProvider`` backed by a stub transport.
 
     Args:
@@ -250,7 +250,7 @@ def _finish_chunk(
     }
 
 
-class _StaticSSETransport(httpx.AsyncBaseTransport):
+class _StaticSSETransport(httpx2.AsyncBaseTransport):
     """Replay a pre-built SSE body for every incoming request."""
 
     def __init__(self, body: bytes) -> None:
@@ -267,19 +267,19 @@ class _StaticSSETransport(httpx.AsyncBaseTransport):
         self.last_request_body: dict[str, object] = {}
 
     @override
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         """Capture the request body and replay the pre-built SSE bytes.
 
         Args:
             request: The inbound HTTP request from the SDK.
 
         Returns:
-            httpx.Response: A 200 response with the fixed SSE body and
+            httpx2.Response: A 200 response with the fixed SSE body and
             ``content-type: text/event-stream``.
         """
         if request.content:
             self.last_request_body = json.loads(request.content)
-        return httpx.Response(
+        return httpx2.Response(
             200,
             content=self.body,
             headers={"content-type": "text/event-stream"},
@@ -469,7 +469,7 @@ class TestIterOpenAIStreamTextAccumulation:
     """Gate: ``_iter_openai_stream`` accumulates text delta chunks correctly.
 
     Drives the real method through a real ``openai.AsyncOpenAI`` client
-    backed by a stub ``httpx.AsyncBaseTransport`` that returns pre-built
+    backed by a stub ``httpx2.AsyncBaseTransport`` that returns pre-built
     SSE frames.  Asserts the exact list of text chunks yielded and the
     exact ``UsageInfo`` stored on the provider.
     """
@@ -680,15 +680,15 @@ class TestIterOpenAIStreamToolCallAccumulation:
             _finish_chunk(),
         ])
 
-        class _CancelOnFirstRequest(httpx.AsyncBaseTransport):
+        class _CancelOnFirstRequest(httpx2.AsyncBaseTransport):
             def __init__(self, inner_body: bytes, provider_ref: OpenAIProvider) -> None:
                 self._body = inner_body
                 self._provider = provider_ref
 
             @override
-            async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+            async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
                 setattr(self._provider, _CANCEL_REQUESTED_ATTR, True)
-                return httpx.Response(
+                return httpx2.Response(
                     200,
                     content=self._body,
                     headers={"content-type": "text/event-stream"},
@@ -699,7 +699,7 @@ class TestIterOpenAIStreamToolCallAccumulation:
         provider.connected = True
         provider.client = openai.AsyncOpenAI(
             api_key="offline-test-key",
-            http_client=httpx.AsyncClient(transport=_CancelOnFirstRequest(body, provider)),
+            http_client=httpx2.AsyncClient(transport=_CancelOnFirstRequest(body, provider)),
         )
 
         chunks = await _collect_stream(provider)
@@ -710,7 +710,7 @@ class TestOpenOpenAIStreamParamDispatch:
     """Gate: ``_open_openai_stream`` routes parameters correctly to the HTTP layer.
 
     The real ``openai.AsyncOpenAI`` client serialises the request arguments
-    into a JSON body that the ``httpx.AsyncBaseTransport`` intercepts.
+    into a JSON body that the ``httpx2.AsyncBaseTransport`` intercepts.
     Asserting against the captured body verifies which branch of the 16-path
     dispatch tree was taken without mocking the function under test.
     """

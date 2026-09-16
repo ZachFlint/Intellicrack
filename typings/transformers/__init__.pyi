@@ -35,6 +35,24 @@ class BatchEncoding:
     def __getitem__(self, key: str) -> torch.Tensor: ...
     def get(self, key: str, default: torch.Tensor | None = ...) -> torch.Tensor | None: ...
 
+class PretrainedConfig:
+    def __init__(self, **kwargs: object) -> None: ...
+
+class LlamaConfig(PretrainedConfig):
+    def __init__(
+        self,
+        *,
+        vocab_size: int = ...,
+        hidden_size: int = ...,
+        intermediate_size: int = ...,
+        num_hidden_layers: int = ...,
+        num_attention_heads: int = ...,
+        num_key_value_heads: int | None = ...,
+        max_position_embeddings: int = ...,
+        tie_word_embeddings: bool = ...,
+        **kwargs: object,
+    ) -> None: ...
+
 class PreTrainedModel:
     def generate(
         self,
@@ -57,6 +75,18 @@ class PreTrainedModel:
     ) -> Any: ...
     def eval(self) -> PreTrainedModel: ...
     def to(self, device: torch.device | str, **kwargs: object) -> PreTrainedModel: ...
+    def state_dict(self) -> dict[str, torch.Tensor]: ...
+    def save_pretrained(
+        self,
+        save_directory: str,
+        *,
+        max_shard_size: int | str = ...,
+        safe_serialization: bool = ...,
+        **kwargs: object,
+    ) -> None: ...
+
+class LlamaForCausalLM(PreTrainedModel):
+    def __init__(self, config: LlamaConfig) -> None: ...
 
 class AutoModelForCausalLM:
     @staticmethod

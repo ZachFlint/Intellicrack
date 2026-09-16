@@ -246,6 +246,7 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         # which is not mounted into the container, so the dependency security
         # floor gates run on the host.
         (_SECURITY_FLOORS, "test_pyproject_declares_pyasn1_runtime_security_floor"),
+        (_SECURITY_FLOORS, "test_pyproject_declares_httpx_stack_runtime_security_floor"),
         (_SECURITY_FLOORS, "test_pyproject_declares_gitpython_dev_security_floor"),
         (_SECURITY_FLOORS, "test_pixi_lock_resolves_patched_versions"),
         (_SECURITY_FLOORS, "test_requirements_txt_pins_patched_versions"),

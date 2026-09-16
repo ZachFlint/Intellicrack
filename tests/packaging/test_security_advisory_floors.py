@@ -5,20 +5,30 @@
 
 r"""Falsifiable gates for the dependency security floors that clear Dependabot.
 
-Two transitive PyPI distributions carried Dependabot advisories:
+Several PyPI distributions carried Dependabot advisories:
 
 * **GitPython** (pulled by ``bandit``/``wily``/``pygount`` in the dev feature)
-  had a run of git-option-injection, config-injection and environment-variable
-  exfiltration advisories, all fixed by ``3.1.58``; and
+  had a long run of git-option-injection, config-injection and environment-variable
+  exfiltration advisories; the most recent batch (including the critical
+  GitConfigParser directive-corruption RCE, GHSA-284h-m62q-gf8w) is fixed only in
+  ``3.1.59``, and the dev pin sits conservatively at ``>=3.1.62`` above that floor;
 * **pyasn1** (shipped at runtime via ``google-genai -> google-auth ->
   pyasn1-modules -> pyasn1``) had three decoder / OID / REAL denial-of-service
   advisories (CVE-2026-59884 / CVE-2026-59885 / CVE-2026-59886), all fixed by
-  ``0.6.4``.
+  ``0.6.4``; and
+* **httpx2** and its transport **httpcore2** (shipped at runtime via
+  ``anthropic``/``openai``/``mcp``) had a run of advisories -- a SOCKS-proxied
+  WebSocket TLS bypass, quadratic SSE line-buffering DoS, multipart header
+  injection, conflicting ``Content-Length``/``Transfer-Encoding``, and streaming
+  decompression amplification (CVE-2026-84378 through CVE-2026-84382). ``httpx2``
+  is fully patched by ``2.12.0`` and ``httpcore2`` clears its half of
+  CVE-2026-84381 by ``2.10.0``.
 
 The fix expresses a minimum-version floor for each in ``pyproject.toml`` --
-``pyasn1`` in the default (runtime) ``[tool.pixi].pypi-dependencies`` and
-``gitpython`` in ``[tool.pixi.feature.dev.pypi-dependencies]`` so it stays out of
-the shipped runtime environment. These gates hold that fix at three layers:
+``pyasn1``, ``httpx2`` and ``httpcore2`` in the default (runtime)
+``[tool.pixi].pypi-dependencies`` and ``gitpython`` in
+``[tool.pixi.feature.dev.pypi-dependencies]`` so it stays out of the shipped
+runtime environment. These gates hold that fix at three layers:
 
 * the declared specifier in ``pyproject.toml`` must admit the patched version
   and reject the representative still-vulnerable version;
@@ -55,9 +65,13 @@ _REQUIREMENTS: Final[Path] = _REPO_ROOT / "requirements.txt"
 # by every layer; the vulnerable sample must be rejected by the declared spec.
 _GITPYTHON: Final[str] = str(canonicalize_name("GitPython"))
 _PYASN1: Final[str] = str(canonicalize_name("pyasn1"))
+_HTTPX2: Final[str] = str(canonicalize_name("httpx2"))
+_HTTPCORE2: Final[str] = str(canonicalize_name("httpcore2"))
 _FLOORS: Final[dict[str, tuple[Version, Version]]] = {
-    _GITPYTHON: (Version("3.1.58"), Version("3.1.50")),
+    _GITPYTHON: (Version("3.1.59"), Version("3.1.58")),
     _PYASN1: (Version("0.6.4"), Version("0.6.3")),
+    _HTTPX2: (Version("2.12.0"), Version("2.9.1")),
+    _HTTPCORE2: (Version("2.10.0"), Version("2.9.1")),
 }
 
 _REQUIREMENT_LINE: Final[re.Pattern[str]] = re.compile(r"^\s*([A-Za-z0-9._-]+)\s*==\s*([^\s;#]+)")
@@ -181,6 +195,23 @@ def test_pyproject_declares_pyasn1_runtime_security_floor() -> None:
     assert not spec.contains(vulnerable), f"pyasn1 spec {spec} still admits the vulnerable {vulnerable} (CVE-2026-59884/59885/59886)"
 
 
+def test_pyproject_declares_httpx_stack_runtime_security_floor() -> None:
+    """httpx2 and httpcore2 must carry runtime floors that reject the vulnerable releases.
+
+    Both pins live in the default-feature ``[tool.pixi].pypi-dependencies`` so the
+    patched HTTP stack ships in the runtime environment used by the anthropic,
+    openai and mcp clients. Weakening or dropping either would let the resolver
+    fall back to a version covered by the WebSocket-TLS-bypass, SSE-DoS, header
+    injection or decompression-amplification advisories.
+    """
+    for dist, cves in ((_HTTPX2, "CVE-2026-84378..84382"), (_HTTPCORE2, "CVE-2026-84381")):
+        floor, vulnerable = _FLOORS[dist]
+        spec = _declared_specifier(dist, "tool", "pixi", "pypi-dependencies")
+        assert str(spec), f"{dist} is not declared in [tool.pixi].pypi-dependencies"
+        assert spec.contains(floor), f"{dist} spec {spec} excludes the patched floor {floor}"
+        assert not spec.contains(vulnerable), f"{dist} spec {spec} still admits the vulnerable {vulnerable} ({cves})"
+
+
 def test_pyproject_declares_gitpython_dev_security_floor() -> None:
     """GitPython must carry a dev-feature floor that rejects the vulnerable range.
 
@@ -188,12 +219,17 @@ def test_pyproject_declares_gitpython_dev_security_floor() -> None:
     patched GitPython in the dev toolchain that pulls it (bandit/wily/pygount)
     without dragging it into the shipped runtime environment. It must also not be
     declared in the default-feature table, which would leak it into the runtime.
+
+    The shipped pin is deliberately stricter than the advisory first-patched
+    version, so this asserts the declared floor is *at least* the advisory floor
+    (by rejecting the last vulnerable release) rather than admitting that exact
+    version, and that the pin still admits ongoing 3.1.x patch releases.
     """
     floor, vulnerable = _FLOORS[_GITPYTHON]
     spec = _declared_specifier(_GITPYTHON, "tool", "pixi", "feature", "dev", "pypi-dependencies")
     assert str(spec), "gitpython is not declared in [tool.pixi.feature.dev.pypi-dependencies]"
-    assert spec.contains(floor), f"gitpython spec {spec} excludes the patched floor {floor}"
-    assert not spec.contains(vulnerable), f"gitpython spec {spec} still admits the vulnerable {vulnerable}"
+    assert not spec.contains(vulnerable), f"gitpython spec {spec} still admits the vulnerable {vulnerable} (fixed in {floor})"
+    assert spec.contains(Version("3.1.99")), f"gitpython spec {spec} admits no ongoing 3.1.x patched release"
     runtime_spec = _declared_specifier(_GITPYTHON, "tool", "pixi", "pypi-dependencies")
     assert not str(runtime_spec), "gitpython is declared in the default-feature pypi-dependencies, leaking it into the runtime env"
 

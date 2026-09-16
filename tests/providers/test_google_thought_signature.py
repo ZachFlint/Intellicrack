@@ -37,6 +37,7 @@ from google.genai.types import (
 
 from intellicrack.core.types import Message, ToolCall
 from intellicrack.providers.google import GoogleProvider
+from intellicrack.providers.tool_names import to_wire_name
 
 
 _parse_response: Any = getattr(GoogleProvider, "_parse_response")
@@ -159,7 +160,7 @@ class TestThoughtSignatureRoundTrip:
         assert fc_part["thought_signature"] == _RAW_SIGNATURE
 
         fc_dict = cast("dict[str, object]", fc_part["function_call"])
-        assert fc_dict["name"] == "hex_editor.open_file"
+        assert fc_dict["name"] == to_wire_name("hex_editor.open_file")
         assert fc_dict["args"] == {"path": "/bin/target"}
 
     def test_missing_signature_omits_key_on_rebuild(self) -> None:

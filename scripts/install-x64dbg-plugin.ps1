@@ -10,6 +10,7 @@ $buildDir32 = "$pluginDir/build_x32"
 $binDir = "$pluginDir/bin"
 $dest32 = "tools/x64dbg/release/x32/plugins"
 $dest64 = "tools/x64dbg/release/x64/plugins"
+$Generator = "Visual Studio 18 2026"
 
 if (!(Test-Path "$pluginDir/CMakeLists.txt")) {
     Write-Fail "Plugin source not found at $pluginDir/CMakeLists.txt"
@@ -64,37 +65,56 @@ if ($needBuild) {
     }
 }
 
-if ($cmakePath -and !$have64) {
-    Write-Step 'PLUGIN' "Building x64 plugin..."
+function Invoke-PluginBuild {
+    param(
+        [Parameter(Mandatory)][string]$CMake,
+        [Parameter(Mandatory)][string]$BuildDir,
+        [Parameter(Mandatory)][string[]]$ExtraArgs
+    )
+
+    if (!(Test-Path $BuildDir)) {
+        New-Item -ItemType Directory -Path $BuildDir -Force | Out-Null
+    } else {
+        $cacheFile = Join-Path $BuildDir 'CMakeCache.txt'
+        if (Test-Path $cacheFile) {
+            $match = Select-String -Path $cacheFile -Pattern '^CMAKE_GENERATOR:INTERNAL=(.+)$' | Select-Object -First 1
+            $recorded = if ($match) { $match.Matches[0].Groups[1].Value.Trim() } else { '' }
+            if ($recorded -and $recorded -ne $script:Generator) {
+                Write-Step 'PLUGIN' "Discarding stale '$recorded' cache in $BuildDir to reconfigure with '$script:Generator'"
+                Remove-Item $cacheFile -Force
+                Remove-Item (Join-Path $BuildDir 'CMakeFiles') -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+
+    Push-Location $BuildDir
     try {
-        if (!(Test-Path $buildDir)) { New-Item -ItemType Directory -Path $buildDir -Force | Out-Null }
-        Push-Location $buildDir
-        & $cmakePath .. -G "Visual Studio 17 2022" -A x64 2>&1 | ForEach-Object { Write-Host "  $_" }
+        & $CMake .. -G $script:Generator @ExtraArgs 2>&1 | ForEach-Object { Write-Host "  $_" }
         if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
-        & $cmakePath --build . --config Release 2>&1 | ForEach-Object { Write-Host "  $_" }
+        & $CMake --build . --config Release 2>&1 | ForEach-Object { Write-Host "  $_" }
         if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
+    } finally {
         Pop-Location
+    }
+}
+
+if ($cmakePath -and !$have64) {
+    Write-Step 'PLUGIN' "Building x64 plugin ($Generator)..."
+    try {
+        Invoke-PluginBuild -CMake $cmakePath -BuildDir $buildDir -ExtraArgs @('-A', 'x64')
         Write-Success "x64 plugin built"
     } catch {
-        Pop-Location
         Write-Fail "x64 build failed: $_"
         exit 1
     }
 }
 
 if ($cmakePath -and !$have32) {
-    Write-Step 'PLUGIN' "Building x32 plugin..."
+    Write-Step 'PLUGIN' "Building x32 plugin ($Generator)..."
     try {
-        if (!(Test-Path $buildDir32)) { New-Item -ItemType Directory -Path $buildDir32 -Force | Out-Null }
-        Push-Location $buildDir32
-        & $cmakePath .. -G "Visual Studio 17 2022" -A Win32 -DBUILD_X64=OFF 2>&1 | ForEach-Object { Write-Host "  $_" }
-        if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
-        & $cmakePath --build . --config Release 2>&1 | ForEach-Object { Write-Host "  $_" }
-        if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
-        Pop-Location
+        Invoke-PluginBuild -CMake $cmakePath -BuildDir $buildDir32 -ExtraArgs @('-A', 'Win32', '-DBUILD_X64=OFF')
         Write-Success "x32 plugin built"
     } catch {
-        Pop-Location
         Write-Skip "x32 build failed (optional): $_"
     }
 }

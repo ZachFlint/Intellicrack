@@ -48,7 +48,9 @@ from intellicrack.providers.model_loader import (
     get_global_model_cache,
     load_model_for_cpu,
     load_model_for_xpu,
+    validate_local_checkpoint,
 )
+from intellicrack.providers.tool_names import from_wire_name, to_wire_name
 from intellicrack.providers.xpu_utils import (
     check_windows_requirements,
     clear_xpu_cache,
@@ -976,6 +978,8 @@ class LocalTransformersProvider(LLMProviderBase):
             self._logger.error("cuda_load_transformers_unavailable", model_id=config.model_id)
             raise ImportError(_MSG_TRANSFORMERS_REQUIRED)
 
+        validate_local_checkpoint(config.model_id)
+
         cache = self._model_cache
         dtype_str = "float16" if config.dtype == "auto" else config.dtype
         cached = cache.get(config.model_id, dtype_str, "cuda")
@@ -1334,7 +1338,7 @@ class LocalTransformersProvider(LLMProviderBase):
                     {
                         "id": tc.id,
                         "function": {
-                            "name": tc.function_name,
+                            "name": to_wire_name(tc.function_name),
                             "arguments": tc.arguments,
                         },
                     }
@@ -1583,12 +1587,13 @@ class LocalTransformersProvider(LLMProviderBase):
         """
         data: dict[str, Any] = json.loads(json_str)
         tool_call_data: dict[str, Any] = data.get("tool_call", {})
-        name: str = str(tool_call_data.get("name", ""))
+        raw_name: str = str(tool_call_data.get("name", ""))
         raw_arguments: object = tool_call_data.get("arguments", {})
         parsed_arguments: dict[str, Any] = cast("dict[str, Any]", raw_arguments) if isinstance(raw_arguments, dict) else {}
 
-        if not name:
+        if not raw_name:
             return None
+        name = from_wire_name(raw_name)
         return [
             ToolCall(
                 id=f"call_{uuid.uuid4().hex}",

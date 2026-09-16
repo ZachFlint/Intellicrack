@@ -11,13 +11,17 @@ inference.
 from __future__ import annotations
 
 import gc
+import json
+import os
 import threading
 import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from pathlib import Path, PurePosixPath, PureWindowsPath
+from typing import TYPE_CHECKING, Final, Literal, NoReturn, cast
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.types import UnsafeCheckpointError
 
 
 try:
@@ -53,6 +57,129 @@ _ERR_MISSING_DEPS = "transformers and torch are required for model loading"
 _ERR_XPU_NOT_AVAILABLE = "XPU is not available. Use load_model_for_cpu instead."
 _ERR_LOAD_XPU_FAILED = "Failed to load model %s on XPU: %s"
 _ERR_LOAD_CPU_FAILED = "Failed to load model %s on CPU: %s"
+
+# Every sharded-checkpoint index file transformers recognises for a local model
+# folder. A checkpoint may carry the safetensors or the PyTorch pair, with an
+# optional dtype/variant suffix ("model.fp16.safetensors.index.json"), so the
+# folder is scanned for any file whose name ends with one of these suffixes.
+_SHARD_INDEX_SUFFIXES: Final[tuple[str, ...]] = (
+    ".safetensors.index.json",
+    ".bin.index.json",
+)
+_WEIGHT_MAP_KEY: Final[str] = "weight_map"
+
+
+def _raise_unsafe_checkpoint(
+    checkpoint_dir: str,
+    index_name: str,
+    entry: object,
+    reason: str,
+    cause: BaseException | None = None,
+) -> NoReturn:
+    """Log and raise :class:`UnsafeCheckpointError` for a rejected shard entry.
+
+    Args:
+        checkpoint_dir: The local checkpoint directory under inspection.
+        index_name: File name of the shard index the entry came from.
+        entry: The offending ``weight_map`` value.
+        reason: Why the entry was rejected.
+        cause: The lower-level exception that triggered the rejection, if any.
+
+    Raises:
+        UnsafeCheckpointError: Always; carries the checkpoint and offending entry.
+    """
+    printable = entry if isinstance(entry, str) else repr(entry)
+    message = f"Refusing to load checkpoint {checkpoint_dir!r}: shard index {index_name!r} maps a weight to {printable!r} which {reason}."
+    _logger.warning(
+        "unsafe_checkpoint_shard_rejected",
+        checkpoint_dir=checkpoint_dir,
+        index_name=index_name,
+        offending_entry=printable,
+        reason=reason,
+    )
+    if cause is not None:
+        raise UnsafeCheckpointError(message, checkpoint_dir=checkpoint_dir, offending_entry=printable) from cause
+    raise UnsafeCheckpointError(message, checkpoint_dir=checkpoint_dir, offending_entry=printable)
+
+
+def _validate_shard_entry(folder_norm: str, index_name: str, entry: object) -> None:
+    """Validate a single ``weight_map`` shard name against its checkpoint folder.
+
+    A shard name is safe only when it is a relative path that, once joined onto
+    the checkpoint folder and normalised, still resolves inside that folder and
+    does not name a Windows reserved device. Absolute paths, drive-relative or
+    UNC paths, parent-directory traversal, and reserved device names such as CON,
+    NUL, COM1 or a named pipe are each rejected on their own.
+
+    Args:
+        folder_norm: The normalised absolute checkpoint folder path.
+        index_name: File name of the shard index the entry came from.
+        entry: A single ``weight_map`` value from the index.
+    """
+    if not isinstance(entry, str) or not entry.strip():
+        _raise_unsafe_checkpoint(folder_norm, index_name, entry, "is not a usable relative file name")
+    if PureWindowsPath(entry).drive or PureWindowsPath(entry).root or PurePosixPath(entry).is_absolute():
+        _raise_unsafe_checkpoint(folder_norm, index_name, entry, "is an absolute, drive-relative or UNC path")
+    joined = str(Path(folder_norm) / entry)
+    resolved = os.path.normpath(joined)
+    if resolved != folder_norm and not resolved.startswith(folder_norm + os.sep):
+        _raise_unsafe_checkpoint(folder_norm, index_name, entry, "points outside the checkpoint folder")
+    if os.path.isreserved(joined):
+        _raise_unsafe_checkpoint(folder_norm, index_name, entry, "names a Windows reserved device")
+
+
+def _validate_shard_index(folder_norm: str, index_path: Path) -> None:
+    """Validate every ``weight_map`` entry of one shard-index file.
+
+    Args:
+        folder_norm: The normalised absolute checkpoint folder path.
+        index_path: Path to the shard-index JSON file to inspect.
+    """
+    try:
+        document: object = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, UnicodeDecodeError) as exc:
+        _raise_unsafe_checkpoint(folder_norm, index_path.name, str(exc), "could not be parsed as a shard index", cause=exc)
+    if not isinstance(document, dict):
+        return
+    weight_map: object = cast("dict[str, object]", document).get(_WEIGHT_MAP_KEY)
+    if not isinstance(weight_map, dict):
+        return
+    for entry in set(cast("dict[str, object]", weight_map).values()):
+        _validate_shard_entry(folder_norm, index_path.name, entry)
+
+
+def validate_local_checkpoint(model_id: str) -> None:
+    """Reject a local checkpoint whose sharded-weight index escapes its folder.
+
+    ``transformers`` resolves the shard file names in a sharded checkpoint's
+    ``*.index.json`` by joining each ``weight_map`` value directly onto the
+    checkpoint folder, so a hostile checkpoint can point a shard at ``../`` paths,
+    absolute paths, or a named pipe and have the loader read arbitrary files or
+    block indefinitely (CVE-2026-69112, unreachable in ``accelerate`` here but
+    reachable through the transformers local-folder loader). This runs before any
+    ``from_pretrained`` call and validates every shard entry of every index found
+    in a local checkpoint directory.
+
+    Hugging Face Hub repository ids (anything that is not an existing local
+    directory) are left untouched: the SDK resolves and caches those itself.
+
+    Args:
+        model_id: The configured model identifier or local checkpoint path.
+    """
+    if not model_id:
+        return
+    folder = Path(model_id)
+    if not folder.is_dir():
+        return
+    folder_norm = os.path.normpath(folder.absolute())
+    try:
+        index_files = sorted(child for child in Path(folder_norm).iterdir() if child.name.endswith(_SHARD_INDEX_SUFFIXES) and child.is_file())
+    except OSError as exc:
+        _logger.warning("checkpoint_dir_listing_failed", checkpoint_dir=folder_norm, error=str(exc))
+        return
+    for index_path in index_files:
+        _validate_shard_index(folder_norm, index_path)
+
 
 DtypeOption = Literal["auto", "float32", "float16", "bfloat16", "int8", "int4"]
 DeviceType = Literal["xpu", "cpu", "auto"]
@@ -479,6 +606,8 @@ def load_model_for_xpu(
         _logger.error("xpu_load_missing_dependencies", model_id=config.model_id)
         raise ImportError(_ERR_MISSING_DEPS)
 
+    validate_local_checkpoint(config.model_id)
+
     if not is_xpu_available():
         _logger.error("xpu_load_xpu_unavailable", model_id=config.model_id)
         raise RuntimeError(_ERR_XPU_NOT_AVAILABLE)
@@ -630,6 +759,8 @@ def load_model_for_cpu(
     if _torch is None or AutoModelForCausalLM is None or AutoTokenizer is None:
         _logger.error("cpu_load_missing_dependencies", model_id=config.model_id)
         raise ImportError(_ERR_MISSING_DEPS)
+
+    validate_local_checkpoint(config.model_id)
 
     dtype_str = config.dtype
 

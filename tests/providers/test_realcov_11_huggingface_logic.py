@@ -48,6 +48,7 @@ from intellicrack.core.types import (
 )
 from intellicrack.providers import huggingface
 from intellicrack.providers.huggingface import HuggingFaceProvider
+from intellicrack.providers.tool_names import to_wire_name
 
 
 if TYPE_CHECKING:
@@ -297,7 +298,7 @@ class TestConvertToolChoice:
         """SPECIFIC mode yields a tool-choice object naming the function."""
         result = _convert_tool_choice(ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name="binary.get_file_size"))
         assert isinstance(result, ChatCompletionInputToolChoiceClass)
-        assert result.function.name == "binary.get_file_size"
+        assert result.function.name == to_wire_name("binary.get_file_size")
 
 
 class TestParseMessageToolCalls:

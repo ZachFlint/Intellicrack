@@ -112,7 +112,14 @@ class OpenAIProvider(LLMProviderBase):
     """OpenAI GPT API provider implementation.
 
     Provides integration with OpenAI's GPT models including support for tool/function calling and streaming responses.
+
+    Attributes:
+        TOOL_COUNT_CAP: Maximum number of flattened tool functions OpenAI
+            accepts in a single function-calling request. OpenAI enforces
+            this as a hard limit, rejecting requests that exceed it.
     """
+
+    TOOL_COUNT_CAP: int | None = 128
 
     def __init__(self) -> None:
         """Initialize the OpenAIProvider instance."""
@@ -135,7 +142,9 @@ class OpenAIProvider(LLMProviderBase):
         """Connect to OpenAI API.
 
         Args:
-            credentials: Must contain api_key.
+            credentials: Must contain api_key. ``api_base``, ``organization_id``
+                and ``project_id`` are forwarded to the SDK client, and
+                ``timeout`` replaces the SDK's default request timeout when set.
 
         Raises:
             AuthenticationError: If API key is invalid.
@@ -150,6 +159,7 @@ class OpenAIProvider(LLMProviderBase):
                 base_url=credentials.api_base,
                 organization=credentials.organization_id,
                 project=credentials.project_id,
+                timeout=credentials.timeout if credentials.timeout is not None else openai.NOT_GIVEN,
             )
             await self.client.models.list()
         except openai.AuthenticationError as e:
@@ -997,4 +1007,5 @@ class OpenAIProvider(LLMProviderBase):
         Returns:
             list[dict[str, object]]: List of tools in OpenAI's format.
         """
-        return self._convert_tools_to_openai_format(tools)
+        capped_tools = self._enforce_tool_count_cap(tools)
+        return self._convert_tools_to_openai_format(capped_tools)
