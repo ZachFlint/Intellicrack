@@ -56,6 +56,7 @@ from intellicrack.providers.huggingface import HuggingFaceProvider
 from intellicrack.providers.ollama import OllamaProvider
 from intellicrack.providers.openai import OpenAIProvider
 from intellicrack.providers.openrouter import OpenRouterProvider
+from intellicrack.providers.tool_names import to_wire_name
 
 
 if TYPE_CHECKING:
@@ -988,7 +989,7 @@ class TestHuggingFaceE2EChat:
         function_schema: object = first_tool.get("function")
         assert isinstance(function_schema, dict), f"converted tool missing function schema: {first_tool!r}"
         schema_dict = cast("dict[str, object]", function_schema)
-        assert schema_dict.get("name") == "binary.get_file_size", f"converted tool name wrong: {schema_dict!r}"
+        assert schema_dict.get("name") == to_wire_name("binary.get_file_size"), f"converted tool name wrong: {schema_dict!r}"
         assert schema_dict.get("description") == "Get the file size in bytes of the loaded binary.", (
             f"converted tool description wrong: {schema_dict!r}"
         )

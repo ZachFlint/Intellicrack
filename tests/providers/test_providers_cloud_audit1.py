@@ -40,6 +40,7 @@ from typing import TYPE_CHECKING, Any, cast, override
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
+import httpx2
 import openai
 import pytest
 from google.genai import Client as GenaiClient
@@ -284,7 +285,6 @@ def test_f0005_enable_cache_marks_system_tools_and_last_message() -> None:
     kwargs: dict[str, Any] = _anthropic_build_api_kwargs(
         model="claude-opus-4-7",
         max_tokens=4096,
-        temperature=0.7,
         messages=messages_payload,
         system_prompt="You are an audit fixture.",
         tools=tools_payload,
@@ -317,7 +317,6 @@ def test_f0005_enable_cache_disabled_leaves_payload_untouched() -> None:
     kwargs: dict[str, Any] = _anthropic_build_api_kwargs(
         model="claude-opus-4-7",
         max_tokens=4096,
-        temperature=0.7,
         messages=messages_payload,
         system_prompt="System.",
         tools=None,
@@ -382,7 +381,7 @@ async def test_f0010_fetch_all_models_forwards_limit() -> None:
 async def test_f0001_openai_enable_cache_http_request_body() -> None:
     """OpenAI ``enable_cache=True`` sends the correct serialised chat request body.
 
-    A real :class:`httpx.AsyncBaseTransport` recording seam is injected into
+    A real :class:`httpx2.AsyncBaseTransport` recording seam is injected into
     the real :class:`openai.AsyncOpenAI` client so every SDK serialisation and
     JSON-encoding layer runs without substitution.  The captured HTTP request
     body is asserted against the OpenAI Chat Completions API request schema as
@@ -408,11 +407,11 @@ async def test_f0001_openai_enable_cache_http_request_body() -> None:
     }
     captured: list[dict[str, object]] = []
 
-    class _Transport(httpx.AsyncBaseTransport):
+    class _Transport(httpx2.AsyncBaseTransport):
         @override
-        async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
             captured.append(cast("dict[str, object]", json.loads(request.content)))
-            return httpx.Response(
+            return httpx2.Response(
                 200,
                 content=json.dumps(completion_body).encode(),
                 headers={"content-type": "application/json"},
@@ -420,7 +419,7 @@ async def test_f0001_openai_enable_cache_http_request_body() -> None:
 
     sdk_client = openai.AsyncOpenAI(
         api_key="test-key",
-        http_client=httpx.AsyncClient(transport=_Transport()),
+        http_client=httpx2.AsyncClient(transport=_Transport()),
     )
     provider = OpenAIProvider()
     provider.connected = True
@@ -455,7 +454,7 @@ async def test_f0001_openai_enable_cache_http_request_body() -> None:
 async def test_f0001_grok_enable_cache_http_request_body() -> None:
     """Grok ``enable_cache=True`` sends the correct serialised chat request body.
 
-    A real :class:`httpx.AsyncBaseTransport` recording seam is injected into
+    A real :class:`httpx2.AsyncBaseTransport` recording seam is injected into
     the real :class:`openai.AsyncOpenAI` client (with Grok's base URL) so
     every SDK serialisation and JSON-encoding layer runs without substitution.
     The captured HTTP request body is asserted against the OpenAI-compatible
@@ -480,11 +479,11 @@ async def test_f0001_grok_enable_cache_http_request_body() -> None:
     }
     captured: list[dict[str, object]] = []
 
-    class _Transport(httpx.AsyncBaseTransport):
+    class _Transport(httpx2.AsyncBaseTransport):
         @override
-        async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
             captured.append(cast("dict[str, object]", json.loads(request.content)))
-            return httpx.Response(
+            return httpx2.Response(
                 200,
                 content=json.dumps(completion_body).encode(),
                 headers={"content-type": "application/json"},
@@ -493,7 +492,7 @@ async def test_f0001_grok_enable_cache_http_request_body() -> None:
     sdk_client = openai.AsyncOpenAI(
         api_key="test-key",
         base_url=GrokProvider.BASE_URL,
-        http_client=httpx.AsyncClient(transport=_Transport()),
+        http_client=httpx2.AsyncClient(transport=_Transport()),
     )
     provider = GrokProvider()
     provider.connected = True

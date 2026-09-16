@@ -12,17 +12,120 @@ from __future__ import annotations
 import functools
 import os
 import re
+import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import ClassVar, Final
 
-from intellicrack.core.config import get_project_root
+from intellicrack.core.config import get_env_file, get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials, ProviderName
 
 
 _logger = get_logger(__name__)
+
+
+class CredentialField(StrEnum):
+    """Provider credential fields that are persisted as ``.env`` variables.
+
+    Attributes:
+        API_KEY: The provider API key or access token.
+        API_BASE: A custom API base URL or host override.
+        ORGANIZATION_ID: The provider organization identifier.
+        PROJECT_ID: The provider project identifier.
+    """
+
+    API_KEY = "api_key"
+    API_BASE = "api_base"
+    ORGANIZATION_ID = "organization_id"
+    PROJECT_ID = "project_id"
+
+
+class EnvPersistAction(StrEnum):
+    """Outcome of persisting a credential field to the ``.env`` file.
+
+    Attributes:
+        WRITTEN: The variable was written to the ``.env`` file.
+        REMOVED: A saved value was removed from the ``.env`` file.
+        UNCHANGED: The effective value already matched, so nothing was written.
+    """
+
+    WRITTEN = "written"
+    REMOVED = "removed"
+    UNCHANGED = "unchanged"
+
+
+@dataclass(frozen=True)
+class _OverlayRecord:
+    """Pre-override state of one process environment variable.
+
+    Attributes:
+        original: The value the process environment held before a ``.env``
+            override was applied, or ``None`` when the variable was unset.
+        injected: The value the overlay most recently wrote into the process
+            environment.
+    """
+
+    original: str | None
+    injected: str
+
+
+class _EnvironmentOverlay:
+    """Tracks process-environment variables overridden by ``.env`` entries.
+
+    :class:`CredentialLoader` copies parsed ``.env`` entries into
+    ``os.environ`` so provider SDKs that read their own variables observe the
+    same values. When a saved entry is later removed from ``.env``, the
+    variable must fall back to whatever the operating-system environment
+    supplied before the override, rather than keep the removed value or
+    disappear. The overlay records that pre-override value the first time a
+    variable is overridden, and re-bases the record whenever the environment
+    no longer holds the value the overlay last injected, so an out-of-band
+    change is never undone. Records are process-wide because several loader
+    instances can override the same variable.
+    """
+
+    def __init__(self) -> None:
+        """Initialize an empty overlay."""
+        self._records: dict[str, _OverlayRecord] = {}
+        self._lock = threading.Lock()
+
+    def apply(self, name: str, value: str) -> None:
+        """Override a process environment variable with a ``.env`` value.
+
+        Args:
+            name: Environment variable name.
+            value: Value to write into ``os.environ``.
+        """
+        with self._lock:
+            current = os.environ.get(name)
+            record = self._records.get(name)
+            original = record.original if record is not None and current == record.injected else current
+            self._records[name] = _OverlayRecord(original=original, injected=value)
+            os.environ[name] = value
+
+    def revert(self, name: str) -> None:
+        """Restore a variable to its value from before any ``.env`` override.
+
+        Variables that were never overridden, or that were changed by other
+        code after the last override, are left untouched.
+
+        Args:
+            name: Environment variable name.
+        """
+        with self._lock:
+            record = self._records.pop(name, None)
+            if record is None or os.environ.get(name) != record.injected:
+                return
+            if record.original is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = record.original
+
+
+_ENVIRONMENT_OVERLAY: Final[_EnvironmentOverlay] = _EnvironmentOverlay()
 
 
 _ENV_LINE_PATTERN: re.Pattern[str] = re.compile(
@@ -203,6 +306,56 @@ def _detect_eol(text: str) -> str:
     return "\r\n" if "\r\n" in text else "\n"
 
 
+def _variable_line_pattern(name: str) -> re.Pattern[str]:
+    """Build a pattern matching a stripped ``.env`` line that assigns ``name``.
+
+    Args:
+        name: The environment variable name.
+
+    Returns:
+        re.Pattern[str]: Pattern matching ``NAME=...`` and ``export NAME=...``.
+    """
+    return re.compile(rf"^(?:export\s+)?{re.escape(name)}\s*=.*$")
+
+
+def _split_env_lines(text: str) -> list[tuple[str, str]]:
+    r"""Split ``.env`` text into ``(content, line_ending)`` pairs.
+
+    Only ``\r\n``, ``\n`` and ``\r`` are treated as line endings; any other
+    separator ``str.splitlines`` recognises stays inside the content so the
+    original bytes are reproduced exactly when the pairs are re-joined.
+
+    Args:
+        text: Raw ``.env`` file content.
+
+    Returns:
+        list[tuple[str, str]]: One ``(content, line_ending)`` pair per line;
+        the final line's ending is empty when the text has no trailing newline.
+    """
+    pairs: list[tuple[str, str]] = []
+    for raw_line in text.splitlines(keepends=True):
+        if raw_line.endswith("\r\n"):
+            pairs.append((raw_line[:-2], "\r\n"))
+        elif raw_line.endswith(("\n", "\r")):
+            pairs.append((raw_line[:-1], raw_line[-1]))
+        else:
+            pairs.append((raw_line, ""))
+    return pairs
+
+
+def _same_endpoint(first: str, second: str) -> bool:
+    """Compare two endpoint URLs ignoring surrounding whitespace and trailing slashes.
+
+    Args:
+        first: First endpoint URL.
+        second: Second endpoint URL.
+
+    Returns:
+        bool: True when both URLs denote the same endpoint.
+    """
+    return first.strip().rstrip("/") == second.strip().rstrip("/")
+
+
 @dataclass
 class ProviderCredentialMapping:
     """Mapping of environment variable names for a provider.
@@ -213,6 +366,9 @@ class ProviderCredentialMapping:
         organization_var: Environment variable name for organization ID.
         project_var: Environment variable name for project ID.
         api_key_aliases: Alternative environment variable names for the API key.
+        default_api_base: Endpoint the provider uses when no base URL is saved.
+            A saved base URL equal to it is not an override and is never
+            persisted.
     """
 
     api_key_var: str
@@ -220,6 +376,25 @@ class ProviderCredentialMapping:
     organization_var: str | None = None
     project_var: str | None = None
     api_key_aliases: tuple[str, ...] = ()
+    default_api_base: str | None = None
+
+    def env_var_for(self, field: CredentialField) -> str | None:
+        """Return the primary environment variable backing a credential field.
+
+        Args:
+            field: The credential field.
+
+        Returns:
+            str | None: The variable name, or ``None`` when the provider has no
+            variable for ``field``.
+        """
+        variables: dict[CredentialField, str | None] = {
+            CredentialField.API_KEY: self.api_key_var,
+            CredentialField.API_BASE: self.api_base_var,
+            CredentialField.ORGANIZATION_ID: self.organization_var,
+            CredentialField.PROJECT_ID: self.project_var,
+        }
+        return variables[field]
 
 
 def _find_env_file() -> Path:
@@ -306,9 +481,11 @@ class CredentialLoader:
         ProviderName.OLLAMA: ProviderCredentialMapping(
             api_key_var="OLLAMA_API_KEY",
             api_base_var="OLLAMA_HOST",
+            default_api_base="http://localhost:11434",
         ),
         ProviderName.OPENROUTER: ProviderCredentialMapping(
             api_key_var="OPENROUTER_API_KEY",
+            api_base_var="OPENROUTER_API_BASE",
         ),
         ProviderName.HUGGINGFACE: ProviderCredentialMapping(
             api_key_var="HUGGINGFACE_API_TOKEN",
@@ -369,7 +546,7 @@ class CredentialLoader:
 
         for key, value in parsed.items():
             self._env_vars[key] = value
-            os.environ[key] = value
+            _ENVIRONMENT_OVERLAY.apply(key, value)
 
         _logger.info(
             "env_variables_loaded",
@@ -380,11 +557,15 @@ class CredentialLoader:
     def reload(self) -> None:
         """Reload credentials from the .env file.
 
-        Call this method to pick up changes to the .env file without restarting the application.
+        Call this method to pick up changes to the .env file without restarting the application. Variables that were removed from the
+        file since the last load fall back to the value the operating-system environment supplied before the file overrode them.
         """
         _logger.debug("env_file_reloading", path=str(self.env_path))
+        previous_names = set(self._env_vars)
         self._env_vars.clear()
         self._load_env_file()
+        for name in previous_names.difference(self._env_vars):
+            _ENVIRONMENT_OVERLAY.revert(name)
         _logger.info("env_file_reloaded", path=str(self.env_path))
 
     def get_credentials(self, provider: ProviderName) -> ProviderCredentials | None:
@@ -404,55 +585,219 @@ class CredentialLoader:
             )
             return None
 
-        api_key = self._get_var(mapping.api_key_var)
-        if not api_key:
-            for alias in mapping.api_key_aliases:
-                api_key = self._get_var(alias)
-                if api_key:
-                    _logger.debug(
-                        "credential_found_via_alias",
-                        provider=provider.value,
-                        alias=alias,
-                    )
-                    break
-        if not api_key:
+        api_key = self._resolve_api_key(provider, mapping)
+        if api_key is None:
             _logger.debug(
                 "credential_not_found",
                 provider=provider.value,
             )
             return None
 
-        api_base: str | None = None
-        if mapping.api_base_var:
-            api_base = self._get_var(mapping.api_base_var)
-
-        organization_id: str | None = None
-        if mapping.organization_var:
-            organization_id = self._get_var(mapping.organization_var)
-
-        project_id: str | None = None
-        if mapping.project_var:
-            project_id = self._get_var(mapping.project_var)
-
+        credentials = self._build_credentials(mapping, api_key)
         _logger.debug(
             "credential_retrieved",
             provider=provider.value,
-            has_api_base=api_base is not None,
-            has_organization_id=organization_id is not None,
-            has_project_id=project_id is not None,
+            has_api_base=credentials.api_base is not None,
+            has_organization_id=credentials.organization_id is not None,
+            has_project_id=credentials.project_id is not None,
         )
+        return credentials
 
+    def get_connect_credentials(self, provider: ProviderName, *, api_key_optional: bool) -> ProviderCredentials | None:
+        """Resolve the credentials a provider connects with.
+
+        Keyed providers resolve exactly like :meth:`get_credentials`. Providers
+        that can connect without an API key still receive their saved endpoint
+        settings -- for example a custom ``OLLAMA_HOST`` -- when no key is
+        configured, instead of an empty credential set that would silently
+        discard them.
+
+        Args:
+            provider: The provider to resolve credentials for.
+            api_key_optional: Whether the provider can connect without an API key.
+
+        Returns:
+            ProviderCredentials | None: The resolved credentials, or ``None`` when
+            a required API key is missing or the provider is unknown.
+        """
+        credentials = self.get_credentials(provider)
+        if credentials is not None or not api_key_optional:
+            return credentials
+        mapping = self.PROVIDER_MAPPINGS.get(provider)
+        if mapping is None:
+            return ProviderCredentials()
+        return self._build_credentials(mapping, None)
+
+    def env_var_for(self, provider: ProviderName, field: CredentialField) -> str | None:
+        """Return the environment variable that stores a provider credential field.
+
+        Args:
+            provider: The provider.
+            field: The credential field.
+
+        Returns:
+            str | None: The variable name, or ``None`` when the provider has no
+            variable for ``field``.
+        """
+        mapping = self.PROVIDER_MAPPINGS.get(provider)
+        return mapping.env_var_for(field) if mapping is not None else None
+
+    def get_field(self, provider: ProviderName, field: CredentialField) -> str | None:
+        """Return the effective value of a provider credential field.
+
+        The ``.env`` file takes precedence over the process environment, the
+        API key also honours the provider's alias variables, and empty values
+        resolve to ``None``.
+
+        Args:
+            provider: The provider.
+            field: The credential field.
+
+        Returns:
+            str | None: The effective value, or ``None`` when unset.
+        """
+        mapping = self.PROVIDER_MAPPINGS.get(provider)
+        if mapping is None:
+            return None
+        if field is CredentialField.API_KEY:
+            return self._resolve_api_key(provider, mapping)
+        return self._optional_var(mapping.env_var_for(field))
+
+    def get_saved_var(self, name: str) -> str | None:
+        """Return a variable's value as held by this loader's ``.env`` state.
+
+        Unlike :meth:`get_env_var`, the process environment is ignored, so the
+        result reflects only values loaded from or saved to the ``.env`` file.
+
+        Args:
+            name: The environment variable name.
+
+        Returns:
+            str | None: The saved non-empty value, or ``None``.
+        """
+        return self._env_vars.get(name) or None
+
+    def persist_field(self, provider: ProviderName, field: CredentialField, value: str | None) -> EnvPersistAction:
+        """Persist a provider credential field to the ``.env`` file.
+
+        A non-empty value is written only when it differs from the effective
+        value, so a value inherited from the operating-system environment is
+        never copied into the file unchanged. An empty value -- or, for a base
+        URL, the provider's default endpoint -- clears the saved override: the
+        variable (and, for an API key, its provider-owned aliases) is removed
+        from the file and any value set outside the application applies again.
+
+        Args:
+            provider: The provider whose field is persisted.
+            field: The credential field.
+            value: The value entered by the user; ``None`` or blank clears it.
+
+        Returns:
+            EnvPersistAction: Whether the file was written, a saved value was
+            removed, or nothing changed.
+
+        Raises:
+            ValueError: If the provider has no environment variable for ``field``.
+        """
+        mapping = self.PROVIDER_MAPPINGS.get(provider)
+        env_var = mapping.env_var_for(field) if mapping is not None else None
+        if mapping is None or env_var is None:
+            msg = f"Provider {provider.value!r} has no environment variable for {field.value!r}"
+            raise ValueError(msg)
+
+        normalized = (value or "").strip()
+        if field is CredentialField.API_BASE and mapping.default_api_base and _same_endpoint(normalized, mapping.default_api_base):
+            normalized = ""
+
+        if not normalized:
+            removed = [name for name in self._clearable_variables(mapping, field) if self.remove_from_env_file(name)]
+            return EnvPersistAction.REMOVED if removed else EnvPersistAction.UNCHANGED
+
+        if normalized == self.get_field(provider, field):
+            return EnvPersistAction.UNCHANGED
+
+        self.save_to_env_file(env_var, normalized)
+        return EnvPersistAction.WRITTEN
+
+    @classmethod
+    def _clearable_variables(cls, mapping: ProviderCredentialMapping, field: CredentialField) -> tuple[str, ...]:
+        """Return the variables removed when a credential field is cleared.
+
+        Clearing an API key also removes the provider's alias variables,
+        except an alias that is another provider's primary key variable, which
+        that provider still owns.
+
+        Args:
+            mapping: The provider's credential variable mapping.
+            field: The credential field being cleared.
+
+        Returns:
+            tuple[str, ...]: Variable names to remove, primary variable first.
+        """
+        primary = mapping.env_var_for(field)
+        if primary is None:
+            return ()
+        if field is not CredentialField.API_KEY:
+            return (primary,)
+        foreign_primaries = {other.api_key_var for other in cls.PROVIDER_MAPPINGS.values() if other is not mapping}
+        return (primary, *(alias for alias in mapping.api_key_aliases if alias not in foreign_primaries))
+
+    def _resolve_api_key(self, provider: ProviderName, mapping: ProviderCredentialMapping) -> str | None:
+        """Resolve a provider API key from its primary variable, then its aliases.
+
+        Args:
+            provider: Provider whose key is resolved, used for log records.
+            mapping: The provider's credential variable mapping.
+
+        Returns:
+            str | None: The first non-empty key found, or ``None``.
+        """
+        if api_key := self._get_var(mapping.api_key_var):
+            return api_key
+        for alias in mapping.api_key_aliases:
+            if api_key := self._get_var(alias):
+                _logger.debug(
+                    "credential_found_via_alias",
+                    provider=provider.value,
+                    alias=alias,
+                )
+                return api_key
+        return None
+
+    def _build_credentials(self, mapping: ProviderCredentialMapping, api_key: str | None) -> ProviderCredentials:
+        """Assemble credentials from a key and the provider's endpoint variables.
+
+        Args:
+            mapping: The provider's credential variable mapping.
+            api_key: The resolved API key, or ``None`` for a keyless connection.
+
+        Returns:
+            ProviderCredentials: Credentials carrying the key and every saved
+            endpoint setting.
+        """
         return ProviderCredentials(
             api_key=api_key,
-            api_base=api_base,
-            organization_id=organization_id,
-            project_id=project_id,
+            api_base=self._optional_var(mapping.api_base_var),
+            organization_id=self._optional_var(mapping.organization_var),
+            project_id=self._optional_var(mapping.project_var),
         )
+
+    def _optional_var(self, name: str | None) -> str | None:
+        """Resolve an optional variable name to its value.
+
+        Args:
+            name: Environment variable name, or ``None`` when the provider has
+                no such variable.
+
+        Returns:
+            str | None: The variable value, or ``None`` when unnamed or unset.
+        """
+        return self._get_var(name) if name else None
 
     def _get_var(self, name: str) -> str | None:
         """Get an environment variable value.
 
-        First checks the parsed .env file, then falls back to os.environ.
+        First checks the parsed .env file, then falls back to os.environ. Empty values resolve to ``None``.
 
         Args:
             name: Environment variable name.
@@ -462,7 +807,7 @@ class CredentialLoader:
         """
         if value := self._env_vars.get(name):
             return value
-        return os.environ.get(name)
+        return os.environ.get(name) or None
 
     def validate_credentials(self, provider: ProviderName) -> tuple[bool, str | None]:
         """Validate that credentials exist and are properly formatted.
@@ -482,12 +827,7 @@ class CredentialLoader:
             )
             return False, f"Unknown provider: {provider.value}"
 
-        api_key = self._get_var(mapping.api_key_var)
-        if not api_key:
-            for alias in mapping.api_key_aliases:
-                api_key = self._get_var(alias)
-                if api_key:
-                    break
+        api_key = self._resolve_api_key(provider, mapping)
         if not api_key:
             _logger.debug(
                 "credential_validation_failed",
@@ -556,7 +896,7 @@ class CredentialLoader:
             value: The value to set.
         """
         self._env_vars[name] = value
-        os.environ[name] = value
+        _ENVIRONMENT_OVERLAY.apply(name, value)
 
     def get_env_var(self, name: str, default: str | None = None) -> str | None:
         """Get an environment variable value.
@@ -580,72 +920,36 @@ class CredentialLoader:
         Preserves comments and file structure, and preserves the existing
         end-of-line style. Uses ``\n`` for newly created files. Values are
         quoted and escaped per :func:`_quote_env_value` rules to guarantee a
-        lossless round-trip with the parser.
+        lossless round-trip with the parser. An ``OSError`` raised while
+        reading or writing the file propagates to the caller.
 
         Args:
             name: The environment variable name.
             value: The value to save.
-
-        Raises:
-            OSError: If the .env file cannot be read or written.
         """
         self.set_env_var(name, value)
         _logger.info("env_file_write_started", path=str(self.env_path), variable=name)
 
-        quoted = _quote_env_value(value)
-        new_line_body = f"{name}={quoted}"
-        key_pattern = re.compile(rf"^(?:export\s+)?{re.escape(name)}\s*=.*$")
-
-        existing_text = ""
-        if self.env_path.exists():
-            try:
-                with self.env_path.open("r", encoding="utf-8", newline="") as f:
-                    existing_text = f.read()
-            except OSError:
-                _logger.exception("env_file_read_existing_failed", path=str(self.env_path))
-                raise
-
+        new_line_body = f"{name}={_quote_env_value(value)}"
+        key_pattern = _variable_line_pattern(name)
+        existing_text = self._read_env_file_text()
         eol = _detect_eol(existing_text) if existing_text else "\n"
 
         lines: list[str] = []
         key_found = False
-
-        if existing_text:
-            raw_lines = existing_text.splitlines(keepends=True)
-            for raw_line in raw_lines:
-                content = raw_line
-                line_eol = ""
-                if content.endswith("\r\n"):
-                    line_eol = "\r\n"
-                    content = content[:-2]
-                elif content.endswith("\n"):
-                    line_eol = "\n"
-                    content = content[:-1]
-                elif content.endswith("\r"):
-                    line_eol = "\r"
-                    content = content[:-1]
-
-                if key_pattern.match(content.strip()):
-                    replacement_eol = line_eol or eol
-                    lines.append(f"{new_line_body}{replacement_eol}")
-                    key_found = True
-                else:
-                    lines.append(f"{content}{line_eol}")
+        for content, line_eol in _split_env_lines(existing_text):
+            if key_pattern.match(content.strip()):
+                lines.append(f"{new_line_body}{line_eol or eol}")
+                key_found = True
+            else:
+                lines.append(f"{content}{line_eol}")
 
         if not key_found:
-            if lines:
-                last = lines[-1]
-                if not last.endswith(("\n", "\r")):
-                    lines[-1] = f"{last}{eol}"
+            if lines and not lines[-1].endswith(("\n", "\r")):
+                lines[-1] = f"{lines[-1]}{eol}"
             lines.append(f"{new_line_body}{eol}")
 
-        self.env_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with self.env_path.open("w", encoding="utf-8", newline="") as f:
-                f.writelines(lines)
-        except OSError:
-            _logger.exception("env_file_write_failed", path=str(self.env_path))
-            raise
+        self._write_env_file_lines(lines)
 
         _logger.info(
             "env_file_saved",
@@ -653,6 +957,84 @@ class CredentialLoader:
             variable=name,
             updated_existing=key_found,
         )
+
+    def remove_from_env_file(self, name: str) -> bool:
+        """Remove a variable from the ``.env`` file and from this loader.
+
+        Every line assigning ``name`` (including ``export`` forms) is deleted
+        while comments, other variables and the file's end-of-line style are
+        preserved. The process environment falls back to the value the
+        operating system supplied before the file overrode it, so a variable
+        set outside the application still applies. An ``OSError`` raised while
+        reading or writing the file propagates to the caller, leaving the
+        loader's in-memory state unchanged.
+
+        Args:
+            name: The environment variable name.
+
+        Returns:
+            bool: True when a saved value was removed from the file or from
+            this loader's in-memory state.
+        """
+        key_pattern = _variable_line_pattern(name)
+        kept_lines: list[str] = []
+        removed_lines = 0
+        for content, line_eol in _split_env_lines(self._read_env_file_text()):
+            if key_pattern.match(content.strip()):
+                removed_lines += 1
+            else:
+                kept_lines.append(f"{content}{line_eol}")
+
+        if removed_lines:
+            self._write_env_file_lines(kept_lines)
+
+        had_saved_value = self._env_vars.pop(name, None) is not None
+        _ENVIRONMENT_OVERLAY.revert(name)
+        removed = removed_lines > 0 or had_saved_value
+        if removed:
+            _logger.info(
+                "env_file_variable_removed",
+                path=str(self.env_path),
+                variable=name,
+                removed_lines=removed_lines,
+            )
+        return removed
+
+    def _read_env_file_text(self) -> str:
+        """Read the raw ``.env`` file content with its line endings intact.
+
+        Returns:
+            str: The file content, or an empty string when the file does not exist.
+
+        Raises:
+            OSError: If the existing file cannot be read.
+        """
+        if not self.env_path.exists():
+            return ""
+        try:
+            with self.env_path.open("r", encoding="utf-8", newline="") as f:
+                text = f.read()
+        except OSError:
+            _logger.exception("env_file_read_existing_failed", path=str(self.env_path))
+            raise
+        return text
+
+    def _write_env_file_lines(self, lines: list[str]) -> None:
+        """Write lines, each carrying its own line ending, to the ``.env`` file.
+
+        Args:
+            lines: The complete file content split into lines.
+
+        Raises:
+            OSError: If the file cannot be written.
+        """
+        self.env_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with self.env_path.open("w", encoding="utf-8", newline="") as f:
+                f.writelines(lines)
+        except OSError:
+            _logger.exception("env_file_write_failed", path=str(self.env_path))
+            raise
 
 
 def get_api_key_env_var_mapping() -> dict[str, str]:
@@ -897,9 +1279,16 @@ def create_env_template(path: Path) -> EnvTemplateResult:
 
 @functools.lru_cache(maxsize=1)
 def get_credential_loader() -> CredentialLoader:
-    """Get the global credential loader instance.
+    r"""Get the global credential loader instance.
+
+    The loader is bound to the same state-root ``.env`` file the application
+    loads at startup (:func:`intellicrack.core.config.get_env_file`), so
+    credentials saved through the Provider Settings dialog are the ones the
+    next launch connects with. On an installed build that file lives under
+    ``%LOCALAPPDATA%\Intellicrack`` rather than in the working or install
+    directory.
 
     Returns:
         CredentialLoader: The singleton CredentialLoader instance.
     """
-    return CredentialLoader()
+    return CredentialLoader(get_env_file())

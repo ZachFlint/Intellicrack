@@ -1,0 +1,90 @@
+# MegaLinter configuration for Intellicrack, invoked via `just megalint`
+# (scripts/run-megalinter.ps1), which handles the Docker engine switch,
+# mega-linter-runner invocation, and container lifecycle around this.
+# https://megalinter.io/latest/config-file/ | https://megalinter.io/latest/config-variables/
+
+MEGALINTER_VERSION: v10
+
+# Scope every linter to src/. Repository-level scanners (BETTERLEAKS, CHECKOV,
+# DEVSKIM, DUSTILOCK, GIT_DIFF, GRYPE, JSCPD, KINGFISHER, NPM_PACKAGE_JSON_LINT,
+# OSV_SCANNER, SECRETLINT, SYFT, TRIVY, TRIVY_SBOM, TRUFFLEHOG) run in "project"
+# CLI_LINT_MODE and ignore this filter by design -- they always walk the whole
+# mounted repository instead, regardless of this setting.
+FILTER_REGEX_INCLUDE: (src/)
+
+# The Windows-host -> Linux-container bind mount is slow enough that on a real
+# run against this repo, 14 of ~46 linters blew through the 300s default and
+# were killed mid-scan (pylint, pyright, jscpd, npm-package-json-lint, checkov,
+# devskim, dustilock, grype, kingfisher, syft, trivy, trivy-sbom, betterleaks,
+# trufflehog). Raised generously so a run from Windows actually completes
+# instead of silently reporting a timeout as "1 error". The project-mode
+# scanners above still walk the entire repo (including .pixi/, which is large)
+# with no way to filter them down to src/, so this may still not be enough for
+# all of them -- if one keeps timing out, look at that tool's own native
+# exclude flag via its MegaLinter <LINTER_KEY>_ARGUMENTS override.
+LINTER_TIMEOUT_SECONDS: 1800
+
+# Several bundled Python linters default to looking for their OWN dotfile
+# (.ruff.toml, .flake8, .bandit.yml, .pylintrc, .mypy.ini) and silently fall
+# back to MegaLinter's bundled copy of that file when it isn't present --
+# which is what happened here, since Intellicrack keeps this config in
+# pyproject.toml instead (confirmed from the previous run's logs: ruff was
+# invoked with `--config /action/lib/.automation/.ruff.toml`, not this
+# repo's pyproject.toml, and flagged ExceptionGroup as undefined because that
+# bundled default doesn't know this project targets py313). LINTER_DEFAULT
+# skips MegaLinter's own override entirely and lets each tool fall back to
+# its own normal config discovery, which does check pyproject.toml.
+PYTHON_RUFF_CONFIG_FILE: LINTER_DEFAULT
+PYTHON_BANDIT_CONFIG_FILE: LINTER_DEFAULT
+PYTHON_PYLINT_CONFIG_FILE: LINTER_DEFAULT
+PYTHON_MYPY_CONFIG_FILE: LINTER_DEFAULT
+PYTHON_FLAKE8_CONFIG_FILE: LINTER_DEFAULT
+PYTHON_ISORT_CONFIG_FILE: LINTER_DEFAULT
+# PYTHON_BLACK's own default is already pyproject.toml, and this repo has a
+# real [tool.black] table, so it needs no override. PYTHON_PYRIGHT's own
+# default is already pyrightconfig.json, and this repo has a real, strict one
+# at the root -- also needs no override, and (once the timeout below stops
+# killing it) will actually type-check against this project's real settings.
+# It is still upstream pyright, not this project's actual basedpyright, so it
+# won't enforce basedpyright's own additional rules on top of that config --
+# but it is no longer the "different config entirely" gap this comment used
+# to describe. flake8, pylint, isort, and mypy have no equivalent project
+# config to find (pyproject.toml has no [tool.isort]/[tool.pylint] table, and
+# ruff/basedpyright are this project's actual tools of record for that
+# ground), so LINTER_DEFAULT for them mainly avoids MegaLinter's bundled
+# opinionated config rather than unlocking a real one -- treat their findings
+# as advisory, not as gates.
+
+# RUST_CLIPPY's default "project" CLI_LINT_MODE assumes the mounted repo root
+# is the crate root, so it fails instantly with "could not find Cargo.toml"
+# against this repo (the crate lives at src/intellicrack-hexcore). Point it at
+# the real manifest explicitly, the same way `cargo clippy --manifest-path=...`
+# would. hexcore has no [lints]/[workspace.lints] table in Cargo.toml, so its
+# real lint strictness comes entirely from the CLI flags in the `clippy`
+# justfile recipe (--all-targets -- -W clippy::all -W clippy::pedantic) --
+# replicated here too, since without them clippy only runs at its bare
+# built-in default (roughly clippy::all already, but without ::pedantic) and
+# silently under-reports relative to `just clippy`. Note this also means
+# clippy compiles intellicrack-hexcore from scratch on every `just megalint`
+# run, since the container (and its cargo registry/target cache) is removed
+# afterwards -- expect this step to be slow; `just clippy` remains the fast,
+# incrementally-cached tool for routine use.
+RUST_CLIPPY_ARGUMENTS: >-
+  --manifest-path=src/intellicrack-hexcore/Cargo.toml --all-targets
+  -- -W clippy::all -W clippy::pedantic
+
+# Relocate the report folder to match the rest of the repo's reports/
+# convention, and reset it on every run so stale findings from a previous
+# `just megalint` never mix with the current one.
+REPORT_OUTPUT_FOLDER: reports/megalinter
+CLEAR_REPORT_FOLDER: true
+
+# Always scan every matching file under the filter above, not just files
+# touched since the last commit -- there is no meaningful git diff for a local
+# ad hoc run.
+VALIDATE_ALL_CODEBASE: true
+
+# Posts a PR status via the GitHub API; only meaningful inside a GitHub
+# Actions PR run. `just megalint` never runs in that context, so this is
+# disabled rather than left to fail or log noise locally.
+GITHUB_STATUS_REPORTER: false

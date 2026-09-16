@@ -38,6 +38,7 @@ from intellicrack.core.types import (
     ToolDefinition,
     ToolParameter,
 )
+from intellicrack.providers.tool_names import from_wire_name, to_wire_name
 
 
 if TYPE_CHECKING:
@@ -220,15 +221,20 @@ def parse_tool_call(
     """Parse a tool call from provider-specific data into a ToolCall.
 
     Handles JSON argument parsing and tool name extraction from
-    dotted function names.
+    dotted function names. ``function_name`` is first restored from its
+    provider-safe wire form (e.g. ``"frida__spawn"``) back to the canonical
+    dotted form (``"frida.spawn"``) via :func:`~intellicrack.providers.tool_names.from_wire_name`,
+    so every caller downstream of this function -- routing, classification,
+    confirmation, persistence -- only ever sees canonical names.
 
     Args:
         call_id: Unique identifier for the tool call.
-        function_name: Function name from the provider response.
+        function_name: Function name from the provider response, in the
+            provider's wire form.
         raw_arguments: Arguments as a JSON string or pre-parsed dict.
 
     Returns:
-        ToolCall: Parsed ToolCall instance.
+        ToolCall: Parsed ToolCall instance with canonical dotted names.
     """
     parsed_args: dict[str, Any]
     if isinstance(raw_arguments, str):
@@ -240,11 +246,12 @@ def parse_tool_call(
     else:
         parsed_args = dict(raw_arguments)
 
-    tool_name = function_name.split(".", maxsplit=1)[0] if "." in function_name else function_name
+    canonical_name = from_wire_name(function_name)
+    tool_name = canonical_name.split(".", maxsplit=1)[0] if "." in canonical_name else canonical_name
     return ToolCall(
         id=call_id,
         tool_name=tool_name,
-        function_name=function_name,
+        function_name=canonical_name,
         arguments=parsed_args,
     )
 
@@ -332,7 +339,17 @@ class LLMProviderBase(ABC):
 
     All provider implementations must inherit from this class and implement the abstract methods defined here. This ensures a consistent
     interface for the orchestrator to interact with any LLM provider.
+
+    Attributes:
+        TOOL_COUNT_CAP: Maximum number of flattened tool functions this
+            provider accepts in a single request, or ``None`` when the
+            provider imposes no such limit. Subclasses whose backend
+            rejects function-calling requests past a fixed count (OpenAI,
+            Grok, OpenRouter) override this; :meth:`_enforce_tool_count_cap`
+            reads it to trim the active tool set before conversion.
     """
+
+    TOOL_COUNT_CAP: int | None = None
 
     def __init__(self) -> None:
         """Initialize the LLMProviderBase instance."""
@@ -692,6 +709,96 @@ class LLMProviderBase(ABC):
             openai_tools.extend(dict(schema) for schema in tool_schemas)
         return openai_tools
 
+    def _enforce_tool_count_cap(self, tools: list[ToolDefinition]) -> list[ToolDefinition]:
+        """Trim tool definitions to fit this provider's flattened function-count cap.
+
+        Several providers (OpenAI, Grok, OpenRouter) reject function-calling
+        requests once the flattened function count (every ``ToolFunction``
+        across every bridge's :class:`ToolDefinition`) exceeds
+        :attr:`TOOL_COUNT_CAP`. Intellicrack's tool registry can expose
+        hundreds more functions than that across its bridges, so the active
+        set handed to a capped provider must be reduced before the request
+        leaves the process. Providers with no cap (:attr:`TOOL_COUNT_CAP` is
+        ``None``) return ``tools`` unchanged.
+
+        Tools are kept in their existing (already deterministic) order and
+        included whole wherever possible. The tool whose inclusion would
+        push the running total past the cap is truncated to only its
+        leading functions that still fit, so every tool earlier in the list
+        stays fully intact and no tool is dropped arbitrarily. Callers that
+        place the dynamic-loading meta-tool and always-on core tools first
+        in ``tools`` guarantee this truncation can never drop them.
+
+        Args:
+            tools: Tool definitions to trim, in priority order.
+
+        Returns:
+            list[ToolDefinition]: A new list of tool definitions whose
+            combined function count does not exceed :attr:`TOOL_COUNT_CAP`.
+            Returned unchanged (same object) when uncapped or already
+            within the cap.
+
+        Raises:
+            ProviderError: If :attr:`TOOL_COUNT_CAP` is too small to hold
+                even a single tool function.
+        """
+        cap = self.TOOL_COUNT_CAP
+        if cap is None:
+            return tools
+
+        function_count = sum(len(tool.functions) for tool in tools)
+        self._logger.debug(
+            "tool_conversion_function_count",
+            provider=self.name.value,
+            container_count=len(tools),
+            function_count=function_count,
+            cap=cap,
+        )
+        if function_count <= cap:
+            return tools
+
+        if cap < 1:
+            message = f"{self.name.value} tool-count cap ({cap}) cannot hold any tool function; {function_count} functions were requested."
+            self._logger.error(
+                "tool_count_cap_unsatisfiable",
+                provider=self.name.value,
+                cap=cap,
+                function_count=function_count,
+            )
+            raise ProviderError(message)
+
+        trimmed: list[ToolDefinition] = []
+        dropped: list[str] = []
+        remaining = cap
+        for tool in tools:
+            tool_function_count = len(tool.functions)
+            if tool_function_count <= remaining:
+                trimmed.append(tool)
+                remaining -= tool_function_count
+                continue
+            if remaining > 0:
+                trimmed.append(
+                    ToolDefinition(
+                        tool_name=tool.tool_name,
+                        description=tool.description,
+                        functions=tool.functions[:remaining],
+                    ),
+                )
+                dropped.append(f"{tool.tool_name.value}:{tool_function_count - remaining}_truncated")
+                remaining = 0
+            else:
+                dropped.append(f"{tool.tool_name.value}:{tool_function_count}_dropped")
+
+        self._logger.warning(
+            "tool_count_cap_exceeded",
+            provider=self.name.value,
+            cap=cap,
+            function_count=function_count,
+            kept_count=cap,
+            dropped_tools=dropped,
+        )
+        return trimmed
+
     def convert_messages_to_provider_format(
         self,
         messages: list[Message],
@@ -881,7 +988,7 @@ class LLMProviderBase(ABC):
             raise ProviderError(msg)
         return {
             "type": "function",
-            "function": {"name": function_name},
+            "function": {"name": to_wire_name(function_name)},
         }
 
     @staticmethod
@@ -928,7 +1035,7 @@ class LLMProviderBase(ABC):
                         tc_dict: dict[str, object] = {
                             "id": tc.id,
                             "function": {
-                                "name": tc.function_name,
+                                "name": to_wire_name(tc.function_name),
                                 "arguments": json.dumps(tc.arguments) if serialize_tool_arguments else tc.arguments,
                             },
                         }
@@ -1399,7 +1506,7 @@ def create_anthropic_tool_schema(
                 required.append(param.name)
 
         tool_schema: AnthropicToolSchema = {
-            "name": func.name,
+            "name": to_wire_name(func.name),
             "description": func.description,
             "input_schema": {
                 "type": "object",
@@ -1446,7 +1553,7 @@ def create_openai_tool_schema(
         tool_schema: OpenAIToolSchema = {
             "type": "function",
             "function": {
-                "name": func.name,
+                "name": to_wire_name(func.name),
                 "description": func.description,
                 "parameters": {
                     "type": "object",
@@ -1492,7 +1599,7 @@ def create_google_tool_schema(
                 required.append(param.name)
 
         tool_schema: GoogleFunctionDeclaration = {
-            "name": func.name,
+            "name": to_wire_name(func.name),
             "description": func.description,
             "parameters": {
                 "type": "OBJECT",

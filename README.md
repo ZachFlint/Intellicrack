@@ -1,8 +1,8 @@
 # Intellicrack
 
-An AI-powered reverse engineering orchestration platform that provides a
-unified interface for controlling multiple reverse engineering tools
-through natural language interaction.
+Intellicrack is a Windows desktop application that unifies binary-analysis
+and reverse-engineering tools with AI model providers in a single,
+orchestrated workspace.
 
 ![Python](https://img.shields.io/badge/python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/license-GPL%20v3%2B-green)
@@ -10,177 +10,90 @@ through natural language interaction.
 
 ## Overview
 
-Intellicrack (v0.1.0a1) is a unified workspace for reverse engineering and
-binary analysis. It serves as an orchestration layer where an LLM provider
-acts as central intelligence, coordinating between the user interface, tool
-bridges, and analysis modules so that disassemblers, debuggers, runtime
-instrumentation, and sandboxes operate against a shared analysis context.
-Workflows range from general binary inspection and vulnerability research to
-protocol reversing, malware triage, and software protection analysis.
+Intellicrack brings disassemblers, debuggers, decompilers, runtime
+instrumentation, sandboxes, and a hex editor together with AI providers,
+and coordinates them against a shared analysis context. Instead of juggling
+separate windows and copying results between them, you drive everything
+from one interface: load a target, run tools, inspect their output, and
+hand that context to an AI assistant that can call the same tools on your
+behalf.
 
-### What Intellicrack Does
+Work is grouped into sessions that keep your conversation, loaded binaries,
+tool state, and patches together, so you can pick a target back up where
+you left off.
 
-- **Static Binary Analysis**: PE/ELF/Mach-O parsing, section enumeration,
-  entropy analysis, import/export extraction, string extraction, and
-  disassembly/decompilation through integrated tooling
-- **Dynamic Analysis**: Process attachment, function hooking, memory
-  read/write, breakpoint management, register inspection
-- **Algorithm & Protection Detection**: Identifies crypto primitives (MD5,
-  SHA256, RSA, AES), HWID/time-based checks, validation routines, crypto API
-  calls, and magic constants for use in vulnerability research, malware
-  triage, and software protection analysis
-- **Script Generation**: AI-generated Frida hooks, Ghidra plugins,
-  Cutter/Rizin commands, x64dbg scripts
-- **Sandbox Execution**: Windows Sandbox integration with
-  process/file/registry/network activity monitoring
-- **Binary Patching**: Direct modification with offset/RVA support and patch tracking
+Intellicrack is in early development (version 0.1.0a1).
 
-## Architecture
+## Features
 
-### Core Modules
-
-- **Orchestrator** (`core/orchestrator.py`): Manages conversation flow,
-  tool calling with confirmation workflow, and iterative tool execution
-- **Session Manager** (`core/session.py`): SQLite-based persistence for
-  conversations, loaded binaries, tool states, and patches
-- **Analysis Aggregator** (`core/analysis_aggregator.py`): Queries connected
-  bridges and aggregates their output into a unified `BridgeAnalysisSummary`,
-  including detected protection algorithms, validation routines, and crypto
-  API usage
-- **Config** (`core/config.py`): TOML-based configuration management
-- **Types** (`core/types.py`): Comprehensive type system with 50+ dataclasses
-  (72 total type definitions including enums and protocols)
-
-### Tool Bridges
-
-Unified interfaces for external reverse engineering tools:
-
-- **Ghidra** (`bridges/ghidra.py`): Static analysis and decompilation via ghidra_bridge
-- **x64dbg** (`bridges/x64dbg.py`): Windows debugging via named pipe
-  communication with custom plugin
-- **Frida** (`bridges/frida_bridge.py`): Runtime instrumentation, function
-  hooking, memory manipulation
-- **Cutter/Rizin** (`bridges/cutter.py`): Multi-platform binary analysis via
-  rzpipe/r2pipe (prefers rzpipe/rizin, falls back to r2pipe/radare2)
-- **Binary** (`BinaryOperationsBridge` in `bridges/base.py`): Direct
-  PE/ELF/Mach-O parsing via lief, orchestrated through `core/orchestrator.py`
-
-### LLM Providers
-
-Multiple provider implementations with unified interface:
-
-- Anthropic Claude
-- OpenAI GPT-4/3.5
-- Google Gemini
-- Ollama
-- OpenRouter
-- Hugging Face
-- xAI Grok
-- Local Transformers (in-process HuggingFace models with Intel XPU/CPU
-  acceleration)
-
-### User Interface
-
-PyQt6-based GUI featuring:
-
-- Chat interface for natural language interaction
-- Tool output panels with disassembly/decompilation viewing
-- Provider/model selection and configuration dialogs
-- Embedded tool widgets (x64dbg, Cutter, Ghidra, Frida)
-- Built-in native hex editor (HexEditorBridge)
-- Session management for saving/loading analysis sessions
-- Protection analysis panel displaying detected algorithms, validation
-  routines, and crypto usage
+- **AI assistance** from the provider of your choice: Anthropic Claude,
+  OpenAI, Google Gemini, xAI Grok, OpenRouter, Ollama, Hugging Face, or a
+  local model running in-process. The assistant can drive the analysis
+  tools for you, and asks for confirmation before anything changes a
+  target.
+- **Static analysis**: parse PE, ELF, and Mach-O files; inspect sections,
+  imports and exports, strings, and entropy; disassemble; and decompile
+  and explore with Ghidra, Cutter, rizin, and radare2.
+- **Dynamic analysis**: debug with x64dbg, hook and instrument running
+  code with Frida, and inspect and control live Windows processes.
+- **Sandboxing**: run a target in an isolated Windows Sandbox or QEMU
+  virtual machine and review the file, registry, network, and process
+  activity it produced.
+- **Hex editor**: a fast built-in editor with binary-structure templates,
+  data transforms, hashing, diffing, and patch export.
+- **Binary patching**: apply edits by file offset or RVA and keep track of
+  them.
+- **Script generation**: have the assistant write Frida, Ghidra, x64dbg,
+  or Cutter / rizin scripts for the task at hand.
+- **YARA scanning**: match rules against files and process memory.
 
 ## Requirements
 
-- **OS**: Windows
-- **Python**: 3.13+
-- **RAM**: 8GB minimum (16GB recommended)
-
-### Optional Tools
-
-- Ghidra (static analysis/decompilation)
-- x64dbg (Windows debugging)
-- Cutter/Rizin (binary analysis)
-- Frida (runtime instrumentation)
+Intellicrack runs on 64-bit Windows 10 or later. The built-in hex editor
+requires a CPU that supports the x86-64-v2 level (SSE4.2 and POPCNT).
+Everything else Intellicrack needs is included in the installer.
 
 ## Installation
 
-### Prerequisites
+Intellicrack ships as a single, offline installer for 64-bit Windows,
+`Intellicrack-Setup.exe`. It contains everything needed to run on a clean
+machine, including a private Python runtime, a private Java runtime, and
+the tools it drives (Ghidra, radare2, rizin / Cutter, x64dbg, NASM, and
+QEMU), so there is nothing to install beforehand.
 
-Install Pixi package manager:
-
-```powershell
-iwr -useb https://pixi.sh/install.ps1 | iex
-```
-
-### Setup
-
-```bash
-git clone https://github.com/ZachFlint/Intellicrack.git
-cd Intellicrack
-pixi install
-```
-
-### Activate Environment
-
-```bash
-pixi shell
-```
+Run `Intellicrack-Setup.exe` and follow the wizard. The bundled tools, the
+sandbox guest image, and local model support are optional components you
+can include or leave out. Leave a tool out to use your own copy instead,
+and point Intellicrack at it later from Tools > Tool Settings. The
+installer changes no system-wide settings; your configuration, API keys,
+logs, and data are kept under `%LOCALAPPDATA%\Intellicrack` and remain
+after an uninstall.
 
 ## Usage
 
-### GUI Mode
+Start Intellicrack from the Start Menu or the installed `Intellicrack.exe`.
+It requests administrator rights on Windows, which it uses for its
+debugging and sandbox features.
 
-```bash
-python -m intellicrack
-```
-
-### Python API
-
-```python
-from intellicrack import main
-
-main()
-```
-
-## Project Structure
-
-```text
-intellicrack/
-├── src/intellicrack/
-│   ├── core/           # Configuration, orchestration, types, session, logging
-│   ├── bridges/        # Tool integrations (Ghidra, x64dbg, Frida, Cutter/Rizin)
-│   ├── providers/      # LLM providers (Anthropic, OpenAI, Google, Ollama, etc.)
-│   ├── sandbox/        # Windows Sandbox isolation
-│   ├── ui/             # PyQt6 graphical interface
-│   ├── credentials/    # API key management
-│   └── assets/         # Configuration files and resources
-├── tests/              # Test suite
-├── tools/              # External tool binaries
-└── config.toml         # Main configuration
-```
+On first launch, open Providers to add an API key (or select a local
+Ollama or Transformers model), then load a binary and work with it from the
+chat panel or the individual tool tabs.
 
 ## Configuration
 
-Intellicrack uses TOML-based configuration (`config.toml`) with credential
-loading from `.env` files. Settings include:
+Intellicrack reads its settings from a `config.toml` file (providers, tool
+locations and timeouts, sandbox limits, the UI theme, and session and
+logging options) and API keys from a `.env` file. Both live under
+`%LOCALAPPDATA%\Intellicrack`, and most settings are also editable from the
+application's Preferences and settings dialogs.
 
-- Provider configurations (API base, timeouts, retries)
-- Tool configurations (paths, enable/disable, timeouts)
-- Sandbox settings (memory, network, timeout)
-- UI preferences (theme, fonts, window state)
+## Contributing
+
+Development setup, the build and test workflow, coding standards, and the
+pull-request process are documented in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-GNU General Public License v3.0 - see [LICENSE](LICENSE)
-
-## Disclaimer
-
-Intellicrack is developed for reverse engineering, vulnerability research,
-and defensive security work. Typical uses include understanding unknown
-binaries, auditing third-party code, researching software protection
-mechanisms, and helping developers identify weaknesses in their own
-implementations. This tool is intended for controlled research environments
-and authorized security assessment.
+Intellicrack is released under the GNU General Public License v3.0 or
+later. See [LICENSE](LICENSE).

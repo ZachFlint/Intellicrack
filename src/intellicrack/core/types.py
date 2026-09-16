@@ -226,7 +226,24 @@ __all__: list[str] = [
 
 
 class ToolName(enum.Enum):
-    """Enumeration of all supported reverse engineering tools."""
+    """Enumeration of all supported reverse engineering tools.
+
+    Attributes:
+        GHIDRA: The Ghidra static analysis and decompilation bridge.
+        X64DBG: The x64dbg/x32dbg debugger bridge.
+        FRIDA: The Frida dynamic instrumentation bridge.
+        CUTTER: The Cutter/rizin static analysis bridge.
+        PROCESS: The local process introspection bridge.
+        SANDBOX: The QEMU/Windows Sandbox execution bridge.
+        HEX_EDITOR: The hex editor / binary patching bridge.
+        TOOLS: Synthetic member for the orchestrator-built dynamic tool
+            loading meta-tool (``tools.search``). Unlike every other
+            member, it names no installable bridge: it has no filesystem
+            footprint, no installer, and no verification step, so
+            exhaustive consumers that assume every member is an
+            installable bridge (:meth:`ToolInstaller.get_all_tool_status`)
+            must explicitly skip it.
+    """
 
     GHIDRA = "ghidra"
     X64DBG = "x64dbg"
@@ -235,6 +252,7 @@ class ToolName(enum.Enum):
     PROCESS = "process"
     SANDBOX = "sandbox"
     HEX_EDITOR = "hex_editor"
+    TOOLS = "tools"
 
 
 class ProviderName(enum.Enum):
@@ -1697,6 +1715,52 @@ class ModelNotFoundError(ProviderError):
         super().__init__(message, provider_name, status_code, response_body, error_code, details)
         self.model_name = model_name
         self.available_models = available_models or []
+
+
+class UnsafeCheckpointError(ProviderError):
+    """A local checkpoint directory carries an unsafe sharded-weight index.
+
+    Raised before a model is handed to ``transformers.from_pretrained`` when the
+    checkpoint's own ``*.index.json`` maps a weight to a path that escapes the
+    checkpoint folder (a ``..`` traversal, an absolute or drive/UNC path) or to a
+    Windows reserved device name (``CON``, ``NUL``, ``COM1`` or a named pipe).
+    Loading such an entry would let a hostile checkpoint read arbitrary files or
+    block indefinitely on a device handle.
+
+    Attributes:
+        checkpoint_dir: The local checkpoint directory that was rejected.
+        offending_entry: The ``weight_map`` value that failed validation.
+    """
+
+    checkpoint_dir: str | None
+    offending_entry: str | None
+
+    def __init__(
+        self,
+        message: str,
+        checkpoint_dir: str | None = None,
+        offending_entry: str | None = None,
+        provider_name: str | None = None,
+        status_code: int | None = None,
+        response_body: str | None = None,
+        error_code: int | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize the UnsafeCheckpointError with the rejected checkpoint details.
+
+        Args:
+            message: Human-readable error description.
+            checkpoint_dir: The local checkpoint directory that was rejected.
+            offending_entry: The ``weight_map`` value that failed validation.
+            provider_name: Name of the provider.
+            status_code: HTTP status code if applicable.
+            response_body: Raw response body for debugging.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
+        super().__init__(message, provider_name, status_code, response_body, error_code, details)
+        self.checkpoint_dir = checkpoint_dir
+        self.offending_entry = offending_entry
 
 
 class ToolError(IntellicrackError):

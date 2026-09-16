@@ -31,6 +31,7 @@ from intellicrack.bridges.schemas import (
 )
 from intellicrack.core.analysis_aggregator import AnalysisAggregator
 from intellicrack.core.logging import get_logger, log_analysis_operation
+from intellicrack.core.tool_search import ToolSearchIndex
 from intellicrack.core.types import (
     BinaryInfo,
     CacheConfig,
@@ -44,8 +45,11 @@ from intellicrack.core.types import (
     ThinkingConfig,
     ToolChoice,
     ToolChoiceMode,
+    ToolDefinition,
     ToolError,
+    ToolFunction,
     ToolName,
+    ToolParameter,
     ToolResult,
 )
 
@@ -58,12 +62,7 @@ if TYPE_CHECKING:
     from intellicrack.core.script_gen import ScriptManager
     from intellicrack.core.session import Session, SessionManager
     from intellicrack.core.tools import ToolRegistry
-    from intellicrack.core.types import (
-        BridgeAnalysisSummary,
-        ToolCall,
-        ToolDefinition,
-        ToolFunction,
-    )
+    from intellicrack.core.types import BridgeAnalysisSummary, ToolCall
     from intellicrack.providers.base import LLMProvider
     from intellicrack.providers.registry import ProviderRegistry
 
@@ -129,6 +128,12 @@ from spinning a fresh probe every tick while still surfacing availability change
 :meth:`Orchestrator.get_tool_status` directly, which always re-probes.
 """
 
+_TOOLS_SEARCH_FUNCTION_NAME: str = "tools.search"
+"""Canonical dotted name of the dynamic tool-loading meta-tool's only function."""
+
+_TOOL_CATALOG_REPRESENTATIVE_SAMPLE: int = 4
+"""Representative function names shown per bridge in the compact dynamic-mode catalog."""
+
 _token_encoder_cache: dict[str, tiktoken.Encoding] = {}
 
 
@@ -192,6 +197,20 @@ class OrchestratorConfig:
         context_window_override: Optional explicit context window size (in tokens) used when
             the provider cannot report one for the active model. When ``None`` the provider
             is required to return a context window; otherwise trimming is skipped.
+        enable_dynamic_loading: When ``True`` (the default), the agent loop
+            advertises only the always-on core tool set plus the
+            ``tools.search`` meta-tool, growing the active set on demand as
+            the model discovers more via search. When ``False``, every tool
+            function in the registry is advertised on every iteration (the
+            legacy behaviour), which is useful for tests that must exercise
+            both modes.
+        core_tools: Canonical dotted tool-function names that are always
+            advertised, independent of what the model has discovered via
+            ``tools.search``. Empty by default: with no core set, the model
+            must search before it can call anything but the meta-tool.
+        search_result_limit: Default maximum number of matches
+            ``tools.search`` returns per call when the caller does not
+            specify its own ``limit`` argument.
     """
 
     confirmation_level: ConfirmationLevel = ConfirmationLevel.DESTRUCTIVE
@@ -205,6 +224,9 @@ class OrchestratorConfig:
     thinking: ThinkingConfig | None = None
     cache: CacheConfig | None = None
     context_window_override: int | None = None
+    enable_dynamic_loading: bool = True
+    core_tools: frozenset[str] = field(default_factory=frozenset)
+    search_result_limit: int = 10
 
 
 @dataclass(eq=False)
@@ -556,6 +578,7 @@ BRIDGE_DESTRUCTIVE_METHODS: dict[ToolName, frozenset[str]] = {
     ToolName.PROCESS: _PROCESS_DESTRUCTIVE,
     ToolName.HEX_EDITOR: _HEX_EDITOR_DESTRUCTIVE,
     ToolName.CUTTER: _CUTTER_DESTRUCTIVE,
+    ToolName.TOOLS: frozenset(),
 }
 """Per-bridge whitelist of method names that mutate external state.
 
@@ -1287,7 +1310,7 @@ class Orchestrator:
             raise RuntimeError(error_message)
 
         tool_definitions = self._tools.get_tool_definitions()
-        self._validate_tool_schemas(tool_definitions, provider)
+        self._validate_tool_schemas([*tool_definitions, self._build_meta_tool_definition()], provider)
         context_window = await self._require_model_context_window(provider)
         iteration = 0
         force_no_tools_next = False
@@ -1318,15 +1341,17 @@ class Orchestrator:
 
             iteration_tool_choice_override: ToolChoice | None = ToolChoice(mode=ToolChoiceMode.NONE) if force_no_tools_next else None
 
+            active_tool_definitions = self._active_tool_definitions(tool_definitions)
+
             response, tool_calls = await self._call_llm(
                 provider=provider,
                 messages=messages,
-                tools=tool_definitions,
+                tools=active_tool_definitions,
                 is_final_response=self._is_final_response_expected() or force_no_tools_next,
                 tool_choice_override=iteration_tool_choice_override,
             )
 
-            if response.content:
+            if response.content or tool_calls:
                 self._current_session.messages.append(response)
                 turn_messages.append(response)
                 if self._on_message:
@@ -1582,17 +1607,142 @@ class Orchestrator:
         )
         return f"{serialized[:_MAX_TOOL_RESULT_CHARS]}\n... [truncated {omitted} characters; request a narrower range for full detail]"
 
+    def _build_meta_tool_definition(self) -> ToolDefinition:
+        """Build the orchestrator's dynamic tool-loading meta-tool definition.
+
+        Unlike every bridge :class:`ToolDefinition`, this one is not sourced
+        from :meth:`ToolRegistry.get_tool_definitions` -- there is no
+        registered bridge behind ``tools.search``, since it is intercepted
+        by :meth:`_maybe_handle_meta_tool` before dispatch ever reaches the
+        registry. It is placed under the synthetic :attr:`ToolName.TOOLS`.
+
+        Returns:
+            ToolDefinition: The single-function ``tools.search`` definition.
+        """
+        return ToolDefinition(
+            tool_name=ToolName.TOOLS,
+            description=(
+                "Dynamic tool discovery. The full tool registry is not advertised up front; "
+                "search it for the functions relevant to your current task before calling them."
+            ),
+            functions=[
+                ToolFunction(
+                    name=_TOOLS_SEARCH_FUNCTION_NAME,
+                    description=(
+                        "Search the complete tool registry across every bridge (ghidra, x64dbg, "
+                        "frida, cutter, process, sandbox, hex_editor) for functions matching a "
+                        "natural-language query, e.g. 'set a breakpoint' or 'read process memory'. "
+                        "Matching functions become callable and are added to the active tool set "
+                        "for the rest of this conversation."
+                    ),
+                    parameters=[
+                        ToolParameter(
+                            name="query",
+                            type="string",
+                            description="Natural-language description of the capability needed.",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="limit",
+                            type="integer",
+                            description="Maximum number of matching functions to return.",
+                            required=False,
+                            default=self._config.search_result_limit,
+                        ),
+                    ],
+                    returns=(
+                        "object with 'matches' (list of {name, signature, description}) and "
+                        "'newly_loaded' (names newly added to the active tool set)"
+                    ),
+                ),
+            ],
+        )
+
+    def _active_tool_definitions(self, all_definitions: list[ToolDefinition]) -> list[ToolDefinition]:
+        """Resolve the tool set advertised to the LLM for the current iteration.
+
+        When dynamic loading is disabled (:attr:`OrchestratorConfig.enable_dynamic_loading`
+        is ``False``), every tool in ``all_definitions`` is advertised unchanged
+        (the legacy behaviour). Otherwise the active set is the meta-tool
+        placed first (so a tail-truncating provider cap can never drop tool
+        discovery), followed by the always-on core tools
+        (:attr:`OrchestratorConfig.core_tools`) unioned with whatever the
+        session has discovered via ``tools.search`` so far
+        (:attr:`Session.loaded_tools`), grouped back into one
+        :class:`ToolDefinition` per contributing bridge and resolved against
+        the live registry so a stale or unknown name is silently dropped
+        rather than crashing the turn.
+
+        Args:
+            all_definitions: The full registry snapshot fetched once at the
+                top of the agent loop.
+
+        Returns:
+            list[ToolDefinition]: The tool definitions to advertise this
+            iteration, meta-tool first when dynamic loading is enabled.
+        """
+        if not self._config.enable_dynamic_loading:
+            return all_definitions
+
+        function_index: dict[str, tuple[ToolDefinition, ToolFunction]] = {
+            func.name: (definition, func) for definition in all_definitions for func in definition.functions
+        }
+
+        session = self._current_session
+        loaded = session.loaded_tools if session is not None else []
+
+        active_names: list[str] = []
+        seen: set[str] = set()
+        for name in (*self._config.core_tools, *loaded):
+            if name in seen:
+                continue
+            seen.add(name)
+            active_names.append(name)
+
+        grouped: dict[ToolName, list[ToolFunction]] = {}
+        order: list[ToolName] = []
+        definition_by_tool: dict[ToolName, ToolDefinition] = {}
+        for name in active_names:
+            entry = function_index.get(name)
+            if entry is None:
+                _logger.debug("active_tool_definitions_unresolved_name", name=name)
+                continue
+            definition, func = entry
+            if definition.tool_name not in grouped:
+                grouped[definition.tool_name] = []
+                order.append(definition.tool_name)
+                definition_by_tool[definition.tool_name] = definition
+            grouped[definition.tool_name].append(func)
+
+        active_definitions = [self._build_meta_tool_definition()]
+        for tool_name in order:
+            source = definition_by_tool[tool_name]
+            active_definitions.append(
+                ToolDefinition(
+                    tool_name=source.tool_name,
+                    description=source.description,
+                    functions=grouped[tool_name],
+                ),
+            )
+        return active_definitions
+
     def _render_tool_catalog(self) -> list[str]:
         """Render the tool catalog as a list of prompt lines.
 
-        The renderer queries :meth:`ToolRegistry.get_tool_definitions` and
-        formats every advertised tool / function so the LLM sees an up-to-date
-        list. When no bridges are registered the catalog renders an explicit
-        ``(no tools available)`` marker rather than silently producing an
-        empty section.
+        When dynamic loading is disabled, this queries
+        :meth:`ToolRegistry.get_tool_definitions` and formats every
+        advertised tool / function, matching the legacy behaviour. When
+        dynamic loading is enabled (the default), the full 715-function
+        catalog is never rendered; instead the prompt gets a compact
+        per-bridge menu (description, function count, a few representative
+        names) plus the full signatures of whatever is in the active set
+        this iteration, plus instructions to call ``tools.search`` for
+        anything not already loaded. When no bridges are registered the
+        catalog renders an explicit ``(no tools available)`` marker rather
+        than silently producing an empty section.
 
         Returns:
-            list[str]: Prompt lines describing every registered tool.
+            list[str]: Prompt lines describing the available tools.
         """
         try:
             tool_definitions = self._tools.get_tool_definitions()
@@ -1603,17 +1753,68 @@ class Orchestrator:
         if not tool_definitions:
             return ["", "## Available tools", "", "(no tools available)"]
 
-        lines: list[str] = ["", "## Available tools"]
+        if not self._config.enable_dynamic_loading:
+            lines: list[str] = ["", "## Available tools"]
+            for definition in tool_definitions:
+                lines.append("")
+                tool_name_value = definition.tool_name.value if hasattr(definition.tool_name, "value") else str(definition.tool_name)
+                description = (definition.description or "").strip()
+                heading_suffix = f" - {description}" if description else ""
+                lines.append(f"### {tool_name_value}{heading_suffix}")
+                if not definition.functions:
+                    lines.append("(no functions advertised)")
+                    continue
+                lines.extend(self._render_tool_function(func) for func in definition.functions)
+            return lines
+
+        return self._render_dynamic_tool_catalog(tool_definitions)
+
+    def _render_dynamic_tool_catalog(self, tool_definitions: list[ToolDefinition]) -> list[str]:
+        """Render the compact catalog used when dynamic tool loading is enabled.
+
+        Args:
+            tool_definitions: The full registry snapshot (used only to build
+                the per-bridge menu -- never rendered in full).
+
+        Returns:
+            list[str]: Prompt lines: a per-bridge menu, the fully-specified
+            active set for this iteration, and search instructions.
+        """
+        active_definitions = self._active_tool_definitions(tool_definitions)
+
+        lines: list[str] = [
+            "",
+            "## Available tools",
+            "",
+            (
+                "The full tool registry is not listed here to keep this prompt small. Call "
+                f"`{_TOOLS_SEARCH_FUNCTION_NAME}(query)` with a natural-language description of the "
+                "capability you need; matching functions become callable and appear below on the "
+                "next turn."
+            ),
+            "",
+            "### Bridge menu",
+        ]
         for definition in tool_definitions:
-            lines.append("")
-            tool_name_value = definition.tool_name.value if hasattr(definition.tool_name, "value") else str(definition.tool_name)
+            tool_name_value = definition.tool_name.value
             description = (definition.description or "").strip()
-            heading_suffix = f" - {description}" if description else ""
-            lines.append(f"### {tool_name_value}{heading_suffix}")
-            if not definition.functions:
-                lines.append("(no functions advertised)")
-                continue
-            lines.extend(self._render_tool_function(func) for func in definition.functions)
+            sample_names = [func.name for func in definition.functions[:_TOOL_CATALOG_REPRESENTATIVE_SAMPLE]]
+            sample_suffix = f"; e.g. {', '.join(sample_names)}" if sample_names else ""
+            lines.append(f"- **{tool_name_value}** ({len(definition.functions)} functions){sample_suffix}: {description}")
+
+        lines.extend(["", "### Currently loaded functions"])
+        loaded_lines = [
+            self._render_tool_function(func)
+            for definition in active_definitions
+            for func in definition.functions
+            if func.name != _TOOLS_SEARCH_FUNCTION_NAME
+        ]
+        if loaded_lines:
+            lines.extend(loaded_lines)
+        else:
+            lines.append(f"(none yet - call `{_TOOLS_SEARCH_FUNCTION_NAME}` to load functions)")
+
+        lines.append(f"- `{_TOOLS_SEARCH_FUNCTION_NAME}(query: string, limit: integer) -> object` - search the full registry")
         return lines
 
     @staticmethod
@@ -2119,6 +2320,117 @@ class Orchestrator:
 
         return response, tool_calls
 
+    def _handle_tools_search(self, call: ToolCall) -> ToolResult:
+        """Execute a ``tools.search`` meta-tool call against the live registry.
+
+        Args:
+            call: The ``tools.search`` tool call, carrying a ``query``
+                argument and an optional ``limit`` argument.
+
+        Returns:
+            ToolResult: A JSON-native success result carrying ``matches``
+            (every hit, as plain dicts) and ``newly_loaded`` (canonical
+            names newly added to the session's active set by this call);
+            a failure result when the tool registry itself is unavailable.
+        """
+        start_time = time.time()
+        query_arg = call.arguments.get("query")
+        query = query_arg if isinstance(query_arg, str) else ""
+        limit_arg = call.arguments.get("limit")
+        limit = int(limit_arg) if isinstance(limit_arg, int | float) and limit_arg else self._config.search_result_limit
+
+        try:
+            definitions = self._tools.get_tool_definitions()
+        except (RuntimeError, ToolError) as exc:
+            _logger.warning("tools_search_registry_unavailable", error=str(exc))
+            return ToolResult(
+                call_id=call.id,
+                success=False,
+                result=None,
+                error=f"Tool registry unavailable: {exc}",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
+
+        matches = ToolSearchIndex(definitions).search(query, limit=limit)
+
+        newly_loaded: list[str] = []
+        if self._current_session is not None:
+            newly_loaded.extend(match.function.name for match in matches if self._current_session.add_loaded_tool(match.function.name))
+
+        result_payload: dict[str, object] = {
+            "matches": [
+                {
+                    "name": match.function.name,
+                    "signature": match.function.signature,
+                    "description": match.function.description,
+                }
+                for match in matches
+            ],
+            "newly_loaded": newly_loaded,
+        }
+
+        _logger.info(
+            "tools_search_executed",
+            query=query,
+            match_count=len(matches),
+            newly_loaded_count=len(newly_loaded),
+        )
+
+        return ToolResult(
+            call_id=call.id,
+            success=True,
+            result=result_payload,
+            error=None,
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _maybe_handle_meta_tool(self, call: ToolCall) -> ToolResult | None:
+        """Intercept a call that targets the dynamic tool-loading meta-tool.
+
+        Runs at the top of the per-call loop in :meth:`_execute_tool_calls`,
+        after ``_on_tool_call`` and before ``_should_confirm``: names are
+        already canonical at this point (post-parse), the meta-tool has no
+        registered bridge so :meth:`ToolRegistry.execute_tool_call` would
+        otherwise raise ``ToolError`` on the unknown ``"tools"`` enum key,
+        and running before confirmation grants ``tools.search`` a pure,
+        read-only, always-approved path rather than one contingent on
+        confirmation-level configuration.
+
+        When dynamic loading is enabled, this also guards every other call
+        against the active set: a call to a tool that is neither in
+        :attr:`OrchestratorConfig.core_tools` nor yet discovered via search
+        gets a guiding failure result here instead of an opaque dispatch
+        failure from the registry, redirecting the model to search first.
+
+        Args:
+            call: The tool call to inspect.
+
+        Returns:
+            ToolResult | None: A populated result when ``call`` targets
+            ``tools.search`` or an unloaded tool while dynamic loading is
+            enabled; ``None`` for every other call, which falls through to
+            normal confirmation and dispatch.
+        """
+        if call.function_name == _TOOLS_SEARCH_FUNCTION_NAME:
+            return self._handle_tools_search(call)
+
+        if not self._config.enable_dynamic_loading or self._current_session is None:
+            return None
+
+        if call.function_name in self._config.core_tools:
+            return None
+        if call.function_name in self._current_session.loaded_tools:
+            return None
+
+        _logger.debug("meta_tool_guard_unloaded_call", function=call.function_name)
+        return ToolResult(
+            call_id=call.id,
+            success=False,
+            result=None,
+            error=(f"'{call.function_name}' is not loaded. Call {_TOOLS_SEARCH_FUNCTION_NAME}(query) to discover and load it first."),
+            duration_ms=0,
+        )
+
     async def _execute_tool_calls(
         self,
         tool_calls: list[ToolCall],
@@ -2142,6 +2454,13 @@ class Orchestrator:
 
             if self._on_tool_call:
                 self._on_tool_call(call)
+
+            meta_result = self._maybe_handle_meta_tool(call)
+            if meta_result is not None:
+                results.append(meta_result)
+                if self._on_tool_result:
+                    self._on_tool_result(meta_result)
+                continue
 
             if await self._should_confirm(call):
                 confirmed = await self._request_confirmation(call)

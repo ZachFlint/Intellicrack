@@ -40,6 +40,7 @@ from intellicrack.providers.base import ToolCallBufferManager
 from intellicrack.providers.huggingface import HuggingFaceProvider
 from intellicrack.providers.local_transformers import LocalTransformersProvider
 from intellicrack.providers.model_loader import LoadedModel, ModelCache, ModelConfig
+from intellicrack.providers.tool_names import to_wire_name
 
 
 if TYPE_CHECKING:
@@ -319,7 +320,7 @@ class TestPrepareRequestPayload:
         entry = hf_tools[0]
         assert entry["type"] == "function"
         func = cast("dict[str, object]", entry["function"])
-        assert func["name"] == "binary.get_file_size"
+        assert func["name"] == to_wire_name("binary.get_file_size")
 
 
 # ---------------------------------------------------------------------------
@@ -516,7 +517,7 @@ class TestConvertToolsHF:
         entry = result[0]
         assert entry["type"] == "function"
         func = cast("dict[str, object]", entry["function"])
-        assert func["name"] == "binary.get_file_size"
+        assert func["name"] == to_wire_name("binary.get_file_size")
         assert "description" in func
         params = cast("dict[str, object]", func["parameters"])
         assert params["type"] == "object"
@@ -1243,7 +1244,7 @@ class TestConvertToolsLT:
         entry = result[0]
         assert entry["type"] == "function"
         func = cast("dict[str, object]", entry["function"])
-        assert func["name"] == "binary.get_file_size"
+        assert func["name"] == to_wire_name("binary.get_file_size")
         assert "description" in func
         params = cast("dict[str, object]", func["parameters"])
         assert params["type"] == "object"

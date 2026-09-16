@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import math
 import os
 import time
 from datetime import UTC, datetime
@@ -44,6 +45,7 @@ from intellicrack.providers.base import (
     create_google_tool_schema,
     is_permanent_quota_error,
 )
+from intellicrack.providers.tool_names import from_wire_name, to_wire_name
 
 
 if TYPE_CHECKING:
@@ -155,13 +157,33 @@ class GoogleProvider(LLMProviderBase):
             if saved_gemini_key is not None:
                 os.environ["GEMINI_API_KEY"] = saved_gemini_key
 
+    @staticmethod
+    def _build_client(credentials: ProviderCredentials) -> genai.Client:
+        """Construct the Gemini client for a set of credentials.
+
+        The SDK expresses request timeouts in whole milliseconds, so a saved
+        timeout in seconds is rounded up; without one the SDK default applies.
+
+        Args:
+            credentials: Provider credentials containing the API key and an
+                optional request timeout in seconds.
+
+        Returns:
+            genai.Client: The configured Gemini client.
+        """
+        if credentials.timeout is None:
+            return genai.Client(api_key=credentials.api_key)
+        timeout_ms = math.ceil(credentials.timeout * 1000)
+        return genai.Client(api_key=credentials.api_key, http_options=types.HttpOptions(timeout=timeout_ms))
+
     async def _connect_impl(self, credentials: ProviderCredentials) -> None:
         """Initialise the Google client and probe the models endpoint.
 
         Args:
-            credentials: Provider credentials containing the API key.
+            credentials: Provider credentials containing the API key and an
+                optional request timeout.
         """
-        self.client = genai.Client(api_key=credentials.api_key)
+        self.client = self._build_client(credentials)
 
         models_iter = await asyncio.to_thread(self.client.models.list)
         _ = next(iter(models_iter), None)
@@ -898,7 +920,7 @@ class GoogleProvider(LLMProviderBase):
                 tool_config = types.ToolConfig(
                     function_calling_config=types.FunctionCallingConfig(
                         mode=fc_mode.ANY,
-                        allowed_function_names=[tool_choice.function_name],
+                        allowed_function_names=[to_wire_name(tool_choice.function_name)],
                     ),
                 )
 
@@ -974,7 +996,7 @@ class GoogleProvider(LLMProviderBase):
             base64-encoded for safe storage/persistence, or ``None`` when
             the source part carried no signature.
         """
-        func_name = function_call.name or ""
+        func_name = from_wire_name(function_call.name or "")
         args = dict(function_call.args) if function_call.args else {}
         tool_name = func_name.split(".")[0] if "." in func_name else func_name
         return ToolCall(
@@ -1133,7 +1155,7 @@ class GoogleProvider(LLMProviderBase):
         """
         part: dict[str, object] = {
             "function_call": {
-                "name": tool_call.function_name,
+                "name": to_wire_name(tool_call.function_name),
                 "args": tool_call.arguments,
             },
         }
@@ -1154,6 +1176,10 @@ class GoogleProvider(LLMProviderBase):
         Builds a call_id-to-function_name mapping from assistant messages so
         that tool result ``function_response.name`` fields contain the actual
         function name (required by Google's API), not the opaque call ID.
+        The mapped name is the same provider wire form emitted by
+        :meth:`_build_function_call_part` for the matching ``function_call``,
+        since Gemini rejects a ``function_response`` whose name does not
+        match the preceding ``function_call`` exactly.
 
         Args:
             messages: List of Message objects to convert.
@@ -1165,7 +1191,7 @@ class GoogleProvider(LLMProviderBase):
         for msg in messages:
             if msg.role == "assistant" and msg.tool_calls:
                 for tc in msg.tool_calls:
-                    call_id_to_name[tc.id] = tc.function_name
+                    call_id_to_name[tc.id] = to_wire_name(tc.function_name)
 
         contents: list[dict[str, object]] = []
 

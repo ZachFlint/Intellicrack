@@ -38,6 +38,7 @@ from intellicrack.providers.model_loader import (
     ModelCache,
     select_dtype_for_memory,
 )
+from intellicrack.providers.tool_names import to_wire_name
 from intellicrack.providers.xpu_utils import (
     check_windows_requirements,
     get_optimal_dtype_for_xpu,
@@ -1562,7 +1563,7 @@ class TestPromptFormatting:
         tools = _make_test_tool()
         formatted = _convert_messages_via(loaded_xpu_provider, messages)
         prompt = _format_prompt_via(loaded_xpu_provider, formatted, tools)
-        assert "binary.get_file_size" in prompt
+        assert to_wire_name("binary.get_file_size") in prompt
 
 
 class TestToolCallParsing:

@@ -9,6 +9,23 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- Expand bridge capabilities across dynamic and static tools (`0f75903`)
+Expand API surfaces and UI controls across all reverse-engineering
+bridges to support granular execution flows, direct register access, and
+extended metadata manipulation.
+- Cutter: add basic block/call/ref analysis passes, relative seek history,
+flagspace management, ESIL state/watchpoint controls, and FLIRT tooling
+- Frida: support low-overhead fast replace, typed memory accessors, module
+section/dependency enumeration, script debugger attachment, and bytecode
+precompilation/snapshots
+- Ghidra: implement standalone P-code inspection, arbitrary byte range
+disassembly, non-default memory block types, DTM tree navigation, and
+headless batch processing
+- x64dbg: add debug/extended register inspection, coverage tracing, thread
+creation/termination, and memory range breakpoint controls
+- UI: expose the new bridge operations in their respective Qt panels and
+add integration test coverage across all tool surfaces
+
 - **cutter:** 04-36+04-37+04-48+04-49 Cutter: manually add code/call/data cross-references (axc/axC/axd); Cutter: remove a cross-reference, optionally scoped to one source address (ax-); Cutter: relative seek stepping by a signed byte delta (sd); Cutter: seek-history navigation -- list, undo, redo (sh/shu/shr) (`2275cc4`)
 
 - **frida:** 08-B2+08-D3+08-E5+08-E6+08-E10 Stalker call-summary tracing; Frida NativePointer typed read/write accessors as one coherent surface; Frida Module.enumerateRanges with a protection filter; Frida Module.enumerateSections and Module.enumerateDependencies; Frida single-export lookup via Module.findExportByName/getExportByName (`0e93305`)
@@ -604,22 +621,16 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
 
-- Expand bridge capabilities across dynamic and static tools (``)
-Expand API surfaces and UI controls across all reverse-engineering
-bridges to support granular execution flows, direct register access, and
-extended metadata manipulation.
-- Cutter: add basic block/call/ref analysis passes, relative seek history,
-flagspace management, ESIL state/watchpoint controls, and FLIRT tooling
-- Frida: support low-overhead fast replace, typed memory accessors, module
-section/dependency enumeration, script debugger attachment, and bytecode
-precompilation/snapshots
-- Ghidra: implement standalone P-code inspection, arbitrary byte range
-disassembly, non-default memory block types, DTM tree navigation, and
-headless batch processing
-- x64dbg: add debug/extended register inspection, coverage tracing, thread
-creation/termination, and memory range breakpoint controls
-- UI: expose the new bridge operations in their respective Qt panels and
-add integration test coverage across all tool surfaces
+- **core:** Implement dynamic tool loading and provider hardening (``)
+Introduce on-demand tool discovery via a synthetic `tools.search` meta-tool to prevent context exhaustion and comply with provider tool caps, normalize canonical dotted tool names to provider-safe wire formats, and harden credential persistence across environment and settings stores.
+* Add `ToolSearchIndex` and `tools.search` meta-tool in orchestrator to lazily index and load tool definitions per session.
+* Preserve assistant turns carrying tool calls with empty content in `_run_agent_loop` to prevent orphaned tool execution results.
+* Enforce provider tool-count caps uniformly via `_enforce_tool_count_cap` across OpenAI, Grok, and OpenRouter backends.
+* Map canonical dotted tool names (e.g., `frida.spawn`) to wire-safe names (`frida__spawn`) with deterministic fallback hashing to satisfy provider regex constraints.
+* Add `validate_local_checkpoint` to prevent directory traversal and reserved-device loading vulnerabilities in sharded model indexes.
+* Migrate legacy provider endpoint and credential configurations from `providers.json` into state-managed `.env` files.
+* Forward configured request timeouts to Anthropic, OpenAI, Grok, and Google client instances, omitting deprecated sampling parameters for Anthropic.
+* Update security floors in `pyproject.toml` for `httpx2`, `httpcore2`, and `gitpython`, and add MegaLinter pipeline automation.
 
 
 ### Changed
@@ -6096,3 +6107,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+

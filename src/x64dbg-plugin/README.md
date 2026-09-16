@@ -22,7 +22,7 @@ Ready-to-use plugin binaries are committed under `bin/`:
 - `bin/intellicrack_bridge_x32.dp32` (I386)
 
 A normal install deploys these directly and needs **no compiler or CMake**.
-`just install-x64dbg-plugin` (and `deploy_x64dbg_plugin` in
+`just build-x64dbg-plugin` (and `deploy_x64dbg_plugin` in
 `src/intellicrack/bridges/installer.py`) prefer `bin/` and only fall back to a
 source build when a binary is missing. CMake is required only to *rebuild* the
 plugin from source (below).
@@ -77,7 +77,7 @@ cd ..
 
 ## Installation
 
-Run `just install-x64dbg-plugin` from the project root to deploy the binaries
+Run `just build-x64dbg-plugin` from the project root to deploy the binaries
 from `bin/` into `tools/x64dbg/release/{x64,x32}/plugins/`. The build writes the
 plugin into `bin/` automatically, so no manual copy is needed. The `build/` and
 `build_x32/` trees are regenerable and are not tracked by git.

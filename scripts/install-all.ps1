@@ -47,7 +47,7 @@ $subSteps = @(
     @{ Step = 7;  Name = 'radare2'; Recipe = 'install-radare2' },
     @{ Step = 8;  Name = 'QEMU';    Recipe = 'install-qemu' },
     @{ Step = 9;  Name = 'x64dbg';  Recipe = 'install-x64dbg' },
-    @{ Step = 10; Name = 'x64dbg bridge plugin'; Recipe = 'install-x64dbg-plugin' },
+    @{ Step = 10; Name = 'x64dbg bridge plugin'; Recipe = 'build-x64dbg-plugin' },
     @{ Step = 11; Name = 'Cutter';  Recipe = 'install-cutter' }
 )
 

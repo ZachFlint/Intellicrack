@@ -99,6 +99,13 @@ class Session:
         bridge_analyses: Mapping of binary names to their bridge analysis summary.
         notes: User notes.
         tags: Session tags.
+        loaded_tools: Canonical dotted names of tool functions discovered
+            via the ``tools.search`` meta-tool during dynamic tool loading,
+            in insertion order with duplicates skipped on insert. Holds
+            only *discovered* names; the always-on core tool set comes
+            from configuration and is unioned in at advertise time, not
+            stored here. An ordered list rather than a set so cap-trimming
+            order stays deterministic.
     """
 
     id: str
@@ -115,6 +122,23 @@ class Session:
     bridge_analyses: dict[str, BridgeAnalysisSummary] = field(default_factory=dict)
     notes: str = ""
     tags: list[str] = field(default_factory=list)
+    loaded_tools: list[str] = field(default_factory=list)
+
+    def add_loaded_tool(self, canonical_name: str) -> bool:
+        """Record a discovered tool-function name, skipping duplicates.
+
+        Args:
+            canonical_name: Canonical dotted tool-function name discovered
+                by a ``tools.search`` call (e.g. ``"frida.spawn"``).
+
+        Returns:
+            bool: ``True`` if ``canonical_name`` was newly added; ``False``
+            if it was already present in :attr:`loaded_tools`.
+        """
+        if canonical_name in self.loaded_tools:
+            return False
+        self.loaded_tools.append(canonical_name)
+        return True
 
     @classmethod
     def create(
@@ -440,6 +464,7 @@ class SessionStore:
             "tool_states": {k.value: self._serialize_tool_state(v) for k, v in session.tool_states.items()},
             "patches": [self._serialize_patch(p) for p in session.patches],
             "bridge_analyses": {name: self._serialize_bridge_analysis(analysis) for name, analysis in session.bridge_analyses.items()},
+            "loaded_tools": list(session.loaded_tools),
         }
 
         conn = sqlite3.connect(str(self.db_path), isolation_level=None)
@@ -496,6 +521,7 @@ class SessionStore:
                 tool_states={ToolName(k): self._deserialize_tool_state(v) for k, v in data.get("tool_states", {}).items()},
                 patches=[self._deserialize_patch(p) for p in data.get("patches", [])],
                 bridge_analyses={name: self._deserialize_bridge_analysis(value) for name, value in data.get("bridge_analyses", {}).items()},
+                loaded_tools=list(data.get("loaded_tools", [])),
             )
 
             _logger.debug("session_loaded", session_id=session_id)
@@ -926,6 +952,7 @@ class SessionStore:
                 "tool_states": {k.value: self._serialize_tool_state(v) for k, v in session.tool_states.items()},
                 "patches": [self._serialize_patch(p) for p in session.patches],
                 "bridge_analyses": {name: self._serialize_bridge_analysis(analysis) for name, analysis in session.bridge_analyses.items()},
+                "loaded_tools": list(session.loaded_tools),
             },
         }
 
@@ -989,6 +1016,7 @@ class SessionStore:
             bridge_analyses={
                 name: self._deserialize_bridge_analysis(value) for name, value in session_data.get("bridge_analyses", {}).items()
             },
+            loaded_tools=list(session_data.get("loaded_tools", [])),
         )
 
         _logger.info("session_imported", session_id=session.id, path=str(path))

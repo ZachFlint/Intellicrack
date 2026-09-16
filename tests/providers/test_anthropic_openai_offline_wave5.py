@@ -12,7 +12,7 @@ Covers 8 NOT_RESOLVED findings from group-07-report.md:
              #23 _infer_supports_vision
 
 All tests are fully offline.  Anthropic gates use a real
-``anthropic.AsyncAnthropic`` backed by an ``httpx.AsyncBaseTransport``
+``anthropic.AsyncAnthropic`` backed by an ``httpx2.AsyncBaseTransport``
 subclass so every SDK serialisation and deserialization layer runs without
 substitution.  The #15 gate calls ``_finalize_anthropic_stream`` directly
 via a duck-typed stream stub (the only method called is ``get_final_message``
@@ -34,7 +34,7 @@ import json
 from typing import TYPE_CHECKING, Any, cast, override
 
 import anthropic
-import httpx
+import httpx2
 import openai
 import pytest
 from anthropic.types import (
@@ -233,11 +233,11 @@ def _make_text_tool_sse_body(
 
 
 # ---------------------------------------------------------------------------
-# Stub httpx transports for Anthropic API seam
+# Stub httpx2 transports for Anthropic API seam
 # ---------------------------------------------------------------------------
 
 
-class _AnthropicJSONTransport(httpx.AsyncBaseTransport):
+class _AnthropicJSONTransport(httpx2.AsyncBaseTransport):
     """Replay a canned JSON response for every Anthropic API request.
 
     Attributes:
@@ -255,16 +255,16 @@ class _AnthropicJSONTransport(httpx.AsyncBaseTransport):
         self.body = body
 
     @override
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         """Return a 200 JSON response with the pre-built body.
 
         Args:
             request: Inbound HTTP request from the Anthropic SDK.
 
         Returns:
-            httpx.Response: 200 OK with ``content-type: application/json``.
+            httpx2.Response: 200 OK with ``content-type: application/json``.
         """
-        return httpx.Response(
+        return httpx2.Response(
             200,
             content=self.body,
             headers={"content-type": "application/json"},
@@ -272,7 +272,7 @@ class _AnthropicJSONTransport(httpx.AsyncBaseTransport):
         )
 
 
-class _AnthropicSSETransport(httpx.AsyncBaseTransport):
+class _AnthropicSSETransport(httpx2.AsyncBaseTransport):
     """Replay a canned SSE body for every Anthropic streaming request.
 
     Attributes:
@@ -290,16 +290,16 @@ class _AnthropicSSETransport(httpx.AsyncBaseTransport):
         self.body = body
 
     @override
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         """Return a 200 SSE response with the pre-built SSE bytes.
 
         Args:
             request: Inbound HTTP request from the Anthropic SDK.
 
         Returns:
-            httpx.Response: 200 OK with ``content-type: text/event-stream``.
+            httpx2.Response: 200 OK with ``content-type: text/event-stream``.
         """
-        return httpx.Response(
+        return httpx2.Response(
             200,
             content=self.body,
             headers={"content-type": "text/event-stream"},
@@ -307,7 +307,7 @@ class _AnthropicSSETransport(httpx.AsyncBaseTransport):
         )
 
 
-def _anthropic_provider_with_transport(transport: httpx.AsyncBaseTransport) -> AnthropicProvider:
+def _anthropic_provider_with_transport(transport: httpx2.AsyncBaseTransport) -> AnthropicProvider:
     """Construct a pre-connected ``AnthropicProvider`` backed by a stub transport.
 
     Args:
@@ -321,7 +321,7 @@ def _anthropic_provider_with_transport(transport: httpx.AsyncBaseTransport) -> A
     provider = AnthropicProvider()
     sdk_client = anthropic.AsyncAnthropic(
         api_key="offline-test-key",
-        http_client=httpx.AsyncClient(transport=transport),
+        http_client=httpx2.AsyncClient(transport=transport),
     )
     setattr(provider, _CLIENT_ATTR, sdk_client)
     provider.connected = True
@@ -369,7 +369,7 @@ async def test_anthropic_chat_text_response_parsed_via_stub_transport() -> None:
     """chat() correctly parses a text-only Anthropic JSON response body.
 
     Drives the full ``chat()`` -> ``_make_anthropic_api_call()`` -> real
-    Anthropic SDK -> stub httpx transport path with a canned non-streaming
+    Anthropic SDK -> stub httpx2 transport path with a canned non-streaming
     JSON body.  Asserts the returned ``Message`` carries the exact content
     string and that no tool calls were produced.
 
@@ -651,7 +651,7 @@ async def test_openai_connect_401_raises_authentication_error(
 ) -> None:
     """connect() with an invalid key must raise AuthenticationError and stay disconnected.
 
-    Injects a stub httpx transport returning HTTP 401 into the
+    Injects a stub httpx2 transport returning HTTP 401 into the
     ``openai.AsyncOpenAI`` constructor via ``monkeypatch.setattr``.  The
     real ``connect()`` path — key guard, client creation, ``models.list()``
     call, exception catch and re-raise — runs without substitution.
@@ -666,10 +666,10 @@ async def test_openai_connect_401_raises_authentication_error(
     ``pytest.raises``.
     """
 
-    class _UnauthorizedTransport(httpx.AsyncBaseTransport):
+    class _UnauthorizedTransport(httpx2.AsyncBaseTransport):
         @override
-        async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-            return httpx.Response(
+        async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
+            return httpx2.Response(
                 401,
                 content=json.dumps(
                     {
@@ -689,7 +689,7 @@ async def test_openai_connect_401_raises_authentication_error(
     stub_transport = _UnauthorizedTransport()
 
     def _patched_openai(**kwargs: object) -> openai.AsyncOpenAI:
-        kwargs["http_client"] = httpx.AsyncClient(transport=stub_transport)
+        kwargs["http_client"] = httpx2.AsyncClient(transport=stub_transport)
         return real_cls(**cast("Any", kwargs))
 
     monkeypatch.setattr(openai, "AsyncOpenAI", _patched_openai)

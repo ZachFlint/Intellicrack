@@ -20,6 +20,7 @@ from intellicrack.core.types import (
     ToolFunction,
     ToolParameter,
 )
+from intellicrack.providers.tool_names import is_valid_wire_name, to_wire_name
 
 
 _logger = get_logger(__name__)
@@ -752,6 +753,17 @@ def validate_tool_for_provider(
                 "error",
             ),
         )
+    for func in tool.functions:
+        wire_name = to_wire_name(func.name)
+        if not is_valid_wire_name(wire_name):
+            errors.append(
+                ValidationError(
+                    f"Wire name '{wire_name}' derived from function '{func.name}' violates the "
+                    "provider tool-name rule ^[A-Za-z0-9_-]{1,64}$",
+                    func.name,
+                    "error",
+                ),
+            )
     has_errors = any(e.severity == "error" for e in errors)
     if has_errors:
         _logger.warning(

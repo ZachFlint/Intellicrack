@@ -56,6 +56,7 @@ from intellicrack.providers.base import (
     create_openai_tool_schema,
     parse_tool_call,
 )
+from intellicrack.providers.tool_names import to_wire_name
 
 
 if TYPE_CHECKING:
@@ -1157,7 +1158,7 @@ def _convert_tool_choice(
     if tool_choice.mode is ToolChoiceMode.REQUIRED:
         return "required"
     return ChatCompletionInputToolChoiceClass(
-        function=ChatCompletionInputFunctionName(name=tool_choice.function_name or ""),
+        function=ChatCompletionInputFunctionName(name=to_wire_name(tool_choice.function_name) if tool_choice.function_name else ""),
     )
 
 

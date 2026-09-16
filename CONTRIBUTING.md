@@ -1,7 +1,8 @@
 # Contributing to Intellicrack
 
-Thank you for your interest in contributing to Intellicrack! This document
-provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to Intellicrack. This document
+covers how to set up a development environment, the quality gates every
+change must pass, and how to get your work reviewed and merged.
 
 ## Table of Contents
 
@@ -12,24 +13,27 @@ provides guidelines and instructions for contributing to the project.
 - [Making Changes](#making-changes)
 - [Coding Standards](#coding-standards)
 - [Testing](#testing)
+- [Commit Messages](#commit-messages)
 - [Submitting Changes](#submitting-changes)
+- [Questions](#questions)
 
 ## Code of Conduct
 
-Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md) to ensure a
-welcoming environment for all contributors.
+Please read and follow the [Code of Conduct](CODE_OF_CONDUCT.md) so the
+project stays welcoming to everyone.
 
 ## Getting Started
 
-1. Fork the repository on GitHub
+1. Fork the repository on GitHub.
 2. Clone your fork locally:
 
     ```bash
-    git clone https://github.com/ZachFlint/Intellicrack.git
+    git clone https://github.com/<your-user>/Intellicrack.git
     cd Intellicrack
     ```
 
-3. Add the upstream repository as a remote:
+3. Add the upstream repository as a remote so you can keep your fork in
+   sync:
 
     ```bash
     git remote add upstream https://github.com/ZachFlint/Intellicrack.git
@@ -39,200 +43,197 @@ welcoming environment for all contributors.
 
 ### Prerequisites
 
-- **Python 3.13+** (required for full functionality)
-- **Git** for version control
-- **Windows 11**
-- **[Pixi](https://pixi.sh)** for environment management (the project manifest
-  lives in `pyproject.toml`)
-- **Docker** — the test suites run inside a Docker sandbox
-- **[`just`](https://github.com/casey/just)** command runner — all quality-gate,
-  build, and test recipes are defined in the `justfile`
+Intellicrack is developed on 64-bit Windows. Install these yourself:
 
-### Virtual Environment Setup
+- **Git**
+- **[Pixi](https://pixi.sh)** - provisions Python 3.13 and every
+  development tool from `pyproject.toml`
+- **Docker Desktop** - the test suite runs inside a Docker sandbox
 
-1. Create and activate the environment (the manifest already exists in
-   `pyproject.toml`, so there is nothing to initialize):
+Everything else the project uses (`just`, `ruff`, `basedpyright`, the Rust
+toolchain, and so on) is provided by the Pixi environment; run those tools
+from a `pixi shell` or by prefixing them with `pixi run`.
+
+### Setup
+
+1. Create the environment and enter it:
 
     ```bash
-    # Installs all runtime and development dependencies from pyproject.toml
     pixi install
     pixi shell
     ```
 
-2. Install dependencies:
-
-    All runtime and development dependencies are provided by the Pixi
-    environment created above, so no separate install step is required. If you
-    need a pip-based fallback, install from the root `requirements.txt`:
-
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-3. Build the Rust hex editor core (`intellicrack-hexcore`):
+2. Build the native hex editor core (`intellicrack-hexcore`):
 
     ```bash
     just build-hexcore
     ```
 
-4. Install pre-commit hooks:
+3. Install the pre-commit hooks:
 
     ```bash
     pre-commit install
     ```
 
+`just install` runs the full bootstrap (environment, native core, and Node
+dev tooling) in one step, and `just --list` shows every available recipe.
+
+### Building components
+
+The other native and packaged components have their own recipes:
+
+- `just build-x64dbg-plugin` - the C++ x64dbg bridge plugin
+- `just build-hexbench` - the standalone Hexbench GUI
+- `just build-intellicrack` - the frozen application (PyInstaller)
+- `just build-installer` - the Windows installer (see
+  [packaging/README.md](packaging/README.md))
+
+The external analysis tools can be fetched with `just install-ghidra`,
+`just install-radare2`, `just install-cutter`, `just install-x64dbg`, and
+`just install-qemu`.
+
 ## Project Structure
 
 ```text
-intellicrack/
-├── src/intellicrack/      # Main package source code
-│   ├── assets/           # Bundled icons and static assets
-│   ├── bridges/          # Bridge layer for external tools and internal modules
-│   ├── core/             # Core orchestration, logging, and shared functionality
-│   ├── credentials/      # Credential storage and management
-│   ├── providers/        # AI provider connectivity
-│   ├── sandbox/          # Sandbox analysis and orchestration
-│   ├── ui/               # User interface components
-│   ├── main.py           # Application entry point
-│   ├── __main__.py       # `python -m intellicrack` entry point
-│   └── _metadata.py      # Package metadata
-├── src/intellicrack-hexcore/  # Rust hex editor core crate
-├── tests/                # Test suite
-├── docs/                 # Documentation
-├── data/                 # Runtime data (gitignored)
-└── .github/              # GitHub workflows and templates
+src/
+  intellicrack/          Main application package (Python)
+    core/                Orchestration, config, sessions, types, logging
+    bridges/             Tool integrations and direct binary operations
+    providers/           LLM provider implementations
+    sandbox/             Windows Sandbox and QEMU backends
+    ui/                  PyQt6 interface (chat, tool panels, dialogs)
+    credentials/         API keys and OAuth
+    assets/              Bundled icons and resources
+  intellicrack-hexcore/  Native hex editor core (Rust / PyO3)
+  x64dbg-plugin/         x64dbg bridge plugin (C++)
+  hexbench/              Standalone hex-core tester (web GUI)
+tests/                   Test suite (mirrors the src subsystems)
+packaging/               Windows installer (Inno Setup)
+scripts/                 Build, install, and tooling scripts
+docs/                    Sphinx documentation
+justfile                 Build, lint, and test recipes
 ```
 
 ## Making Changes
 
-1. Create a new branch for your feature or fix:
+1. Branch off `main`:
 
     ```bash
-    git checkout -b feature/your-feature-name
+    git checkout -b feat/short-description
     ```
 
-2. Make your changes following the coding standards
-
-3. Write or update tests as needed
-
-4. Update documentation if you've changed functionality
-
-5. Commit your changes with clear, descriptive messages:
-
-    ```bash
-    git commit -m "Add feature: description of what you added"
-    ```
+2. Make your changes, following the coding standards below.
+3. Add or update tests, and update documentation when behavior changes.
+4. Run the quality gates and the test suite locally before pushing.
 
 ## Coding Standards
 
-### Python Code Style
+- Target Python 3.13. Format with ruff (`just ruff-fmt`); the line length
+  is 140.
+- All code must pass `just lint` (ruff), `just basedpyright`,
+  `just pydoclint`, and `just pydocstyle` with zero findings.
+- Give every function, method, and attribute precise type annotations;
+  basedpyright runs in strict mode.
+- Write Google-style docstrings for every module, class, and function.
+- Do not use suppression comments (no `type: ignore`, no pyright-ignore,
+  no blanket `noqa`). Fix the underlying issue instead.
+- Keep code Windows-compatible, and follow SOLID, DRY, and KISS.
+- Files use CRLF line endings, enforced by `.gitattributes` and
+  pre-commit.
 
-- Follow PEP 8 style guide
-- Format with ruff (`just ruff-fmt`); line length 140
-- All code must pass `ruff check`, `basedpyright`, `pydoclint`, and `pydocstyle`
-- Every function, method, and variable must have precise type hints and
-  annotations
-- Write Google-style docstrings for all functions, methods, and classes
-- Keep functions focused and under 50 lines when possible
+`just lint-fix` and `just ruff-fmt` apply safe fixes and formatting;
+`just run-all-tools` runs the full linter suite; and the pre-commit hooks
+run the core gates on every commit.
 
-### Import Order
+### Import order
 
-1. Standard library imports
-2. Third-party imports
-3. Local application imports
-
-Example:
+Group imports as standard library, third-party, then first-party, with a
+blank line between groups (ruff's isort enforces this):
 
 ```python
-import os
-import sys
-from typing import Dict, List
+import json
+from pathlib import Path
 
-import numpy as np
 from PyQt6.QtWidgets import QWidget
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.tools import ToolRegistry
 ```
 
-### Naming Conventions
+### Naming conventions
 
 - Classes: `PascalCase`
-- Functions/variables: `snake_case`
-
+- Functions and variables: `snake_case`
 - Constants: `UPPER_SNAKE_CASE`
-- Private methods/attributes: `_leading_underscore`
+- Private members: `_leading_underscore`
 
 ## Testing
 
-### Running Tests
-
-Tests run inside a Docker sandbox and are driven through `just` recipes.
-Invoking `pytest` directly is not supported.
+The tests run inside a Docker sandbox and are driven through `just`
+recipes; invoking `pytest` directly is not the supported path.
 
 ```bash
-# Run the test suite in the Docker sandbox
+# Run the default (unit) suite, followed by the host-native pass
 just test
 
-# Run with coverage
+# Run one subsystem, e.g. the bridges
+just test module --module bridges
+
+# Measure coverage; run the Rust hex-core tests
 just test-coverage
+just test-hexcore
 ```
 
-### Writing Tests
+`just test <TYPE>` selects a suite (`unit`, `integration`, `all`,
+`module`, and others listed in the recipe header). `just test-host` runs
+only the host-native pass.
 
-- Place tests under `tests/` in the subsystem subdirectory that matches the code
-  under test: `bridges/`, `core/`, `providers/`, `sandbox/`, `hexpat/`,
-  `integration/`, or `ui/`
-- Never place tests at the `tests/` root or beside the source files
-- Use descriptive test names that explain what is being tested
-- Include both positive and negative test cases
-- Every test must be a real, falsifiable quality gate that fails when the
-  behavior it asserts is broken — do not assert on mocks or stubs in place of
-  the real behavior under test
+When writing tests:
 
-Example:
+- Place each test under `tests/` in the subsystem directory that matches
+  the code: `bridges/`, `core/`, `providers/`, `sandbox/`, `hexpat/`,
+  `integration/`, `ui/`, or `packaging/`. Never at the `tests/` root or
+  beside the source.
+- Use descriptive names and cover both success and failure paths.
+- Every test must be a real, falsifiable gate: it must fail when the
+  behavior it asserts is broken. Exercise genuine operations against real
+  inputs rather than asserting on mocks or stubs.
 
-```python
-from intellicrack.core.logging import get_logger
+## Commit Messages
 
+The project uses [Conventional Commits](https://www.conventionalcommits.org).
+Write each message as `<type>(<scope>): <summary>`:
 
-def test_get_logger_returns_named_logger():
-    """Verify get_logger returns a logger bound to the requested name."""
-    logger = get_logger("intellicrack.example")
-    assert logger is not None
+```text
+feat(bridges): add memory-map enumeration to the Frida bridge
+fix(cutter): use ASCII labels for the relative-seek toolbar
+test(ghidra): drive the real ProgramTree widget in the L3 gate
 ```
+
+Common types are `feat`, `fix`, `docs`, `test`, `refactor`, and `chore`.
+The changelog is generated from these messages, so keep them accurate.
 
 ## Submitting Changes
 
-1. Push your changes to your fork:
+1. Push your branch to your fork:
 
     ```bash
-    git push origin feature/your-feature-name
+    git push origin feat/short-description
     ```
 
-2. Create a Pull Request on GitHub:
-    - Provide a clear title and description
-    - Reference any related issues
-    - Include screenshots for UI changes
-    - Ensure all tests pass
-    - Address review feedback promptly
+2. Open a Pull Request against `main`. Give it a clear description,
+   reference any related issues, and include screenshots for UI changes.
 
 ### Pull Request Checklist
 
-- [ ] Code follows the project's style guidelines
-- [ ] Self-review of code completed
-- [ ] Comments added for complex logic
-- [ ] Documentation updated if needed
-- [ ] Tests added/updated and passing
-- [ ] No new linting warnings
-- [ ] Commit messages are clear and descriptive
+- [ ] `just lint`, `just basedpyright`, `just pydoclint`, and
+      `just pydocstyle` pass with no findings
+- [ ] Tests added or updated, and `just test` passes
+- [ ] Type hints and Google-style docstrings are complete
+- [ ] Commit messages follow Conventional Commits
+- [ ] No suppression comments, placeholders, or stubbed-out behavior
 
-## Additional Resources
+## Questions
 
-- [Issue Tracker](https://github.com/ZachFlint/Intellicrack/issues)
-- [Documentation](docs/) - Local documentation in project repository
-
-## Questions?
-
-Feel free to open an issue for any questions about contributing. We're here to
-help!
+Open an issue for anything about contributing, or browse the local
+[documentation](docs/). We are happy to help.

@@ -46,6 +46,7 @@ from intellicrack.providers.base import (
     create_anthropic_tool_schema,
     serialize_tool_result,
 )
+from intellicrack.providers.tool_names import from_wire_name, to_wire_name
 
 
 if TYPE_CHECKING:
@@ -93,7 +94,9 @@ class AnthropicProvider(LLMProviderBase):
         """Connect to Anthropic API.
 
         Args:
-            credentials: Must contain api_key.
+            credentials: Must contain api_key. ``api_base`` is forwarded to the
+                SDK client, and ``timeout`` replaces the SDK's default request
+                timeout when set.
 
         Raises:
             AuthenticationError: If API key is invalid.
@@ -106,6 +109,7 @@ class AnthropicProvider(LLMProviderBase):
             self._client = anthropic.AsyncAnthropic(
                 api_key=credentials.api_key,
                 base_url=credentials.api_base,
+                timeout=credentials.timeout if credentials.timeout is not None else anthropic.NOT_GIVEN,
             )
             await self._client.models.list(limit=1)
         except anthropic.AuthenticationError as e:
@@ -237,7 +241,6 @@ class AnthropicProvider(LLMProviderBase):
         *,
         model: str,
         max_tokens: int,
-        temperature: float,
         messages: list[MessageParam],
         system_prompt: str | None,
         tools: list[dict[str, object]] | None,
@@ -247,10 +250,16 @@ class AnthropicProvider(LLMProviderBase):
     ) -> dict[str, Any]:
         """Build keyword arguments for the Anthropic messages API.
 
+        Sampling parameters (``temperature``/``top_p``/``top_k``) are
+        intentionally omitted: the anthropic 1.x SDK removed them from
+        ``messages.create``/``messages.stream``, and current Claude
+        models reject them at the API layer.  Callers still accept a
+        ``temperature`` on the provider interface for cross-provider
+        uniformity; it simply does not reach the Anthropic request.
+
         Args:
             model: Model ID to use.
             max_tokens: Maximum tokens in response.
-            temperature: Sampling temperature.
             messages: Formatted message list.
             system_prompt: Optional system prompt text.
             tools: Optional formatted tools list.
@@ -264,7 +273,6 @@ class AnthropicProvider(LLMProviderBase):
         kwargs: dict[str, Any] = {
             "model": model,
             "max_tokens": max_tokens,
-            "temperature": temperature,
             "messages": messages,
         }
         if system_prompt is not None:
@@ -281,11 +289,10 @@ class AnthropicProvider(LLMProviderBase):
             elif tool_choice.mode == ToolChoiceMode.NONE:
                 kwargs.pop("tools", None)
             elif tool_choice.mode == ToolChoiceMode.SPECIFIC and tool_choice.function_name:
-                kwargs["tool_choice"] = {"type": "tool", "name": tool_choice.function_name}
+                kwargs["tool_choice"] = {"type": "tool", "name": to_wire_name(tool_choice.function_name)}
 
         if thinking is not None and thinking.enabled:
             kwargs["thinking"] = {"type": "enabled", "budget_tokens": thinking.budget_tokens}
-            kwargs["temperature"] = 1.0
             kwargs["max_tokens"] = max(kwargs["max_tokens"], thinking.budget_tokens + 1024)
 
         if enable_cache:
@@ -535,13 +542,13 @@ class AnthropicProvider(LLMProviderBase):
             model=model,
             messages_count=len(messages),
             tools_count=len(tools) if tools else 0,
+            temperature=temperature,
         )
 
         start_time = time.perf_counter()
         api_kwargs = self._build_api_kwargs(
             model=model,
             max_tokens=max_tokens,
-            temperature=temperature,
             messages=typed_messages,
             system_prompt=system_prompt,
             tools=anthropic_tools,
@@ -658,7 +665,7 @@ class AnthropicProvider(LLMProviderBase):
         self._pending_usage = None
         self._pending_thinking.clear()
 
-        log_provider_request("anthropic", model, len(messages), len(tools or []))
+        log_provider_request("anthropic", model, len(messages), len(tools or []), temperature=temperature)
         system_prompt = self._extract_system_messages(messages)
         anthropic_messages = self.convert_messages_to_provider_format(messages)
         typed_messages = cast("list[MessageParam]", anthropic_messages)
@@ -669,7 +676,6 @@ class AnthropicProvider(LLMProviderBase):
         api_kwargs = self._build_api_kwargs(
             model=model,
             max_tokens=max_tokens,
-            temperature=temperature,
             messages=typed_messages,
             system_prompt=system_prompt,
             tools=anthropic_tools,
@@ -759,11 +765,12 @@ class AnthropicProvider(LLMProviderBase):
         for block in final_message.content:
             if block.type == "tool_use":
                 args: dict[str, object] = dict(block.input)
+                canonical_name = from_wire_name(block.name)
                 tool_calls.append(
                     ToolCall(
                         id=block.id,
-                        tool_name=block.name.split(".")[0] if "." in block.name else block.name,
-                        function_name=block.name,
+                        tool_name=canonical_name.split(".")[0] if "." in canonical_name else canonical_name,
+                        function_name=canonical_name,
                         arguments=args,
                     ),
                 )
@@ -856,7 +863,7 @@ class AnthropicProvider(LLMProviderBase):
                 {
                     "type": "tool_use",
                     "id": tc.id,
-                    "name": tc.function_name,
+                    "name": to_wire_name(tc.function_name),
                     "input": tc.arguments,
                 }
                 for tc in msg.tool_calls

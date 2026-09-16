@@ -759,6 +759,15 @@ pypi-dependencies.xxhash = ">=4.0.1, <5"
 # (CVE-2026-59884 / CVE-2026-59885 / CVE-2026-59886) and stays within the
 # <0.7 bound that pyasn1-modules requires.
 pypi-dependencies.pyasn1 = ">=0.6.4, <0.7"
+# Security floors for the transitive HTTP stack shipped in the runtime environment
+# (anthropic / openai / mcp -> httpx2 -> httpcore2). httpx2 >=2.12.0 clears the
+# SOCKS-proxied WebSocket TLS bypass, SSE line-buffering DoS, multipart header
+# injection, conflicting Content-Length/Transfer-Encoding, and streaming
+# decompression-amplification advisories (CVE-2026-84378 through CVE-2026-84382);
+# httpcore2 >=2.10.0 clears its half of CVE-2026-84381. Both stay within the <3
+# bound every consumer requires.
+pypi-dependencies.httpx2 = ">=2.12.0, <3"
+pypi-dependencies.httpcore2 = ">=2.10.0, <3"
 # Declared explicitly so the runtime environment cannot lose them to a re-solve:
 # each is imported by the shipped app (keyring -> credentials/store.py,
 # cryptography -> ui/panels/vnc_widget.py, psutil -> core/process_manager.py,

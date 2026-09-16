@@ -29,6 +29,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any, Self, cast, override
 
 import httpx
+import httpx2
 import openai
 import pytest
 
@@ -292,7 +293,7 @@ class _TempEventLoop:
             self._loop.close()
 
 
-class _StaticSSETransport(httpx.AsyncBaseTransport):
+class _StaticSSETransport(httpx2.AsyncBaseTransport):
     """Replay a pre-built SSE body for every request; capture the inbound request body."""
 
     def __init__(self, body: bytes) -> None:
@@ -305,19 +306,19 @@ class _StaticSSETransport(httpx.AsyncBaseTransport):
         self.last_request_body: dict[str, object] = {}
 
     @override
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         """Capture the inbound request body and replay the pre-built SSE bytes.
 
         Args:
             request: The inbound HTTP request from the SDK.
 
         Returns:
-            httpx.Response: A 200 response with the fixed SSE body and
+            httpx2.Response: A 200 response with the fixed SSE body and
             ``content-type: text/event-stream``.
         """
         if request.content:
             self.last_request_body = cast("dict[str, object]", json.loads(request.content))
-        return httpx.Response(
+        return httpx2.Response(
             200,
             content=self.body,
             headers={"content-type": "text/event-stream"},
@@ -442,8 +443,8 @@ def _finish_chunk(
     }
 
 
-def _build_grok_provider(transport: httpx.AsyncBaseTransport) -> GrokProvider:
-    """Return a pre-connected GrokProvider backed by the given httpx transport.
+def _build_grok_provider(transport: httpx2.AsyncBaseTransport) -> GrokProvider:
+    """Return a pre-connected GrokProvider backed by the given httpx2 transport.
 
     Args:
         transport: The stub transport injected into the openai SDK client.
@@ -456,7 +457,7 @@ def _build_grok_provider(transport: httpx.AsyncBaseTransport) -> GrokProvider:
     provider.client = openai.AsyncOpenAI(
         api_key="offline-test-key",
         base_url="http://unused.local/v1",
-        http_client=httpx.AsyncClient(transport=transport),
+        http_client=httpx2.AsyncClient(transport=transport),
     )
     provider.connected = True
     return provider

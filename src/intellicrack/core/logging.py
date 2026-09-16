@@ -591,6 +591,7 @@ def log_provider_request(
     model: str,
     messages_count: int,
     tools_count: int,
+    temperature: float | None = None,
 ) -> None:
     """Log an LLM provider request.
 
@@ -599,6 +600,11 @@ def log_provider_request(
         model: Model ID being used.
         messages_count: Number of messages in the request.
         tools_count: Number of tools available.
+        temperature: Sampling temperature requested by the caller, if any.
+            Recorded so operators can see the requested value even when a
+            provider does not forward it to its backend (for example
+            Anthropic, whose current models reject the parameter).
+
     """
     slog = get_logger("providers")
     slog.info(
@@ -607,6 +613,7 @@ def log_provider_request(
         model=model,
         messages_count=messages_count,
         tools_count=tools_count,
+        requested_temperature=temperature,
     )
 
 

@@ -50,7 +50,7 @@ check, not as truth to copy. Re-run each check yourself and correct any drift.
       (maturin develop --release). It installs into the env's site-packages; it
       is NOT a declared pixi package. Confirm how it lands and capture it in the
       staged runtime.
-  - x64dbg plugin — C++ built via `just install-x64dbg-plugin`
+  - x64dbg plugin — C++ built via `just build-x64dbg-plugin`
       (cmake+ninja from pixi + system MSVC on the BUILD machine only). Prebuilt
       artifacts observed at tools\x64dbg\release\x64\plugins\intellicrack_bridge_x64.dp64
       and ...\x32\plugins\intellicrack_bridge_x32.dp32 — ship these prebuilt.
@@ -103,7 +103,7 @@ Produce a written dependency/asset manifest, each row backed by a check:
    alone and `default` composes them all. packaging\stage.ps1 stages the
    installer from .pixi\envs\runtime, so the build toolchain never ships.
 2. Native artifacts: read the justfile recipes build-hexcore and
-   install-x64dbg-plugin and scripts\install-*.ps1. Confirm hexcore's installed
+   build-x64dbg-plugin and scripts\install-*.ps1. Confirm hexcore's installed
    location in the env and the exact plugin artifact paths. Determine precisely
    what must be prebuilt on the build machine vs shipped.
 3. External tools: inventory tools\ with fd/ls. For EACH bridge in
