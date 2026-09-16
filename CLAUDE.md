@@ -40,14 +40,6 @@ capabilities feel like one coherent application rather than a collection of
 disconnected integrations. The defining value of Intellicrack is that it
 unifies tools, context, and AI connectivity into a single operational surface.
 
-## Tools
-
-## USE THESE TOOLS
-
-1. rg instead of grep
-2. fd instead of find
-3. tree is installed
-
 ## CRITICAL: SHELL USAGE
 
 - **Prefer the `PowerShell` tool over the `Bash` tool for ALL shell

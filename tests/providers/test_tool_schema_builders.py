@@ -26,6 +26,7 @@ from intellicrack.providers.base import (
     create_google_tool_schema,
     create_openai_tool_schema,
 )
+from intellicrack.providers.tool_names import to_wire_name
 
 
 _EXPECTED_DEFAULT_TIMEOUT: Final[int] = 30
@@ -141,7 +142,7 @@ def test_openai_basic_schema_structure() -> None:
     schema = schemas[0]
     assert schema["type"] == "function"
     func = schema["function"]
-    assert func["name"] == _FUNC_NAME_ANALYZE
+    assert func["name"] == to_wire_name(_FUNC_NAME_ANALYZE)
     assert func["description"] == _FUNC_DESC_ANALYZE
 
 
@@ -195,8 +196,8 @@ def test_openai_multi_function_produces_multiple_schemas() -> None:
 
     assert len(schemas) == _EXPECTED_MULTI_FUNC_COUNT
     names = [s["function"]["name"] for s in schemas]
-    assert _FUNC_NAME_ANALYZE in names
-    assert _FUNC_NAME_DECOMPILE in names
+    assert to_wire_name(_FUNC_NAME_ANALYZE) in names
+    assert to_wire_name(_FUNC_NAME_DECOMPILE) in names
 
 
 def test_openai_empty_functions_returns_empty() -> None:
@@ -211,7 +212,7 @@ def test_anthropic_basic_schema_structure() -> None:
 
     assert len(schemas) == 1
     schema = schemas[0]
-    assert schema["name"] == _FUNC_NAME_ANALYZE
+    assert schema["name"] == to_wire_name(_FUNC_NAME_ANALYZE)
     assert schema["description"] == _FUNC_DESC_ANALYZE
     assert "input_schema" in schema
     assert "type" not in schema
@@ -245,7 +246,7 @@ def test_google_basic_schema_structure() -> None:
 
     assert len(schemas) == 1
     schema = schemas[0]
-    assert schema["name"] == _FUNC_NAME_ANALYZE
+    assert schema["name"] == to_wire_name(_FUNC_NAME_ANALYZE)
     assert schema["description"] == _FUNC_DESC_ANALYZE
     assert "parameters" in schema
     assert "type" not in schema
@@ -301,8 +302,8 @@ def test_google_multi_function_produces_multiple_declarations() -> None:
 
     assert len(schemas) == _EXPECTED_MULTI_FUNC_COUNT
     names = [s["name"] for s in schemas]
-    assert _FUNC_NAME_ANALYZE in names
-    assert _FUNC_NAME_DECOMPILE in names
+    assert to_wire_name(_FUNC_NAME_ANALYZE) in names
+    assert to_wire_name(_FUNC_NAME_DECOMPILE) in names
 
 
 def test_google_no_function_wrapper() -> None:
@@ -339,7 +340,7 @@ def test_consistency_all_formats_preserve_function_names() -> None:
     anthropic_names = [s["name"] for s in create_anthropic_tool_schema(tool)]
     google_names = [s["name"] for s in create_google_tool_schema(tool)]
 
-    expected = {_FUNC_NAME_ANALYZE, _FUNC_NAME_DECOMPILE}
+    expected = {to_wire_name(_FUNC_NAME_ANALYZE), to_wire_name(_FUNC_NAME_DECOMPILE)}
     assert set(openai_names) == expected
     assert set(anthropic_names) == expected
     assert set(google_names) == expected

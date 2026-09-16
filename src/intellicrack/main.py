@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from intellicrack.core.tools import ToolRegistry
     from intellicrack.core.types import HexDocumentFull, ProviderName
     from intellicrack.credentials.env_loader import CredentialLoader
+    from intellicrack.credentials.provider_settings import ProviderConnectPolicy, ProviderSettingsStore
     from intellicrack.providers.base import LLMProviderBase
     from intellicrack.providers.discovery import ModelDiscovery
     from intellicrack.providers.registry import ProviderRegistry
@@ -636,17 +637,128 @@ def _upgrade_to_full_splash(
         return None
 
 
+def _load_provider_connect_policy(
+    config: Config,
+    credentials: CredentialLoader,
+    logger: BoundLogger,
+) -> ProviderConnectPolicy:
+    """Migrate legacy provider endpoint settings and build the startup connect policy.
+
+    Endpoint settings (base URL, organization) that earlier releases saved only
+    in ``providers.json`` are moved into the ``.env`` file ``credentials`` is
+    bound to before any provider connects, so a saved custom endpoint is honoured
+    on the first launch after upgrading. The returned policy disables providers
+    that either ``providers.json`` or the application configuration marks as
+    disabled and carries each provider's saved request timeout.
+
+    Args:
+        config: Application configuration supplying the per-provider enabled flag.
+        credentials: Credential loader bound to the application's ``.env`` file.
+        logger: BoundLogger instance.
+
+    Returns:
+        ProviderConnectPolicy: Policy applied while providers connect at startup.
+    """
+    settings_mod = importlib.import_module("intellicrack.credentials.provider_settings")
+    config_mod = importlib.import_module("intellicrack.core.config")
+    store_cls = cast("type[ProviderSettingsStore]", settings_mod.ProviderSettingsStore)
+    settings_filename = cast("str", settings_mod.PROVIDER_SETTINGS_FILENAME)
+    settings_path = cast("Callable[[str], Path]", config_mod.get_config_file)(settings_filename)
+
+    store = store_cls(settings_path)
+    migration = store.migrate_legacy_endpoints(credentials)
+    policy = store.connect_policy(config.is_provider_enabled)
+    logger.info(
+        "provider_connect_policy_loaded",
+        settings_path=str(settings_path),
+        imported_endpoints=list(migration.imported),
+        retained_endpoints=list(migration.retained),
+        settings_rewritten=migration.settings_rewritten,
+        disabled=sorted(provider.value for provider in policy.disabled),
+        timeouts={provider.value: seconds for provider, seconds in policy.timeouts.items()},
+    )
+    return policy
+
+
+async def _connect_provider_at_startup(
+    provider: LLMProviderBase,
+    provider_name: ProviderName,
+    credentials: CredentialLoader,
+    policy: ProviderConnectPolicy | None,
+    logger: BoundLogger,
+) -> None:
+    """Connect one constructed provider using its saved credentials and policy.
+
+    Disabled providers and providers without usable credentials are left
+    unconnected. A connect that times out or raises ``ProviderError`` is logged
+    and swallowed so the caller still registers the provider for a later
+    reconnect from Provider Settings.
+
+    Args:
+        provider: The constructed provider instance.
+        provider_name: Registry key and credential lookup name for the provider.
+        credentials: Credential loader bound to the application's ``.env`` file.
+        policy: Enablement and timeout policy, or ``None`` to connect every
+            provider with its default timeout.
+        logger: BoundLogger instance.
+    """
+    if policy is not None and not policy.is_enabled(provider_name):
+        logger.info("provider_connect_skipped_disabled", provider=provider_name.value)
+        return
+
+    display_mod = importlib.import_module("intellicrack.providers.display_names")
+    types_mod = importlib.import_module("intellicrack.core.types")
+    no_api_key_providers = cast("frozenset[ProviderName]", display_mod.NO_API_KEY_PROVIDERS)
+    provider_error_cls = cast("type[Exception]", types_mod.ProviderError)
+
+    creds = credentials.get_connect_credentials(provider_name, api_key_optional=provider_name in no_api_key_providers)
+    if creds is None:
+        logger.debug("no_credentials", provider=provider_name.value)
+        return
+    if policy is not None:
+        creds = policy.apply_timeout(provider_name, creds)
+
+    try:
+        await asyncio.wait_for(
+            provider.connect(creds),
+            timeout=_PROVIDER_CONNECT_TIMEOUT,
+        )
+    except TimeoutError:
+        logger.warning(
+            "provider_connect_timeout",
+            provider=provider_name.value,
+            timeout=_PROVIDER_CONNECT_TIMEOUT,
+        )
+    except provider_error_cls as exc:
+        logger.warning(
+            "provider_connect_failed",
+            provider=provider_name.value,
+            error=str(exc),
+        )
+    else:
+        logger.info("provider_connected", provider=provider_name.value)
+
+
 async def _initialize_providers(
     registry: ProviderRegistry,
     credentials: CredentialLoader,
     logger: BoundLogger,
+    policy: ProviderConnectPolicy | None = None,
 ) -> None:
     """Initialize and connect LLM providers.
 
+    Every provider class is registered before it is constructed and every
+    constructed instance is registered whatever the outcome of its connect, so a
+    provider that is disabled, lacks credentials, times out, or is rejected by
+    its endpoint can still be reconnected from Provider Settings -- and one whose
+    construction failed can still be constructed on demand from its class.
+
     Args:
         registry: Provider registry to populate.
-        credentials: Credential loader for API keys.
+        credentials: Credential loader for API keys and endpoint settings.
         logger: BoundLogger instance.
+        policy: Enablement and timeout policy from the saved provider settings, or
+            ``None`` to connect every provider with its default timeout.
     """
     types_mod = importlib.import_module("intellicrack.core.types")
     provider_name_enum = types_mod.ProviderName
@@ -675,11 +787,13 @@ async def _initialize_providers(
     )
 
     async def _init_one_impl(provider_name: ProviderName, provider_class: type[LLMProviderBase]) -> None:
-        """Construct, optionally connect, and register a single provider.
+        """Register a provider class, then construct, optionally connect, and register its instance.
 
         Propagates ``ImportError``, ``OSError``, ``RuntimeError``,
         ``ValueError``, ``TypeError``, and ``AttributeError`` so the caller
-        wrapper can log a single ``provider_init_failed`` warning.
+        wrapper can log a single ``provider_init_failed`` warning. The
+        constructed instance is registered even when such an error escapes its
+        connect attempt.
 
         Args:
             provider_name: Provider enum value used for log records and
@@ -687,40 +801,11 @@ async def _initialize_providers(
             provider_class: Concrete :class:`LLMProviderBase` subclass to
                 instantiate.
         """
-        display_mod = importlib.import_module("intellicrack.providers.display_names")
-        no_api_key_providers = display_mod.NO_API_KEY_PROVIDERS
-        provider_credentials_cls = types_mod.ProviderCredentials
-        provider_error_cls = types_mod.ProviderError
-
+        registry.register_class(provider_name, provider_class)
         provider = provider_class()
-        creds = credentials.get_credentials(provider_name)
-        if creds is None and provider_name in no_api_key_providers:
-            creds = provider_credentials_cls()
-
-        if creds is not None:
-            try:
-                await asyncio.wait_for(
-                    provider.connect(creds),
-                    timeout=_PROVIDER_CONNECT_TIMEOUT,
-                )
-                logger.info("provider_connected", provider=provider_name.value)
-            except TimeoutError:
-                logger.warning(
-                    "provider_connect_timeout",
-                    provider=provider_name.value,
-                    timeout=_PROVIDER_CONNECT_TIMEOUT,
-                )
-            except provider_error_cls as exc:
-                logger.warning(
-                    "provider_connect_failed",
-                    provider=provider_name.value,
-                    error=str(exc),
-                )
-                if provider_name not in no_api_key_providers:
-                    return
-            registry.register(provider)
-        else:
-            logger.debug("no_credentials", provider=provider_name.value)
+        try:
+            await _connect_provider_at_startup(provider, provider_name, credentials, policy, logger)
+        finally:
             registry.register(provider)
 
     async def _init_one(provider_name: ProviderName, provider_class: type[LLMProviderBase]) -> None:
@@ -1346,7 +1431,12 @@ async def _run_application(
 
     provider_registry = _get_provider_registry()
     logger.info("provider_initialization_started")
-    await _initialize_providers(provider_registry, credential_loader, logger)
+    await _initialize_providers(
+        provider_registry,
+        credential_loader,
+        logger,
+        _load_provider_connect_policy(config, credential_loader, logger),
+    )
     logger.info("provider_initialization_complete")
 
     splash.set_progress(50, "Initializing tools...")

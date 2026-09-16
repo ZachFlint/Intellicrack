@@ -1847,11 +1847,16 @@ class ToolInstaller:
             dict[ToolName, tuple[bool, Path | None]]: Dict mapping tool
             name to (available, path) tuples. ``path`` is None for
             non-filesystem tools (builtin / python_package) even when
-            they are available.
+            they are available. ``ToolName.TOOLS``, the orchestrator-built
+            dynamic tool loading meta-tool, is skipped: it names no
+            installable bridge and has no entry in the tool registry this
+            method walks.
         """
         status: dict[ToolName, tuple[bool, Path | None]] = {}
 
         for tool in ToolName:
+            if tool is ToolName.TOOLS:
+                continue
             found = await self.find_tool_detailed(tool)
             if found is None:
                 status[tool] = (False, None)

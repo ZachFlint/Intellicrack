@@ -12,7 +12,6 @@ from __future__ import annotations
 import asyncio
 import importlib
 import json
-import os
 import sys
 import weakref
 from pathlib import Path
@@ -67,6 +66,13 @@ from intellicrack.core.types import (
     ToolResult,
 )
 from intellicrack.credentials import get_credentials
+from intellicrack.credentials.env_loader import CredentialField, get_credential_loader
+from intellicrack.credentials.provider_settings import (
+    PROVIDER_SETTINGS_FILENAME,
+    ProviderSettingsStore,
+    coerce_timeout_seconds,
+    resolve_session_credentials,
+)
 from intellicrack.providers.discovery import ModelDiscovery, format_discovery_status
 from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
 from intellicrack.sandbox import SandboxConfig, SandboxManager
@@ -1644,6 +1650,10 @@ class MainWindow(QMainWindow):
     async def _connect_provider_for_session(self, provider: ProviderName) -> None:
         """Connect a provider using stored credentials for implicit session start.
 
+        Credentials from the credential store take precedence; a keyless
+        provider with none still receives its saved endpoint (for example a
+        custom Ollama host), and the saved request timeout is applied.
+
         Args:
             provider: Provider to connect.
 
@@ -1651,9 +1661,13 @@ class MainWindow(QMainWindow):
             RuntimeError: If the provider cannot be connected, with guidance to
                 configure credentials in Preferences.
         """
-        credentials = await get_credentials(provider)
-        if credentials is None:
-            credentials = ProviderCredentials()
+        credentials = resolve_session_credentials(
+            provider,
+            await get_credentials(provider),
+            loader=get_credential_loader(),
+            settings=ProviderSettingsStore(get_config_file(PROVIDER_SETTINGS_FILENAME)),
+            api_key_optional=provider.value in NO_API_KEY_PROVIDER_IDS,
+        )
 
         registry = self._orchestrator.provider_registry
         try:
@@ -2671,9 +2685,13 @@ class MainWindow(QMainWindow):
         """Apply provider configuration settings at runtime.
 
         The ProviderConfigDialog handles persistence via its own JSON config file.
-        This method reconnects providers with updated API keys and credentials
-        and explicitly disconnects providers the user has disabled or cleared
-        credentials for, so changes take effect without an application restart.
+        This method reconnects providers with updated API keys, endpoints and
+        timeouts, and explicitly disconnects providers the user has disabled or
+        cleared credentials for, so changes take effect without an application
+        restart. A provider missing from the registry -- for example one whose
+        construction failed at startup -- is constructed from its registered
+        class, and each reconnect failure is isolated so it cannot prevent the
+        remaining providers from reconnecting.
 
         Args:
             settings: Provider settings dictionary mapping provider IDs to their settings.
@@ -2703,13 +2721,11 @@ class MainWindow(QMainWindow):
                     providers_to_disconnect.append(pname)
                 continue
 
-            if existing_provider is None:
-                continue
-
             creds = ProviderCredentials(
                 api_key=api_key or None,
                 api_base=api_base,
                 organization_id=org_id,
+                timeout=coerce_timeout_seconds(provider_settings.get("timeout_seconds")),
             )
             providers_to_connect.append((pname, creds))
 
@@ -2731,7 +2747,7 @@ class MainWindow(QMainWindow):
                     try:
                         await registry.connect_provider(pname, creds)
                         _logger.info("provider_reconnected", provider=pname.value)
-                    except (RuntimeError, OSError, ValueError) as e:
+                    except (ProviderError, ConfigurationError, ConnectionError, TimeoutError, OSError, RuntimeError, ValueError) as e:
                         _logger.warning(
                             "provider_reconnect_failed",
                             provider=pname.value,
@@ -2811,30 +2827,21 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Warning", f"Provider {provider_id} is disabled in configuration.")
             return
 
-        env_vars: dict[str, str] = {
-            "anthropic": "ANTHROPIC_API_KEY",
-            "openai": "OPENAI_API_KEY",
-            "google": "GOOGLE_API_KEY",
-            "openrouter": "OPENROUTER_API_KEY",
-        }
         api_key = ""
-        if provider_id in env_vars:
-            api_key = os.environ.get(env_vars[provider_id], "")
+        api_base: str | None = None
+        if provider_enum is not None:
+            loader = get_credential_loader()
+            api_key = loader.get_field(provider_enum, CredentialField.API_KEY) or ""
+            api_base = loader.get_field(provider_enum, CredentialField.API_BASE)
 
-        config_path = get_config_file("providers.json")
-        if config_path.exists():
-            try:
-                with config_path.open(encoding="utf-8") as f:
-                    loaded_json: dict[str, dict[str, str]] = json.load(f)
-                    provider_section = loaded_json.get(provider_id, {})
-                    if config_key := provider_section.get("api_key", ""):
-                        api_key = config_key
-            except (json.JSONDecodeError, OSError):
-                _logger.debug("config_file_load_failed", exc_info=True)
+        legacy_key = ProviderSettingsStore(get_config_file(PROVIDER_SETTINGS_FILENAME)).section(provider_id).get("api_key")
+        if isinstance(legacy_key, str) and legacy_key:
+            api_key = legacy_key
         _logger.info(
             "models_refresh_requested",
             provider=provider_id,
             has_credentials=bool(api_key),
+            has_custom_base=api_base is not None,
             reuse_connected_instance=connected_instance is not None,
         )
         self.status_update.emit("Refreshing models...")
@@ -2849,7 +2856,7 @@ class MainWindow(QMainWindow):
         if self.model_discovery is not None:
             run_bridge_coroutine_async(self.model_discovery.discover_all(), parent=self)
 
-        self.model_refresh_worker = ModelRefreshWorker(provider_id, api_key, provider=connected_instance, parent=self)
+        self.model_refresh_worker = ModelRefreshWorker(provider_id, api_key, api_base, provider=connected_instance, parent=self)
 
         def _refresh_slot(s: int, m: list[str], msg: str) -> None:
             """Adapt the model-refresh worker signal into the typed handler.

@@ -25,7 +25,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
-import httpx
+import httpx2
 import openai
 import pytest
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
@@ -379,8 +379,8 @@ def test_translate_openai_errors_passthrough() -> None:
     assert captured == _PASSTHROUGH_SENTINEL
 
 
-def _make_httpx_response(status_code: int) -> httpx.Response:
-    """Build a real :class:`httpx.Response` carrying a request object.
+def _make_httpx_response(status_code: int) -> httpx2.Response:
+    """Build a real :class:`httpx2.Response` carrying a request object.
 
     The OpenAI SDK exception constructors dereference
     ``response.request`` during ``__init__``, so the response must
@@ -390,11 +390,11 @@ def _make_httpx_response(status_code: int) -> httpx.Response:
         status_code: HTTP status code to attach to the response.
 
     Returns:
-        httpx.Response: A response instance suitable for use as the
+        httpx2.Response: A response instance suitable for use as the
         ``response=`` argument of an ``openai`` SDK exception.
     """
-    request = httpx.Request("POST", "https://api.openai.test/v1/chat/completions")
-    return httpx.Response(status_code=status_code, request=request)
+    request = httpx2.Request("POST", "https://api.openai.test/v1/chat/completions")
+    return httpx2.Response(status_code=status_code, request=request)
 
 
 def _build_auth_error() -> openai.AuthenticationError:

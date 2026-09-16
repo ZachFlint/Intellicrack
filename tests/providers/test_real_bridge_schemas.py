@@ -45,6 +45,7 @@ from intellicrack.providers.base import (
     create_google_tool_schema,
     create_openai_tool_schema,
 )
+from intellicrack.providers.tool_names import from_wire_name
 
 
 def _bridge_definitions() -> list[ToolDefinition]:
@@ -259,7 +260,12 @@ def test_required_parameters_in_schema_match_tool_definition() -> None:
             declarations = builder(definition)
             fn_map: dict[str, list[str]] = {}
             for decl in declarations:
-                fn_name_key = fn_name_ext(decl)
+                # ``base.*`` builders emit the provider-safe wire name (e.g.
+                # "x64dbg__get_resources"); ``schemas.*`` builders still emit the
+                # raw canonical dotted name. Normalizing through from_wire_name
+                # (idempotent on already-canonical names) lets both correlate
+                # against fn.name below.
+                fn_name_key = from_wire_name(fn_name_ext(decl))
                 fn_map[fn_name_key] = req_extractor(decl)
 
             for fn in definition.functions:

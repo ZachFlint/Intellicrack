@@ -49,6 +49,7 @@ from intellicrack.core.types import (
     ToolResult,
 )
 from intellicrack.providers.anthropic import AnthropicProvider
+from intellicrack.providers.tool_names import to_wire_name
 
 
 if TYPE_CHECKING:
@@ -148,7 +149,6 @@ class TestBuildApiKwargs:
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            temperature=0.7,
             messages=msgs,
             system_prompt=None,
             tools=None,
@@ -156,7 +156,12 @@ class TestBuildApiKwargs:
 
         assert result["model"] == "claude-3-5-sonnet-20241022"
         assert result["max_tokens"] == 4096
-        assert abs(float(result["temperature"]) - 0.7) < 1e-9
+        assert "temperature" not in result, (
+            "temperature must not be forwarded to the Anthropic request: the "
+            "anthropic 1.x SDK removed it and current Claude models reject it"
+        )
+        assert "top_p" not in result
+        assert "top_k" not in result
         assert result["messages"] is msgs
         assert "system" not in result, "system must be absent when system_prompt is None"
         assert "tools" not in result, "tools must be absent when tools arg is None"
@@ -168,7 +173,6 @@ class TestBuildApiKwargs:
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            temperature=0.7,
             messages=cast("list[MessageParam]", []),
             system_prompt="You are a binary analysis expert",
             tools=None,
@@ -187,7 +191,6 @@ class TestBuildApiKwargs:
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            temperature=0.7,
             messages=cast("list[MessageParam]", []),
             system_prompt=None,
             tools=[dummy_tool],
@@ -207,7 +210,6 @@ class TestBuildApiKwargs:
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            temperature=0.7,
             messages=cast("list[MessageParam]", []),
             system_prompt=None,
             tools=[dummy_tool],
@@ -227,14 +229,13 @@ class TestBuildApiKwargs:
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            temperature=0.7,
             messages=cast("list[MessageParam]", []),
             system_prompt=None,
             tools=[dummy_tool],
             tool_choice=ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name="ghidra.decompile"),
         )
 
-        assert result["tool_choice"] == {"type": "tool", "name": "ghidra.decompile"}
+        assert result["tool_choice"] == {"type": "tool", "name": to_wire_name("ghidra.decompile")}
 
     def test_tool_choice_none_mode_removes_tools_from_kwargs(self) -> None:
         """ToolChoiceMode.NONE removes the tools key so no tools are offered."""
@@ -247,7 +248,6 @@ class TestBuildApiKwargs:
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            temperature=0.7,
             messages=cast("list[MessageParam]", []),
             system_prompt=None,
             tools=[dummy_tool],
@@ -257,38 +257,45 @@ class TestBuildApiKwargs:
         assert "tools" not in result, "NONE tool_choice mode must strip tools from kwargs"
         assert "tool_choice" not in result
 
-    def test_thinking_enabled_forces_temperature_to_one_and_inflates_max_tokens(self) -> None:
-        """Extended thinking sets temperature=1.0 and max_tokens=max(req, budget+1024)."""
+    def test_thinking_enabled_omits_temperature_and_inflates_max_tokens(self) -> None:
+        """Extended thinking inflates max_tokens and never sets a temperature.
+
+        The old-style thinking API required ``temperature=1.0``; the
+        anthropic 1.x SDK removed the parameter entirely, so the helper
+        must leave it out (the API default of 1.0 already applies to
+        thinking requests) while still raising ``max_tokens`` to at least
+        ``budget_tokens + 1024``.
+        """
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-7-sonnet-20250219",
             max_tokens=100,
-            temperature=0.5,
             messages=cast("list[MessageParam]", []),
             system_prompt=None,
             tools=None,
             thinking=ThinkingConfig(enabled=True, budget_tokens=5000),
         )
 
-        assert abs(float(result["temperature"]) - 1.0) < 1e-9, f"thinking mode must force temperature to 1.0, got {result['temperature']}"
+        assert "temperature" not in result, (
+            f"thinking mode must not set temperature (SDK 1.x rejects it), got {result.get('temperature')!r}"
+        )
         expected_max_tokens: int = max(100, 5000 + 1024)
         assert result["max_tokens"] == expected_max_tokens, (
             f"thinking mode must set max_tokens={expected_max_tokens}, got {result['max_tokens']}"
         )
         assert result["thinking"] == {"type": "enabled", "budget_tokens": 5000}
 
-    def test_thinking_disabled_leaves_temperature_and_max_tokens_unchanged(self) -> None:
-        """When ThinkingConfig.enabled is False the kwargs are not modified."""
+    def test_thinking_disabled_leaves_max_tokens_unchanged_and_omits_temperature(self) -> None:
+        """When ThinkingConfig.enabled is False no thinking or temperature is added."""
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            temperature=0.7,
             messages=cast("list[MessageParam]", []),
             system_prompt=None,
             tools=None,
             thinking=ThinkingConfig(enabled=False, budget_tokens=10000),
         )
 
-        assert abs(float(result["temperature"]) - 0.7) < 1e-9
+        assert "temperature" not in result
         assert result["max_tokens"] == 4096
         assert "thinking" not in result
 
@@ -297,7 +304,6 @@ class TestBuildApiKwargs:
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-7-sonnet-20250219",
             max_tokens=50000,
-            temperature=0.5,
             messages=cast("list[MessageParam]", []),
             system_prompt=None,
             tools=None,
@@ -322,7 +328,6 @@ class TestApplyCacheBreakpoints:
         kwargs: dict[str, Any] = {
             "model": "claude-3-5-sonnet-20241022",
             "max_tokens": 4096,
-            "temperature": 0.7,
             "messages": [],
         }
         _apply_cache_breakpoints(kwargs, system_prompt="You are a binary analysis expert")
@@ -345,7 +350,6 @@ class TestApplyCacheBreakpoints:
         kwargs: dict[str, Any] = {
             "model": "claude-3-5-sonnet-20241022",
             "max_tokens": 4096,
-            "temperature": 0.7,
             "messages": [],
             "tools": copy.deepcopy(tools),
         }
@@ -364,7 +368,6 @@ class TestApplyCacheBreakpoints:
         kwargs: dict[str, Any] = {
             "model": "claude-3-5-sonnet-20241022",
             "max_tokens": 4096,
-            "temperature": 0.7,
             "messages": [{"role": "user", "content": "Analyze this binary"}],
         }
         _apply_cache_breakpoints(kwargs, system_prompt=None)
@@ -383,7 +386,6 @@ class TestApplyCacheBreakpoints:
         kwargs: dict[str, Any] = {
             "model": "claude-3-5-sonnet-20241022",
             "max_tokens": 4096,
-            "temperature": 0.7,
             "messages": [
                 {
                     "role": "user",
@@ -411,7 +413,6 @@ class TestApplyCacheBreakpoints:
         kwargs: dict[str, Any] = {
             "model": "claude-3-5-sonnet-20241022",
             "max_tokens": 4096,
-            "temperature": 0.7,
             "messages": [],
             "tools": [original_tool],
         }
@@ -758,7 +759,7 @@ class TestConvertMessagesToProviderFormat:
         tool_block: dict[str, object] = content[1]
         assert tool_block["type"] == "tool_use"
         assert tool_block["id"] == "toolu_01"
-        assert tool_block["name"] == "ghidra.decompile"
+        assert tool_block["name"] == to_wire_name("ghidra.decompile")
         assert tool_block["input"] == {"address": "0x1400"}
 
     def test_tool_result_message_produces_tool_result_blocks_in_user_role(self) -> None:
@@ -854,7 +855,7 @@ class TestConvertToolsToProviderFormat:
 
         assert len(result) == 1
         schema: dict[str, object] = result[0]
-        assert schema["name"] == "ghidra.decompile"
+        assert schema["name"] == to_wire_name("ghidra.decompile")
         assert schema["description"] == "Decompile a function at the given address"
         input_schema: dict[str, object] = cast("dict[str, object]", schema["input_schema"])
         assert input_schema["type"] == "object"
