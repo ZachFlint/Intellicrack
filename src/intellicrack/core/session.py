@@ -30,7 +30,6 @@ from .types import (
     Message,
     ParameterInfo,
     PatchInfo,
-    ProviderName,
     SectionInfo,
     StringInfo,
     ToolCall,
@@ -74,7 +73,7 @@ class SessionMetadata:
     name: str
     created_at: datetime
     updated_at: datetime
-    provider: ProviderName
+    provider: str
     model: str
     binary_count: int = 0
     message_count: int = 0
@@ -89,7 +88,7 @@ class Session:
         name: Human-readable session name.
         created_at: Timestamp when the session was created.
         updated_at: Timestamp of the last session update.
-        provider: LLM provider used for this session.
+        provider: Instance id of the LLM provider used for this session.
         model: Model identifier used for this session.
         binaries: List of loaded binaries.
         active_binary_index: Index of active binary.
@@ -112,7 +111,7 @@ class Session:
     name: str
     created_at: datetime
     updated_at: datetime
-    provider: ProviderName
+    provider: str
     model: str
     binaries: list[BinaryInfo] = field(default_factory=list)
     active_binary_index: int = -1
@@ -143,14 +142,14 @@ class Session:
     @classmethod
     def create(
         cls,
-        provider: ProviderName,
+        provider: str,
         model: str,
         name: str | None = None,
     ) -> Session:
         """Create a new session.
 
         Args:
-            provider: LLM provider to use.
+            provider: Instance id of the LLM provider to use.
             model: Model identifier.
             name: Optional session name.
 
@@ -416,7 +415,7 @@ class SessionStore:
                     session.name,
                     session.created_at.isoformat(),
                     session.updated_at.isoformat(),
-                    session.provider.value,
+                    session.provider,
                     session.model,
                     session.active_binary_index,
                     session.notes,
@@ -511,7 +510,7 @@ class SessionStore:
                 name=row["name"],
                 created_at=datetime.fromisoformat(row["created_at"]),
                 updated_at=datetime.fromisoformat(row["updated_at"]),
-                provider=ProviderName(row["provider"]),
+                provider=str(row["provider"]),
                 model=row["model"],
                 active_binary_index=row["active_binary_index"],
                 notes=row["notes"],
@@ -575,7 +574,7 @@ class SessionStore:
                         name=row["name"],
                         created_at=datetime.fromisoformat(row["created_at"]),
                         updated_at=datetime.fromisoformat(row["updated_at"]),
-                        provider=ProviderName(row["provider"]),
+                        provider=str(row["provider"]),
                         model=row["model"],
                         binary_count=len(data.get("binaries", [])),
                         message_count=len(data.get("messages", [])),
@@ -616,7 +615,7 @@ class SessionStore:
                         name=row["name"],
                         created_at=datetime.fromisoformat(row["created_at"]),
                         updated_at=datetime.fromisoformat(row["updated_at"]),
-                        provider=ProviderName(row["provider"]),
+                        provider=str(row["provider"]),
                         model=row["model"],
                         binary_count=len(data.get("binaries", [])),
                         message_count=len(data.get("messages", [])),
@@ -942,7 +941,7 @@ class SessionStore:
                 "name": session.name,
                 "created_at": session.created_at.isoformat(),
                 "updated_at": session.updated_at.isoformat(),
-                "provider": session.provider.value,
+                "provider": session.provider,
                 "model": session.model,
                 "active_binary_index": session.active_binary_index,
                 "notes": session.notes,
@@ -1004,7 +1003,7 @@ class SessionStore:
             name=session_data.get("name", "Imported Session"),
             created_at=datetime.fromisoformat(session_data["created_at"]),
             updated_at=datetime.fromisoformat(session_data["updated_at"]),
-            provider=ProviderName(session_data["provider"]),
+            provider=str(session_data["provider"]),
             model=session_data.get("model", "unknown"),
             active_binary_index=session_data.get("active_binary_index", -1),
             notes=session_data.get("notes", ""),
@@ -1205,14 +1204,14 @@ class SessionManager:
 
     async def create(
         self,
-        provider: ProviderName,
+        provider: str,
         model: str,
         name: str | None = None,
     ) -> Session:
         """Create a new session.
 
         Args:
-            provider: LLM provider to use.
+            provider: Instance id of the LLM provider to use.
             model: Model identifier.
             name: Optional session name.
 
@@ -1228,7 +1227,7 @@ class SessionManager:
         await self.save()
         await self._start_auto_save()
 
-        log_session_operation("create", session.id, provider=provider.value, model=model)
+        log_session_operation("create", session.id, provider=provider, model=model)
         _logger.info("session_created", session_id=session.id)
         return session
 

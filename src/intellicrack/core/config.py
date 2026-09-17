@@ -19,7 +19,8 @@ from pathlib import Path
 from typing import Any
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ConfirmationLevel, ProviderName, ToolName
+from intellicrack.core.types import ConfirmationLevel, ToolName
+from intellicrack.providers import ids as provider_ids
 
 
 _logger = get_logger(__name__)
@@ -334,54 +335,54 @@ class LogConfig:
     json_file: bool = True
 
 
-def _default_providers() -> dict[ProviderName, ProviderConfig]:
+def _default_providers() -> dict[str, ProviderConfig]:
     """Create default provider configurations.
 
     Returns:
-        dict[ProviderName, ProviderConfig]: Dictionary mapping provider names to their default configurations.
+        dict[str, ProviderConfig]: Dictionary mapping provider ids to their default configurations.
     """
     return {
-        ProviderName.ANTHROPIC: ProviderConfig(
+        provider_ids.ANTHROPIC: ProviderConfig(
             enabled=True,
             timeout_seconds=120,
             max_retries=3,
         ),
-        ProviderName.OPENAI: ProviderConfig(
+        provider_ids.OPENAI: ProviderConfig(
             enabled=True,
             timeout_seconds=120,
             max_retries=3,
         ),
-        ProviderName.GOOGLE: ProviderConfig(
+        provider_ids.GOOGLE: ProviderConfig(
             enabled=True,
             timeout_seconds=120,
             max_retries=3,
         ),
-        ProviderName.OLLAMA: ProviderConfig(
+        provider_ids.OLLAMA: ProviderConfig(
             enabled=True,
             api_base="http://localhost:11434",
             timeout_seconds=300,
             max_retries=3,
         ),
-        ProviderName.OPENROUTER: ProviderConfig(
+        provider_ids.OPENROUTER: ProviderConfig(
             enabled=True,
             api_base="https://openrouter.ai/api/v1",
             timeout_seconds=120,
             max_retries=3,
         ),
-        ProviderName.HUGGINGFACE: ProviderConfig(
+        provider_ids.HUGGINGFACE: ProviderConfig(
             enabled=True,
             api_base="https://api-inference.huggingface.co",
             default_model="openai/gpt-oss-120b",
             timeout_seconds=120,
             max_retries=3,
         ),
-        ProviderName.GROK: ProviderConfig(
+        provider_ids.GROK: ProviderConfig(
             enabled=True,
             api_base="https://api.x.ai/v1",
             timeout_seconds=120,
             max_retries=3,
         ),
-        ProviderName.LOCAL_TRANSFORMERS: ProviderConfig(
+        provider_ids.LOCAL_TRANSFORMERS: ProviderConfig(
             enabled=True,
             default_model="microsoft/Phi-3-mini-4k-instruct",
             timeout_seconds=600,
@@ -448,10 +449,10 @@ class Config:
     logs_directory: Path = field(default_factory=lambda: get_state_root() / "logs")
     data_directory: Path = field(default_factory=lambda: get_state_root() / "data")
 
-    default_provider: ProviderName = ProviderName.ANTHROPIC
+    default_provider: str = provider_ids.ANTHROPIC
     confirmation_level: ConfirmationLevel = ConfirmationLevel.DESTRUCTIVE
 
-    providers: dict[ProviderName, ProviderConfig] = field(default_factory=_default_providers)
+    providers: dict[str, ProviderConfig] = field(default_factory=_default_providers)
     tools: dict[ToolName, ToolConfig] = field(default_factory=_default_tools)
     sandbox: SandboxConfig = field(default_factory=SandboxConfig)
     ui: UIConfig = field(default_factory=UIConfig)
@@ -482,30 +483,30 @@ class Config:
         return config
 
     @staticmethod
-    def _parse_general(general: dict[str, Any]) -> tuple[Path, Path, Path, ProviderName, ConfirmationLevel]:
+    def _parse_general(general: dict[str, Any]) -> tuple[Path, Path, Path, str, ConfirmationLevel]:
         """Parse general configuration section.
 
         Args:
             general: Dictionary with general configuration values.
 
         Returns:
-            tuple[Path, Path, Path, ProviderName, ConfirmationLevel]: Tuple of (tools_dir, logs_dir, data_dir, default_provider, confirmation_level).
+            tuple[Path, Path, Path, str, ConfirmationLevel]: Tuple of (tools_dir, logs_dir, data_dir, default_provider, confirmation_level).
         """
         state_root = get_state_root()
         tools_dir = Path(general.get("tools_directory", str(get_project_root() / "tools")))
         logs_dir = Path(general.get("logs_directory", str(state_root / "logs")))
         data_dir = Path(general.get("data_directory", str(state_root / "data")))
 
-        default_provider_str = general.get("default_provider", "anthropic")
-        try:
-            default_provider = ProviderName(default_provider_str)
-        except ValueError:
+        default_provider_str = str(general.get("default_provider", provider_ids.ANTHROPIC))
+        if provider_ids.is_valid_provider_id(default_provider_str):
+            default_provider = provider_ids.normalize_provider_id(default_provider_str)
+        else:
             _logger.warning(
                 "config_invalid_provider_name",
                 value=default_provider_str,
-                fallback=ProviderName.ANTHROPIC.value,
+                fallback=provider_ids.ANTHROPIC,
             )
-            default_provider = ProviderName.ANTHROPIC
+            default_provider = provider_ids.ANTHROPIC
 
         confirmation_str = general.get("confirmation_level", "destructive")
         try:
@@ -521,28 +522,27 @@ class Config:
         return tools_dir, logs_dir, data_dir, default_provider, confirmation_level
 
     @staticmethod
-    def parse_providers(providers_data: dict[str, Any]) -> dict[ProviderName, ProviderConfig]:
+    def parse_providers(providers_data: dict[str, Any]) -> dict[str, ProviderConfig]:
         """Parse providers configuration section.
 
-        Round-trip safe: every entry in ``providers_data`` whose key resolves to
-        a valid ``ProviderName`` is preserved in the returned mapping, even when
-        the provider is not present in ``_default_providers()``. Unknown keys
-        that do not match any ``ProviderName`` member are skipped with a
-        warning.
+        Round-trip safe: every entry in ``providers_data`` whose key is a valid
+        provider instance id is preserved in the returned mapping, even when
+        the provider is not present in ``_default_providers()`` -- which is how
+        a user-defined instance keeps its saved configuration. Keys that
+        violate the instance-id grammar are skipped with a warning.
 
         Args:
             providers_data: Dictionary with provider configuration values.
 
         Returns:
-            dict[ProviderName, ProviderConfig]: Dictionary mapping provider names to their configurations.
+            dict[str, ProviderConfig]: Dictionary mapping provider ids to their configurations.
         """
         providers = _default_providers()
         for name_str, prov_data in providers_data.items():
-            try:
-                provider_name = ProviderName(name_str)
-            except ValueError:
+            if not provider_ids.is_valid_provider_id(name_str):
                 _logger.warning("config_unknown_provider_skipped", value=name_str)
                 continue
+            provider_name = provider_ids.normalize_provider_id(name_str)
 
             prov_base = providers.get(provider_name, ProviderConfig())
             providers[provider_name] = ProviderConfig(
@@ -724,7 +724,7 @@ class Config:
                 "tools_directory": str(self.tools_directory),
                 "logs_directory": str(self.logs_directory),
                 "data_directory": str(self.data_directory),
-                "default_provider": self.default_provider.value,
+                "default_provider": self.default_provider,
                 "confirmation_level": self.confirmation_level.value,
             },
             "providers": {},
@@ -768,7 +768,7 @@ class Config:
                 prov_dict["api_base"] = prov_config.api_base
             if prov_config.default_model:
                 prov_dict["default_model"] = prov_config.default_model
-            data["providers"][prov_name.value] = prov_dict
+            data["providers"][prov_name] = prov_dict
 
         for tool_name, tool_config in self.tools.items():
             tool_dict: dict[str, Any] = {
@@ -809,7 +809,7 @@ class Config:
                     path=str(directory),
                 )
 
-    def get_provider_config(self, provider: ProviderName) -> ProviderConfig:
+    def get_provider_config(self, provider: str) -> ProviderConfig:
         """Get configuration for a specific provider.
 
         Args:
@@ -831,7 +831,7 @@ class Config:
         """
         return self.tools.get(tool, ToolConfig())
 
-    def is_provider_enabled(self, provider: ProviderName) -> bool:
+    def is_provider_enabled(self, provider: str) -> bool:
         """Check if a provider is enabled.
 
         Args:
@@ -843,7 +843,7 @@ class Config:
         config = self.get_provider_config(provider)
         return config.enabled
 
-    def preferred_model_index(self, provider: ProviderName, models: list[str]) -> int:
+    def preferred_model_index(self, provider: str, models: list[str]) -> int:
         """Find the index of the configured default model within a discovered catalog.
 
         Lets model-selection UI prefer a provider's curated ``default_model``

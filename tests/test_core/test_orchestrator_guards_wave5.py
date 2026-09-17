@@ -34,13 +34,13 @@ from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
-    ProviderName,
     ToolCall,
     ToolChoiceMode,
     ToolDefinition,
     ToolFunction,
     ToolName,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.registry import ProviderRegistry
 
@@ -193,13 +193,13 @@ class _ProbeProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """Provider name constant.
 
         Returns:
-            ProviderName: Always OPENAI.
+            str: Always OPENAI.
         """
-        return ProviderName.OPENAI
+        return provider_ids.OPENAI
 
     @override
     async def connect(self, credentials: ProviderCredentials) -> None:
@@ -221,7 +221,7 @@ class _ProbeProvider(LLMProviderBase):
             ModelInfo(
                 id=_MODEL_ID,
                 name=_MODEL_ID,
-                provider=ProviderName.OPENAI,
+                provider=provider_ids.OPENAI,
                 context_window=8192,
                 supports_tools=True,
                 supports_vision=False,
@@ -358,13 +358,13 @@ class _TerminateProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """OPENAI provider name constant.
 
         Returns:
-            ProviderName: Always OPENAI.
+            str: Always OPENAI.
         """
-        return ProviderName.OPENAI
+        return provider_ids.OPENAI
 
     @override
     async def connect(self, credentials: ProviderCredentials) -> None:
@@ -386,7 +386,7 @@ class _TerminateProvider(LLMProviderBase):
             ModelInfo(
                 id=_MODEL_ID,
                 name=_MODEL_ID,
-                provider=ProviderName.OPENAI,
+                provider=provider_ids.OPENAI,
                 context_window=8192,
                 supports_tools=True,
                 supports_vision=False,
@@ -564,7 +564,7 @@ class TestMaxIterationsGuard:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("run probes")
 
         asyncio.run(_run())
@@ -625,7 +625,7 @@ class TestTimeoutGuard:
         unchanged by the substitution.
         """
 
-        def _fake_get_encoder(_p: ProviderName | None) -> _FakeTiktokenEncoder:
+        def _fake_get_encoder(_p: str | None) -> _FakeTiktokenEncoder:
             del _p
             return _FakeTiktokenEncoder()
 
@@ -641,7 +641,7 @@ class TestTimeoutGuard:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             with pytest.raises(asyncio.TimeoutError):
                 await orch.process_user_input("this should time out")
 
@@ -676,7 +676,7 @@ class TestConfirmationGate:
         orch.set_confirmation_callback(lambda _call: False)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("terminate something")
 
         asyncio.run(_run())
@@ -702,7 +702,7 @@ class TestConfirmationGate:
         orch.set_confirmation_callback(lambda _call: True)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("terminate something approved")
 
         asyncio.run(_run())

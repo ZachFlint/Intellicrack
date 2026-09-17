@@ -30,7 +30,7 @@ from intellicrack.core.config import Config, UIConfig
 from intellicrack.core.orchestrator import Orchestrator
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import ProviderName
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui import app as app_module
 from intellicrack.ui.app import MainWindow
@@ -120,7 +120,7 @@ def _build_window(tmp_path: Path, *, restore_layout: bool = False) -> MainWindow
     return MainWindow(config, orch)
 
 
-def _select_provider(window: MainWindow, provider: ProviderName) -> None:
+def _select_provider(window: MainWindow, provider: str) -> None:
     """Make ``provider`` current in the toolbar combo without firing handlers.
 
     Args:
@@ -218,7 +218,7 @@ class TestModelPersistence:
         """
         window = _build_window(tmp_path)
         try:
-            _select_provider(window, ProviderName.ANTHROPIC)
+            _select_provider(window, provider_ids.ANTHROPIC)
             with QSignalBlocker(window.model_combo):
                 window.model_combo.clear()
                 window.model_combo.addItems(["claude-x", "claude-y"])
@@ -226,8 +226,8 @@ class TestModelPersistence:
 
             getattr(window, "_persist_current_model")()
 
-            assert getattr(MainWindow, "_remembered_model_for")(ProviderName.ANTHROPIC) == "claude-y"
-            assert getattr(MainWindow, "_remembered_provider")() == ProviderName.ANTHROPIC
+            assert getattr(MainWindow, "_remembered_model_for")(provider_ids.ANTHROPIC) == "claude-y"
+            assert getattr(MainWindow, "_remembered_provider")() == provider_ids.ANTHROPIC
             assert persist_settings.value("last_model/anthropic") == "claude-y"
         finally:
             window.close()
@@ -252,7 +252,7 @@ class TestModelPersistence:
         _ = persist_settings
         window = _build_window(tmp_path)
         try:
-            _select_provider(window, ProviderName.ANTHROPIC)
+            _select_provider(window, provider_ids.ANTHROPIC)
             with QSignalBlocker(window.model_combo):
                 window.model_combo.clear()
                 window.model_combo.addItems(["claude-x", "claude-y"])
@@ -260,7 +260,7 @@ class TestModelPersistence:
 
             window.model_combo.activated.emit(1)
 
-            assert getattr(MainWindow, "_remembered_model_for")(ProviderName.ANTHROPIC) == "claude-y"
+            assert getattr(MainWindow, "_remembered_model_for")(provider_ids.ANTHROPIC) == "claude-y"
         finally:
             window.close()
 
@@ -279,20 +279,20 @@ class TestModelPersistence:
         _ = persist_settings
         window = _build_window(tmp_path)
         try:
-            _select_provider(window, ProviderName.ANTHROPIC)
+            _select_provider(window, provider_ids.ANTHROPIC)
             with QSignalBlocker(window.model_combo):
                 window.model_combo.clear()
                 window.model_combo.setCurrentText("claude-y")
             getattr(window, "_persist_current_model")()
 
-            _select_provider(window, ProviderName.OPENAI)
+            _select_provider(window, provider_ids.OPENAI)
             with QSignalBlocker(window.model_combo):
                 window.model_combo.clear()
                 window.model_combo.setCurrentText("gpt-4o")
             getattr(window, "_persist_current_model")()
 
-            assert getattr(MainWindow, "_remembered_model_for")(ProviderName.ANTHROPIC) == "claude-y"
-            assert getattr(MainWindow, "_remembered_model_for")(ProviderName.OPENAI) == "gpt-4o"
+            assert getattr(MainWindow, "_remembered_model_for")(provider_ids.ANTHROPIC) == "claude-y"
+            assert getattr(MainWindow, "_remembered_model_for")(provider_ids.OPENAI) == "gpt-4o"
         finally:
             window.close()
 
@@ -310,7 +310,7 @@ class TestModelPersistence:
         """
         window = _build_window(tmp_path)
         try:
-            _select_provider(window, ProviderName.ANTHROPIC)
+            _select_provider(window, provider_ids.ANTHROPIC)
             with QSignalBlocker(window.model_combo):
                 window.model_combo.clear()
                 window.model_combo.setCurrentText("claude-y")
@@ -321,7 +321,7 @@ class TestModelPersistence:
                 window.model_combo.setCurrentText("")
             getattr(window, "_persist_current_model")()
 
-            assert getattr(MainWindow, "_remembered_model_for")(ProviderName.ANTHROPIC) == "claude-y"
+            assert getattr(MainWindow, "_remembered_model_for")(provider_ids.ANTHROPIC) == "claude-y"
             _ = persist_settings
         finally:
             window.close()
@@ -350,7 +350,7 @@ class TestModelPersistence:
             with QSignalBlocker(window.model_combo):
                 window.model_combo.clear()
                 window.model_combo.addItems(models)
-                getattr(window, "_select_model_for_provider")(ProviderName.ANTHROPIC, models)
+                getattr(window, "_select_model_for_provider")(provider_ids.ANTHROPIC, models)
 
             assert window.model_combo.currentText() == "claude-y"
         finally:
@@ -375,7 +375,7 @@ class TestModelPersistence:
             with QSignalBlocker(window.model_combo):
                 window.model_combo.clear()
                 window.model_combo.addItems(models)
-                getattr(window, "_select_model_for_provider")(ProviderName.ANTHROPIC, models)
+                getattr(window, "_select_model_for_provider")(provider_ids.ANTHROPIC, models)
 
             assert window.model_combo.currentText() == "claude-x"
         finally:
@@ -406,7 +406,7 @@ class TestModelPersistence:
             with QSignalBlocker(window.model_combo):
                 window.model_combo.clear()
                 window.model_combo.addItems(models)
-                getattr(window, "_select_model_for_provider")(ProviderName.ANTHROPIC, models)
+                getattr(window, "_select_model_for_provider")(provider_ids.ANTHROPIC, models)
 
             assert window.model_combo.currentText() == "org/custom-model"
         finally:
@@ -433,9 +433,9 @@ class TestStartupProviderChoice:
 
         window = _build_window(tmp_path)
         try:
-            connected = [ProviderName.ANTHROPIC, ProviderName.OPENAI, ProviderName.GOOGLE]
+            connected = [provider_ids.ANTHROPIC, provider_ids.OPENAI, provider_ids.GOOGLE]
             chosen = getattr(window, "_startup_provider")(connected)
-            assert chosen == ProviderName.OPENAI
+            assert chosen == provider_ids.OPENAI
         finally:
             window.close()
 
@@ -456,9 +456,9 @@ class TestStartupProviderChoice:
 
         window = _build_window(tmp_path)
         try:
-            connected = [ProviderName.ANTHROPIC, ProviderName.OPENAI]
+            connected = [provider_ids.ANTHROPIC, provider_ids.OPENAI]
             chosen = getattr(window, "_startup_provider")(connected)
-            assert chosen == ProviderName.ANTHROPIC
+            assert chosen == provider_ids.ANTHROPIC
         finally:
             window.close()
 
@@ -477,8 +477,8 @@ class TestStartupProviderChoice:
         _ = persist_settings
         window = _build_window(tmp_path)
         try:
-            connected = [ProviderName.GOOGLE, ProviderName.ANTHROPIC]
+            connected = [provider_ids.GOOGLE, provider_ids.ANTHROPIC]
             chosen = getattr(window, "_startup_provider")(connected)
-            assert chosen == ProviderName.GOOGLE
+            assert chosen == provider_ids.GOOGLE
         finally:
             window.close()

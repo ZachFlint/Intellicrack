@@ -33,7 +33,8 @@ from intellicrack.core.config import Config
 from intellicrack.core.orchestrator import Orchestrator
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import BridgeAnalysisSummary, ConfirmationLevel, ProviderName, StringInfo
+from intellicrack.core.types import BridgeAnalysisSummary, ConfirmationLevel, StringInfo
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui import app as app_module
 from intellicrack.ui.app import MainWindow
@@ -462,7 +463,7 @@ def test_m13_model_selection_preserved_across_refresh(
     provider_combo = getattr(window, "_provider_combo")
     with QSignalBlocker(provider_combo):
         provider_combo.clear()
-        provider_combo.addItem("Anthropic", ProviderName.ANTHROPIC)
+        provider_combo.addItem("Anthropic", provider_ids.ANTHROPIC)
         provider_combo.setCurrentIndex(0)
 
     with QSignalBlocker(window.model_combo):

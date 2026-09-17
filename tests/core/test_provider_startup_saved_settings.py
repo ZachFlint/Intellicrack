@@ -31,8 +31,9 @@ import pytest
 
 from intellicrack.core.config import Config, ProviderConfig, get_config_file
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialLoader
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.openai import OpenAIProvider
 from intellicrack.providers.registry import ProviderRegistry
 from tests._helpers.provider_endpoint_server import OLLAMA_TAGS_PATH, OPENAI_COMPATIBLE_MODELS_PATH, ProviderEndpointServer
@@ -150,7 +151,7 @@ async def test_startup_connects_openai_through_gateway_saved_in_provider_setting
 
     registry = await _run_startup()
 
-    openai = registry.get(ProviderName.OPENAI)
+    openai = registry.get(provider_ids.OPENAI)
     assert openai is not None
     assert openai.is_connected
     probes = gateway.requests(OPENAI_COMPATIBLE_MODELS_PATH)
@@ -160,7 +161,7 @@ async def test_startup_connects_openai_through_gateway_saved_in_provider_setting
     assert probes[-1].headers["x-stainless-read-timeout"] == "90.0"
     await openai.disconnect()
 
-    next_launch = CredentialLoader(_resolve_env_path()).get_credentials(ProviderName.OPENAI)
+    next_launch = CredentialLoader(_resolve_env_path()).get_credentials(provider_ids.OPENAI)
     assert next_launch is not None
     assert next_launch.api_base == gateway.openai_compatible_base_url
     assert next_launch.organization_id == "org-venice"
@@ -181,16 +182,16 @@ async def test_rejected_provider_stays_registered_and_reconnects(gateway: Provid
 
     registry = await _run_startup()
 
-    rejected = registry.get(ProviderName.OPENAI)
+    rejected = registry.get(provider_ids.OPENAI)
     assert rejected is not None, "a provider rejected at startup must stay registered"
     assert not rejected.is_connected
     assert len(gateway.requests(OPENAI_COMPATIBLE_MODELS_PATH)) == 1
 
     assert await registry.connect_provider(
-        ProviderName.OPENAI,
+        provider_ids.OPENAI,
         ProviderCredentials(api_key=_GATEWAY_KEY, api_base=gateway.openai_compatible_base_url),
     )
-    assert registry.get(ProviderName.OPENAI) is rejected
+    assert registry.get(provider_ids.OPENAI) is rejected
     assert rejected.is_connected
     await rejected.disconnect()
 
@@ -225,12 +226,12 @@ async def test_provider_whose_construction_failed_is_constructed_on_reconnect(
 
     registry = await _run_startup()
 
-    assert registry.get(ProviderName.OPENAI) is None
+    assert registry.get(provider_ids.OPENAI) is None
     assert await registry.connect_provider(
-        ProviderName.OPENAI,
+        provider_ids.OPENAI,
         ProviderCredentials(api_key=_GATEWAY_KEY, api_base=gateway.openai_compatible_base_url),
     )
-    constructed = registry.get(ProviderName.OPENAI)
+    constructed = registry.get(provider_ids.OPENAI)
     assert isinstance(constructed, OpenAIProvider)
     assert constructed.is_connected
     await constructed.disconnect()
@@ -251,12 +252,12 @@ async def test_disabled_provider_is_registered_but_never_contacted(gateway: Prov
     if disabled_in == "providers_json":
         sections["openai"] = {"enabled": False, "schema_version": 2}
     else:
-        config.providers[ProviderName.OPENAI] = ProviderConfig(enabled=False)
+        config.providers[provider_ids.OPENAI] = ProviderConfig(enabled=False)
     _write_state(f"OPENAI_API_KEY={_GATEWAY_KEY}\nOPENAI_API_BASE={gateway.openai_compatible_base_url}\n", sections)
 
     registry = await _run_startup(config)
 
-    disabled = registry.get(ProviderName.OPENAI)
+    disabled = registry.get(provider_ids.OPENAI)
     assert disabled is not None
     assert not disabled.is_connected
     assert gateway.requests(OPENAI_COMPATIBLE_MODELS_PATH) == []
@@ -274,7 +275,7 @@ async def test_startup_connects_openrouter_to_saved_base_url(gateway: ProviderEn
 
     registry = await _run_startup()
 
-    openrouter = registry.get(ProviderName.OPENROUTER)
+    openrouter = registry.get(provider_ids.OPENROUTER)
     assert openrouter is not None
     assert openrouter.is_connected
     assert gateway.requests(OPENAI_COMPATIBLE_MODELS_PATH)[-1].headers["authorization"] == f"Bearer {_GATEWAY_KEY}"
@@ -296,7 +297,7 @@ async def test_startup_connects_keyless_ollama_to_saved_host(gateway: ProviderEn
 
     registry = await _run_startup()
 
-    ollama = registry.get(ProviderName.OLLAMA)
+    ollama = registry.get(provider_ids.OLLAMA)
     assert ollama is not None
     assert ollama.is_connected
     assert gateway.requests(OLLAMA_TAGS_PATH), "Ollama never contacted the saved host"

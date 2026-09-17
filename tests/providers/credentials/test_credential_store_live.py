@@ -34,8 +34,9 @@ import keyring
 import keyring.errors
 import pytest
 
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials import store as store_module_original
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -58,7 +59,7 @@ class _StoreProtocol(Protocol):
 
     keyring_available: bool
 
-    async def get(self, provider: ProviderName) -> ProviderCredentials | None:
+    async def get(self, provider: str) -> ProviderCredentials | None:
         """Retrieve credentials for a provider.
 
         Args:
@@ -71,7 +72,7 @@ class _StoreProtocol(Protocol):
 
     async def set(
         self,
-        provider: ProviderName,
+        provider: str,
         credentials: ProviderCredentials,
     ) -> None:
         """Persist credentials for a provider.
@@ -82,7 +83,7 @@ class _StoreProtocol(Protocol):
         """
         ...
 
-    async def delete(self, provider: ProviderName) -> bool:
+    async def delete(self, provider: str) -> bool:
         """Remove credentials for a provider.
 
         Args:
@@ -257,7 +258,7 @@ def test_credential_roundtrip_live(store_module_fresh: ModuleType) -> None:
         pytest.skip("Keyring backend is not available on this host.")
 
     store = _get_store(store_module_fresh)
-    provider = ProviderName.OLLAMA
+    provider = provider_ids.OLLAMA
     marker = f"live-marker-{uuid.uuid4().hex}"
     creds = ProviderCredentials(
         api_key=marker,
@@ -305,7 +306,7 @@ def test_keyring_error_handled(
     monkeypatch.setattr(keyring, "set_password", _raise)
 
     store = _get_store(store_module_fresh)
-    provider = ProviderName.OLLAMA
+    provider = provider_ids.OLLAMA
     placeholder_value = f"placeholder-{uuid.uuid4().hex}"
     creds = ProviderCredentials(
         api_key=placeholder_value,

@@ -49,7 +49,7 @@ if TYPE_CHECKING:
     from intellicrack.core.session import SessionManager, SessionStore
     from intellicrack.core.template_manager import TemplateManager
     from intellicrack.core.tools import ToolRegistry
-    from intellicrack.core.types import HexDocumentFull, ProviderName
+    from intellicrack.core.types import HexDocumentFull
     from intellicrack.credentials.env_loader import CredentialLoader
     from intellicrack.credentials.provider_settings import ProviderConnectPolicy, ProviderSettingsStore
     from intellicrack.providers.base import LLMProviderBase
@@ -674,15 +674,15 @@ def _load_provider_connect_policy(
         imported_endpoints=list(migration.imported),
         retained_endpoints=list(migration.retained),
         settings_rewritten=migration.settings_rewritten,
-        disabled=sorted(provider.value for provider in policy.disabled),
-        timeouts={provider.value: seconds for provider, seconds in policy.timeouts.items()},
+        disabled=sorted(policy.disabled),
+        timeouts=dict(policy.timeouts),
     )
     return policy
 
 
 async def _connect_provider_at_startup(
     provider: LLMProviderBase,
-    provider_name: ProviderName,
+    provider_name: str,
     credentials: CredentialLoader,
     policy: ProviderConnectPolicy | None,
     logger: BoundLogger,
@@ -703,17 +703,17 @@ async def _connect_provider_at_startup(
         logger: BoundLogger instance.
     """
     if policy is not None and not policy.is_enabled(provider_name):
-        logger.info("provider_connect_skipped_disabled", provider=provider_name.value)
+        logger.info("provider_connect_skipped_disabled", provider=provider_name)
         return
 
     display_mod = importlib.import_module("intellicrack.providers.display_names")
     types_mod = importlib.import_module("intellicrack.core.types")
-    no_api_key_providers = cast("frozenset[ProviderName]", display_mod.NO_API_KEY_PROVIDERS)
+    no_api_key_providers = cast("frozenset[str]", display_mod.NO_API_KEY_PROVIDERS)
     provider_error_cls = cast("type[Exception]", types_mod.ProviderError)
 
     creds = credentials.get_connect_credentials(provider_name, api_key_optional=provider_name in no_api_key_providers)
     if creds is None:
-        logger.debug("no_credentials", provider=provider_name.value)
+        logger.debug("no_credentials", provider=provider_name)
         return
     if policy is not None:
         creds = policy.apply_timeout(provider_name, creds)
@@ -726,17 +726,17 @@ async def _connect_provider_at_startup(
     except TimeoutError:
         logger.warning(
             "provider_connect_timeout",
-            provider=provider_name.value,
+            provider=provider_name,
             timeout=_PROVIDER_CONNECT_TIMEOUT,
         )
     except provider_error_cls as exc:
         logger.warning(
             "provider_connect_failed",
-            provider=provider_name.value,
+            provider=provider_name,
             error=str(exc),
         )
     else:
-        logger.info("provider_connected", provider=provider_name.value)
+        logger.info("provider_connected", provider=provider_name)
 
 
 async def _initialize_providers(
@@ -760,8 +760,7 @@ async def _initialize_providers(
         policy: Enablement and timeout policy from the saved provider settings, or
             ``None`` to connect every provider with its default timeout.
     """
-    types_mod = importlib.import_module("intellicrack.core.types")
-    provider_name_enum = types_mod.ProviderName
+    ids_mod = importlib.import_module("intellicrack.providers.ids")
 
     anthropic_mod = importlib.import_module("intellicrack.providers.anthropic")
     google_mod = importlib.import_module("intellicrack.providers.google")
@@ -772,21 +771,21 @@ async def _initialize_providers(
     openai_mod = importlib.import_module("intellicrack.providers.openai")
     openrouter_mod = importlib.import_module("intellicrack.providers.openrouter")
 
-    providers: list[tuple[ProviderName, type[LLMProviderBase]]] = cast(
-        "list[tuple[ProviderName, type[LLMProviderBase]]]",
+    providers: list[tuple[str, type[LLMProviderBase]]] = cast(
+        "list[tuple[str, type[LLMProviderBase]]]",
         [
-            (provider_name_enum.ANTHROPIC, anthropic_mod.AnthropicProvider),
-            (provider_name_enum.OPENAI, openai_mod.OpenAIProvider),
-            (provider_name_enum.GOOGLE, google_mod.GoogleProvider),
-            (provider_name_enum.OLLAMA, ollama_mod.OllamaProvider),
-            (provider_name_enum.OPENROUTER, openrouter_mod.OpenRouterProvider),
-            (provider_name_enum.HUGGINGFACE, hf_mod.HuggingFaceProvider),
-            (provider_name_enum.GROK, grok_mod.GrokProvider),
-            (provider_name_enum.LOCAL_TRANSFORMERS, local_mod.LocalTransformersProvider),
+            (ids_mod.ANTHROPIC, anthropic_mod.AnthropicProvider),
+            (ids_mod.OPENAI, openai_mod.OpenAIProvider),
+            (ids_mod.GOOGLE, google_mod.GoogleProvider),
+            (ids_mod.OLLAMA, ollama_mod.OllamaProvider),
+            (ids_mod.OPENROUTER, openrouter_mod.OpenRouterProvider),
+            (ids_mod.HUGGINGFACE, hf_mod.HuggingFaceProvider),
+            (ids_mod.GROK, grok_mod.GrokProvider),
+            (ids_mod.LOCAL_TRANSFORMERS, local_mod.LocalTransformersProvider),
         ],
     )
 
-    async def _init_one_impl(provider_name: ProviderName, provider_class: type[LLMProviderBase]) -> None:
+    async def _init_one_impl(provider_name: str, provider_class: type[LLMProviderBase]) -> None:
         """Register a provider class, then construct, optionally connect, and register its instance.
 
         Propagates ``ImportError``, ``OSError``, ``RuntimeError``,
@@ -796,7 +795,7 @@ async def _initialize_providers(
         connect attempt.
 
         Args:
-            provider_name: Provider enum value used for log records and
+            provider_name: Provider instance id used for log records and
                 credential lookup.
             provider_class: Concrete :class:`LLMProviderBase` subclass to
                 instantiate.
@@ -808,7 +807,7 @@ async def _initialize_providers(
         finally:
             registry.register(provider)
 
-    async def _init_one(provider_name: ProviderName, provider_class: type[LLMProviderBase]) -> None:
+    async def _init_one(provider_name: str, provider_class: type[LLMProviderBase]) -> None:
         """Initialize one provider and log recoverable failures without aborting.
 
         Args:
@@ -820,7 +819,7 @@ async def _initialize_providers(
         except (ImportError, OSError, RuntimeError, ValueError, TypeError, AttributeError) as e:
             logger.warning(
                 "provider_init_failed",
-                provider=provider_name.value,
+                provider=provider_name,
                 error=str(e),
                 error_type=type(e).__name__,
                 exc_info=True,

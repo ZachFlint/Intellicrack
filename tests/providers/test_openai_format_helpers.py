@@ -35,7 +35,6 @@ from intellicrack.core.types import (
     Message,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     RateLimitError,
     ThinkingConfig,
     ToolCall,
@@ -52,6 +51,7 @@ from intellicrack.providers.base import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from contextlib import AbstractContextManager
+from intellicrack.providers import ids as provider_ids
 
 
 _BUILD_FROM_COMPLETION_ATTR = "_build_usage_from_openai_completion"
@@ -115,14 +115,14 @@ class _BareProvider(LLMProviderBase):
     """
 
     @property
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """A placeholder provider name.
 
         Returns:
-            ProviderName: ``ProviderName.OPENAI`` chosen arbitrarily;
+            str: ``provider_ids.OPENAI`` chosen arbitrarily;
             the helper under test does not consult ``name``.
         """
-        return ProviderName.OPENAI
+        return provider_ids.OPENAI
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Satisfy the abstract :meth:`connect` contract.

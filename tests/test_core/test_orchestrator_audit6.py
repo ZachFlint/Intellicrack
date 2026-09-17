@@ -71,7 +71,6 @@ from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
-    ProviderName,
     ToolCall,
     ToolDefinition,
     ToolError,
@@ -79,6 +78,7 @@ from intellicrack.core.types import (
     ToolName,
     ToolParameter,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.registry import ProviderRegistry
 
@@ -1139,7 +1139,7 @@ class _FakeProvider(LLMProviderBase):
 
     def __init__(
         self,
-        provider_name: ProviderName = ProviderName.OPENAI,
+        provider_name: str = provider_ids.OPENAI,
         *,
         context_window: int | None = _DEFAULT_CONTEXT_WINDOW,
         chat_response: Message | None = None,
@@ -1170,11 +1170,11 @@ class _FakeProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The provider name.
 
         Returns:
-            ProviderName: Configured provider name.
+            str: Configured provider name.
         """
         return self._provider_name
 
@@ -1514,7 +1514,7 @@ async def test_load_session_marks_current_and_starts_autosave(tmp_path: Path) ->
     orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path)
     async with _AutoStopSessionManager(session_manager):
         created = await session_manager.create(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
         await session_manager.close()
@@ -1543,7 +1543,7 @@ async def test_system_prompt_lists_only_registered_tools(tmp_path: Path) -> None
     orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path, bridge=bridge)
     async with _AutoStopSessionManager(session_manager):
         await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
 
@@ -1562,7 +1562,7 @@ def test_estimate_tokens_uses_tiktoken_for_openai() -> None:
     naive = len(sample) // 4
     encoder = tiktoken.get_encoding("o200k_base")
     real = len(encoder.encode(sample))
-    estimate = Orchestrator.estimate_tokens(sample, ProviderName.OPENAI)
+    estimate = Orchestrator.estimate_tokens(sample, provider_ids.OPENAI)
 
     assert estimate == real
     assert estimate != naive
@@ -1574,15 +1574,15 @@ def test_estimate_tokens_uses_cl100k_for_anthropic() -> None:
 
     encoder = tiktoken.get_encoding("cl100k_base")
     real = len(encoder.encode(sample))
-    estimate = Orchestrator.estimate_tokens(sample, ProviderName.ANTHROPIC)
+    estimate = Orchestrator.estimate_tokens(sample, provider_ids.ANTHROPIC)
 
     assert estimate == real
 
 
 def test_estimate_tokens_handles_empty_string() -> None:
     """F-0004: Empty input must produce zero tokens for any provider."""
-    assert Orchestrator.estimate_tokens("", ProviderName.OPENAI) == 0
-    assert Orchestrator.estimate_tokens("", ProviderName.ANTHROPIC) == 0
+    assert Orchestrator.estimate_tokens("", provider_ids.OPENAI) == 0
+    assert Orchestrator.estimate_tokens("", provider_ids.ANTHROPIC) == 0
 
 
 def test_trim_messages_raises_when_context_window_missing() -> None:
@@ -1623,7 +1623,7 @@ def test_trim_messages_uses_provider_specific_encoding() -> None:
     trimmed = Orchestrator.trim_messages_to_context_window(
         list(messages),
         budget_window,
-        provider=ProviderName.OPENAI,
+        provider=provider_ids.OPENAI,
     )
 
     assert len(trimmed) == 1
@@ -1646,7 +1646,7 @@ async def test_user_message_not_persisted_on_loop_failure(tmp_path: Path) -> Non
     )
     async with _AutoStopSessionManager(session_manager):
         session = await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
         baseline_message_count = len(session.messages)
@@ -1673,7 +1673,7 @@ async def test_user_message_persisted_on_loop_success(tmp_path: Path) -> None:
     orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path, bridge=bridge)
     async with _AutoStopSessionManager(session_manager):
         session = await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
 
@@ -1710,7 +1710,7 @@ async def test_broken_tool_schema_raises_tool_error(tmp_path: Path) -> None:
     orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path, bridge=broken_bridge)
     async with _AutoStopSessionManager(session_manager):
         await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
 
@@ -1734,7 +1734,7 @@ async def test_missing_context_window_raises_tool_error(tmp_path: Path) -> None:
     )
     async with _AutoStopSessionManager(session_manager):
         await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
 
@@ -1762,7 +1762,7 @@ async def test_context_window_override_bypasses_provider_lookup(tmp_path: Path) 
     )
     async with _AutoStopSessionManager(session_manager):
         await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
 

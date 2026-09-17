@@ -34,7 +34,8 @@ from intellicrack.core.config import Config
 from intellicrack.core.orchestrator import Orchestrator
 from intellicrack.core.session import Session, SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import BinaryInfo, Message, ProviderName
+from intellicrack.core.types import BinaryInfo, Message
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui.app import MainWindow
 from intellicrack.ui.chat import MessageBubble
@@ -102,7 +103,7 @@ def _build_saved_session(window: MainWindow, tmp_path: Path) -> Session:
         Session: The persisted session.
     """
     manager = window._orchestrator._sessions
-    session = run_bridge_coroutine(manager.create(ProviderName.OLLAMA, "test-model", "S15P1 Session"))
+    session = run_bridge_coroutine(manager.create(provider_ids.OLLAMA, "test-model", "S15P1 Session"))
     assert isinstance(session, Session)
 
     for role, content in _SAVED_TURNS:

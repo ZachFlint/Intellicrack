@@ -30,13 +30,13 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     RateLimitError,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase, UsageInfo, create_openai_tool_schema
 
 
@@ -230,13 +230,13 @@ class OllamaProvider(LLMProviderBase):
             return self._local_client, self._cloud_client
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: ProviderName.OLLAMA
+            str: The ``ollama`` built-in provider id.
         """
-        return ProviderName.OLLAMA
+        return provider_ids.OLLAMA
 
     @property
     def local_available(self) -> bool:
@@ -874,7 +874,7 @@ class OllamaProvider(LLMProviderBase):
                 ModelInfo(
                     id=f"{id_prefix}{model_name}",
                     name=f"{name_prefix}{model_name}",
-                    provider=ProviderName.OLLAMA,
+                    provider=provider_ids.OLLAMA,
                     context_window=ctx_window,
                     supports_tools=has_tools,
                     supports_vision=has_vision,

@@ -37,7 +37,8 @@ import pytest_asyncio
 from intellicrack.bridges.hex_editor import HexEditorBridge
 from intellicrack.core.session import Session
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import BreakpointInfo, ProviderName, ToolError, ToolName
+from intellicrack.core.types import BreakpointInfo, ToolError, ToolName
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -280,7 +281,7 @@ class TestSetSessionPropagation:
         if not await bridge.is_available():
             pytest.skip("hex editor Rust core (intellicrack_hexcore) is not available")
 
-        session = Session.create(provider=ProviderName.OLLAMA, model="test-model")
+        session = Session.create(provider=provider_ids.OLLAMA, model="test-model")
         initialized_registry.set_session(session)
 
         await initialized_registry.execute_tool_call(

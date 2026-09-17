@@ -30,12 +30,12 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase, UsageInfo, create_openai_tool_schema
 from intellicrack.providers.model_loader import (
     RECOMMENDED_MODELS_B580,
@@ -252,13 +252,13 @@ class LocalTransformersProvider(LLMProviderBase):
         self._logger.info("local_transformers_provider_initialized", prefer_xpu=prefer_xpu)
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: ProviderName.LOCAL_TRANSFORMERS
+            str: The ``local_transformers`` built-in provider id.
         """
-        return ProviderName.LOCAL_TRANSFORMERS
+        return provider_ids.LOCAL_TRANSFORMERS
 
     @property
     def device_type(self) -> str:
@@ -536,7 +536,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 ModelInfo(
                     id=model_id,
                     name=f"[Local] {model_id.rsplit('/', maxsplit=1)[-1]}",
-                    provider=ProviderName.LOCAL_TRANSFORMERS,
+                    provider=provider_ids.LOCAL_TRANSFORMERS,
                     context_window=context_window,
                     supports_tools=True,
                     supports_vision=supports_vision,
