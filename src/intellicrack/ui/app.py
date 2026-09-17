@@ -15,7 +15,7 @@ import json
 import sys
 import weakref
 from pathlib import Path
-from typing import TYPE_CHECKING, cast, override
+from typing import TYPE_CHECKING, Any, cast, override
 
 from PyQt6.QtCore import QByteArray, QObject, QSettings, QSignalBlocker, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QScreen, QShowEvent
@@ -72,9 +72,11 @@ from intellicrack.credentials.provider_settings import (
     coerce_timeout_seconds,
     resolve_session_credentials,
 )
+from intellicrack.providers.configurable import ConfigurableProvider
 from intellicrack.providers.discovery import ModelDiscovery, format_discovery_status
 from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
 from intellicrack.providers.ids import BUILTIN_PROVIDER_IDS, is_valid_provider_id, normalize_provider_id
+from intellicrack.providers.instances import ProviderInstance
 from intellicrack.sandbox import SandboxConfig, SandboxManager
 from intellicrack.ui._screen_compat import get_screen_geometry, move_widget
 from intellicrack.ui.chat import ChatPanel
@@ -124,6 +126,7 @@ if TYPE_CHECKING:
     from intellicrack.core.config import Config
     from intellicrack.core.orchestrator import Orchestrator
     from intellicrack.core.template_manager import TemplateManager
+    from intellicrack.providers.base import LLMProviderBase
     from intellicrack.sandbox.base import SandboxBase
 
 _MAX_RESULT_DISPLAY_LEN = 500
@@ -2693,6 +2696,34 @@ class MainWindow(QMainWindow):
             else:
                 self._on_refresh_models(provider_switch=True)
 
+    def _register_saved_instance(self, provider_id: str) -> LLMProviderBase | None:
+        """Register a user-defined instance the registry has never seen.
+
+        A provider added in the settings dialog is a saved record, not a
+        registered class, so the first Apply after adding one has to construct
+        it. Doing it here is what makes a newly added endpoint usable without
+        restarting the application.
+
+        Args:
+            provider_id: The instance id to construct.
+
+        Returns:
+            LLMProviderBase | None: The registered provider, or ``None`` when
+            no instance is saved under that id.
+        """
+        store = ProviderSettingsStore(get_config_file(PROVIDER_SETTINGS_FILENAME))
+        record = store.load_instances().get(provider_id)
+        if record is None:
+            return None
+        instance = ProviderInstance.from_mapping(cast("dict[str, Any]", record))
+        if instance is None:
+            _logger.warning("provider_instance_record_invalid", instance_id=provider_id)
+            return None
+        provider = ConfigurableProvider(instance)
+        self._orchestrator.provider_registry.register(provider)
+        _logger.info("provider_instance_registered", instance_id=provider_id)
+        return provider
+
     def _apply_provider_settings(self, settings: dict[str, dict[str, object]]) -> None:
         """Apply provider configuration settings at runtime.
 
@@ -2723,7 +2754,7 @@ class MainWindow(QMainWindow):
                 continue
             pname = normalize_provider_id(provider_id)
 
-            existing_provider = registry.get(pname)
+            existing_provider = registry.get(pname) or self._register_saved_instance(pname)
 
             is_no_key_provider = provider_id in NO_API_KEY_PROVIDER_IDS
 
@@ -2747,21 +2778,21 @@ class MainWindow(QMainWindow):
                 for pname in providers_to_disconnect:
                     try:
                         await registry.disconnect_provider(pname)
-                        _logger.info("provider_disconnected", provider=pname.value)
+                        _logger.info("provider_disconnected", provider=pname)
                     except (RuntimeError, OSError, ValueError) as e:
                         _logger.warning(
                             "provider_disconnect_failed",
-                            provider=pname.value,
+                            provider=pname,
                             error=str(e),
                         )
                 for pname, creds in providers_to_connect:
                     try:
                         await registry.connect_provider(pname, creds)
-                        _logger.info("provider_reconnected", provider=pname.value)
+                        _logger.info("provider_reconnected", provider=pname)
                     except (ProviderError, ConfigurationError, ConnectionError, TimeoutError, OSError, RuntimeError, ValueError) as e:
                         _logger.warning(
                             "provider_reconnect_failed",
-                            provider=pname.value,
+                            provider=pname,
                             error=str(e),
                         )
 
