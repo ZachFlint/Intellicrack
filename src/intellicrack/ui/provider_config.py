@@ -487,7 +487,6 @@ class _TimeoutSpinBox(QSpinBox):
 
 
 if TYPE_CHECKING:
-
     from intellicrack.core.types import ModelInfo
     from intellicrack.providers.base import LLMProviderBase
     from intellicrack.providers.discovery import DiscoveryEvent, ModelDiscovery
@@ -2017,7 +2016,7 @@ class ProviderConfigDialog(QDialog):
                 source = await store.get_source(cred.provider)
                 _logger.debug(
                     "credential_source",
-                    provider=cred.provider.value,
+                    provider=cred.provider,
                     source=str(source),
                 )
             return len(store_providers)
@@ -2202,9 +2201,7 @@ class ProviderConfigDialog(QDialog):
             list[tuple[str, str]]: ``(display name, provider id)`` pairs, in
             display order.
         """
-        listed: list[tuple[str, str]] = [
-            (provider_display_name(provider_id), provider_id) for provider_id in BUILTIN_PROVIDER_IDS
-        ]
+        listed: list[tuple[str, str]] = [(provider_display_name(provider_id), provider_id) for provider_id in BUILTIN_PROVIDER_IDS]
         for instance_id, record in self._settings_store.load_instances().items():
             if instance_id in BUILTIN_PROVIDER_IDS:
                 continue
@@ -2449,11 +2446,7 @@ class ProviderConfigDialog(QDialog):
             bool: ``True`` when the instance may be stored.
         """
         host = urlsplit(instance.api_base).hostname if instance.api_base else None
-        known_hosts = {
-            urlsplit(preset.default_api_base).hostname
-            for preset in all_presets().values()
-            if preset.default_api_base
-        }
+        known_hosts = {urlsplit(preset.default_api_base).hostname for preset in all_presets().values() if preset.default_api_base}
         if host is None or host in known_hosts:
             return True
         header_summary = ", ".join(instance.headers) or "none"
@@ -2517,7 +2510,7 @@ class ProviderConfigDialog(QDialog):
             _logger.warning("active_provider_lookup_failed", error=str(exc))
             return None
         else:
-            return active.value if active is not None else None
+            return active
 
     def _is_provider_connected(self, provider_id: str) -> bool:
         """Check if a provider is connected.
@@ -2698,7 +2691,7 @@ class ProviderConfigDialog(QDialog):
         missing = loader.list_missing_providers()
 
         for name in configured:
-            env_var = loader.get_env_var(name.value)
+            env_var = loader.get_env_var(name)
             if env_var is not None:
                 _logger.debug("credential_refreshed", provider=name)
         _logger.info(

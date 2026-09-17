@@ -20,6 +20,7 @@ import json
 from typing import TYPE_CHECKING, Any, ClassVar, Final, override
 
 from intellicrack.bridges.json_schema import function_parameters
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
     ReasoningItem,
@@ -363,13 +364,13 @@ class ChatCompletionsAdapter(DialectAdapter):
             DialectResponse: The normalized response.
         """
         raw_choices = payload.get("choices")
-        choices: list[Any] = raw_choices if isinstance(raw_choices, list) else []
+        choices: list[Any] = raw_choices if is_json_array(raw_choices) else []
         if not choices:
             return DialectResponse(usage=parse_usage(payload.get("usage")))
         first = choices[0]
-        choice: dict[str, Any] = first if isinstance(first, dict) else {}
+        choice: dict[str, Any] = first if is_json_object(first) else {}
         raw_message = choice.get("message")
-        message: dict[str, Any] = raw_message if isinstance(raw_message, dict) else {}
+        message: dict[str, Any] = raw_message if is_json_object(raw_message) else {}
 
         content = message.get("content")
         tool_calls = tuple(self._parse_tool_calls(message.get("tool_calls")))
@@ -394,16 +395,16 @@ class ChatCompletionsAdapter(DialectAdapter):
             list[Any]: Parsed :class:`~intellicrack.core.types.ToolCall`
             instances, skipping entries that carry no usable function.
         """
-        if not isinstance(raw, list):
+        if not is_json_array(raw):
             return []
         entries: list[Any] = raw
         parsed: list[Any] = []
         for entry in entries:
-            if not isinstance(entry, dict):
+            if not is_json_object(entry):
                 continue
             call: dict[str, Any] = entry
             function = call.get("function")
-            if not isinstance(function, dict):
+            if not is_json_object(function):
                 continue
             function_map: dict[str, Any] = function
             name = function_map.get("name")
@@ -413,7 +414,7 @@ class ChatCompletionsAdapter(DialectAdapter):
             raw_arguments: str | dict[str, object]
             if isinstance(arguments, str):
                 raw_arguments = arguments
-            elif isinstance(arguments, dict):
+            elif is_json_object(arguments):
                 raw_arguments = dict(arguments)
             else:
                 raw_arguments = "{}"
@@ -439,13 +440,13 @@ class ChatCompletionsAdapter(DialectAdapter):
         deltas: list[StreamDelta] = []
         usage = parse_usage(event.get("usage"))
         raw_choices = event.get("choices")
-        choices: list[Any] = raw_choices if isinstance(raw_choices, list) else []
+        choices: list[Any] = raw_choices if is_json_array(raw_choices) else []
         for entry in choices:
-            if not isinstance(entry, dict):
+            if not is_json_object(entry):
                 continue
             choice: dict[str, Any] = entry
             raw_delta = choice.get("delta")
-            delta: dict[str, Any] = raw_delta if isinstance(raw_delta, dict) else {}
+            delta: dict[str, Any] = raw_delta if is_json_object(raw_delta) else {}
             content = delta.get("content")
             if isinstance(content, str) and content:
                 deltas.append(StreamDelta(text=content))
@@ -607,16 +608,16 @@ def parse_usage(raw: object) -> UsageInfo | None:
     Returns:
         UsageInfo | None: Populated usage, or ``None`` when absent.
     """
-    if not isinstance(raw, dict):
+    if not is_json_object(raw):
         return None
     usage: dict[str, Any] = raw
     prompt = _as_int(usage.get("prompt_tokens"))
     completion = _as_int(usage.get("completion_tokens"))
     total = _as_int(usage.get("total_tokens")) or (prompt + completion)
     details = usage.get("prompt_tokens_details")
-    cached = _as_int(details.get("cached_tokens")) if isinstance(details, dict) else 0
+    cached = _as_int(details.get("cached_tokens")) if is_json_object(details) else 0
     completion_details = usage.get("completion_tokens_details")
-    reasoning = _as_int(completion_details.get("reasoning_tokens")) if isinstance(completion_details, dict) else 0
+    reasoning = _as_int(completion_details.get("reasoning_tokens")) if is_json_object(completion_details) else 0
     return UsageInfo(
         prompt_tokens=prompt,
         completion_tokens=completion,
@@ -667,18 +668,18 @@ def _parse_tool_call_deltas(raw: object) -> list[StreamDelta]:
     Returns:
         list[StreamDelta]: One delta per fragment, in wire order.
     """
-    if not isinstance(raw, list):
+    if not is_json_array(raw):
         return []
     entries: list[Any] = raw
     deltas: list[StreamDelta] = []
     for position, entry in enumerate(entries):
-        if not isinstance(entry, dict):
+        if not is_json_object(entry):
             continue
         call: dict[str, Any] = entry
         index = call.get("index")
         token = str(index if isinstance(index, int) else position)
         function = call.get("function")
-        function_map: dict[str, Any] = function if isinstance(function, dict) else {}
+        function_map: dict[str, Any] = function if is_json_object(function) else {}
         name = function_map.get("name")
         arguments = function_map.get("arguments")
         call_id = call.get("id")

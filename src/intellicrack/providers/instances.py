@@ -33,6 +33,7 @@ from dataclasses import dataclass, field
 from typing import Any, Final
 from urllib.parse import urlsplit
 
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.providers.capabilities import ApiDialect, CapabilityOverride
 from intellicrack.providers.dialects.base import ToolNameStyle, headers_receiving_api_key
@@ -251,9 +252,9 @@ class ProviderInstance:
         style = _coerce_name_style(record.get("tool_name_style"))
         overrides: dict[str, CapabilityOverride] = {}
         raw_overrides = record.get("model_overrides")
-        if isinstance(raw_overrides, dict):
+        if is_json_object(raw_overrides):
             for model, entry in raw_overrides.items():
-                if isinstance(entry, dict):
+                if is_json_object(entry):
                     overrides[str(model)] = CapabilityOverride.from_mapping(entry)
 
         return cls(
@@ -417,7 +418,7 @@ def _as_str_mapping(raw: object) -> dict[str, str]:
     Returns:
         dict[str, str]: Entries whose key and value are both strings.
     """
-    if not isinstance(raw, dict):
+    if not is_json_object(raw):
         return {}
     mapping: dict[str, Any] = raw
     return {str(key): value for key, value in mapping.items() if isinstance(value, str)}
@@ -432,7 +433,7 @@ def _as_mapping(raw: object) -> dict[str, Any]:
     Returns:
         dict[str, Any]: The mapping, or an empty one.
     """
-    if not isinstance(raw, dict):
+    if not is_json_object(raw):
         return {}
     mapping: dict[str, Any] = raw
     return dict(mapping)
@@ -447,7 +448,7 @@ def _as_str_list(raw: object) -> list[str]:
     Returns:
         list[str]: The string entries, or an empty list.
     """
-    if not isinstance(raw, list):
+    if not is_json_array(raw):
         return []
     entries: list[Any] = raw
     return [str(entry) for entry in entries]

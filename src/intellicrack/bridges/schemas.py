@@ -39,6 +39,7 @@ from intellicrack.bridges.json_schema import (
     is_recognized_type,
     normalize_type,
 )
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
     ToolDefinition,
@@ -329,7 +330,7 @@ def validate_raw_input_schema(schema: dict[str, Any], location: str) -> list[Val
         )
 
     properties = schema.get("properties")
-    if properties is not None and not isinstance(properties, dict):
+    if properties is not None and not is_json_object(properties):
         errors.append(
             ValidationError(
                 "Raw input_schema 'properties' must be an object",
@@ -341,7 +342,7 @@ def validate_raw_input_schema(schema: dict[str, Any], location: str) -> list[Val
     required = schema.get("required")
     if required is None:
         return errors
-    if not isinstance(required, list):
+    if not is_json_array(required):
         errors.append(
             ValidationError(
                 "Raw input_schema 'required' must be an array",
@@ -350,7 +351,7 @@ def validate_raw_input_schema(schema: dict[str, Any], location: str) -> list[Val
         )
         return errors
 
-    declared: dict[str, Any] = properties if isinstance(properties, dict) else {}
+    declared: dict[str, Any] = properties if is_json_object(properties) else {}
     entries: list[Any] = required
     errors.extend(
         ValidationError(
@@ -460,7 +461,7 @@ def to_google_schema(tool: ToolDefinition) -> list[GoogleFunctionDeclaration]:
     declarations: list[GoogleFunctionDeclaration] = []
     for entry in _schemas_for(tool, ApiDialect.GEMINI):
         raw = entry.get("functionDeclarations")
-        if isinstance(raw, list):
+        if is_json_array(raw):
             members: list[Any] = raw
             declarations.extend(cast("GoogleFunctionDeclaration", member) for member in members)
     return declarations
