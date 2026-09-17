@@ -47,9 +47,31 @@ class _KeyringFallbackError(Exception):
 
 
 if _keyring_errors_module is not None:
-    _KeyringError: type[BaseException] = _keyring_errors_module.KeyringError
+    _KeyringError: type[Exception] = _keyring_errors_module.KeyringError
 else:
     _KeyringError = _KeyringFallbackError
+
+
+try:
+    from win32ctypes.pywin32.pywintypes import error as _win32_credential_error
+except ImportError:
+    _logger.debug("win32_credential_error_unavailable")
+    _win32_credential_error = None
+
+
+class _Win32CredentialFallbackError(Exception):
+    """Sentinel exception used when the Win32 credential shim is unavailable.
+
+    This class is never raised. It exists only to keep the ``except`` tuples
+    type-consistent on platforms where ``win32ctypes`` is not installed,
+    mirroring :class:`_KeyringFallbackError`.
+    """
+
+
+if _win32_credential_error is not None:
+    _Win32CredentialError: type[Exception] = _win32_credential_error
+else:
+    _Win32CredentialError = _Win32CredentialFallbackError
 
 
 class CredentialStoreError(IntellicrackError):
@@ -150,7 +172,7 @@ class CredentialStore:
 
         try:
             backend = _keyring_module.get_keyring()
-        except (OSError, RuntimeError, KeyError, ValueError, _KeyringError) as e:
+        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError, RuntimeError) as e:
             _logger.warning("keyring_unavailable", error=str(e), exc_info=True)
             return False
 
@@ -317,7 +339,7 @@ class CredentialStore:
         try:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_credentials(data) if data else None
-        except (OSError, KeyError, ValueError, _KeyringError, CredentialStoreError) as e:
+        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError, CredentialStoreError) as e:
             _logger.warning("keyring_get_failed", provider=provider.value, error=str(e), exc_info=True)
             return None
 
@@ -370,7 +392,7 @@ class CredentialStore:
         try:
             await asyncio.to_thread(_store)
             _logger.info("credentials_stored", provider=provider.value, store="keyring")
-        except (OSError, KeyError, ValueError, _KeyringError) as e:
+        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError) as e:
             _logger.warning("credential_store_failed", provider=provider.value, error=str(e), exc_info=True)
             msg = f"Failed to store credentials: {e}"
             raise CredentialStoreError(msg) from e
@@ -402,7 +424,7 @@ class CredentialStore:
         try:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_metadata(data, provider) if data else None
-        except (OSError, KeyError, ValueError, _KeyringError):
+        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError):
             _logger.debug("metadata_get_failed", provider=provider.value, exc_info=True)
             return None
 
@@ -535,12 +557,12 @@ class CredentialStore:
             """
             try:
                 keyring.delete_password(self.SERVICE_NAME, key)
-            except (OSError, KeyError, ValueError, _KeyringError):
+            except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError):
                 _logger.exception("keyring_delete_credential_failed", provider=provider.value)
                 return False
             try:
                 keyring.delete_password(self.SERVICE_NAME, metadata_key)
-            except (OSError, KeyError, ValueError, _KeyringError):
+            except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError):
                 _logger.exception("keyring_delete_metadata_failed", provider=provider.value)
             return True
 
@@ -634,7 +656,7 @@ class CredentialStore:
                     )
                     results[provider] = True
                     _logger.info("credentials_migrated", provider=provider.value, source="env", destination="keyring")
-                except (OSError, KeyError, ValueError, _KeyringError, CredentialStoreError) as exc:
+                except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError, CredentialStoreError) as exc:
                     _logger.warning("credential_migration_failed", provider=provider.value, error=str(exc), exc_info=True)
                     results[provider] = False
 
