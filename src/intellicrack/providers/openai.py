@@ -44,6 +44,7 @@ from intellicrack.providers.capabilities import ApiDialect, TokenLimitField
 from intellicrack.providers.dialects.base import DialectRequest
 from intellicrack.providers.dialects.chat_completions import ChatCompletionsAdapter
 from intellicrack.providers.dialects.responses import ResponsesAdapter
+from intellicrack.providers.presets import preset_capabilities
 
 
 if TYPE_CHECKING:
@@ -272,6 +273,46 @@ class OpenAIProvider(LLMProviderBase):
             "gpt-image-",
         )
         return not model_id.startswith(non_chat_prefixes)
+
+    @staticmethod
+    def _infer_context_window(model_id: str) -> int:
+        """Resolve a model's context window from its capability record.
+
+        This reads the resolved capability layer rather than matching
+        prefixes: the preset supplies the documented window for each OpenAI
+        family, an endpoint that states its own ``context_length`` overrides
+        the preset, and a per-model user override beats both. A model the
+        record does not cover resolves to the dialect default, which is the
+        128k window every current OpenAI chat model meets or exceeds.
+
+        Args:
+            model_id: OpenAI model identifier.
+
+        Returns:
+            int: The context window in tokens.
+        """
+        return preset_capabilities(provider_ids.OPENAI, model_id).context_window
+
+    @staticmethod
+    def _infer_supports_vision(model_id: str) -> bool:
+        """Resolve whether a model accepts image input.
+
+        The capability record answers first, so a family the presets cover
+        and an endpoint that states its own modalities both win over any
+        name matching. Only when the record is silent does the model id
+        decide, and then on the literal ``vision`` marker OpenAI puts in the
+        name rather than on a family prefix.
+
+        Args:
+            model_id: OpenAI model identifier.
+
+        Returns:
+            bool: ``True`` if the model accepts image input.
+        """
+        stated = preset_capabilities(provider_ids.OPENAI, model_id).supports_vision
+        if stated is not None:
+            return stated
+        return "vision" in model_id
 
     async def list_models(self) -> list[ModelInfo]:
         """Dynamically fetch available models from OpenAI.

@@ -2218,13 +2218,13 @@ class Orchestrator:
                 total_tokens=usage.total_tokens,
             )
         if reasoning_items := provider.get_pending_reasoning():
-            if response.reasoning is None:
-                response.reasoning = reasoning_items
-            else:
+            if response.reasoning:
                 response.reasoning.extend(reasoning_items)
+            else:
+                response.reasoning = reasoning_items
         if thinking_blocks := provider.get_pending_thinking():
             self._stats.thinking_blocks_collected += len(thinking_blocks)
-            if response.reasoning is None:
+            if not response.reasoning:
                 response.set_thinking_content("\n\n".join(thinking_blocks))
             _logger.debug(
                 "provider_thinking_recorded",
