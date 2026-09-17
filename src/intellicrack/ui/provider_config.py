@@ -3133,14 +3133,15 @@ class ProviderSettingsWidget(QFrame):
         self._api_base_input: QLineEdit | None
         self._org_id_input: QLineEdit | None
 
-        self._api_base_input = QLineEdit()
-        self._api_base_input.setPlaceholderText(_provider_default_api_base(self.provider_id) or "Provider default")
-        self._api_base_input.setToolTip(
+        api_base_input = QLineEdit()
+        api_base_input.setPlaceholderText(_provider_default_api_base(self.provider_id) or "Provider default")
+        api_base_input.setToolTip(
             "Base URL for this provider. https:// anywhere is fine, and plain http:// to a local runtime is fine. "
             "Plain http:// to a public host needs an explicit acknowledgement before the API key is attached.",
         )
-        self._api_base_input.editingFinished.connect(self._update_transport_notice)
-        credentials_layout.addRow("API Base URL:", self._api_base_input)
+        api_base_input.editingFinished.connect(self._update_transport_notice)
+        self._api_base_input = api_base_input
+        credentials_layout.addRow("API Base URL:", api_base_input)
 
         self._insecure_ack_checkbox = QCheckBox("Send the API key over plain HTTP to this public host")
         self._insecure_ack_checkbox.setToolTip(
