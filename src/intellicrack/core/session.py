@@ -30,6 +30,8 @@ from .types import (
     Message,
     ParameterInfo,
     PatchInfo,
+    ReasoningItem,
+    ReasoningKind,
     SectionInfo,
     StringInfo,
     ToolCall,
@@ -52,6 +54,60 @@ _ERR_NO_CURRENT_SESSION = "no current session"
 _ERR_EMPTY_TAG = "session tag must be a non-empty, non-whitespace string"
 
 _logger = get_logger(__name__)
+
+
+def _serialize_reasoning_item(item: ReasoningItem) -> dict[str, Any]:
+    """Serialize a reasoning block, payload intact.
+
+    The provider-opaque fields are what make a reasoning block replayable:
+    an Anthropic signature or an OpenAI Responses item id has to come back
+    verbatim on the next tool-use turn. Dropping them on save would mean a
+    reloaded session silently loses extended thinking the moment it calls a
+    tool, so they are stored exactly as received.
+
+    Args:
+        item: The reasoning block to serialize.
+
+    Returns:
+        dict[str, Any]: JSON-compatible record.
+    """
+    return {
+        "kind": item.kind.value,
+        "text": item.text,
+        "signature": item.signature,
+        "item_id": item.item_id,
+        "encrypted_content": item.encrypted_content,
+        "redacted_data": item.redacted_data,
+        "summary": list(item.summary),
+    }
+
+
+def _deserialize_reasoning_item(data: dict[str, Any]) -> ReasoningItem:
+    """Rebuild a reasoning block from its stored record.
+
+    Args:
+        data: A record previously produced by
+            :func:`_serialize_reasoning_item`.
+
+    Returns:
+        ReasoningItem: The reconstructed block. An unrecognised kind falls
+        back to a plain thinking block, which is displayable and simply
+        not replayed.
+    """
+    try:
+        kind = ReasoningKind(data.get("kind", ReasoningKind.THINKING.value))
+    except ValueError:
+        kind = ReasoningKind.THINKING
+    raw_summary = data.get("summary")
+    return ReasoningItem(
+        kind=kind,
+        text=str(data.get("text", "")),
+        signature=data.get("signature"),
+        item_id=data.get("item_id"),
+        encrypted_content=data.get("encrypted_content"),
+        redacted_data=data.get("redacted_data"),
+        summary=tuple(str(part) for part in raw_summary) if isinstance(raw_summary, list) else (),
+    )
 
 
 @dataclass
@@ -730,9 +786,13 @@ class SessionStore:
                     "result": tr.result,
                     "error": tr.error,
                     "duration_ms": tr.duration_ms,
+                    "is_error": tr.is_error,
                 }
                 for tr in message.tool_results
             ]
+
+        if message.reasoning:
+            result["reasoning"] = [_serialize_reasoning_item(item) for item in message.reasoning]
 
         return result
 
@@ -754,12 +814,17 @@ class SessionStore:
         if "tool_results" in data:
             tool_results = [ToolResult(**tr) for tr in data["tool_results"]]
 
+        reasoning = None
+        if "reasoning" in data:
+            reasoning = [_deserialize_reasoning_item(item) for item in data["reasoning"]]
+
         return Message(
             role=data["role"],
             content=data["content"],
             timestamp=datetime.fromisoformat(data["timestamp"]),
             tool_calls=tool_calls,
             tool_results=tool_results,
+            reasoning=reasoning,
         )
 
     @staticmethod

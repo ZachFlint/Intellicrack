@@ -29,6 +29,7 @@ from intellicrack.bridges.hex_editor import HexEditorBridge
 from intellicrack.bridges.installer import ToolInstaller
 from intellicrack.bridges.process import ProcessBridge
 from intellicrack.bridges.sandbox_bridge import SandboxBridge
+from intellicrack.bridges.schemas import RESERVED_TOOL_NAMESPACES
 from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.logging import get_logger, log_tool_call
 from intellicrack.core.types import ToolDefinition, ToolError, ToolName
@@ -52,14 +53,6 @@ if TYPE_CHECKING:
 
 
 _logger = get_logger(__name__)
-
-RESERVED_TOOL_NAMESPACES: frozenset[str] = frozenset(member.value for member in ToolName)
-"""Namespaces owned by Intellicrack's own bridges.
-
-An externally-sourced tool may not claim one of these. Dispatch resolves a
-namespace against the bridge registry first, so a tool calling itself
-``ghidra`` would shadow the real Ghidra bridge rather than sit beside it.
-"""
 
 _ERR_RESERVED_NAMESPACE = "namespace is reserved for an Intellicrack bridge"
 _ERR_INVALID_NAMESPACE = "namespace must be a non-empty identifier"
