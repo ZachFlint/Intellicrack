@@ -254,6 +254,7 @@ class AnthropicProvider(LLMProviderBase):
         max_tokens: int,
         messages: list[Message],
         tools: list[ToolDefinition] | None,
+        system_prompt: str | None = None,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
@@ -278,6 +279,9 @@ class AnthropicProvider(LLMProviderBase):
             max_tokens: Maximum tokens in response.
             messages: Conversation history in Intellicrack's message model.
             tools: Optional tool definitions to advertise.
+            system_prompt: Explicit system instruction. When given it wins
+                over any ``system``-role message in ``messages``; when omitted
+                the instruction is taken from those messages.
             tool_choice: Tool selection mode.
             thinking: Extended thinking configuration.
             enable_cache: Whether to enable prompt caching.
@@ -293,6 +297,7 @@ class AnthropicProvider(LLMProviderBase):
                 capabilities=capabilities,
                 tools=self._enforce_tool_count_cap(tools, capabilities) if tools else (),
                 max_tokens=max_tokens,
+                system=system_prompt,
                 tool_choice=tool_choice,
                 thinking=thinking,
                 enable_cache=enable_cache,

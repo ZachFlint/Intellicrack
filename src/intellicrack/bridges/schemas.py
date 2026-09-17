@@ -48,6 +48,7 @@ from intellicrack.core.types import (
 )
 from intellicrack.providers.capabilities import ApiDialect
 from intellicrack.providers.dialects import adapter_for
+from intellicrack.providers.presets import preset_for
 from intellicrack.providers.tool_names import is_valid_wire_name, to_wire_name
 
 
@@ -581,6 +582,83 @@ def validate_tool_for_dialect(
     return errors
 
 
+def dialect_for_provider(provider: str) -> ApiDialect:
+    """Resolve the wire format a provider instance speaks.
+
+    Provider identity is open, so a provider the presets do not know is
+    assumed to speak Chat Completions: that is the format an arbitrary
+    OpenAI-compatible endpoint serves, and it is what the configuration UI
+    probes such an endpoint with. A preset that declares no dialect at all
+    resolves the same way, which covers the in-process local-inference
+    provider: it never reaches an HTTP wire, but callers still ask it for
+    schemas and expect the OpenAI-compatible shape.
+
+    Args:
+        provider: The provider instance id.
+
+    Returns:
+        ApiDialect: The wire format that provider speaks.
+    """
+    preset = preset_for(provider)
+    if preset is None or preset.dialect is None:
+        return ApiDialect.CHAT_COMPLETIONS
+    return preset.dialect
+
+
+def get_schema_for_provider(
+    tool: ToolDefinition,
+    provider: str,
+) -> list[dict[str, Any]]:
+    """Convert a tool definition to one provider's schema.
+
+    Convenience over :func:`get_schema_for_dialect` for callers that hold a
+    provider id rather than a dialect. Dispatch is still keyed by dialect;
+    this resolves the provider to its wire format first.
+
+    Args:
+        tool: The tool definition to convert.
+        provider: The provider instance id to build schemas for.
+
+    Returns:
+        list[dict[str, Any]]: List of tool schemas in that provider's format.
+    """
+    return get_schema_for_dialect(tool, dialect_for_provider(provider))
+
+
+def get_all_schemas_for_provider(
+    tools: list[ToolDefinition],
+    provider: str,
+) -> list[dict[str, Any]]:
+    """Convert multiple tool definitions to one provider's schemas.
+
+    Args:
+        tools: List of tool definitions to convert, in priority order. The
+            returned list preserves that order exactly.
+        provider: The provider instance id to build schemas for.
+
+    Returns:
+        list[dict[str, Any]]: Flattened list of all tool schemas in that
+        provider's format.
+    """
+    return get_all_schemas_for_dialect(tools, dialect_for_provider(provider))
+
+
+def validate_tool_for_provider(
+    tool: ToolDefinition,
+    provider: str,
+) -> list[ValidationError]:
+    """Validate a tool definition for one provider without allocating schemas.
+
+    Args:
+        tool: The tool definition to validate.
+        provider: The provider instance id to validate against.
+
+    Returns:
+        list[ValidationError]: List of validation errors (empty if valid).
+    """
+    return validate_tool_for_dialect(tool, dialect_for_provider(provider))
+
+
 def validate_external_tool_namespace(tool_name: str) -> ValidationError | None:
     """Reject an externally-sourced tool that claims a bridge namespace.
 
@@ -661,8 +739,11 @@ __all__ = [
     "ValidationError",
     "build_schema_parameters",
     "build_schema_property",
+    "dialect_for_provider",
     "get_all_schemas_for_dialect",
+    "get_all_schemas_for_provider",
     "get_schema_for_dialect",
+    "get_schema_for_provider",
     "is_recognized_type",
     "normalize_type",
     "to_anthropic_schema",
@@ -675,6 +756,7 @@ __all__ = [
     "validate_raw_input_schema",
     "validate_tool_definition",
     "validate_tool_for_dialect",
+    "validate_tool_for_provider",
     "validate_tool_function",
     "validate_tool_parameter",
 ]
