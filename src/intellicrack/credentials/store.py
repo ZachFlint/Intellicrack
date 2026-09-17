@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, ClassVar, Final
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import IntellicrackError, ProviderCredentials
-from intellicrack.credentials.env_loader import CredentialLoader, get_credential_loader
+from intellicrack.credentials.env_loader import CredentialLoader, get_credential_loader, validate_key_format
 from intellicrack.providers import ids as provider_ids
 
 
@@ -664,10 +664,18 @@ class CredentialStore:
         return results
 
     async def validate(self, provider: str) -> tuple[bool, str | None]:
-        """Validate credentials exist and are properly formatted.
+        """Validate that a credential exists and is usable.
+
+        Shape validation is deliberately minimal and delegates to
+        :func:`~intellicrack.credentials.env_loader.validate_key_format`. The
+        old rule rejected a key that did not start with the prefix the
+        built-in provider of that name uses, which was wrong as soon as a
+        provider id could name any endpoint: a gateway in front of Anthropic,
+        an Azure deployment or a LiteLLM proxy all issue their own keys, and
+        refusing them made the endpoint unusable for a cosmetic reason.
 
         Args:
-            provider: The provider to validate.
+            provider: The provider instance to validate.
 
         Returns:
             tuple[bool, str | None]: Tuple of (is_valid, error_message).
@@ -677,28 +685,8 @@ class CredentialStore:
         if creds is None or not creds.api_key:
             _logger.debug("credentials_validate_no_credentials", provider=provider)
             return False, f"No credentials found for {provider}"
-
-        if provider == provider_ids.ANTHROPIC:
-            if not creds.api_key.startswith("sk-ant-"):
-                return False, "Anthropic API key should start with 'sk-ant-'"
-
-        elif provider == provider_ids.OPENAI:
-            if not creds.api_key.startswith("sk-"):
-                return False, "OpenAI API key should start with 'sk-'"
-
-        elif provider == provider_ids.OPENROUTER and not creds.api_key.startswith("sk-or-"):
-            return False, "OpenRouter API key should start with 'sk-or-'"
-
-        elif provider == provider_ids.GOOGLE and not creds.api_key.startswith("AIza"):
-            return False, "Google API key should start with 'AIza'"
-
-        elif provider == provider_ids.GROK and not creds.api_key.startswith("xai-"):
-            return False, "Grok API key should start with 'xai-'"
-
-        elif provider == provider_ids.HUGGINGFACE and not creds.api_key.startswith("hf_"):
-            return False, "HuggingFace API token should start with 'hf_'"
-
-        return True, None
+        problem = validate_key_format(provider, creds.api_key)
+        return (problem is None), problem
 
     async def get_source(self, provider: str) -> CredentialSource | None:
         """Get the source of credentials for a provider.
