@@ -17,26 +17,33 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 from uuid import uuid4
 
 from .logging import get_logger, log_session_operation
 from .types import (
+    AudioResultPart,
     BinaryInfo,
     BridgeAnalysisSummary,
+    EmbeddedResourcePart,
     ExportInfo,
     FunctionInfo,
+    ImageResultPart,
     ImportInfo,
     Message,
     ParameterInfo,
     PatchInfo,
     ReasoningItem,
     ReasoningKind,
+    ResourceLinkPart,
     SectionInfo,
     StringInfo,
+    StructuredResultPart,
+    TextResultPart,
     ToolCall,
     ToolName,
     ToolResult,
+    ToolResultPart,
     ToolState,
     VariableInfo,
 )
@@ -107,6 +114,165 @@ def _deserialize_reasoning_item(data: dict[str, Any]) -> ReasoningItem:
         encrypted_content=data.get("encrypted_content"),
         redacted_data=data.get("redacted_data"),
         summary=tuple(str(part) for part in raw_summary) if isinstance(raw_summary, list) else (),
+    )
+
+
+_PART_TYPE_TEXT: Final[str] = "text"
+_PART_TYPE_IMAGE: Final[str] = "image"
+_PART_TYPE_AUDIO: Final[str] = "audio"
+_PART_TYPE_RESOURCE_LINK: Final[str] = "resource_link"
+_PART_TYPE_EMBEDDED_RESOURCE: Final[str] = "embedded_resource"
+_PART_TYPE_STRUCTURED: Final[str] = "structured"
+
+
+def _optional_str(value: object) -> str | None:
+    """Coerce a stored field to an optional string.
+
+    Args:
+        value: Value read from a session record.
+
+    Returns:
+        str | None: ``None`` when the field was absent or null, otherwise its
+        text.
+    """
+    return None if value is None else str(value)
+
+
+def _serialize_result_part(part: ToolResultPart) -> dict[str, Any]:
+    """Serialize one part of a multi-part tool result.
+
+    Args:
+        part: The part to serialize.
+
+    Returns:
+        dict[str, Any]: JSON-compatible record tagged with the part kind.
+    """
+    if isinstance(part, TextResultPart):
+        return {"type": _PART_TYPE_TEXT, "text": part.text}
+    if isinstance(part, ImageResultPart):
+        return {"type": _PART_TYPE_IMAGE, "data": part.data, "mime_type": part.mime_type}
+    if isinstance(part, AudioResultPart):
+        return {"type": _PART_TYPE_AUDIO, "data": part.data, "mime_type": part.mime_type}
+    if isinstance(part, ResourceLinkPart):
+        return {
+            "type": _PART_TYPE_RESOURCE_LINK,
+            "uri": part.uri,
+            "name": part.name,
+            "mime_type": part.mime_type,
+            "description": part.description,
+        }
+    if isinstance(part, EmbeddedResourcePart):
+        return {
+            "type": _PART_TYPE_EMBEDDED_RESOURCE,
+            "uri": part.uri,
+            "text": part.text,
+            "data": part.data,
+            "mime_type": part.mime_type,
+        }
+    return {"type": _PART_TYPE_STRUCTURED, "content": dict(part.content)}
+
+
+def _deserialize_referenced_part(part_type: str, data: dict[str, Any]) -> ToolResultPart | None:
+    """Rebuild the part kinds that carry media or a resource reference.
+
+    Args:
+        part_type: The stored part-kind tag.
+        data: The stored record for that part.
+
+    Returns:
+        ToolResultPart | None: The reconstructed part, or ``None`` when
+        ``part_type`` names no media or resource kind.
+    """
+    if part_type == _PART_TYPE_IMAGE:
+        return ImageResultPart(data=str(data.get("data", "")), mime_type=str(data.get("mime_type", "")))
+    if part_type == _PART_TYPE_AUDIO:
+        return AudioResultPart(data=str(data.get("data", "")), mime_type=str(data.get("mime_type", "")))
+    if part_type == _PART_TYPE_RESOURCE_LINK:
+        return ResourceLinkPart(
+            uri=str(data.get("uri", "")),
+            name=_optional_str(data.get("name")),
+            mime_type=_optional_str(data.get("mime_type")),
+            description=_optional_str(data.get("description")),
+        )
+    if part_type == _PART_TYPE_EMBEDDED_RESOURCE:
+        return EmbeddedResourcePart(
+            uri=str(data.get("uri", "")),
+            text=_optional_str(data.get("text")),
+            data=_optional_str(data.get("data")),
+            mime_type=_optional_str(data.get("mime_type")),
+        )
+    return None
+
+
+def _deserialize_result_part(data: dict[str, Any]) -> ToolResultPart:
+    """Rebuild one part of a multi-part tool result from its stored record.
+
+    Args:
+        data: A record previously produced by :func:`_serialize_result_part`.
+
+    Returns:
+        ToolResultPart: The reconstructed part. A kind this build does not
+        recognise degrades to text carrying the stored record, so a session
+        written by a newer build still loads without losing the content.
+    """
+    part_type = str(data.get("type", ""))
+    if part_type == _PART_TYPE_TEXT:
+        return TextResultPart(text=str(data.get("text", "")))
+    if part_type == _PART_TYPE_STRUCTURED:
+        content = data.get("content")
+        return StructuredResultPart(content=dict(content) if isinstance(content, dict) else {})
+    referenced = _deserialize_referenced_part(part_type, data)
+    if referenced is not None:
+        return referenced
+    return TextResultPart(text=json.dumps(data, sort_keys=True, default=str))
+
+
+def _serialize_tool_result(result: ToolResult) -> dict[str, Any]:
+    """Serialize a tool result, multi-part content included.
+
+    Args:
+        result: The tool result to serialize.
+
+    Returns:
+        dict[str, Any]: JSON-compatible record. ``content`` is written only
+        when the tool produced parts, so a text-only result keeps the record
+        shape it had before multi-part results existed.
+    """
+    record: dict[str, Any] = {
+        "call_id": result.call_id,
+        "success": result.success,
+        "result": result.result,
+        "error": result.error,
+        "duration_ms": result.duration_ms,
+        "is_error": result.is_error,
+    }
+    if result.content:
+        record["content"] = [_serialize_result_part(part) for part in result.content]
+    return record
+
+
+def _deserialize_tool_result(data: dict[str, Any]) -> ToolResult:
+    """Rebuild a tool result from its stored record.
+
+    Args:
+        data: A record previously produced by :func:`_serialize_tool_result`.
+            Records written before multi-part results existed carry no
+            ``content`` or ``is_error`` key and load as a text-only success
+            or failure, exactly as they did before.
+
+    Returns:
+        ToolResult: The reconstructed result.
+    """
+    raw_content = data.get("content")
+    content = [_deserialize_result_part(part) for part in raw_content] if isinstance(raw_content, list) else None
+    return ToolResult(
+        call_id=str(data.get("call_id", "")),
+        success=bool(data.get("success")),
+        result=data.get("result"),
+        error=_optional_str(data.get("error")),
+        duration_ms=float(data.get("duration_ms", 0.0)),
+        content=content,
+        is_error=bool(data.get("is_error")),
     )
 
 
@@ -779,17 +945,7 @@ class SessionStore:
             result["tool_calls"] = [asdict(tc) for tc in message.tool_calls]
 
         if message.tool_results:
-            result["tool_results"] = [
-                {
-                    "call_id": tr.call_id,
-                    "success": tr.success,
-                    "result": tr.result,
-                    "error": tr.error,
-                    "duration_ms": tr.duration_ms,
-                    "is_error": tr.is_error,
-                }
-                for tr in message.tool_results
-            ]
+            result["tool_results"] = [_serialize_tool_result(tr) for tr in message.tool_results]
 
         if message.reasoning:
             result["reasoning"] = [_serialize_reasoning_item(item) for item in message.reasoning]
@@ -812,7 +968,7 @@ class SessionStore:
 
         tool_results = None
         if "tool_results" in data:
-            tool_results = [ToolResult(**tr) for tr in data["tool_results"]]
+            tool_results = [_deserialize_tool_result(tr) for tr in data["tool_results"]]
 
         reasoning = None
         if "reasoning" in data:
