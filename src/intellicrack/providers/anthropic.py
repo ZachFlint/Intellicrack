@@ -390,7 +390,7 @@ class AnthropicProvider(LLMProviderBase):
             if isinstance(block, TextBlock):
                 content += block.text
             elif isinstance(block, (ThinkingBlock, RedactedThinkingBlock)):
-                reasoning.append(parse_thinking_block(cast("dict[str, Any]", block.model_dump())))
+                reasoning.append(parse_thinking_block(block.model_dump()))
             elif isinstance(block, ToolUseBlock):
                 tool_call = self._parse_tool_call_common(
                     call_id=block.id,
@@ -720,7 +720,7 @@ class AnthropicProvider(LLMProviderBase):
                     ),
                 )
             elif block.type in {"thinking", "redacted_thinking"}:
-                item = parse_thinking_block(cast("dict[str, Any]", block.model_dump()))
+                item = parse_thinking_block(block.model_dump())
                 reasoning.append(item)
                 self._logger.debug(
                     "stream_thinking_captured",

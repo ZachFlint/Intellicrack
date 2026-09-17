@@ -128,34 +128,6 @@ class ValidationError:
         return f"[{self.severity.upper()}] {self.location}: {self.message}"
 
 
-def _build_json_schema_parameters(
-    params: list[ToolParameter],
-) -> JSONSchemaParameters:
-    """Build JSON Schema parameters for Anthropic/OpenAI/Ollama/OpenRouter.
-
-    Args:
-        params: List of tool parameters.
-
-    Returns:
-        JSONSchemaParameters: JSONSchemaParameters dict with lowercase types.
-    """
-    return build_json_schema_parameters(params)
-
-
-def _build_google_schema_parameters(
-    params: list[ToolParameter],
-) -> GoogleSchemaParameters:
-    """Build Google Gemini schema parameters with uppercase types.
-
-    Args:
-        params: List of tool parameters.
-
-    Returns:
-        GoogleSchemaParameters: GoogleSchemaParameters dict with uppercase types.
-    """
-    return build_google_schema_parameters(params)
-
-
 def build_schema_parameters(
     params: list[ToolParameter],
     *,
