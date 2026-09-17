@@ -426,32 +426,60 @@ def _find_env_file() -> Path:
     return default_path
 
 
-def _validate_key_format(provider: str, api_key: str) -> str | None:
-    """Validate API key format for a provider.
+_MIN_PRINTABLE_ORD: Final[int] = 0x20
+"""Lowest code point an HTTP header value may carry."""
+
+
+def validate_key_format(provider: str, api_key: str) -> str | None:
+    """Validate an API key's shape without assuming whose key it is.
+
+    The previous rule rejected any key that did not start with the prefix the
+    built-in provider of that name uses. That was wrong the moment a provider
+    id could name any endpoint at all: a corporate gateway in front of
+    Anthropic issues its own keys, an Azure deployment issues its own, and a
+    LiteLLM proxy issues whatever its operator configured. Rejecting those
+    made the endpoint unusable for a cosmetic reason.
+
+    What remains are the two shapes no endpoint accepts: a key that is empty
+    once trimmed, and one carrying whitespace or control characters, which
+    cannot survive an HTTP header intact.
 
     Args:
-        provider: The provider the key is for.
+        provider: The provider instance the key is for, used for log records.
         api_key: The API key to validate.
 
     Returns:
-        str | None: Error message if invalid, None if valid.
+        str | None: Error message if unusable, None if valid.
     """
-    if provider == provider_ids.ANTHROPIC and not api_key.startswith("sk-ant-"):
-        return "Anthropic API key should start with 'sk-ant-'"
-
-    if provider == provider_ids.OPENAI and not api_key.startswith("sk-"):
-        return "OpenAI API key should start with 'sk-'"
-
-    if provider == provider_ids.OPENROUTER and not api_key.startswith("sk-or-"):
-        return "OpenRouter API key should start with 'sk-or-'"
-
-    if provider == provider_ids.HUGGINGFACE and not api_key.startswith("hf_"):
-        return "HuggingFace API token should start with 'hf_'"
-
-    if provider == provider_ids.GROK and not api_key.startswith("xai-"):
-        return "Grok API key should start with 'xai-'"
-
+    if not api_key.strip():
+        return "API key is empty"
+    if any(character.isspace() for character in api_key) or any(ord(character) < _MIN_PRINTABLE_ORD for character in api_key):
+        _logger.warning("credential_key_contains_whitespace", provider=provider)
+        return "API key contains whitespace or control characters, which cannot be sent in an HTTP header"
     return None
+
+
+def derived_credential_mapping(provider: str) -> ProviderCredentialMapping:
+    """Derive the environment variables an unregistered instance reads.
+
+    A user-defined instance has no entry in :data:`CredentialLoader.PROVIDER_MAPPINGS`,
+    so its variables are derived from its id the way Zed derives them:
+    ``<PROVIDER_ID>_API_KEY`` upper-snake, with matching names for the
+    endpoint fields.
+
+    Args:
+        provider: The instance id.
+
+    Returns:
+        ProviderCredentialMapping: The derived variable mapping.
+    """
+    prefix = provider_ids.env_var_prefix(provider)
+    return ProviderCredentialMapping(
+        api_key_var=f"{prefix}_API_KEY",
+        api_base_var=f"{prefix}_API_BASE",
+        organization_var=f"{prefix}_ORGANIZATION",
+        project_var=f"{prefix}_PROJECT",
+    )
 
 
 class CredentialLoader:
@@ -502,6 +530,24 @@ class CredentialLoader:
             api_key_aliases=("HUGGINGFACE_API_TOKEN",),
         ),
     }
+
+    @classmethod
+    def mapping_for(cls, provider: str) -> ProviderCredentialMapping:
+        """Return the environment-variable mapping one instance reads.
+
+        A built-in provider keeps its historical variable names, so ``.env``
+        files stay byte-compatible. Every other instance id derives its
+        variables from itself, which is what lets a user-defined endpoint be
+        configured from ``.env`` at all.
+
+        Args:
+            provider: The provider instance id.
+
+        Returns:
+            ProviderCredentialMapping: The instance's variable mapping.
+        """
+        mapping = cls.PROVIDER_MAPPINGS.get(provider)
+        return mapping if mapping is not None else derived_credential_mapping(provider)
 
     def __init__(self, env_path: Path | None = None) -> None:
         """Initialize the CredentialLoader with the given env file path.
@@ -578,14 +624,7 @@ class CredentialLoader:
         Returns:
             ProviderCredentials | None: ProviderCredentials if found and valid, None otherwise.
         """
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        if mapping is None:
-            _logger.debug(
-                "credential_provider_unknown",
-                provider=provider,
-            )
-            return None
-
+        mapping = self.mapping_for(provider)
         api_key = self._resolve_api_key(provider, mapping)
         if api_key is None:
             _logger.debug(
@@ -624,10 +663,7 @@ class CredentialLoader:
         credentials = self.get_credentials(provider)
         if credentials is not None or not api_key_optional:
             return credentials
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        if mapping is None:
-            return ProviderCredentials()
-        return self._build_credentials(mapping, None)
+        return self._build_credentials(self.mapping_for(provider), None)
 
     def env_var_for(self, provider: str, field: CredentialField) -> str | None:
         """Return the environment variable that stores a provider credential field.
@@ -640,8 +676,7 @@ class CredentialLoader:
             str | None: The variable name, or ``None`` when the provider has no
             variable for ``field``.
         """
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        return mapping.env_var_for(field) if mapping is not None else None
+        return self.mapping_for(provider).env_var_for(field)
 
     def get_field(self, provider: str, field: CredentialField) -> str | None:
         """Return the effective value of a provider credential field.
@@ -657,9 +692,7 @@ class CredentialLoader:
         Returns:
             str | None: The effective value, or ``None`` when unset.
         """
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        if mapping is None:
-            return None
+        mapping = self.mapping_for(provider)
         if field is CredentialField.API_KEY:
             return self._resolve_api_key(provider, mapping)
         return self._optional_var(mapping.env_var_for(field))
@@ -700,9 +733,9 @@ class CredentialLoader:
         Raises:
             ValueError: If the provider has no environment variable for ``field``.
         """
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        env_var = mapping.env_var_for(field) if mapping is not None else None
-        if mapping is None or env_var is None:
+        mapping = self.mapping_for(provider)
+        env_var = mapping.env_var_for(field)
+        if env_var is None:
             msg = f"Provider {provider!r} has no environment variable for {field.value!r}"
             raise ValueError(msg)
 
@@ -819,15 +852,7 @@ class CredentialLoader:
         Returns:
             tuple[bool, str | None]: Tuple of (is_valid, error_message). error_message is None if valid.
         """
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        if mapping is None:
-            _logger.debug(
-                "credential_validation_failed",
-                provider=provider,
-                reason="unknown_provider",
-            )
-            return False, f"Unknown provider: {provider}"
-
+        mapping = self.mapping_for(provider)
         api_key = self._resolve_api_key(provider, mapping)
         if not api_key:
             _logger.debug(
@@ -837,7 +862,7 @@ class CredentialLoader:
             )
             return False, f"Missing {mapping.api_key_var}"
 
-        validation_result = _validate_key_format(provider, api_key)
+        validation_result = validate_key_format(provider, api_key)
         if validation_result is not None:
             _logger.warning(
                 "credential_validation_failed",

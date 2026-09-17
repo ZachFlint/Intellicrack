@@ -18,7 +18,7 @@ import time
 from dataclasses import dataclass
 from itertools import starmap
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, Protocol, cast
+from typing import TYPE_CHECKING, Any, Final, Protocol, cast
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QGuiApplication, QPainter, QPixmap
@@ -794,6 +794,11 @@ async def _initialize_providers(
     its endpoint can still be reconnected from Provider Settings -- and one whose
     construction failed can still be constructed on demand from its class.
 
+    Every user-defined instance saved in ``providers.json`` is initialized
+    alongside the eight built-ins, through the same registration and connect
+    path, so a corporate gateway or a second OpenAI account is a provider like
+    any other rather than a special case.
+
     Args:
         registry: Provider registry to populate.
         credentials: Credential loader for API keys and endpoint settings.
@@ -867,6 +872,113 @@ async def _initialize_providers(
             )
 
     await asyncio.gather(*starmap(_init_one, providers))
+    await _initialize_saved_instances(registry, credentials, logger, policy)
+
+
+def _saved_provider_instances(logger: BoundLogger) -> list[object]:
+    """Load every user-defined provider instance from ``providers.json``.
+
+    Args:
+        logger: BoundLogger instance.
+
+    Returns:
+        list[object]: The saved instances, skipping records that name no valid
+        instance id and any that collides with a built-in, which is owned by
+        its preset.
+    """
+    settings_mod = importlib.import_module("intellicrack.credentials.provider_settings")
+    config_mod = importlib.import_module("intellicrack.core.config")
+    instances_mod = importlib.import_module("intellicrack.providers.instances")
+    ids_mod = importlib.import_module("intellicrack.providers.ids")
+
+    store_cls = cast("type[ProviderSettingsStore]", settings_mod.ProviderSettingsStore)
+    settings_filename = cast("str", settings_mod.PROVIDER_SETTINGS_FILENAME)
+    settings_path = cast("Callable[[str], Path]", config_mod.get_config_file)(settings_filename)
+    from_mapping = cast("Callable[[dict[str, Any]], object | None]", instances_mod.ProviderInstance.from_mapping)
+    builtin_ids = cast("tuple[str, ...]", ids_mod.BUILTIN_PROVIDER_IDS)
+
+    loaded: list[object] = []
+    for instance_id, record in store_cls(settings_path).load_instances().items():
+        if instance_id in builtin_ids:
+            logger.warning("provider_instance_shadows_builtin", instance_id=instance_id)
+            continue
+        instance = from_mapping(cast("dict[str, Any]", record))
+        if instance is None:
+            logger.warning("provider_instance_record_invalid", instance_id=instance_id)
+            continue
+        loaded.append(instance)
+    return loaded
+
+
+async def _connect_and_register(
+    provider: LLMProviderBase,
+    instance_id: str,
+    credentials: CredentialLoader,
+    policy: ProviderConnectPolicy | None,
+    logger: BoundLogger,
+    registry: ProviderRegistry,
+) -> None:
+    """Connect one provider and register it whatever the connect outcome.
+
+    Registering regardless is what lets a provider that is disabled, lacks
+    credentials or is rejected by its endpoint still be reconnected from
+    Provider Settings instead of vanishing.
+
+    Args:
+        provider: The constructed provider instance.
+        instance_id: Registry key for the provider.
+        credentials: Credential loader for API keys and endpoint settings.
+        policy: Enablement and timeout policy from the saved provider settings.
+        logger: BoundLogger instance.
+        registry: Provider registry to register into.
+    """
+    try:
+        await _connect_provider_at_startup(provider, instance_id, credentials, policy, logger)
+    finally:
+        registry.register(provider)
+
+
+async def _initialize_saved_instances(
+    registry: ProviderRegistry,
+    credentials: CredentialLoader,
+    logger: BoundLogger,
+    policy: ProviderConnectPolicy | None,
+) -> None:
+    """Construct, connect and register every saved user-defined instance.
+
+    Args:
+        registry: Provider registry to populate.
+        credentials: Credential loader for API keys and endpoint settings.
+        logger: BoundLogger instance.
+        policy: Enablement and timeout policy from the saved provider settings.
+    """
+    instances = _saved_provider_instances(logger)
+    if not instances:
+        return
+
+    configurable_mod = importlib.import_module("intellicrack.providers.configurable")
+    provider_cls = cast("Callable[[object], LLMProviderBase]", configurable_mod.ConfigurableProvider)
+
+    async def _init_instance(instance: object) -> None:
+        """Initialize one saved instance, logging recoverable failures.
+
+        Args:
+            instance: The saved :class:`ProviderInstance` to initialize.
+        """
+        instance_id = cast("str", getattr(instance, "instance_id", ""))
+        try:
+            await _connect_and_register(provider_cls(instance), instance_id, credentials, policy, logger, registry)
+        except (ImportError, OSError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
+            logger.warning(
+                "provider_instance_init_failed",
+                instance_id=instance_id,
+                error=str(exc),
+                error_type=type(exc).__name__,
+                exc_info=True,
+            )
+
+    await asyncio.gather(*(_init_instance(instance) for instance in instances))
+    logger.info("provider_instances_initialized", count=len(instances))
 
 
 def _resolve_config_path(cli_options: _CLIOptions, get_config_dir: Callable[[], Path]) -> Path | None:
