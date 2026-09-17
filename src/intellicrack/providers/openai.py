@@ -44,7 +44,7 @@ from intellicrack.providers.capabilities import ApiDialect, TokenLimitField
 from intellicrack.providers.dialects.base import DialectRequest
 from intellicrack.providers.dialects.chat_completions import ChatCompletionsAdapter
 from intellicrack.providers.dialects.responses import ResponsesAdapter
-from intellicrack.providers.presets import preset_capabilities
+from intellicrack.providers.presets import OPENAI_CONTEXT_WINDOW, preset_capabilities
 
 
 if TYPE_CHECKING:
@@ -289,9 +289,12 @@ class OpenAIProvider(LLMProviderBase):
             model_id: OpenAI model identifier.
 
         Returns:
-            int: The context window in tokens.
+            int: The context window in tokens. A record that states no window
+            at all falls back to the OpenAI baseline, which every current
+            chat model meets or exceeds.
         """
-        return preset_capabilities(provider_ids.OPENAI, model_id).context_window
+        stated = preset_capabilities(provider_ids.OPENAI, model_id).context_window
+        return stated if stated is not None else OPENAI_CONTEXT_WINDOW
 
     @staticmethod
     def _infer_supports_vision(model_id: str) -> bool:
