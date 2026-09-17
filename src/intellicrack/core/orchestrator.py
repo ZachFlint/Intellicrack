@@ -39,6 +39,7 @@ from intellicrack.core.types import (
     ExportInfo,
     ImportInfo,
     Message,
+    ModelInfo,
     PatchInfo,
     SectionInfo,
     ThinkingConfig,
@@ -133,6 +134,30 @@ _TOOLS_SEARCH_FUNCTION_NAME: str = "tools.search"
 
 _TOOL_CATALOG_REPRESENTATIVE_SAMPLE: int = 4
 """Representative function names shown per bridge in the compact dynamic-mode catalog."""
+
+_MODEL_VARIANT_SEPARATORS: tuple[str, ...] = (":", "@")
+"""Separators that introduce a variant suffix on an otherwise known model id.
+
+Endpoints routinely advertise ``my-model:free`` or ``my-model@2026-01`` for
+what is, for every purpose here, the same model.
+"""
+
+
+def _strip_model_variant_suffix(model_id: str) -> str:
+    """Strip a variant suffix from a model id.
+
+    Args:
+        model_id: The model id to normalize.
+
+    Returns:
+        str: The id up to the first variant separator, or the id unchanged
+        when it carries none.
+    """
+    stem = model_id
+    for separator in _MODEL_VARIANT_SEPARATORS:
+        stem = stem.partition(separator)[0]
+    return stem
+
 
 _token_encoder_cache: dict[str, tiktoken.Encoding] = {}
 
@@ -1888,46 +1913,59 @@ class Orchestrator:
     async def _get_model_context_window(self, provider: LLMProvider) -> int | None:
         """Resolve the context window for the active model.
 
-        Resolution order:
+        Resolution order, first hit winning:
 
-        1. If ``OrchestratorConfig.context_window_override`` is set, that value is used.
-        2. Otherwise the provider's ``list_models()`` result is searched for the active
-           model and its reported ``context_window`` is returned.
-        3. If neither source yields a usable value the method logs a warning identifying
-           the provider and model, and returns ``None`` so callers can decide how to
-           handle the missing value (the agent loop refuses to run via
-           :meth:`_require_model_context_window`; callers that legitimately want to
-           skip trimming may inspect ``None`` themselves).
+        1. an exact ``list_models()`` match on the model id;
+        2. the model's resolved capability record, which folds in the preset
+           defaults, whatever the endpoint advertised and any per-model user
+           override;
+        3. a ``list_models()`` match after stripping a variant suffix, so
+           ``my-model:free`` and ``my-model@2026-01`` resolve against
+           ``my-model`` instead of being treated as unknown models;
+        4. ``OrchestratorConfig.context_window_override``, the operator's
+           last-resort answer for an endpoint that advertises nothing.
+
+        The override moved from first to last deliberately. As the first
+        entry it silently masked every model's real window the moment it was
+        set, which made it useless as an escape hatch for the one model that
+        needed it.
 
         Args:
             provider: The LLM provider to query.
 
         Returns:
-            int | None: Context window size in tokens, or ``None`` when neither an override
-                nor a provider value is available.
+            int | None: Context window size in tokens, or ``None`` when no
+            source yields a usable value.
         """
-        if self._config.context_window_override is not None:
-            return self._config.context_window_override
-
         if self._current_session is None:
-            return None
+            return self._config.context_window_override
 
         provider_name = provider.name
         model_id = self._current_session.model
-        try:
-            models = await provider.list_models()
-        except (OSError, RuntimeError, ValueError) as exc:
-            _logger.warning(
-                "context_window_lookup_failed",
-                provider=provider_name,
-                model=model_id,
-                error=str(exc),
-            )
-            return None
+        models = await self._safe_list_models(provider)
 
         for model_info in models:
-            if model_info.id == model_id:
+            if model_info.id == model_id and model_info.context_window > 0:
                 return model_info.context_window
+
+        capabilities = provider.capabilities_for(model_id)
+        if capabilities.context_window:
+            return capabilities.context_window
+
+        normalized = _strip_model_variant_suffix(model_id)
+        if normalized != model_id:
+            for model_info in models:
+                if model_info.id == normalized and model_info.context_window > 0:
+                    _logger.debug(
+                        "context_window_resolved_by_normalized_id",
+                        provider=provider_name,
+                        model=model_id,
+                        normalized=normalized,
+                    )
+                    return model_info.context_window
+
+        if self._config.context_window_override is not None:
+            return self._config.context_window_override
 
         _logger.warning(
             "context_window_unknown_model",
@@ -1935,6 +1973,28 @@ class Orchestrator:
             model=model_id,
         )
         return None
+
+    @staticmethod
+    async def _safe_list_models(provider: LLMProvider) -> list[ModelInfo]:
+        """List a provider's models without letting a listing failure abort resolution.
+
+        Args:
+            provider: The LLM provider to query.
+
+        Returns:
+            list[ModelInfo]: The provider's models, or an empty list when the
+            listing failed. A failed listing is not fatal here: the capability
+            record and the operator override are still ahead of giving up.
+        """
+        try:
+            return await provider.list_models()
+        except (OSError, RuntimeError, ValueError) as exc:
+            _logger.warning(
+                "context_window_lookup_failed",
+                provider=provider.name,
+                error=str(exc),
+            )
+            return []
 
     async def _require_model_context_window(self, provider: LLMProvider) -> int:
         """Resolve a non-null context window or refuse to run the loop.
@@ -1966,8 +2026,8 @@ class Orchestrator:
         _logger.warning("context_window_unknown", provider=provider_name, model=model_id)
         error_message = (
             f"No context window known for provider '{provider_name}' model '{model_id}'. "
-            "Configure OrchestratorConfig.context_window_override (or fix the provider's "
-            "list_models() to advertise context_window) before sending requests; refusing "
+            "Set the model's context window in Provider Settings, or configure "
+            "OrchestratorConfig.context_window_override, before sending requests; refusing "
             "to send unbounded history."
         )
         raise ToolError(error_message)

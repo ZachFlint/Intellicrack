@@ -16,7 +16,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ModelInfo, ProviderError
@@ -27,6 +27,16 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from intellicrack.providers.registry import ProviderRegistry
+
+
+DISCOVERY_CACHE_VERSION: Final[int] = 2
+"""Schema version of the persisted discovery cache.
+
+Version 1 keyed its entries by the removed provider enum's members. The ids
+themselves round-trip byte-identically, but a v1 file predates the capability
+metadata now carried alongside each model, so a v1 file is treated as a cold
+cache and re-fetched. Nothing is lost: it is a TTL cache.
+"""
 
 
 @dataclass
@@ -342,7 +352,7 @@ class DiscoveryCache:
                     }
 
             data: dict[str, object] = {
-                "version": 1,
+                "version": DISCOVERY_CACHE_VERSION,
                 "ttl_seconds": self._ttl_seconds,
                 "saved_at": snapshot_now,
                 "entries": entries_dict,
@@ -458,8 +468,12 @@ class DiscoveryCache:
                 return
             data: dict[str, Any] = cast("dict[str, Any]", raw_data)
 
-            if data.get("version") != 1:
-                _cache_logger.warning("unknown_cache_version", version=data.get("version"))
+            if data.get("version") != DISCOVERY_CACHE_VERSION:
+                _cache_logger.info(
+                    "cache_version_superseded",
+                    version=data.get("version"),
+                    expected=DISCOVERY_CACHE_VERSION,
+                )
                 return
 
             entries = data.get("entries", {})
@@ -505,12 +519,43 @@ class ModelDiscovery:
         self._registry = registry
         self._cache = DiscoveryCache(ttl_seconds=cache_ttl)
         self._timeout = timeout_per_provider
+        self._provider_timeouts: dict[str, float] = {}
         self._events: list[DiscoveryEvent] = []
         _logger.info(
             "model_discovery_initialized",
             cache_ttl_seconds=cache_ttl,
             timeout_per_provider=timeout_per_provider,
         )
+
+    def set_provider_timeout(self, provider: str, timeout_seconds: float | None) -> None:
+        """Give one instance its own discovery timeout.
+
+        A sweep runs every instance concurrently and bounds each one
+        separately, so a slow endpoint costs only its own budget. That budget
+        is per-instance because the shared default cannot suit both a local
+        Ollama answering in milliseconds and a corporate gateway that takes
+        half a minute to enumerate.
+
+        Args:
+            provider: The instance id the timeout applies to.
+            timeout_seconds: The timeout in seconds, or ``None`` to fall back
+                to the shared default.
+        """
+        if timeout_seconds is None or timeout_seconds <= 0:
+            self._provider_timeouts.pop(provider, None)
+            return
+        self._provider_timeouts[provider] = timeout_seconds
+
+    def timeout_for(self, provider: str) -> float:
+        """Return the discovery timeout that applies to one instance.
+
+        Args:
+            provider: The instance id.
+
+        Returns:
+            float: The instance's own timeout, or the shared default.
+        """
+        return self._provider_timeouts.get(provider, self._timeout)
 
     @property
     def cache(self) -> DiscoveryCache:
@@ -660,13 +705,13 @@ class ModelDiscovery:
             try:
                 models = await asyncio.wait_for(
                     provider.list_models(),
-                    timeout=self._timeout,
+                    timeout=self.timeout_for(provider_name),
                 )
             except TimeoutError:
                 _logger.warning(
                     "discovery_timeout",
                     provider=provider_name,
-                    timeout=self._timeout,
+                    timeout=self.timeout_for(provider_name),
                 )
                 duration_ms = (time.time() - start_time) * 1000
                 if write_cache:
@@ -679,7 +724,7 @@ class ModelDiscovery:
                         timestamp=datetime.now(tz=UTC),
                         model_count=0,
                         success=False,
-                        error_message=f"Timeout after {self._timeout}s",
+                        error_message=f"Timeout after {self.timeout_for(provider_name)}s",
                         duration_ms=duration_ms,
                     ),
                 )
@@ -790,13 +835,13 @@ class ModelDiscovery:
         try:
             models = await asyncio.wait_for(
                 provider_instance.list_models(),
-                timeout=self._timeout,
+                timeout=self.timeout_for(provider),
             )
         except TimeoutError:
             _logger.warning(
                 "discovery_timeout",
                 provider=provider,
-                timeout_seconds=self._timeout,
+                timeout_seconds=self.timeout_for(provider),
             )
             await self._cache.ainvalidate(provider)
             return []

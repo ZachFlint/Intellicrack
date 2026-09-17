@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from intellicrack.credentials.env_loader import CredentialLoader
     from intellicrack.credentials.provider_settings import ProviderConnectPolicy, ProviderSettingsStore
     from intellicrack.providers.base import LLMProviderBase
+    from intellicrack.providers.capabilities import CapabilityOverride
     from intellicrack.providers.discovery import ModelDiscovery
     from intellicrack.providers.registry import ProviderRegistry
     from intellicrack.ui.app import MainWindow
@@ -680,6 +681,44 @@ def _load_provider_connect_policy(
     return policy
 
 
+def _apply_saved_capability_overrides(
+    provider: LLMProviderBase,
+    provider_name: str,
+    logger: BoundLogger,
+) -> None:
+    """Load this provider's saved per-model capability overrides.
+
+    The override is the top layer of the capability merge and the only one a
+    user controls, so it has to be in place before the first request rather
+    than only after the settings dialog is opened.
+
+    Args:
+        provider: The constructed provider instance.
+        provider_name: Registry key for the provider.
+        logger: BoundLogger instance.
+    """
+    settings_mod = importlib.import_module("intellicrack.credentials.provider_settings")
+    config_mod = importlib.import_module("intellicrack.core.config")
+    store_cls = cast("type[ProviderSettingsStore]", settings_mod.ProviderSettingsStore)
+    settings_filename = cast("str", settings_mod.PROVIDER_SETTINGS_FILENAME)
+    settings_path = cast("Callable[[str], Path]", config_mod.get_config_file)(settings_filename)
+    read_overrides = cast(
+        "Callable[[dict[str, object]], dict[str, object]]",
+        settings_mod.saved_model_overrides,
+    )
+
+    section = store_cls(settings_path).section(provider_name)
+    overrides = read_overrides(section)
+    for model_id, override in overrides.items():
+        provider.set_capability_override(model_id, cast("CapabilityOverride", override))
+    if overrides:
+        logger.info(
+            "provider_capability_overrides_loaded",
+            provider=provider_name,
+            model_count=len(overrides),
+        )
+
+
 async def _connect_provider_at_startup(
     provider: LLMProviderBase,
     provider_name: str,
@@ -702,6 +741,8 @@ async def _connect_provider_at_startup(
             provider with its default timeout.
         logger: BoundLogger instance.
     """
+    _apply_saved_capability_overrides(provider, provider_name, logger)
+
     if policy is not None and not policy.is_enabled(provider_name):
         logger.info("provider_connect_skipped_disabled", provider=provider_name)
         return
