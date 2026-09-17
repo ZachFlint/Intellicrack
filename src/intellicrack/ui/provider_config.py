@@ -60,6 +60,7 @@ from intellicrack.credentials.oauth import (
     get_oauth_manager,
 )
 from intellicrack.credentials.provider_settings import (
+    MODEL_OVERRIDES_KEY,
     PROVIDER_SETTINGS_FILENAME,
     ProviderSettingsStore,
     build_settings_section,
@@ -226,6 +227,47 @@ def _row_content_width(row: QHBoxLayout) -> int:
     margins = row.contentsMargins()
     spacing = row.spacing() * (len(widths) - 1)
     return sum(widths) + spacing + margins.left() + margins.right()
+
+
+_MAX_CONTEXT_WINDOW_TOKENS: Final[int] = 100000000
+"""Upper bound of the context-window spin box, well above any real window."""
+
+
+def _model_overrides_from(saved_settings: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Read a provider section's per-model overrides.
+
+    Args:
+        saved_settings: The provider's section from ``providers.json``.
+
+    Returns:
+        dict[str, dict[str, Any]]: Overrides keyed by model id, skipping any
+        entry that is not a JSON object.
+    """
+    raw = saved_settings.get(MODEL_OVERRIDES_KEY)
+    if not isinstance(raw, dict):
+        return {}
+    overrides: dict[str, dict[str, Any]] = {}
+    for model_id, entry in cast("dict[str, Any]", raw).items():
+        if isinstance(entry, dict):
+            overrides[model_id] = cast("dict[str, Any]", entry)
+    return overrides
+
+
+def _saved_context_window(saved_settings: dict[str, Any], model_id: str) -> int:
+    """Read the saved context-window override for one model.
+
+    Args:
+        saved_settings: The provider's section from ``providers.json``.
+        model_id: The model whose override is wanted.
+
+    Returns:
+        int: The saved window, or ``0`` meaning "let it resolve automatically".
+    """
+    if not model_id:
+        return 0
+    entry = _model_overrides_from(saved_settings).get(model_id, {})
+    value = entry.get("context_window")
+    return value if isinstance(value, int) and value > 0 else 0
 
 
 def _resolve_widget_loader(widget: object) -> CredentialLoader:
@@ -1269,7 +1311,7 @@ class ModelRefreshWorker(QThread):
             provider="openai",
             model_count=len(models),
         )
-        return True, models[:20], f"Found {len(models)} OpenAI models"
+        return True, models, f"Found {len(models)} OpenAI models"
 
     def _fetch_google_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch Google Gemini models from API.
@@ -1383,7 +1425,7 @@ class ModelRefreshWorker(QThread):
             provider="openrouter",
             model_count=len(models),
         )
-        return True, models[:50], f"Found {len(models)} OpenRouter models"
+        return True, models, f"Found {len(models)} OpenRouter models"
 
     def _fetch_huggingface_models(
         self,
@@ -1451,7 +1493,7 @@ class ModelRefreshWorker(QThread):
         )
         return (
             True,
-            models[:30],
+            models,
             f"Found {len(models)} HuggingFace models",
         )
 
@@ -2541,6 +2583,8 @@ class ProviderSettingsWidget(QFrame):
         model_row = QHBoxLayout()
         self._model_combo = QComboBox()
         self._model_combo.setMinimumWidth(_MODEL_COMBO_MIN_WIDTH)
+        self._model_combo.setEditable(True)
+        self._model_combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         model_row.addWidget(self._model_combo)
 
         self._refresh_models_btn = QPushButton("Refresh")
@@ -2554,6 +2598,18 @@ class ProviderSettingsWidget(QFrame):
         self._recommended_label.setWordWrap(True)
         self._recommended_label.setObjectName("hint_label")
         model_layout.addRow("", self._recommended_label)
+
+        self._context_window_spin = QSpinBox()
+        self._context_window_spin.setRange(0, _MAX_CONTEXT_WINDOW_TOKENS)
+        self._context_window_spin.setSingleStep(1024)
+        self._context_window_spin.setSpecialValueText("Auto")
+        self._context_window_spin.setValue(0)
+        self._context_window_spin.setToolTip(
+            "Context window for the selected model, in tokens. 'Auto' uses what the endpoint advertises, "
+            "falling back to what Intellicrack already knows about the model family. Set it when an endpoint "
+            "advertises nothing and the agent loop refuses to run for want of a window.",
+        )
+        model_layout.addRow("Context Window:", self._context_window_spin)
 
         model_group.setLayout(model_layout)
         layout.addWidget(model_group)
@@ -3185,6 +3241,7 @@ class ProviderSettingsWidget(QFrame):
 
         saved_model: str = saved_settings.get("default_model", "")
         self._pending_saved_model = saved_model
+        self._context_window_spin.setValue(_saved_context_window(saved_settings, saved_model))
         self._populate_default_models()
 
         self._update_credential_source_display(api_key)
@@ -3365,6 +3422,8 @@ class ProviderSettingsWidget(QFrame):
             idx = self._model_combo.findText(restore_model)
             if idx >= 0:
                 self._model_combo.setCurrentIndex(idx)
+            elif restore_model:
+                self._model_combo.setEditText(restore_model)
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_success", 16))
             self._status_label.setText(message)
         else:
@@ -3479,13 +3538,29 @@ class ProviderSettingsWidget(QFrame):
         Returns:
             dict[str, Any]: Dictionary of current settings.
         """
+        selected_model = self._get_selected_model()
         settings: dict[str, Any] = {
             "enabled": self._enabled_checkbox.isChecked(),
             "api_key": self._api_key_input.text().strip(),
-            "default_model": self._get_selected_model(),
+            "default_model": selected_model,
             "timeout_seconds": self._timeout_spin.timeout_seconds(),
             "max_retries": self._retries_spin.value(),
         }
+
+        overrides = _model_overrides_from(self._load_from_config())
+        context_window = self._context_window_spin.value()
+        if selected_model:
+            entry: dict[str, Any] = dict(overrides.get(selected_model, {}))
+            if context_window > 0:
+                entry["context_window"] = context_window
+            else:
+                entry.pop("context_window", None)
+            if entry:
+                overrides[selected_model] = entry
+            else:
+                overrides.pop(selected_model, None)
+        if overrides:
+            settings[MODEL_OVERRIDES_KEY] = overrides
 
         if self._api_base_input:
             settings["api_base"] = self._api_base_input.text().strip()

@@ -23,12 +23,13 @@ import math
 import os
 import threading
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialField, EnvPersistAction
 from intellicrack.providers import ids as provider_ids
+from intellicrack.providers.capabilities import CapabilityOverride
 
 
 if TYPE_CHECKING:
@@ -41,8 +42,27 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 PROVIDER_SETTINGS_FILENAME: Final[str] = "providers.json"
-SETTINGS_SCHEMA_VERSION: Final[int] = 2
+SETTINGS_SCHEMA_VERSION: Final[int] = 3
+"""Schema version written into every provider section.
+
+Version 3 only *adds* the top-level ``instances`` section; every v2 key stays
+exactly where it was. ``_uses_current_schema`` tests ``version >=
+SETTINGS_SCHEMA_VERSION``, so an older build reading a v3 file already treats
+it as legacy and applies its own defaults rather than failing. A v3 file is
+therefore still readable by a v2 build, which loses only the custom instances
+it could not have used anyway.
+"""
+
 SCHEMA_VERSION_KEY: Final[str] = "schema_version"
+MODEL_OVERRIDES_KEY: Final[str] = "model_overrides"
+"""Key holding a provider section's per-model capability overrides."""
+
+INSTANCES_KEY: Final[str] = "instances"
+"""Top-level key holding user-defined provider instances.
+
+It is a sibling of the per-provider sections rather than one of them, so it is
+excluded from provider-section reads by name.
+"""
 ENABLED_KEY: Final[str] = "enabled"
 TIMEOUT_SECONDS_KEY: Final[str] = "timeout_seconds"
 LEGACY_DEFAULT_TIMEOUT_SECONDS: Final[int] = 120
@@ -51,6 +71,32 @@ LEGACY_ENDPOINT_KEYS: Final[tuple[tuple[str, CredentialField], ...]] = (
     ("organization_id", CredentialField.ORGANIZATION_ID),
 )
 _NON_PERSISTED_KEYS: Final[frozenset[str]] = frozenset({"api_key", *(key for key, _ in LEGACY_ENDPOINT_KEYS)})
+
+
+def saved_model_overrides(section: Mapping[str, object]) -> dict[str, CapabilityOverride]:
+    """Read the per-model capability overrides a provider section stores.
+
+    This is the top layer of the capability merge: whatever the user stated
+    for a specific model, which wins over both the endpoint's own metadata and
+    the preset defaults. An entry that is not a JSON object is skipped rather
+    than rejected, so one damaged record cannot cost the user the rest.
+
+    Args:
+        section: The provider's section from ``providers.json``.
+
+    Returns:
+        dict[str, CapabilityOverride]: Overrides keyed by model id.
+    """
+    raw = section.get(MODEL_OVERRIDES_KEY)
+    if not isinstance(raw, dict):
+        return {}
+    overrides: dict[str, CapabilityOverride] = {}
+    for model_id, entry in cast("dict[str, object]", raw).items():
+        if isinstance(entry, dict):
+            overrides[model_id] = CapabilityOverride.from_mapping(cast("dict[str, Any]", entry))
+        else:
+            _logger.warning("model_override_not_an_object", model=model_id)
+    return overrides
 
 
 def coerce_timeout_seconds(value: object) -> float | None:
@@ -258,9 +304,92 @@ class ProviderSettingsStore:
 
         sections: dict[str, dict[str, object]] = {}
         for provider_id, section in cast("dict[str, object]", payload).items():
+            if provider_id == INSTANCES_KEY:
+                continue
             if isinstance(section, dict):
                 sections[provider_id] = cast("dict[str, object]", section)
         return sections
+
+    def _load_raw(self) -> dict[str, object]:
+        """Load the whole settings file, including non-provider sections.
+
+        Returns:
+            dict[str, object]: The decoded file, or an empty mapping when it
+            is missing, unreadable or malformed.
+        """
+        try:
+            text = self._path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return {}
+        except OSError as exc:
+            _logger.warning("provider_settings_read_failed", path=str(self._path), error=str(exc))
+            return {}
+        try:
+            payload: object = json.loads(text)
+        except json.JSONDecodeError as exc:
+            _logger.warning("provider_settings_parse_failed", path=str(self._path), error=str(exc))
+            return {}
+        return cast("dict[str, object]", payload) if isinstance(payload, dict) else {}
+
+    def load_instances(self) -> dict[str, dict[str, object]]:
+        """Load every saved provider instance.
+
+        Returns:
+            dict[str, dict[str, object]]: Instance records keyed by instance
+            id. Entries that are not JSON objects are skipped, so one damaged
+            record cannot cost the user the rest.
+        """
+        raw = self._load_raw().get(INSTANCES_KEY)
+        if not isinstance(raw, dict):
+            return {}
+        instances: dict[str, dict[str, object]] = {}
+        for instance_id, record in cast("dict[str, object]", raw).items():
+            if isinstance(record, dict):
+                instances[instance_id] = cast("dict[str, object]", record)
+            else:
+                _logger.warning("provider_instance_record_not_an_object", instance_id=instance_id)
+        return instances
+
+    def write_instance(self, instance_id: str, record: Mapping[str, object]) -> None:
+        """Store one provider instance, preserving every other section.
+
+        Args:
+            instance_id: The instance's id.
+            record: The complete instance record to store. It must never
+                contain a secret; keys live in the credential store. An
+                ``OSError`` from writing the file propagates to the caller and
+                leaves the previous file intact.
+        """
+        with self._lock:
+            payload = self._load_raw()
+            raw = payload.get(INSTANCES_KEY)
+            instances: dict[str, object] = cast("dict[str, object]", raw) if isinstance(raw, dict) else {}
+            instances[instance_id] = dict(record)
+            payload[INSTANCES_KEY] = instances
+            self._write_payload(payload)
+
+    def delete_instance(self, instance_id: str) -> bool:
+        """Remove one saved provider instance.
+
+        Args:
+            instance_id: The instance's id.
+
+        Returns:
+            bool: ``True`` when a record was removed. An ``OSError`` from
+            writing the file propagates to the caller and leaves the previous
+            file intact.
+        """
+        with self._lock:
+            payload = self._load_raw()
+            raw = payload.get(INSTANCES_KEY)
+            if not isinstance(raw, dict):
+                return False
+            instances: dict[str, object] = cast("dict[str, object]", raw)
+            if instances.pop(instance_id, None) is None:
+                return False
+            payload[INSTANCES_KEY] = instances
+            self._write_payload(payload)
+            return True
 
     def section(self, provider_id: str) -> dict[str, object]:
         """Return one provider's saved section.
@@ -284,9 +413,9 @@ class ProviderSettingsStore:
             section: The complete section to store.
         """
         with self._lock:
-            sections = self.load()
-            sections[provider_id] = dict(section)
-            self._write(sections)
+            payload = self._load_raw()
+            payload[provider_id] = dict(section)
+            self._write_payload(payload)
 
     def timeout_seconds(self, provider: str) -> float | None:
         """Return a provider's saved request timeout.
@@ -420,10 +549,24 @@ class ProviderSettingsStore:
         return imported, retained, changed
 
     def _write(self, sections: Mapping[str, Mapping[str, object]]) -> None:
-        """Atomically replace the settings file.
+        """Atomically replace the provider sections, preserving other sections.
 
         Args:
-            sections: Every provider section to store.
+            sections: Every provider section to store. An ``OSError`` from
+                writing the file propagates to the caller and leaves the
+                previous file intact.
+        """
+        payload = self._load_raw()
+        for key in [name for name in payload if name != INSTANCES_KEY]:
+            del payload[key]
+        payload.update({name: dict(section) for name, section in sections.items()})
+        self._write_payload(payload)
+
+    def _write_payload(self, payload: Mapping[str, object]) -> None:
+        """Atomically replace the whole settings file.
+
+        Args:
+            payload: The complete file contents to store.
 
         Raises:
             OSError: If the file cannot be written or moved into place.
@@ -431,7 +574,7 @@ class ProviderSettingsStore:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self._path.with_name(f"{self._path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
         try:
-            temporary.write_text(json.dumps(sections, indent=2), encoding="utf-8")
+            temporary.write_text(json.dumps(payload, indent=2), encoding="utf-8")
             temporary.replace(self._path)
         except OSError:
             with contextlib.suppress(OSError):

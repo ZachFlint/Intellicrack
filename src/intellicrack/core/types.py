@@ -20,6 +20,8 @@ from intellicrack.core.logging import get_logger
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from intellicrack.providers.capabilities import ModelCapabilities
+
 
 _logger = get_logger(__name__)
 
@@ -1629,6 +1631,12 @@ class ModelInfo:
         supports_streaming: Whether model supports streaming.
         input_cost_per_1m_tokens: Cost per 1M input tokens.
         output_cost_per_1m_tokens: Cost per 1M output tokens.
+        capabilities: The model's full capability record, when one has been
+            resolved. The scalar fields above are the historical view of the
+            same facts and stay populated, so nothing that reads them breaks;
+            the record carries everything they cannot express -- which wire
+            format the model speaks, which field takes its output limit, what
+            its reasoning surface is, which tokenizer estimates it.
     """
 
     id: str
@@ -1640,6 +1648,7 @@ class ModelInfo:
     supports_streaming: bool
     input_cost_per_1m_tokens: float | None
     output_cost_per_1m_tokens: float | None
+    capabilities: ModelCapabilities | None = None
 
 
 @dataclass
