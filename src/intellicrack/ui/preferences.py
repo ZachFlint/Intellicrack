@@ -40,7 +40,8 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.config import Config, LogConfig, SessionConfig, UIConfig
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ConfirmationLevel, ProviderName
+from intellicrack.core.types import ConfirmationLevel
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.display_names import provider_display_name
 from intellicrack.ui.resources.font_manager import FontManager
 
@@ -117,8 +118,8 @@ class GeneralSettingsWidget(QWidget):
         provider_layout = QFormLayout(provider_group)
 
         self._provider_combo = QComboBox()
-        for provider in ProviderName:
-            self._provider_combo.addItem(provider_display_name(provider), provider.value)
+        for provider in provider_ids.BUILTIN_PROVIDER_IDS:
+            self._provider_combo.addItem(provider_display_name(provider), provider)
         provider_layout.addRow("Default Provider:", self._provider_combo)
 
         layout.addWidget(provider_group)
@@ -172,7 +173,7 @@ class GeneralSettingsWidget(QWidget):
         """Load settings from configuration."""
         idx = _combo_find_data(
             self._provider_combo,
-            self._config.default_provider.value,
+            self._config.default_provider,
         )
         if idx >= 0:
             self._provider_combo.setCurrentIndex(idx)
@@ -197,7 +198,7 @@ class GeneralSettingsWidget(QWidget):
         confirm_value = _combo_current_data(self._confirm_combo)
 
         return {
-            "default_provider": ProviderName(provider_value) if provider_value else self._config.default_provider,
+            "default_provider": str(provider_value) if provider_value else self._config.default_provider,
             "tools_directory": Path(self._tools_path.text()) if self._tools_path.text() else self._config.tools_directory,
             "logs_directory": Path(self._logs_path.text()) if self._logs_path.text() else self._config.logs_directory,
             "confirmation_level": ConfirmationLevel(confirm_value) if confirm_value else self._config.confirmation_level,

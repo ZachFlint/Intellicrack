@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from intellicrack.core.types import ProviderName
+from intellicrack.providers import ids as provider_ids
 
 
 PROVIDER_DISPLAY_NAMES: dict[str, str] = {
@@ -20,22 +20,21 @@ PROVIDER_DISPLAY_NAMES: dict[str, str] = {
     "local_transformers": "Local Transformers",
 }
 
-NO_API_KEY_PROVIDERS: frozenset[ProviderName] = frozenset({
-    ProviderName.OLLAMA,
-    ProviderName.LOCAL_TRANSFORMERS,
+NO_API_KEY_PROVIDERS: frozenset[str] = frozenset({
+    provider_ids.OLLAMA,
+    provider_ids.LOCAL_TRANSFORMERS,
 })
 
-NO_API_KEY_PROVIDER_IDS: frozenset[str] = frozenset(provider.value for provider in NO_API_KEY_PROVIDERS)
+NO_API_KEY_PROVIDER_IDS: frozenset[str] = NO_API_KEY_PROVIDERS
 
 
-def provider_display_name(provider: ProviderName | str) -> str:
+def provider_display_name(provider: str) -> str:
     """Return a human-readable label for a provider.
 
     Args:
-        provider: Provider enum value or provider identifier string.
+        provider: Provider instance id.
 
     Returns:
         str: Display label with underscores removed and known aliases applied.
     """
-    key = provider.value if isinstance(provider, ProviderName) else provider
-    return PROVIDER_DISPLAY_NAMES.get(key, key.replace("_", " ").title())
+    return PROVIDER_DISPLAY_NAMES.get(provider, provider.replace("_", " ").title())

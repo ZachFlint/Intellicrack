@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtGui import QColor
 
 from intellicrack.core.session import Session
-from intellicrack.core.types import ProviderName
+from intellicrack.providers import ids as provider_ids
 from intellicrack.ui.resources.font_manager import FALLBACK_CODE_FONTS, FontManager
 from intellicrack.ui.resources.theme_manager import (
     THEME_DARK,
@@ -68,7 +68,7 @@ def _build_session() -> Session:
     Returns:
         Session: A fresh ``Session`` instance carrying the ``"triage"`` tag.
     """
-    session = Session.create(provider=ProviderName.OPENAI, model="gpt-4")
+    session = Session.create(provider=provider_ids.OPENAI, model="gpt-4")
     session.add_tag("triage")
     return session
 

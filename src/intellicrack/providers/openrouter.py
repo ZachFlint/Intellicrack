@@ -26,13 +26,13 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     RateLimitError,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
     MAX_ERROR_BODY_CHARS,
     HttpErrorMessages,
@@ -163,13 +163,13 @@ class OpenRouterProvider(LLMProviderBase):
         self._client_loop = target_loop
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: ProviderName.OPENROUTER
+            str: The ``openrouter`` built-in provider id.
         """
-        return ProviderName.OPENROUTER
+        return provider_ids.OPENROUTER
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to OpenRouter API.
@@ -357,7 +357,7 @@ class OpenRouterProvider(LLMProviderBase):
         return ModelInfo(
             id=model_id,
             name=name,
-            provider=ProviderName.OPENROUTER,
+            provider=provider_ids.OPENROUTER,
             context_window=context_length,
             supports_tools=supports_tools,
             supports_vision=supports_vision,

@@ -44,7 +44,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.config import get_config_file, get_env_file
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import AuthenticationError, ProviderCredentials, ProviderError, ProviderName
+from intellicrack.core.types import AuthenticationError, ProviderCredentials, ProviderError
 from intellicrack.credentials.env_loader import (
     CredentialField,
     CredentialLoader,
@@ -66,8 +66,10 @@ from intellicrack.credentials.provider_settings import (
     saved_timeout_seconds,
 )
 from intellicrack.credentials.store import CredentialStore, get_credential_store
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
 from intellicrack.providers.huggingface import fetch_router_served_model_ids
+from intellicrack.providers.ids import is_valid_provider_id, normalize_provider_id
 from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
 from intellicrack.ui.resources import IconManager
@@ -251,11 +253,7 @@ def _provider_default_api_base(provider_id: str) -> str:
         str: The default endpoint, or an empty string when the provider
         defines none.
     """
-    try:
-        provider = ProviderName(provider_id)
-    except ValueError:
-        return ""
-    mapping = CredentialLoader.PROVIDER_MAPPINGS.get(provider)
+    mapping = CredentialLoader.PROVIDER_MAPPINGS.get(provider_id)
     if mapping is None or mapping.default_api_base is None:
         return ""
     return mapping.default_api_base
@@ -409,7 +407,7 @@ class _RevokeOutcome:
 
 
 async def _revoke_credential(
-    provider_name: ProviderName,
+    provider_name: str,
     oauth_provider: OAuthProvider | None,
     *,
     store: CredentialStore | None = None,
@@ -1907,8 +1905,7 @@ class ProviderConfigDialog(QDialog):
         if self._registry is None:
             return False
         try:
-            provider_name = ProviderName(provider_id)
-            provider = self._registry.get(provider_name)
+            provider = self._registry.get(provider_id)
             return provider is not None and getattr(provider, "is_connected", False)
         except (RuntimeError, AttributeError, ValueError) as exc:
             _logger.warning(
@@ -1930,9 +1927,8 @@ class ProviderConfigDialog(QDialog):
         if self._discovery is None:
             return 0
         try:
-            provider_name = ProviderName(provider_id)
             counts = self._discovery.get_provider_model_count()
-            return counts.get(provider_name, 0)
+            return counts.get(provider_id, 0)
         except (RuntimeError, AttributeError, ValueError) as exc:
             _logger.warning(
                 "model_count_lookup_failed",
@@ -1956,8 +1952,7 @@ class ProviderConfigDialog(QDialog):
             registry: Provider registry that owns the active selection.
             current_provider: Name of the provider to activate.
         """
-        provider_name = ProviderName(current_provider)
-        registry.set_active(provider_name)
+        registry.set_active(current_provider)
         self._update_active_label()
         self._refresh_provider_status()
         self.active_provider_changed.emit(current_provider)
@@ -2188,11 +2183,10 @@ class ProviderConfigDialog(QDialog):
         if self._discovery is None:
             return
         discovery = self._discovery
-        try:
-            pname = ProviderName(provider_name)
-        except ValueError:
+        if not is_valid_provider_id(provider_name):
             _logger.warning("unknown_provider_for_discovery", provider=provider_name)
             return
+        pname = normalize_provider_id(provider_name)
 
         async def _discover() -> None:
             """Run model discovery for the selected provider on the bridge loop."""
@@ -2344,12 +2338,11 @@ class ProviderConfigDialog(QDialog):
         Args:
             provider_id: The provider whose credential should be revoked.
         """
-        try:
-            provider_name = ProviderName(provider_id)
-        except ValueError:
+        if not is_valid_provider_id(provider_id):
             _logger.warning("unknown_provider_for_revoke", provider=provider_id)
             show_error(self, "Revoke Credential", f"Unknown provider: {provider_id}")
             return
+        provider_name = normalize_provider_id(provider_id)
 
         try:
             oauth_provider: OAuthProvider | None = OAuthProvider(provider_id)
@@ -3216,12 +3209,7 @@ class ProviderSettingsWidget(QFrame):
         Returns:
             str: The resolved API key, or an empty string if none is configured.
         """
-        try:
-            provider_name = ProviderName(self.provider_id)
-        except ValueError:
-            return ""
-
-        credentials = _resolve_widget_loader(self).get_credentials(provider_name)
+        credentials = _resolve_widget_loader(self).get_credentials(self.provider_id)
         if credentials is None or credentials.api_key is None:
             return ""
         return credentials.api_key
@@ -3241,11 +3229,7 @@ class ProviderSettingsWidget(QFrame):
         Returns:
             str: The text to show in the field.
         """
-        try:
-            provider_name = ProviderName(self.provider_id)
-        except ValueError:
-            provider_name = None
-        if provider_name is not None and (saved := _resolve_widget_loader(self).get_field(provider_name, field)):
+        if saved := _resolve_widget_loader(self).get_field(self.provider_id, field):
             return saved
 
         legacy_value: object = saved_settings.get(field.value)
@@ -3325,11 +3309,7 @@ class ProviderSettingsWidget(QFrame):
 
         provider = None
         if self._registry is not None:
-            try:
-                provider_name = ProviderName(self.provider_id)
-                provider = self._registry.get(provider_name)
-            except ValueError:
-                _logger.warning("provider_name_parse_failed", provider_id=self.provider_id)
+            provider = self._registry.get(self.provider_id)
 
         self._refresh_worker = ModelRefreshWorker(
             self.provider_id,
@@ -3612,7 +3592,7 @@ class ProviderSettingsWidget(QFrame):
             env_var_name: Environment variable name that maps to ``provider_id``.
             api_key: Credential value to persist; blank removes the saved key.
         """
-        action = _resolve_widget_loader(self).persist_field(ProviderName(self.provider_id), CredentialField.API_KEY, api_key)
+        action = _resolve_widget_loader(self).persist_field(self.provider_id, CredentialField.API_KEY, api_key)
         _logger.info(
             "env_credential_persisted",
             provider=self.provider_id,
@@ -3628,11 +3608,7 @@ class ProviderSettingsWidget(QFrame):
         base URL equal to the provider's default endpoint -- removes the saved
         override so a value set outside the application applies again.
         """
-        try:
-            provider_name = ProviderName(self.provider_id)
-        except ValueError:
-            return
-
+        provider_name = self.provider_id
         loader = _resolve_widget_loader(self)
         inputs = (
             (CredentialField.API_BASE, self._api_base_input),
@@ -3677,7 +3653,7 @@ class ProviderSettingsWidget(QFrame):
             return None
 
         if self._registry is not None:
-            registered = self._registry.get(ProviderName.LOCAL_TRANSFORMERS)
+            registered = self._registry.get(provider_ids.LOCAL_TRANSFORMERS)
             if registered is not None:
                 try:
                     get_info = getattr(registered, "get_device_info", None)
@@ -3900,7 +3876,7 @@ class ModelSelectionDialog(QDialog):
         self,
         models: list[ModelInfo],
         current_model: str | None = None,
-        provider_name: ProviderName | None = None,
+        provider_name: str | None = None,
         discovery: ModelDiscovery | None = None,
         parent: QWidget | None = None,
     ) -> None:

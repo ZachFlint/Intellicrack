@@ -39,9 +39,11 @@ import pytest
 from intellicrack.core.types import (
     Message,
     ProviderError,
-    ProviderName,
 )
-from intellicrack.providers import xpu_utils as _xpu_utils_module
+from intellicrack.providers import (
+    ids as provider_ids,
+    xpu_utils as _xpu_utils_module,
+)
 from intellicrack.providers.local_transformers import LocalTransformersProvider
 from intellicrack.providers.ollama import OllamaProvider
 
@@ -430,13 +432,14 @@ def test_f0004_init_logger_binds_provider_field() -> None:
 
 
 def test_f0004_provider_name_matches_logger_binding() -> None:
-    """The bound logger label must agree with ``ProviderName.LOCAL_TRANSFORMERS``.
+    """The bound logger label must agree with ``provider_ids.LOCAL_TRANSFORMERS``.
 
     Sanity check: a future enum rename should not silently desynchronise
     from the logger binding.
+    from intellicrack.providers import ids as provider_ids
     """
     provider = LocalTransformersProvider()
-    assert provider.name == ProviderName.LOCAL_TRANSFORMERS
+    assert provider.name == provider_ids.LOCAL_TRANSFORMERS
 
 
 # ---------------------------------------------------------------------------

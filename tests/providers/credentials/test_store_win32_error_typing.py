@@ -31,8 +31,9 @@ import uuid
 
 import pytest
 
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials import store as store_module
+from intellicrack.providers import ids as provider_ids
 
 
 pytestmark = pytest.mark.skipif(
@@ -43,7 +44,7 @@ pytestmark = pytest.mark.skipif(
 _CRED_MAX_BLOB_CHARS = 1280
 """Largest secret WinVaultKeyring stores: CRED_MAX_CREDENTIAL_BLOB_SIZE / 2 (UTF-16)."""
 
-_PROBE_PROVIDER = ProviderName.OLLAMA
+_PROBE_PROVIDER = provider_ids.OLLAMA
 """Provider key used for the probe write; harmless because the service name is isolated."""
 
 

@@ -59,7 +59,6 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     ToolCall,
     ToolError,
     ToolName,
@@ -75,6 +74,7 @@ from intellicrack.credentials.provider_settings import (
 )
 from intellicrack.providers.discovery import ModelDiscovery, format_discovery_status
 from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
+from intellicrack.providers.ids import BUILTIN_PROVIDER_IDS, is_valid_provider_id, normalize_provider_id
 from intellicrack.sandbox import SandboxConfig, SandboxManager
 from intellicrack.ui._screen_compat import get_screen_geometry, move_widget
 from intellicrack.ui.chat import ChatPanel
@@ -242,7 +242,7 @@ class MainWindow(QMainWindow):
         self._status_failure_count: int = 0
         self._status_refresh_in_flight: bool = False
         self._pending_model_restore: str = ""
-        self._pending_model_restore_provider: ProviderName | None = None
+        self._pending_model_restore_provider: str | None = None
         self._session_token_total: int = 0
         self._binary_dependent_buttons: list[QPushButton] = []
         self._initial_discovery_triggered: bool = False
@@ -292,17 +292,17 @@ class MainWindow(QMainWindow):
         self._restore_window_state()
 
         registry = self._orchestrator.provider_registry
-        connected: list[ProviderName] = registry.list_connected()
+        connected: list[str] = registry.list_connected()
         if connected:
-            target_provider: ProviderName = self._startup_provider(connected)
+            target_provider: str = self._startup_provider(connected)
             try:
                 registry.set_active(target_provider)
-                _logger.info("startup_active_provider_set", provider=target_provider.value)
+                _logger.info("startup_active_provider_set", provider=target_provider)
             except (ProviderError, RuntimeError, ValueError) as exc:
                 _logger.warning("startup_active_provider_set_failed", error=str(exc))
             for idx in range(self._provider_combo.count()):
                 combo_data: object = self._provider_combo.itemData(idx)
-                if isinstance(combo_data, ProviderName) and combo_data == target_provider:
+                if isinstance(combo_data, str) and combo_data == target_provider:
                     with QSignalBlocker(self._provider_combo):
                         self._provider_combo.setCurrentIndex(idx)
                     break
@@ -327,14 +327,13 @@ class MainWindow(QMainWindow):
         if not model:
             _logger.debug("initial_session_deferred_no_model")
             return
-        try:
-            provider_name = provider if isinstance(provider, ProviderName) else ProviderName(str(provider).lower())
-        except ValueError:
-            _logger.debug("initial_session_deferred_bad_provider", provider=str(provider))
+        if not is_valid_provider_id(provider):
+            _logger.debug("initial_session_deferred_bad_provider", provider=provider)
             return
+        provider_name = normalize_provider_id(provider)
         instance = self._orchestrator.provider_registry.get(provider_name)
         if instance is None or not instance.is_connected:
-            _logger.debug("initial_session_deferred_provider_not_connected", provider=provider_name.value)
+            _logger.debug("initial_session_deferred_provider_not_connected", provider=provider_name)
             return
 
         async def create() -> None:
@@ -502,7 +501,24 @@ class MainWindow(QMainWindow):
 
         _logger.debug("window_state_restored")
 
-    def _startup_provider(self, connected: list[ProviderName]) -> ProviderName:
+    def _selectable_provider_ids(self) -> list[str]:
+        """List the provider instance ids the toolbar combo offers.
+
+        Every registered instance is offered, not just the eight built-ins, so
+        a user-defined endpoint appears in the toolbar as soon as it is
+        registered. The built-ins are listed first and in their canonical
+        order so the toolbar stays stable across restarts, and any further
+        instance follows in registration order.
+
+        Returns:
+            list[str]: Instance ids in display order.
+        """
+        registered = self._orchestrator.provider_registry.list_registered()
+        ordered = [provider for provider in BUILTIN_PROVIDER_IDS if provider in registered or not registered]
+        ordered.extend(provider for provider in registered if provider not in ordered)
+        return ordered
+
+    def _startup_provider(self, connected: list[str]) -> str:
         """Choose which provider to activate at startup from the connected set.
 
         Prefers the persisted last-active provider when it is still connected so
@@ -514,30 +530,28 @@ class MainWindow(QMainWindow):
                 Must be non-empty.
 
         Returns:
-            ProviderName: The provider to make active.
+            str: The instance id of the provider to make active.
         """
         remembered = self._remembered_provider()
         return remembered if remembered in connected else connected[0]
 
     @staticmethod
-    def _remembered_provider() -> ProviderName | None:
+    def _remembered_provider() -> str | None:
         """Return the persisted last-active provider from QSettings.
 
         Returns:
-            ProviderName | None: The provider stored under ``last_provider`` on
-            the last selection, or ``None`` when nothing valid is stored.
+            str | None: The instance id stored under ``last_provider`` on the
+            last selection, or ``None`` when nothing valid is stored.
         """
         raw: object = QSettings("Intellicrack", "MainWindow").value("last_provider")
+        if isinstance(raw, str) and is_valid_provider_id(raw):
+            return normalize_provider_id(raw)
         if isinstance(raw, str):
-            try:
-                return ProviderName(raw)
-            except ValueError:
-                _logger.debug("remembered_provider_invalid", value=raw)
-                return None
+            _logger.debug("remembered_provider_invalid", value=raw)
         return None
 
     @staticmethod
-    def _remembered_model_for(provider: ProviderName) -> str:
+    def _remembered_model_for(provider: str) -> str:
         """Return the persisted model id for ``provider`` from QSettings.
 
         Args:
@@ -547,17 +561,17 @@ class MainWindow(QMainWindow):
             str: The remembered model id stored under
             ``last_model/<provider>``, or ``""`` when none is stored.
         """
-        raw: object = QSettings("Intellicrack", "MainWindow").value(f"last_model/{provider.value}")
+        raw: object = QSettings("Intellicrack", "MainWindow").value(f"last_model/{provider}")
         return raw.strip() if isinstance(raw, str) else ""
 
     @staticmethod
-    def _persist_provider_selection(provider: ProviderName) -> None:
+    def _persist_provider_selection(provider: str) -> None:
         """Persist ``provider`` as the last-active provider in QSettings.
 
         Args:
             provider: The provider the user just activated.
         """
-        QSettings("Intellicrack", "MainWindow").setValue("last_provider", provider.value)
+        QSettings("Intellicrack", "MainWindow").setValue("last_provider", provider)
 
     def _persist_current_model(self) -> None:
         """Persist the toolbar's current provider and model to QSettings.
@@ -567,17 +581,17 @@ class MainWindow(QMainWindow):
         signal (user picks only, never programmatic repopulation) and invoked from the typed and browsed selection paths.
         """
         provider_data: object = self._provider_combo.currentData()
-        if not isinstance(provider_data, ProviderName):
+        if not isinstance(provider_data, str) or not provider_data:
             return
         model = self.model_combo.currentText().strip()
         if not model:
             return
         settings = QSettings("Intellicrack", "MainWindow")
-        settings.setValue(f"last_model/{provider_data.value}", model)
-        settings.setValue("last_provider", provider_data.value)
-        _logger.debug("model_selection_persisted", provider=provider_data.value, model=model)
+        settings.setValue(f"last_model/{provider_data}", model)
+        settings.setValue("last_provider", provider_data)
+        _logger.debug("model_selection_persisted", provider=provider_data, model=model)
 
-    def _select_model_for_provider(self, provider: ProviderName, models: list[str]) -> None:
+    def _select_model_for_provider(self, provider: str, models: list[str]) -> None:
         """Select the preferred model in the already-populated model combo.
 
         Prefers the per-provider remembered model persisted in QSettings,
@@ -1019,7 +1033,7 @@ class MainWindow(QMainWindow):
         self._provider_combo.setMinimumHeight(compute_control_min_height(self))
         self._provider_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._provider_combo.setObjectName("toolbar_combo")
-        for provider in ProviderName:
+        for provider in self._selectable_provider_ids():
             self._provider_combo.addItem(provider_display_name(provider), provider)
         self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
         toolbar.addWidget(self._provider_combo)
@@ -1590,20 +1604,19 @@ class MainWindow(QMainWindow):
 
         self._run_async(process())
 
-    def _selected_provider_model(self) -> tuple[str | ProviderName, str]:
+    def _selected_provider_model(self) -> tuple[str, str]:
         """Return the provider and model currently selected in the toolbar.
 
         Returns:
-            tuple[str | ProviderName, str]: The selected provider (a
-            :class:`ProviderName` when the combo carries enum data, otherwise
-            its string form) and the trimmed model identifier.
+            tuple[str, str]: The selected provider instance id and the trimmed
+            model identifier.
         """
         provider_data: object = self._provider_combo.currentData()
         model = self.model_combo.currentText().strip()
-        provider: str | ProviderName = provider_data if isinstance(provider_data, ProviderName) else str(provider_data)
+        provider: str = provider_data if isinstance(provider_data, str) else str(provider_data)
         return provider, model
 
-    async def _ensure_active_session(self, provider: str | ProviderName, model: str) -> None:
+    async def _ensure_active_session(self, provider: str, model: str) -> None:
         """Ensure the active session is bound to the requested provider and model.
 
         Creates a new session implicitly when none is active yet. When a
@@ -1620,7 +1633,7 @@ class MainWindow(QMainWindow):
             provider: Provider selected in the toolbar.
             model: Model identifier selected in the toolbar.
         """
-        provider_name = provider if isinstance(provider, ProviderName) else ProviderName(str(provider).lower())
+        provider_name = normalize_provider_id(provider)
         current_session = self._orchestrator.current_session
 
         if current_session is not None and current_session.provider == provider_name and current_session.model == model:
@@ -1635,19 +1648,19 @@ class MainWindow(QMainWindow):
             _logger.info(
                 "active_session_rebound",
                 session_id=current_session.id,
-                previous_provider=current_session.provider.value,
+                previous_provider=current_session.provider,
                 previous_model=current_session.model,
-                provider=provider_name.value,
+                provider=provider_name,
                 model=model,
             )
             current_session.provider = provider_name
             current_session.model = model
             return
 
-        _logger.info("implicit_session_create", provider=provider_name.value, model=model)
+        _logger.info("implicit_session_create", provider=provider_name, model=model)
         await self._orchestrator.start_session(provider_name, model)
 
-    async def _connect_provider_for_session(self, provider: ProviderName) -> None:
+    async def _connect_provider_for_session(self, provider: str) -> None:
         """Connect a provider using stored credentials for implicit session start.
 
         Credentials from the credential store take precedence; a keyless
@@ -1666,7 +1679,7 @@ class MainWindow(QMainWindow):
             await get_credentials(provider),
             loader=get_credential_loader(),
             settings=ProviderSettingsStore(get_config_file(PROVIDER_SETTINGS_FILENAME)),
-            api_key_optional=provider.value in NO_API_KEY_PROVIDER_IDS,
+            api_key_optional=provider in NO_API_KEY_PROVIDER_IDS,
         )
 
         registry = self._orchestrator.provider_registry
@@ -1681,9 +1694,9 @@ class MainWindow(QMainWindow):
             RuntimeError,
             ValueError,
         ) as exc:
-            _logger.warning("implicit_provider_connect_failed", provider=provider.value, error=str(exc))
+            _logger.warning("implicit_provider_connect_failed", provider=provider, error=str(exc))
             message = (
-                f"Could not connect to provider '{provider.value}'. "
+                f"Could not connect to provider '{provider}'. "
                 "Configure its credentials in Preferences, then try again.\n\n"
                 f"Details: {exc}"
             )
@@ -2650,15 +2663,14 @@ class MainWindow(QMainWindow):
         Args:
             provider_id: Identifier of the provider that was made active.
         """
-        try:
-            new_active = ProviderName(provider_id)
-        except ValueError:
+        if not is_valid_provider_id(provider_id):
             _logger.warning("active_provider_changed_unknown_id", provider_id=provider_id)
             return
+        new_active = normalize_provider_id(provider_id)
 
         for index in range(self._provider_combo.count()):
             data = self._provider_combo.itemData(index)
-            if isinstance(data, ProviderName) and data == new_active:
+            if isinstance(data, str) and data == new_active:
                 with QSignalBlocker(self._provider_combo):
                     self._provider_combo.setCurrentIndex(index)
                 break
@@ -2697,8 +2709,8 @@ class MainWindow(QMainWindow):
             settings: Provider settings dictionary mapping provider IDs to their settings.
         """
         registry = self._orchestrator.provider_registry
-        providers_to_connect: list[tuple[ProviderName, ProviderCredentials]] = []
-        providers_to_disconnect: list[ProviderName] = []
+        providers_to_connect: list[tuple[str, ProviderCredentials]] = []
+        providers_to_disconnect: list[str] = []
 
         for provider_id, provider_settings in settings.items():
             enabled = bool(provider_settings.get("enabled", False))
@@ -2706,11 +2718,10 @@ class MainWindow(QMainWindow):
             api_base = str(provider_settings.get("api_base", "")) or None
             org_id = str(provider_settings.get("organization_id", "")) or None
 
-            try:
-                pname = ProviderName(provider_id)
-            except ValueError:
+            if not is_valid_provider_id(provider_id):
                 _logger.warning("unknown_provider_id", provider_id=provider_id)
                 continue
+            pname = normalize_provider_id(provider_id)
 
             existing_provider = registry.get(pname)
 
@@ -2810,18 +2821,18 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Warning", "Please select a provider first.")
             return
 
-        provider_id: str = provider_data.value if isinstance(provider_data, ProviderName) else str(provider_data)
-        provider_enum: ProviderName | None = provider_data if isinstance(provider_data, ProviderName) else None
+        provider_id: str = provider_data if isinstance(provider_data, str) else str(provider_data)
+        provider_enum: str | None = provider_id if isinstance(provider_data, str) else None
 
         connected_instance = None
-        if isinstance(provider_data, ProviderName):
+        if isinstance(provider_data, str):
             registry_instance = self._orchestrator.provider_registry.get(provider_data)
             if registry_instance is not None and registry_instance.is_connected:
                 connected_instance = registry_instance
 
         if (
             hasattr(self._config, "is_provider_enabled")
-            and isinstance(provider_data, ProviderName)
+            and isinstance(provider_data, str)
             and not self._config.is_provider_enabled(provider_data)
         ):
             QMessageBox.warning(self, "Warning", f"Provider {provider_id} is disabled in configuration.")
@@ -2919,7 +2930,7 @@ class MainWindow(QMainWindow):
             """
             return await active_provider.list_models()
 
-        _logger.info("provider_list_models_requested", provider=active_provider.name.value)
+        _logger.info("provider_list_models_requested", provider=active_provider.name)
         run_bridge_coroutine_async(fetch(), self._on_browse_models_result, self._on_async_error, self)
         self.status_update.emit("Fetching models...")
 
@@ -3036,21 +3047,20 @@ class MainWindow(QMainWindow):
             result: Mapping of provider names to lists of ``ModelInfo``.
         """
         if isinstance(result, dict):
-            res_dict = cast("dict[ProviderName, list[ModelInfo]]", result)
+            res_dict = cast("dict[str, list[ModelInfo]]", result)
             counts: dict[str, int] = {}
             for provider_name_obj, models_obj in res_dict.items():
-                key = provider_name_obj.value
-                counts[key] = len(models_obj)
+                counts[provider_name_obj] = len(models_obj)
             _logger.info("initial_model_discovery_completed", per_provider_counts=counts)
         else:
             _logger.info("initial_model_discovery_completed", provider_count=0)
         self._refresh_model_discovery_status()
 
         provider_data: object = self._provider_combo.currentData()
-        if isinstance(provider_data, ProviderName):
+        if isinstance(provider_data, str) and provider_data:
             models_list: list[str] = []
             if isinstance(result, dict):
-                res_dict = cast("dict[ProviderName, list[ModelInfo]]", result)
+                res_dict = cast("dict[str, list[ModelInfo]]", result)
                 for k, v in res_dict.items():
                     if k == provider_data:
                         models_list.extend(m.id for m in v)
@@ -4114,7 +4124,7 @@ class MainWindow(QMainWindow):
         prev_idx = self._provider_combo.findData(active_provider.name) if active_provider is not None else -1
 
         provider: object = self._provider_combo.currentData()
-        if not isinstance(provider, ProviderName):
+        if not isinstance(provider, str) or not provider:
             _logger.debug("provider_changed_invalid_data")
             return
 
@@ -4122,7 +4132,7 @@ class MainWindow(QMainWindow):
         if instance is None or not instance.is_connected:
             _logger.info(
                 "provider_changed_not_connected",
-                provider=provider.value,
+                provider=provider,
             )
             display_name = provider_display_name(provider)
             choice = self._prompt_provider_not_connected(display_name)
@@ -4142,17 +4152,17 @@ class MainWindow(QMainWindow):
         except (ProviderError, RuntimeError, ValueError) as exc:
             _logger.warning(
                 "provider_set_active_failed",
-                provider=provider.value,
+                provider=provider,
                 error=str(exc),
             )
             self.status_update.emit(
-                f"Failed to activate provider {provider.value}: {exc}",
+                f"Failed to activate provider {provider}: {exc}",
             )
             return
 
         self._persist_provider_selection(provider)
-        _logger.info("provider_changed", provider=provider.value)
-        self.status_update.emit(f"Active provider: {provider.value}")
+        _logger.info("provider_changed", provider=provider)
+        self.status_update.emit(f"Active provider: {provider}")
 
         if self.model_discovery is not None:
             cached_models = self.model_discovery.cache.get(provider)

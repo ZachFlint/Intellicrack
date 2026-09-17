@@ -27,11 +27,13 @@ from intellicrack.core.config import (
     get_config_file,
     get_project_root,
 )
-from intellicrack.core.types import ConfirmationLevel, ProviderName, ToolName
+from intellicrack.core.types import ConfirmationLevel, ToolName
 
 
 if TYPE_CHECKING:
     from pathlib import Path
+from intellicrack.providers import ids as provider_ids
+
 
 _CUSTOM_TIMEOUT = 222
 _CUSTOM_PORT = 5099
@@ -62,9 +64,9 @@ def test_config_save_edit_reload_preserves_real_values(tmp_path: Path) -> None:
     """
     pytest.importorskip("tomli_w")
     config = _build_real_config(tmp_path)
-    config.default_provider = ProviderName.OPENAI
+    config.default_provider = provider_ids.OPENAI
     config.confirmation_level = ConfirmationLevel.ALL
-    config.providers[ProviderName.ANTHROPIC].timeout_seconds = _CUSTOM_TIMEOUT
+    config.providers[provider_ids.ANTHROPIC].timeout_seconds = _CUSTOM_TIMEOUT
     config.tools[ToolName.GHIDRA].port = _CUSTOM_PORT
 
     config_path = tmp_path / "config.toml"
@@ -78,9 +80,9 @@ def test_config_save_edit_reload_preserves_real_values(tmp_path: Path) -> None:
     assert on_disk["tools"]["ghidra"]["port"] == _CUSTOM_PORT
 
     reloaded = Config.load(config_path)
-    assert reloaded.default_provider == ProviderName.OPENAI
+    assert reloaded.default_provider == provider_ids.OPENAI
     assert reloaded.confirmation_level == ConfirmationLevel.ALL
-    assert reloaded.get_provider_config(ProviderName.ANTHROPIC).timeout_seconds == _CUSTOM_TIMEOUT
+    assert reloaded.get_provider_config(provider_ids.ANTHROPIC).timeout_seconds == _CUSTOM_TIMEOUT
     assert reloaded.get_tool_config(ToolName.GHIDRA).port == _CUSTOM_PORT
 
 
@@ -239,6 +241,6 @@ def test_committed_project_config_loads_if_present() -> None:
     if not config_path.is_file():
         pytest.skip(f"No committed project config at {config_path}")
     config = Config.load(config_path)
-    anthropic = config.get_provider_config(ProviderName.ANTHROPIC)
+    anthropic = config.get_provider_config(provider_ids.ANTHROPIC)
     assert isinstance(anthropic.enabled, bool)
     assert len(config.tools) > 0

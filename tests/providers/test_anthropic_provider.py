@@ -37,7 +37,6 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
@@ -55,6 +54,7 @@ from intellicrack.providers.tool_names import to_wire_name
 if TYPE_CHECKING:
     from intellicrack.credentials.env_loader import CredentialLoader
     from intellicrack.providers.base import UsageInfo
+from intellicrack.providers import ids as provider_ids
 
 
 _KNOWN_CLAUDE_PREFIX: str = "claude-"
@@ -87,7 +87,7 @@ class TestBuildModelInfo:
 
         assert model.id == "claude-3-5-sonnet-20241022"
         assert model.name == "Claude 3.5 Sonnet"
-        assert model.provider == ProviderName.ANTHROPIC
+        assert model.provider == provider_ids.ANTHROPIC
         assert model.context_window == _CONTEXT_WINDOW_200K
         assert model.supports_tools is True
         assert model.supports_vision is True
@@ -127,10 +127,10 @@ class TestBuildModelInfo:
             )
 
     def test_provider_is_always_anthropic(self) -> None:
-        """Provider field is always ProviderName.ANTHROPIC regardless of model ID."""
+        """Provider field is always provider_ids.ANTHROPIC regardless of model ID."""
         model: ModelInfo = _build_model_info("claude-3-5-haiku-20241022", "Claude 3.5 Haiku")
 
-        assert model.provider is ProviderName.ANTHROPIC
+        assert model.provider is provider_ids.ANTHROPIC
         assert model.provider.value == "anthropic"
 
 
@@ -899,10 +899,10 @@ class TestProviderNameAndConnectedState:
     """Unit tests for AnthropicProvider name property and is_connected state."""
 
     def test_name_property_returns_anthropic_enum_value(self) -> None:
-        """The name property returns exactly ProviderName.ANTHROPIC."""
+        """The name property returns exactly provider_ids.ANTHROPIC."""
         provider = AnthropicProvider()
 
-        assert provider.name is ProviderName.ANTHROPIC
+        assert provider.name is provider_ids.ANTHROPIC
         assert provider.name.value == "anthropic"
 
     def test_is_connected_false_before_connect(self) -> None:
@@ -1079,7 +1079,7 @@ class TestAnthropicModelListing:
     async def test_list_models_all_have_anthropic_provider_tag(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Every returned model carries ProviderName.ANTHROPIC.
+        """Every returned model carries provider_ids.ANTHROPIC.
 
         Args:
             anthropic_provider: Connected Anthropic provider fixture.
@@ -1088,7 +1088,7 @@ class TestAnthropicModelListing:
 
         assert models
         for model in models:
-            assert model.provider is ProviderName.ANTHROPIC, f"Model {model.id!r} must have provider=ANTHROPIC, got {model.provider}"
+            assert model.provider is provider_ids.ANTHROPIC, f"Model {model.id!r} must have provider=ANTHROPIC, got {model.provider}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -1146,12 +1146,12 @@ class TestAnthropicConnection:
     async def test_provider_name_is_anthropic_enum_value(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Connected provider's name property is ProviderName.ANTHROPIC.
+        """Connected provider's name property is provider_ids.ANTHROPIC.
 
         Args:
             anthropic_provider: Connected Anthropic provider fixture.
         """
-        assert anthropic_provider.name is ProviderName.ANTHROPIC
+        assert anthropic_provider.name is provider_ids.ANTHROPIC
         assert anthropic_provider.name.value == "anthropic"
 
     @pytest.mark.asyncio
@@ -1171,7 +1171,7 @@ class TestAnthropicConnection:
             pytest.skip("ANTHROPIC_API_KEY not configured")
 
         provider = AnthropicProvider()
-        credentials = credential_loader.get_credentials(ProviderName.ANTHROPIC)
+        credentials = credential_loader.get_credentials(provider_ids.ANTHROPIC)
         assert credentials is not None
 
         await provider.connect(credentials)

@@ -17,7 +17,8 @@ from typing import TYPE_CHECKING
 
 from intellicrack.bridges.base import BridgeState, ToolBridgeBase
 from intellicrack.core.session import Session
-from intellicrack.core.types import ProviderName, ToolDefinition, ToolName
+from intellicrack.core.types import ToolDefinition, ToolName
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -115,7 +116,7 @@ def _build_session() -> Session:
     Returns:
         Session: A fresh ``Session`` instance.
     """
-    return Session.create(provider=ProviderName.OPENAI, model="gpt-4")
+    return Session.create(provider=provider_ids.OPENAI, model="gpt-4")
 
 
 def test_bridge_publishes_connect_state_to_session() -> None:

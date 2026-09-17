@@ -36,9 +36,9 @@ from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QCheckBox, QComboBox, QLineEdit, QPushButton, QSpinBox, QWidget
 
 from intellicrack.core.config import get_env_file
-from intellicrack.core.types import ProviderName
 from intellicrack.credentials.env_loader import CredentialField, CredentialLoader, EnvPersistAction
 from intellicrack.credentials.provider_settings import ProviderSettingsStore
+from intellicrack.providers import ids as provider_ids
 from intellicrack.ui.provider_config import (
     ConnectionTestWorker,
     CredentialSource,
@@ -313,7 +313,7 @@ def test_saving_base_url_and_organization_writes_env_not_providers_json(
     _child(widget, "_org_id_input", QLineEdit).setText("org-typed")
     widget.save_settings()
 
-    next_launch = CredentialLoader(tmp_path / ".env").get_credentials(ProviderName.OPENAI)
+    next_launch = CredentialLoader(tmp_path / ".env").get_credentials(provider_ids.OPENAI)
     assert next_launch is not None
     assert next_launch.api_key == _ACCEPTED_KEY
     assert next_launch.api_base == gateway_alt
@@ -380,7 +380,7 @@ def test_keyless_ollama_host_is_saved_without_an_api_key(
     _child(widget, "_api_base_input", QLineEdit).setText(secondary_host)
     widget.save_settings()
 
-    keyless = CredentialLoader(tmp_path / ".env").get_connect_credentials(ProviderName.OLLAMA, api_key_optional=True)
+    keyless = CredentialLoader(tmp_path / ".env").get_connect_credentials(provider_ids.OLLAMA, api_key_optional=True)
     assert keyless is not None
     assert keyless.api_base == secondary_host
     assert _read_sections(tmp_path)["ollama"]["enabled"] is True
@@ -479,11 +479,11 @@ def test_cleared_huggingface_token_is_not_resurrected_by_local_transformers(
     local_transformers = make_widget("local_transformers", shared_loader)
     _wait_for_auto_refresh(qtbot, local_transformers)
 
-    assert shared_loader.persist_field(ProviderName.HUGGINGFACE, CredentialField.API_KEY, "") is EnvPersistAction.REMOVED
+    assert shared_loader.persist_field(provider_ids.HUGGINGFACE, CredentialField.API_KEY, "") is EnvPersistAction.REMOVED
     local_transformers.save_settings()
 
     assert _env_names(tmp_path).isdisjoint({"HUGGINGFACE_API_TOKEN", "LOCAL_TRANSFORMERS_HF_TOKEN"})
-    assert shared_loader.get_field(ProviderName.LOCAL_TRANSFORMERS, CredentialField.API_KEY) is None
+    assert shared_loader.get_field(provider_ids.LOCAL_TRANSFORMERS, CredentialField.API_KEY) is None
 
 
 def test_clearing_api_key_removes_it_from_env_and_keeps_the_disabled_section(
@@ -512,9 +512,9 @@ def test_clearing_api_key_removes_it_from_env_and_keeps_the_disabled_section(
     widget.save_settings()
 
     assert "OPENAI_API_KEY" not in _env_names(tmp_path)
-    assert CredentialLoader(tmp_path / ".env").get_credentials(ProviderName.OPENAI) is None
+    assert CredentialLoader(tmp_path / ".env").get_credentials(provider_ids.OPENAI) is None
     assert _read_sections(tmp_path)["openai"]["enabled"] is False
-    assert ProviderSettingsStore(tmp_path / "providers.json").connect_policy().is_enabled(ProviderName.OPENAI) is False
+    assert ProviderSettingsStore(tmp_path / "providers.json").connect_policy().is_enabled(provider_ids.OPENAI) is False
 
 
 def test_legacy_untouched_timeout_shows_provider_default(
@@ -640,7 +640,7 @@ def test_credential_source_label_reads_the_env_file_credentials_come_from(tmp_pa
     with redirected_state_root(monkeypatch, tmp_path) as state_root:
         _ = (state_root / ".env").write_text(f"ANTHROPIC_API_KEY={anthropic_key}\n", encoding="utf-8")
         loader = CredentialLoader(get_env_file())
-        assert loader.get_field(ProviderName.ANTHROPIC, CredentialField.API_KEY) == anthropic_key
+        assert loader.get_field(provider_ids.ANTHROPIC, CredentialField.API_KEY) == anthropic_key
 
         detector = CredentialSourceDetector(state_root / ".intellicrack" / "providers.json")
 

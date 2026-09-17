@@ -31,7 +31,6 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     RateLimitError,
     ThinkingConfig,
     ToolCall,
@@ -39,6 +38,7 @@ from intellicrack.core.types import (
     ToolChoiceMode,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
     LLMProviderBase,
     UsageInfo,
@@ -100,13 +100,13 @@ class GoogleProvider(LLMProviderBase):
         self._logger.info("google_provider_initialized")
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: The provider name enum value.
+            str: The ``google`` built-in provider id.
         """
-        return ProviderName.GOOGLE
+        return provider_ids.GOOGLE
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to Google AI API.
@@ -292,7 +292,7 @@ class GoogleProvider(LLMProviderBase):
                 ModelInfo(
                     id=model_id,
                     name=display_name or model_id,
-                    provider=ProviderName.GOOGLE,
+                    provider=provider_ids.GOOGLE,
                     context_window=input_limit,
                     supports_tools=supports_tools,
                     supports_vision=supports_vision,

@@ -20,7 +20,8 @@ import openai
 import pytest
 import pytest_asyncio
 
-from intellicrack.core.types import ProviderCredentials, ProviderError, ProviderName
+from intellicrack.core.types import ProviderCredentials, ProviderError
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.anthropic import AnthropicProvider
 from intellicrack.providers.google import GoogleProvider
 from intellicrack.providers.grok import GrokProvider
@@ -327,7 +328,7 @@ async def anthropic_provider(
         pytest.skip("ANTHROPIC_API_KEY not configured in .env")
 
     provider = AnthropicProvider()
-    credentials = credential_loader.get_credentials(ProviderName.ANTHROPIC)
+    credentials = credential_loader.get_credentials(provider_ids.ANTHROPIC)
     assert credentials is not None, "Expected credentials after validation"
 
     await provider.connect(credentials)
@@ -357,7 +358,7 @@ async def openai_provider(
         pytest.skip("OPENAI_API_KEY not configured in .env")
 
     provider = OpenAIProvider()
-    credentials = credential_loader.get_credentials(ProviderName.OPENAI)
+    credentials = credential_loader.get_credentials(provider_ids.OPENAI)
     assert credentials is not None, "Expected credentials after validation"
 
     await provider.connect(credentials)
@@ -387,7 +388,7 @@ async def google_provider(
         pytest.skip("GOOGLE_API_KEY not configured in .env")
 
     provider = GoogleProvider()
-    credentials = credential_loader.get_credentials(ProviderName.GOOGLE)
+    credentials = credential_loader.get_credentials(provider_ids.GOOGLE)
     assert credentials is not None, "Expected credentials after validation"
 
     await provider.connect(credentials)
@@ -417,7 +418,7 @@ async def openrouter_provider(
         pytest.skip("OPENROUTER_API_KEY not configured in .env")
 
     provider = OpenRouterProvider()
-    credentials = credential_loader.get_credentials(ProviderName.OPENROUTER)
+    credentials = credential_loader.get_credentials(provider_ids.OPENROUTER)
     assert credentials is not None, "Expected credentials after validation"
 
     await provider.connect(credentials)
@@ -447,7 +448,7 @@ async def ollama_provider(
         pytest.skip("Ollama not running locally at http://localhost:11434")
 
     provider = OllamaProvider()
-    credentials = credential_loader.get_credentials(ProviderName.OLLAMA)
+    credentials = credential_loader.get_credentials(provider_ids.OLLAMA)
 
     if credentials is None:
         credentials = ProviderCredentials(
@@ -482,7 +483,7 @@ async def huggingface_provider(
         pytest.skip("HUGGINGFACE_API_TOKEN not configured in .env")
 
     provider = HuggingFaceProvider()
-    credentials = credential_loader.get_credentials(ProviderName.HUGGINGFACE)
+    credentials = credential_loader.get_credentials(provider_ids.HUGGINGFACE)
     assert credentials is not None, "Expected credentials after validation"
 
     await provider.connect(credentials)
@@ -512,7 +513,7 @@ async def grok_provider(
         pytest.skip("XAI_API_KEY not configured in .env")
 
     provider = GrokProvider()
-    credentials = credential_loader.get_credentials(ProviderName.GROK)
+    credentials = credential_loader.get_credentials(provider_ids.GROK)
     assert credentials is not None, "Expected credentials after validation"
 
     await provider.connect(credentials)

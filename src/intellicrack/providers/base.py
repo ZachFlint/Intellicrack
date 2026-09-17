@@ -16,7 +16,7 @@ import json
 import random
 import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final, TypedDict, TypeVar, cast
 
@@ -36,9 +36,24 @@ from intellicrack.core.types import (
     ToolChoice,
     ToolChoiceMode,
     ToolDefinition,
-    ToolParameter,
 )
-from intellicrack.providers.tool_names import from_wire_name, to_wire_name
+from intellicrack.providers.capabilities import (
+    ApiDialect,
+    CapabilityOverride,
+    ModelCapabilities,
+    ToolSearchStyle,
+    merge_capabilities,
+)
+from intellicrack.providers.dialects import adapter_for
+from intellicrack.providers.dialects.base import (
+    DialectAdapter,
+    StreamDelta,
+    ToolCallFragment,
+    UsageInfo,
+    parse_tool_call,
+    serialize_tool_result,
+)
+from intellicrack.providers.tool_names import to_wire_name
 
 
 if TYPE_CHECKING:
@@ -46,8 +61,6 @@ if TYPE_CHECKING:
 
     import structlog
     from openai.types.chat.chat_completion_message import ChatCompletionMessage
-
-    from intellicrack.core.types import ProviderName
 
 _T = TypeVar("_T")
 
@@ -95,30 +108,6 @@ def redact_secrets(text: str) -> str:
     for pattern, replacement in _SECRET_SUBSTITUTIONS:
         redacted = pattern.sub(replacement, redacted)
     return redacted
-
-
-@dataclass(slots=True)
-class UsageInfo:
-    """Token usage statistics reported by a provider.
-
-    Attributes:
-        prompt_tokens: Tokens consumed by the prompt / input messages.
-        completion_tokens: Tokens generated in the completion / output.
-        total_tokens: Sum of prompt and completion tokens as reported
-            by the provider when available.
-        cache_read_tokens: Prompt tokens served from a provider-side
-            prompt cache (Anthropic ``cache_read_input_tokens``); ``0``
-            when the provider reports no cache hit or lacks the field.
-        cache_creation_tokens: Prompt tokens written into the
-            provider-side prompt cache (Anthropic
-            ``cache_creation_input_tokens``); ``0`` when not reported.
-    """
-
-    prompt_tokens: int = field(default=0)
-    completion_tokens: int = field(default=0)
-    total_tokens: int = field(default=0)
-    cache_read_tokens: int = field(default=0)
-    cache_creation_tokens: int = field(default=0)
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,63 +188,6 @@ class GoogleFunctionDeclaration(TypedDict):
     parameters: JSONSchemaParameters
 
 
-def serialize_tool_result(result: object) -> str:
-    """Serialize a tool result to a string for API consumption.
-
-    Args:
-        result: The tool result value, either a string or a
-            JSON-serializable object.
-
-    Returns:
-        str: The result as a string, JSON-encoded if not already a string.
-    """
-    return result if isinstance(result, str) else json.dumps(result)
-
-
-def parse_tool_call(
-    *,
-    call_id: str,
-    function_name: str,
-    raw_arguments: str | dict[str, object],
-) -> ToolCall:
-    """Parse a tool call from provider-specific data into a ToolCall.
-
-    Handles JSON argument parsing and tool name extraction from
-    dotted function names. ``function_name`` is first restored from its
-    provider-safe wire form (e.g. ``"frida__spawn"``) back to the canonical
-    dotted form (``"frida.spawn"``) via :func:`~intellicrack.providers.tool_names.from_wire_name`,
-    so every caller downstream of this function -- routing, classification,
-    confirmation, persistence -- only ever sees canonical names.
-
-    Args:
-        call_id: Unique identifier for the tool call.
-        function_name: Function name from the provider response, in the
-            provider's wire form.
-        raw_arguments: Arguments as a JSON string or pre-parsed dict.
-
-    Returns:
-        ToolCall: Parsed ToolCall instance with canonical dotted names.
-    """
-    parsed_args: dict[str, Any]
-    if isinstance(raw_arguments, str):
-        try:
-            parsed_args = json.loads(raw_arguments)
-        except json.JSONDecodeError:
-            _logger.warning("tool_call_args_json_decode_failed", function=function_name)
-            parsed_args = {}
-    else:
-        parsed_args = dict(raw_arguments)
-
-    canonical_name = from_wire_name(function_name)
-    tool_name = canonical_name.split(".", maxsplit=1)[0] if "." in canonical_name else canonical_name
-    return ToolCall(
-        id=call_id,
-        tool_name=tool_name,
-        function_name=canonical_name,
-        arguments=parsed_args,
-    )
-
-
 @dataclass(frozen=True, slots=True)
 class HttpErrorMessages:
     """Provider-specific message templates for HTTP-status exception translation.
@@ -333,6 +265,50 @@ def map_thinking_budget_to_effort(
 
 _ERR_EMPTY_MESSAGES: Final[str] = "messages must contain at least one message"
 
+_MODEL_SUFFIX_SEPARATORS: Final[tuple[str, ...]] = (":", "@")
+"""Separators that introduce a variant suffix on an otherwise known model id.
+
+An endpoint routinely advertises ``my-model:free`` or ``my-model@2026-01`` for
+what is capability-wise the same model. Stripping the suffix is what lets the
+base record resolve instead of the request being refused for want of a context
+window.
+"""
+
+
+@dataclass(frozen=True, slots=True)
+class SentToolReport:
+    """What actually happened to the tool set on the last request.
+
+    The wire layer is handed a final, priority-ordered tool list and never
+    reorders it, but it does decide what ships in reach, what ships deferred
+    and what does not fit at all. Without a report of that decision the caller
+    cannot tell a model that chose not to call a tool from a tool that never
+    reached the model.
+
+    Attributes:
+        sent: Canonical dotted names callable at the start of the turn.
+        deferred: Canonical dotted names that shipped but are reachable only
+            through the endpoint's tool search.
+        truncated: Canonical dotted names dropped from a tool definition that
+            partly fit within the count cap.
+        dropped: Canonical dotted names dropped entirely, because the cap was
+            already exhausted before their definition was reached.
+    """
+
+    sent: tuple[str, ...] = ()
+    deferred: tuple[str, ...] = ()
+    truncated: tuple[str, ...] = ()
+    dropped: tuple[str, ...] = ()
+
+    @property
+    def total(self) -> int:
+        """Total number of tool functions accounted for.
+
+        Returns:
+            int: Sent plus deferred plus truncated plus dropped.
+        """
+        return len(self.sent) + len(self.deferred) + len(self.truncated) + len(self.dropped)
+
 
 class LLMProviderBase(ABC):
     """Abstract base class for LLM providers.
@@ -359,16 +335,19 @@ class LLMProviderBase(ABC):
         self._pending_tool_calls: list[ToolCall] = []
         self._pending_usage: UsageInfo | None = None
         self._pending_thinking: list[str] = []
+        self._model_capabilities: dict[str, ModelCapabilities] = {}
+        self._capability_overrides: dict[str, CapabilityOverride] = {}
+        self._last_sent_tools: SentToolReport = SentToolReport()
         self._logger = get_logger(__name__)
         self._logger.info("provider_base_initialized")
 
     @property
     @abstractmethod
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: The ProviderName enum value for this provider.
+            str: The instance id this provider is registered under.
         """
 
     @property
@@ -379,6 +358,124 @@ class LLMProviderBase(ABC):
             bool: True if the provider is ready to accept requests.
         """
         return self.connected
+
+    @property
+    def dialect(self) -> ApiDialect | None:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect | None: The dialect, or ``None`` for a provider that is
+            not an HTTP endpoint at all. ``local_transformers`` runs the model
+            in-process and has no wire format, so every caller that maps a
+            provider to a dialect must tolerate ``None``.
+        """
+        return None
+
+    def adapter(self) -> DialectAdapter | None:
+        """Construct the adapter for this provider's dialect.
+
+        Returns:
+            DialectAdapter | None: A fresh adapter, or ``None`` when the
+            provider has no dialect.
+        """
+        dialect = self.dialect
+        return None if dialect is None else adapter_for(dialect)
+
+    def ingest_model_capabilities(self, model: str, capabilities: ModelCapabilities) -> None:
+        """Record capabilities discovered from the endpoint's own metadata.
+
+        This is layer two of the three-layer merge. Providers call it while
+        parsing ``/models`` so a later request resolves against what the
+        endpoint actually advertised rather than against a dialect default.
+
+        Args:
+            model: The model id the metadata describes.
+            capabilities: The record built from the endpoint's metadata.
+        """
+        self._model_capabilities[model] = capabilities
+
+    def set_capability_override(self, model: str, override: CapabilityOverride | None) -> None:
+        """Record or clear the user's per-model capability override.
+
+        This is layer three of the three-layer merge and always wins, because
+        it is the only layer that can correct an endpoint whose metadata is
+        wrong or absent.
+
+        Args:
+            model: The model id the override applies to.
+            override: The override, or ``None`` to clear it.
+        """
+        if override is None or override.is_empty():
+            self._capability_overrides.pop(model, None)
+            return
+        self._capability_overrides[model] = override
+
+    def capability_overrides(self) -> dict[str, CapabilityOverride]:
+        """Return every per-model override currently configured.
+
+        Returns:
+            dict[str, CapabilityOverride]: Overrides keyed by model id.
+        """
+        return dict(self._capability_overrides)
+
+    def capabilities_for(self, model: str) -> ModelCapabilities:
+        """Resolve one model's capability record through the three-layer merge.
+
+        Resolution order is dialect default, then metadata ingested from the
+        endpoint, then the per-model user override. A model id that matches
+        nothing exactly is retried with its variant suffix stripped, so
+        ``my-model:free`` resolves against ``my-model`` rather than falling all
+        the way back to the dialect default.
+
+        Args:
+            model: The model id to resolve.
+
+        Returns:
+            ModelCapabilities: The merged record.
+        """
+        adapter = self.adapter()
+        base = adapter.default_capabilities() if adapter is not None else ModelCapabilities()
+        ingested = self._lookup_model_entry(self._model_capabilities, model)
+        if ingested is not None:
+            base = ingested
+        override = self._lookup_model_entry(self._capability_overrides, model)
+        return merge_capabilities(base, override)
+
+    @staticmethod
+    def _lookup_model_entry[EntryT](table: dict[str, EntryT], model: str) -> EntryT | None:
+        """Look a model id up, retrying without its variant suffix.
+
+        Args:
+            table: The per-model table to search.
+            model: The model id to resolve.
+
+        Returns:
+            EntryT | None: The matching entry, or ``None``.
+        """
+        exact = table.get(model)
+        if exact is not None:
+            return exact
+        for separator in _MODEL_SUFFIX_SEPARATORS:
+            stem, found, _ = model.partition(separator)
+            if found:
+                trimmed = table.get(stem)
+                if trimmed is not None:
+                    return trimmed
+        return None
+
+    def get_last_sent_tools(self) -> SentToolReport:
+        """Report what happened to the tool set on the last request.
+
+        Mirrors :meth:`get_pending_tool_calls` and :meth:`get_pending_usage`:
+        the record is produced by the request path and read once by the
+        caller. Unlike those, it is not cleared on read, because it describes
+        the request rather than buffering an event -- reading it twice must
+        give the same answer.
+
+        Returns:
+            SentToolReport: What was sent, deferred, truncated and dropped.
+        """
+        return self._last_sent_tools
 
     @staticmethod
     def _httpx_client_rebind_target(
@@ -709,59 +806,100 @@ class LLMProviderBase(ABC):
             openai_tools.extend(dict(schema) for schema in tool_schemas)
         return openai_tools
 
-    def _enforce_tool_count_cap(self, tools: list[ToolDefinition]) -> list[ToolDefinition]:
-        """Trim tool definitions to fit this provider's flattened function-count cap.
+    def _effective_tool_budget(self, capabilities: ModelCapabilities | None) -> int | None:
+        """Resolve how many tool functions may be callable at the start of a turn.
 
-        Several providers (OpenAI, Grok, OpenRouter) reject function-calling
-        requests once the flattened function count (every ``ToolFunction``
-        across every bridge's :class:`ToolDefinition`) exceeds
-        :attr:`TOOL_COUNT_CAP`. Intellicrack's tool registry can expose
-        hundreds more functions than that across its bridges, so the active
-        set handed to a capped provider must be reduced before the request
-        leaves the process. Providers with no cap (:attr:`TOOL_COUNT_CAP` is
-        ``None``) return ``tools`` unchanged.
+        Without native tool search this is the whole budget: every function
+        ships in reach, so the endpoint's flat cap applies to all of them.
+        With Anthropic deferred loading the budget is the deferral ceiling,
+        because all ~715 functions ship and only the non-deferred head is in
+        reach. With OpenAI namespaces the cap applies only to the functions
+        callable at turn start, which is the first namespace.
+
+        Args:
+            capabilities: The resolved capability record for the target model,
+                or ``None`` when the caller has not resolved one.
+
+        Returns:
+            int | None: The budget, or ``None`` when the endpoint imposes no
+            limit.
+        """
+        if capabilities is None:
+            return self.TOOL_COUNT_CAP
+        style = capabilities.tool_search.style
+        if style is ToolSearchStyle.ANTHROPIC_DEFERRED:
+            return capabilities.tool_search.max_deferred_tools + 1
+        if style is ToolSearchStyle.OPENAI_TOOL_SEARCH:
+            return None
+        declared = capabilities.tool_count_cap
+        return declared if declared is not None else self.TOOL_COUNT_CAP
+
+    def _enforce_tool_count_cap(
+        self,
+        tools: list[ToolDefinition],
+        capabilities: ModelCapabilities | None = None,
+    ) -> list[ToolDefinition]:
+        """Trim tool definitions to fit this model's callable-function budget.
+
+        Several endpoints reject function-calling requests once the flattened
+        function count (every ``ToolFunction`` across every
+        :class:`ToolDefinition`) exceeds their cap. Intellicrack's registry
+        exposes hundreds more functions than that, so the active set handed to
+        a capped endpoint must be reduced before the request leaves the
+        process. An endpoint with native tool search has no such problem: the
+        whole set ships and deferral keeps it out of reach until searched.
 
         Tools are kept in their existing (already deterministic) order and
-        included whole wherever possible. The tool whose inclusion would
-        push the running total past the cap is truncated to only its
-        leading functions that still fit, so every tool earlier in the list
-        stays fully intact and no tool is dropped arbitrarily. Callers that
-        place the dynamic-loading meta-tool and always-on core tools first
-        in ``tools`` guarantee this truncation can never drop them.
+        included whole wherever possible. The tool whose inclusion would push
+        the running total past the budget is truncated to the leading
+        functions that still fit, so every tool earlier in the list stays
+        fully intact and no tool is dropped arbitrarily. Callers that place
+        the dynamic-loading meta-tool and always-on core tools first guarantee
+        this truncation can never drop them.
+
+        The outcome is recorded for :meth:`get_last_sent_tools` so a caller can
+        tell a tool the model declined to call from one it never saw.
 
         Args:
             tools: Tool definitions to trim, in priority order.
+            capabilities: The resolved capability record for the target model.
+                When ``None``, the provider's own :attr:`TOOL_COUNT_CAP`
+                applies, preserving the pre-capability behaviour.
 
         Returns:
-            list[ToolDefinition]: A new list of tool definitions whose
-            combined function count does not exceed :attr:`TOOL_COUNT_CAP`.
-            Returned unchanged (same object) when uncapped or already
-            within the cap.
+            list[ToolDefinition]: A new list of tool definitions whose combined
+            function count does not exceed the budget. Returned unchanged
+            (same object) when uncapped or already within it.
 
         Raises:
-            ProviderError: If :attr:`TOOL_COUNT_CAP` is too small to hold
-                even a single tool function.
+            ProviderError: If the budget is too small to hold even a single
+                tool function.
         """
-        cap = self.TOOL_COUNT_CAP
+        cap = self._effective_tool_budget(capabilities)
+        all_names = [func.name for tool in tools for func in tool.functions]
+        deferred_style = capabilities.tool_search.style if capabilities is not None else ToolSearchStyle.NONE
+
         if cap is None:
+            self._last_sent_tools = self._report_for_uncapped(tools, deferred_style)
             return tools
 
-        function_count = sum(len(tool.functions) for tool in tools)
+        function_count = len(all_names)
         self._logger.debug(
             "tool_conversion_function_count",
-            provider=self.name.value,
+            provider=self.name,
             container_count=len(tools),
             function_count=function_count,
             cap=cap,
         )
         if function_count <= cap:
+            self._last_sent_tools = self._report_for_uncapped(tools, deferred_style)
             return tools
 
         if cap < 1:
-            message = f"{self.name.value} tool-count cap ({cap}) cannot hold any tool function; {function_count} functions were requested."
+            message = f"{self.name} tool-count cap ({cap}) cannot hold any tool function; {function_count} functions were requested."
             self._logger.error(
                 "tool_count_cap_unsatisfiable",
-                provider=self.name.value,
+                provider=self.name,
                 cap=cap,
                 function_count=function_count,
             )
@@ -769,6 +907,8 @@ class LLMProviderBase(ABC):
 
         trimmed: list[ToolDefinition] = []
         dropped: list[str] = []
+        truncated: list[str] = []
+        dropped_labels: list[str] = []
         remaining = cap
         for tool in tools:
             tool_function_count = len(tool.functions)
@@ -784,20 +924,53 @@ class LLMProviderBase(ABC):
                         functions=tool.functions[:remaining],
                     ),
                 )
-                dropped.append(f"{tool.tool_name.value}:{tool_function_count - remaining}_truncated")
+                truncated.extend(func.name for func in tool.functions[remaining:])
+                dropped_labels.append(f"{tool.tool_name}:{tool_function_count - remaining}_truncated")
                 remaining = 0
             else:
-                dropped.append(f"{tool.tool_name.value}:{tool_function_count}_dropped")
+                dropped.extend(func.name for func in tool.functions)
+                dropped_labels.append(f"{tool.tool_name}:{tool_function_count}_dropped")
 
         self._logger.warning(
             "tool_count_cap_exceeded",
-            provider=self.name.value,
+            provider=self.name,
             cap=cap,
             function_count=function_count,
             kept_count=cap,
-            dropped_tools=dropped,
+            dropped_tools=dropped_labels,
+        )
+        kept = [func.name for tool in trimmed for func in tool.functions]
+        self._last_sent_tools = SentToolReport(
+            sent=tuple(kept),
+            truncated=tuple(truncated),
+            dropped=tuple(dropped),
         )
         return trimmed
+
+    @staticmethod
+    def _report_for_uncapped(tools: list[ToolDefinition], style: ToolSearchStyle) -> SentToolReport:
+        """Build the sent-tool report for a request that trimmed nothing.
+
+        With native tool search only part of the set is callable at the start
+        of the turn, so the report splits the set the same way the adapter
+        does rather than claiming everything was in reach.
+
+        Args:
+            tools: The tool definitions that shipped, in priority order.
+            style: The endpoint's native large-toolset mechanism.
+
+        Returns:
+            SentToolReport: What was sent and what shipped deferred.
+        """
+        if style is ToolSearchStyle.NONE:
+            return SentToolReport(sent=tuple(func.name for tool in tools for func in tool.functions))
+        if style is ToolSearchStyle.ANTHROPIC_DEFERRED:
+            names = [func.name for tool in tools for func in tool.functions]
+            return SentToolReport(sent=tuple(names[:1]), deferred=tuple(names[1:]))
+        head = tools[0] if tools else None
+        sent = tuple(func.name for func in head.functions) if head is not None else ()
+        deferred = tuple(func.name for tool in tools[1:] for func in tool.functions)
+        return SentToolReport(sent=sent, deferred=deferred)
 
     def convert_messages_to_provider_format(
         self,
@@ -1311,34 +1484,43 @@ class LLMProviderBase(ABC):
 
 
 class ToolCallBufferManager:
-    """Accumulates streaming tool call deltas into complete ToolCall objects.
+    """Accumulates streaming tool-call fragments into complete ToolCall objects.
 
-    Used by providers that consume OpenAI-compatible SSE streams where tool call fragments arrive incrementally across multiple chunks.
+    Every dialect fragments a streamed tool call differently -- Chat
+    Completions by array index, Responses by the output item's id, Messages by
+    content-block index, Gemini not at all -- so fragments are keyed by an
+    opaque correlation token the adapter chooses rather than by any one
+    dialect's shape. Insertion order is preserved, so finalized calls come out
+    in the order the endpoint started them.
     """
 
     def __init__(self) -> None:
         """Initialize the ToolCallBufferManager instance."""
-        self._buffers: dict[int, dict[str, str]] = {}
+        self._buffers: dict[str, dict[str, str]] = {}
 
     def accumulate(
         self,
         *,
-        index: int,
+        index: int | str | None = None,
+        token: str | None = None,
         call_id: str | None = None,
         name: str | None = None,
         arguments: str | None = None,
     ) -> None:
-        """Merge a single streaming delta into the buffer.
+        """Merge a single streaming fragment into the buffer.
 
         Args:
-            index: Tool-call index from the SSE delta.
-            call_id: Unique identifier for the tool call (first chunk only).
-            name: Function name (first chunk only).
+            index: Legacy positional correlation key, kept so existing
+                OpenAI-shaped callers continue to work unchanged. Used when
+                ``token`` is not supplied.
+            token: Opaque per-dialect correlation token. Fragments sharing a
+                token belong to the same tool call.
+            call_id: Unique identifier for the tool call (first fragment only).
+            name: Wire function name (first fragment only).
             arguments: Partial JSON argument fragment to append.
         """
-        if index not in self._buffers:
-            self._buffers[index] = {"id": "", "name": "", "arguments": ""}
-        buf = self._buffers[index]
+        key = token if token is not None else str(index)
+        buf = self._buffers.setdefault(key, {"id": "", "name": "", "arguments": ""})
         if call_id:
             buf["id"] = call_id
         if name:
@@ -1346,13 +1528,30 @@ class ToolCallBufferManager:
         if arguments:
             buf["arguments"] += arguments
 
+    def absorb(self, delta: StreamDelta) -> None:
+        """Merge a normalized stream delta's tool-call fragment, if it has one.
+
+        Args:
+            delta: A delta produced by a dialect adapter.
+        """
+        fragment: ToolCallFragment | None = delta.tool_call_fragment
+        if fragment is None:
+            return
+        self.accumulate(
+            token=fragment.token,
+            call_id=fragment.call_id,
+            name=fragment.name,
+            arguments=fragment.arguments,
+        )
+
     def finalize(self) -> list[ToolCall]:
         """Convert all complete buffered entries to ToolCall objects and reset.
 
         Entries missing an ``id`` or ``name`` are silently discarded.
 
         Returns:
-            list[ToolCall]: List of parsed ToolCall instances.
+            list[ToolCall]: List of parsed ToolCall instances, in the order the
+            endpoint started them.
         """
         results = [
             parse_tool_call(
@@ -1397,88 +1596,14 @@ def is_permanent_quota_error(message: str) -> bool:
     return any(marker in lowered for marker in _PERMANENT_QUOTA_MARKERS)
 
 
-def _build_items_schema(
-    items_type: str,
-    item_properties: list[ToolParameter] | None,
-    *,
-    uppercase: bool,
-) -> JSONSchemaProperty:
-    """Build the ``items`` schema for an array property.
-
-    Args:
-        items_type: JSON Schema type of the array elements.
-        item_properties: Nested property definitions when ``items_type`` is
-            ``"object"``; describes the element object's shape.
-        uppercase: Whether type strings must be uppercased for the target
-            provider (Google Gemini) rather than left lowercase
-            (Anthropic, OpenAI).
-
-    Returns:
-        JSONSchemaProperty: Schema describing a single array element.
-    """
-    element_type = items_type.upper() if uppercase else items_type
-    items: JSONSchemaProperty = {"type": element_type}
-    if items_type == "object" and item_properties:
-        properties: dict[str, JSONSchemaProperty] = {}
-        required: list[str] = []
-        for param in item_properties:
-            properties[param.name] = _build_schema_property(
-                param_type=param.type.upper() if uppercase else param.type,
-                description=param.description,
-                enum_values=param.enum,
-                default=param.default,
-                items_type=param.items_type,
-                item_properties=param.item_properties,
-            )
-            if param.required:
-                required.append(param.name)
-        items["properties"] = properties
-        items["required"] = required
-    return items
-
-
-def _build_schema_property(
-    param_type: str,
-    description: str,
-    enum_values: list[str] | None = None,
-    default: object = None,
-    items_type: str = "string",
-    item_properties: list[ToolParameter] | None = None,
-) -> JSONSchemaProperty:
-    """Build a JSON Schema property from parameters.
-
-    Args:
-        param_type: The JSON Schema type string. Uppercase (e.g. ``"ARRAY"``)
-            signals Google Gemini formatting; lowercase signals
-            Anthropic/OpenAI formatting.
-        description: Description of the parameter.
-        enum_values: Optional list of allowed values.
-        default: Optional default value.
-        items_type: JSON Schema type of array elements when ``param_type`` is
-            an array. Emitted as the required ``items`` definition.
-        item_properties: Nested property definitions for object array
-            elements when ``items_type`` is ``"object"``.
-
-    Returns:
-        JSONSchemaProperty: JSONSchemaProperty with the specified values.
-    """
-    prop: JSONSchemaProperty = {
-        "type": param_type,
-        "description": description,
-    }
-    if param_type.upper() == "ARRAY":
-        prop["items"] = _build_items_schema(items_type, item_properties, uppercase=param_type.isupper())
-    if enum_values is not None:
-        prop["enum"] = enum_values
-    if default is not None and isinstance(default, (str, int, float, bool)):
-        prop["default"] = default
-    return prop
-
-
 def create_anthropic_tool_schema(
     tool: ToolDefinition,
 ) -> list[AnthropicToolSchema]:
     """Convert ToolDefinition to Anthropic's tool format.
+
+    Delegates to :class:`~intellicrack.providers.dialects.messages.MessagesAdapter`,
+    the single owner of the Messages wire format, so this entry point and the
+    provider path can no longer disagree about a tool's advertised name.
 
     Args:
         tool: The tool definition to convert.
@@ -1486,38 +1611,10 @@ def create_anthropic_tool_schema(
     Returns:
         list[AnthropicToolSchema]: List of tools in Anthropic's format.
     """
-    _logger.debug("create_anthropic_tool_schema", function_count=len(tool.functions))
-    tools: list[AnthropicToolSchema] = []
-
-    for func in tool.functions:
-        properties: dict[str, JSONSchemaProperty] = {}
-        required: list[str] = []
-
-        for param in func.parameters:
-            properties[param.name] = _build_schema_property(
-                param_type=param.type,
-                description=param.description,
-                enum_values=param.enum,
-                default=param.default,
-                items_type=param.items_type,
-                item_properties=param.item_properties,
-            )
-            if param.required:
-                required.append(param.name)
-
-        tool_schema: AnthropicToolSchema = {
-            "name": to_wire_name(func.name),
-            "description": func.description,
-            "input_schema": {
-                "type": "object",
-                "properties": properties,
-                "required": required,
-            },
-        }
-        tools.append(tool_schema)
-
-    _logger.debug("create_anthropic_tool_schema_complete", tools_created=len(tools))
-    return tools
+    adapter = adapter_for(ApiDialect.MESSAGES)
+    schemas = adapter.build_tool_schemas([tool], adapter.default_capabilities())
+    _logger.debug("create_anthropic_tool_schema_complete", tools_created=len(schemas))
+    return [cast("AnthropicToolSchema", schema) for schema in schemas]
 
 
 def create_openai_tool_schema(
@@ -1525,47 +1622,19 @@ def create_openai_tool_schema(
 ) -> list[OpenAIToolSchema]:
     """Convert ToolDefinition to OpenAI's tool format.
 
+    Delegates to
+    :class:`~intellicrack.providers.dialects.chat_completions.ChatCompletionsAdapter`.
+
     Args:
         tool: The tool definition to convert.
 
     Returns:
         list[OpenAIToolSchema]: List of tools in OpenAI's format.
     """
-    _logger.debug("create_openai_tool_schema", function_count=len(tool.functions))
-    tools: list[OpenAIToolSchema] = []
-
-    for func in tool.functions:
-        properties: dict[str, JSONSchemaProperty] = {}
-        required: list[str] = []
-
-        for param in func.parameters:
-            properties[param.name] = _build_schema_property(
-                param_type=param.type,
-                description=param.description,
-                enum_values=param.enum,
-                default=param.default,
-                items_type=param.items_type,
-                item_properties=param.item_properties,
-            )
-            if param.required:
-                required.append(param.name)
-
-        tool_schema: OpenAIToolSchema = {
-            "type": "function",
-            "function": {
-                "name": to_wire_name(func.name),
-                "description": func.description,
-                "parameters": {
-                    "type": "object",
-                    "properties": properties,
-                    "required": required,
-                },
-            },
-        }
-        tools.append(tool_schema)
-
-    _logger.debug("create_openai_tool_schema_complete", tools_created=len(tools))
-    return tools
+    adapter = adapter_for(ApiDialect.CHAT_COMPLETIONS)
+    schemas = adapter.build_tool_schemas([tool], adapter.default_capabilities())
+    _logger.debug("create_openai_tool_schema_complete", tools_created=len(schemas))
+    return [cast("OpenAIToolSchema", schema) for schema in schemas]
 
 
 def create_google_tool_schema(
@@ -1573,44 +1642,55 @@ def create_google_tool_schema(
 ) -> list[GoogleFunctionDeclaration]:
     """Convert ToolDefinition to Google Gemini's function declaration format.
 
+    Delegates to :class:`~intellicrack.providers.dialects.gemini.GeminiAdapter`,
+    which returns a single ``functionDeclarations`` tool; the declarations are
+    unwrapped here so callers keep receiving one entry per function.
+
     Args:
         tool: The tool definition to convert.
 
     Returns:
         list[GoogleFunctionDeclaration]: List of function declarations in Google's format with uppercase types.
     """
-    _logger.debug("create_google_tool_schema", function_count=len(tool.functions))
-    tools: list[GoogleFunctionDeclaration] = []
-
-    for func in tool.functions:
-        properties: dict[str, JSONSchemaProperty] = {}
-        required: list[str] = []
-
-        for param in func.parameters:
-            properties[param.name] = _build_schema_property(
-                param_type=param.type.upper(),
-                description=param.description,
-                enum_values=param.enum,
-                default=param.default,
-                items_type=param.items_type,
-                item_properties=param.item_properties,
-            )
-            if param.required:
-                required.append(param.name)
-
-        tool_schema: GoogleFunctionDeclaration = {
-            "name": to_wire_name(func.name),
-            "description": func.description,
-            "parameters": {
-                "type": "OBJECT",
-                "properties": properties,
-                "required": required,
-            },
-        }
-        tools.append(tool_schema)
-
-    _logger.debug("create_google_tool_schema_complete", tools_created=len(tools))
-    return tools
+    adapter = adapter_for(ApiDialect.GEMINI)
+    declarations: list[GoogleFunctionDeclaration] = []
+    for entry in adapter.build_tool_schemas([tool], adapter.default_capabilities()):
+        raw_declarations = entry.get("functionDeclarations")
+        if isinstance(raw_declarations, list):
+            members: list[Any] = raw_declarations
+            declarations.extend(cast("GoogleFunctionDeclaration", member) for member in members)
+    _logger.debug("create_google_tool_schema_complete", tools_created=len(declarations))
+    return declarations
 
 
 LLMProvider = LLMProviderBase
+
+
+__all__ = [
+    "MAX_ERROR_BODY_CHARS",
+    "REASONING_EFFORT_HIGH_THRESHOLD",
+    "REASONING_EFFORT_LOW_THRESHOLD",
+    "REASONING_EFFORT_MEDIUM_THRESHOLD",
+    "REDACTION_MARKER",
+    "AnthropicToolSchema",
+    "GoogleFunctionDeclaration",
+    "HttpErrorMessages",
+    "JSONSchemaParameters",
+    "JSONSchemaProperty",
+    "LLMProvider",
+    "LLMProviderBase",
+    "OpenAIErrorMessages",
+    "OpenAIFunctionSchema",
+    "OpenAIToolSchema",
+    "SentToolReport",
+    "ToolCallBufferManager",
+    "UsageInfo",
+    "create_anthropic_tool_schema",
+    "create_google_tool_schema",
+    "create_openai_tool_schema",
+    "is_permanent_quota_error",
+    "map_thinking_budget_to_effort",
+    "parse_tool_call",
+    "redact_secrets",
+    "serialize_tool_result",
+]

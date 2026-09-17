@@ -17,8 +17,9 @@ from pathlib import Path
 
 import pytest
 
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialLoader
+from intellicrack.providers import ids as provider_ids
 
 
 def _make_env_file(content: str) -> Path:
@@ -35,7 +36,7 @@ def _make_env_file(content: str) -> Path:
         return Path(fh.name)
 
 
-def _load_and_validate(env_path: Path, provider: ProviderName) -> tuple[bool, str | None]:
+def _load_and_validate(env_path: Path, provider: str) -> tuple[bool, str | None]:
     """Create a CredentialLoader from env_path and validate the given provider.
 
     Args:
@@ -48,7 +49,7 @@ def _load_and_validate(env_path: Path, provider: ProviderName) -> tuple[bool, st
     return CredentialLoader(env_path=env_path).validate_credentials(provider)
 
 
-def _assert_msg_mentions(msg: str | None, expected_prefix: str, provider: ProviderName) -> None:
+def _assert_msg_mentions(msg: str | None, expected_prefix: str, provider: str) -> None:
     """Assert that msg is a non-empty str containing expected_prefix.
 
     Args:
@@ -61,7 +62,7 @@ def _assert_msg_mentions(msg: str | None, expected_prefix: str, provider: Provid
     assert expected_prefix in msg, f"{provider}: error {msg!r} must mention {expected_prefix!r}"
 
 
-def _assert_invalid_key(provider: ProviderName, env_var: str, bad_key: str, expected_prefix: str) -> None:
+def _assert_invalid_key(provider: str, env_var: str, bad_key: str, expected_prefix: str) -> None:
     """Assert that a key with the wrong prefix fails validation with a diagnostic message.
 
     Args:
@@ -79,7 +80,7 @@ def _assert_invalid_key(provider: ProviderName, env_var: str, bad_key: str, expe
         env_path.unlink()
 
 
-def _assert_valid_key(provider: ProviderName, env_var: str, valid_key: str) -> None:
+def _assert_valid_key(provider: str, env_var: str, valid_key: str) -> None:
     """Assert that a key with the correct prefix validates as (True, None).
 
     Args:
@@ -109,19 +110,19 @@ def _assert_get_credentials_value(env_path: Path, known_key: str, monkeypatch: p
         known_key: The exact key value written to the env file.
         monkeypatch: Pytest monkeypatch fixture used to isolate os.environ.
     """
-    openai_mapping = CredentialLoader.PROVIDER_MAPPINGS[ProviderName.OPENAI]
+    openai_mapping = CredentialLoader.PROVIDER_MAPPINGS[provider_ids.OPENAI]
     monkeypatch.delenv(openai_mapping.api_key_var, raising=False)
     for alias in openai_mapping.api_key_aliases:
         monkeypatch.delenv(alias, raising=False)
 
     loader = CredentialLoader(env_path=env_path)
-    creds = loader.get_credentials(ProviderName.ANTHROPIC)
+    creds = loader.get_credentials(provider_ids.ANTHROPIC)
     assert creds is not None, "get_credentials must return ProviderCredentials when the key is present in the env file"
     assert isinstance(creds, ProviderCredentials), f"Expected ProviderCredentials, got {type(creds)}"
     assert creds.api_key == known_key, (
         f"get_credentials must propagate the exact injected api_key value; expected {known_key!r}, got {creds.api_key!r}"
     )
-    absent_creds = loader.get_credentials(ProviderName.OPENAI)
+    absent_creds = loader.get_credentials(provider_ids.OPENAI)
     assert absent_creds is None, "get_credentials must return None for a provider not present in the controlled env file"
 
 
@@ -178,7 +179,7 @@ class TestCredentialValidation:
         Args:
             credential_loader: Credential loader fixture.
         """
-        for provider in ProviderName:
+        for provider in provider_ids.BUILTIN_PROVIDER_IDS:
             result = credential_loader.validate_credentials(provider)
             assert isinstance(result, tuple), f"Expected tuple for {provider}"
             assert len(result) == _EXPECTED_TUPLE_LENGTH, f"Expected 2-tuple for {provider}"
@@ -199,11 +200,11 @@ class TestCredentialValidation:
         the validation must return False and a non-empty diagnostic string that
         names the expected prefix.
         """
-        cases: list[tuple[ProviderName, str, str, str]] = [
-            (ProviderName.ANTHROPIC, "ANTHROPIC_API_KEY", "wrongprefix-key12345", "sk-ant-"),
-            (ProviderName.OPENAI, "OPENAI_API_KEY", "wrongprefix-key12345", "sk-"),
-            (ProviderName.OPENROUTER, "OPENROUTER_API_KEY", "wrongprefix-key12345", "sk-or-"),
-            (ProviderName.GROK, "XAI_API_KEY", "wrongprefix-key12345", "xai-"),
+        cases: list[tuple[str, str, str, str]] = [
+            (provider_ids.ANTHROPIC, "ANTHROPIC_API_KEY", "wrongprefix-key12345", "sk-ant-"),
+            (provider_ids.OPENAI, "OPENAI_API_KEY", "wrongprefix-key12345", "sk-"),
+            (provider_ids.OPENROUTER, "OPENROUTER_API_KEY", "wrongprefix-key12345", "sk-or-"),
+            (provider_ids.GROK, "XAI_API_KEY", "wrongprefix-key12345", "xai-"),
         ]
         for provider, env_var, bad_key, expected_prefix in cases:
             _assert_invalid_key(provider, env_var, bad_key, expected_prefix)
@@ -215,12 +216,12 @@ class TestCredentialValidation:
         Uses a controlled env file with a syntactically valid (but fake) key so
         the test is unconditional and independent of live credentials.
         """
-        cases: list[tuple[ProviderName, str, str]] = [
-            (ProviderName.ANTHROPIC, "ANTHROPIC_API_KEY", "sk-ant-" + "a" * 50),
-            (ProviderName.OPENAI, "OPENAI_API_KEY", "sk-" + "a" * 48),
-            (ProviderName.OPENROUTER, "OPENROUTER_API_KEY", "sk-or-" + "a" * 48),
-            (ProviderName.GROK, "XAI_API_KEY", "xai-" + "a" * 50),
-            (ProviderName.HUGGINGFACE, "HUGGINGFACE_API_TOKEN", "hf_" + "a" * 30),
+        cases: list[tuple[str, str, str]] = [
+            (provider_ids.ANTHROPIC, "ANTHROPIC_API_KEY", "sk-ant-" + "a" * 50),
+            (provider_ids.OPENAI, "OPENAI_API_KEY", "sk-" + "a" * 48),
+            (provider_ids.OPENROUTER, "OPENROUTER_API_KEY", "sk-or-" + "a" * 48),
+            (provider_ids.GROK, "XAI_API_KEY", "xai-" + "a" * 50),
+            (provider_ids.HUGGINGFACE, "HUGGINGFACE_API_TOKEN", "hf_" + "a" * 30),
         ]
         for provider, env_var, valid_key in cases:
             _assert_valid_key(provider, env_var, valid_key)
@@ -248,7 +249,7 @@ class TestCredentialValidation:
         env_path = _make_env_file("")
         try:
             loader = CredentialLoader(env_path=env_path)
-            for provider in ProviderName:
+            for provider in provider_ids.BUILTIN_PROVIDER_IDS:
                 is_valid, msg = loader.validate_credentials(provider)
                 assert is_valid is False, f"{provider}: missing key must fail validation"
                 assert isinstance(msg, str), f"{provider}: error message for missing key must be str, got {msg!r}"
@@ -293,7 +294,7 @@ class TestProviderListing:
     def test_list_configured_providers_returns_list(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test list_configured_providers returns list of ProviderName.
+        """Test list_configured_providers returns list of provider id.
 
         Args:
             credential_loader: Credential loader fixture.
@@ -301,13 +302,13 @@ class TestProviderListing:
         configured = credential_loader.list_configured_providers()
         assert isinstance(configured, list)
         for provider in configured:
-            assert isinstance(provider, ProviderName), f"Expected ProviderName, got {type(provider)}"
+            assert isinstance(provider, str), f"Expected provider id, got {type(provider)}"
 
     @staticmethod
     def test_list_missing_providers_returns_list(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test list_missing_providers returns list of ProviderName.
+        """Test list_missing_providers returns list of provider id.
 
         Args:
             credential_loader: Credential loader fixture.
@@ -315,7 +316,7 @@ class TestProviderListing:
         missing = credential_loader.list_missing_providers()
         assert isinstance(missing, list)
         for provider in missing:
-            assert isinstance(provider, ProviderName), f"Expected ProviderName, got {type(provider)}"
+            assert isinstance(provider, str), f"Expected provider id, got {type(provider)}"
 
     @staticmethod
     def test_configured_and_missing_cover_all_providers(
@@ -329,7 +330,7 @@ class TestProviderListing:
         configured = set(credential_loader.list_configured_providers())
         missing = set(credential_loader.list_missing_providers())
 
-        all_providers = set(ProviderName)
+        all_providers = provider_ids.BUILTIN_PROVIDER_IDS
         covered = configured.union(missing)
 
         assert covered == all_providers, (
@@ -352,7 +353,7 @@ class TestApiKeyFormatValidation:
         Uses a synthetic key injected via a controlled env file; runs
         unconditionally so the format-validation logic is always exercised.
         """
-        _assert_valid_key(ProviderName.ANTHROPIC, "ANTHROPIC_API_KEY", "sk-ant-api03-" + "A" * 95)
+        _assert_valid_key(provider_ids.ANTHROPIC, "ANTHROPIC_API_KEY", "sk-ant-api03-" + "A" * 95)
 
     @staticmethod
     def test_anthropic_key_wrong_prefix_fails_validation() -> None:
@@ -361,7 +362,7 @@ class TestApiKeyFormatValidation:
         Unconditional: uses a synthetic bad key injected via a controlled env file.
         """
         _assert_invalid_key(
-            ProviderName.ANTHROPIC,
+            provider_ids.ANTHROPIC,
             "ANTHROPIC_API_KEY",
             "sk-wrongprefix-" + "A" * 60,
             "sk-ant-",
@@ -370,17 +371,17 @@ class TestApiKeyFormatValidation:
     @staticmethod
     def test_openai_key_correct_prefix_validates() -> None:
         """OpenAI key with correct prefix sk- validates unconditionally."""
-        _assert_valid_key(ProviderName.OPENAI, "OPENAI_API_KEY", "sk-proj-" + "A" * 40)
+        _assert_valid_key(provider_ids.OPENAI, "OPENAI_API_KEY", "sk-proj-" + "A" * 40)
 
     @staticmethod
     def test_openrouter_key_correct_prefix_validates() -> None:
         """OpenRouter key with correct prefix sk-or- validates unconditionally."""
-        _assert_valid_key(ProviderName.OPENROUTER, "OPENROUTER_API_KEY", "sk-or-v1-" + "A" * 60)
+        _assert_valid_key(provider_ids.OPENROUTER, "OPENROUTER_API_KEY", "sk-or-v1-" + "A" * 60)
 
     @staticmethod
     def test_grok_key_correct_prefix_validates() -> None:
         """Grok key with correct prefix xai- validates unconditionally."""
-        _assert_valid_key(ProviderName.GROK, "XAI_API_KEY", "xai-" + "A" * 60)
+        _assert_valid_key(provider_ids.GROK, "XAI_API_KEY", "xai-" + "A" * 60)
 
     @staticmethod
     def test_live_anthropic_key_prefix_when_configured(
@@ -400,7 +401,7 @@ class TestApiKeyFormatValidation:
         if not has_anthropic_key:
             pytest.skip("ANTHROPIC_API_KEY not configured")
 
-        creds = credential_loader.get_credentials(ProviderName.ANTHROPIC)
+        creds = credential_loader.get_credentials(provider_ids.ANTHROPIC)
         assert creds is not None, "Expected credentials after validation"
         assert creds.api_key is not None, "Expected api_key to be set"
         assert creds.api_key.startswith("sk-ant-"), f"Live Anthropic key must start with 'sk-ant-', got prefix: {creds.api_key[:10]!r}"

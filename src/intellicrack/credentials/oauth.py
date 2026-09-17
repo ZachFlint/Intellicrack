@@ -29,8 +29,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final, cast
 import httpx
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import IntellicrackError, ProviderCredentials, ProviderName
+from intellicrack.core.types import IntellicrackError, ProviderCredentials
 from intellicrack.credentials.store import CredentialSource, get_credential_store
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -99,21 +100,21 @@ class OAuthProvider(Enum):
     HUGGINGFACE = "huggingface"
 
 
-_OAUTH_TO_PROVIDER_NAME: dict[OAuthProvider, ProviderName] = {
-    OAuthProvider.GOOGLE: ProviderName.GOOGLE,
-    OAuthProvider.ANTHROPIC: ProviderName.ANTHROPIC,
-    OAuthProvider.HUGGINGFACE: ProviderName.HUGGINGFACE,
+_OAUTH_TO_PROVIDER_NAME: dict[OAuthProvider, str] = {
+    OAuthProvider.GOOGLE: provider_ids.GOOGLE,
+    OAuthProvider.ANTHROPIC: provider_ids.ANTHROPIC,
+    OAuthProvider.HUGGINGFACE: provider_ids.HUGGINGFACE,
 }
 
 
-def _oauth_provider_to_name(provider: OAuthProvider) -> ProviderName:
-    """Map an OAuthProvider to the corresponding ProviderName.
+def _oauth_provider_to_name(provider: OAuthProvider) -> str:
+    """Map an OAuthProvider to the corresponding provider instance id.
 
     Args:
         provider: The OAuth provider enum value.
 
     Returns:
-        ProviderName: The matching ProviderName.
+        str: The matching provider instance id.
 
     Raises:
         KeyError: If the provider has no mapping.

@@ -45,13 +45,13 @@ from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
-    ProviderName,
     ToolCall,
     ToolDefinition,
     ToolFunction,
     ToolName,
     ToolParameter,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.registry import ProviderRegistry
 
@@ -226,13 +226,13 @@ class _ScriptedProviderBase(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """Provider name constant.
 
         Returns:
-            ProviderName: Always OPENAI (an arbitrary real enum member).
+            str: Always OPENAI (an arbitrary real enum member).
         """
-        return ProviderName.OPENAI
+        return provider_ids.OPENAI
 
     @override
     async def connect(self, credentials: ProviderCredentials) -> None:
@@ -254,7 +254,7 @@ class _ScriptedProviderBase(LLMProviderBase):
             ModelInfo(
                 id=_MODEL_ID,
                 name=_MODEL_ID,
-                provider=ProviderName.OPENAI,
+                provider=provider_ids.OPENAI,
                 context_window=8192,
                 supports_tools=True,
                 supports_vision=False,
@@ -446,7 +446,7 @@ class TestPart0EmptyContentToolOnlyTurn:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("run a probe")
 
         asyncio.run(_run())
@@ -476,7 +476,7 @@ class TestPart0EmptyContentToolOnlyTurn:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("run a probe")
 
         asyncio.run(_run())
@@ -575,7 +575,7 @@ class TestDynamicToolLoadingFullLoop:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("please set a breakpoint at the entry point")
 
         asyncio.run(_run())
@@ -609,7 +609,7 @@ class TestDynamicToolLoadingFullLoop:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("please set a breakpoint at the entry point")
 
         asyncio.run(_run())
@@ -675,7 +675,7 @@ class TestDynamicToolLoadingFullLoop:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("set a breakpoint immediately, no searching")
 
         asyncio.run(_run())
@@ -717,7 +717,7 @@ class TestMetaToolAndCoreNeverTrimmed:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
 
         async def _prepare() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
 
         asyncio.run(_prepare())
 
@@ -733,8 +733,8 @@ class TestMetaToolAndCoreNeverTrimmed:
 
             @property
             @override
-            def name(self) -> ProviderName:
-                return ProviderName.GROK
+            def name(self) -> str:
+                return provider_ids.GROK
 
             @override
             async def connect(self, credentials: ProviderCredentials) -> None:

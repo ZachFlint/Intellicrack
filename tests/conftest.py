@@ -33,8 +33,9 @@ import pytest
 import structlog
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialLoader
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.xpu_utils import is_arc_b580, is_xpu_available
 from tests._helpers.host_native import (
     HOST_NATIVE_MARKER,
@@ -307,7 +308,7 @@ def has_anthropic_key(credential_loader: CredentialLoader) -> bool:
     Returns:
         bool: True if a valid Anthropic API key is configured.
     """
-    is_valid, _ = credential_loader.validate_credentials(ProviderName.ANTHROPIC)
+    is_valid, _ = credential_loader.validate_credentials(provider_ids.ANTHROPIC)
     return is_valid
 
 
@@ -321,7 +322,7 @@ def has_openai_key(credential_loader: CredentialLoader) -> bool:
     Returns:
         bool: True if a valid OpenAI API key is configured.
     """
-    is_valid, _ = credential_loader.validate_credentials(ProviderName.OPENAI)
+    is_valid, _ = credential_loader.validate_credentials(provider_ids.OPENAI)
     return is_valid
 
 
@@ -335,7 +336,7 @@ def has_google_key(credential_loader: CredentialLoader) -> bool:
     Returns:
         bool: True if a Google API key is configured.
     """
-    is_valid, _ = credential_loader.validate_credentials(ProviderName.GOOGLE)
+    is_valid, _ = credential_loader.validate_credentials(provider_ids.GOOGLE)
     return is_valid
 
 
@@ -349,7 +350,7 @@ def has_openrouter_key(credential_loader: CredentialLoader) -> bool:
     Returns:
         bool: True if a valid OpenRouter API key is configured.
     """
-    is_valid, _ = credential_loader.validate_credentials(ProviderName.OPENROUTER)
+    is_valid, _ = credential_loader.validate_credentials(provider_ids.OPENROUTER)
     return is_valid
 
 
@@ -363,7 +364,7 @@ def has_huggingface_key(credential_loader: CredentialLoader) -> bool:
     Returns:
         bool: True if a valid HuggingFace API token is configured.
     """
-    is_valid, _ = credential_loader.validate_credentials(ProviderName.HUGGINGFACE)
+    is_valid, _ = credential_loader.validate_credentials(provider_ids.HUGGINGFACE)
     return is_valid
 
 
@@ -377,7 +378,7 @@ def has_grok_key(credential_loader: CredentialLoader) -> bool:
     Returns:
         bool: True if a valid Grok API key is configured.
     """
-    is_valid, _ = credential_loader.validate_credentials(ProviderName.GROK)
+    is_valid, _ = credential_loader.validate_credentials(provider_ids.GROK)
     return is_valid
 
 
@@ -403,14 +404,14 @@ def has_ollama_available() -> bool:
 
 
 @pytest.fixture(scope="session")
-def configured_providers(credential_loader: CredentialLoader) -> list[ProviderName]:
+def configured_providers(credential_loader: CredentialLoader) -> list[str]:
     """Get list of providers with valid credentials configured.
 
     Args:
         credential_loader: The credential loader instance.
 
     Returns:
-        list[ProviderName]: List of ProviderName enums for configured providers.
+        list[str]: List of provider id enums for configured providers.
     """
     return credential_loader.list_configured_providers()
 
@@ -432,7 +433,7 @@ def anthropic_credentials(
     """
     if not has_anthropic_key:
         return None
-    return credential_loader.get_credentials(ProviderName.ANTHROPIC)
+    return credential_loader.get_credentials(provider_ids.ANTHROPIC)
 
 
 @pytest.fixture(scope="session")
@@ -452,7 +453,7 @@ def openai_credentials(
     """
     if not has_openai_key:
         return None
-    return credential_loader.get_credentials(ProviderName.OPENAI)
+    return credential_loader.get_credentials(provider_ids.OPENAI)
 
 
 @pytest.fixture(scope="session")
@@ -472,7 +473,7 @@ def google_credentials(
     """
     if not has_google_key:
         return None
-    return credential_loader.get_credentials(ProviderName.GOOGLE)
+    return credential_loader.get_credentials(provider_ids.GOOGLE)
 
 
 @pytest.fixture(scope="session")
@@ -492,7 +493,7 @@ def openrouter_credentials(
     """
     if not has_openrouter_key:
         return None
-    return credential_loader.get_credentials(ProviderName.OPENROUTER)
+    return credential_loader.get_credentials(provider_ids.OPENROUTER)
 
 
 @pytest.fixture(scope="session")
@@ -507,7 +508,7 @@ def ollama_credentials(
     Returns:
         ProviderCredentials: ProviderCredentials for Ollama (may have empty api_key for local).
     """
-    creds = credential_loader.get_credentials(ProviderName.OLLAMA)
+    creds = credential_loader.get_credentials(provider_ids.OLLAMA)
     if creds is None:
         return ProviderCredentials(
             api_key=None,
@@ -533,7 +534,7 @@ def huggingface_credentials(
     """
     if not has_huggingface_key:
         return None
-    return credential_loader.get_credentials(ProviderName.HUGGINGFACE)
+    return credential_loader.get_credentials(provider_ids.HUGGINGFACE)
 
 
 @pytest.fixture(scope="session")
@@ -553,7 +554,7 @@ def grok_credentials(
     """
     if not has_grok_key:
         return None
-    return credential_loader.get_credentials(ProviderName.GROK)
+    return credential_loader.get_credentials(provider_ids.GROK)
 
 
 @pytest.fixture(scope="session")

@@ -23,13 +23,13 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     RateLimitError,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
     LLMProviderBase,
     OpenAIErrorMessages,
@@ -130,13 +130,13 @@ class OpenAIProvider(LLMProviderBase):
         self._logger.info("openai_provider_initialized")
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: ProviderName.OPENAI
+            str: The ``openai`` built-in provider id.
         """
-        return ProviderName.OPENAI
+        return provider_ids.OPENAI
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to OpenAI API.
@@ -313,7 +313,7 @@ class OpenAIProvider(LLMProviderBase):
                 ModelInfo(
                     id=model_id,
                     name=model_id,
-                    provider=ProviderName.OPENAI,
+                    provider=provider_ids.OPENAI,
                     context_window=self._infer_context_window(model_id),
                     supports_tools=True,
                     supports_vision=self._infer_supports_vision(model_id),
