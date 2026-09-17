@@ -532,6 +532,11 @@ class MessagesAdapter(DialectAdapter):
         index = event.get("index")
         raw_block = event.get("content_block")
         block: dict[str, Any] = raw_block if isinstance(raw_block, dict) else {}
+        if block.get("type") == "server_tool_use":
+            self._open_blocks.pop(str(index), None)
+            block_id = block.get("id")
+            _logger.debug("messages_server_tool_use_streamed", block_id=block_id)
+            return []
         if block.get("type") != "tool_use":
             self._open_blocks.pop(str(index), None)
             if block.get("type") in {"thinking", "redacted_thinking"}:
