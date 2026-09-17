@@ -310,7 +310,9 @@ def tool_result_text(result: ToolResult) -> str:
     Multi-part content wins when present, because an externally-sourced tool
     that supplied parts described its own output more precisely than the
     legacy ``result`` value can. Bridge results, which carry no parts, fall
-    through to ``result`` exactly as before.
+    through to ``result`` exactly as before -- including on failure, where the
+    failure travels as the dialect's own error signal rather than by replacing
+    the result text.
 
     Args:
         result: The tool result to render.
@@ -320,8 +322,6 @@ def tool_result_text(result: ToolResult) -> str:
     """
     if result.content:
         return render_parts_as_text(result.content)
-    if result.error and not result.success:
-        return result.error
     return serialize_tool_result(result.result)
 
 

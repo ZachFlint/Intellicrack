@@ -718,8 +718,8 @@ class ChatPanel(QFrame):
             self._streaming_message.tool_calls = message.tool_calls
         if message.tool_results:
             self._streaming_message.tool_results = message.tool_results
-        if message.thinking_content:
-            self._streaming_message.thinking_content = message.thinking_content
+        if message.reasoning:
+            self._streaming_message.reasoning = message.reasoning
 
         _logger.debug(
             "streaming_message_finalized",

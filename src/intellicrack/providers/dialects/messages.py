@@ -415,10 +415,10 @@ class MessagesAdapter(DialectAdapter):
         messages_obj = body.get("messages")
         if isinstance(messages_obj, list) and messages_obj:
             messages_list: list[Any] = messages_obj
-            MessagesAdapter._cache_last_message_block(messages_list)
+            MessagesAdapter.cache_last_message_block(messages_list)
 
     @staticmethod
-    def _cache_last_message_block(messages: list[Any]) -> None:
+    def cache_last_message_block(messages: list[Any]) -> None:
         """Tag the last content block of the final turn for caching.
 
         Args:
