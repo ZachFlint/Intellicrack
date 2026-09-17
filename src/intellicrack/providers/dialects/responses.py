@@ -27,6 +27,7 @@ import json
 from typing import TYPE_CHECKING, Any, ClassVar, Final, override
 
 from intellicrack.bridges.json_schema import function_parameters, to_strict_subset
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
     ReasoningItem,
@@ -426,14 +427,14 @@ class ResponsesAdapter(DialectAdapter):
             DialectResponse: The normalized response.
         """
         raw_output = payload.get("output")
-        output: list[Any] = raw_output if isinstance(raw_output, list) else []
+        output: list[Any] = raw_output if is_json_array(raw_output) else []
         text_parts: list[str] = []
         tool_calls: list[ToolCall] = []
         reasoning: list[ReasoningItem] = []
         loaded: list[str] = []
 
         for entry in output:
-            if not isinstance(entry, dict):
+            if not is_json_object(entry):
                 continue
             item: dict[str, Any] = entry
             item_type = item.get("type")
@@ -665,12 +666,12 @@ def _message_text(item: Mapping[str, Any]) -> list[str]:
         list[str]: Every ``output_text`` chunk, in order.
     """
     raw_content = item.get("content")
-    if not isinstance(raw_content, list):
+    if not is_json_array(raw_content):
         return []
     content: list[Any] = raw_content
     texts: list[str] = []
     for entry in content:
-        if not isinstance(entry, dict):
+        if not is_json_object(entry):
             continue
         part: dict[str, Any] = entry
         if part.get("type") == "output_text":
@@ -713,11 +714,11 @@ def _parse_reasoning_item(item: Mapping[str, Any]) -> ReasoningItem:
     """
     raw_summary = item.get("summary")
     summary: tuple[str, ...] = ()
-    if isinstance(raw_summary, list):
+    if is_json_array(raw_summary):
         entries: list[Any] = raw_summary
         collected: list[str] = []
         for entry in entries:
-            if isinstance(entry, dict):
+            if is_json_object(entry):
                 part: dict[str, Any] = entry
                 text = part.get("text")
                 if isinstance(text, str):
@@ -750,7 +751,7 @@ def _added_item_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
         list[StreamDelta]: One fragment delta, or an empty list.
     """
     raw_item = event.get("item")
-    if not isinstance(raw_item, dict):
+    if not is_json_object(raw_item):
         return []
     item: dict[str, Any] = raw_item
     if item.get("type") != "function_call":
@@ -780,7 +781,7 @@ def _completed_item_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
         list[StreamDelta]: One reasoning-item delta, or an empty list.
     """
     raw_item = event.get("item")
-    if not isinstance(raw_item, dict):
+    if not is_json_object(raw_item):
         return []
     item: dict[str, Any] = raw_item
     if item.get("type") != "reasoning":
@@ -822,7 +823,7 @@ def _completed_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
         delta.
     """
     raw_response = event.get("response")
-    response: dict[str, Any] = raw_response if isinstance(raw_response, dict) else {}
+    response: dict[str, Any] = raw_response if is_json_object(raw_response) else {}
     deltas: list[StreamDelta] = []
     usage = parse_usage(response.get("usage"))
     if usage is not None:
@@ -841,16 +842,16 @@ def parse_usage(raw: object) -> UsageInfo | None:
     Returns:
         UsageInfo | None: Populated usage, or ``None`` when absent.
     """
-    if not isinstance(raw, dict):
+    if not is_json_object(raw):
         return None
     usage: dict[str, Any] = raw
     prompt = _as_int(usage.get("input_tokens"))
     completion = _as_int(usage.get("output_tokens"))
     total = _as_int(usage.get("total_tokens")) or (prompt + completion)
     input_details = usage.get("input_tokens_details")
-    cached = _as_int(input_details.get("cached_tokens")) if isinstance(input_details, dict) else 0
+    cached = _as_int(input_details.get("cached_tokens")) if is_json_object(input_details) else 0
     output_details = usage.get("output_tokens_details")
-    reasoning = _as_int(output_details.get("reasoning_tokens")) if isinstance(output_details, dict) else 0
+    reasoning = _as_int(output_details.get("reasoning_tokens")) if is_json_object(output_details) else 0
     return UsageInfo(
         prompt_tokens=prompt,
         completion_tokens=completion,
@@ -890,7 +891,7 @@ def canonical_names_in_tool_search_output(item: Mapping[str, Any]) -> list[str]:
         list[str]: Canonical dotted names, in result order.
     """
     raw_results = item.get("results") or item.get("tools")
-    if not isinstance(raw_results, list):
+    if not is_json_array(raw_results):
         return []
     results: list[Any] = raw_results
     names: list[str] = []
@@ -898,7 +899,7 @@ def canonical_names_in_tool_search_output(item: Mapping[str, Any]) -> list[str]:
         if isinstance(entry, str):
             names.append(canonical_from_tool_search_output("", entry))
             continue
-        if not isinstance(entry, dict):
+        if not is_json_object(entry):
             continue
         result: dict[str, Any] = entry
         name = result.get("name")
@@ -916,7 +917,7 @@ def _log_tool_search_event(event: Mapping[str, Any]) -> None:
         event: The decoded tool-search event.
     """
     raw_item = event.get("item")
-    item: dict[str, Any] = raw_item if isinstance(raw_item, dict) else {}
+    item: dict[str, Any] = raw_item if is_json_object(raw_item) else {}
     names = canonical_names_in_tool_search_output(item)
     if names:
         _logger.info("responses_tool_search_loaded", tools=names)

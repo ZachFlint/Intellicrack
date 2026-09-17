@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 
 
@@ -79,6 +80,20 @@ _GEMINI_ALLOWED_KEYWORDS: Final[frozenset[str]] = frozenset({
 })
 """Keywords Gemini's ``Schema`` accepts."""
 
+_SCHEMA_MAP_KEYWORDS: Final[frozenset[str]] = frozenset({"properties"})
+"""Keywords whose value maps a caller-chosen name to a subschema.
+
+A reduction recurses into the values of these and leaves the names alone. The
+names are the tool's own property names, not schema vocabulary, so filtering
+them against a keyword allowlist would delete every argument the tool declares.
+"""
+
+_SCHEMA_LIST_KEYWORDS: Final[frozenset[str]] = frozenset({"anyOf", "oneOf", "allOf", "prefixItems"})
+"""Keywords whose value is a list of subschemas."""
+
+_SCHEMA_KEYWORDS: Final[frozenset[str]] = frozenset({"items", "additionalProperties", "not", "if", "then", "else"})
+"""Keywords whose value is itself a single subschema."""
+
 _GEMINI_TYPE_NAMES: Final[frozenset[str]] = frozenset({
     "string",
     "integer",
@@ -108,13 +123,10 @@ def _lookup_ref(root: dict[str, Any], ref: str) -> dict[str, Any] | None:
         return None
     current: object = root
     for segment in segments:
-        if not isinstance(current, dict):
+        if not is_json_object(current) or segment not in current:
             return None
-        container: dict[str, Any] = current
-        if segment not in container:
-            return None
-        current = container[segment]
-    return current if isinstance(current, dict) else None
+        current = current[segment]
+    return current if is_json_object(current) else None
 
 
 def _inline_node(node: object, root: dict[str, Any], depth: int) -> object:
@@ -130,14 +142,12 @@ def _inline_node(node: object, root: dict[str, Any], depth: int) -> object:
         cannot be resolved within ``depth`` expansions collapses to a
         permissive empty schema, which every dialect accepts.
     """
-    if isinstance(node, list):
-        items: list[Any] = node
-        return [_inline_node(item, root, depth) for item in items]
-    if not isinstance(node, dict):
+    if is_json_array(node):
+        return [_inline_node(item, root, depth) for item in node]
+    if not is_json_object(node):
         return node
 
-    mapping: dict[str, Any] = node
-    ref = mapping.get("$ref")
+    ref = node.get("$ref")
     if isinstance(ref, str):
         if depth <= 0:
             _logger.warning("json_schema_ref_depth_exceeded", ref=ref)
@@ -146,16 +156,15 @@ def _inline_node(node: object, root: dict[str, Any], depth: int) -> object:
         if target is None:
             _logger.warning("json_schema_ref_unresolved", ref=ref)
             return {}
-        merged: dict[str, Any] = {key: value for key, value in mapping.items() if key != "$ref"}
+        merged: dict[str, Any] = {key: value for key, value in node.items() if key != "$ref"}
         expanded = _inline_node(target, root, depth - 1)
-        if isinstance(expanded, dict):
-            expanded_mapping: dict[str, Any] = expanded
-            combined = dict(expanded_mapping)
+        if is_json_object(expanded):
+            combined = dict(expanded)
             combined.update(merged)
             return combined
         return expanded
 
-    return {key: _inline_node(value, root, depth) for key, value in mapping.items() if key not in _DEF_CONTAINERS}
+    return {key: _inline_node(value, root, depth) for key, value in node.items() if key not in _DEF_CONTAINERS}
 
 
 def inline_refs(schema: dict[str, Any]) -> dict[str, Any]:
@@ -172,7 +181,7 @@ def inline_refs(schema: dict[str, Any]) -> dict[str, Any]:
         dict[str, Any]: A new schema with no ``$ref`` and no ``$defs``.
     """
     inlined = _inline_node(schema, schema, MAX_INLINE_DEPTH)
-    return inlined if isinstance(inlined, dict) else {}
+    return inlined if is_json_object(inlined) else {}
 
 
 def _widen_with_null(node: dict[str, Any]) -> dict[str, Any]:
@@ -193,17 +202,15 @@ def _widen_with_null(node: dict[str, Any]) -> dict[str, Any]:
     if isinstance(declared, str):
         widened["type"] = [declared, "null"] if declared != "null" else declared
         return widened
-    if isinstance(declared, list):
-        types: list[Any] = declared
-        names = [str(entry) for entry in types]
+    if is_json_array(declared):
+        names = [str(entry) for entry in declared]
         if "null" not in names:
             names.append("null")
         widened["type"] = names
         return widened
     options = widened.get("anyOf")
-    if isinstance(options, list):
-        branches: list[Any] = options
-        widened["anyOf"] = [*branches, {"type": "null"}]
+    if is_json_array(options):
+        widened["anyOf"] = [*options, {"type": "null"}]
     return widened
 
 
@@ -217,42 +224,52 @@ def _strictify(node: object) -> tuple[object, bool]:
         tuple[object, bool]: The reduced node and whether strict mode can
         faithfully represent it.
     """
-    if isinstance(node, list):
-        entries: list[Any] = node
+    if is_json_array(node):
         reduced_list: list[object] = []
         faithful = True
-        for entry in entries:
+        for entry in node:
             reduced_entry, entry_ok = _strictify(entry)
             reduced_list.append(reduced_entry)
             faithful = faithful and entry_ok
         return reduced_list, faithful
-    if not isinstance(node, dict):
+    if not is_json_object(node):
         return node, True
 
-    mapping: dict[str, Any] = node
     faithful = True
-    if _STRICT_REJECTED_KEYWORDS.intersection(mapping):
-        _logger.debug("json_schema_strict_unsupported_keyword", keywords=sorted(_STRICT_REJECTED_KEYWORDS.intersection(mapping)))
+    rejected = _STRICT_REJECTED_KEYWORDS.intersection(node)
+    if rejected:
+        _logger.debug("json_schema_strict_unsupported_keyword", keywords=sorted(rejected))
         faithful = False
 
     reduced: dict[str, Any] = {}
-    for key, value in mapping.items():
+    for key, value in node.items():
         if key not in _STRICT_ALLOWED_KEYWORDS:
             continue
-        reduced_value, value_ok = _strictify(value)
-        reduced[key] = reduced_value
-        faithful = faithful and value_ok
+        if key in _SCHEMA_MAP_KEYWORDS:
+            if not is_json_object(value):
+                continue
+            members: dict[str, Any] = {}
+            for name, member in value.items():
+                reduced_member, member_ok = _strictify(member)
+                members[name] = reduced_member
+                faithful = faithful and member_ok
+            reduced[key] = members
+            continue
+        if key in _SCHEMA_KEYWORDS or key in _SCHEMA_LIST_KEYWORDS:
+            reduced_value, value_ok = _strictify(value)
+            reduced[key] = reduced_value
+            faithful = faithful and value_ok
+            continue
+        reduced[key] = value
 
     properties = reduced.get("properties")
-    if isinstance(properties, dict):
-        property_map: dict[str, Any] = properties
-        declared_required = mapping.get("required")
-        required_names = {str(name) for name in declared_required} if isinstance(declared_required, list) else set()
+    if is_json_object(properties):
+        declared_required = node.get("required")
+        required_names: set[str] = {str(name) for name in declared_required} if is_json_array(declared_required) else set()
         rebuilt: dict[str, Any] = {}
-        for name, prop in property_map.items():
-            if isinstance(prop, dict) and name not in required_names:
-                prop_mapping: dict[str, Any] = prop
-                rebuilt[name] = _widen_with_null(prop_mapping)
+        for name, prop in properties.items():
+            if is_json_object(prop) and name not in required_names:
+                rebuilt[name] = _widen_with_null(prop)
             else:
                 rebuilt[name] = prop
         reduced["properties"] = rebuilt
@@ -282,7 +299,7 @@ def to_strict_subset(schema: dict[str, Any]) -> tuple[dict[str, Any], bool]:
         guarantee the schema does not actually carry.
     """
     reduced, faithful = _strictify(inline_refs(schema))
-    if not isinstance(reduced, dict):
+    if not is_json_object(reduced):
         return {"type": "object", "properties": {}, "required": [], "additionalProperties": False}, False
     return reduced, faithful
 
@@ -300,9 +317,8 @@ def _gemini_type(declared: object) -> tuple[str | None, bool]:
     names: list[str]
     if isinstance(declared, str):
         names = [declared]
-    elif isinstance(declared, list):
-        entries: list[Any] = declared
-        names = [str(entry) for entry in entries]
+    elif is_json_array(declared):
+        names = [str(entry) for entry in declared]
     else:
         return None, False
 
@@ -323,22 +339,25 @@ def _geminify(node: object) -> object:
     Returns:
         object: The reduced node.
     """
-    if isinstance(node, list):
-        entries: list[Any] = node
-        return [_geminify(entry) for entry in entries]
-    if not isinstance(node, dict):
+    if is_json_array(node):
+        return [_geminify(entry) for entry in node]
+    if not is_json_object(node):
         return node
 
-    mapping: dict[str, Any] = node
     reduced: dict[str, Any] = {}
-    for key, value in mapping.items():
-        if key not in _GEMINI_ALLOWED_KEYWORDS:
+    for key, value in node.items():
+        if key not in _GEMINI_ALLOWED_KEYWORDS or key == "type":
             continue
-        if key == "type":
+        if key in _SCHEMA_MAP_KEYWORDS:
+            if is_json_object(value):
+                reduced[key] = {name: _geminify(member) for name, member in value.items()}
             continue
-        reduced[key] = _geminify(value)
+        if key in _SCHEMA_KEYWORDS or key in _SCHEMA_LIST_KEYWORDS:
+            reduced[key] = _geminify(value)
+            continue
+        reduced[key] = value
 
-    gemini_type, nullable = _gemini_type(mapping.get("type"))
+    gemini_type, nullable = _gemini_type(node.get("type"))
     if gemini_type is not None:
         reduced["type"] = gemini_type
     if nullable:
@@ -348,7 +367,7 @@ def _geminify(node: object) -> object:
         reduced["items"] = {"type": "STRING"}
     if reduced.get("type") == "OBJECT":
         properties = reduced.get("properties")
-        if not isinstance(properties, dict) or not properties:
+        if not is_json_object(properties) or not properties:
             reduced["properties"] = {}
     return reduced
 
@@ -368,9 +387,9 @@ def to_gemini_subset(schema: dict[str, Any]) -> dict[str, Any]:
         dict[str, Any]: The reduced schema, always a Gemini ``OBJECT``.
     """
     reduced = _geminify(inline_refs(schema))
-    if not isinstance(reduced, dict):
+    if not is_json_object(reduced):
         return {"type": "OBJECT", "properties": {}, "required": []}
-    result: dict[str, Any] = reduced
+    result = reduced
     result.setdefault("type", "OBJECT")
     if result["type"] == "OBJECT":
         result.setdefault("properties", {})
@@ -396,7 +415,7 @@ def normalize_object_schema(schema: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("type", "object")
     if normalized["type"] == "object":
         properties = normalized.get("properties")
-        if not isinstance(properties, dict):
+        if not is_json_object(properties):
             normalized["properties"] = {}
         required = normalized.get("required")
         if not isinstance(required, list):
@@ -566,10 +585,10 @@ def build_schema_property(
 ) -> JSONSchemaProperty:
     """Build a JSON Schema property from a ToolParameter.
 
-    A non-scalar default (an empty list, say) is omitted rather than emitted:
-    that is what actually reached every provider before schema generation was
-    consolidated here, and widening it now would change the advertised schema
-    of tools that are working today.
+    Every declared default is emitted, including a list default such as the
+    empty list several sandbox parameters carry. That is what reached each
+    provider before schema generation was consolidated here, so dropping one
+    would silently narrow the advertised schema of tools working today.
 
     Args:
         param: The tool parameter to convert.
@@ -593,7 +612,7 @@ def build_schema_property(
     if param.enum is not None and len(param.enum) > 0:
         prop["enum"] = param.enum
 
-    if param.default is not None and isinstance(param.default, (str, int, float, bool)):
+    if param.default is not None:
         prop["default"] = param.default
 
     return prop

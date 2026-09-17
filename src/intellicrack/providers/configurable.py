@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any, Final, override
 
 import httpx
 
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger, log_provider_request, log_provider_response
 from intellicrack.core.types import (
     AuthenticationError,
@@ -275,7 +276,7 @@ class ConfigurableProvider(LLMProviderBase):
             self._logger.warning("configurable_list_models_failed", error=str(exc))
             raise ProviderError(_ERR_LIST_MODELS_FAILED % (self.name, exc)) from exc
 
-        if not isinstance(payload, dict):
+        if not is_json_object(payload):
             self._logger.warning("configurable_model_payload_not_an_object")
             return []
 
@@ -461,7 +462,7 @@ class ConfigurableProvider(LLMProviderBase):
         except (httpx.HTTPError, ValueError) as exc:
             self._logger.warning("configurable_request_failed", error=str(exc))
             raise ProviderError(_ERR_REQUEST_FAILED % (self.name, exc)) from exc
-        if not isinstance(decoded, dict):
+        if not is_json_object(decoded):
             raise ProviderError(_ERR_PAYLOAD_NOT_OBJECT % self.name)
         return decoded
 
@@ -684,9 +685,9 @@ class ConfigurableProvider(LLMProviderBase):
         )
         for key in ("messages", "input", "contents"):
             raw = body.get(key)
-            if isinstance(raw, list):
+            if is_json_array(raw):
                 entries: list[Any] = raw
-                return [entry for entry in entries if isinstance(entry, dict)]
+                return [entry for entry in entries if is_json_object(entry)]
         return []
 
 

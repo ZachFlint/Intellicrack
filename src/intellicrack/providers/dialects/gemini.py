@@ -26,6 +26,7 @@ import json
 from typing import TYPE_CHECKING, Any, ClassVar, Final, override
 
 from intellicrack.bridges.json_schema import function_parameters
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
     ReasoningItem,
@@ -371,7 +372,7 @@ class GeminiAdapter(DialectAdapter):
             if isinstance(text, str) and text:
                 deltas.append(StreamDelta(text=text))
             raw_call = part.get("functionCall") or part.get("function_call")
-            if isinstance(raw_call, dict):
+            if is_json_object(raw_call):
                 call: dict[str, Any] = raw_call
                 name = call.get("name")
                 args = call.get("args")
@@ -381,7 +382,7 @@ class GeminiAdapter(DialectAdapter):
                             token=f"{name}:{position}",
                             call_id=f"{name}:{position}",
                             name=name if isinstance(name, str) else None,
-                            arguments=json.dumps(args) if isinstance(args, dict) else "{}",
+                            arguments=json.dumps(args) if is_json_object(args) else "{}",
                         ),
                     ),
                 )
@@ -443,10 +444,7 @@ class GeminiAdapter(DialectAdapter):
         ]
         images = image_parts(result)
         if images and capabilities.supports_vision:
-            parts.extend(
-                {"inline_data": {"mime_type": part.mime_type, "data": part.data}}
-                for part in images
-            )
+            parts.extend({"inline_data": {"mime_type": part.mime_type, "data": part.data}} for part in images)
         return parts
 
     @override
@@ -517,22 +515,22 @@ def _iter_candidate_parts(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
         list[dict[str, Any]]: Parts in wire order, or an empty list.
     """
     raw_candidates = payload.get("candidates")
-    if not isinstance(raw_candidates, list) or not raw_candidates:
+    if not is_json_array(raw_candidates) or not raw_candidates:
         return []
     candidates: list[Any] = raw_candidates
     first = candidates[0]
-    if not isinstance(first, dict):
+    if not is_json_object(first):
         return []
     candidate: dict[str, Any] = first
     raw_content = candidate.get("content")
-    if not isinstance(raw_content, dict):
+    if not is_json_object(raw_content):
         return []
     content: dict[str, Any] = raw_content
     raw_parts = content.get("parts")
-    if not isinstance(raw_parts, list):
+    if not is_json_array(raw_parts):
         return []
     parts: list[Any] = raw_parts
-    return [part for part in parts if isinstance(part, dict)]
+    return [part for part in parts if is_json_object(part)]
 
 
 def _finish_reason(payload: Mapping[str, Any]) -> str | None:
@@ -545,11 +543,11 @@ def _finish_reason(payload: Mapping[str, Any]) -> str | None:
         str | None: The finish reason, or ``None`` when absent.
     """
     raw_candidates = payload.get("candidates")
-    if not isinstance(raw_candidates, list) or not raw_candidates:
+    if not is_json_array(raw_candidates) or not raw_candidates:
         return None
     candidates: list[Any] = raw_candidates
     first = candidates[0]
-    if not isinstance(first, dict):
+    if not is_json_object(first):
         return None
     candidate: dict[str, Any] = first
     reason = candidate.get("finishReason")
@@ -567,14 +565,14 @@ def _parse_function_call_part(part: Mapping[str, Any]) -> ToolCall | None:
         no function call.
     """
     raw_call = part.get("functionCall") or part.get("function_call")
-    if not isinstance(raw_call, dict):
+    if not is_json_object(raw_call):
         return None
     call: dict[str, Any] = raw_call
     name = call.get("name")
     if not isinstance(name, str):
         return None
     raw_args = call.get("args")
-    arguments: str | dict[str, object] = dict(raw_args) if isinstance(raw_args, dict) else "{}"
+    arguments: str | dict[str, object] = dict(raw_args) if is_json_object(raw_args) else "{}"
     parsed = parse_tool_call(call_id=str(call.get("id", name)), function_name=name, raw_arguments=arguments)
     signature = part.get("thoughtSignature") or part.get(_THOUGHT_SIGNATURE_KEY)
     if isinstance(signature, bytes):
@@ -593,7 +591,7 @@ def parse_usage(raw: object) -> UsageInfo | None:
     Returns:
         UsageInfo | None: Populated usage, or ``None`` when absent.
     """
-    if not isinstance(raw, dict):
+    if not is_json_object(raw):
         return None
     usage: dict[str, Any] = raw
     prompt = _as_int(usage.get("promptTokenCount"))

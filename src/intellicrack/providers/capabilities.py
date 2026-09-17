@@ -32,6 +32,7 @@ import enum
 from dataclasses import dataclass, field, replace
 from typing import Any, Final
 
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 
 
@@ -463,7 +464,7 @@ def _reasoning_from_mapping(payload: dict[str, Any]) -> ReasoningSupport:
     """
     default = ReasoningSupport()
     raw_levels = payload.get("effort_levels")
-    levels = tuple(str(level) for level in raw_levels) if isinstance(raw_levels, list) else default.effort_levels
+    levels = tuple(str(level) for level in raw_levels) if is_json_array(raw_levels) else default.effort_levels
     return ReasoningSupport(
         supported=bool(payload.get("supported", default.supported)),
         effort_levels=levels,
@@ -592,13 +593,11 @@ def _coerce_override_value(name: str, raw: object) -> object | None:
     if name == "dialect":
         return _coerce_enum(ApiDialect, raw, ApiDialect.CHAT_COMPLETIONS) if isinstance(raw, (str, ApiDialect)) else None
     if name == "token_limit_field":
-        return (
-            _coerce_enum(TokenLimitField, raw, TokenLimitField.MAX_TOKENS) if isinstance(raw, (str, TokenLimitField)) else None
-        )
+        return _coerce_enum(TokenLimitField, raw, TokenLimitField.MAX_TOKENS) if isinstance(raw, (str, TokenLimitField)) else None
     if name == "reasoning":
-        return _reasoning_from_mapping(raw) if isinstance(raw, dict) else None
+        return _reasoning_from_mapping(raw) if is_json_object(raw) else None
     if name == "tool_search":
-        return _tool_search_from_mapping(raw) if isinstance(raw, dict) else None
+        return _tool_search_from_mapping(raw) if is_json_object(raw) else None
     if name in _BOOL_OVERRIDE_FIELDS:
         return bool(raw)
     if name in _INT_OVERRIDE_FIELDS:

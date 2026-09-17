@@ -24,6 +24,7 @@ from google.genai import types
 from google.genai.errors import APIError
 
 from intellicrack.core.error_logging import log_passthrough
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger, log_provider_request, log_provider_response
 from intellicrack.core.types import (
     AuthenticationError,
@@ -1217,11 +1218,11 @@ class GoogleProvider(LLMProviderBase):
         function_declarations: list[types.FunctionDeclaration] = []
         for declaration in self._gemini_declarations(tools):
             parameters = declaration.get("parameters")
-            params: dict[str, Any] = parameters if isinstance(parameters, dict) else {}
+            params: dict[str, Any] = parameters if is_json_object(parameters) else {}
             raw_properties = params.get("properties")
-            properties: dict[str, Any] = raw_properties if isinstance(raw_properties, dict) else {}
+            properties: dict[str, Any] = raw_properties if is_json_object(raw_properties) else {}
             raw_required = params.get("required")
-            required: list[str] = [str(name) for name in raw_required] if isinstance(raw_required, list) else []
+            required: list[str] = [str(name) for name in raw_required] if is_json_array(raw_required) else []
             function_declarations.append(
                 types.FunctionDeclaration(
                     name=str(declaration.get("name", "")),
@@ -1266,9 +1267,9 @@ class GoogleProvider(LLMProviderBase):
         declarations: list[dict[str, Any]] = []
         for entry in self._adapter.build_tool_schemas(self._enforce_tool_count_cap(tools, capabilities), capabilities):
             raw = entry.get("functionDeclarations")
-            if isinstance(raw, list):
+            if is_json_array(raw):
                 members: list[Any] = raw
-                declarations.extend(member for member in members if isinstance(member, dict))
+                declarations.extend(member for member in members if is_json_object(member))
         return declarations
 
 
