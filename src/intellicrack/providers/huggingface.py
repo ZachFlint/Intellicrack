@@ -56,6 +56,7 @@ from intellicrack.providers.base import (
     create_openai_tool_schema,
     parse_tool_call,
 )
+from intellicrack.providers.capabilities import ApiDialect
 from intellicrack.providers.tool_names import to_wire_name
 
 
@@ -226,6 +227,16 @@ class HuggingFaceProvider(LLMProviderBase):
             str: The ``huggingface`` built-in provider id.
         """
         return provider_ids.HUGGINGFACE
+
+    @property
+    @override
+    def dialect(self) -> ApiDialect:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect: Always :data:`ApiDialect.CHAT_COMPLETIONS`.
+        """
+        return ApiDialect.CHAT_COMPLETIONS
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to the HuggingFace Inference API.

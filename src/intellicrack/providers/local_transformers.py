@@ -90,6 +90,8 @@ if TYPE_CHECKING:
     from transformers import PreTrainedModel, PreTrainedTokenizerBase
     from transformers.modeling_outputs import CausalLMOutputWithPast
 
+    from intellicrack.providers.capabilities import ApiDialect
+
 
 _logger = get_logger(__name__)
 
@@ -259,6 +261,20 @@ class LocalTransformersProvider(LLMProviderBase):
             str: The ``local_transformers`` built-in provider id.
         """
         return provider_ids.LOCAL_TRANSFORMERS
+
+    @property
+    @override
+    def dialect(self) -> ApiDialect | None:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect | None: Always ``None``. This provider is not an HTTP
+            endpoint at all: it runs ``AutoModelForCausalLM.from_pretrained``
+            and ``model.generate()`` in-process, and its only HTTP traffic is
+            a reachability probe. It therefore has no wire format, and code
+            that maps a provider to a dialect has to tolerate ``None``.
+        """
+        return None
 
     @property
     def device_type(self) -> str:

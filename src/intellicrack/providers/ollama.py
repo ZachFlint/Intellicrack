@@ -38,6 +38,7 @@ from intellicrack.core.types import (
 )
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase, UsageInfo, create_openai_tool_schema
+from intellicrack.providers.capabilities import ApiDialect
 
 
 if TYPE_CHECKING:
@@ -237,6 +238,16 @@ class OllamaProvider(LLMProviderBase):
             str: The ``ollama`` built-in provider id.
         """
         return provider_ids.OLLAMA
+
+    @property
+    @override
+    def dialect(self) -> ApiDialect:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect: Always :data:`ApiDialect.CHAT_COMPLETIONS`.
+        """
+        return ApiDialect.CHAT_COMPLETIONS
 
     @property
     def local_available(self) -> bool:

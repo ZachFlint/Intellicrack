@@ -38,6 +38,7 @@ from intellicrack.providers.base import (
     is_permanent_quota_error,
     map_thinking_budget_to_effort,
 )
+from intellicrack.providers.capabilities import ApiDialect
 
 
 _GROK_4_CONTEXT_WINDOW = 256000
@@ -127,6 +128,16 @@ class GrokProvider(LLMProviderBase):
             str: The ``grok`` built-in provider id.
         """
         return provider_ids.GROK
+
+    @property
+    @override
+    def dialect(self) -> ApiDialect:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect: Always :data:`ApiDialect.CHAT_COMPLETIONS`.
+        """
+        return ApiDialect.CHAT_COMPLETIONS
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to X.AI Grok API.

@@ -2127,21 +2127,23 @@ class Orchestrator:
         provider: LLMProvider,
         response: Message,
     ) -> None:
-        """Drain pending usage and thinking buffers from the provider.
+        """Drain the pending usage, reasoning and thinking buffers from the provider.
 
-        Each provider exposes :meth:`LLMProviderBase.get_pending_usage`
-        and :meth:`LLMProviderBase.get_pending_thinking` after every
-        chat / chat-stream call.  This helper folds those values into
-        :class:`OrchestratorStats` and copies the most recent thinking
-        text onto ``response.thinking_content`` so the assistant
-        message preserves the model's reasoning summary for downstream
-        callbacks and persistence.
+        Each provider exposes :meth:`LLMProviderBase.get_pending_usage`,
+        :meth:`LLMProviderBase.get_pending_reasoning` and
+        :meth:`LLMProviderBase.get_pending_thinking` after every chat /
+        chat-stream call. This helper folds those values into
+        :class:`OrchestratorStats` and attaches the captured reasoning blocks
+        to the assistant message, so the provider-opaque payloads that have to
+        be echoed back verbatim on the next tool-use turn -- an Anthropic
+        signature, an OpenAI Responses item id -- survive into history rather
+        than being flattened to display text.
 
         Args:
             provider: LLM provider that just produced the response.
             response: Assistant message returned by the provider.
-                Mutated in place to attach ``thinking_content`` when
-                the provider reported any.
+                Mutated in place to attach ``reasoning`` when the provider
+                reported any.
         """
         usage = provider.get_pending_usage()
         if usage is not None:
@@ -2155,10 +2157,15 @@ class Orchestrator:
                 completion_tokens=usage.completion_tokens,
                 total_tokens=usage.total_tokens,
             )
+        if reasoning_items := provider.get_pending_reasoning():
+            if response.reasoning is None:
+                response.reasoning = reasoning_items
+            else:
+                response.reasoning.extend(reasoning_items)
         if thinking_blocks := provider.get_pending_thinking():
             self._stats.thinking_blocks_collected += len(thinking_blocks)
-            if response.thinking_content is None:
-                response.thinking_content = "\n\n".join(thinking_blocks)
+            if response.reasoning is None:
+                response.set_thinking_content("\n\n".join(thinking_blocks))
             _logger.debug(
                 "provider_thinking_recorded",
                 provider=provider.name,
