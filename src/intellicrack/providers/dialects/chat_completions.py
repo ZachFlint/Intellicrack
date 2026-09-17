@@ -262,6 +262,7 @@ class ChatCompletionsAdapter(DialectAdapter):
         Returns:
             dict[str, Any]: The JSON body to POST.
         """
+        self.rehydrate_tool_names(request)
         capabilities = request.capabilities
         body: dict[str, Any] = {
             "model": request.model,

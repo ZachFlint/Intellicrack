@@ -39,7 +39,7 @@ from intellicrack.core.types import (
     ToolCall,
 )
 from intellicrack.providers.capabilities import ApiDialect, ModelCapabilities
-from intellicrack.providers.tool_names import from_wire_name, to_wire_name
+from intellicrack.providers.tool_names import from_wire_name, rehydrate_wire_names, to_wire_name
 
 
 if TYPE_CHECKING:
@@ -673,6 +673,31 @@ class DialectAdapter(ABC):
             return request.system
         parts = [message.content for message in request.messages if message.role == "system" and message.content]
         return "\n\n".join(parts) if parts else None
+
+    @staticmethod
+    def rehydrate_tool_names(request: DialectRequest) -> None:
+        """Register every tool name this turn could have to reverse.
+
+        Reversal of a hash-fallback wire name depends on a process-local
+        registry that is populated as a side effect of writing the name out.
+        A tool that appears only in replayed history -- exactly what tool
+        search and deferred loading produce, since a deferred tool is not in
+        the active set -- would never have been registered, and its wire name
+        would reverse through the primary ``__`` -> ``.`` path to the wrong
+        canonical name.
+
+        Registering the union of the active tools and every tool referenced
+        in history, before the request goes out, closes that gap without
+        persisting anything: the mapping is a pure function of the canonical
+        name, so a cold restart reproduces it exactly.
+
+        Args:
+            request: The normalized request whose names are registered.
+        """
+        names: set[str] = {func.name for tool in request.tools for func in tool.functions}
+        for message in request.messages:
+            names.update(call.function_name for call in message.tool_calls or ())
+        rehydrate_wire_names(sorted(names))
 
     @staticmethod
     def apply_body_overrides(body: dict[str, Any], request: DialectRequest) -> dict[str, Any]:

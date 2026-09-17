@@ -252,6 +252,7 @@ class GeminiAdapter(DialectAdapter):
         Returns:
             dict[str, Any]: The JSON body to POST.
         """
+        self.rehydrate_tool_names(request)
         capabilities = request.capabilities
         body: dict[str, Any] = {
             "contents": self.build_contents(request.messages, capabilities, name_style=request.tool_name_style),

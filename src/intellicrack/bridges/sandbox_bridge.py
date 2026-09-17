@@ -465,7 +465,7 @@ class SandboxBridge(ToolBridgeBase):
             ToolDefinition: ToolDefinition with all sandbox functions.
         """
         return ToolDefinition(
-            tool_name=ToolName.SANDBOX,
+            tool_name=ToolName.SANDBOX.value,
             description=(
                 "Sandbox environment for isolated binary execution with behavior "
                 "monitoring. Use for safely testing patched binaries, observing "
