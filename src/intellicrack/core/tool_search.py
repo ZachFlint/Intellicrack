@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from intellicrack.core.types import ToolDefinition, ToolFunction, ToolName
+from intellicrack.core.types import ToolDefinition, ToolFunction
 
 
 _TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
@@ -100,13 +100,13 @@ class ToolSearchMatch:
     """A single ranked tool-function search hit.
 
     Attributes:
-        tool_name: The :class:`ToolName` of the bridge that owns ``function``.
+        tool_name: Namespace of the bridge that owns ``function``.
         function: The matched :class:`ToolFunction` definition.
         score: Relevance score assigned by :meth:`ToolSearchIndex.search`;
             higher scores rank first.
     """
 
-    tool_name: ToolName
+    tool_name: str
     function: ToolFunction
     score: float
 
@@ -158,8 +158,8 @@ class ToolSearchIndex:
 
         scored: list[ToolSearchMatch] = []
         for definition in self._definitions:
-            tool_name_tokens = set(_tokenize(definition.tool_name.value))
-            bridge_hit = bool(query_tokens & tool_name_tokens) or (bool(lowered_query) and definition.tool_name.value in lowered_query)
+            tool_name_tokens = set(_tokenize(definition.tool_name))
+            bridge_hit = bool(query_tokens & tool_name_tokens) or (bool(lowered_query) and definition.tool_name in lowered_query)
             for func in definition.functions:
                 score = self._score_function(
                     func=func,
@@ -237,8 +237,8 @@ class ToolSearchIndex:
         if not matches:
             return []
 
-        matched_names_by_tool: dict[ToolName, set[str]] = {}
-        order: list[ToolName] = []
+        matched_names_by_tool: dict[str, set[str]] = {}
+        order: list[str] = []
         for match in matches:
             if match.tool_name not in matched_names_by_tool:
                 matched_names_by_tool[match.tool_name] = set()

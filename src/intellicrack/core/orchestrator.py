@@ -1630,7 +1630,7 @@ class Orchestrator:
             ToolDefinition: The single-function ``tools.search`` definition.
         """
         return ToolDefinition(
-            tool_name=ToolName.TOOLS,
+            tool_name=ToolName.TOOLS.value,
             description=(
                 "Dynamic tool discovery. The full tool registry is not advertised up front; "
                 "search it for the functions relevant to your current task before calling them."
@@ -1709,9 +1709,9 @@ class Orchestrator:
             seen.add(name)
             active_names.append(name)
 
-        grouped: dict[ToolName, list[ToolFunction]] = {}
-        order: list[ToolName] = []
-        definition_by_tool: dict[ToolName, ToolDefinition] = {}
+        grouped: dict[str, list[ToolFunction]] = {}
+        order: list[str] = []
+        definition_by_tool: dict[str, ToolDefinition] = {}
         for name in active_names:
             entry = function_index.get(name)
             if entry is None:

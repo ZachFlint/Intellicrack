@@ -805,7 +805,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
             ToolDefinition: ToolDefinition with all available functions.
         """
         return ToolDefinition(
-            tool_name=ToolName.GHIDRA,
+            tool_name=ToolName.GHIDRA.value,
             description="Ghidra static analysis - decompilation, disassembly, cross-references",
             functions=[
                 ToolFunction(
