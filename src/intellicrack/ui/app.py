@@ -343,7 +343,7 @@ class MainWindow(QMainWindow):
             """Create the initial analysis session for the toolbar selection."""
             await self._ensure_active_session(provider_name, model)
 
-        _logger.info("initial_session_kickoff", provider=provider_name.value, model=model)
+        _logger.info("initial_session_kickoff", provider=provider_name, model=model)
         self._run_async(create())
 
     def _apply_smart_window_size(self) -> None:

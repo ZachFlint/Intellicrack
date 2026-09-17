@@ -80,6 +80,7 @@ from intellicrack.core.types import (
 )
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
+from intellicrack.providers.capabilities import TIKTOKEN_O200K
 from intellicrack.providers.registry import ProviderRegistry
 
 
@@ -1623,7 +1624,7 @@ def test_trim_messages_uses_provider_specific_encoding() -> None:
     trimmed = Orchestrator.trim_messages_to_context_window(
         list(messages),
         budget_window,
-        provider=provider_ids.OPENAI,
+        tokenizer=TIKTOKEN_O200K,
     )
 
     assert len(trimmed) == 1

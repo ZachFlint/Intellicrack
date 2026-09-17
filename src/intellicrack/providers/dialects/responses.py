@@ -81,6 +81,18 @@ NAMESPACE_TYPE: Final[str] = "namespace"
 _EFFORT_LOW_THRESHOLD: Final[int] = 4000
 _EFFORT_MEDIUM_THRESHOLD: Final[int] = 16000
 
+_TOOL_SEARCH_ITEM_TYPES: Final[frozenset[str]] = frozenset({"tool_search_call", "tool_search_output"})
+"""Output items a tool search produces. A search result is not a tool call: it
+makes a deferred tool callable, and returning a ``function_call_output`` for
+one is a protocol error."""
+
+_TOOL_SEARCH_EVENT_TYPES: Final[frozenset[str]] = frozenset({
+    "response.tool_search_call.in_progress",
+    "response.tool_search_call.completed",
+    "response.tool_search_output.added",
+})
+"""Streaming events a tool search emits."""
+
 _OPENAI_TOOL_COUNT_CAP: Final[int] = 128
 """Functions callable at the start of a turn, before tool search is enabled."""
 
@@ -418,6 +430,7 @@ class ResponsesAdapter(DialectAdapter):
         text_parts: list[str] = []
         tool_calls: list[ToolCall] = []
         reasoning: list[ReasoningItem] = []
+        loaded: list[str] = []
 
         for entry in output:
             if not isinstance(entry, dict):
@@ -432,7 +445,11 @@ class ResponsesAdapter(DialectAdapter):
                     tool_calls.append(call)
             elif item_type == "reasoning":
                 reasoning.append(_parse_reasoning_item(item))
+            elif item_type in _TOOL_SEARCH_ITEM_TYPES:
+                loaded.extend(canonical_names_in_tool_search_output(item))
 
+        if loaded:
+            _logger.info("responses_tool_search_loaded", tools=loaded)
         status = payload.get("status")
         return DialectResponse(
             content="".join(text_parts),
@@ -465,6 +482,9 @@ class ResponsesAdapter(DialectAdapter):
             return _added_item_deltas(event)
         if event_type == "response.output_item.done":
             return _completed_item_deltas(event)
+        if event_type in _TOOL_SEARCH_EVENT_TYPES:
+            _log_tool_search_event(event)
+            return []
         if event_type == "response.function_call_arguments.delta":
             return _argument_delta(event)
         if event_type == "response.completed":
@@ -852,6 +872,54 @@ def _as_int(raw: object) -> int:
     if isinstance(raw, bool):
         return 0
     return int(raw) if isinstance(raw, (int, float)) else 0
+
+
+def canonical_names_in_tool_search_output(item: Mapping[str, Any]) -> list[str]:
+    """Resolve the canonical names a tool-search result made callable.
+
+    A search result names tools by their wire identity, which under
+    namespaces is the ``(namespace, name)`` pair. Reversing it through
+    :func:`~intellicrack.providers.tool_names.from_wire_pair` is what lets a
+    subsequent call on a tool that was never in the active set still route to
+    its canonical dotted name.
+
+    Args:
+        item: The ``tool_search_call`` or ``tool_search_output`` item.
+
+    Returns:
+        list[str]: Canonical dotted names, in result order.
+    """
+    raw_results = item.get("results") or item.get("tools")
+    if not isinstance(raw_results, list):
+        return []
+    results: list[Any] = raw_results
+    names: list[str] = []
+    for entry in results:
+        if isinstance(entry, str):
+            names.append(canonical_from_tool_search_output("", entry))
+            continue
+        if not isinstance(entry, dict):
+            continue
+        result: dict[str, Any] = entry
+        name = result.get("name")
+        if not isinstance(name, str):
+            continue
+        namespace = result.get("namespace")
+        names.append(canonical_from_tool_search_output(namespace if isinstance(namespace, str) else "", name))
+    return names
+
+
+def _log_tool_search_event(event: Mapping[str, Any]) -> None:
+    """Record which tools a streamed tool search made callable.
+
+    Args:
+        event: The decoded tool-search event.
+    """
+    raw_item = event.get("item")
+    item: dict[str, Any] = raw_item if isinstance(raw_item, dict) else {}
+    names = canonical_names_in_tool_search_output(item)
+    if names:
+        _logger.info("responses_tool_search_loaded", tools=names)
 
 
 def canonical_from_tool_search_output(namespace: str, name: str) -> str:

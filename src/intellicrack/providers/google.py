@@ -1262,8 +1262,9 @@ class GoogleProvider(LLMProviderBase):
             they are unwrapped here because both the SDK builder and the
             legacy dict conversion want the flat list.
         """
+        capabilities = self.capabilities_for("")
         declarations: list[dict[str, Any]] = []
-        for entry in self._adapter.build_tool_schemas(tools, self.capabilities_for("")):
+        for entry in self._adapter.build_tool_schemas(self._enforce_tool_count_cap(tools, capabilities), capabilities):
             raw = entry.get("functionDeclarations")
             if isinstance(raw, list):
                 members: list[Any] = raw

@@ -285,12 +285,13 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             dict[str, Any]: Keyword arguments dict for messages.create or messages.stream.
         """
+        capabilities = self.capabilities_for(model)
         return self._adapter.build_request(
             DialectRequest(
                 model=model,
                 messages=messages,
-                capabilities=self.capabilities_for(model),
-                tools=tools or (),
+                capabilities=capabilities,
+                tools=self._enforce_tool_count_cap(tools, capabilities) if tools else (),
                 max_tokens=max_tokens,
                 tool_choice=tool_choice,
                 thinking=thinking,
