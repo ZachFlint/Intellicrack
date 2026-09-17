@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Final, TypedDict, TypeVar, cast
 import openai
 
 from intellicrack.core.error_logging import log_passthrough
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger, log_provider_response
 from intellicrack.core.types import (
     AuthenticationError,
@@ -1515,7 +1516,7 @@ class LLMProviderBase(ABC):
         except json.JSONDecodeError as exc:
             logger.warning(event, error=str(exc))
             return None
-        return cast("dict[str, Any]", decoded) if isinstance(decoded, dict) else None
+        return decoded if is_json_object(decoded) else None
 
 
 class ToolCallBufferManager:
@@ -1691,9 +1692,8 @@ def create_google_tool_schema(
     declarations: list[GoogleFunctionDeclaration] = []
     for entry in adapter.build_tool_schemas([tool], adapter.default_capabilities()):
         raw_declarations = entry.get("functionDeclarations")
-        if isinstance(raw_declarations, list):
-            members: list[Any] = raw_declarations
-            declarations.extend(cast("GoogleFunctionDeclaration", member) for member in members)
+        if is_json_array(raw_declarations):
+            declarations.extend(cast("GoogleFunctionDeclaration", member) for member in raw_declarations)
     _logger.debug("create_google_tool_schema_complete", tools_created=len(declarations))
     return declarations
 

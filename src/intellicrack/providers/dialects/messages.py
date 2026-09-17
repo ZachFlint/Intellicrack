@@ -28,6 +28,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Final, override
 
 from intellicrack.bridges.json_schema import function_parameters
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
     ProviderError,
@@ -406,15 +407,15 @@ class MessagesAdapter(DialectAdapter):
             ]
 
         tools_obj = body.get("tools")
-        if isinstance(tools_obj, list) and tools_obj:
+        if is_json_array(tools_obj) and tools_obj:
             tools_list: list[Any] = tools_obj
-            cached_tools: list[dict[str, Any]] = [dict(tool) for tool in tools_list if isinstance(tool, dict)]
+            cached_tools: list[dict[str, Any]] = [dict(tool) for tool in tools_list if is_json_object(tool)]
             if cached_tools:
                 cached_tools[-1] = {**cached_tools[-1], "cache_control": dict(_CACHE_CONTROL)}
                 body["tools"] = cached_tools
 
         messages_obj = body.get("messages")
-        if isinstance(messages_obj, list) and messages_obj:
+        if is_json_array(messages_obj) and messages_obj:
             messages_list: list[Any] = messages_obj
             MessagesAdapter.cache_last_message_block(messages_list)
 
@@ -426,7 +427,7 @@ class MessagesAdapter(DialectAdapter):
             messages: Message dicts in Anthropic wire format, mutated in place.
         """
         last_msg = messages[-1]
-        if not isinstance(last_msg, dict):
+        if not is_json_object(last_msg):
             return
         message: dict[str, Any] = last_msg
         content = message.get("content")
@@ -439,10 +440,10 @@ class MessagesAdapter(DialectAdapter):
                 },
             ]
             return
-        if isinstance(content, list) and content:
+        if is_json_array(content) and content:
             blocks: list[Any] = content
             last_block = blocks[-1]
-            if isinstance(last_block, dict):
+            if is_json_object(last_block):
                 block: dict[str, Any] = last_block
                 blocks[-1] = {**block, "cache_control": dict(_CACHE_CONTROL)}
 
@@ -457,13 +458,13 @@ class MessagesAdapter(DialectAdapter):
             DialectResponse: The normalized response.
         """
         raw_content = payload.get("content")
-        blocks: list[Any] = raw_content if isinstance(raw_content, list) else []
+        blocks: list[Any] = raw_content if is_json_array(raw_content) else []
         text_parts: list[str] = []
         tool_calls: list[ToolCall] = []
         reasoning: list[ReasoningItem] = []
 
         for entry in blocks:
-            if not isinstance(entry, dict):
+            if not is_json_object(entry):
                 continue
             block: dict[str, Any] = entry
             block_type = block.get("type")
@@ -515,7 +516,7 @@ class MessagesAdapter(DialectAdapter):
             return _message_delta_deltas(event)
         if event_type == "error":
             raw_error = event.get("error")
-            detail: dict[str, Any] = raw_error if isinstance(raw_error, dict) else {}
+            detail: dict[str, Any] = raw_error if is_json_object(raw_error) else {}
             _logger.warning("messages_stream_error", error=detail.get("message"))
             return [StreamDelta(finish="error")]
         return []
@@ -531,7 +532,7 @@ class MessagesAdapter(DialectAdapter):
         """
         index = event.get("index")
         raw_block = event.get("content_block")
-        block: dict[str, Any] = raw_block if isinstance(raw_block, dict) else {}
+        block: dict[str, Any] = raw_block if is_json_object(raw_block) else {}
         if block.get("type") == "server_tool_use":
             self._open_blocks.pop(str(index), None)
             block_id = block.get("id")
@@ -565,7 +566,7 @@ class MessagesAdapter(DialectAdapter):
         """
         index = event.get("index")
         raw_delta = event.get("delta")
-        delta: dict[str, Any] = raw_delta if isinstance(raw_delta, dict) else {}
+        delta: dict[str, Any] = raw_delta if is_json_object(raw_delta) else {}
         delta_type = delta.get("type")
         if delta_type == "text_delta":
             text = delta.get("text")
@@ -790,7 +791,7 @@ def _parse_tool_use(block: Mapping[str, Any]) -> ToolCall | None:
     if is_server_tool_use_id(call_id):
         return None
     raw_input = block.get("input")
-    arguments: str | dict[str, object] = dict(raw_input) if isinstance(raw_input, dict) else "{}"
+    arguments: str | dict[str, object] = dict(raw_input) if is_json_object(raw_input) else "{}"
     return parse_tool_call(call_id=call_id, function_name=name, raw_arguments=arguments)
 
 
@@ -808,7 +809,7 @@ def _message_delta_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
     if usage is not None:
         deltas.append(StreamDelta(usage=usage))
     raw_delta = event.get("delta")
-    delta: dict[str, Any] = raw_delta if isinstance(raw_delta, dict) else {}
+    delta: dict[str, Any] = raw_delta if is_json_object(raw_delta) else {}
     stop_reason = delta.get("stop_reason")
     if isinstance(stop_reason, str):
         deltas.append(StreamDelta(finish=stop_reason))
@@ -824,7 +825,7 @@ def parse_usage(raw: object) -> UsageInfo | None:
     Returns:
         UsageInfo | None: Populated usage, or ``None`` when absent.
     """
-    if not isinstance(raw, dict):
+    if not is_json_object(raw):
         return None
     usage: dict[str, Any] = raw
     prompt = _as_int(usage.get("input_tokens"))

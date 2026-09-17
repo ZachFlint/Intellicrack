@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 from uuid import uuid4
 
+from .json_payload import is_json_array, is_json_object
 from .logging import get_logger, log_session_operation
 from .types import (
     AudioResultPart,
@@ -113,7 +114,7 @@ def _deserialize_reasoning_item(data: dict[str, Any]) -> ReasoningItem:
         item_id=data.get("item_id"),
         encrypted_content=data.get("encrypted_content"),
         redacted_data=data.get("redacted_data"),
-        summary=tuple(str(part) for part in raw_summary) if isinstance(raw_summary, list) else (),
+        summary=tuple(str(part) for part in raw_summary) if is_json_array(raw_summary) else (),
     )
 
 
@@ -220,7 +221,7 @@ def _deserialize_result_part(data: dict[str, Any]) -> ToolResultPart:
         return TextResultPart(text=str(data.get("text", "")))
     if part_type == _PART_TYPE_STRUCTURED:
         content = data.get("content")
-        return StructuredResultPart(content=dict(content) if isinstance(content, dict) else {})
+        return StructuredResultPart(content=dict(content) if is_json_object(content) else {})
     referenced = _deserialize_referenced_part(part_type, data)
     if referenced is not None:
         return referenced
@@ -264,7 +265,7 @@ def _deserialize_tool_result(data: dict[str, Any]) -> ToolResult:
         ToolResult: The reconstructed result.
     """
     raw_content = data.get("content")
-    content = [_deserialize_result_part(part) for part in raw_content] if isinstance(raw_content, list) else None
+    content = [_deserialize_result_part(part) for part in raw_content] if is_json_array(raw_content) else None
     return ToolResult(
         call_id=str(data.get("call_id", "")),
         success=bool(data.get("success")),
@@ -580,21 +581,18 @@ class SessionStore:
                 NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL, active_binary_index INTEGER DEFAULT -1, notes TEXT DEFAULT '',
 
                 data TEXT NOT NULL )
-                """
-                   ,
+                """,
             )
 
             conn.execute(
-                """CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions (updated_at DESC)"""
-                                                                                                   ,
+                """CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions (updated_at DESC)""",
             )
 
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS session_tags ( session_id TEXT NOT NULL, tag TEXT NOT NULL, PRIMARY KEY (session_id, tag),
 
                 FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE )
-                """
-                   ,
+                """,
             )
 
             _logger.debug("database_schema_initialized", db_path=str(self.db_path))
@@ -630,8 +628,7 @@ class SessionStore:
             conn.execute(
                 """INSERT OR REPLACE INTO sessions (id, name, created_at, updated_at, provider, model, active_binary_index, notes, data)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """
-                   ,
+                """,
                 (
                     session.id,
                     session.name,
@@ -782,8 +779,7 @@ class SessionStore:
         _logger.debug("session_list_all_query", limit=limit)
         with self._connection() as conn:
             rows = conn.execute(
-                """SELECT id, name, created_at, updated_at, provider, model, data FROM sessions ORDER BY updated_at DESC LIMIT ?"""
-                                                                                                                                   ,
+                """SELECT id, name, created_at, updated_at, provider, model, data FROM sessions ORDER BY updated_at DESC LIMIT ?""",
                 (limit,),
             ).fetchall()
 

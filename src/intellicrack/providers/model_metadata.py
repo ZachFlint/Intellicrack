@@ -27,6 +27,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Final, override
 
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ModelInfo
 from intellicrack.providers.capabilities import CapabilityOverride
@@ -142,9 +143,9 @@ def _entries(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """
     for key in ("data", "models"):
         raw = payload.get(key)
-        if isinstance(raw, list):
+        if is_json_array(raw):
             entries: list[Any] = raw
-            return [entry for entry in entries if isinstance(entry, dict)]
+            return [entry for entry in entries if is_json_object(entry)]
     return []
 
 
@@ -268,7 +269,7 @@ def _stated_limits(entry: dict[str, Any]) -> dict[str, Any]:
         stated["max_output_tokens"] = max_output
 
     top_provider = entry.get("top_provider")
-    if isinstance(top_provider, dict):
+    if is_json_object(top_provider):
         provider_entry: dict[str, Any] = top_provider
         nested_context = _first_int(provider_entry, _CONTEXT_KEYS)
         if nested_context is not None:
@@ -287,7 +288,7 @@ def _add_stated_pricing(entry: dict[str, Any], stated: dict[str, Any]) -> None:
         stated: The stated-field mapping, mutated in place.
     """
     pricing = entry.get("pricing")
-    if not isinstance(pricing, dict):
+    if not is_json_object(pricing):
         return
     price_entry: dict[str, Any] = pricing
     prompt_price = _as_price_per_million(price_entry.get("prompt") or price_entry.get("input"))
@@ -308,17 +309,17 @@ def _states_vision(entry: dict[str, Any]) -> bool | None:
         bool | None: The stated value, or ``None`` when the entry is silent.
     """
     architecture = entry.get("architecture")
-    if isinstance(architecture, dict):
+    if is_json_object(architecture):
         arch: dict[str, Any] = architecture
         modality = arch.get("modality")
         if isinstance(modality, str) and modality:
             return "image" in modality
         input_modalities = arch.get("input_modalities")
-        if isinstance(input_modalities, list):
+        if is_json_array(input_modalities):
             modalities: list[Any] = input_modalities
             return any(str(item).lower() == "image" for item in modalities)
     capabilities = entry.get("capabilities")
-    if isinstance(capabilities, dict):
+    if is_json_object(capabilities):
         caps: dict[str, Any] = capabilities
         for key in ("vision", "images", "image_input"):
             value = caps.get(key)
@@ -337,11 +338,11 @@ def _states_tools(entry: dict[str, Any]) -> bool | None:
         bool | None: The stated value, or ``None`` when the entry is silent.
     """
     supported = entry.get("supported_parameters")
-    if isinstance(supported, list):
+    if is_json_array(supported):
         names: list[Any] = supported
         return any(str(name) in _TOOL_PARAMETER_NAMES for name in names)
     capabilities = entry.get("capabilities")
-    if isinstance(capabilities, dict):
+    if is_json_object(capabilities):
         caps: dict[str, Any] = capabilities
         for key in ("tools", "tool_calling", "function_calling"):
             value = caps.get(key)

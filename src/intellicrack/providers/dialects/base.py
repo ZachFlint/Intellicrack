@@ -214,7 +214,7 @@ class DialectRequest:
     enable_cache: bool = False
     stream: bool = False
     store: bool | None = None
-    extra_body: Mapping[str, Any] = field(default_factory=dict)
+    extra_body: Mapping[str, Any] = field(default_factory=dict[str, Any])
     drop_params: frozenset[str] = frozenset()
     tool_name_style: ToolNameStyle = ToolNameStyle.DOUBLE_UNDERSCORE
     system: str | None = None
