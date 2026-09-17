@@ -40,7 +40,6 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     ToolCall,
     ToolChoice,
     ToolChoiceMode,
@@ -49,6 +48,7 @@ from intellicrack.core.types import (
     ToolName,
     ToolParameter,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.anthropic import AnthropicProvider
 from intellicrack.providers.google import GoogleProvider
 from intellicrack.providers.grok import GrokProvider
@@ -323,7 +323,7 @@ def _assert_math_answer(content: str, provider_name: str) -> None:
 def _assert_model_listing(
     models: list[ModelInfo],
     *,
-    provider: ProviderName,
+    provider: str,
     id_substring: str,
     required_model: str | None,
 ) -> None:
@@ -462,7 +462,7 @@ async def ollama_e2e_provider(
     """
     _ = ollama_server
     provider = OllamaProvider()
-    credentials = credential_loader.get_credentials(ProviderName.OLLAMA)
+    credentials = credential_loader.get_credentials(provider_ids.OLLAMA)
     if credentials is None:
         credentials = ProviderCredentials(
             api_key=None,
@@ -599,7 +599,7 @@ class TestAnthropicE2EChat:
             anthropic_provider: A connected AnthropicProvider instance.
         """
         models = await anthropic_provider.list_models()
-        _assert_model_listing(models, provider=ProviderName.ANTHROPIC, id_substring="claude", required_model=None)
+        _assert_model_listing(models, provider=provider_ids.ANTHROPIC, id_substring="claude", required_model=None)
 
 
 class TestOpenAIE2EChat:
@@ -682,7 +682,7 @@ class TestOpenAIE2EChat:
             openai_provider: A connected OpenAIProvider instance.
         """
         models = await openai_provider.list_models()
-        _assert_model_listing(models, provider=ProviderName.OPENAI, id_substring="", required_model=OPENAI_MODEL)
+        _assert_model_listing(models, provider=provider_ids.OPENAI, id_substring="", required_model=OPENAI_MODEL)
 
 
 class TestGoogleE2EChat:
@@ -765,7 +765,7 @@ class TestGoogleE2EChat:
             google_provider: A connected GoogleProvider instance.
         """
         models = await google_provider.list_models()
-        _assert_model_listing(models, provider=ProviderName.GOOGLE, id_substring="gemini", required_model=None)
+        _assert_model_listing(models, provider=provider_ids.GOOGLE, id_substring="gemini", required_model=None)
 
 
 class TestGrokE2EChat:
@@ -848,7 +848,7 @@ class TestGrokE2EChat:
             grok_provider: A connected GrokProvider instance.
         """
         models = await grok_provider.list_models()
-        _assert_model_listing(models, provider=ProviderName.GROK, id_substring="grok", required_model=None)
+        _assert_model_listing(models, provider=provider_ids.GROK, id_substring="grok", required_model=None)
 
 
 class TestOpenRouterE2EChat:
@@ -931,7 +931,7 @@ class TestOpenRouterE2EChat:
             openrouter_provider: A connected OpenRouterProvider instance.
         """
         models = await openrouter_provider.list_models()
-        _assert_model_listing(models, provider=ProviderName.OPENROUTER, id_substring="/", required_model=OPENROUTER_MODEL)
+        _assert_model_listing(models, provider=provider_ids.OPENROUTER, id_substring="/", required_model=OPENROUTER_MODEL)
 
 
 class TestHuggingFaceE2EChat:
@@ -1038,7 +1038,7 @@ class TestHuggingFaceE2EChat:
             huggingface_provider: A connected HuggingFaceProvider instance.
         """
         models = await huggingface_provider.list_models()
-        _assert_model_listing(models, provider=ProviderName.HUGGINGFACE, id_substring="/", required_model=None)
+        _assert_model_listing(models, provider=provider_ids.HUGGINGFACE, id_substring="/", required_model=None)
 
 
 class TestOllamaE2EChat:
@@ -1133,7 +1133,7 @@ class TestOllamaE2EChat:
             ollama_model: The first available Ollama model ID.
         """
         models = await ollama_e2e_provider.list_models()
-        _assert_model_listing(models, provider=ProviderName.OLLAMA, id_substring="", required_model=ollama_model)
+        _assert_model_listing(models, provider=provider_ids.OLLAMA, id_substring="", required_model=ollama_model)
 
 
 class TestCrossProviderConsistency:
@@ -1172,13 +1172,13 @@ class TestCrossProviderConsistency:
         _ = ollama_server
         providers: list[tuple[str, str, LLMProviderBase]] = []
 
-        provider_configs: list[tuple[bool, type[LLMProviderBase], ProviderName, str]] = [
-            (has_anthropic_key, AnthropicProvider, ProviderName.ANTHROPIC, ANTHROPIC_MODEL),
-            (has_openai_key, OpenAIProvider, ProviderName.OPENAI, OPENAI_MODEL),
-            (has_google_key, GoogleProvider, ProviderName.GOOGLE, GOOGLE_MODEL),
-            (has_grok_key, GrokProvider, ProviderName.GROK, GROK_MODEL),
-            (has_openrouter_key, OpenRouterProvider, ProviderName.OPENROUTER, OPENROUTER_MODEL),
-            (has_huggingface_key, HuggingFaceProvider, ProviderName.HUGGINGFACE, HUGGINGFACE_MODEL),
+        provider_configs: list[tuple[bool, type[LLMProviderBase], str, str]] = [
+            (has_anthropic_key, AnthropicProvider, provider_ids.ANTHROPIC, ANTHROPIC_MODEL),
+            (has_openai_key, OpenAIProvider, provider_ids.OPENAI, OPENAI_MODEL),
+            (has_google_key, GoogleProvider, provider_ids.GOOGLE, GOOGLE_MODEL),
+            (has_grok_key, GrokProvider, provider_ids.GROK, GROK_MODEL),
+            (has_openrouter_key, OpenRouterProvider, provider_ids.OPENROUTER, OPENROUTER_MODEL),
+            (has_huggingface_key, HuggingFaceProvider, provider_ids.HUGGINGFACE, HUGGINGFACE_MODEL),
         ]
 
         for has_key, provider_cls, provider_name, model_id in provider_configs:
@@ -1201,7 +1201,7 @@ class TestCrossProviderConsistency:
 
         if ollama_available:
             ollama_prov = OllamaProvider()
-            ollama_creds = credential_loader.get_credentials(ProviderName.OLLAMA)
+            ollama_creds = credential_loader.get_credentials(provider_ids.OLLAMA)
             if ollama_creds is None:
                 ollama_creds = ProviderCredentials(api_key=None, api_base=_OLLAMA_URL)
             await ollama_prov.connect(ollama_creds)
@@ -1339,7 +1339,7 @@ class TestRateLimitAndErrorHandling:
         if not has_openai_key:
             pytest.skip("OPENAI_API_KEY not configured in .env")
 
-        base = credential_loader.get_credentials(ProviderName.OPENAI)
+        base = credential_loader.get_credentials(provider_ids.OPENAI)
         assert base is not None
         unreachable_creds = ProviderCredentials(
             api_key=base.api_key,

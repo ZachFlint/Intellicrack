@@ -35,7 +35,7 @@ import keyring
 import keyring.errors
 import pytest
 
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.credentials.store import (
     CredentialSource,
@@ -43,6 +43,7 @@ from intellicrack.credentials.store import (
     get_credential_store,
     get_credentials,
 )
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -67,7 +68,7 @@ def _keyring_usable() -> bool:
     return bool(CredentialStore().keyring_available)
 
 
-def _purge(provider: ProviderName) -> None:
+def _purge(provider: str) -> None:
     """Delete any keyring entries left behind for a provider.
 
     Args:
@@ -84,27 +85,27 @@ def _purge(provider: ProviderName) -> None:
 
 
 @pytest.fixture
-def ollama_clean() -> Iterator[ProviderName]:
+def ollama_clean() -> Iterator[str]:
     """Yield the OLLAMA provider with keyring entries purged before/after.
 
     Yields:
-        ProviderName: The OLLAMA provider name.
+        str: The OLLAMA provider name.
     """
-    _purge(ProviderName.OLLAMA)
-    yield ProviderName.OLLAMA
-    _purge(ProviderName.OLLAMA)
+    _purge(provider_ids.OLLAMA)
+    yield provider_ids.OLLAMA
+    _purge(provider_ids.OLLAMA)
 
 
 @pytest.fixture
-def anthropic_clean() -> Iterator[ProviderName]:
+def anthropic_clean() -> Iterator[str]:
     """Yield the ANTHROPIC provider with keyring entries purged before/after.
 
     Yields:
-        ProviderName: The ANTHROPIC provider name.
+        str: The ANTHROPIC provider name.
     """
-    _purge(ProviderName.ANTHROPIC)
-    yield ProviderName.ANTHROPIC
-    _purge(ProviderName.ANTHROPIC)
+    _purge(provider_ids.ANTHROPIC)
+    yield provider_ids.ANTHROPIC
+    _purge(provider_ids.ANTHROPIC)
 
 
 @pytest.fixture
@@ -142,7 +143,7 @@ def _write_env(path: Path, **values: str) -> Path:
     return env_file
 
 
-def test_get_credentials_wrapper_returns_seeded_value(ollama_clean: ProviderName) -> None:
+def test_get_credentials_wrapper_returns_seeded_value(ollama_clean: str) -> None:
     """The module-level :func:`get_credentials` returns what the store holds.
 
     Seeds a credential through ``get_credential_store().set`` (real keyring
@@ -167,7 +168,7 @@ def test_get_credentials_wrapper_returns_seeded_value(ollama_clean: ProviderName
     assert fetched.api_key == marker
 
 
-def test_get_credentials_wrapper_delegates_to_singleton(ollama_clean: ProviderName) -> None:
+def test_get_credentials_wrapper_delegates_to_singleton(ollama_clean: str) -> None:
     """:func:`get_credentials` returns exactly what the singleton store yields.
 
     Rather than asserting ``None`` (the ambient environment may carry a real
@@ -193,7 +194,7 @@ def test_get_credentials_wrapper_delegates_to_singleton(ollama_clean: ProviderNa
 
 def test_migrate_from_env_copies_into_keyring(
     tmp_path: Path,
-    ollama_clean: ProviderName,
+    ollama_clean: str,
     restore_env: None,
 ) -> None:
     """``migrate_from_env`` copies an env credential into the OS keyring.
@@ -211,7 +212,7 @@ def test_migrate_from_env_copies_into_keyring(
     env_file = _write_env(tmp_path, OLLAMA_API_KEY=marker)
     store = CredentialStore(fallback_loader=CredentialLoader(env_path=env_file))
 
-    async def _run() -> dict[ProviderName, bool]:
+    async def _run() -> dict[str, bool]:
         return await store.migrate_from_env([ollama_clean])
 
     result = asyncio.run(_run())
@@ -224,7 +225,7 @@ def test_migrate_from_env_copies_into_keyring(
 
 def test_migrate_from_env_overwrite_false_skips_existing(
     tmp_path: Path,
-    ollama_clean: ProviderName,
+    ollama_clean: str,
     restore_env: None,
 ) -> None:
     """With ``overwrite=False`` an already-present keyring entry is preserved.
@@ -245,7 +246,7 @@ def test_migrate_from_env_overwrite_false_skips_existing(
     env_file = _write_env(tmp_path, OLLAMA_API_KEY=env_marker)
     store = CredentialStore(fallback_loader=CredentialLoader(env_path=env_file))
 
-    async def _run() -> tuple[dict[ProviderName, bool], ProviderCredentials | None]:
+    async def _run() -> tuple[dict[str, bool], ProviderCredentials | None]:
         await store.set(ollama_clean, existing)
         migrated = await store.migrate_from_env([ollama_clean], overwrite=False)
         after = await store.get(ollama_clean)
@@ -259,7 +260,7 @@ def test_migrate_from_env_overwrite_false_skips_existing(
 
 def test_migrate_from_env_overwrite_true_replaces(
     tmp_path: Path,
-    ollama_clean: ProviderName,
+    ollama_clean: str,
     restore_env: None,
 ) -> None:
     """With ``overwrite=True`` the env value replaces the keyring entry.
@@ -290,7 +291,7 @@ def test_migrate_from_env_overwrite_true_replaces(
     assert after.api_key == env_marker
 
 
-def test_validate_accepts_correct_anthropic_prefix(anthropic_clean: ProviderName) -> None:
+def test_validate_accepts_correct_anthropic_prefix(anthropic_clean: str) -> None:
     """``validate`` accepts an Anthropic key with the ``sk-ant-`` prefix.
 
     Args:
@@ -316,7 +317,7 @@ def test_validate_accepts_correct_anthropic_prefix(anthropic_clean: ProviderName
     assert error is None
 
 
-def test_validate_rejects_wrong_anthropic_prefix(anthropic_clean: ProviderName) -> None:
+def test_validate_rejects_wrong_anthropic_prefix(anthropic_clean: str) -> None:
     """``validate`` rejects an Anthropic key missing the ``sk-ant-`` prefix.
 
     Args:
@@ -346,16 +347,16 @@ def test_validate_rejects_wrong_anthropic_prefix(anthropic_clean: ProviderName) 
 @pytest.mark.parametrize(
     ("provider", "good_key", "bad_key"),
     [
-        (ProviderName.OPENAI, "sk-", "xx-"),
-        (ProviderName.ANTHROPIC, "sk-ant-", "sk-"),
-        (ProviderName.GOOGLE, "AIza", "BBza"),
-        (ProviderName.GROK, "xai-", "grok-"),
-        (ProviderName.HUGGINGFACE, "hf_", "xf_"),
-        (ProviderName.OPENROUTER, "sk-or-", "sk-"),
+        (provider_ids.OPENAI, "sk-", "xx-"),
+        (provider_ids.ANTHROPIC, "sk-ant-", "sk-"),
+        (provider_ids.GOOGLE, "AIza", "BBza"),
+        (provider_ids.GROK, "xai-", "grok-"),
+        (provider_ids.HUGGINGFACE, "hf_", "xf_"),
+        (provider_ids.OPENROUTER, "sk-or-", "sk-"),
     ],
 )
 def test_validate_per_provider_prefix_branches(
-    provider: ProviderName,
+    provider: str,
     good_key: str,
     bad_key: str,
 ) -> None:
@@ -391,7 +392,7 @@ def test_validate_per_provider_prefix_branches(
     assert bad_error
 
 
-def test_get_source_returns_keyring_for_stored_credential(ollama_clean: ProviderName) -> None:
+def test_get_source_returns_keyring_for_stored_credential(ollama_clean: str) -> None:
     """``get_source`` reports ``KEYRING`` for a credential stored via ``set``.
 
     Args:
@@ -419,7 +420,7 @@ def test_get_source_returns_keyring_for_stored_credential(ollama_clean: Provider
 
 def test_get_source_returns_env_file_for_env_only_credential(
     tmp_path: Path,
-    ollama_clean: ProviderName,
+    ollama_clean: str,
     restore_env: None,
 ) -> None:
     """``get_source`` reports an env source when only a ``.env`` credential exists.

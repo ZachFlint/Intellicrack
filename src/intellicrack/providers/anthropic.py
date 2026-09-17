@@ -32,7 +32,6 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     RateLimitError,
     ThinkingConfig,
     ToolCall,
@@ -40,6 +39,7 @@ from intellicrack.core.types import (
     ToolChoiceMode,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
     LLMProviderBase,
     UsageInfo,
@@ -82,13 +82,13 @@ class AnthropicProvider(LLMProviderBase):
         self._logger.info("anthropic_provider_initialized")
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: ProviderName.ANTHROPIC
+            str: The ``anthropic`` built-in provider id.
         """
-        return ProviderName.ANTHROPIC
+        return provider_ids.ANTHROPIC
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to Anthropic API.
@@ -227,7 +227,7 @@ class AnthropicProvider(LLMProviderBase):
         return ModelInfo(
             id=model_id,
             name=display_name,
-            provider=ProviderName.ANTHROPIC,
+            provider=provider_ids.ANTHROPIC,
             context_window=200000,
             supports_tools=True,
             supports_vision=True,

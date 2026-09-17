@@ -32,7 +32,8 @@ from intellicrack.bridges.base import (
 )
 from intellicrack.core.session import Session
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import ProviderName, ToolDefinition, ToolError, ToolName
+from intellicrack.core.types import ToolDefinition, ToolError, ToolName
+from intellicrack.providers import ids as provider_ids
 
 
 _ADDR: Final[int] = 0x00401000
@@ -631,7 +632,7 @@ class TestBridgeStateSessionIntegration:
         wrong at session-attach time.
         """
         bridge = _MinimalBridge(ToolName.CUTTER)
-        sess = Session.create(provider=ProviderName.ANTHROPIC, model="test")
+        sess = Session.create(provider=provider_ids.ANTHROPIC, model="test")
         assert ToolName.CUTTER not in sess.tool_states
         bridge.set_session(sess)
         assert ToolName.CUTTER in sess.tool_states
@@ -643,7 +644,7 @@ class TestBridgeStateSessionIntegration:
         connected flag immediately after the assignment, not lazily.
         """
         bridge = _MinimalBridge(ToolName.CUTTER)
-        sess = Session.create(provider=ProviderName.ANTHROPIC, model="test")
+        sess = Session.create(provider=provider_ids.ANTHROPIC, model="test")
         bridge.set_session(sess)
 
         new_state = BridgeState(connected=True, tool_running=True)
@@ -659,7 +660,7 @@ class TestBridgeStateSessionIntegration:
         user would see no error message.
         """
         bridge = _MinimalBridge(ToolName.CUTTER)
-        sess = Session.create(provider=ProviderName.ANTHROPIC, model="test")
+        sess = Session.create(provider=provider_ids.ANTHROPIC, model="test")
         bridge.set_session(sess)
 
         bridge.set_last_error("rizin crashed: exit code 139")
@@ -708,7 +709,7 @@ class TestBridgeStateSessionIntegration:
         reflects reality.
         """
         bridge = _MinimalBridge(ToolName.CUTTER)
-        sess = Session.create(provider=ProviderName.ANTHROPIC, model="test")
+        sess = Session.create(provider=provider_ids.ANTHROPIC, model="test")
         bridge.set_session(sess)
 
         new_state = BridgeState(connected=True, tool_running=True)

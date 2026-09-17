@@ -39,7 +39,8 @@ from typing import TYPE_CHECKING, cast
 import httpx
 import pytest
 
-from intellicrack.core.types import ProviderError, ProviderName
+from intellicrack.core.types import ProviderError
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.huggingface import HuggingFaceProvider
 
 
@@ -127,7 +128,7 @@ async def test_list_models_only_returns_router_served_models(
     if not has_huggingface_key:
         pytest.skip("HUGGINGFACE_API_TOKEN / HUGGINGFACE_TOKEN not configured")
 
-    credentials = credential_loader.get_credentials(ProviderName.HUGGINGFACE)
+    credentials = credential_loader.get_credentials(provider_ids.HUGGINGFACE)
     assert credentials is not None, "Expected credentials after validation"
 
     provider = HuggingFaceProvider()

@@ -45,9 +45,9 @@ from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
-    ProviderName,
     ToolCall,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui import (
@@ -240,7 +240,7 @@ def test_save_patched_binary_writes_valid_pe(
 class _StateProvider(LLMProviderBase):
     """Minimal real provider whose connect/disconnect toggle real state."""
 
-    def __init__(self, provider_name: ProviderName) -> None:
+    def __init__(self, provider_name: str) -> None:
         """Initialize the provider with a name.
 
         Args:
@@ -251,11 +251,11 @@ class _StateProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The configured provider name.
 
         Returns:
-            ProviderName: The configured provider name.
+            str: The configured provider name.
         """
         return self._name
 
@@ -386,24 +386,24 @@ def test_apply_provider_settings_disconnects_disabled(
     """
     window = window_factory()
     registry = _provider_registry(window)
-    provider = _StateProvider(ProviderName.OLLAMA)
+    provider = _StateProvider(provider_ids.OLLAMA)
     registry.register(provider)
     run_bridge_coroutine(
         registry.connect_provider(
-            ProviderName.OLLAMA,
+            provider_ids.OLLAMA,
             ProviderCredentials(api_key="k", api_base=None, organization_id=None, project_id=None),
         ),
     )
-    assert registry.get(ProviderName.OLLAMA) is not None
+    assert registry.get(provider_ids.OLLAMA) is not None
     assert provider.is_connected is True
 
     _apply_provider_settings(
         window,
-        {ProviderName.OLLAMA.value: {"enabled": False, "api_key": ""}},
+        {provider_ids.OLLAMA: {"enabled": False, "api_key": ""}},
     )
 
     qtbot.waitUntil(lambda: provider.is_connected is False, timeout=5_000)
-    assert registry.get(ProviderName.OLLAMA) is not None
+    assert registry.get(provider_ids.OLLAMA) is not None
     assert provider.is_connected is False
 
 

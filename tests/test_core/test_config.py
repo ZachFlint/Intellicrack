@@ -26,7 +26,8 @@ from intellicrack.core.config import (
     get_config_file,
     get_project_root,
 )
-from intellicrack.core.types import ConfirmationLevel, ProviderName, ToolName
+from intellicrack.core.types import ConfirmationLevel, ToolName
+from intellicrack.providers import ids as provider_ids
 
 
 class _GeneralSection(TypedDict):
@@ -136,15 +137,15 @@ def test_log_config_defaults() -> None:
     assert lc.json_file is True
 
 
-_EXPECTED_PROVIDERS: Final[frozenset[ProviderName]] = frozenset({
-    ProviderName.ANTHROPIC,
-    ProviderName.OPENAI,
-    ProviderName.GOOGLE,
-    ProviderName.OLLAMA,
-    ProviderName.OPENROUTER,
-    ProviderName.HUGGINGFACE,
-    ProviderName.GROK,
-    ProviderName.LOCAL_TRANSFORMERS,
+_EXPECTED_PROVIDERS: Final[frozenset[str]] = frozenset({
+    provider_ids.ANTHROPIC,
+    provider_ids.OPENAI,
+    provider_ids.GOOGLE,
+    provider_ids.OLLAMA,
+    provider_ids.OPENROUTER,
+    provider_ids.HUGGINGFACE,
+    provider_ids.GROK,
+    provider_ids.LOCAL_TRANSFORMERS,
 })
 
 _EXPECTED_TOOLS: Final[frozenset[ToolName]] = frozenset({
@@ -167,7 +168,7 @@ def test_config_default() -> None:
     negative case that catches any fallback-to-default regression.
     """
     config = Config.default()
-    assert config.default_provider == ProviderName.ANTHROPIC
+    assert config.default_provider == provider_ids.ANTHROPIC
     assert config.confirmation_level == ConfirmationLevel.DESTRUCTIVE
 
     assert set(config.providers.keys()) == _EXPECTED_PROVIDERS, (
@@ -181,13 +182,13 @@ def test_config_default() -> None:
     for tname in _EXPECTED_TOOLS:
         assert config.tools[tname].enabled is True, f"Tool {tname} should be enabled by default"
 
-    assert config.providers[ProviderName.OLLAMA].api_base == "http://localhost:11434"
-    assert config.providers[ProviderName.OPENROUTER].api_base == "https://openrouter.ai/api/v1"
-    assert config.providers[ProviderName.HUGGINGFACE].api_base == "https://api-inference.huggingface.co"
-    assert config.providers[ProviderName.GROK].api_base == "https://api.x.ai/v1"
-    assert config.providers[ProviderName.LOCAL_TRANSFORMERS].default_model == "microsoft/Phi-3-mini-4k-instruct"
-    assert config.providers[ProviderName.LOCAL_TRANSFORMERS].timeout_seconds == 600
-    assert config.providers[ProviderName.LOCAL_TRANSFORMERS].max_retries == 1
+    assert config.providers[provider_ids.OLLAMA].api_base == "http://localhost:11434"
+    assert config.providers[provider_ids.OPENROUTER].api_base == "https://openrouter.ai/api/v1"
+    assert config.providers[provider_ids.HUGGINGFACE].api_base == "https://api-inference.huggingface.co"
+    assert config.providers[provider_ids.GROK].api_base == "https://api.x.ai/v1"
+    assert config.providers[provider_ids.LOCAL_TRANSFORMERS].default_model == "microsoft/Phi-3-mini-4k-instruct"
+    assert config.providers[provider_ids.LOCAL_TRANSFORMERS].timeout_seconds == 600
+    assert config.providers[provider_ids.LOCAL_TRANSFORMERS].max_retries == 1
 
     assert config.tools[ToolName.GHIDRA].port == 4768
     assert config.tools[ToolName.GHIDRA].startup_timeout_seconds == 120
@@ -195,8 +196,8 @@ def test_config_default() -> None:
     assert config.tools[ToolName.FRIDA].startup_timeout_seconds == 10
     assert config.tools[ToolName.PROCESS].auto_install is False
 
-    config.providers[ProviderName.ANTHROPIC] = ProviderConfig(enabled=False)
-    assert config.is_provider_enabled(ProviderName.ANTHROPIC) is False, (
+    config.providers[provider_ids.ANTHROPIC] = ProviderConfig(enabled=False)
+    assert config.is_provider_enabled(provider_ids.ANTHROPIC) is False, (
         "Overriding a default-enabled provider to disabled must return False, not fall back to ProviderConfig default"
     )
 
@@ -206,7 +207,7 @@ def test_config_default() -> None:
     )
 
     config_unknown_provider = Config(providers={})
-    unknown_pc = config_unknown_provider.get_provider_config(ProviderName.GROK)
+    unknown_pc = config_unknown_provider.get_provider_config(provider_ids.GROK)
     assert unknown_pc.enabled is True, "Missing provider falls back to ProviderConfig() default of enabled=True"
     assert unknown_pc.timeout_seconds == _DEFAULT_TIMEOUT
     assert unknown_pc.max_retries == _DEFAULT_RETRIES
@@ -277,22 +278,22 @@ def test_config_get_provider_config() -> None:
     """
     config = Config.default()
 
-    anthropic_pc = config.get_provider_config(ProviderName.ANTHROPIC)
+    anthropic_pc = config.get_provider_config(provider_ids.ANTHROPIC)
     assert anthropic_pc.enabled is True
     assert anthropic_pc.timeout_seconds == _DEFAULT_TIMEOUT
     assert anthropic_pc.max_retries == _DEFAULT_RETRIES
     assert anthropic_pc.api_base is None
 
-    ollama_pc = config.get_provider_config(ProviderName.OLLAMA)
+    ollama_pc = config.get_provider_config(provider_ids.OLLAMA)
     assert ollama_pc.enabled is True
     assert ollama_pc.api_base == "http://localhost:11434"
     assert ollama_pc.timeout_seconds == 300
 
     disabled_config = ProviderConfig(enabled=False, timeout_seconds=10, max_retries=1)
     config_with_disabled = Config(
-        providers={ProviderName.OPENAI: disabled_config},
+        providers={provider_ids.OPENAI: disabled_config},
     )
-    disabled_pc = config_with_disabled.get_provider_config(ProviderName.OPENAI)
+    disabled_pc = config_with_disabled.get_provider_config(provider_ids.OPENAI)
     assert disabled_pc.enabled is False
     assert disabled_pc.timeout_seconds == 10
     assert disabled_pc.max_retries == 1
@@ -307,8 +308,8 @@ def test_config_get_provider_config_unknown() -> None:
     independent results with equal field values (determinism and independence).
     """
     config = Config(providers={})
-    pc1 = config.get_provider_config(ProviderName.GROK)
-    pc2 = config.get_provider_config(ProviderName.GROK)
+    pc1 = config.get_provider_config(provider_ids.GROK)
+    pc2 = config.get_provider_config(provider_ids.GROK)
 
     assert pc1.enabled is True
     assert pc1.api_base is None
@@ -363,21 +364,21 @@ def test_config_is_provider_enabled() -> None:
     ProviderConfig default of True because get_provider_config returns ProviderConfig().
     """
     config = Config.default()
-    assert config.is_provider_enabled(ProviderName.ANTHROPIC) is True
-    assert config.is_provider_enabled(ProviderName.OPENAI) is True
-    assert config.is_provider_enabled(ProviderName.GROK) is True
+    assert config.is_provider_enabled(provider_ids.ANTHROPIC) is True
+    assert config.is_provider_enabled(provider_ids.OPENAI) is True
+    assert config.is_provider_enabled(provider_ids.GROK) is True
 
     config_disabled = Config(
         providers={
-            ProviderName.ANTHROPIC: ProviderConfig(enabled=False),
-            ProviderName.OPENAI: ProviderConfig(enabled=True),
+            provider_ids.ANTHROPIC: ProviderConfig(enabled=False),
+            provider_ids.OPENAI: ProviderConfig(enabled=True),
         },
     )
-    assert config_disabled.is_provider_enabled(ProviderName.ANTHROPIC) is False
-    assert config_disabled.is_provider_enabled(ProviderName.OPENAI) is True
+    assert config_disabled.is_provider_enabled(provider_ids.ANTHROPIC) is False
+    assert config_disabled.is_provider_enabled(provider_ids.OPENAI) is True
 
     config_empty = Config(providers={})
-    assert config_empty.is_provider_enabled(ProviderName.GOOGLE) is True
+    assert config_empty.is_provider_enabled(provider_ids.GOOGLE) is True
 
 
 def test_config_is_tool_enabled() -> None:
@@ -541,7 +542,7 @@ def test_config_from_dict_custom_general() -> None:
         },
     }
     config = Config.from_dict(data)
-    assert config.default_provider == ProviderName.OPENAI
+    assert config.default_provider == provider_ids.OPENAI
     assert config.confirmation_level == ConfirmationLevel.NONE
 
     default = Config.default()
@@ -563,7 +564,7 @@ def test_config_from_dict_custom_general() -> None:
 def test_config_from_dict_invalid_provider_fallback() -> None:
     """Verify from_dict falls back to ANTHROPIC for an unrecognised provider name.
 
-    The fallback must be exactly ProviderName.ANTHROPIC (not None or any other
+    The fallback must be exactly provider_ids.ANTHROPIC (not None or any other
     provider).  Calling from_dict with the same bad value twice must produce
     the same fallback both times (determinism).
     """
@@ -572,8 +573,8 @@ def test_config_from_dict_invalid_provider_fallback() -> None:
     }
     config1 = Config.from_dict(data)
     config2 = Config.from_dict(data)
-    assert config1.default_provider == ProviderName.ANTHROPIC
-    assert config2.default_provider == ProviderName.ANTHROPIC
+    assert config1.default_provider == provider_ids.ANTHROPIC
+    assert config2.default_provider == provider_ids.ANTHROPIC
     assert config1.default_provider is not None
 
 
@@ -596,7 +597,7 @@ def test_config_from_dict_invalid_confirmation_fallback() -> None:
 def test_config_parse_providers_unknown_skipped() -> None:
     """Verify parse_providers skips unknown names and preserves defaults for unprovided providers.
 
-    The unknown key must not appear as any ProviderName in the result.
+    The unknown key must not appear as any provider id in the result.
     Unprovided known providers (GROK, OPENAI, etc.) must retain the
     _default_providers() values - specifically enabled=True - which confirms
     the function merges into the defaults rather than producing a sparse dict.
@@ -606,17 +607,17 @@ def test_config_parse_providers_unknown_skipped() -> None:
         "unknown_provider": {"enabled": True},
     }
     result = Config.parse_providers(providers_data)
-    assert result[ProviderName.ANTHROPIC].enabled is False
+    assert result[provider_ids.ANTHROPIC].enabled is False
 
     unknown_values: list[str] = [pn.value for pn in result]
     assert "unknown_provider" not in unknown_values, "Unknown provider key must not appear in the parsed result"
 
-    assert ProviderName.GROK in result, "GROK must be present as a default provider"
-    assert result[ProviderName.GROK].enabled is True, "Unprovided GROK must retain default enabled=True"
-    assert result[ProviderName.GROK].api_base == "https://api.x.ai/v1", "Unprovided GROK must retain its default api_base"
+    assert provider_ids.GROK in result, "GROK must be present as a default provider"
+    assert result[provider_ids.GROK].enabled is True, "Unprovided GROK must retain default enabled=True"
+    assert result[provider_ids.GROK].api_base == "https://api.x.ai/v1", "Unprovided GROK must retain its default api_base"
 
-    assert ProviderName.OPENAI in result
-    assert result[ProviderName.OPENAI].enabled is True
+    assert provider_ids.OPENAI in result
+    assert result[provider_ids.OPENAI].enabled is True
 
     assert set(result.keys()) == _EXPECTED_PROVIDERS, "parse_providers must return exactly the expected provider set"
 
@@ -759,7 +760,7 @@ theme = "light"
     toml_path.write_bytes(toml_content)
 
     config = Config.load(toml_path)
-    assert config.default_provider == ProviderName.OPENAI
+    assert config.default_provider == provider_ids.OPENAI
     assert config.sandbox.network_enabled is True
     assert config.ui.theme == "light"
     assert config.sandbox.timeout_seconds == _SANDBOX_TIMEOUT
@@ -793,7 +794,7 @@ def test_config_save_and_reload(tmp_path: Path) -> None:
         tools_directory=tmp_path / "tools",
         logs_directory=tmp_path / "logs",
         data_directory=tmp_path / "data",
-        default_provider=ProviderName.OPENAI,
+        default_provider=provider_ids.OPENAI,
         confirmation_level=ConfirmationLevel.NONE,
         sandbox=SandboxConfig(network_enabled=True, timeout_seconds=60, memory_limit_mb=512),
         ui=UIConfig(theme="dark", font_size=_CUSTOM_FONT_SIZE),
@@ -807,16 +808,16 @@ def test_config_save_and_reload(tmp_path: Path) -> None:
 
     reloaded = Config.load(save_path)
 
-    assert reloaded.default_provider == ProviderName.OPENAI
+    assert reloaded.default_provider == provider_ids.OPENAI
     assert reloaded.confirmation_level == ConfirmationLevel.NONE
     assert str(reloaded.tools_directory) == str(config.tools_directory)
     assert str(reloaded.logs_directory) == str(config.logs_directory)
     assert str(reloaded.data_directory) == str(config.data_directory)
 
-    assert reloaded.providers[ProviderName.ANTHROPIC].timeout_seconds == _DEFAULT_TIMEOUT
-    assert reloaded.providers[ProviderName.ANTHROPIC].max_retries == _DEFAULT_RETRIES
-    assert reloaded.providers[ProviderName.OLLAMA].api_base == "http://localhost:11434"
-    assert reloaded.providers[ProviderName.LOCAL_TRANSFORMERS].default_model == "microsoft/Phi-3-mini-4k-instruct"
+    assert reloaded.providers[provider_ids.ANTHROPIC].timeout_seconds == _DEFAULT_TIMEOUT
+    assert reloaded.providers[provider_ids.ANTHROPIC].max_retries == _DEFAULT_RETRIES
+    assert reloaded.providers[provider_ids.OLLAMA].api_base == "http://localhost:11434"
+    assert reloaded.providers[provider_ids.LOCAL_TRANSFORMERS].default_model == "microsoft/Phi-3-mini-4k-instruct"
 
     assert reloaded.tools[ToolName.GHIDRA].port == 4768
     assert reloaded.tools[ToolName.GHIDRA].startup_timeout_seconds == 120

@@ -6,7 +6,7 @@
 """Audit6 CORE-D regression tests for ``intellicrack.core.config``.
 
 Exercises:
-    * F-0010 - ``_default_providers`` includes every ``ProviderName`` member.
+    * F-0010 - ``_default_providers`` includes every ``provider id`` member.
     * F-0021 - ``Config.parse_providers`` is round-trip safe and never drops
       user-defined providers.
 """
@@ -17,7 +17,7 @@ import importlib
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from intellicrack.core.config import Config, ProviderConfig
-from intellicrack.core.types import ProviderName
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -27,43 +27,43 @@ if TYPE_CHECKING:
 _DEFAULT_PROVIDERS_ATTR: Final[str] = "_default_providers"
 
 
-def _default_providers() -> dict[ProviderName, ProviderConfig]:
+def _default_providers() -> dict[str, ProviderConfig]:
     """Return the canonical default provider mapping via ``getattr``.
 
     Returns:
-        dict[ProviderName, ProviderConfig]: Default provider mapping produced
+        dict[str, ProviderConfig]: Default provider mapping produced
             by the production helper.
     """
     config_module = importlib.import_module("intellicrack.core.config")
     fn = cast(
-        "Callable[[], dict[ProviderName, ProviderConfig]]",
+        "Callable[[], dict[str, ProviderConfig]]",
         getattr(config_module, _DEFAULT_PROVIDERS_ATTR),
     )
     return fn()
 
 
 class TestF0010DefaultProvidersCompleteness:
-    """``_default_providers`` must enumerate every ``ProviderName`` member."""
+    """``_default_providers`` must enumerate every ``provider id`` member."""
 
     @staticmethod
     def test_huggingface_in_defaults() -> None:
         """HUGGINGFACE must be present in the default provider mapping."""
         defaults = _default_providers()
-        assert ProviderName.HUGGINGFACE in defaults
-        assert defaults[ProviderName.HUGGINGFACE].enabled is True
+        assert provider_ids.HUGGINGFACE in defaults
+        assert defaults[provider_ids.HUGGINGFACE].enabled is True
 
     @staticmethod
     def test_grok_in_defaults() -> None:
         """GROK must be present in the default provider mapping."""
         defaults = _default_providers()
-        assert ProviderName.GROK in defaults
-        assert defaults[ProviderName.GROK].enabled is True
+        assert provider_ids.GROK in defaults
+        assert defaults[provider_ids.GROK].enabled is True
 
     @staticmethod
     def test_every_enum_member_present() -> None:
-        """Every ``ProviderName`` enum member must appear in defaults."""
+        """Every ``provider id`` enum member must appear in defaults."""
         defaults = _default_providers()
-        for member in ProviderName:
+        for member in provider_ids.BUILTIN_PROVIDER_IDS:
             assert member in defaults, f"missing default for {member.value!r}"
 
 
@@ -74,7 +74,7 @@ class TestF0021ParseProvidersRoundTrip:
     def test_round_trip_preserves_user_overrides_for_huggingface() -> None:
         """A HUGGINGFACE override on disk survives parse + serialise + parse."""
         original_data: dict[str, dict[str, Any]] = {
-            ProviderName.HUGGINGFACE.value: {
+            provider_ids.HUGGINGFACE: {
                 "enabled": False,
                 "api_base": "https://example.invalid/hf",
                 "default_model": "mistralai/Mistral-7B",
@@ -83,8 +83,8 @@ class TestF0021ParseProvidersRoundTrip:
             },
         }
         parsed = Config.parse_providers(original_data)
-        assert ProviderName.HUGGINGFACE in parsed
-        hf = parsed[ProviderName.HUGGINGFACE]
+        assert provider_ids.HUGGINGFACE in parsed
+        hf = parsed[provider_ids.HUGGINGFACE]
         assert hf.enabled is False
         assert hf.api_base == "https://example.invalid/hf"
         assert hf.default_model == "mistralai/Mistral-7B"
@@ -95,7 +95,7 @@ class TestF0021ParseProvidersRoundTrip:
     def test_round_trip_preserves_user_overrides_for_grok() -> None:
         """A GROK override on disk survives parse + serialise + parse."""
         original_data: dict[str, dict[str, Any]] = {
-            ProviderName.GROK.value: {
+            provider_ids.GROK: {
                 "enabled": True,
                 "api_base": "https://api.x.ai/v1/test",
                 "default_model": "grok-2-latest",
@@ -104,8 +104,8 @@ class TestF0021ParseProvidersRoundTrip:
             },
         }
         parsed = Config.parse_providers(original_data)
-        assert ProviderName.GROK in parsed
-        grok = parsed[ProviderName.GROK]
+        assert provider_ids.GROK in parsed
+        grok = parsed[provider_ids.GROK]
         assert grok.enabled is True
         assert grok.api_base == "https://api.x.ai/v1/test"
         assert grok.default_model == "grok-2-latest"
@@ -120,7 +120,7 @@ class TestF0021ParseProvidersRoundTrip:
         serialised = to_dict()
         rebuilt = Config.from_dict(serialised)
 
-        for provider in ProviderName:
+        for provider in provider_ids.BUILTIN_PROVIDER_IDS:
             assert provider in rebuilt.providers, f"round-trip lost {provider.value!r}"
             assert rebuilt.providers[provider] == config.providers[provider]
 
@@ -128,6 +128,6 @@ class TestF0021ParseProvidersRoundTrip:
     def test_unknown_provider_skipped() -> None:
         """A non-enum provider name is skipped without raising."""
         parsed = Config.parse_providers({"definitely_not_a_provider": {"enabled": True}})
-        for member in ProviderName:
+        for member in provider_ids.BUILTIN_PROVIDER_IDS:
             assert member in parsed
         assert "definitely_not_a_provider" not in {key.value for key in parsed}

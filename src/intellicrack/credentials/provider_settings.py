@@ -26,8 +26,9 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Final, cast
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialField, EnvPersistAction
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -139,11 +140,11 @@ def build_settings_section(values: Mapping[str, object]) -> dict[str, object]:
     return section
 
 
-def _empty_timeouts() -> dict[ProviderName, float]:
+def _empty_timeouts() -> dict[str, float]:
     """Create an empty timeout mapping for :class:`ProviderConnectPolicy`.
 
     Returns:
-        dict[ProviderName, float]: A new empty mapping.
+        dict[str, float]: A new empty mapping.
     """
     return {}
 
@@ -157,10 +158,10 @@ class ProviderConnectPolicy:
         timeouts: Request timeout overrides in seconds, keyed by provider.
     """
 
-    disabled: frozenset[ProviderName] = frozenset()
-    timeouts: Mapping[ProviderName, float] = field(default_factory=_empty_timeouts)
+    disabled: frozenset[str] = frozenset()
+    timeouts: Mapping[str, float] = field(default_factory=_empty_timeouts)
 
-    def is_enabled(self, provider: ProviderName) -> bool:
+    def is_enabled(self, provider: str) -> bool:
         """Report whether a provider may be connected automatically.
 
         Args:
@@ -171,7 +172,7 @@ class ProviderConnectPolicy:
         """
         return provider not in self.disabled
 
-    def timeout_for(self, provider: ProviderName) -> float | None:
+    def timeout_for(self, provider: str) -> float | None:
         """Return a provider's saved request timeout.
 
         Args:
@@ -182,7 +183,7 @@ class ProviderConnectPolicy:
         """
         return self.timeouts.get(provider)
 
-    def apply_timeout(self, provider: ProviderName, credentials: ProviderCredentials) -> ProviderCredentials:
+    def apply_timeout(self, provider: str, credentials: ProviderCredentials) -> ProviderCredentials:
         """Return credentials carrying the provider's saved request timeout.
 
         Args:
@@ -287,7 +288,7 @@ class ProviderSettingsStore:
             sections[provider_id] = dict(section)
             self._write(sections)
 
-    def timeout_seconds(self, provider: ProviderName) -> float | None:
+    def timeout_seconds(self, provider: str) -> float | None:
         """Return a provider's saved request timeout.
 
         Args:
@@ -296,9 +297,9 @@ class ProviderSettingsStore:
         Returns:
             float | None: The timeout in seconds, or ``None`` for the provider default.
         """
-        return saved_timeout_seconds(self.section(provider.value))
+        return saved_timeout_seconds(self.section(provider))
 
-    def connect_policy(self, config_enabled: Callable[[ProviderName], bool] | None = None) -> ProviderConnectPolicy:
+    def connect_policy(self, config_enabled: Callable[[str], bool] | None = None) -> ProviderConnectPolicy:
         """Build the automatic-connection policy from the saved settings.
 
         Args:
@@ -310,10 +311,10 @@ class ProviderSettingsStore:
             ProviderConnectPolicy: The disabled providers and timeout overrides.
         """
         sections = self.load()
-        disabled: set[ProviderName] = set()
-        timeouts: dict[ProviderName, float] = {}
-        for provider in ProviderName:
-            section = sections.get(provider.value, {})
+        disabled: set[str] = set()
+        timeouts: dict[str, float] = {}
+        for provider in provider_ids.BUILTIN_PROVIDER_IDS:
+            section = sections.get(provider, {})
             if not saved_enabled(section) or (config_enabled is not None and not config_enabled(provider)):
                 disabled.add(provider)
             timeout = saved_timeout_seconds(section)
@@ -347,10 +348,9 @@ class ProviderSettingsStore:
             retained: list[str] = []
             changed = False
             for provider_id, section in sections.items():
-                try:
-                    provider = ProviderName(provider_id)
-                except ValueError:
+                if not provider_ids.is_valid_provider_id(provider_id):
                     continue
+                provider = provider_ids.normalize_provider_id(provider_id)
                 section_imported, section_retained, section_changed = self._migrate_section(loader, provider, section)
                 imported.extend(section_imported)
                 retained.extend(section_retained)
@@ -377,7 +377,7 @@ class ProviderSettingsStore:
     @staticmethod
     def _migrate_section(
         loader: CredentialLoader,
-        provider: ProviderName,
+        provider: str,
         section: dict[str, object],
     ) -> tuple[list[str], list[str], bool]:
         """Migrate one provider section's legacy endpoint fields, mutating it.
@@ -407,11 +407,11 @@ class ProviderSettingsStore:
                 except OSError as exc:
                     _logger.warning(
                         "provider_settings_endpoint_import_failed",
-                        provider=provider.value,
+                        provider=provider,
                         variable=env_var,
                         error=str(exc),
                     )
-                    retained.append(f"{provider.value}.{json_key}")
+                    retained.append(f"{provider}.{json_key}")
                     continue
                 if action is EnvPersistAction.WRITTEN:
                     imported.append(env_var)
@@ -441,7 +441,7 @@ class ProviderSettingsStore:
 
 
 def resolve_session_credentials(
-    provider: ProviderName,
+    provider: str,
     stored: ProviderCredentials | None,
     *,
     loader: CredentialLoader,

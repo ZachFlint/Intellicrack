@@ -157,6 +157,7 @@ class CompiledYaraRules(Protocol):
 __all__: list[str] = [
     "ApiResolverMatch",
     "AttachError",
+    "AudioResultPart",
     "AuthenticationError",
     "BinaryInfo",
     "BlockInfo",
@@ -172,6 +173,7 @@ __all__: list[str] = [
     "CrashInfo",
     "CrossReference",
     "DataTypeInfo",
+    "EmbeddedResourcePart",
     "ExportInfo",
     "FlagInfo",
     "FridaDeviceInfo",
@@ -181,6 +183,7 @@ __all__: list[str] = [
     "HexDocumentFull",
     "HexDocumentLike",
     "HookInfo",
+    "ImageResultPart",
     "ImportInfo",
     "InitializationError",
     "IntellicrackError",
@@ -195,18 +198,22 @@ __all__: list[str] = [
     "ProcessInfo",
     "ProviderCredentials",
     "ProviderError",
-    "ProviderName",
     "RateLimitError",
+    "ReasoningItem",
+    "ReasoningKind",
     "RegisterState",
     "RelocationInfo",
     "ResourceInfo",
+    "ResourceLinkPart",
     "SandboxError",
     "SectionInfo",
     "SegmentInfo",
     "StalkerEvent",
     "StalkerTrace",
     "StringInfo",
+    "StructuredResultPart",
     "SymbolInfo",
+    "TextResultPart",
     "ThinkingConfig",
     "ThreadInfo",
     "ToolCall",
@@ -219,6 +226,7 @@ __all__: list[str] = [
     "ToolNotFoundError",
     "ToolParameter",
     "ToolResult",
+    "ToolResultPart",
     "ToolState",
     "VariableInfo",
     "VtableInfo",
@@ -253,19 +261,6 @@ class ToolName(enum.Enum):
     SANDBOX = "sandbox"
     HEX_EDITOR = "hex_editor"
     TOOLS = "tools"
-
-
-class ProviderName(enum.Enum):
-    """Enumeration of all supported LLM providers."""
-
-    ANTHROPIC = "anthropic"
-    OPENAI = "openai"
-    GOOGLE = "google"
-    OLLAMA = "ollama"
-    OPENROUTER = "openrouter"
-    HUGGINGFACE = "huggingface"
-    GROK = "grok"
-    LOCAL_TRANSFORMERS = "local_transformers"
 
 
 class ConfirmationLevel(enum.Enum):
@@ -331,6 +326,147 @@ class CacheConfig:
     ttl_seconds: int = 3600
 
 
+class ReasoningKind(enum.Enum):
+    """Which provider representation a :class:`ReasoningItem` was captured from.
+
+    The kind selects the replay shape an adapter must reproduce: a signed
+    Anthropic thinking block, a redacted Anthropic block, an OpenAI Responses
+    reasoning item, or the ``reasoning_content`` string that
+    OpenAI-compatible gateways emit alongside Chat Completions deltas.
+    """
+
+    THINKING = "thinking"
+    REDACTED_THINKING = "redacted_thinking"
+    RESPONSES_ITEM = "responses_item"
+    REASONING_CONTENT = "reasoning_content"
+
+
+@dataclass
+class ReasoningItem:
+    """One reasoning block emitted by a model, with its replay payload.
+
+    Providers that support extended thinking require the reasoning they
+    produced on one turn to be echoed back verbatim on the next turn that
+    carries a tool result, or they reject the request or silently lose the
+    reasoning chain. Every provider-opaque field here is stored exactly as it
+    arrived and is never re-serialized, re-ordered or normalized.
+
+    Attributes:
+        kind: Which provider representation this item came from.
+        text: Human-readable reasoning text for display. Empty for a redacted
+            block, which carries no readable text by construction.
+        signature: Anthropic ``thinking`` block signature. Anthropic rejects a
+            replayed thinking block whose signature is missing or altered.
+        item_id: OpenAI Responses reasoning item ``id``, used to correlate the
+            item with the function call it preceded.
+        encrypted_content: OpenAI Responses ``reasoning.encrypted_content``
+            payload, which carries the reasoning state when ``store`` is
+            ``False`` and nothing is retained server-side.
+        redacted_data: Anthropic ``redacted_thinking`` ``data`` payload.
+        summary: Responses reasoning summary parts, in wire order.
+    """
+
+    kind: ReasoningKind
+    text: str = ""
+    signature: str | None = None
+    item_id: str | None = None
+    encrypted_content: str | None = None
+    redacted_data: str | None = None
+    summary: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class TextResultPart:
+    """A plain-text part of a multi-part tool result.
+
+    Attributes:
+        text: The text content.
+    """
+
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class ImageResultPart:
+    """An image part of a multi-part tool result.
+
+    Attributes:
+        data: Base64-encoded image bytes, exactly as produced by the tool.
+        mime_type: IANA media type of ``data`` (e.g. ``"image/png"``).
+    """
+
+    data: str
+    mime_type: str
+
+
+@dataclass(frozen=True, slots=True)
+class AudioResultPart:
+    """An audio part of a multi-part tool result.
+
+    Attributes:
+        data: Base64-encoded audio bytes, exactly as produced by the tool.
+        mime_type: IANA media type of ``data`` (e.g. ``"audio/wav"``).
+    """
+
+    data: str
+    mime_type: str
+
+
+@dataclass(frozen=True, slots=True)
+class ResourceLinkPart:
+    """A reference to a resource the tool did not inline.
+
+    Attributes:
+        uri: The resource URI.
+        name: Optional human-readable resource name.
+        mime_type: Optional IANA media type of the referenced resource.
+        description: Optional human-readable description.
+    """
+
+    uri: str
+    name: str | None = None
+    mime_type: str | None = None
+    description: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddedResourcePart:
+    """A resource whose contents the tool inlined into the result.
+
+    Attributes:
+        uri: The resource URI the contents came from.
+        text: Inlined textual contents, when the resource is text.
+        data: Base64-encoded inlined contents, when the resource is binary.
+        mime_type: Optional IANA media type of the contents.
+    """
+
+    uri: str
+    text: str | None = None
+    data: str | None = None
+    mime_type: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class StructuredResultPart:
+    """A structured JSON part of a multi-part tool result.
+
+    Attributes:
+        content: The structured payload, passed through verbatim to dialects
+            that accept structured tool output and JSON-encoded for the rest.
+    """
+
+    content: dict[str, Any]
+
+
+ToolResultPart = TextResultPart | ImageResultPart | AudioResultPart | ResourceLinkPart | EmbeddedResourcePart | StructuredResultPart
+"""One part of a multi-part tool result.
+
+Dialects that support a native multi-part tool result render each part
+directly; the rest degrade through the single shared text fallback defined in
+``intellicrack.providers.dialects.base`` so every dialect degrades identically.
+"""
+
+
 @dataclass
 class ToolCall:
     """Represents a tool/function call request from the LLM.
@@ -361,9 +497,17 @@ class ToolResult:
     Attributes:
         call_id: ID of the corresponding ToolCall.
         success: Whether the operation succeeded.
-        result: The result data if successful.
+        result: The result data if successful. Bridge tools keep using this
+            field; it stays authoritative when ``content`` is ``None``.
         error: Error message if failed.
         duration_ms: Execution time in milliseconds.
+        content: Multi-part result content for externally-sourced tools that
+            return more than text. When set it is authoritative and ``result``
+            is used only as the text fallback for dialects that cannot render
+            a part natively.
+        is_error: Whether the result represents a tool-reported error that the
+            model should see as such. Dialects with a native error flag
+            (Anthropic ``is_error``) set it; the rest prefix the rendered text.
     """
 
     call_id: str
@@ -371,6 +515,8 @@ class ToolResult:
     result: object
     error: str | None
     duration_ms: float
+    content: list[ToolResultPart] | None = None
+    is_error: bool = False
 
 
 @dataclass
@@ -382,7 +528,9 @@ class Message:
         content: Text content of the message.
         tool_calls: Tool calls made by this message (if assistant).
         tool_results: Results of tool calls (if tool response).
-        thinking_content: Extended thinking text from the model, if any.
+        reasoning: Reasoning blocks the model emitted for this message, each
+            carrying its display text and the provider-opaque payload that
+            must be echoed back verbatim on the next tool-use turn.
         timestamp: When the message was created.
     """
 
@@ -390,8 +538,40 @@ class Message:
     content: str
     tool_calls: list[ToolCall] | None = None
     tool_results: list[ToolResult] | None = None
-    thinking_content: str | None = None
+    reasoning: list[ReasoningItem] | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
+
+    @property
+    def thinking_content(self) -> str | None:
+        """Displayable extended-thinking text derived from :attr:`reasoning`.
+
+        Joins the readable text of every reasoning block with blank lines,
+        skipping blocks that carry no readable text (a redacted Anthropic
+        block, or a Responses item whose content is encrypted).
+
+        Returns:
+            str | None: The joined thinking text, or ``None`` when this
+            message carries no readable reasoning.
+        """
+        if not self.reasoning:
+            return None
+        parts = [item.text for item in self.reasoning if item.text]
+        return "\n\n".join(parts) if parts else None
+
+    def set_thinking_content(self, text: str | None) -> None:
+        """Replace this message's reasoning with a single plain-text block.
+
+        Provided for callers that only have display text and no
+        provider-opaque replay payload, such as the streaming chat view
+        mirroring thinking into a placeholder message.
+
+        Args:
+            text: The thinking text, or ``None`` / empty to clear reasoning.
+        """
+        if not text:
+            self.reasoning = None
+            return
+        self.reasoning = [ReasoningItem(kind=ReasoningKind.THINKING, text=text)]
 
 
 @dataclass
@@ -1442,7 +1622,7 @@ class ModelInfo:
     Attributes:
         id: Model identifier string.
         name: Human-readable model name.
-        provider: Which provider offers this model.
+        provider: Instance id of the provider offering this model.
         context_window: Maximum context length in tokens.
         supports_tools: Whether model supports function calling.
         supports_vision: Whether model supports image input.
@@ -1453,7 +1633,7 @@ class ModelInfo:
 
     id: str
     name: str
-    provider: ProviderName
+    provider: str
     context_window: int
     supports_tools: bool
     supports_vision: bool
@@ -1521,12 +1701,20 @@ class ToolFunction:
         description: What the function does.
         parameters: List of parameters.
         returns: Description of return value.
+        input_schema: Raw JSON Schema (2020-12) describing the function's
+            arguments. When set it is authoritative and ``parameters`` is
+            ignored during schema generation, which is how an
+            externally-sourced tool carries a schema Intellicrack's
+            ``ToolParameter`` model cannot express (``$ref``, ``$defs``,
+            ``anyOf``, ``oneOf``). Bridge tools leave it ``None`` and keep
+            using ``parameters`` unchanged.
     """
 
     name: str
     description: str
     parameters: list[ToolParameter]
     returns: str
+    input_schema: dict[str, Any] | None = None
 
     @property
     def signature(self) -> str:
@@ -1544,12 +1732,14 @@ class ToolDefinition:
     """Complete tool definition for LLM function calling.
 
     Attributes:
-        tool_name: Which tool this definition is for.
+        tool_name: Namespace this definition is for. Bridge definitions carry
+            a :class:`ToolName` member's value; an externally-sourced tool
+            carries its own namespace, which may not claim a bridge namespace.
         description: Overall tool description.
         functions: List of available functions.
     """
 
-    tool_name: ToolName
+    tool_name: str
     description: str
     functions: list[ToolFunction]
 

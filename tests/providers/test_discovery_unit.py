@@ -25,9 +25,9 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     ToolCall,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.discovery import (
     DiscoveryCache,
@@ -56,7 +56,7 @@ class _DiscoveryProvider(LLMProviderBase):
 
     def __init__(
         self,
-        provider_name: ProviderName,
+        provider_name: str,
         models: list[ModelInfo] | None = None,
         error: BaseException | None = None,
     ) -> None:
@@ -75,11 +75,11 @@ class _DiscoveryProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The provider's enum name.
 
         Returns:
-            ProviderName: The configured provider name.
+            str: The configured provider name.
         """
         return self._name
 
@@ -215,7 +215,7 @@ def _reraise(err: BaseException) -> None:
 
 
 def _model(
-    provider: ProviderName,
+    provider: str,
     mid: str,
     *,
     name: str | None = None,
@@ -263,9 +263,9 @@ class TestF0006F0007AsyncCacheLockHonoured:
     async def test_async_set_then_async_get_round_trip() -> None:
         """A value written via aset() must be visible via aget()."""
         cache = DiscoveryCache(ttl_seconds=60)
-        models = [_model(ProviderName.OPENAI, "gpt-x")]
-        await cache.aset(ProviderName.OPENAI, models)
-        result = await cache.aget(ProviderName.OPENAI)
+        models = [_model(provider_ids.OPENAI, "gpt-x")]
+        await cache.aset(provider_ids.OPENAI, models)
+        result = await cache.aget(provider_ids.OPENAI)
         assert result is not None
         assert [m.id for m in result] == ["gpt-x"]
 
@@ -275,12 +275,12 @@ class TestF0006F0007AsyncCacheLockHonoured:
         """Concurrent aset() calls under the lock leave a consistent cache."""
         cache = DiscoveryCache(ttl_seconds=60)
         targets = [
-            (ProviderName.OPENAI, "openai-1"),
-            (ProviderName.ANTHROPIC, "claude-1"),
-            (ProviderName.GOOGLE, "gemini-1"),
+            (provider_ids.OPENAI, "openai-1"),
+            (provider_ids.ANTHROPIC, "claude-1"),
+            (provider_ids.GOOGLE, "gemini-1"),
         ]
 
-        async def writer(provider: ProviderName, model_id: str) -> None:
+        async def writer(provider: str, model_id: str) -> None:
             await cache.aset(provider, [_model(provider, model_id)])
 
         await asyncio.gather(*starmap(writer, targets))
@@ -299,8 +299,8 @@ class TestF0008GetRecommendedAwaitsDiscovery:
         """Cold cache triggers discover_all and returns a candidate."""
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "gpt-x")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "gpt-x")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
@@ -331,8 +331,8 @@ class TestF0010F0024RegexFilter:
         """A substring regex must match models even if not anchored to the start."""
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "openai/gpt-4o")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "openai/gpt-4o")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
@@ -357,21 +357,21 @@ class TestF0011EmptyModelsNotCached:
     async def test_empty_list_not_cached_via_discover_all() -> None:
         """An empty list returned by list_models must not populate the cache."""
         reg = ProviderRegistry()
-        provider = _DiscoveryProvider(ProviderName.OPENAI, models=[])
+        provider = _DiscoveryProvider(provider_ids.OPENAI, models=[])
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.discover_all()
-        assert discovery.cache.get(ProviderName.OPENAI) is None
+        assert discovery.cache.get(provider_ids.OPENAI) is None
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_empty_aset_clears_existing_entry() -> None:
         """Calling aset() with an empty list invalidates any existing entry."""
         cache = DiscoveryCache(ttl_seconds=60)
-        await cache.aset(ProviderName.OPENAI, [_model(ProviderName.OPENAI, "x")])
-        assert cache.get(ProviderName.OPENAI) is not None
-        await cache.aset(ProviderName.OPENAI, [])
-        assert cache.get(ProviderName.OPENAI) is None
+        await cache.aset(provider_ids.OPENAI, [_model(provider_ids.OPENAI, "x")])
+        assert cache.get(provider_ids.OPENAI) is not None
+        await cache.aset(provider_ids.OPENAI, [])
+        assert cache.get(provider_ids.OPENAI) is None
 
 
 class TestF0012NoCacheUseFalse:
@@ -382,17 +382,17 @@ class TestF0012NoCacheUseFalse:
     async def test_use_cache_false_leaves_cache_unchanged() -> None:
         """Existing cache must be untouched when use_cache=False."""
         reg = ProviderRegistry()
-        models = [_model(ProviderName.OPENAI, "preexisting")]
+        models = [_model(provider_ids.OPENAI, "preexisting")]
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "fresh")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "fresh")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
-        await discovery.cache.aset(ProviderName.OPENAI, models)
+        await discovery.cache.aset(provider_ids.OPENAI, models)
         results = await discovery.discover_all(use_cache=False)
-        assert results[ProviderName.OPENAI][0].id == "fresh"
-        cached = discovery.cache.get(ProviderName.OPENAI)
+        assert results[provider_ids.OPENAI][0].id == "fresh"
+        cached = discovery.cache.get(provider_ids.OPENAI)
         assert cached is not None
         assert cached[0].id == "preexisting"
 
@@ -406,22 +406,22 @@ class TestF0017DiscoverProviderInvalidatesStaleCache:
         """Stale cache entries are dropped when the provider is unconnected."""
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "stale")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "stale")],
         )
         provider.connected = False
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.cache.aset(
-            ProviderName.OPENAI,
-            [_model(ProviderName.OPENAI, "stale")],
+            provider_ids.OPENAI,
+            [_model(provider_ids.OPENAI, "stale")],
         )
         result = await discovery.discover_provider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             use_cache=False,
         )
         assert result == []
-        assert discovery.cache.get(ProviderName.OPENAI) is None
+        assert discovery.cache.get(provider_ids.OPENAI) is None
 
 
 class TestF0018DRYDiffHelper:
@@ -433,20 +433,20 @@ class TestF0018DRYDiffHelper:
         """discover_provider records new/removed model IDs vs prior cache."""
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "b"),
-                _model(ProviderName.OPENAI, "c"),
+                _model(provider_ids.OPENAI, "b"),
+                _model(provider_ids.OPENAI, "c"),
             ],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.cache.aset(
-            ProviderName.OPENAI,
-            [_model(ProviderName.OPENAI, "a"), _model(ProviderName.OPENAI, "b")],
+            provider_ids.OPENAI,
+            [_model(provider_ids.OPENAI, "a"), _model(provider_ids.OPENAI, "b")],
         )
-        await discovery.discover_provider(ProviderName.OPENAI, use_cache=False)
-        last = discovery.get_last_event(ProviderName.OPENAI)
+        await discovery.discover_provider(provider_ids.OPENAI, use_cache=False)
+        last = discovery.get_last_event(provider_ids.OPENAI)
         assert last is not None
         assert sorted(last.new_models) == ["c"]
         assert sorted(last.removed_models) == ["a"]
@@ -460,12 +460,12 @@ class TestF0019SaveSnapshotsTime:
     async def test_save_persists_unexpired_entries(tmp_path: Path) -> None:
         """Saving the cache must not skip valid entries due to TOCTOU drift."""
         cache = DiscoveryCache(ttl_seconds=60)
-        await cache.aset(ProviderName.OPENAI, [_model(ProviderName.OPENAI, "a")])
+        await cache.aset(provider_ids.OPENAI, [_model(provider_ids.OPENAI, "a")])
         out = tmp_path / "cache.json"
         await cache.save_to_disk(out)
         data = json.loads(out.read_text("utf-8"))
         entries = data["entries"]
-        assert ProviderName.OPENAI.value in entries
+        assert provider_ids.OPENAI in entries
 
 
 class TestF0020AtomicLoadFromDisk:
@@ -476,11 +476,11 @@ class TestF0020AtomicLoadFromDisk:
     async def test_corrupt_json_preserves_existing_cache(tmp_path: Path) -> None:
         """A malformed JSON file must not clobber the existing cache."""
         cache = DiscoveryCache(ttl_seconds=60)
-        await cache.aset(ProviderName.OPENAI, [_model(ProviderName.OPENAI, "live")])
+        await cache.aset(provider_ids.OPENAI, [_model(provider_ids.OPENAI, "live")])
         bad = tmp_path / "bad.json"
         bad.write_text("{not json", encoding="utf-8")
         await cache.load_from_disk(bad)
-        result = cache.get(ProviderName.OPENAI)
+        result = cache.get(provider_ids.OPENAI)
         assert result is not None
         assert result[0].id == "live"
 
@@ -491,14 +491,14 @@ class TestF0020AtomicLoadFromDisk:
     ) -> None:
         """A partially invalid payload must not partially overwrite the cache."""
         cache = DiscoveryCache(ttl_seconds=60)
-        await cache.aset(ProviderName.OPENAI, [_model(ProviderName.OPENAI, "live")])
+        await cache.aset(provider_ids.OPENAI, [_model(provider_ids.OPENAI, "live")])
 
         bad_payload = {
             "version": 1,
             "ttl_seconds": 60,
             "saved_at": 0,
             "entries": {
-                ProviderName.GOOGLE.value: {
+                provider_ids.GOOGLE: {
                     "models": "not-a-list",
                     "expires_at": 9999999999,
                     "timestamp": 0,
@@ -508,10 +508,10 @@ class TestF0020AtomicLoadFromDisk:
         bad = tmp_path / "partial.json"
         bad.write_text(json.dumps(bad_payload), encoding="utf-8")
         await cache.load_from_disk(bad)
-        live = cache.get(ProviderName.OPENAI)
+        live = cache.get(provider_ids.OPENAI)
         assert live is not None
         assert live[0].id == "live"
-        assert cache.get(ProviderName.GOOGLE) is None
+        assert cache.get(provider_ids.GOOGLE) is None
 
 
 class TestF0021DiscoverAllInvalidatesOnError:
@@ -523,17 +523,17 @@ class TestF0021DiscoverAllInvalidatesOnError:
         """A failing list_models() call must invalidate the prior cache entry."""
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             error=ConnectionError("network unreachable"),
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.cache.aset(
-            ProviderName.OPENAI,
-            [_model(ProviderName.OPENAI, "stale")],
+            provider_ids.OPENAI,
+            [_model(provider_ids.OPENAI, "stale")],
         )
         await discovery.discover_all(force_refresh=True)
-        assert discovery.cache.get(ProviderName.OPENAI) is None
+        assert discovery.cache.get(provider_ids.OPENAI) is None
 
 
 class TestRealProviderConnectionContract:
@@ -569,14 +569,14 @@ class TestRealProviderConnectionContract:
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.cache.aset(
-            ProviderName.OPENAI,
-            [_model(ProviderName.OPENAI, "gpt-stale")],
+            provider_ids.OPENAI,
+            [_model(provider_ids.OPENAI, "gpt-stale")],
         )
 
-        result = await discovery.discover_provider(ProviderName.OPENAI, use_cache=False)
+        result = await discovery.discover_provider(provider_ids.OPENAI, use_cache=False)
 
         assert result == []
-        assert discovery.cache.get(ProviderName.OPENAI) is None
+        assert discovery.cache.get(provider_ids.OPENAI) is None
 
     @pytest.mark.asyncio
     @staticmethod
@@ -642,17 +642,17 @@ class TestRealProviderConnectionContract:
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.cache.aset(
-            ProviderName.OPENAI,
-            [_model(ProviderName.OPENAI, "gpt-stale-all")],
+            provider_ids.OPENAI,
+            [_model(provider_ids.OPENAI, "gpt-stale-all")],
         )
 
         results = await discovery.discover_all(force_refresh=True)
 
-        assert ProviderName.OPENAI in results
-        assert results[ProviderName.OPENAI] == []
-        assert discovery.cache.get(ProviderName.OPENAI) is None
+        assert provider_ids.OPENAI in results
+        assert results[provider_ids.OPENAI] == []
+        assert discovery.cache.get(provider_ids.OPENAI) is None
 
-        last = discovery.get_last_event(ProviderName.OPENAI)
+        last = discovery.get_last_event(provider_ids.OPENAI)
         assert last is not None
         assert last.success is False
         assert last.error_message == "Provider not connected"
@@ -698,7 +698,7 @@ class TestRealProviderDiscoveryErrorPropagation:
 
         await discovery.discover_all(force_refresh=True)
 
-        last = discovery.get_last_event(ProviderName.OPENAI)
+        last = discovery.get_last_event(provider_ids.OPENAI)
         assert last is not None
         assert last.success is False
         assert last.error_message is not None
@@ -722,14 +722,14 @@ class TestRealProviderDiscoveryErrorPropagation:
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.cache.aset(
-            ProviderName.OPENAI,
-            [_model(ProviderName.OPENAI, "stale-single")],
+            provider_ids.OPENAI,
+            [_model(provider_ids.OPENAI, "stale-single")],
         )
 
-        result = await discovery.discover_provider(ProviderName.OPENAI, use_cache=False)
+        result = await discovery.discover_provider(provider_ids.OPENAI, use_cache=False)
 
         assert result == []
-        assert discovery.cache.get(ProviderName.OPENAI) is None
+        assert discovery.cache.get(provider_ids.OPENAI) is None
 
     @pytest.mark.asyncio
     @staticmethod
@@ -751,6 +751,7 @@ class TestRealProviderDiscoveryErrorPropagation:
         documented model capabilities from OpenAI's public API reference.
         If the real provider's logic ever changed context_window for ``gpt-4o``
         from 128000 to something else, the filter test here would catch the
+        from intellicrack.providers import ids as provider_ids
         discrepancy: the filter assertion uses 100000 as the boundary, so a
         context_window of anything below 100000 would silently break the filter
         result.
@@ -768,7 +769,7 @@ class TestRealProviderDiscoveryErrorPropagation:
         gpt4o_info = ModelInfo(
             id="gpt-4o",
             name="gpt-4o",
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             context_window=gpt4o_context,
             supports_tools=True,
             supports_vision=gpt4o_vision,
@@ -779,7 +780,7 @@ class TestRealProviderDiscoveryErrorPropagation:
         gpt35_info = ModelInfo(
             id="gpt-3.5-turbo",
             name="gpt-3.5-turbo",
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             context_window=gpt35_context,
             supports_tools=True,
             supports_vision=gpt35_vision,
@@ -790,7 +791,7 @@ class TestRealProviderDiscoveryErrorPropagation:
 
         reg = ProviderRegistry()
         discovery = ModelDiscovery(reg)
-        await discovery.cache.aset(ProviderName.OPENAI, [gpt4o_info, gpt35_info])
+        await discovery.cache.aset(provider_ids.OPENAI, [gpt4o_info, gpt35_info])
 
         vision_results = discovery.filter(DiscoveryFilter(requires_vision=True))
         vision_ids = [m.id for m in vision_results]
@@ -818,15 +819,15 @@ class TestRoundTripPersistence:
         """Round-trip persistence keeps a non-expired entry intact."""
         cache_a = DiscoveryCache(ttl_seconds=600)
         await cache_a.aset(
-            ProviderName.OPENAI,
-            [_model(ProviderName.OPENAI, "round-trip")],
+            provider_ids.OPENAI,
+            [_model(provider_ids.OPENAI, "round-trip")],
         )
         path = tmp_path / "cache.json"
         await cache_a.save_to_disk(path)
 
         cache_b = DiscoveryCache(ttl_seconds=600)
         await cache_b.load_from_disk(path)
-        loaded = cache_b.get(ProviderName.OPENAI)
+        loaded = cache_b.get(provider_ids.OPENAI)
         assert loaded is not None
         assert loaded[0].id == "round-trip"
 
@@ -851,10 +852,10 @@ class TestFilterAllDimensions:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "small", context_window=32000),
-                _model(ProviderName.OPENAI, "large", context_window=200000),
+                _model(provider_ids.OPENAI, "small", context_window=32000),
+                _model(provider_ids.OPENAI, "large", context_window=200000),
             ],
         )
         reg.register(provider)
@@ -879,16 +880,16 @@ class TestFilterAllDimensions:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
                 _model(
-                    ProviderName.OPENAI,
+                    provider_ids.OPENAI,
                     "cheap",
                     input_cost_per_1m_tokens=0.5,
                     output_cost_per_1m_tokens=1.0,
                 ),
                 _model(
-                    ProviderName.OPENAI,
+                    provider_ids.OPENAI,
                     "expensive",
                     input_cost_per_1m_tokens=10.0,
                     output_cost_per_1m_tokens=20.0,
@@ -917,10 +918,10 @@ class TestFilterAllDimensions:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
                 _model(
-                    ProviderName.OPENAI,
+                    provider_ids.OPENAI,
                     "free-tier",
                     input_cost_per_1m_tokens=None,
                     output_cost_per_1m_tokens=None,
@@ -946,10 +947,10 @@ class TestFilterAllDimensions:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "with-tools", supports_tools=True),
-                _model(ProviderName.OPENAI, "no-tools", supports_tools=False),
+                _model(provider_ids.OPENAI, "with-tools", supports_tools=True),
+                _model(provider_ids.OPENAI, "no-tools", supports_tools=False),
             ],
         )
         reg.register(provider)
@@ -974,10 +975,10 @@ class TestFilterAllDimensions:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "with-tools", supports_tools=True),
-                _model(ProviderName.OPENAI, "no-tools", supports_tools=False),
+                _model(provider_ids.OPENAI, "with-tools", supports_tools=True),
+                _model(provider_ids.OPENAI, "no-tools", supports_tools=False),
             ],
         )
         reg.register(provider)
@@ -997,10 +998,10 @@ class TestFilterAllDimensions:
         """requires_vision=True must keep only vision-capable models."""
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "vision", supports_vision=True),
-                _model(ProviderName.OPENAI, "text-only", supports_vision=False),
+                _model(provider_ids.OPENAI, "vision", supports_vision=True),
+                _model(provider_ids.OPENAI, "text-only", supports_vision=False),
             ],
         )
         reg.register(provider)
@@ -1020,10 +1021,10 @@ class TestFilterAllDimensions:
         """requires_streaming=True must keep only streaming-capable models."""
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "streams", supports_streaming=True),
-                _model(ProviderName.OPENAI, "no-stream", supports_streaming=False),
+                _model(provider_ids.OPENAI, "streams", supports_streaming=True),
+                _model(provider_ids.OPENAI, "no-stream", supports_streaming=False),
             ],
         )
         reg.register(provider)
@@ -1047,23 +1048,23 @@ class TestFilterAllDimensions:
         """
         reg = ProviderRegistry()
         openai_provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "oai-m1")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "oai-m1")],
         )
         anthropic_provider = _DiscoveryProvider(
-            ProviderName.ANTHROPIC,
-            models=[_model(ProviderName.ANTHROPIC, "ant-m1")],
+            provider_ids.ANTHROPIC,
+            models=[_model(provider_ids.ANTHROPIC, "ant-m1")],
         )
         reg.register(openai_provider)
         reg.register(anthropic_provider)
         discovery = ModelDiscovery(reg)
         await discovery.discover_all()
 
-        results = discovery.filter(DiscoveryFilter(providers=[ProviderName.OPENAI]))
+        results = discovery.filter(DiscoveryFilter(providers=[provider_ids.OPENAI]))
 
         assert len(results) == 1
         assert results[0].id == "oai-m1"
-        assert results[0].provider == ProviderName.OPENAI
+        assert results[0].provider == provider_ids.OPENAI
 
     @pytest.mark.asyncio
     @staticmethod
@@ -1076,11 +1077,11 @@ class TestFilterAllDimensions:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "large-tools", context_window=200000, supports_tools=True),
-                _model(ProviderName.OPENAI, "large-notools", context_window=200000, supports_tools=False),
-                _model(ProviderName.OPENAI, "small-tools", context_window=16000, supports_tools=True),
+                _model(provider_ids.OPENAI, "large-tools", context_window=200000, supports_tools=True),
+                _model(provider_ids.OPENAI, "large-notools", context_window=200000, supports_tools=False),
+                _model(provider_ids.OPENAI, "small-tools", context_window=16000, supports_tools=True),
             ],
         )
         reg.register(provider)
@@ -1104,10 +1105,10 @@ class TestFilterAllDimensions:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "gpt-4o-mini"),
-                _model(ProviderName.OPENAI, "claude-3-opus"),
+                _model(provider_ids.OPENAI, "gpt-4o-mini"),
+                _model(provider_ids.OPENAI, "claude-3-opus"),
             ],
         )
         reg.register(provider)
@@ -1130,8 +1131,8 @@ class TestFilterAllDimensions:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "gpt-4o")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "gpt-4o")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
@@ -1151,15 +1152,15 @@ class TestFilterAllDimensions:
         """
         reg = ProviderRegistry()
         openai_p = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "gpt-z"),
-                _model(ProviderName.OPENAI, "gpt-a"),
+                _model(provider_ids.OPENAI, "gpt-z"),
+                _model(provider_ids.OPENAI, "gpt-a"),
             ],
         )
         anthropic_p = _DiscoveryProvider(
-            ProviderName.ANTHROPIC,
-            models=[_model(ProviderName.ANTHROPIC, "claude-x")],
+            provider_ids.ANTHROPIC,
+            models=[_model(provider_ids.ANTHROPIC, "claude-x")],
         )
         reg.register(openai_p)
         reg.register(anthropic_p)
@@ -1184,10 +1185,10 @@ class TestSearchMethod:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "gpt-4o"),
-                _model(ProviderName.OPENAI, "claude-3"),
+                _model(provider_ids.OPENAI, "gpt-4o"),
+                _model(provider_ids.OPENAI, "claude-3"),
             ],
         )
         reg.register(provider)
@@ -1209,8 +1210,8 @@ class TestSearchMethod:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "gpt-4o", name="GPT-4o Turbo")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "gpt-4o", name="GPT-4o Turbo")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
@@ -1230,8 +1231,8 @@ class TestSearchMethod:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "openai-gpt4o-turbo", name="GPT-4o Turbo")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "openai-gpt4o-turbo", name="GPT-4o Turbo")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
@@ -1248,8 +1249,8 @@ class TestSearchMethod:
         """A query with no substring match must return an empty list."""
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "gpt-4o")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "gpt-4o")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
@@ -1269,12 +1270,12 @@ class TestSearchMethod:
         """
         reg = ProviderRegistry()
         openai_p = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "gpt-model")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "gpt-model")],
         )
         anthropic_p = _DiscoveryProvider(
-            ProviderName.ANTHROPIC,
-            models=[_model(ProviderName.ANTHROPIC, "gpt-alike")],
+            provider_ids.ANTHROPIC,
+            models=[_model(provider_ids.ANTHROPIC, "gpt-alike")],
         )
         reg.register(openai_p)
         reg.register(anthropic_p)
@@ -1284,8 +1285,8 @@ class TestSearchMethod:
         results = discovery.search("gpt")
 
         assert len(results) == 2
-        assert results[0].provider == ProviderName.ANTHROPIC
-        assert results[1].provider == ProviderName.OPENAI
+        assert results[0].provider == provider_ids.ANTHROPIC
+        assert results[1].provider == provider_ids.OPENAI
 
 
 class TestGetByIdMethod:
@@ -1300,21 +1301,21 @@ class TestGetByIdMethod:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "model-a"),
-                _model(ProviderName.OPENAI, "model-b"),
+                _model(provider_ids.OPENAI, "model-a"),
+                _model(provider_ids.OPENAI, "model-b"),
             ],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.discover_all()
 
-        result = discovery.get_by_id(ProviderName.OPENAI, "model-a")
+        result = discovery.get_by_id(provider_ids.OPENAI, "model-a")
 
         assert result is not None
         assert result.id == "model-a"
-        assert result.provider == ProviderName.OPENAI
+        assert result.provider == provider_ids.OPENAI
 
     @pytest.mark.asyncio
     @staticmethod
@@ -1325,14 +1326,14 @@ class TestGetByIdMethod:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "model-a")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "model-a")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.discover_all()
 
-        result = discovery.get_by_id(ProviderName.OPENAI, "does-not-exist")
+        result = discovery.get_by_id(provider_ids.OPENAI, "does-not-exist")
 
         assert result is None
 
@@ -1346,7 +1347,7 @@ class TestGetByIdMethod:
         reg = ProviderRegistry()
         discovery = ModelDiscovery(reg)
 
-        result = discovery.get_by_id(ProviderName.GOOGLE, "gemini-pro")
+        result = discovery.get_by_id(provider_ids.GOOGLE, "gemini-pro")
 
         assert result is None
 
@@ -1368,21 +1369,21 @@ class TestDiffModelIdsBehavior:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "a"),
-                _model(ProviderName.OPENAI, "b"),
-                _model(ProviderName.OPENAI, "c"),
+                _model(provider_ids.OPENAI, "a"),
+                _model(provider_ids.OPENAI, "b"),
+                _model(provider_ids.OPENAI, "c"),
             ],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.cache.aset(
-            ProviderName.OPENAI,
-            [_model(ProviderName.OPENAI, "a"), _model(ProviderName.OPENAI, "b")],
+            provider_ids.OPENAI,
+            [_model(provider_ids.OPENAI, "a"), _model(provider_ids.OPENAI, "b")],
         )
-        await discovery.discover_provider(ProviderName.OPENAI, use_cache=False)
-        last = discovery.get_last_event(ProviderName.OPENAI)
+        await discovery.discover_provider(provider_ids.OPENAI, use_cache=False)
+        last = discovery.get_last_event(provider_ids.OPENAI)
 
         assert last is not None
         assert sorted(last.new_models) == ["c"]
@@ -1397,17 +1398,17 @@ class TestDiffModelIdsBehavior:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "a")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "a")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.cache.aset(
-            ProviderName.OPENAI,
-            [_model(ProviderName.OPENAI, "a"), _model(ProviderName.OPENAI, "b")],
+            provider_ids.OPENAI,
+            [_model(provider_ids.OPENAI, "a"), _model(provider_ids.OPENAI, "b")],
         )
-        await discovery.discover_provider(ProviderName.OPENAI, use_cache=False)
-        last = discovery.get_last_event(ProviderName.OPENAI)
+        await discovery.discover_provider(provider_ids.OPENAI, use_cache=False)
+        last = discovery.get_last_event(provider_ids.OPENAI)
 
         assert last is not None
         assert last.new_models == []
@@ -1422,17 +1423,17 @@ class TestDiffModelIdsBehavior:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "y")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "y")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.cache.aset(
-            ProviderName.OPENAI,
-            [_model(ProviderName.OPENAI, "x")],
+            provider_ids.OPENAI,
+            [_model(provider_ids.OPENAI, "x")],
         )
-        await discovery.discover_provider(ProviderName.OPENAI, use_cache=False)
-        last = discovery.get_last_event(ProviderName.OPENAI)
+        await discovery.discover_provider(provider_ids.OPENAI, use_cache=False)
+        last = discovery.get_last_event(provider_ids.OPENAI)
 
         assert last is not None
         assert sorted(last.new_models) == ["y"]
@@ -1447,20 +1448,20 @@ class TestDiffModelIdsBehavior:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "a"),
-                _model(ProviderName.OPENAI, "b"),
+                _model(provider_ids.OPENAI, "a"),
+                _model(provider_ids.OPENAI, "b"),
             ],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
         await discovery.cache.aset(
-            ProviderName.OPENAI,
-            [_model(ProviderName.OPENAI, "a"), _model(ProviderName.OPENAI, "b")],
+            provider_ids.OPENAI,
+            [_model(provider_ids.OPENAI, "a"), _model(provider_ids.OPENAI, "b")],
         )
-        await discovery.discover_provider(ProviderName.OPENAI, use_cache=False)
-        last = discovery.get_last_event(ProviderName.OPENAI)
+        await discovery.discover_provider(provider_ids.OPENAI, use_cache=False)
+        last = discovery.get_last_event(provider_ids.OPENAI)
 
         assert last is not None
         assert last.new_models == []
@@ -1475,16 +1476,16 @@ class TestDiffModelIdsBehavior:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "a"),
-                _model(ProviderName.OPENAI, "b"),
+                _model(provider_ids.OPENAI, "a"),
+                _model(provider_ids.OPENAI, "b"),
             ],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
-        await discovery.discover_provider(ProviderName.OPENAI, use_cache=False)
-        last = discovery.get_last_event(ProviderName.OPENAI)
+        await discovery.discover_provider(provider_ids.OPENAI, use_cache=False)
+        last = discovery.get_last_event(provider_ids.OPENAI)
 
         assert last is not None
         assert sorted(last.new_models) == ["a", "b"]
@@ -1504,18 +1505,18 @@ class TestGetProviderModelCount:
         """
         reg = ProviderRegistry()
         openai_p = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "o1"),
-                _model(ProviderName.OPENAI, "o2"),
+                _model(provider_ids.OPENAI, "o1"),
+                _model(provider_ids.OPENAI, "o2"),
             ],
         )
         anthropic_p = _DiscoveryProvider(
-            ProviderName.ANTHROPIC,
+            provider_ids.ANTHROPIC,
             models=[
-                _model(ProviderName.ANTHROPIC, "a1"),
-                _model(ProviderName.ANTHROPIC, "a2"),
-                _model(ProviderName.ANTHROPIC, "a3"),
+                _model(provider_ids.ANTHROPIC, "a1"),
+                _model(provider_ids.ANTHROPIC, "a2"),
+                _model(provider_ids.ANTHROPIC, "a3"),
             ],
         )
         reg.register(openai_p)
@@ -1525,8 +1526,8 @@ class TestGetProviderModelCount:
 
         counts = discovery.get_provider_model_count()
 
-        assert counts[ProviderName.OPENAI] == 2
-        assert counts[ProviderName.ANTHROPIC] == 3
+        assert counts[provider_ids.OPENAI] == 2
+        assert counts[provider_ids.ANTHROPIC] == 3
 
     @pytest.mark.asyncio
     @staticmethod
@@ -1557,11 +1558,11 @@ class TestGetRecommendedModelTaskTypes:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "small", context_window=16000, supports_tools=True),
-                _model(ProviderName.OPENAI, "medium", context_window=128000, supports_tools=True),
-                _model(ProviderName.OPENAI, "large", context_window=200000, supports_tools=True),
+                _model(provider_ids.OPENAI, "small", context_window=16000, supports_tools=True),
+                _model(provider_ids.OPENAI, "medium", context_window=128000, supports_tools=True),
+                _model(provider_ids.OPENAI, "large", context_window=200000, supports_tools=True),
             ],
         )
         reg.register(provider)
@@ -1584,16 +1585,16 @@ class TestGetRecommendedModelTaskTypes:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
                 _model(
-                    ProviderName.OPENAI,
+                    provider_ids.OPENAI,
                     "cheap-gen",
                     supports_streaming=True,
                     output_cost_per_1m_tokens=0.5,
                 ),
                 _model(
-                    ProviderName.OPENAI,
+                    provider_ids.OPENAI,
                     "expensive-gen",
                     supports_streaming=True,
                     output_cost_per_1m_tokens=10.0,
@@ -1619,16 +1620,16 @@ class TestGetRecommendedModelTaskTypes:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
                 _model(
-                    ProviderName.OPENAI,
+                    provider_ids.OPENAI,
                     "known-cheap",
                     supports_streaming=True,
                     output_cost_per_1m_tokens=1.0,
                 ),
                 _model(
-                    ProviderName.OPENAI,
+                    provider_ids.OPENAI,
                     "unknown-cost",
                     supports_streaming=True,
                     output_cost_per_1m_tokens=None,
@@ -1654,10 +1655,10 @@ class TestGetRecommendedModelTaskTypes:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "chat-small", context_window=32000, supports_streaming=True),
-                _model(ProviderName.OPENAI, "chat-large", context_window=128000, supports_streaming=True),
+                _model(provider_ids.OPENAI, "chat-small", context_window=32000, supports_streaming=True),
+                _model(provider_ids.OPENAI, "chat-large", context_window=128000, supports_streaming=True),
             ],
         )
         reg.register(provider)
@@ -1694,8 +1695,8 @@ class TestDiscoveryEventTracking:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "m1")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "m1")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
@@ -1717,20 +1718,20 @@ class TestDiscoveryEventTracking:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             models=[
-                _model(ProviderName.OPENAI, "m1"),
-                _model(ProviderName.OPENAI, "m2"),
+                _model(provider_ids.OPENAI, "m1"),
+                _model(provider_ids.OPENAI, "m2"),
             ],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
-        await discovery.discover_provider(ProviderName.OPENAI, use_cache=False)
+        await discovery.discover_provider(provider_ids.OPENAI, use_cache=False)
 
-        last = discovery.get_last_event(ProviderName.OPENAI)
+        last = discovery.get_last_event(provider_ids.OPENAI)
 
         assert last is not None
-        assert last.provider == ProviderName.OPENAI
+        assert last.provider == provider_ids.OPENAI
         assert last.model_count == 2
         assert last.success is True
 
@@ -1741,7 +1742,7 @@ class TestDiscoveryEventTracking:
         reg = ProviderRegistry()
         discovery = ModelDiscovery(reg)
 
-        last = discovery.get_last_event(ProviderName.OPENAI)
+        last = discovery.get_last_event(provider_ids.OPENAI)
 
         assert last is None
 
@@ -1760,12 +1761,12 @@ class TestDiscoverAllMultiProvider:
         """
         reg = ProviderRegistry()
         openai_p = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "oai-1")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "oai-1")],
         )
         anthropic_p = _DiscoveryProvider(
-            ProviderName.ANTHROPIC,
-            models=[_model(ProviderName.ANTHROPIC, "ant-1")],
+            provider_ids.ANTHROPIC,
+            models=[_model(provider_ids.ANTHROPIC, "ant-1")],
         )
         reg.register(openai_p)
         reg.register(anthropic_p)
@@ -1773,12 +1774,12 @@ class TestDiscoverAllMultiProvider:
 
         results = await discovery.discover_all()
 
-        assert ProviderName.OPENAI in results
-        assert ProviderName.ANTHROPIC in results
-        assert len(results[ProviderName.OPENAI]) == 1
-        assert results[ProviderName.OPENAI][0].id == "oai-1"
-        assert len(results[ProviderName.ANTHROPIC]) == 1
-        assert results[ProviderName.ANTHROPIC][0].id == "ant-1"
+        assert provider_ids.OPENAI in results
+        assert provider_ids.ANTHROPIC in results
+        assert len(results[provider_ids.OPENAI]) == 1
+        assert results[provider_ids.OPENAI][0].id == "oai-1"
+        assert len(results[provider_ids.ANTHROPIC]) == 1
+        assert results[provider_ids.ANTHROPIC][0].id == "ant-1"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -1791,17 +1792,17 @@ class TestDiscoverAllMultiProvider:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "first-model")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "first-model")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
 
         await discovery.discover_all()
-        provider.models = [_model(ProviderName.OPENAI, "second-model")]
+        provider.models = [_model(provider_ids.OPENAI, "second-model")]
         results = await discovery.discover_all()
 
-        assert results[ProviderName.OPENAI][0].id == "first-model"
+        assert results[provider_ids.OPENAI][0].id == "first-model"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -1813,18 +1814,18 @@ class TestDiscoverAllMultiProvider:
         """
         reg = ProviderRegistry()
         provider = _DiscoveryProvider(
-            ProviderName.OPENAI,
-            models=[_model(ProviderName.OPENAI, "old-model")],
+            provider_ids.OPENAI,
+            models=[_model(provider_ids.OPENAI, "old-model")],
         )
         reg.register(provider)
         discovery = ModelDiscovery(reg)
 
         await discovery.discover_all()
-        provider.models = [_model(ProviderName.OPENAI, "new-model")]
+        provider.models = [_model(provider_ids.OPENAI, "new-model")]
         results = await discovery.discover_all(force_refresh=True)
 
-        assert results[ProviderName.OPENAI][0].id == "new-model"
-        cached = discovery.cache.get(ProviderName.OPENAI)
+        assert results[provider_ids.OPENAI][0].id == "new-model"
+        cached = discovery.cache.get(provider_ids.OPENAI)
         assert cached is not None
         assert cached[0].id == "new-model"
 
@@ -1837,15 +1838,15 @@ class TestCacheIsExpiredAndGetAllCached:
     async def test_is_expired_returns_true_for_missing_provider() -> None:
         """is_expired must return True when the provider has no cache entry."""
         cache = DiscoveryCache(ttl_seconds=60)
-        assert cache.is_expired(ProviderName.OPENAI) is True
+        assert cache.is_expired(provider_ids.OPENAI) is True
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_is_expired_returns_false_for_fresh_entry() -> None:
         """is_expired must return False immediately after aset()."""
         cache = DiscoveryCache(ttl_seconds=60)
-        await cache.aset(ProviderName.OPENAI, [_model(ProviderName.OPENAI, "m")])
-        assert cache.is_expired(ProviderName.OPENAI) is False
+        await cache.aset(provider_ids.OPENAI, [_model(provider_ids.OPENAI, "m")])
+        assert cache.is_expired(provider_ids.OPENAI) is False
 
     @pytest.mark.asyncio
     @staticmethod
@@ -1855,41 +1856,41 @@ class TestCacheIsExpiredAndGetAllCached:
         Two providers inserted; get_all_cached must return both.
         """
         cache = DiscoveryCache(ttl_seconds=60)
-        await cache.aset(ProviderName.OPENAI, [_model(ProviderName.OPENAI, "o1")])
-        await cache.aset(ProviderName.ANTHROPIC, [_model(ProviderName.ANTHROPIC, "a1")])
+        await cache.aset(provider_ids.OPENAI, [_model(provider_ids.OPENAI, "o1")])
+        await cache.aset(provider_ids.ANTHROPIC, [_model(provider_ids.ANTHROPIC, "a1")])
 
         all_cached = cache.get_all_cached()
 
-        assert ProviderName.OPENAI in all_cached
-        assert ProviderName.ANTHROPIC in all_cached
-        assert all_cached[ProviderName.OPENAI][0].id == "o1"
-        assert all_cached[ProviderName.ANTHROPIC][0].id == "a1"
+        assert provider_ids.OPENAI in all_cached
+        assert provider_ids.ANTHROPIC in all_cached
+        assert all_cached[provider_ids.OPENAI][0].id == "o1"
+        assert all_cached[provider_ids.ANTHROPIC][0].id == "a1"
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_invalidate_all_empties_cache() -> None:
         """ainvalidate(None) must remove every entry from the cache."""
         cache = DiscoveryCache(ttl_seconds=60)
-        await cache.aset(ProviderName.OPENAI, [_model(ProviderName.OPENAI, "x")])
-        await cache.aset(ProviderName.ANTHROPIC, [_model(ProviderName.ANTHROPIC, "y")])
+        await cache.aset(provider_ids.OPENAI, [_model(provider_ids.OPENAI, "x")])
+        await cache.aset(provider_ids.ANTHROPIC, [_model(provider_ids.ANTHROPIC, "y")])
 
         await cache.ainvalidate()
 
-        assert cache.get(ProviderName.OPENAI) is None
-        assert cache.get(ProviderName.ANTHROPIC) is None
+        assert cache.get(provider_ids.OPENAI) is None
+        assert cache.get(provider_ids.ANTHROPIC) is None
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_invalidate_single_provider_leaves_others() -> None:
         """ainvalidate(provider) must remove only the targeted provider's entry."""
         cache = DiscoveryCache(ttl_seconds=60)
-        await cache.aset(ProviderName.OPENAI, [_model(ProviderName.OPENAI, "x")])
-        await cache.aset(ProviderName.ANTHROPIC, [_model(ProviderName.ANTHROPIC, "y")])
+        await cache.aset(provider_ids.OPENAI, [_model(provider_ids.OPENAI, "x")])
+        await cache.aset(provider_ids.ANTHROPIC, [_model(provider_ids.ANTHROPIC, "y")])
 
-        await cache.ainvalidate(ProviderName.OPENAI)
+        await cache.ainvalidate(provider_ids.OPENAI)
 
-        assert cache.get(ProviderName.OPENAI) is None
-        surviving = cache.get(ProviderName.ANTHROPIC)
+        assert cache.get(provider_ids.OPENAI) is None
+        surviving = cache.get(provider_ids.ANTHROPIC)
         assert surviving is not None
         assert surviving[0].id == "y"
 
@@ -1912,10 +1913,10 @@ class TestSaveLoadDiskFullCycle:
 
         cache_a = DiscoveryCache(ttl_seconds=600)
         await cache_a.aset(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             [
                 _model(
-                    ProviderName.OPENAI,
+                    provider_ids.OPENAI,
                     "gpt-full",
                     name="GPT Full",
                     context_window=256000,
@@ -1932,14 +1933,14 @@ class TestSaveLoadDiskFullCycle:
 
         cache_b = DiscoveryCache(ttl_seconds=600)
         await cache_b.load_from_disk(path)
-        loaded = cache_b.get(ProviderName.OPENAI)
+        loaded = cache_b.get(provider_ids.OPENAI)
 
         assert loaded is not None
         assert len(loaded) == 1
         m = loaded[0]
         assert m.id == "gpt-full"
         assert m.name == "GPT Full"
-        assert m.provider == ProviderName.OPENAI
+        assert m.provider == provider_ids.OPENAI
         assert m.context_window == 256000
         assert m.supports_tools is True
         assert m.supports_vision is True
@@ -1954,11 +1955,11 @@ class TestSaveLoadDiskFullCycle:
     async def test_load_nonexistent_file_is_a_noop(tmp_path: Path) -> None:
         """Loading a path that does not exist must leave the cache unchanged."""
         cache = DiscoveryCache(ttl_seconds=60)
-        await cache.aset(ProviderName.OPENAI, [_model(ProviderName.OPENAI, "live")])
+        await cache.aset(provider_ids.OPENAI, [_model(provider_ids.OPENAI, "live")])
 
         await cache.load_from_disk(tmp_path / "does_not_exist.json")
 
-        result = cache.get(ProviderName.OPENAI)
+        result = cache.get(provider_ids.OPENAI)
         assert result is not None
         assert result[0].id == "live"
 
@@ -1967,7 +1968,7 @@ class TestSaveLoadDiskFullCycle:
     async def test_load_wrong_version_preserves_cache(tmp_path: Path) -> None:
         """A payload with version != 1 must be rejected and leave cache intact."""
         cache = DiscoveryCache(ttl_seconds=60)
-        await cache.aset(ProviderName.OPENAI, [_model(ProviderName.OPENAI, "live")])
+        await cache.aset(provider_ids.OPENAI, [_model(provider_ids.OPENAI, "live")])
 
         bad = tmp_path / "wrong_version.json"
         bad.write_text(
@@ -1976,6 +1977,6 @@ class TestSaveLoadDiskFullCycle:
         )
         await cache.load_from_disk(bad)
 
-        result = cache.get(ProviderName.OPENAI)
+        result = cache.get(provider_ids.OPENAI)
         assert result is not None
         assert result[0].id == "live"

@@ -27,7 +27,7 @@ import tiktoken
 
 from intellicrack.bridges.schemas import (
     build_schema_parameters,
-    validate_tool_for_provider,
+    validate_tool_for_dialect,
 )
 from intellicrack.core.analysis_aggregator import AnalysisAggregator
 from intellicrack.core.logging import get_logger, log_analysis_operation
@@ -40,7 +40,6 @@ from intellicrack.core.types import (
     ImportInfo,
     Message,
     PatchInfo,
-    ProviderName,
     SectionInfo,
     ThinkingConfig,
     ToolChoice,
@@ -52,6 +51,13 @@ from intellicrack.core.types import (
     ToolParameter,
     ToolResult,
 )
+from intellicrack.providers.capabilities import (
+    DEFAULT_TOKENIZER,
+    TIKTOKEN_CL100K,
+    TIKTOKEN_O200K,
+    ApiDialect,
+)
+from intellicrack.providers.ids import normalize_provider_id
 
 
 if TYPE_CHECKING:
@@ -70,38 +76,32 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 
-_TIKTOKEN_O200K: str = "o200k_base"
-_TIKTOKEN_CL100K: str = "cl100k_base"
+_TIKTOKEN_O200K: str = TIKTOKEN_O200K
+_TIKTOKEN_CL100K: str = TIKTOKEN_CL100K
 
-_PROVIDER_TOKEN_ENCODINGS: dict[ProviderName, str] = {
-    ProviderName.OPENAI: _TIKTOKEN_O200K,
-    ProviderName.ANTHROPIC: _TIKTOKEN_CL100K,
-    ProviderName.GOOGLE: _TIKTOKEN_CL100K,
-    ProviderName.OLLAMA: _TIKTOKEN_CL100K,
-    ProviderName.OPENROUTER: _TIKTOKEN_CL100K,
-    ProviderName.HUGGINGFACE: _TIKTOKEN_CL100K,
-    ProviderName.GROK: _TIKTOKEN_CL100K,
-    ProviderName.LOCAL_TRANSFORMERS: _TIKTOKEN_CL100K,
-}
+_DEFAULT_TOKEN_ENCODING: str = DEFAULT_TOKENIZER
+"""Encoding used when a model states no tokenizer of its own.
 
-_DEFAULT_TOKEN_ENCODING: str = _TIKTOKEN_CL100K
+The old table keyed encodings by provider identity, which cannot survive an
+open provider id and was wrong anyway: an Anthropic-compatible gateway serving
+Llama is not cl100k. The tokenizer is a property of the model, so it lives on
+:class:`~intellicrack.providers.capabilities.ModelCapabilities` and this is
+only the fallback for a model that has not said.
+"""
 
-_STREAMING_TOOL_CALL_PROVIDERS: frozenset[ProviderName] = frozenset(
+_STREAMING_TOOL_CALL_DIALECTS: frozenset[ApiDialect] = frozenset(
     {
-        ProviderName.OPENAI,
-        ProviderName.ANTHROPIC,
-        ProviderName.GOOGLE,
-        ProviderName.OLLAMA,
-        ProviderName.OPENROUTER,
-        ProviderName.HUGGINGFACE,
-        ProviderName.GROK,
-        ProviderName.LOCAL_TRANSFORMERS,
+        ApiDialect.CHAT_COMPLETIONS,
+        ApiDialect.RESPONSES,
+        ApiDialect.MESSAGES,
+        ApiDialect.GEMINI,
     },
 )
-"""Providers whose ``chat_stream()`` implementation populates ``get_pending_tool_calls()`` from streamed deltas, so a tools-on initial turn
-can be safely streamed without losing a tool call the model emits mid-stream.
+"""Dialects whose adapter finalizes tool calls from streamed deltas, so a tools-on initial turn can be streamed without losing a tool call
+the model emits mid-stream.
 
-A provider added in the future that cannot yet finalize tool calls from a stream is simply left out of this set, so
+Finalizing a streamed tool call is a property of the wire format, not of the provider, which is why this re-keyed to ``ApiDialect`` when
+provider identity opened up. A dialect added in the future that cannot yet finalize tool calls from a stream is simply left out, so
 ``_should_use_streaming`` falls back to the non-streaming path for its initial tools-on turn until it is added here.
 """
 
@@ -137,42 +137,51 @@ _TOOL_CATALOG_REPRESENTATIVE_SAMPLE: int = 4
 _token_encoder_cache: dict[str, tiktoken.Encoding] = {}
 
 
-def _get_token_encoder(provider: ProviderName | None) -> tiktoken.Encoding:
-    """Resolve the tiktoken encoder for a provider.
+def _get_token_encoder(tokenizer: str | None) -> tiktoken.Encoding:
+    """Resolve the tiktoken encoder a model's capability record names.
 
-    Selects ``o200k_base`` for OpenAI (current default for GPT-4o family) and
-    ``cl100k_base`` for every other provider as a conservative shared default.
-    Encodings are cached per-name to avoid the cost of re-loading the BPE
-    tables on every call.
+    Encodings are cached per-name to avoid re-loading the BPE tables on every
+    call. A name tiktoken does not know falls back to the default encoding
+    rather than raising, so an endpoint advertising an unfamiliar tokenizer
+    costs accuracy rather than availability.
 
     Args:
-        provider: Active LLM provider, or ``None`` to use the default encoding.
+        tokenizer: ``tiktoken`` encoding name from the model's capability
+            record, or ``None`` to use the default encoding.
 
     Returns:
         tiktoken.Encoding: Encoder instance suitable for token counting.
     """
-    encoding_name = _DEFAULT_TOKEN_ENCODING if provider is None else _PROVIDER_TOKEN_ENCODINGS.get(provider, _DEFAULT_TOKEN_ENCODING)
+    encoding_name = tokenizer or _DEFAULT_TOKEN_ENCODING
     encoder = _token_encoder_cache.get(encoding_name)
-    if encoder is None:
+    if encoder is not None:
+        return encoder
+    try:
         encoder = tiktoken.get_encoding(encoding_name)
-        _token_encoder_cache[encoding_name] = encoder
+    except (KeyError, ValueError):
+        _logger.warning("token_encoding_unknown", tokenizer=encoding_name, fallback=_DEFAULT_TOKEN_ENCODING)
+        encoding_name = _DEFAULT_TOKEN_ENCODING
+        encoder = _token_encoder_cache.get(encoding_name)
+        if encoder is None:
+            encoder = tiktoken.get_encoding(encoding_name)
+    _token_encoder_cache[encoding_name] = encoder
     return encoder
 
 
-def _count_tokens(text: str, provider: ProviderName | None) -> int:
-    """Count tokens in ``text`` using a provider-aware tiktoken encoder.
+def _count_tokens(text: str, tokenizer: str | None) -> int:
+    """Count tokens in ``text`` using the model's own tiktoken encoding.
 
     Args:
         text: String to count tokens in. Empty input returns ``0``.
-        provider: Active LLM provider used to select the encoder, or ``None``
-            to fall back to the conservative default encoding.
+        tokenizer: ``tiktoken`` encoding name from the model's capability
+            record, or ``None`` to fall back to the default encoding.
 
     Returns:
         int: Token count for ``text``.
     """
     if not text:
         return 0
-    encoder = _get_token_encoder(provider)
+    encoder = _get_token_encoder(tokenizer)
     return len(encoder.encode(text, disallowed_special=()))
 
 
@@ -977,7 +986,7 @@ class Orchestrator:
 
     async def start_session(
         self,
-        provider: str | ProviderName,
+        provider: str,
         model: str,
         binary_path: Path | None = None,
         name: str | None = None,
@@ -986,7 +995,8 @@ class Orchestrator:
         """Start a new session.
 
         Args:
-            provider: LLM provider to use.
+            provider: Instance id of the LLM provider to use. Case is
+                normalized, so a display-cased id still resolves.
             model: Model ID to use.
             binary_path: Optional binary to load.
             name: Optional human-readable session name recorded on the new ``Session``.
@@ -996,19 +1006,19 @@ class Orchestrator:
             Session: New session instance.
 
         Raises:
-            ValueError: If provider not available.
+            ValueError: If the provider id is malformed or the provider is not
+                available.
         """
-        if isinstance(provider, str):
-            provider = ProviderName(provider.lower())
+        provider = normalize_provider_id(provider)
 
         provider_instance = self._providers.get(provider)
         if provider_instance is None or not provider_instance.is_connected:
             _logger.warning(
                 "provider_not_found",
-                provider=provider.value,
+                provider=provider,
                 connected=getattr(provider_instance, "is_connected", None),
             )
-            error_message = f"Provider not available: {provider.value}"
+            error_message = f"Provider not available: {provider}"
             raise ValueError(error_message)
 
         session = await self._sessions.create(
@@ -1031,14 +1041,14 @@ class Orchestrator:
 
         structlog.contextvars.bind_contextvars(
             session_id=session.id,
-            provider=provider.value,
+            provider=provider,
             model=model,
         )
 
         _logger.info(
             "session_started",
             session_id=session.id,
-            provider=provider.value,
+            provider=provider,
             model=model,
         )
 
@@ -1073,7 +1083,7 @@ class Orchestrator:
 
         structlog.contextvars.bind_contextvars(
             session_id=session.id,
-            provider=session.provider.value,
+            provider=session.provider,
             model=session.model,
         )
 
@@ -1306,7 +1316,7 @@ class Orchestrator:
 
         provider = self._providers.get(self._current_session.provider)
         if provider is None or not provider.is_connected:
-            error_message = f"Provider not available or disconnected: {self._current_session.provider.value}"
+            error_message = f"Provider not available or disconnected: {self._current_session.provider}"
             raise RuntimeError(error_message)
 
         tool_definitions = self._tools.get_tool_definitions()
@@ -1336,7 +1346,7 @@ class Orchestrator:
             messages = self.trim_messages_to_context_window(
                 messages,
                 context_window,
-                provider=provider.name,
+                tokenizer=provider.capabilities_for(self._current_session.model).tokenizer,
             )
 
             iteration_tool_choice_override: ToolChoice | None = ToolChoice(mode=ToolChoiceMode.NONE) if force_no_tools_next else None
@@ -1757,7 +1767,7 @@ class Orchestrator:
             lines: list[str] = ["", "## Available tools"]
             for definition in tool_definitions:
                 lines.append("")
-                tool_name_value = definition.tool_name.value if hasattr(definition.tool_name, "value") else str(definition.tool_name)
+                tool_name_value = definition.tool_name
                 description = (definition.description or "").strip()
                 heading_suffix = f" - {description}" if description else ""
                 lines.append(f"### {tool_name_value}{heading_suffix}")
@@ -1796,7 +1806,7 @@ class Orchestrator:
             "### Bridge menu",
         ]
         for definition in tool_definitions:
-            tool_name_value = definition.tool_name.value
+            tool_name_value = definition.tool_name
             description = (definition.description or "").strip()
             sample_names = [func.name for func in definition.functions[:_TOOL_CATALOG_REPRESENTATIVE_SAMPLE]]
             sample_suffix = f"; e.g. {', '.join(sample_names)}" if sample_names else ""
@@ -1833,8 +1843,8 @@ class Orchestrator:
         return f"- `{func.name}({params}) -> {func.returns}`{suffix}"
 
     @staticmethod
-    def _estimate_tokens(text: str, provider: ProviderName | None = None) -> int:
-        """Inner provider-aware token-count helper.
+    def _estimate_tokens(text: str, tokenizer: str | None = None) -> int:
+        """Inner model-aware token-count helper.
 
         Used across internal orchestrator paths (context-window trimming,
         per-call accounting) so subclasses can override token estimation in a
@@ -1843,35 +1853,37 @@ class Orchestrator:
 
         Args:
             text: Text to count tokens for.
-            provider: Active LLM provider, or ``None`` to use the default
-                conservative encoding.
+            tokenizer: ``tiktoken`` encoding name from the model's capability
+                record, or ``None`` to use the default encoding.
 
         Returns:
             int: Token count for ``text``.
         """
-        return _count_tokens(text, provider)
+        return _count_tokens(text, tokenizer)
 
     @staticmethod
-    def estimate_tokens(text: str, provider: ProviderName | None = None) -> int:
-        """Count tokens in ``text`` using a provider-aware tiktoken encoder.
+    def estimate_tokens(text: str, tokenizer: str | None = None) -> int:
+        """Count tokens in ``text`` using the model's own tiktoken encoding.
 
-        Public entry point that delegates to :meth:`_estimate_tokens`.
-        OpenAI requests use the ``o200k_base`` encoding (matching the GPT-4o
-        family) and every other provider uses ``cl100k_base`` as a
-        conservative shared default that overcounts vs. each provider's
-        real tokenizer rather than undercounts. This avoids the runaway
-        prompt-size failures that the original ``len // 4`` heuristic
-        produced on token-dense payloads (code, hex dumps, table output).
+        Public entry point that delegates to :meth:`_estimate_tokens`. The
+        encoding comes from the model's capability record rather than from the
+        provider's identity, because the two do not correlate once a provider
+        can be any endpoint at all: an Anthropic-compatible gateway serving
+        Llama is not cl100k. A model that states no tokenizer falls back to
+        ``o200k_base``, which overcounts against most real tokenizers rather
+        than undercounting, avoiding the runaway prompt-size failures the
+        original ``len // 4`` heuristic produced on token-dense payloads
+        (code, hex dumps, table output).
 
         Args:
             text: Text to count tokens for.
-            provider: Active LLM provider, or ``None`` to use the default
-                conservative encoding.
+            tokenizer: ``tiktoken`` encoding name from the model's capability
+                record, or ``None`` to use the default encoding.
 
         Returns:
             int: Token count for ``text``.
         """
-        return Orchestrator._estimate_tokens(text, provider)
+        return Orchestrator._estimate_tokens(text, tokenizer)
 
     async def _get_model_context_window(self, provider: LLMProvider) -> int | None:
         """Resolve the context window for the active model.
@@ -1900,7 +1912,7 @@ class Orchestrator:
         if self._current_session is None:
             return None
 
-        provider_name = provider.name.value
+        provider_name = provider.name
         model_id = self._current_session.model
         try:
             models = await provider.list_models()
@@ -1950,7 +1962,7 @@ class Orchestrator:
             return context_window
 
         model_id = self._current_session.model if self._current_session is not None else "<no session>"
-        provider_name = provider.name.value
+        provider_name = provider.name
         _logger.warning("context_window_unknown", provider=provider_name, model=model_id)
         error_message = (
             f"No context window known for provider '{provider_name}' model '{model_id}'. "
@@ -1965,14 +1977,14 @@ class Orchestrator:
         messages: list[Message],
         context_window: int | None,
         *,
-        provider: ProviderName | None = None,
+        tokenizer: str | None = None,
     ) -> list[Message]:
         """Remove oldest non-system messages until within context budget.
 
         Keeps 85% of the context window as the token budget to leave headroom
-        for the response. Token counting uses :func:`_count_tokens` which
-        selects a provider-specific tiktoken encoding when ``provider`` is
-        supplied and falls back to ``cl100k_base`` otherwise.
+        for the response. Token counting uses :func:`_count_tokens`, which
+        uses the model's own tiktoken encoding when ``tokenizer`` is supplied
+        and falls back to the default encoding otherwise.
 
         ``context_window=None`` is treated as a hard error rather than a
         silent passthrough so callers cannot accidentally send unbounded
@@ -1984,8 +1996,8 @@ class Orchestrator:
             messages: List of messages to trim. Mutated in place.
             context_window: Maximum context window in tokens. ``None`` raises
                 ``ToolError`` instead of skipping trimming.
-            provider: Active provider used to select the tiktoken encoding
-                for token counting.
+            tokenizer: ``tiktoken`` encoding name from the model's
+                capability record, used for token counting.
 
         Returns:
             list[Message]: Trimmed list of messages.
@@ -2002,7 +2014,7 @@ class Orchestrator:
             )
             raise ToolError(error_message)
         budget = int(context_window * 0.85)
-        total = sum(Orchestrator._estimate_tokens(m.content, provider) for m in messages)
+        total = sum(Orchestrator._estimate_tokens(m.content, tokenizer) for m in messages)
         while total > budget and len(messages) > 1:
             oldest_idx = next(
                 (i for i, m in enumerate(messages) if m.role != "system"),
@@ -2011,7 +2023,7 @@ class Orchestrator:
             if oldest_idx < 0:
                 break
             removed = messages.pop(oldest_idx)
-            removed_tokens = Orchestrator._estimate_tokens(removed.content, provider)
+            removed_tokens = Orchestrator._estimate_tokens(removed.content, tokenizer)
             total -= removed_tokens
             _logger.debug(
                 "message_trimmed_for_context",
@@ -2054,8 +2066,8 @@ class Orchestrator:
             _logger.error("call_llm_no_active_session")
             raise RuntimeError(error_message)
 
-        provider_name = provider.name
-        input_tokens = sum(Orchestrator._estimate_tokens(m.content, provider_name) for m in messages)
+        tokenizer = provider.capabilities_for(self._current_session.model).tokenizer
+        input_tokens = sum(Orchestrator._estimate_tokens(m.content, tokenizer) for m in messages)
         self._stats.total_tokens_used += input_tokens
 
         tools_available = bool(tools)
@@ -2096,7 +2108,7 @@ class Orchestrator:
             )
 
         response, tool_calls_result = result
-        output_tokens = Orchestrator._estimate_tokens(response.content, provider_name)
+        output_tokens = Orchestrator._estimate_tokens(response.content, tokenizer)
         self._stats.total_tokens_used += output_tokens
         self._record_provider_usage(provider=provider, response=response)
         _logger.debug(
@@ -2138,7 +2150,7 @@ class Orchestrator:
             self._stats.provider_total_tokens += usage.total_tokens
             _logger.debug(
                 "provider_usage_recorded",
-                provider=provider.name.value,
+                provider=provider.name,
                 prompt_tokens=usage.prompt_tokens,
                 completion_tokens=usage.completion_tokens,
                 total_tokens=usage.total_tokens,
@@ -2149,7 +2161,7 @@ class Orchestrator:
                 response.thinking_content = "\n\n".join(thinking_blocks)
             _logger.debug(
                 "provider_thinking_recorded",
-                provider=provider.name.value,
+                provider=provider.name,
                 blocks=len(thinking_blocks),
                 total_chars=sum(len(t) for t in thinking_blocks),
             )
@@ -2166,8 +2178,10 @@ class Orchestrator:
         In "auto" mode, a turn with no tools (or the final summarizing turn
         after tool results have already been collected) always streams. An
         initial turn where tools are available also streams as long as the
-        active provider is known to finalize tool calls from streamed deltas
-        (see ``_STREAMING_TOOL_CALL_PROVIDERS``); ``_stream_response`` still
+        active dialect is known to finalize tool calls from streamed deltas
+        (see ``_STREAMING_TOOL_CALL_DIALECTS``); a provider with no dialect at
+        all runs the model in-process and finalizes its own tool calls, so it
+        streams too; ``_stream_response`` still
         collects any tool calls the model emits mid-stream via
         ``provider.get_pending_tool_calls()`` after the stream completes, so
         text deltas can reach the UI immediately without losing tool-call
@@ -2195,7 +2209,8 @@ class Orchestrator:
             return True
         if not tools_available or is_final_response:
             return True
-        return provider.name in _STREAMING_TOOL_CALL_PROVIDERS
+        dialect = provider.dialect
+        return dialect is None or dialect in _STREAMING_TOOL_CALL_DIALECTS
 
     async def _stream_response(
         self,
@@ -2584,7 +2599,7 @@ class Orchestrator:
         """Validate tool definitions against the provider's schema format.
 
         Refuses to run the agent loop when any tool's schema would not be
-        accepted by the provider. ``validate_tool_for_provider`` returns a
+        accepted by the provider. ``validate_tool_for_dialect`` returns a
         mix of ``warning`` and ``error`` severities; only ``error`` entries
         gate the loop, but every diagnostic is logged so warnings remain
         observable. Raising here ensures invalid tool schemas surface on the
@@ -2600,38 +2615,40 @@ class Orchestrator:
             ToolError: If any tool definition is invalid for the provider.
         """
         provider_name = provider.name
+        dialect = provider.dialect or ApiDialect.CHAT_COMPLETIONS
         function_count = sum(len(tool.functions) for tool in tools)
         _logger.debug(
             "tool_schema_validation_started",
-            provider=provider_name.value,
+            provider=provider_name,
+            dialect=dialect.value,
             container_count=len(tools),
             function_count=function_count,
         )
         broken: list[str] = []
         for tool in tools:
-            errors = validate_tool_for_provider(tool, provider_name)
+            errors = validate_tool_for_dialect(tool, dialect)
             for err in errors:
                 if err.severity == "error":
                     _logger.error(
                         "tool_schema_validation_error",
-                        tool=tool.tool_name.value,
+                        tool=tool.tool_name,
                         location=err.location,
                         error=err.message,
-                        provider=provider_name.value,
+                        provider=provider_name,
                     )
-                    broken.append(f"{tool.tool_name.value}: {err}")
+                    broken.append(f"{tool.tool_name}: {err}")
                 else:
                     _logger.warning(
                         "tool_schema_validation_warning",
-                        tool=tool.tool_name.value,
+                        tool=tool.tool_name,
                         location=err.location,
                         error=err.message,
-                        provider=provider_name.value,
+                        provider=provider_name,
                     )
             for func in tool.functions:
                 param_schema = build_schema_parameters(
                     func.parameters,
-                    uppercase_types=(provider_name == ProviderName.GOOGLE),
+                    uppercase_types=(dialect is ApiDialect.GEMINI),
                 )
                 _logger.debug(
                     "tool_function_params_built",
@@ -2643,7 +2660,7 @@ class Orchestrator:
         if broken:
             joined = "; ".join(broken)
             error_message = (
-                f"Tool schema validation failed for provider '{provider_name.value}': {joined}. "
+                f"Tool schema validation failed for provider '{provider_name}': {joined}. "
                 "Fix the offending bridge's tool definition before sending the request."
             )
             raise ToolError(error_message, tool_name=broken[0].split(":", 1)[0])
@@ -2777,7 +2794,7 @@ class Orchestrator:
 
         provider = self._providers.get(self._current_session.provider) if self._current_session else None
         if provider:
-            provider_name = self._current_session.provider.value if self._current_session else "unknown"
+            provider_name = self._current_session.provider if self._current_session else "unknown"
             try:
                 await provider.cancel_request()
                 _logger.debug("cancel_provider_request_sent", provider=provider_name)
@@ -3297,11 +3314,11 @@ class Orchestrator:
                         unload(),
                     )
                     await unload_coro
-                    _logger.info("shutdown_provider_model_unloaded", provider=provider_name.value)
+                    _logger.info("shutdown_provider_model_unloaded", provider=provider_name)
                 except Exception as exc:
                     _logger.exception(
                         "shutdown_provider_unload_failed",
-                        provider=provider_name.value,
+                        provider=provider_name,
                     )
                     errors.append(exc)
 

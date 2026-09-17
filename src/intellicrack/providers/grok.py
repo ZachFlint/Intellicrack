@@ -24,13 +24,13 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     RateLimitError,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
     LLMProviderBase,
     OpenAIErrorMessages,
@@ -120,13 +120,13 @@ class GrokProvider(LLMProviderBase):
         self._logger.info("grok_provider_initialized")
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: ProviderName.GROK
+            str: The ``grok`` built-in provider id.
         """
-        return ProviderName.GROK
+        return provider_ids.GROK
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to X.AI Grok API.
@@ -298,7 +298,7 @@ class GrokProvider(LLMProviderBase):
                 ModelInfo(
                     id=model_id,
                     name=model_id,
-                    provider=ProviderName.GROK,
+                    provider=provider_ids.GROK,
                     context_window=self._infer_context_window(model_id),
                     supports_tools=True,
                     supports_vision=self._infer_supports_vision(model_id),

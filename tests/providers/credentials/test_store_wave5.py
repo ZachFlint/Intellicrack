@@ -17,7 +17,7 @@ from typing import Any, cast
 
 import pytest
 
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.credentials.store import (
     CredentialSource,
@@ -25,6 +25,7 @@ from intellicrack.credentials.store import (
     KeyringUnavailableError,
     StoredCredential,
 )
+from intellicrack.providers import ids as provider_ids
 
 
 def _make_keyring_free_store(env_entries: dict[str, str] | None = None) -> CredentialStore:
@@ -98,10 +99,10 @@ def test_deserialize_metadata_corrupt_fallback() -> None:
     """
     result: StoredCredential = cast(Any, CredentialStore)._deserialize_metadata(
         "not-valid-json{{{",
-        ProviderName.ANTHROPIC,
+        provider_ids.ANTHROPIC,
     )
-    assert result.provider is ProviderName.ANTHROPIC
-    assert result.key_name == ProviderName.ANTHROPIC.value
+    assert result.provider is provider_ids.ANTHROPIC
+    assert result.key_name == provider_ids.ANTHROPIC
     assert result.source is CredentialSource.KEYRING
 
 
@@ -115,7 +116,7 @@ def test_set_keyring_unavailable_raises() -> None:
     store = _make_keyring_free_store()
     creds = ProviderCredentials(api_key="sk-ant-test-wave5")
     with pytest.raises(KeyringUnavailableError, match=r"(?i)keyring.*not.*available|not available"):
-        asyncio.run(store.set(ProviderName.ANTHROPIC, creds))
+        asyncio.run(store.set(provider_ids.ANTHROPIC, creds))
 
 
 def test_delete_keyring_unavailable_raises() -> None:
@@ -126,7 +127,7 @@ def test_delete_keyring_unavailable_raises() -> None:
     """
     store = _make_keyring_free_store()
     with pytest.raises(KeyringUnavailableError, match=r"(?i)keyring.*not.*available|not available"):
-        asyncio.run(store.delete(ProviderName.ANTHROPIC))
+        asyncio.run(store.delete(provider_ids.ANTHROPIC))
 
 
 def test_delete_credential_not_found_returns_false() -> None:
@@ -141,8 +142,8 @@ def test_delete_credential_not_found_returns_false() -> None:
         pytest.skip("no real keyring backend available on this host")
 
     async def _run() -> bool:
-        await store.delete(ProviderName.OLLAMA)
-        return await store.delete(ProviderName.OLLAMA)
+        await store.delete(provider_ids.OLLAMA)
+        return await store.delete(provider_ids.OLLAMA)
 
     result = asyncio.run(_run())
     assert result is False
@@ -152,7 +153,7 @@ def test_list_providers_entry_content() -> None:
     """list_providers() returns a StoredCredential with exact provider and source fields.
 
     Seeds an OLLAMA env entry and asserts the returned entry has
-    provider==ProviderName.OLLAMA and source==CredentialSource.ENV_FILE
+    provider==provider_ids.OLLAMA and source==CredentialSource.ENV_FILE
     (the keyring-free fallback path).
 
     Mutation: removing the metadata-assembly loop and returning [] always leaves
@@ -167,8 +168,8 @@ def test_list_providers_entry_content() -> None:
 
     results = asyncio.run(_run())
     providers = [e.provider for e in results]
-    assert ProviderName.OLLAMA in providers
-    ollama_entry = next(e for e in results if e.provider is ProviderName.OLLAMA)
+    assert provider_ids.OLLAMA in providers
+    ollama_entry = next(e for e in results if e.provider is provider_ids.OLLAMA)
     assert ollama_entry.source is CredentialSource.ENV_FILE
 
 
@@ -185,7 +186,7 @@ def test_migrate_from_env_keyring_unavailable_raises() -> None:
         KeyringUnavailableError,
         match=r"(?i)keyring.*not.*available|not available|migration",
     ):
-        asyncio.run(store.migrate_from_env([ProviderName.OLLAMA]))
+        asyncio.run(store.migrate_from_env([provider_ids.OLLAMA]))
 
 
 def test_migrate_from_env_missing_key_result_false(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -203,11 +204,11 @@ def test_migrate_from_env_missing_key_result_false(monkeypatch: pytest.MonkeyPat
     _clear_ollama_env(monkeypatch)
     store = _make_keyring_available_store()
 
-    async def _run() -> dict[ProviderName, bool]:
-        return await store.migrate_from_env([ProviderName.OLLAMA])
+    async def _run() -> dict[str, bool]:
+        return await store.migrate_from_env([provider_ids.OLLAMA])
 
     result = asyncio.run(_run())
-    assert result[ProviderName.OLLAMA] is False
+    assert result[provider_ids.OLLAMA] is False
 
 
 def test_validate_no_credentials_returns_false_with_message(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -222,7 +223,7 @@ def test_validate_no_credentials_returns_false_with_message(monkeypatch: pytest.
     store = _make_keyring_free_store()
 
     async def _run() -> tuple[bool, str | None]:
-        return await store.validate(ProviderName.OLLAMA)
+        return await store.validate(provider_ids.OLLAMA)
 
     valid, message = asyncio.run(_run())
     assert valid is False
@@ -243,7 +244,7 @@ def test_get_source_no_credential_returns_none(monkeypatch: pytest.MonkeyPatch) 
     store = _make_keyring_free_store()
 
     async def _run() -> CredentialSource | None:
-        return await store.get_source(ProviderName.OLLAMA)
+        return await store.get_source(provider_ids.OLLAMA)
 
     result = asyncio.run(_run())
     assert result is None
