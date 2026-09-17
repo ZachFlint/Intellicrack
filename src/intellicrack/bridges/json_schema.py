@@ -566,6 +566,11 @@ def build_schema_property(
 ) -> JSONSchemaProperty:
     """Build a JSON Schema property from a ToolParameter.
 
+    A non-scalar default (an empty list, say) is omitted rather than emitted:
+    that is what actually reached every provider before schema generation was
+    consolidated here, and widening it now would change the advertised schema
+    of tools that are working today.
+
     Args:
         param: The tool parameter to convert.
         uppercase_types: If True, use uppercase type names (for Google).
@@ -588,7 +593,7 @@ def build_schema_property(
     if param.enum is not None and len(param.enum) > 0:
         prop["enum"] = param.enum
 
-    if param.default is not None:
+    if param.default is not None and isinstance(param.default, (str, int, float, bool)):
         prop["default"] = param.default
 
     return prop

@@ -31,6 +31,7 @@ from intellicrack.core.types import (
     ProviderCredentials,
     ProviderError,
     RateLimitError,
+    ReasoningItem,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
@@ -53,6 +54,7 @@ from intellicrack.providers.dialects.base import (
     parse_tool_call,
     serialize_tool_result,
 )
+from intellicrack.providers.presets import preset_capabilities
 from intellicrack.providers.tool_names import to_wire_name
 
 
@@ -335,6 +337,7 @@ class LLMProviderBase(ABC):
         self._pending_tool_calls: list[ToolCall] = []
         self._pending_usage: UsageInfo | None = None
         self._pending_thinking: list[str] = []
+        self._pending_reasoning: list[ReasoningItem] = []
         self._model_capabilities: dict[str, ModelCapabilities] = {}
         self._capability_overrides: dict[str, CapabilityOverride] = {}
         self._last_sent_tools: SentToolReport = SentToolReport()
@@ -418,14 +421,26 @@ class LLMProviderBase(ABC):
         """
         return dict(self._capability_overrides)
 
-    def capabilities_for(self, model: str) -> ModelCapabilities:
-        """Resolve one model's capability record through the three-layer merge.
+    @property
+    def preset_id(self) -> str:
+        """The preset this provider's capability defaults come from.
 
-        Resolution order is dialect default, then metadata ingested from the
-        endpoint, then the per-model user override. A model id that matches
-        nothing exactly is retried with its variant suffix stripped, so
-        ``my-model:free`` resolves against ``my-model`` rather than falling all
-        the way back to the dialect default.
+        Returns:
+            str: The preset id, which for a built-in provider equals its
+            instance id. A user-defined instance reports the preset it was
+            created from instead.
+        """
+        return self.name
+
+    def capabilities_for(self, model: str) -> ModelCapabilities:
+        """Resolve one model's capability record through the layered merge.
+
+        Resolution order is the dialect's defaults, then the preset's known
+        capabilities for that model family, then metadata ingested from the
+        endpoint's own ``/models`` payload, then the per-model user override,
+        which always wins. A model id that matches nothing exactly is retried
+        with its variant suffix stripped, so ``my-model:free`` resolves
+        against ``my-model`` rather than falling back to the dialect default.
 
         Args:
             model: The model id to resolve.
@@ -435,6 +450,7 @@ class LLMProviderBase(ABC):
         """
         adapter = self.adapter()
         base = adapter.default_capabilities() if adapter is not None else ModelCapabilities()
+        base = merge_capabilities(base, preset_capabilities(self.preset_id, model))
         ingested = self._lookup_model_entry(self._model_capabilities, model)
         if ingested is not None:
             base = ingested
@@ -532,6 +548,7 @@ class LLMProviderBase(ABC):
         self._pending_tool_calls.clear()
         self._pending_usage = None
         self._pending_thinking.clear()
+        self._pending_reasoning.clear()
         self._logger.debug("provider_base_disconnected")
 
     @abstractmethod
@@ -663,6 +680,24 @@ class LLMProviderBase(ABC):
         thinking = list(self._pending_thinking)
         self._pending_thinking.clear()
         return thinking
+
+    def get_pending_reasoning(self) -> list[ReasoningItem]:
+        """Retrieve the reasoning blocks captured during the last request.
+
+        Mirrors :meth:`get_pending_thinking`, but returns the full blocks
+        rather than their display text, so the provider-opaque payloads that
+        must be echoed back verbatim -- an Anthropic signature, an OpenAI
+        Responses item id and encrypted content -- survive into the assistant
+        message the caller builds. The buffer is cleared on each call so the
+        same block is never returned twice.
+
+        Returns:
+            list[ReasoningItem]: Reasoning blocks accumulated during the last
+            request. Empty when reasoning was not enabled or not emitted.
+        """
+        reasoning = list(self._pending_reasoning)
+        self._pending_reasoning.clear()
+        return reasoning
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request.

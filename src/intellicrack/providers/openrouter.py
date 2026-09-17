@@ -42,6 +42,7 @@ from intellicrack.providers.base import (
     map_thinking_budget_to_effort,
     redact_secrets,
 )
+from intellicrack.providers.capabilities import ApiDialect
 
 
 if TYPE_CHECKING:
@@ -170,6 +171,16 @@ class OpenRouterProvider(LLMProviderBase):
             str: The ``openrouter`` built-in provider id.
         """
         return provider_ids.OPENROUTER
+
+    @property
+    @override
+    def dialect(self) -> ApiDialect:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect: Always :data:`ApiDialect.CHAT_COMPLETIONS`.
+        """
+        return ApiDialect.CHAT_COMPLETIONS
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to OpenRouter API.

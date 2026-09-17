@@ -32,6 +32,8 @@ from intellicrack.core.types import (
     ProviderCredentials,
     ProviderError,
     RateLimitError,
+    ReasoningItem,
+    ReasoningKind,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
@@ -42,9 +44,11 @@ from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
     LLMProviderBase,
     UsageInfo,
-    create_google_tool_schema,
     is_permanent_quota_error,
 )
+from intellicrack.providers.capabilities import ApiDialect
+from intellicrack.providers.dialects.base import ToolNameStyle
+from intellicrack.providers.dialects.gemini import GeminiAdapter
 from intellicrack.providers.tool_names import from_wire_name, to_wire_name
 
 
@@ -96,6 +100,7 @@ class GoogleProvider(LLMProviderBase):
         super().__init__()
         self.client: genai.Client | None = None
         self._current_task: asyncio.Task[object] | None = None
+        self._adapter = GeminiAdapter()
         self._logger = get_logger(__name__).bind(provider="google")
         self._logger.info("google_provider_initialized")
 
@@ -107,6 +112,16 @@ class GoogleProvider(LLMProviderBase):
             str: The ``google`` built-in provider id.
         """
         return provider_ids.GOOGLE
+
+    @property
+    @override
+    def dialect(self) -> ApiDialect:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect: Always :data:`ApiDialect.GEMINI`.
+        """
+        return ApiDialect.GEMINI
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to Google AI API.
@@ -486,6 +501,7 @@ class GoogleProvider(LLMProviderBase):
         self._pending_usage = self._extract_usage(response)
         if thinking_text := self._extract_thinking_text(response):
             self._pending_thinking.append(thinking_text)
+            self._pending_reasoning.append(ReasoningItem(kind=ReasoningKind.THINKING, text=thinking_text))
 
         for tc in tool_calls:
             self._logger.debug(
@@ -712,6 +728,7 @@ class GoogleProvider(LLMProviderBase):
             self._pending_usage = self._extract_usage(last_chunk)
             if thinking_parts:
                 self._pending_thinking.extend(thinking_parts)
+                self._pending_reasoning.extend(ReasoningItem(kind=ReasoningKind.THINKING, text=part) for part in thinking_parts)
             self._pending_tool_calls = self._extract_function_calls(last_chunk)
             self._logger.info(
                 "google_chat_stream_completed",
@@ -1132,16 +1149,15 @@ class GoogleProvider(LLMProviderBase):
         return "\n\n".join(thoughts)
 
     @staticmethod
-    def _build_function_call_part(tool_call: ToolCall) -> dict[str, object]:
+    def _build_function_call_part(tool_call: ToolCall) -> dict[str, Any]:
         """Build a Gemini function-call part dict from an internal ToolCall.
 
-        Re-attaches ``thought_signature`` as a sibling of ``function_call``
-        (matching the shape of ``google.genai.types.Part``) so Gemini 3.x
-        multi-turn tool chains can resume without a
-        ``400 INVALID_ARGUMENT: Function call is missing a
-        thought_signature`` error. Older responses/models that never
-        produced a signature leave ``tool_call.thought_signature`` unset,
-        so the key is omitted entirely for backward compatibility.
+        Delegates to
+        :meth:`~intellicrack.providers.dialects.gemini.GeminiAdapter.build_function_call_part`,
+        which re-attaches ``thought_signature`` as a sibling of
+        ``function_call`` so Gemini 3.x multi-turn tool chains resume instead
+        of failing with ``400 INVALID_ARGUMENT: Function call is missing a
+        thought_signature``.
 
         Args:
             tool_call: The internal tool call to convert, as previously
@@ -1149,19 +1165,11 @@ class GoogleProvider(LLMProviderBase):
                 :meth:`_extract_function_calls`.
 
         Returns:
-            dict[str, object]: A Gemini ``Part``-shaped dict containing the
+            dict[str, Any]: A Gemini ``Part``-shaped dict containing the
             ``function_call`` and, when present, the decoded
             ``thought_signature`` bytes.
         """
-        part: dict[str, object] = {
-            "function_call": {
-                "name": to_wire_name(tool_call.function_name),
-                "args": tool_call.arguments,
-            },
-        }
-        if tool_call.thought_signature:
-            part["thought_signature"] = base64.b64decode(tool_call.thought_signature)
-        return part
+        return GeminiAdapter.build_function_call_part(tool_call, name_style=ToolNameStyle.DOUBLE_UNDERSCORE)
 
     @override
     def _convert_messages_to_provider_format(
@@ -1170,16 +1178,13 @@ class GoogleProvider(LLMProviderBase):
     ) -> list[dict[str, object]]:
         """Convert internal messages to Gemini format.
 
-        System messages are excluded here because they are passed separately
-        via the native system_instruction parameter in GenerateContentConfig.
-
-        Builds a call_id-to-function_name mapping from assistant messages so
-        that tool result ``function_response.name`` fields contain the actual
-        function name (required by Google's API), not the opaque call ID.
-        The mapped name is the same provider wire form emitted by
-        :meth:`_build_function_call_part` for the matching ``function_call``,
-        since Gemini rejects a ``function_response`` whose name does not
-        match the preceding ``function_call`` exactly.
+        Delegates to
+        :class:`~intellicrack.providers.dialects.gemini.GeminiAdapter`, which
+        owns the Gemini wire format: system messages are dropped here because
+        they travel as the native ``system_instruction``, and a tool result's
+        ``function_response.name`` carries the function name the matching
+        ``function_call`` used, because Gemini rejects a response whose name
+        does not match.
 
         Args:
             messages: List of Message objects to convert.
@@ -1187,57 +1192,21 @@ class GoogleProvider(LLMProviderBase):
         Returns:
             list[dict[str, object]]: List of content dictionaries in Gemini's expected format.
         """
-        call_id_to_name: dict[str, str] = {}
-        for msg in messages:
-            if msg.role == "assistant" and msg.tool_calls:
-                for tc in msg.tool_calls:
-                    call_id_to_name[tc.id] = to_wire_name(tc.function_name)
+        return cast(
+            "list[dict[str, object]]",
+            self._adapter.build_contents(messages, self.capabilities_for("")),
+        )
 
-        contents: list[dict[str, object]] = []
-
-        for msg in messages:
-            if msg.role == "system":
-                continue
-            if msg.role == "user":
-                contents.append({
-                    "role": "user",
-                    "parts": [{"text": msg.content}],
-                })
-            elif msg.role == "assistant":
-                parts: list[dict[str, object]] = []
-                if msg.content:
-                    parts.append({"text": msg.content})
-
-                if msg.tool_calls:
-                    parts.extend([self._build_function_call_part(tc) for tc in msg.tool_calls])
-
-                contents.append({
-                    "role": "model",
-                    "parts": parts,
-                })
-            elif msg.role == "tool" and msg.tool_results:
-                parts_list: list[dict[str, object]] = [
-                    {
-                        "function_response": {
-                            "name": call_id_to_name.get(tr.call_id, tr.call_id),
-                            "response": {"result": tr.result},
-                        },
-                    }
-                    for tr in msg.tool_results
-                ]
-
-                contents.append({
-                    "role": "user",
-                    "parts": parts_list,
-                })
-
-        return contents
-
-    @staticmethod
     def _build_tool_declarations(
+        self,
         tools: list[ToolDefinition],
     ) -> list[types.Tool]:
         """Build Gemini tool declarations from ToolDefinitions.
+
+        The declarations themselves come from
+        :class:`~intellicrack.providers.dialects.gemini.GeminiAdapter`, which
+        owns the uppercase-typed Gemini schema subset and the raw-JSON-Schema
+        reduction; this method only lifts them into the SDK's typed objects.
 
         Args:
             tools: List of ToolDefinition objects to convert.
@@ -1246,20 +1215,24 @@ class GoogleProvider(LLMProviderBase):
             list[types.Tool]: List of Gemini Tool objects for function calling.
         """
         function_declarations: list[types.FunctionDeclaration] = []
-        for tool in tools:
-            google_schemas = create_google_tool_schema(tool)
-            for decl in google_schemas:
-                params = decl["parameters"]
-                func_decl = types.FunctionDeclaration(
-                    name=decl["name"],
-                    description=decl["description"],
+        for declaration in self._gemini_declarations(tools):
+            parameters = declaration.get("parameters")
+            params: dict[str, Any] = parameters if isinstance(parameters, dict) else {}
+            raw_properties = params.get("properties")
+            properties: dict[str, Any] = raw_properties if isinstance(raw_properties, dict) else {}
+            raw_required = params.get("required")
+            required: list[str] = [str(name) for name in raw_required] if isinstance(raw_required, list) else []
+            function_declarations.append(
+                types.FunctionDeclaration(
+                    name=str(declaration.get("name", "")),
+                    description=str(declaration.get("description", "")),
                     parameters=types.Schema(
                         type=types.Type.OBJECT,
-                        properties={k: types.Schema(**cast("dict[str, Any]", dict(v))) for k, v in params["properties"].items()},
-                        required=params["required"],
+                        properties={key: types.Schema(**cast("dict[str, Any]", dict(value))) for key, value in properties.items()},
+                        required=required,
                     ),
-                )
-                function_declarations.append(func_decl)
+                ),
+            )
         return [types.Tool(function_declarations=function_declarations)]
 
     @override
@@ -1273,13 +1246,29 @@ class GoogleProvider(LLMProviderBase):
             tools: List of ToolDefinition objects to convert.
 
         Returns:
-            list[dict[str, object]]: List of tool dictionaries in Gemini's expected format.
+            list[dict[str, object]]: List of function declarations in Gemini's expected format.
         """
-        result: list[dict[str, object]] = []
-        for tool in tools:
-            google_schemas = create_google_tool_schema(tool)
-            result.extend(dict(schema) for schema in google_schemas)
-        return result
+        return cast("list[dict[str, object]]", self._gemini_declarations(tools))
+
+    def _gemini_declarations(self, tools: list[ToolDefinition]) -> list[dict[str, Any]]:
+        """Build the flat function-declaration list for a tool set.
+
+        Args:
+            tools: Tool definitions in final priority order.
+
+        Returns:
+            list[dict[str, Any]]: One declaration per tool function, in input
+            order. The adapter groups them under a single Gemini ``Tool``;
+            they are unwrapped here because both the SDK builder and the
+            legacy dict conversion want the flat list.
+        """
+        declarations: list[dict[str, Any]] = []
+        for entry in self._adapter.build_tool_schemas(tools, self.capabilities_for("")):
+            raw = entry.get("functionDeclarations")
+            if isinstance(raw, list):
+                members: list[Any] = raw
+                declarations.extend(member for member in members if isinstance(member, dict))
+        return declarations
 
 
 __all__ = ["GoogleProvider", "UsageInfo"]
