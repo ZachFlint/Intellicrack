@@ -41,13 +41,13 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
     ToolChoiceMode,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
     HttpErrorMessages,
     LLMProviderBase,
@@ -56,6 +56,7 @@ from intellicrack.providers.base import (
     create_openai_tool_schema,
     parse_tool_call,
 )
+from intellicrack.providers.capabilities import ApiDialect
 from intellicrack.providers.tool_names import to_wire_name
 
 
@@ -219,13 +220,23 @@ class HuggingFaceProvider(LLMProviderBase):
         self._logger.info("huggingface_provider_initialized")
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: The provider name enum value.
+            str: The ``huggingface`` built-in provider id.
         """
-        return ProviderName.HUGGINGFACE
+        return provider_ids.HUGGINGFACE
+
+    @property
+    @override
+    def dialect(self) -> ApiDialect:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect: Always :data:`ApiDialect.CHAT_COMPLETIONS`.
+        """
+        return ApiDialect.CHAT_COMPLETIONS
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to the HuggingFace Inference API.
@@ -592,7 +603,7 @@ class HuggingFaceProvider(LLMProviderBase):
                 ModelInfo(
                     id=model_id,
                     name=short_name,
-                    provider=ProviderName.HUGGINGFACE,
+                    provider=provider_ids.HUGGINGFACE,
                     context_window=_DEFAULT_CONTEXT_WINDOW,
                     supports_tools=supports_tools,
                     supports_vision=supports_vision,

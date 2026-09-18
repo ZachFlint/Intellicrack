@@ -2,121 +2,68 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""JSON Schema generation for LLM tool calling.
+"""Validation and dialect dispatch for LLM tool schemas.
 
-This module provides centralized schema generation for converting Intellicrack tool definitions to provider-specific formats for LLM
-function calling. Supports Anthropic, OpenAI, Google Gemini, Ollama, and OpenRouter.
+Schema *generation* now lives in one place per wire format: the dialect
+adapters under :mod:`intellicrack.providers.dialects`, which every provider
+and every entry point here delegates to. That consolidation resolved a real
+disagreement -- two OpenAI schema builders existed and only one applied the
+provider-safe wire-name mapping, so the same tool could be advertised under
+two different names depending on which path built it.
+
+What remains here is validation: the cheap per-tool checks the orchestrator
+runs at the top of every agent loop iteration, plus the reserved-namespace rule
+that stops an externally-sourced tool from claiming a bridge namespace.
+
+Dispatch is keyed by :class:`~intellicrack.providers.capabilities.ApiDialect`
+rather than by provider, because a provider is now an arbitrary string id while
+the set of wire formats stays closed.
 """
 
 from __future__ import annotations
 
 import re
-from typing import Any, Literal, Never, TypedDict
+from typing import Any, Literal, TypedDict, cast
 
+from intellicrack.bridges.json_schema import (
+    GOOGLE_TYPE_MAP,
+    PYTHON_TO_JSON_TYPES,
+    VALID_JSON_SCHEMA_TYPES,
+    GoogleSchemaParameters,
+    GoogleSchemaProperty,
+    JSONSchemaParameters,
+    JSONSchemaProperty,
+    build_google_schema_parameters,
+    build_json_schema_parameters,
+    build_schema_property,
+    is_recognized_type,
+    normalize_type,
+)
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
-    ProviderName,
     ToolDefinition,
     ToolFunction,
+    ToolName,
     ToolParameter,
 )
+from intellicrack.providers.capabilities import ApiDialect
+from intellicrack.providers.dialects import adapter_for
+from intellicrack.providers.presets import preset_for
 from intellicrack.providers.tool_names import is_valid_wire_name, to_wire_name
 
 
 _logger = get_logger(__name__)
 
 
-def _assert_never(value: Never) -> Never:
-    """Assert that a code path is never reached.
+RESERVED_TOOL_NAMESPACES: frozenset[str] = frozenset(member.value for member in ToolName)
+"""Namespaces owned by Intellicrack's own bridges.
 
-    Used for exhaustive enum matching to ensure all cases are handled.
-
-    Args:
-        value: A value of type Never (should be impossible to call).
-
-    Returns:
-        Never: This function never returns; it always raises ``AssertionError``.
-
-    Raises:
-        AssertionError: Always raised if this function is somehow called.
-    """
-    msg = f"Unexpected value: {value!r}"
-    _logger.error(
-        "assert_never_triggered",
-        unexpected_value=repr(value),
-        unexpected_type=type(value).__name__,
-    )
-    raise AssertionError(msg)
-
-
-VALID_JSON_SCHEMA_TYPES: frozenset[str] = frozenset({
-    "string",
-    "integer",
-    "number",
-    "boolean",
-    "array",
-    "object",
-    "null",
-})
-
-PYTHON_TO_JSON_TYPES: dict[str, str] = {
-    "str": "string",
-    "int": "integer",
-    "float": "number",
-    "bool": "boolean",
-    "list": "array",
-    "dict": "object",
-}
-
-GOOGLE_TYPE_MAP: dict[str, str] = {
-    "string": "STRING",
-    "integer": "INTEGER",
-    "number": "NUMBER",
-    "boolean": "BOOLEAN",
-    "array": "ARRAY",
-    "object": "OBJECT",
-    "null": "NULL",
-}
-
-
-class JSONSchemaProperty(TypedDict, total=False):
-    """JSON Schema property definition for tool parameters."""
-
-    type: str
-    description: str
-    enum: list[str]
-    default: str | int | float | bool | list[str | int | float | bool] | None
-    items: JSONSchemaProperty
-    properties: dict[str, JSONSchemaProperty]
-    required: list[str]
-
-
-class JSONSchemaParameters(TypedDict):
-    """JSON Schema parameters object for tool functions."""
-
-    type: Literal["object", "OBJECT"]
-    properties: dict[str, JSONSchemaProperty]
-    required: list[str]
-
-
-class GoogleSchemaProperty(TypedDict, total=False):
-    """Google Gemini schema property with uppercase types."""
-
-    type: str
-    description: str
-    enum: list[str]
-    default: str | int | float | bool | list[str | int | float | bool] | None
-    items: JSONSchemaProperty
-    properties: dict[str, JSONSchemaProperty]
-    required: list[str]
-
-
-class GoogleSchemaParameters(TypedDict):
-    """Google Gemini schema parameters with OBJECT type."""
-
-    type: Literal["OBJECT"]
-    properties: dict[str, GoogleSchemaProperty]
-    required: list[str]
+An externally-sourced tool may not claim one of these: the dispatch boundary
+resolves a namespace against the bridge registry first, so a tool calling
+itself ``ghidra`` would shadow the real Ghidra bridge rather than sit beside
+it.
+"""
 
 
 class AnthropicToolSchema(TypedDict):
@@ -183,179 +130,6 @@ class ValidationError:
         return f"[{self.severity.upper()}] {self.location}: {self.message}"
 
 
-def is_recognized_type(param_type: str) -> bool:
-    """Check whether a parameter type string is a recognised type alias.
-
-    A type is recognised when its lower-cased / whitespace-stripped form
-    matches a key in ``PYTHON_TO_JSON_TYPES`` or a member of
-    ``VALID_JSON_SCHEMA_TYPES``. Types outside this set (parameterised
-    generics like ``list[int]``, optional unions like ``int|None``,
-    arbitrary class names) are rejected because they cannot be advertised
-    to LLM providers without information loss.
-
-    Args:
-        param_type: The type string to test.
-
-    Returns:
-        bool: True when the type is one of the recognised aliases.
-    """
-    param_type_lower = param_type.lower().strip()
-    return param_type_lower in PYTHON_TO_JSON_TYPES or param_type_lower in VALID_JSON_SCHEMA_TYPES
-
-
-def normalize_type(param_type: str) -> str:
-    """Normalize a parameter type string to a JSON Schema type.
-
-    Recognised inputs (Python aliases such as ``int``/``str``/``list``
-    or JSON Schema names such as ``integer``/``string``/``array``) are
-    returned as their JSON Schema equivalents. Unrecognised inputs fall
-    back to ``"string"`` and emit a ``schema_type_fallback`` warning so
-    the offending type cannot be silently downgraded without leaving an
-    audit trail. Callers that need to decide between
-    ``raise``/``warn``/``coerce`` should pre-check with
-    :func:`is_recognized_type`.
-
-    Args:
-        param_type: The type string to normalize.
-
-    Returns:
-        str: A JSON Schema type drawn from ``VALID_JSON_SCHEMA_TYPES``.
-    """
-    param_type_lower = param_type.lower().strip()
-    if param_type_lower in PYTHON_TO_JSON_TYPES:
-        return PYTHON_TO_JSON_TYPES[param_type_lower]
-    if param_type_lower in VALID_JSON_SCHEMA_TYPES:
-        return param_type_lower
-    _logger.warning(
-        "schema_type_fallback",
-        param_type=param_type,
-        normalized="string",
-    )
-    return "string"
-
-
-def _build_array_items(
-    param: ToolParameter,
-    *,
-    uppercase_types: bool,
-) -> JSONSchemaProperty:
-    """Build the JSON Schema ``items`` definition for an array parameter.
-
-    Strict providers such as Google Gemini reject array schemas that omit
-    ``items``; object element schemas additionally require non-empty
-    ``properties``. This helper emits a typed element schema, recursing into
-    ``param.item_properties`` for object elements.
-
-    Args:
-        param: The array parameter whose element schema is built.
-        uppercase_types: If True, use uppercase type names (for Google).
-
-    Returns:
-        JSONSchemaProperty: Schema describing a single array element.
-    """
-    element_type = normalize_type(param.items_type)
-    cased_type = GOOGLE_TYPE_MAP.get(element_type, element_type.upper()) if uppercase_types else element_type
-    items: JSONSchemaProperty = {"type": cased_type}
-    if element_type == "object" and param.item_properties:
-        properties: dict[str, JSONSchemaProperty] = {}
-        required: list[str] = []
-        for nested in param.item_properties:
-            properties[nested.name] = build_schema_property(nested, uppercase_types=uppercase_types)
-            if nested.required:
-                required.append(nested.name)
-        items["properties"] = properties
-        items["required"] = required
-    return items
-
-
-def build_schema_property(
-    param: ToolParameter,
-    *,
-    uppercase_types: bool = False,
-) -> JSONSchemaProperty:
-    """Build a JSON Schema property from a ToolParameter.
-
-    Args:
-        param: The tool parameter to convert.
-        uppercase_types: If True, use uppercase type names (for Google).
-
-    Returns:
-        JSONSchemaProperty: JSONSchemaProperty dict; type strings are
-            uppercased when ``uppercase_types`` is set (Google format).
-    """
-    normalized = normalize_type(param.type)
-    param_type = GOOGLE_TYPE_MAP.get(normalized, normalized.upper()) if uppercase_types else normalized
-
-    prop: JSONSchemaProperty = {
-        "type": param_type,
-        "description": param.description,
-    }
-
-    if normalized == "array":
-        prop["items"] = _build_array_items(param, uppercase_types=uppercase_types)
-
-    if param.enum is not None and len(param.enum) > 0:
-        prop["enum"] = param.enum
-
-    if param.default is not None:
-        prop["default"] = param.default
-
-    return prop
-
-
-def _build_json_schema_parameters(
-    params: list[ToolParameter],
-) -> JSONSchemaParameters:
-    """Build JSON Schema parameters for Anthropic/OpenAI/Ollama/OpenRouter.
-
-    Args:
-        params: List of tool parameters.
-
-    Returns:
-        JSONSchemaParameters: JSONSchemaParameters dict with lowercase types.
-    """
-    properties: dict[str, JSONSchemaProperty] = {}
-    required: list[str] = []
-
-    for param in params:
-        prop = build_schema_property(param, uppercase_types=False)
-        properties[param.name] = prop
-        if param.required:
-            required.append(param.name)
-
-    return {
-        "type": "object",
-        "properties": properties,
-        "required": required,
-    }
-
-
-def _build_google_schema_parameters(
-    params: list[ToolParameter],
-) -> GoogleSchemaParameters:
-    """Build Google Gemini schema parameters with uppercase types.
-
-    Args:
-        params: List of tool parameters.
-
-    Returns:
-        GoogleSchemaParameters: GoogleSchemaParameters dict with uppercase types.
-    """
-    properties: dict[str, GoogleSchemaProperty] = {}
-    required: list[str] = []
-
-    for param in params:
-        properties[param.name] = build_schema_property(param, uppercase_types=True)
-        if param.required:
-            required.append(param.name)
-
-    return {
-        "type": "OBJECT",
-        "properties": properties,
-        "required": required,
-    }
-
-
 def build_schema_parameters(
     params: list[ToolParameter],
     *,
@@ -371,8 +145,8 @@ def build_schema_parameters(
         JSONSchemaParameters | GoogleSchemaParameters: JSONSchemaParameters or GoogleSchemaParameters dict.
     """
     if uppercase_types:
-        return _build_google_schema_parameters(params)
-    return _build_json_schema_parameters(params)
+        return build_google_schema_parameters(params)
+    return build_json_schema_parameters(params)
 
 
 def validate_tool_parameter(
@@ -507,6 +281,10 @@ def validate_tool_function(func: ToolFunction) -> list[ValidationError]:
             ),
         )
 
+    if func.input_schema is not None:
+        errors.extend(validate_raw_input_schema(func.input_schema, func.name or "function"))
+        return errors
+
     param_names: set[str] = set()
     for param in func.parameters:
         if param.name in param_names:
@@ -519,6 +297,70 @@ def validate_tool_function(func: ToolFunction) -> list[ValidationError]:
         param_names.add(param.name)
         errors.extend(validate_tool_parameter(param, func.name))
 
+    return errors
+
+
+def validate_raw_input_schema(schema: dict[str, Any], location: str) -> list[ValidationError]:
+    """Validate a function's raw JSON Schema override.
+
+    A raw schema is authoritative and bypasses the ``ToolParameter`` model
+    entirely, so the checks here are the structural ones every dialect needs:
+    the schema has to describe an object, and its ``properties`` and
+    ``required`` entries have to be the right shape. Composition keywords are
+    not rejected -- Messages and Chat Completions accept them, and the
+    Responses and Gemini reductions handle them -- but a ``required`` entry
+    naming no declared property is reported, because the endpoint will treat
+    it as a schema error rather than as a permissive default.
+
+    Args:
+        schema: The raw schema supplied on the function.
+        location: Dotted path used for error context.
+
+    Returns:
+        list[ValidationError]: List of validation errors (empty if valid).
+    """
+    errors: list[ValidationError] = []
+    declared_type = schema.get("type")
+    if declared_type is not None and declared_type != "object":
+        errors.append(
+            ValidationError(
+                f"Raw input_schema must describe an object, not {declared_type!r}",
+                location,
+            ),
+        )
+
+    properties = schema.get("properties")
+    if properties is not None and not is_json_object(properties):
+        errors.append(
+            ValidationError(
+                "Raw input_schema 'properties' must be an object",
+                location,
+            ),
+        )
+        return errors
+
+    required = schema.get("required")
+    if required is None:
+        return errors
+    if not is_json_array(required):
+        errors.append(
+            ValidationError(
+                "Raw input_schema 'required' must be an array",
+                location,
+            ),
+        )
+        return errors
+
+    declared: dict[str, Any] = properties if is_json_object(properties) else {}
+    entries: list[Any] = required
+    errors.extend(
+        ValidationError(
+            f"Raw input_schema requires '{name}', which it does not declare in 'properties'",
+            location,
+        )
+        for name in entries
+        if isinstance(name, str) and name not in declared
+    )
     return errors
 
 
@@ -565,6 +407,45 @@ def validate_tool_definition(tool: ToolDefinition) -> list[ValidationError]:
     return errors
 
 
+def _one_entry_per_function(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Unwrap Gemini's grouped declarations so every dialect yields one entry per function.
+
+    Chat Completions, Responses and Messages already render one tool entry per
+    function. Gemini groups every declaration under a single
+    ``functionDeclarations`` tool, which is how its request body wants them but
+    not what a schema getter promises its caller.
+
+    Args:
+        entries: Tool entries as a dialect adapter rendered them.
+
+    Returns:
+        list[dict[str, Any]]: The same schemas, one entry per function.
+    """
+    flattened: list[dict[str, Any]] = []
+    for entry in entries:
+        grouped = entry.get("functionDeclarations")
+        if is_json_array(grouped):
+            flattened.extend(member for member in grouped if is_json_object(member))
+        else:
+            flattened.append(entry)
+    return flattened
+
+
+def _schemas_for(tool: ToolDefinition, dialect: ApiDialect) -> list[dict[str, Any]]:
+    """Build one tool's schemas through the adapter that owns the wire format.
+
+    Args:
+        tool: The tool definition to convert.
+        dialect: The target wire format.
+
+    Returns:
+        list[dict[str, Any]]: Tool schemas in the dialect's format, one entry
+        per function.
+    """
+    adapter = adapter_for(dialect)
+    return _one_entry_per_function(adapter.build_tool_schemas([tool], adapter.default_capabilities()))
+
+
 def to_anthropic_schema(tool: ToolDefinition) -> list[AnthropicToolSchema]:
     """Convert ToolDefinition to Anthropic Claude's tool format.
 
@@ -574,18 +455,7 @@ def to_anthropic_schema(tool: ToolDefinition) -> list[AnthropicToolSchema]:
     Returns:
         list[AnthropicToolSchema]: List of tools in Anthropic's format.
     """
-    tools: list[AnthropicToolSchema] = []
-
-    for func in tool.functions:
-        params = _build_json_schema_parameters(func.parameters)
-        tool_schema: AnthropicToolSchema = {
-            "name": func.name,
-            "description": func.description,
-            "input_schema": params,
-        }
-        tools.append(tool_schema)
-
-    return tools
+    return [cast("AnthropicToolSchema", schema) for schema in _schemas_for(tool, ApiDialect.MESSAGES)]
 
 
 def to_openai_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
@@ -597,27 +467,15 @@ def to_openai_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
     Returns:
         list[OpenAIToolSchema]: List of tools in OpenAI's format.
     """
-    tools: list[OpenAIToolSchema] = []
-
-    for func in tool.functions:
-        params = _build_json_schema_parameters(func.parameters)
-        tool_schema: OpenAIToolSchema = {
-            "type": "function",
-            "function": {
-                "name": func.name,
-                "description": func.description,
-                "parameters": params,
-            },
-        }
-        tools.append(tool_schema)
-
-    return tools
+    return [cast("OpenAIToolSchema", schema) for schema in _schemas_for(tool, ApiDialect.CHAT_COMPLETIONS)]
 
 
 def to_google_schema(tool: ToolDefinition) -> list[GoogleFunctionDeclaration]:
     """Convert ToolDefinition to Google Gemini's tool format.
 
-    Google Gemini uses uppercase type names (STRING, INTEGER, OBJECT, etc.).
+    Google Gemini uses uppercase type names (STRING, INTEGER, OBJECT, etc.)
+    and groups every declaration under a single ``functionDeclarations`` tool,
+    which this helper unwraps so callers keep receiving one entry per function.
 
     Args:
         tool: The tool definition to convert.
@@ -625,18 +483,7 @@ def to_google_schema(tool: ToolDefinition) -> list[GoogleFunctionDeclaration]:
     Returns:
         list[GoogleFunctionDeclaration]: List of function declarations in Google's format.
     """
-    function_declarations: list[GoogleFunctionDeclaration] = []
-
-    for func in tool.functions:
-        params = _build_google_schema_parameters(func.parameters)
-        func_decl: GoogleFunctionDeclaration = {
-            "name": func.name,
-            "description": func.description,
-            "parameters": params,
-        }
-        function_declarations.append(func_decl)
-
-    return function_declarations
+    return [cast("GoogleFunctionDeclaration", entry) for entry in _schemas_for(tool, ApiDialect.GEMINI)]
 
 
 def to_ollama_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
@@ -667,92 +514,72 @@ def to_openrouter_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
     return to_openai_schema(tool)
 
 
-def get_schema_for_provider(
+def get_schema_for_dialect(
     tool: ToolDefinition,
-    provider: ProviderName,
+    dialect: ApiDialect,
 ) -> list[dict[str, Any]]:
-    """Convert tool definition to provider-specific schema format.
+    """Convert a tool definition to one wire format's schema.
 
-    This is the high-level API for schema conversion. Use this when you
-    need to convert a tool definition for a specific provider.
+    This is the high-level API for schema conversion. Dispatch is keyed by
+    dialect rather than by provider, so an arbitrary provider instance gets a
+    correct schema as soon as it states which wire format it speaks.
 
     Args:
         tool: The tool definition to convert.
-        provider: The target LLM provider.
+        dialect: The target wire format.
 
     Returns:
-        list[dict[str, Any]]: List of tool schemas in the provider's format.
+        list[dict[str, Any]]: List of tool schemas in the dialect's format.
     """
-    if provider == ProviderName.ANTHROPIC:
-        return [dict(s) for s in to_anthropic_schema(tool)]
-    if provider == ProviderName.OPENAI:
-        return [dict(s) for s in to_openai_schema(tool)]
-    if provider == ProviderName.GOOGLE:
-        return [dict(s) for s in to_google_schema(tool)]
-    if provider == ProviderName.OLLAMA:
-        return [dict(s) for s in to_ollama_schema(tool)]
-    if provider == ProviderName.OPENROUTER:
-        return [dict(s) for s in to_openrouter_schema(tool)]
-    if provider == ProviderName.HUGGINGFACE:
-        return [dict(s) for s in to_openai_schema(tool)]
-    if provider == ProviderName.GROK:
-        return [dict(s) for s in to_openai_schema(tool)]
-    if provider == ProviderName.LOCAL_TRANSFORMERS:
-        return [dict(s) for s in to_openai_schema(tool)]
-    _assert_never(provider)
+    return _schemas_for(tool, dialect)
 
 
-def get_all_schemas_for_provider(
+def get_all_schemas_for_dialect(
     tools: list[ToolDefinition],
-    provider: ProviderName,
+    dialect: ApiDialect,
 ) -> list[dict[str, Any]]:
-    """Convert multiple tool definitions to provider schemas.
+    """Convert multiple tool definitions to one wire format's schemas.
 
     Args:
-        tools: List of tool definitions to convert.
-        provider: The target LLM provider.
+        tools: List of tool definitions to convert, in priority order. The
+            returned list preserves that order exactly.
+        dialect: The target wire format.
 
     Returns:
-        list[dict[str, Any]]: Flattened list of all tool schemas in the provider's format.
+        list[dict[str, Any]]: Flattened list of all tool schemas in the
+        dialect's format.
     """
-    all_schemas: list[dict[str, Any]] = []
-    for tool in tools:
-        schemas = get_schema_for_provider(tool, provider)
-        all_schemas.extend(schemas)
-    return all_schemas
+    adapter = adapter_for(dialect)
+    return _one_entry_per_function(adapter.build_tool_schemas(tools, adapter.default_capabilities()))
 
 
-def validate_tool_for_provider(
+def validate_tool_for_dialect(
     tool: ToolDefinition,
-    provider: ProviderName,
+    dialect: ApiDialect,
 ) -> list[ValidationError]:
-    """Validate a tool definition for a specific provider without allocating schema dicts.
+    """Validate a tool definition for one wire format without allocating schemas.
 
-    This is the cheap path used by the orchestrator at the top of every
-    agent loop iteration: it walks the tool definition, normalises every
-    parameter type once (so unknown types surface as
-    ``schema_type_fallback`` warnings), and confirms the chosen provider
-    has a code path in ``get_schema_for_provider``. It deliberately does
-    not allocate the per-provider dict trees that ``get_schema_for_provider``
-    would build because the orchestrator hands the raw ``ToolDefinition``
-    list to ``_call_llm`` and each provider re-converts on its own.
+    This is the cheap path used by the orchestrator at the top of every agent
+    loop iteration: it walks the tool definition, normalises every parameter
+    type once (so unknown types surface as ``schema_type_fallback`` warnings)
+    and confirms every function name survives the round trip to its wire form.
+    It deliberately does not allocate the per-dialect dict trees that
+    :func:`get_schema_for_dialect` would build, because the orchestrator hands
+    the raw ``ToolDefinition`` list to ``_call_llm`` and each provider
+    re-converts on its own.
+
+    The provider-has-a-converter check that used to live here is gone: every
+    dialect has an adapter by construction, and provider identity no longer
+    constrains which schemas can be built.
 
     Args:
         tool: The tool definition to validate.
-        provider: The target LLM provider.
+        dialect: The target wire format.
 
     Returns:
         list[ValidationError]: List of validation errors (empty if valid).
     """
     errors = validate_tool_definition(tool)
-    if provider not in set(ProviderName):
-        errors.append(
-            ValidationError(
-                f"Provider '{provider}' has no schema converter",
-                str(tool.tool_name),
-                "error",
-            ),
-        )
     for func in tool.functions:
         wire_name = to_wire_name(func.name)
         if not is_valid_wire_name(wire_name):
@@ -768,27 +595,128 @@ def validate_tool_for_provider(
     if has_errors:
         _logger.warning(
             "tool_validation_failed",
-            tool=str(tool.tool_name),
-            provider=str(provider),
+            tool=tool.tool_name,
+            dialect=dialect.value,
             error_count=len(errors),
         )
     return errors
 
 
+def dialect_for_provider(provider: str) -> ApiDialect:
+    """Resolve the wire format a provider instance speaks.
+
+    Provider identity is open, so a provider the presets do not know is
+    assumed to speak Chat Completions: that is the format an arbitrary
+    OpenAI-compatible endpoint serves, and it is what the configuration UI
+    probes such an endpoint with. A preset that declares no dialect at all
+    resolves the same way, which covers the in-process local-inference
+    provider: it never reaches an HTTP wire, but callers still ask it for
+    schemas and expect the OpenAI-compatible shape.
+
+    Args:
+        provider: The provider instance id.
+
+    Returns:
+        ApiDialect: The wire format that provider speaks.
+    """
+    preset = preset_for(provider)
+    if preset is None or preset.dialect is None:
+        return ApiDialect.CHAT_COMPLETIONS
+    return preset.dialect
+
+
+def get_schema_for_provider(
+    tool: ToolDefinition,
+    provider: str,
+) -> list[dict[str, Any]]:
+    """Convert a tool definition to one provider's schema.
+
+    Convenience over :func:`get_schema_for_dialect` for callers that hold a
+    provider id rather than a dialect. Dispatch is still keyed by dialect;
+    this resolves the provider to its wire format first.
+
+    Args:
+        tool: The tool definition to convert.
+        provider: The provider instance id to build schemas for.
+
+    Returns:
+        list[dict[str, Any]]: List of tool schemas in that provider's format.
+    """
+    return get_schema_for_dialect(tool, dialect_for_provider(provider))
+
+
+def get_all_schemas_for_provider(
+    tools: list[ToolDefinition],
+    provider: str,
+) -> list[dict[str, Any]]:
+    """Convert multiple tool definitions to one provider's schemas.
+
+    Args:
+        tools: List of tool definitions to convert, in priority order. The
+            returned list preserves that order exactly.
+        provider: The provider instance id to build schemas for.
+
+    Returns:
+        list[dict[str, Any]]: Flattened list of all tool schemas in that
+        provider's format.
+    """
+    return get_all_schemas_for_dialect(tools, dialect_for_provider(provider))
+
+
+def validate_tool_for_provider(
+    tool: ToolDefinition,
+    provider: str,
+) -> list[ValidationError]:
+    """Validate a tool definition for one provider without allocating schemas.
+
+    Args:
+        tool: The tool definition to validate.
+        provider: The provider instance id to validate against.
+
+    Returns:
+        list[ValidationError]: List of validation errors (empty if valid).
+    """
+    return validate_tool_for_dialect(tool, dialect_for_provider(provider))
+
+
+def validate_external_tool_namespace(tool_name: str) -> ValidationError | None:
+    """Reject an externally-sourced tool that claims a bridge namespace.
+
+    The dispatch boundary resolves a namespace against the bridge registry
+    before it reaches the external-executor registry, so an external tool
+    calling itself ``ghidra`` would shadow the real Ghidra bridge instead of
+    sitting beside it.
+
+    Args:
+        tool_name: The namespace the external tool claims.
+
+    Returns:
+        ValidationError | None: An error when the namespace is reserved,
+        otherwise ``None``.
+    """
+    if tool_name in RESERVED_TOOL_NAMESPACES:
+        return ValidationError(
+            f"Namespace '{tool_name}' is reserved for an Intellicrack bridge and cannot be claimed by an external tool",
+            tool_name,
+            "error",
+        )
+    return None
+
+
 def validate_and_convert(
     tool: ToolDefinition,
-    provider: ProviderName,
+    dialect: ApiDialect,
 ) -> tuple[list[dict[str, Any]], list[ValidationError]]:
-    """Validate a tool definition and convert to provider schema.
+    """Validate a tool definition and convert it to one wire format's schemas.
 
     Combines validation and conversion in a single call. This builds the
-    provider-specific dict tree, so callers that only need validation
-    diagnostics should prefer ``validate_tool_for_provider`` to avoid the
+    dialect-specific dict tree, so callers that only need validation
+    diagnostics should prefer :func:`validate_tool_for_dialect` to avoid the
     allocation cost.
 
     Args:
         tool: The tool definition to validate and convert.
-        provider: The target LLM provider.
+        dialect: The target wire format.
 
     Returns:
         tuple[list[dict[str, Any]], list[ValidationError]]: Tuple of (schemas, validation_errors).
@@ -800,16 +728,55 @@ def validate_and_convert(
     if has_errors:
         _logger.warning(
             "tool_validation_failed",
-            tool=str(tool.tool_name),
+            tool=tool.tool_name,
             error_count=len(errors),
         )
         return [], errors
 
-    schemas = get_schema_for_provider(tool, provider)
+    schemas = get_schema_for_dialect(tool, dialect)
     _logger.debug(
         "schema_converted",
-        tool=str(tool.tool_name),
-        provider=str(provider),
+        tool=tool.tool_name,
+        dialect=dialect.value,
         schema_count=len(schemas),
     )
     return schemas, errors
+
+
+__all__ = [
+    "GOOGLE_TYPE_MAP",
+    "PYTHON_TO_JSON_TYPES",
+    "RESERVED_TOOL_NAMESPACES",
+    "VALID_JSON_SCHEMA_TYPES",
+    "AnthropicToolSchema",
+    "GoogleFunctionDeclaration",
+    "GoogleSchemaParameters",
+    "GoogleSchemaProperty",
+    "JSONSchemaParameters",
+    "JSONSchemaProperty",
+    "OpenAIFunctionSchema",
+    "OpenAIToolSchema",
+    "ValidationError",
+    "build_schema_parameters",
+    "build_schema_property",
+    "dialect_for_provider",
+    "get_all_schemas_for_dialect",
+    "get_all_schemas_for_provider",
+    "get_schema_for_dialect",
+    "get_schema_for_provider",
+    "is_recognized_type",
+    "normalize_type",
+    "to_anthropic_schema",
+    "to_google_schema",
+    "to_ollama_schema",
+    "to_openai_schema",
+    "to_openrouter_schema",
+    "validate_and_convert",
+    "validate_external_tool_namespace",
+    "validate_raw_input_schema",
+    "validate_tool_definition",
+    "validate_tool_for_dialect",
+    "validate_tool_for_provider",
+    "validate_tool_function",
+    "validate_tool_parameter",
+]

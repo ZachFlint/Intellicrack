@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from intellicrack.core.types import ProviderName
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.display_names import (
     NO_API_KEY_PROVIDER_IDS,
     NO_API_KEY_PROVIDERS,
@@ -20,14 +20,14 @@ class TestProviderDisplayName:
     @staticmethod
     def test_local_transformers_uses_spaces() -> None:
         """Local Transformers must not expose underscore identifiers in the UI."""
-        assert provider_display_name(ProviderName.LOCAL_TRANSFORMERS) == "Local Transformers"
+        assert provider_display_name(provider_ids.LOCAL_TRANSFORMERS) == "Local Transformers"
         assert provider_display_name("local_transformers") == "Local Transformers"
 
     @staticmethod
     def test_known_provider_aliases() -> None:
         """Mapped providers return stable display labels."""
-        assert provider_display_name(ProviderName.GOOGLE) == "Google Gemini"
-        assert provider_display_name(ProviderName.ANTHROPIC) == "Anthropic"
+        assert provider_display_name(provider_ids.GOOGLE) == "Google Gemini"
+        assert provider_display_name(provider_ids.ANTHROPIC) == "Anthropic"
 
     @staticmethod
     def test_unknown_provider_fallback_titleizes_underscores() -> None:
@@ -41,7 +41,7 @@ class TestNoApiKeyProviders:
     @staticmethod
     def test_local_transformers_and_ollama_are_no_key() -> None:
         """Local and Ollama providers do not require API keys to connect."""
-        assert ProviderName.LOCAL_TRANSFORMERS in NO_API_KEY_PROVIDERS
-        assert ProviderName.OLLAMA in NO_API_KEY_PROVIDERS
+        assert provider_ids.LOCAL_TRANSFORMERS in NO_API_KEY_PROVIDERS
+        assert provider_ids.OLLAMA in NO_API_KEY_PROVIDERS
         assert "local_transformers" in NO_API_KEY_PROVIDER_IDS
         assert "ollama" in NO_API_KEY_PROVIDER_IDS

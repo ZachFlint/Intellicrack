@@ -48,7 +48,7 @@ from unittest.mock import Mock
 import pytest
 from PyQt6.QtWidgets import QComboBox
 
-from intellicrack.core.types import ProviderName
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.grok import GrokProvider
 from intellicrack.providers.openai import OpenAIProvider
 from intellicrack.ui import app as app_module
@@ -175,7 +175,7 @@ class _RegistryDouble:
         """
         self._provider = provider
 
-    def get(self, _name: ProviderName) -> _ProviderDouble | None:
+    def get(self, _name: str) -> _ProviderDouble | None:
         """Return the configured provider double.
 
         Args:
@@ -249,7 +249,7 @@ def _combo_double(*, current_data: object = None, current_text: str = "") -> QCo
 
 def _build_refresh_holder(
     *,
-    provider_name: ProviderName,
+    provider_name: str,
     registry_provider: _ProviderDouble | None,
 ) -> MainWindow:
     """Build a ``MainWindow``-shaped holder for ``_on_refresh_models`` tests.
@@ -286,7 +286,7 @@ class TestRefreshModelsReusesConnectedProvider:
     def _run(
         monkeypatch: pytest.MonkeyPatch,
         *,
-        provider_name: ProviderName,
+        provider_name: str,
         registry_provider: _ProviderDouble | None,
     ) -> type[_RecordingModelRefreshWorker]:
         """Drive the real ``_on_refresh_models`` and return the recorded worker args.
@@ -319,7 +319,7 @@ class TestRefreshModelsReusesConnectedProvider:
             monkeypatch: Pytest fixture used to substitute ``ModelRefreshWorker``.
         """
         connected = _ProviderDouble(is_connected=True)
-        worker_cls = self._run(monkeypatch, provider_name=ProviderName.HUGGINGFACE, registry_provider=connected)
+        worker_cls = self._run(monkeypatch, provider_name=provider_ids.HUGGINGFACE, registry_provider=connected)
 
         assert worker_cls.instances == 1, "ModelRefreshWorker must be constructed exactly once"
         assert worker_cls.last_provider_arg is connected, (
@@ -335,7 +335,7 @@ class TestRefreshModelsReusesConnectedProvider:
             monkeypatch: Pytest fixture used to substitute ``ModelRefreshWorker``.
         """
         connected = _ProviderDouble(is_connected=True)
-        worker_cls = self._run(monkeypatch, provider_name=ProviderName.OLLAMA, registry_provider=connected)
+        worker_cls = self._run(monkeypatch, provider_name=provider_ids.OLLAMA, registry_provider=connected)
 
         assert worker_cls.last_provider_arg is connected, (
             "connected Ollama instance (cloud-only when local is down) must be passed through so the "
@@ -351,7 +351,7 @@ class TestRefreshModelsReusesConnectedProvider:
             monkeypatch: Pytest fixture used to substitute ``ModelRefreshWorker``.
         """
         disconnected = _ProviderDouble(is_connected=False)
-        worker_cls = self._run(monkeypatch, provider_name=ProviderName.HUGGINGFACE, registry_provider=disconnected)
+        worker_cls = self._run(monkeypatch, provider_name=provider_ids.HUGGINGFACE, registry_provider=disconnected)
 
         assert worker_cls.last_provider_arg is None, (
             f"a disconnected registry entry must not be reused; got provider={worker_cls.last_provider_arg!r}"
@@ -363,7 +363,7 @@ class TestRefreshModelsReusesConnectedProvider:
         Args:
             monkeypatch: Pytest fixture used to substitute ``ModelRefreshWorker``.
         """
-        worker_cls = self._run(monkeypatch, provider_name=ProviderName.OPENAI, registry_provider=None)
+        worker_cls = self._run(monkeypatch, provider_name=provider_ids.OPENAI, registry_provider=None)
 
         assert worker_cls.last_provider_arg is None, (
             f"an unregistered provider must pass provider=None; got {worker_cls.last_provider_arg!r}"

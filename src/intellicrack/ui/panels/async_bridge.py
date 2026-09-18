@@ -187,6 +187,10 @@ class RetainedWorker(QThread):
         super().start(priority)
 
 
+_RetainedWorker = RetainedWorker
+"""Original private name of :class:`RetainedWorker`, kept for existing references."""
+
+
 _LOOP_READY_TIMEOUT: float = 2.0
 
 _WORKER_POLL_INTERVAL_S: float = 0.1

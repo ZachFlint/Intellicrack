@@ -37,8 +37,8 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.script_gen import ScriptGenerator, ScriptManager, ScriptValidator
 from intellicrack.core.session import Session, SessionManager, SessionStore
 from intellicrack.core.template_manager import TemplateManager
-from intellicrack.core.types import ProviderName
 from intellicrack.main import init_script_engine, init_template_manager
+from intellicrack.providers import ids as provider_ids
 from intellicrack.ui.panels.async_bridge import BridgeCallWorker, ensure_loop
 
 
@@ -165,7 +165,7 @@ class TestSessionManagerInitialization:
             replace ``session.provider.value`` with ``"openai"`` in the INSERT VALUES
             tuple. The direct SQL oracle query ``SELECT provider FROM sessions WHERE id=?``
             would then return ``"openai"`` instead of ``"anthropic"``, failing
-            ``assert raw_provider == ProviderName.ANTHROPIC.value``.
+            ``assert raw_provider == provider_ids.ANTHROPIC``.
 
         Args:
             tmp_path: Pytest temporary directory for the session database.
@@ -175,7 +175,7 @@ class TestSessionManagerInitialization:
         manager = SessionManager(store)
 
         session = Session.create(
-            provider=ProviderName.ANTHROPIC,
+            provider=provider_ids.ANTHROPIC,
             model="claude-3-opus-20240229",
             name="Store-type gate",
         )
@@ -188,7 +188,7 @@ class TestSessionManagerInitialization:
         assert loaded is not None
         assert loaded.id == session.id
         assert loaded.name == "Store-type gate"
-        assert loaded.provider == ProviderName.ANTHROPIC
+        assert loaded.provider == provider_ids.ANTHROPIC
         assert loaded.model == "claude-3-opus-20240229"
         assert loaded.notes == "manager-wiring-check"
         assert set(loaded.tags) == {"gate", "manager"}
@@ -209,7 +209,7 @@ class TestSessionManagerInitialization:
         raw_model = str(row["model"])
         raw_notes = str(row["notes"])
 
-        assert raw_provider == ProviderName.ANTHROPIC.value
+        assert raw_provider == provider_ids.ANTHROPIC
         assert raw_name == "Store-type gate"
         assert raw_model == "claude-3-opus-20240229"
         assert raw_notes == "manager-wiring-check"
@@ -289,13 +289,13 @@ class TestSessionManagerOperations:
             manager: SessionManager fixture backed by a temporary database.
         """
         session = await manager.create(
-            provider=ProviderName.ANTHROPIC,
+            provider=provider_ids.ANTHROPIC,
             model="claude-3-opus-20240229",
             name="Test Session",
         )
 
         assert session.name == "Test Session"
-        assert session.provider == ProviderName.ANTHROPIC
+        assert session.provider == provider_ids.ANTHROPIC
         assert session.model == "claude-3-opus-20240229"
         assert manager.current is session
 
@@ -308,7 +308,7 @@ class TestSessionManagerOperations:
             manager: SessionManager fixture backed by a temporary database.
         """
         session = await manager.create(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model="gpt-4",
             name="Persistent Session",
         )
@@ -323,7 +323,7 @@ class TestSessionManagerOperations:
 
         assert loaded is not None
         assert loaded.name == "Persistent Session"
-        assert loaded.provider == ProviderName.OPENAI
+        assert loaded.provider == provider_ids.OPENAI
 
     @staticmethod
     @pytest.mark.asyncio
@@ -334,14 +334,14 @@ class TestSessionManagerOperations:
             manager: SessionManager fixture backed by a temporary database.
         """
         await manager.create(
-            provider=ProviderName.ANTHROPIC,
+            provider=provider_ids.ANTHROPIC,
             model="claude-3-opus-20240229",
             name="Session 1",
         )
         await manager.save()
 
         await manager.create(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model="gpt-4",
             name="Session 2",
         )
@@ -379,7 +379,7 @@ class TestSessionDataIntegrity:
             store: SessionStore fixture backed by a temporary database.
         """
         session = Session.create(
-            provider=ProviderName.GOOGLE,
+            provider=provider_ids.GOOGLE,
             model="gemini-pro",
             name="Roundtrip Test",
         )
@@ -415,7 +415,7 @@ class TestSessionDataIntegrity:
             store: SessionStore fixture backed by a temporary database.
         """
         session = Session.create(
-            provider=ProviderName.OLLAMA,
+            provider=provider_ids.OLLAMA,
             model="llama2",
             name="Delete Test",
         )

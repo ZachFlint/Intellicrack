@@ -34,7 +34,6 @@ import pytest
 
 from intellicrack.core.types import (
     Message,
-    ProviderName,
     RateLimitError,
 )
 from intellicrack.providers.google import GoogleProvider, UsageInfo
@@ -42,6 +41,7 @@ from intellicrack.providers.google import GoogleProvider, UsageInfo
 
 if TYPE_CHECKING:
     from intellicrack.credentials.env_loader import CredentialLoader
+from intellicrack.providers import ids as provider_ids
 
 
 _MODEL = "gemini-flash-latest"
@@ -157,7 +157,7 @@ async def test_live_google_chat_returns_requested_word_and_usage(
         pytest.skip("GOOGLE_API_KEY not configured in .env")
 
     provider = GoogleProvider()
-    credentials = credential_loader.get_credentials(ProviderName.GOOGLE)
+    credentials = credential_loader.get_credentials(provider_ids.GOOGLE)
     assert credentials is not None, "Expected credentials after validation"
 
     await provider.connect(credentials)
@@ -187,7 +187,7 @@ async def test_live_google_chat_stream_streams_requested_word_and_usage(
         pytest.skip("GOOGLE_API_KEY not configured in .env")
 
     provider = GoogleProvider()
-    credentials = credential_loader.get_credentials(ProviderName.GOOGLE)
+    credentials = credential_loader.get_credentials(provider_ids.GOOGLE)
     assert credentials is not None, "Expected credentials after validation"
 
     await provider.connect(credentials)

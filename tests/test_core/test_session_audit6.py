@@ -31,10 +31,10 @@ from intellicrack.core.session import Session, SessionManager, SessionStore
 from intellicrack.core.types import (
     HexDocumentFull,
     HexDocumentLike,
-    ProviderName,
     ToolName,
     ToolState,
 )
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -50,7 +50,7 @@ def _make_session(name: str = "audit6") -> Session:
     Returns:
         Session: New Session instance.
     """
-    return Session.create(provider=ProviderName.ANTHROPIC, model="claude", name=name)
+    return Session.create(provider=provider_ids.ANTHROPIC, model="claude", name=name)
 
 
 def _swap_session_store_save(replacement: Callable[[SessionStore, Session], None]) -> Callable[[SessionStore, Session], None]:
@@ -109,7 +109,7 @@ class TestAutoSaveLoopSurvivesFailures:
         db_path = tmp_path / "sessions.db"
         store = SessionStore(db_path)
         manager = SessionManager(store, save_interval=0)
-        session = await manager.create(provider=ProviderName.ANTHROPIC, model="claude", name="autosave")
+        session = await manager.create(provider=provider_ids.ANTHROPIC, model="claude", name="autosave")
 
         save_attempts: int = 0
         failure_serial_numbers: list[int] = []
@@ -167,7 +167,7 @@ class TestAutoSaveLoopSurvivesFailures:
         """
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store, save_interval=300)
-        await manager.create(provider=ProviderName.ANTHROPIC, model="claude", name="task-active")
+        await manager.create(provider=provider_ids.ANTHROPIC, model="claude", name="task-active")
         try:
             assert manager.is_auto_saving is True, "is_auto_saving must be True after create()"
         finally:
@@ -190,7 +190,7 @@ class TestAutoSaveLoopSurvivesFailures:
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store, save_interval=300)
         session = await manager.create(
-            provider=ProviderName.ANTHROPIC,
+            provider=provider_ids.ANTHROPIC,
             model="claude",
             name="cross-loop",
         )
@@ -225,7 +225,7 @@ class TestAutoSaveLoopSurvivesFailures:
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store, save_interval=300)
         await manager.create(
-            provider=ProviderName.ANTHROPIC,
+            provider=provider_ids.ANTHROPIC,
             model="claude",
             name="prompt-stop",
         )
@@ -250,7 +250,7 @@ class TestAutoSaveLoopSurvivesFailures:
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store, save_interval=300)
         session = await manager.create(
-            provider=ProviderName.ANTHROPIC,
+            provider=provider_ids.ANTHROPIC,
             model="claude",
             name="final-flush",
         )
@@ -274,7 +274,7 @@ class TestAutoSaveLoopSurvivesFailures:
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store, auto_save=False, save_interval=1)
         await manager.create(
-            provider=ProviderName.ANTHROPIC,
+            provider=provider_ids.ANTHROPIC,
             model="claude",
             name="no-autosave",
         )
@@ -946,7 +946,7 @@ class TestSessionManagerUpdateOffloadsAndSerialises:
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store, auto_save=False)
         session = await manager.create(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model="gpt-4",
             name="lock-test",
         )

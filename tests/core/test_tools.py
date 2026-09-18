@@ -295,9 +295,11 @@ def _assert_real_tool_definitions(defs: list[ToolDefinition], available: set[Too
     """
     assert len(defs) == _BRIDGE_COUNT_ALL
     assert all(isinstance(d, ToolDefinition) for d in defs)
-    assert {d.tool_name for d in defs} == available
+    bridge_namespaces = {name.value for name in ToolName}
+    assert {d.tool_name for d in defs} == {name.value for name in available}
     for definition in defs:
-        assert isinstance(definition.tool_name, ToolName)
+        assert isinstance(definition.tool_name, str)
+        assert definition.tool_name in bridge_namespaces
         assert definition.description.strip(), f"{definition.tool_name} definition must carry a non-empty description"
         assert definition.functions, f"{definition.tool_name} definition must expose at least one function"
         assert all(isinstance(fn, ToolFunction) for fn in definition.functions)

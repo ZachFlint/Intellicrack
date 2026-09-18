@@ -18,7 +18,7 @@ import time
 from dataclasses import dataclass
 from itertools import starmap
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, Protocol, cast
+from typing import TYPE_CHECKING, Any, Final, Protocol, cast
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QGuiApplication, QPainter, QPixmap
@@ -49,10 +49,11 @@ if TYPE_CHECKING:
     from intellicrack.core.session import SessionManager, SessionStore
     from intellicrack.core.template_manager import TemplateManager
     from intellicrack.core.tools import ToolRegistry
-    from intellicrack.core.types import HexDocumentFull, ProviderName
+    from intellicrack.core.types import HexDocumentFull
     from intellicrack.credentials.env_loader import CredentialLoader
     from intellicrack.credentials.provider_settings import ProviderConnectPolicy, ProviderSettingsStore
     from intellicrack.providers.base import LLMProviderBase
+    from intellicrack.providers.capabilities import CapabilityOverride
     from intellicrack.providers.discovery import ModelDiscovery
     from intellicrack.providers.registry import ProviderRegistry
     from intellicrack.ui.app import MainWindow
@@ -674,15 +675,53 @@ def _load_provider_connect_policy(
         imported_endpoints=list(migration.imported),
         retained_endpoints=list(migration.retained),
         settings_rewritten=migration.settings_rewritten,
-        disabled=sorted(provider.value for provider in policy.disabled),
-        timeouts={provider.value: seconds for provider, seconds in policy.timeouts.items()},
+        disabled=sorted(policy.disabled),
+        timeouts=dict(policy.timeouts),
     )
     return policy
 
 
+def _apply_saved_capability_overrides(
+    provider: LLMProviderBase,
+    provider_name: str,
+    logger: BoundLogger,
+) -> None:
+    """Load this provider's saved per-model capability overrides.
+
+    The override is the top layer of the capability merge and the only one a
+    user controls, so it has to be in place before the first request rather
+    than only after the settings dialog is opened.
+
+    Args:
+        provider: The constructed provider instance.
+        provider_name: Registry key for the provider.
+        logger: BoundLogger instance.
+    """
+    settings_mod = importlib.import_module("intellicrack.credentials.provider_settings")
+    config_mod = importlib.import_module("intellicrack.core.config")
+    store_cls = cast("type[ProviderSettingsStore]", settings_mod.ProviderSettingsStore)
+    settings_filename = cast("str", settings_mod.PROVIDER_SETTINGS_FILENAME)
+    settings_path = cast("Callable[[str], Path]", config_mod.get_config_file)(settings_filename)
+    read_overrides = cast(
+        "Callable[[dict[str, object]], dict[str, object]]",
+        settings_mod.saved_model_overrides,
+    )
+
+    section = store_cls(settings_path).section(provider_name)
+    overrides = read_overrides(section)
+    for model_id, override in overrides.items():
+        provider.set_capability_override(model_id, cast("CapabilityOverride", override))
+    if overrides:
+        logger.info(
+            "provider_capability_overrides_loaded",
+            provider=provider_name,
+            model_count=len(overrides),
+        )
+
+
 async def _connect_provider_at_startup(
     provider: LLMProviderBase,
-    provider_name: ProviderName,
+    provider_name: str,
     credentials: CredentialLoader,
     policy: ProviderConnectPolicy | None,
     logger: BoundLogger,
@@ -702,18 +741,20 @@ async def _connect_provider_at_startup(
             provider with its default timeout.
         logger: BoundLogger instance.
     """
+    _apply_saved_capability_overrides(provider, provider_name, logger)
+
     if policy is not None and not policy.is_enabled(provider_name):
-        logger.info("provider_connect_skipped_disabled", provider=provider_name.value)
+        logger.info("provider_connect_skipped_disabled", provider=provider_name)
         return
 
     display_mod = importlib.import_module("intellicrack.providers.display_names")
     types_mod = importlib.import_module("intellicrack.core.types")
-    no_api_key_providers = cast("frozenset[ProviderName]", display_mod.NO_API_KEY_PROVIDERS)
+    no_api_key_providers = cast("frozenset[str]", display_mod.NO_API_KEY_PROVIDERS)
     provider_error_cls = cast("type[Exception]", types_mod.ProviderError)
 
     creds = credentials.get_connect_credentials(provider_name, api_key_optional=provider_name in no_api_key_providers)
     if creds is None:
-        logger.debug("no_credentials", provider=provider_name.value)
+        logger.debug("no_credentials", provider=provider_name)
         return
     if policy is not None:
         creds = policy.apply_timeout(provider_name, creds)
@@ -726,17 +767,17 @@ async def _connect_provider_at_startup(
     except TimeoutError:
         logger.warning(
             "provider_connect_timeout",
-            provider=provider_name.value,
+            provider=provider_name,
             timeout=_PROVIDER_CONNECT_TIMEOUT,
         )
     except provider_error_cls as exc:
         logger.warning(
             "provider_connect_failed",
-            provider=provider_name.value,
+            provider=provider_name,
             error=str(exc),
         )
     else:
-        logger.info("provider_connected", provider=provider_name.value)
+        logger.info("provider_connected", provider=provider_name)
 
 
 async def _initialize_providers(
@@ -753,6 +794,11 @@ async def _initialize_providers(
     its endpoint can still be reconnected from Provider Settings -- and one whose
     construction failed can still be constructed on demand from its class.
 
+    Every user-defined instance saved in ``providers.json`` is initialized
+    alongside the eight built-ins, through the same registration and connect
+    path, so a corporate gateway or a second OpenAI account is a provider like
+    any other rather than a special case.
+
     Args:
         registry: Provider registry to populate.
         credentials: Credential loader for API keys and endpoint settings.
@@ -760,8 +806,7 @@ async def _initialize_providers(
         policy: Enablement and timeout policy from the saved provider settings, or
             ``None`` to connect every provider with its default timeout.
     """
-    types_mod = importlib.import_module("intellicrack.core.types")
-    provider_name_enum = types_mod.ProviderName
+    ids_mod = importlib.import_module("intellicrack.providers.ids")
 
     anthropic_mod = importlib.import_module("intellicrack.providers.anthropic")
     google_mod = importlib.import_module("intellicrack.providers.google")
@@ -772,21 +817,21 @@ async def _initialize_providers(
     openai_mod = importlib.import_module("intellicrack.providers.openai")
     openrouter_mod = importlib.import_module("intellicrack.providers.openrouter")
 
-    providers: list[tuple[ProviderName, type[LLMProviderBase]]] = cast(
-        "list[tuple[ProviderName, type[LLMProviderBase]]]",
+    providers: list[tuple[str, type[LLMProviderBase]]] = cast(
+        "list[tuple[str, type[LLMProviderBase]]]",
         [
-            (provider_name_enum.ANTHROPIC, anthropic_mod.AnthropicProvider),
-            (provider_name_enum.OPENAI, openai_mod.OpenAIProvider),
-            (provider_name_enum.GOOGLE, google_mod.GoogleProvider),
-            (provider_name_enum.OLLAMA, ollama_mod.OllamaProvider),
-            (provider_name_enum.OPENROUTER, openrouter_mod.OpenRouterProvider),
-            (provider_name_enum.HUGGINGFACE, hf_mod.HuggingFaceProvider),
-            (provider_name_enum.GROK, grok_mod.GrokProvider),
-            (provider_name_enum.LOCAL_TRANSFORMERS, local_mod.LocalTransformersProvider),
+            (ids_mod.ANTHROPIC, anthropic_mod.AnthropicProvider),
+            (ids_mod.OPENAI, openai_mod.OpenAIProvider),
+            (ids_mod.GOOGLE, google_mod.GoogleProvider),
+            (ids_mod.OLLAMA, ollama_mod.OllamaProvider),
+            (ids_mod.OPENROUTER, openrouter_mod.OpenRouterProvider),
+            (ids_mod.HUGGINGFACE, hf_mod.HuggingFaceProvider),
+            (ids_mod.GROK, grok_mod.GrokProvider),
+            (ids_mod.LOCAL_TRANSFORMERS, local_mod.LocalTransformersProvider),
         ],
     )
 
-    async def _init_one_impl(provider_name: ProviderName, provider_class: type[LLMProviderBase]) -> None:
+    async def _init_one_impl(provider_name: str, provider_class: type[LLMProviderBase]) -> None:
         """Register a provider class, then construct, optionally connect, and register its instance.
 
         Propagates ``ImportError``, ``OSError``, ``RuntimeError``,
@@ -796,7 +841,7 @@ async def _initialize_providers(
         connect attempt.
 
         Args:
-            provider_name: Provider enum value used for log records and
+            provider_name: Provider instance id used for log records and
                 credential lookup.
             provider_class: Concrete :class:`LLMProviderBase` subclass to
                 instantiate.
@@ -808,7 +853,7 @@ async def _initialize_providers(
         finally:
             registry.register(provider)
 
-    async def _init_one(provider_name: ProviderName, provider_class: type[LLMProviderBase]) -> None:
+    async def _init_one(provider_name: str, provider_class: type[LLMProviderBase]) -> None:
         """Initialize one provider and log recoverable failures without aborting.
 
         Args:
@@ -820,13 +865,120 @@ async def _initialize_providers(
         except (ImportError, OSError, RuntimeError, ValueError, TypeError, AttributeError) as e:
             logger.warning(
                 "provider_init_failed",
-                provider=provider_name.value,
+                provider=provider_name,
                 error=str(e),
                 error_type=type(e).__name__,
                 exc_info=True,
             )
 
     await asyncio.gather(*starmap(_init_one, providers))
+    await _initialize_saved_instances(registry, credentials, logger, policy)
+
+
+def _saved_provider_instances(logger: BoundLogger) -> list[object]:
+    """Load every user-defined provider instance from ``providers.json``.
+
+    Args:
+        logger: BoundLogger instance.
+
+    Returns:
+        list[object]: The saved instances, skipping records that name no valid
+        instance id and any that collides with a built-in, which is owned by
+        its preset.
+    """
+    settings_mod = importlib.import_module("intellicrack.credentials.provider_settings")
+    config_mod = importlib.import_module("intellicrack.core.config")
+    instances_mod = importlib.import_module("intellicrack.providers.instances")
+    ids_mod = importlib.import_module("intellicrack.providers.ids")
+
+    store_cls = cast("type[ProviderSettingsStore]", settings_mod.ProviderSettingsStore)
+    settings_filename = cast("str", settings_mod.PROVIDER_SETTINGS_FILENAME)
+    settings_path = cast("Callable[[str], Path]", config_mod.get_config_file)(settings_filename)
+    from_mapping = cast("Callable[[dict[str, Any]], object | None]", instances_mod.ProviderInstance.from_mapping)
+    builtin_ids = cast("tuple[str, ...]", ids_mod.BUILTIN_PROVIDER_IDS)
+
+    loaded: list[object] = []
+    for instance_id, record in store_cls(settings_path).load_instances().items():
+        if instance_id in builtin_ids:
+            logger.warning("provider_instance_shadows_builtin", instance_id=instance_id)
+            continue
+        instance = from_mapping(cast("dict[str, Any]", record))
+        if instance is None:
+            logger.warning("provider_instance_record_invalid", instance_id=instance_id)
+            continue
+        loaded.append(instance)
+    return loaded
+
+
+async def _connect_and_register(
+    provider: LLMProviderBase,
+    instance_id: str,
+    credentials: CredentialLoader,
+    policy: ProviderConnectPolicy | None,
+    logger: BoundLogger,
+    registry: ProviderRegistry,
+) -> None:
+    """Connect one provider and register it whatever the connect outcome.
+
+    Registering regardless is what lets a provider that is disabled, lacks
+    credentials or is rejected by its endpoint still be reconnected from
+    Provider Settings instead of vanishing.
+
+    Args:
+        provider: The constructed provider instance.
+        instance_id: Registry key for the provider.
+        credentials: Credential loader for API keys and endpoint settings.
+        policy: Enablement and timeout policy from the saved provider settings.
+        logger: BoundLogger instance.
+        registry: Provider registry to register into.
+    """
+    try:
+        await _connect_provider_at_startup(provider, instance_id, credentials, policy, logger)
+    finally:
+        registry.register(provider)
+
+
+async def _initialize_saved_instances(
+    registry: ProviderRegistry,
+    credentials: CredentialLoader,
+    logger: BoundLogger,
+    policy: ProviderConnectPolicy | None,
+) -> None:
+    """Construct, connect and register every saved user-defined instance.
+
+    Args:
+        registry: Provider registry to populate.
+        credentials: Credential loader for API keys and endpoint settings.
+        logger: BoundLogger instance.
+        policy: Enablement and timeout policy from the saved provider settings.
+    """
+    instances = _saved_provider_instances(logger)
+    if not instances:
+        return
+
+    configurable_mod = importlib.import_module("intellicrack.providers.configurable")
+    provider_cls = cast("Callable[[object], LLMProviderBase]", configurable_mod.ConfigurableProvider)
+
+    async def _init_instance(instance: object) -> None:
+        """Initialize one saved instance, logging recoverable failures.
+
+        Args:
+            instance: The saved :class:`ProviderInstance` to initialize.
+        """
+        instance_id = cast("str", getattr(instance, "instance_id", ""))
+        try:
+            await _connect_and_register(provider_cls(instance), instance_id, credentials, policy, logger, registry)
+        except (ImportError, OSError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
+            logger.warning(
+                "provider_instance_init_failed",
+                instance_id=instance_id,
+                error=str(exc),
+                error_type=type(exc).__name__,
+                exc_info=True,
+            )
+
+    await asyncio.gather(*(_init_instance(instance) for instance in instances))
+    logger.info("provider_instances_initialized", count=len(instances))
 
 
 def _resolve_config_path(cli_options: _CLIOptions, get_config_dir: Callable[[], Path]) -> Path | None:

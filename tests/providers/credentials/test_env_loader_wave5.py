@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 
 import intellicrack.credentials.env_loader as _env_loader_mod
-from intellicrack.core.types import ProviderName
 from intellicrack.credentials.env_loader import (
     CredentialLoader,
     create_env_template,
@@ -30,6 +29,8 @@ from intellicrack.credentials.env_loader import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+from intellicrack.providers import ids as provider_ids
+
 
 _decode_double_quoted: Callable[[str], str] = cast(Any, _env_loader_mod)._decode_double_quoted
 
@@ -114,7 +115,7 @@ def test_load_env_file_missing_path_returns_none(
     _clear_all_provider_vars(monkeypatch)
     nonexistent = tmp_path / "missing.env"
     loader = CredentialLoader(env_path=nonexistent)
-    assert loader.get_credentials(ProviderName.ANTHROPIC) is None
+    assert loader.get_credentials(provider_ids.ANTHROPIC) is None
 
 
 def test_load_env_file_read_error_no_raise(
@@ -142,14 +143,14 @@ def test_load_env_file_read_error_no_raise(
     monkeypatch.setattr(pathlib.Path, "read_text", _read_text_raise)
 
     loader = CredentialLoader(env_path=env_file)
-    assert loader.get_credentials(ProviderName.ANTHROPIC) is None
+    assert loader.get_credentials(provider_ids.ANTHROPIC) is None
 
 
 def test_get_credentials_alias_lookup(
     tmp_path: pathlib.Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """get_credentials resolves GEMINI_API_KEY as an alias for ProviderName.GOOGLE.
+    """get_credentials resolves GEMINI_API_KEY as an alias for provider_ids.GOOGLE.
 
     When only the alias variable is present in the .env file (primary
     GOOGLE_API_KEY is absent from both the file and os.environ), get_credentials
@@ -167,24 +168,24 @@ def test_get_credentials_alias_lookup(
     env_file.write_text("GEMINI_API_KEY=AIzaTestXXXX\n", encoding="utf-8")
 
     loader = CredentialLoader(env_path=env_file)
-    creds = loader.get_credentials(ProviderName.GOOGLE)
+    creds = loader.get_credentials(provider_ids.GOOGLE)
 
     assert creds is not None
     assert creds.api_key == "AIzaTestXXXX"
 
 
 def test_all_provider_names_in_mapping_making_unknown_branch_dead() -> None:
-    """Every ProviderName member has a PROVIDER_MAPPINGS entry, so the early-return is dead.
+    """Every provider id member has a PROVIDER_MAPPINGS entry, so the early-return is dead.
 
     The branch ``if mapping is None: return None`` at env_loader.py:396 can never
-    be reached because the ProviderName enum is closed and all its members are keys
+    be reached because the provider id enum is closed and all its members are keys
     in PROVIDER_MAPPINGS.  This test asserts the structural invariant.
 
-    Mutation: adding a new ProviderName member without a corresponding
+    Mutation: adding a new provider id member without a corresponding
     PROVIDER_MAPPINGS entry would break the invariant and turn this test red.
     """
-    all_names: set[ProviderName] = set(ProviderName)
-    mapped_names: set[ProviderName] = set(CredentialLoader.PROVIDER_MAPPINGS.keys())
+    all_names: set[str] = set(provider_ids.BUILTIN_PROVIDER_IDS)
+    mapped_names: set[str] = set(CredentialLoader.PROVIDER_MAPPINGS.keys())
     assert all_names == mapped_names
 
 
@@ -267,7 +268,7 @@ def test_get_api_key_env_var_mapping_exact_values() -> None:
     assert mapping["huggingface"] == "HUGGINGFACE_API_TOKEN"
     assert mapping["grok"] == "XAI_API_KEY"
     assert mapping["local_transformers"] == "LOCAL_TRANSFORMERS_HF_TOKEN"
-    assert set(mapping.keys()) == {p.value for p in ProviderName}
+    assert set(mapping.keys()) == set(provider_ids.BUILTIN_PROVIDER_IDS)
 
 
 def test_create_env_template_contains_required_placeholders(tmp_path: pathlib.Path) -> None:
@@ -334,12 +335,12 @@ def test_reload_picks_up_new_key(
     env_file.write_text("", encoding="utf-8")
 
     loader = CredentialLoader(env_path=env_file)
-    assert ProviderName.ANTHROPIC not in loader.list_configured_providers()
+    assert provider_ids.ANTHROPIC not in loader.list_configured_providers()
 
     env_file.write_text("ANTHROPIC_API_KEY=sk-ant-api03-testkey\n", encoding="utf-8")
     loader.reload()
 
-    assert ProviderName.ANTHROPIC in loader.list_configured_providers()
+    assert provider_ids.ANTHROPIC in loader.list_configured_providers()
 
 
 def test_list_configured_providers_exact_single_provider(
@@ -350,11 +351,11 @@ def test_list_configured_providers_exact_single_provider(
 
     Writing exactly one Anthropic API key to a controlled .env file, with all
     other provider variables absent from os.environ, must produce a list
-    containing only ProviderName.ANTHROPIC.
+    containing only provider_ids.ANTHROPIC.
 
     Mutation: replacing list_configured_providers with a function that returns
-    all ProviderName members would include providers beyond ANTHROPIC and turn
-    the ``== [ProviderName.ANTHROPIC]`` assertion red.
+    all provider id members would include providers beyond ANTHROPIC and turn
+    the ``== [provider_ids.ANTHROPIC]`` assertion red.
 
     Args:
         tmp_path: pytest temporary directory.
@@ -367,4 +368,4 @@ def test_list_configured_providers_exact_single_provider(
     loader = CredentialLoader(env_path=env_file)
     configured = loader.list_configured_providers()
 
-    assert configured == [ProviderName.ANTHROPIC]
+    assert configured == [provider_ids.ANTHROPIC]

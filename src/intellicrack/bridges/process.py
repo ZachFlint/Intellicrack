@@ -1337,7 +1337,7 @@ class _ProcessBridgeBase(ToolBridgeBase):
             ToolDefinition: ToolDefinition with all available functions.
         """
         return ToolDefinition(
-            tool_name=ToolName.PROCESS,
+            tool_name=ToolName.PROCESS.value,
             description="Windows process control - memory, threads, modules, tokens, handles, windows, services, PEB/TEB, heaps, context, stack walk, SEH, mitigations, pipes, COM, .NET, devices, registry, and more",
             functions=_PROCESS_FUNCTIONS,
         )

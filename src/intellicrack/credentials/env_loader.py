@@ -21,7 +21,8 @@ from typing import ClassVar, Final
 
 from intellicrack.core.config import get_env_file, get_project_root
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
+from intellicrack.providers import ids as provider_ids
 
 
 _logger = get_logger(__name__)
@@ -425,32 +426,60 @@ def _find_env_file() -> Path:
     return default_path
 
 
-def _validate_key_format(provider: ProviderName, api_key: str) -> str | None:
-    """Validate API key format for a provider.
+_MIN_PRINTABLE_ORD: Final[int] = 0x20
+"""Lowest code point an HTTP header value may carry."""
+
+
+def validate_key_format(provider: str, api_key: str) -> str | None:
+    """Validate an API key's shape without assuming whose key it is.
+
+    The previous rule rejected any key that did not start with the prefix the
+    built-in provider of that name uses. That was wrong the moment a provider
+    id could name any endpoint at all: a corporate gateway in front of
+    Anthropic issues its own keys, an Azure deployment issues its own, and a
+    LiteLLM proxy issues whatever its operator configured. Rejecting those
+    made the endpoint unusable for a cosmetic reason.
+
+    What remains are the two shapes no endpoint accepts: a key that is empty
+    once trimmed, and one carrying whitespace or control characters, which
+    cannot survive an HTTP header intact.
 
     Args:
-        provider: The provider the key is for.
+        provider: The provider instance the key is for, used for log records.
         api_key: The API key to validate.
 
     Returns:
-        str | None: Error message if invalid, None if valid.
+        str | None: Error message if unusable, None if valid.
     """
-    if provider == ProviderName.ANTHROPIC and not api_key.startswith("sk-ant-"):
-        return "Anthropic API key should start with 'sk-ant-'"
-
-    if provider == ProviderName.OPENAI and not api_key.startswith("sk-"):
-        return "OpenAI API key should start with 'sk-'"
-
-    if provider == ProviderName.OPENROUTER and not api_key.startswith("sk-or-"):
-        return "OpenRouter API key should start with 'sk-or-'"
-
-    if provider == ProviderName.HUGGINGFACE and not api_key.startswith("hf_"):
-        return "HuggingFace API token should start with 'hf_'"
-
-    if provider == ProviderName.GROK and not api_key.startswith("xai-"):
-        return "Grok API key should start with 'xai-'"
-
+    if not api_key.strip():
+        return "API key is empty"
+    if any(character.isspace() for character in api_key) or any(ord(character) < _MIN_PRINTABLE_ORD for character in api_key):
+        _logger.warning("credential_key_contains_whitespace", provider=provider)
+        return "API key contains whitespace or control characters, which cannot be sent in an HTTP header"
     return None
+
+
+def derived_credential_mapping(provider: str) -> ProviderCredentialMapping:
+    """Derive the environment variables an unregistered instance reads.
+
+    A user-defined instance has no entry in :data:`CredentialLoader.PROVIDER_MAPPINGS`,
+    so its variables are derived from its id the way Zed derives them:
+    ``<PROVIDER_ID>_API_KEY`` upper-snake, with matching names for the
+    endpoint fields.
+
+    Args:
+        provider: The instance id.
+
+    Returns:
+        ProviderCredentialMapping: The derived variable mapping.
+    """
+    prefix = provider_ids.env_var_prefix(provider)
+    return ProviderCredentialMapping(
+        api_key_var=f"{prefix}_API_KEY",
+        api_base_var=f"{prefix}_API_BASE",
+        organization_var=f"{prefix}_ORGANIZATION",
+        project_var=f"{prefix}_PROJECT",
+    )
 
 
 class CredentialLoader:
@@ -463,44 +492,62 @@ class CredentialLoader:
         PROVIDER_MAPPINGS: Mapping of provider names to their credential environment variable configuration.
     """
 
-    PROVIDER_MAPPINGS: ClassVar[dict[ProviderName, ProviderCredentialMapping]] = {
-        ProviderName.ANTHROPIC: ProviderCredentialMapping(
+    PROVIDER_MAPPINGS: ClassVar[dict[str, ProviderCredentialMapping]] = {
+        provider_ids.ANTHROPIC: ProviderCredentialMapping(
             api_key_var="ANTHROPIC_API_KEY",
         ),
-        ProviderName.OPENAI: ProviderCredentialMapping(
+        provider_ids.OPENAI: ProviderCredentialMapping(
             api_key_var="OPENAI_API_KEY",
             api_base_var="OPENAI_API_BASE",
             organization_var="OPENAI_ORGANIZATION",
             project_var="OPENAI_PROJECT",
         ),
-        ProviderName.GOOGLE: ProviderCredentialMapping(
+        provider_ids.GOOGLE: ProviderCredentialMapping(
             api_key_var="GOOGLE_API_KEY",
             project_var="GOOGLE_CLOUD_PROJECT",
             api_key_aliases=("GEMINI_API_KEY",),
         ),
-        ProviderName.OLLAMA: ProviderCredentialMapping(
+        provider_ids.OLLAMA: ProviderCredentialMapping(
             api_key_var="OLLAMA_API_KEY",
             api_base_var="OLLAMA_HOST",
             default_api_base="http://localhost:11434",
         ),
-        ProviderName.OPENROUTER: ProviderCredentialMapping(
+        provider_ids.OPENROUTER: ProviderCredentialMapping(
             api_key_var="OPENROUTER_API_KEY",
             api_base_var="OPENROUTER_API_BASE",
         ),
-        ProviderName.HUGGINGFACE: ProviderCredentialMapping(
+        provider_ids.HUGGINGFACE: ProviderCredentialMapping(
             api_key_var="HUGGINGFACE_API_TOKEN",
             api_base_var="HUGGINGFACE_API_BASE",
         ),
-        ProviderName.GROK: ProviderCredentialMapping(
+        provider_ids.GROK: ProviderCredentialMapping(
             api_key_var="XAI_API_KEY",
             api_base_var="XAI_API_BASE",
         ),
-        ProviderName.LOCAL_TRANSFORMERS: ProviderCredentialMapping(
+        provider_ids.LOCAL_TRANSFORMERS: ProviderCredentialMapping(
             api_key_var="LOCAL_TRANSFORMERS_HF_TOKEN",
             api_base_var="LOCAL_TRANSFORMERS_CACHE_DIR",
             api_key_aliases=("HUGGINGFACE_API_TOKEN",),
         ),
     }
+
+    @classmethod
+    def mapping_for(cls, provider: str) -> ProviderCredentialMapping:
+        """Return the environment-variable mapping one instance reads.
+
+        A built-in provider keeps its historical variable names, so ``.env``
+        files stay byte-compatible. Every other instance id derives its
+        variables from itself, which is what lets a user-defined endpoint be
+        configured from ``.env`` at all.
+
+        Args:
+            provider: The provider instance id.
+
+        Returns:
+            ProviderCredentialMapping: The instance's variable mapping.
+        """
+        mapping = cls.PROVIDER_MAPPINGS.get(provider)
+        return mapping if mapping is not None else derived_credential_mapping(provider)
 
     def __init__(self, env_path: Path | None = None) -> None:
         """Initialize the CredentialLoader with the given env file path.
@@ -568,7 +615,7 @@ class CredentialLoader:
             _ENVIRONMENT_OVERLAY.revert(name)
         _logger.info("env_file_reloaded", path=str(self.env_path))
 
-    def get_credentials(self, provider: ProviderName) -> ProviderCredentials | None:
+    def get_credentials(self, provider: str) -> ProviderCredentials | None:
         """Get credentials for a specific provider.
 
         Args:
@@ -577,33 +624,26 @@ class CredentialLoader:
         Returns:
             ProviderCredentials | None: ProviderCredentials if found and valid, None otherwise.
         """
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        if mapping is None:
-            _logger.debug(
-                "credential_provider_unknown",
-                provider=provider.value,
-            )
-            return None
-
+        mapping = self.mapping_for(provider)
         api_key = self._resolve_api_key(provider, mapping)
         if api_key is None:
             _logger.debug(
                 "credential_not_found",
-                provider=provider.value,
+                provider=provider,
             )
             return None
 
         credentials = self._build_credentials(mapping, api_key)
         _logger.debug(
             "credential_retrieved",
-            provider=provider.value,
+            provider=provider,
             has_api_base=credentials.api_base is not None,
             has_organization_id=credentials.organization_id is not None,
             has_project_id=credentials.project_id is not None,
         )
         return credentials
 
-    def get_connect_credentials(self, provider: ProviderName, *, api_key_optional: bool) -> ProviderCredentials | None:
+    def get_connect_credentials(self, provider: str, *, api_key_optional: bool) -> ProviderCredentials | None:
         """Resolve the credentials a provider connects with.
 
         Keyed providers resolve exactly like :meth:`get_credentials`. Providers
@@ -623,12 +663,9 @@ class CredentialLoader:
         credentials = self.get_credentials(provider)
         if credentials is not None or not api_key_optional:
             return credentials
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        if mapping is None:
-            return ProviderCredentials()
-        return self._build_credentials(mapping, None)
+        return self._build_credentials(self.mapping_for(provider), None)
 
-    def env_var_for(self, provider: ProviderName, field: CredentialField) -> str | None:
+    def env_var_for(self, provider: str, field: CredentialField) -> str | None:
         """Return the environment variable that stores a provider credential field.
 
         Args:
@@ -639,10 +676,9 @@ class CredentialLoader:
             str | None: The variable name, or ``None`` when the provider has no
             variable for ``field``.
         """
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        return mapping.env_var_for(field) if mapping is not None else None
+        return self.mapping_for(provider).env_var_for(field)
 
-    def get_field(self, provider: ProviderName, field: CredentialField) -> str | None:
+    def get_field(self, provider: str, field: CredentialField) -> str | None:
         """Return the effective value of a provider credential field.
 
         The ``.env`` file takes precedence over the process environment, the
@@ -656,9 +692,7 @@ class CredentialLoader:
         Returns:
             str | None: The effective value, or ``None`` when unset.
         """
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        if mapping is None:
-            return None
+        mapping = self.mapping_for(provider)
         if field is CredentialField.API_KEY:
             return self._resolve_api_key(provider, mapping)
         return self._optional_var(mapping.env_var_for(field))
@@ -677,7 +711,7 @@ class CredentialLoader:
         """
         return self._env_vars.get(name) or None
 
-    def persist_field(self, provider: ProviderName, field: CredentialField, value: str | None) -> EnvPersistAction:
+    def persist_field(self, provider: str, field: CredentialField, value: str | None) -> EnvPersistAction:
         """Persist a provider credential field to the ``.env`` file.
 
         A non-empty value is written only when it differs from the effective
@@ -699,10 +733,10 @@ class CredentialLoader:
         Raises:
             ValueError: If the provider has no environment variable for ``field``.
         """
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        env_var = mapping.env_var_for(field) if mapping is not None else None
-        if mapping is None or env_var is None:
-            msg = f"Provider {provider.value!r} has no environment variable for {field.value!r}"
+        mapping = self.mapping_for(provider)
+        env_var = mapping.env_var_for(field)
+        if env_var is None:
+            msg = f"Provider {provider!r} has no environment variable for {field.value!r}"
             raise ValueError(msg)
 
         normalized = (value or "").strip()
@@ -742,7 +776,7 @@ class CredentialLoader:
         foreign_primaries = {other.api_key_var for other in cls.PROVIDER_MAPPINGS.values() if other is not mapping}
         return (primary, *(alias for alias in mapping.api_key_aliases if alias not in foreign_primaries))
 
-    def _resolve_api_key(self, provider: ProviderName, mapping: ProviderCredentialMapping) -> str | None:
+    def _resolve_api_key(self, provider: str, mapping: ProviderCredentialMapping) -> str | None:
         """Resolve a provider API key from its primary variable, then its aliases.
 
         Args:
@@ -758,7 +792,7 @@ class CredentialLoader:
             if api_key := self._get_var(alias):
                 _logger.debug(
                     "credential_found_via_alias",
-                    provider=provider.value,
+                    provider=provider,
                     alias=alias,
                 )
                 return api_key
@@ -809,7 +843,7 @@ class CredentialLoader:
             return value
         return os.environ.get(name) or None
 
-    def validate_credentials(self, provider: ProviderName) -> tuple[bool, str | None]:
+    def validate_credentials(self, provider: str) -> tuple[bool, str | None]:
         """Validate that credentials exist and are properly formatted.
 
         Args:
@@ -818,73 +852,65 @@ class CredentialLoader:
         Returns:
             tuple[bool, str | None]: Tuple of (is_valid, error_message). error_message is None if valid.
         """
-        mapping = self.PROVIDER_MAPPINGS.get(provider)
-        if mapping is None:
-            _logger.debug(
-                "credential_validation_failed",
-                provider=provider.value,
-                reason="unknown_provider",
-            )
-            return False, f"Unknown provider: {provider.value}"
-
+        mapping = self.mapping_for(provider)
         api_key = self._resolve_api_key(provider, mapping)
         if not api_key:
             _logger.debug(
                 "credential_validation_failed",
-                provider=provider.value,
+                provider=provider,
                 reason="missing_key",
             )
             return False, f"Missing {mapping.api_key_var}"
 
-        validation_result = _validate_key_format(provider, api_key)
+        validation_result = validate_key_format(provider, api_key)
         if validation_result is not None:
             _logger.warning(
                 "credential_validation_failed",
-                provider=provider.value,
+                provider=provider,
                 reason="invalid_format",
             )
             return False, validation_result
 
         _logger.debug(
             "credential_validated",
-            provider=provider.value,
+            provider=provider,
             valid=True,
         )
         return True, None
 
-    def list_configured_providers(self) -> list[ProviderName]:
+    def list_configured_providers(self) -> list[str]:
         """List all providers that have credentials configured.
 
         Returns:
-            list[ProviderName]: List of provider names with valid credentials.
+            list[str]: List of provider names with valid credentials.
         """
-        configured: list[ProviderName] = []
-        for provider in ProviderName:
+        configured: list[str] = []
+        for provider in provider_ids.BUILTIN_PROVIDER_IDS:
             is_valid, _ = self.validate_credentials(provider)
             if is_valid:
                 configured.append(provider)
         _logger.debug(
             "configured_providers_listed",
             count=len(configured),
-            providers=[p.value for p in configured],
+            providers=list(configured),
         )
         return configured
 
-    def list_missing_providers(self) -> list[ProviderName]:
+    def list_missing_providers(self) -> list[str]:
         """List all providers that are missing credentials.
 
         Returns:
-            list[ProviderName]: List of provider names without valid credentials.
+            list[str]: List of provider names without valid credentials.
         """
-        missing: list[ProviderName] = []
-        for provider in ProviderName:
+        missing: list[str] = []
+        for provider in provider_ids.BUILTIN_PROVIDER_IDS:
             is_valid, _ = self.validate_credentials(provider)
             if not is_valid:
                 missing.append(provider)
         _logger.debug(
             "missing_providers_listed",
             count=len(missing),
-            providers=[p.value for p in missing],
+            providers=list(missing),
         )
         return missing
 
@@ -1046,7 +1072,7 @@ def get_api_key_env_var_mapping() -> dict[str, str]:
     Returns:
         dict[str, str]: Dict mapping provider ID string to API key env var name.
     """
-    return {provider.value: mapping.api_key_var for provider, mapping in CredentialLoader.PROVIDER_MAPPINGS.items()}
+    return {provider: mapping.api_key_var for provider, mapping in CredentialLoader.PROVIDER_MAPPINGS.items()}
 
 
 @dataclass(frozen=True)

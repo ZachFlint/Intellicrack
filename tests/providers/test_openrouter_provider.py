@@ -28,8 +28,8 @@ from intellicrack.core.types import (
     AuthenticationError,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.openrouter import OpenRouterProvider
 
 
@@ -98,7 +98,7 @@ async def openrouter_provider(
         pytest.skip("OPENROUTER_API_KEY not configured in .env")
 
     provider = OpenRouterProvider()
-    credentials = credential_loader.get_credentials(ProviderName.OPENROUTER)
+    credentials = credential_loader.get_credentials(provider_ids.OPENROUTER)
     assert credentials is not None, "Expected credentials after validation"
 
     try:
@@ -182,7 +182,7 @@ class TestOpenRouterModelListing:
         assert matching, f"Expected to find '{known_id}' in OpenRouter model listing, got {[m.id for m in models[:10]]}"
 
         model = matching[0]
-        assert model.provider == ProviderName.OPENROUTER, f"Expected provider OPENROUTER, got {model.provider}"
+        assert model.provider == provider_ids.OPENROUTER, f"Expected provider OPENROUTER, got {model.provider}"
         assert model.supports_tools is True, f"Expected {known_id} to have supports_tools=True (gpt-family + documented tool support)"
         assert model.supports_streaming is True, f"Expected {known_id} to have supports_streaming=True (OpenRouter universal streaming)"
         assert model.context_window > 0, f"Expected {known_id} to have positive context_window, got {model.context_window}"
@@ -296,7 +296,7 @@ class TestOpenRouterConnection:
         Args:
             openrouter_provider: Connected OpenRouter provider fixture.
         """
-        assert openrouter_provider.name == ProviderName.OPENROUTER
+        assert openrouter_provider.name == provider_ids.OPENROUTER
 
     @pytest.mark.asyncio
     @staticmethod
@@ -352,7 +352,7 @@ class TestOpenRouterConnection:
             pytest.skip("OPENROUTER_API_KEY not configured")
 
         provider = OpenRouterProvider()
-        credentials = credential_loader.get_credentials(ProviderName.OPENROUTER)
+        credentials = credential_loader.get_credentials(provider_ids.OPENROUTER)
         assert credentials is not None
 
         await provider.connect(credentials)

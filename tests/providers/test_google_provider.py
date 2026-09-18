@@ -23,13 +23,14 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
 )
 from intellicrack.providers.google import GoogleProvider
 
 
 if TYPE_CHECKING:
     from intellicrack.credentials.store import CredentialLoader
+from intellicrack.providers import ids as provider_ids
+
 
 _GOOGLE_API_HOST: str = "generativelanguage.googleapis.com"
 _GOOGLE_API_PORT: int = 443
@@ -130,7 +131,7 @@ class TestGoogleModelListing:
         first_gemini = gemini_models[0]
         assert isinstance(first_gemini.id, str)
         assert len(first_gemini.id) > 0
-        assert first_gemini.provider == ProviderName.GOOGLE
+        assert first_gemini.provider == provider_ids.GOOGLE
         assert isinstance(first_gemini.context_window, int)
         assert first_gemini.context_window > 0
 
@@ -161,7 +162,7 @@ class TestGoogleModelListing:
             assert len(model.id) > 0, f"Model id must not be empty; got {model.id!r}"
             assert isinstance(model.name, str), f"Model name must be str; got {type(model.name)}"
             assert len(model.name) > 0, f"Model name must not be empty; got {model.name!r}"
-            assert model.provider == ProviderName.GOOGLE, f"Model {model.id} has wrong provider {model.provider!r}"
+            assert model.provider == provider_ids.GOOGLE, f"Model {model.id} has wrong provider {model.provider!r}"
             assert isinstance(model.context_window, int), f"Model {model.id} context_window must be int; got {type(model.context_window)}"
             assert model.context_window > 0, f"Model {model.id} has invalid context_window {model.context_window!r}"
             assert isinstance(model.supports_tools, bool), f"Model {model.id} supports_tools must be bool, got {type(model.supports_tools)}"
@@ -275,7 +276,7 @@ class TestGoogleConnection:
         Args:
             google_provider: Connected Google provider fixture.
         """
-        assert google_provider.name == ProviderName.GOOGLE
+        assert google_provider.name == provider_ids.GOOGLE
 
     @pytest.mark.asyncio
     @pytest.mark.usefixtures("google_network_required")
@@ -325,7 +326,7 @@ class TestGoogleConnection:
             pytest.skip("GOOGLE_API_KEY not configured")
 
         provider = GoogleProvider()
-        credentials = credential_loader.get_credentials(ProviderName.GOOGLE)
+        credentials = credential_loader.get_credentials(provider_ids.GOOGLE)
         assert credentials is not None
 
         await provider.connect(credentials)

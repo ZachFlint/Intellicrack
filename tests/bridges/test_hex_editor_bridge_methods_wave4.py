@@ -173,7 +173,7 @@ class _FakeSandboxBridge(ToolBridgeBase):
         Returns:
             ToolDefinition: Stub definition with no functions.
         """
-        return ToolDefinition(tool_name=ToolName.SANDBOX, description="fake", functions=[])
+        return ToolDefinition(tool_name=ToolName.SANDBOX.value, description="fake", functions=[])
 
     async def initialize(self, tool_path: Path | None = None) -> None:
         """No-op initializer satisfying the abstract contract.
@@ -245,7 +245,7 @@ class _FakeSandboxBridgeNoRunBinary(ToolBridgeBase):
         Returns:
             ToolDefinition: Stub definition with no functions.
         """
-        return ToolDefinition(tool_name=ToolName.SANDBOX, description="no-run-binary", functions=[])
+        return ToolDefinition(tool_name=ToolName.SANDBOX.value, description="no-run-binary", functions=[])
 
     async def initialize(self, tool_path: Path | None = None) -> None:
         """No-op initializer.

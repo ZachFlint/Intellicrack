@@ -66,7 +66,7 @@ class TestRankingAgainstRealRegistry:
 
         assert matches, "expected at least one match for 'set a breakpoint'"
         assert matches[0].function.name == "x64dbg.set_breakpoint"
-        assert matches[0].tool_name == ToolName.X64DBG
+        assert matches[0].tool_name == ToolName.X64DBG.value
 
     def test_breakpoint_query_surfaces_only_debugger_capable_bridges_in_top_results(self) -> None:
         """Every top-5 match for a breakpoint query belongs to a debugger-capable bridge.
@@ -82,7 +82,7 @@ class TestRankingAgainstRealRegistry:
         matches = index.search("set a breakpoint at an address", limit=5)
 
         assert matches
-        assert all(match.tool_name in {ToolName.X64DBG, ToolName.CUTTER} for match in matches)
+        assert all(match.tool_name in {ToolName.X64DBG.value, ToolName.CUTTER.value} for match in matches)
 
     def test_bridge_name_query_boosts_that_bridges_functions(self) -> None:
         """A query naming a bridge directly (``"frida hook function"``) ranks that bridge's functions highly.
@@ -96,7 +96,7 @@ class TestRankingAgainstRealRegistry:
         matches = index.search("frida hook a function", limit=5)
 
         assert matches
-        assert matches[0].tool_name == ToolName.FRIDA
+        assert matches[0].tool_name == ToolName.FRIDA.value
 
     def test_function_name_match_ranks_above_description_only_match(self) -> None:
         """A query matching a function's own name outranks one matching only a description.
@@ -154,8 +154,8 @@ class TestSearchGrouped:
         grouped = index.search_grouped("set a breakpoint", limit=10)
 
         assert grouped, "expected at least one grouped ToolDefinition"
-        assert all(d.tool_name in {ToolName.X64DBG, ToolName.CUTTER} for d in grouped)
-        assert grouped[0].tool_name == ToolName.X64DBG
+        assert all(d.tool_name in {ToolName.X64DBG.value, ToolName.CUTTER.value} for d in grouped)
+        assert grouped[0].tool_name == ToolName.X64DBG.value
 
         x64dbg_original_order = [f.name for f in X64DbgBridge().tool_definition.functions]
         grouped_names = [f.name for f in grouped[0].functions]
@@ -201,7 +201,7 @@ class TestSyntheticWeightOrdering:
         """
         return [
             ToolDefinition(
-                tool_name=ToolName.GHIDRA,
+                tool_name=ToolName.GHIDRA.value,
                 description="Static analysis",
                 functions=[
                     ToolFunction(
@@ -213,7 +213,7 @@ class TestSyntheticWeightOrdering:
                 ],
             ),
             ToolDefinition(
-                tool_name=ToolName.FRIDA,
+                tool_name=ToolName.FRIDA.value,
                 description="Dynamic instrumentation",
                 functions=[
                     ToolFunction(
@@ -239,14 +239,14 @@ class TestSyntheticWeightOrdering:
         """A query containing the exact bridge name (``"frida"``) boosts that bridge's function over a same-scoring rival."""
         definitions = [
             ToolDefinition(
-                tool_name=ToolName.GHIDRA,
+                tool_name=ToolName.GHIDRA.value,
                 description="d",
                 functions=[
                     ToolFunction(name="ghidra.inspect", description="Inspect state", parameters=[], returns="r"),
                 ],
             ),
             ToolDefinition(
-                tool_name=ToolName.FRIDA,
+                tool_name=ToolName.FRIDA.value,
                 description="d",
                 functions=[
                     ToolFunction(name="frida.inspect", description="Inspect state", parameters=[], returns="r"),
@@ -258,5 +258,5 @@ class TestSyntheticWeightOrdering:
 
         assert len(matches) == 2
         assert matches[0].function.name == "frida.inspect"
-        assert matches[0].tool_name == ToolName.FRIDA
+        assert matches[0].tool_name == ToolName.FRIDA.value
         assert matches[0].score > matches[1].score

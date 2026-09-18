@@ -20,8 +20,8 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.ollama import OllamaProvider
 
 
@@ -97,7 +97,7 @@ class TestOllamaModelListing:
             assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
             assert model.id, f"ModelInfo.id must be non-empty, got empty string for {model!r}"
             assert model.name, f"ModelInfo.name must be non-empty, got empty string for {model!r}"
-            assert model.provider == ProviderName.OLLAMA, f"Expected provider OLLAMA, got {model.provider!r}"
+            assert model.provider == provider_ids.OLLAMA, f"Expected provider OLLAMA, got {model.provider!r}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -150,7 +150,7 @@ class TestOllamaModelListing:
             installed_models: Non-empty list of models from the connected provider.
         """
         for model in installed_models:
-            assert model.provider == ProviderName.OLLAMA, f"Expected OLLAMA provider, got {model.provider}"
+            assert model.provider == provider_ids.OLLAMA, f"Expected OLLAMA provider, got {model.provider}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -253,7 +253,7 @@ class TestOllamaConnection:
         Args:
             ollama_provider: Connected Ollama provider fixture.
         """
-        assert ollama_provider.name == ProviderName.OLLAMA
+        assert ollama_provider.name == provider_ids.OLLAMA
 
     @pytest.mark.asyncio
     @staticmethod

@@ -30,12 +30,12 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase, UsageInfo, create_openai_tool_schema
 from intellicrack.providers.model_loader import (
     RECOMMENDED_MODELS_B580,
@@ -89,6 +89,8 @@ if TYPE_CHECKING:
     import torch
     from transformers import PreTrainedModel, PreTrainedTokenizerBase
     from transformers.modeling_outputs import CausalLMOutputWithPast
+
+    from intellicrack.providers.capabilities import ApiDialect
 
 
 _logger = get_logger(__name__)
@@ -252,13 +254,27 @@ class LocalTransformersProvider(LLMProviderBase):
         self._logger.info("local_transformers_provider_initialized", prefer_xpu=prefer_xpu)
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: ProviderName.LOCAL_TRANSFORMERS
+            str: The ``local_transformers`` built-in provider id.
         """
-        return ProviderName.LOCAL_TRANSFORMERS
+        return provider_ids.LOCAL_TRANSFORMERS
+
+    @property
+    @override
+    def dialect(self) -> ApiDialect | None:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect | None: Always ``None``. This provider is not an HTTP
+            endpoint at all: it runs ``AutoModelForCausalLM.from_pretrained``
+            and ``model.generate()`` in-process, and its only HTTP traffic is
+            a reachability probe. It therefore has no wire format, and code
+            that maps a provider to a dialect has to tolerate ``None``.
+        """
+        return None
 
     @property
     def device_type(self) -> str:
@@ -536,7 +552,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 ModelInfo(
                     id=model_id,
                     name=f"[Local] {model_id.rsplit('/', maxsplit=1)[-1]}",
-                    provider=ProviderName.LOCAL_TRANSFORMERS,
+                    provider=provider_ids.LOCAL_TRANSFORMERS,
                     context_window=context_window,
                     supports_tools=True,
                     supports_vision=supports_vision,
