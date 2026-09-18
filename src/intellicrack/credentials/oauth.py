@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
+import html
 import http.server
 import json
 import os
@@ -468,15 +469,21 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
     def _send_response(self, status: int, message: str) -> None:
         """Send an HTML response.
 
+        The message is HTML-escaped on the way into the page. An error
+        message carries the authorization server's ``error`` parameter, which
+        arrives on the query string of a request anything in the browser can
+        make to this loopback port while a flow is open, so it reaches the
+        response body as attacker-controlled text.
+
         Args:
             status: HTTP status code.
-            message: Message to display.
+            message: Message to display, escaped before it is interpolated.
         """
         self.send_response(status)
         self.send_header("Content-type", "text/html")
         self.end_headers()
 
-        html = f"""<!DOCTYPE html>
+        page = f"""<!DOCTYPE html>
 <html>
 <head>
     <title>Intellicrack OAuth</title>
@@ -487,10 +494,10 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
 </head>
 <body>
     <h1>{"Success" if status == _HTTP_OK else "Error"}</h1>
-    <p>{message}</p>
+    <p>{html.escape(message)}</p>
 </body>
 </html>"""
-        self.wfile.write(html.encode("utf-8"))
+        self.wfile.write(page.encode("utf-8"))
 
     def log_request(self, code: int | str = "-", size: int | str = "-") -> None:
         """Suppress default HTTP request logging.

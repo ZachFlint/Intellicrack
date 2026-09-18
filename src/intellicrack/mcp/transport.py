@@ -262,11 +262,11 @@ async def open_http_transport(
         timeout_s: Connect and write timeout in seconds. The read timeout is
             left long because a server may hold a response stream open.
 
+    A header still carrying an unresolved reference propagates
+    :class:`McpConfigError` from :func:`_reject_unresolved`.
+
     Yields:
         tuple[Any, Any]: The read stream and the write stream.
-
-    Raises:
-        McpConfigError: If a header still carries an unresolved reference.
     """
     for name, value in headers.items():
         _reject_unresolved(value, f"headers.{name}")
