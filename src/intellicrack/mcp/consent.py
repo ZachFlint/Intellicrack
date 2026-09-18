@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import enum
 import hashlib
+import inspect
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -39,7 +40,7 @@ from intellicrack.mcp.errors import McpConsentDeniedError
 
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Awaitable, Mapping, Sequence
 
     from intellicrack.mcp.config import McpServerConfig, StdioServerSpec
 
@@ -592,12 +593,17 @@ class ApprovalStore:
         self._session.clear()
 
 
-LaunchPrompt = Callable[["McpServerConfig", str, list[DangerousPattern]], bool]
+LaunchPrompt = Callable[["McpServerConfig", str, list["DangerousPattern"]], "bool | Awaitable[bool]"]
 """Presents a proposed launch and returns the operator's answer.
 
 Receives the server configuration, the rendered description from
 :func:`describe_launch`, and the findings from
 :func:`scan_command_for_dangerous_patterns`.
+
+The answer may be awaitable. A prompt that shows a window has to hand the
+question to the GUI thread and wait for it, and awaiting that wait keeps the
+loop free to serve every other server in the meantime -- rather than blocking
+all of them behind one modal dialog.
 """
 
 
@@ -610,16 +616,27 @@ class McpConsentGate:
     no prompt is available to ask through.
     """
 
-    def __init__(self, trust: TrustStore, prompt: LaunchPrompt) -> None:
+    def __init__(
+        self,
+        trust: TrustStore,
+        prompt: LaunchPrompt,
+        on_generation_change: Callable[[str, str], None] | None = None,
+    ) -> None:
         """Initialize the gate.
 
         Args:
             trust: Store holding trust state and approved launches.
             prompt: Callable that presents the launch and returns the
                 operator's answer.
+            on_generation_change: Invoked with the server id and its new
+                generation whenever a server's tool listing changes. This is
+                where remembered per-tool approvals are discarded, so an
+                answer about the old definitions is never replayed against
+                the new ones.
         """
         self._trust = trust
         self._prompt = prompt
+        self._on_generation_change = on_generation_change
 
     @property
     def trust(self) -> TrustStore:
@@ -664,7 +681,10 @@ class McpConsentGate:
             argument_count=len(config.stdio.args),
             finding_count=len(findings),
         )
-        if not self._prompt(config, description, findings):
+        answer = self._prompt(config, description, findings)
+        if inspect.isawaitable(answer):
+            answer = await answer
+        if not answer:
             self._trust.set_state(config.server_id, TrustState.DENIED)
             message = f"launching MCP server '{config.server_id}' was not approved"
             raise McpConsentDeniedError(message)
@@ -694,6 +714,8 @@ class McpConsentGate:
                 previous=previous,
                 current=generation,
             )
+            if self._on_generation_change is not None:
+                self._on_generation_change(server_id, generation)
         return changed
 
     def is_trusted(self, server_id: str) -> bool:
