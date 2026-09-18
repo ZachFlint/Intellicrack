@@ -25,16 +25,18 @@ manager must run on that single loop.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import enum
 import os
 import threading
 from collections import deque
-from contextlib import asynccontextmanager, suppress
-from dataclasses import dataclass, field
+from contextlib import ExitStack, asynccontextmanager, suppress
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
+import psutil
 from mcp import Client
 from mcp.client.stdio import stdio_client
 from mcp.shared.exceptions import MCPError
@@ -45,6 +47,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.mcp.catalog import McpToolCatalog, fetch_catalog
 from intellicrack.mcp.config import McpConfigStore, McpServerConfig, McpTransportKind
 from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
+from intellicrack.mcp.sandbox_launch import SandboxedJob, build_sandboxed_startup, sandbox_supported
 from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, open_http_transport
 
 
@@ -92,6 +95,12 @@ DISCONNECT_TIMEOUT_S: Final[float] = 10.0
 
 STDERR_JOIN_TIMEOUT_S: Final[float] = 2.0
 """How long to wait for the stderr reader thread to finish."""
+
+SANDBOX_ADOPT_TIMEOUT_S: Final[float] = 10.0
+"""How long to look for a sandboxed child before giving up on confining it."""
+
+SANDBOX_ADOPT_POLL_S: Final[float] = 0.05
+"""How often to re-check for the sandboxed child while waiting for it."""
 
 HEARTBEAT_INTERVAL_S: Final[float] = 15.0
 """How often a live connection pings its server.
@@ -542,26 +551,45 @@ class McpConnection:
             raise McpConnectionError(message)
         await self._consent.ensure_launch_consent(self._config, env)
 
-        parameters = build_stdio_parameters(spec, env)
+        sandbox = self._config.sandbox
+        launch_spec = spec
+        if sandbox.enabled:
+            if not sandbox_supported():
+                message = (
+                    f"server '{self.server_id}' is configured to run sandboxed, which Intellicrack implements "
+                    f"with Windows job objects. Refusing to start it unconfined on this platform."
+                )
+                raise McpConnectionError(message)
+            confined = build_sandboxed_startup(spec, sandbox, env)
+            env = dict(confined.env)
+            launch_spec = replace(spec, cwd=confined.cwd)
+
+        parameters = build_stdio_parameters(launch_spec, env)
         errlog = self._stderr.open()
         _logger.info(
             "mcp_stdio_server_starting",
             server_id=self.server_id,
             command=parameters.command,
             argument_count=len(parameters.args),
+            sandboxed=sandbox.enabled,
         )
+        known_children = _child_pids() if sandbox.enabled else frozenset()
         try:
-            async with (
-                stdio_client(parameters, errlog=errlog) as streams,
-                Client(
-                    _StreamPairTransport(streams),
-                    client_info=self._client_info,
-                    elicitation_callback=self._elicitation_callback,
-                    message_handler=self._on_incoming,
-                    read_timeout_seconds=self._config.request_timeout_s,
-                ) as client,
-            ):
-                yield client
+            with ExitStack() as guards:
+                job = guards.enter_context(SandboxedJob(sandbox)) if sandbox.enabled else None
+                async with (
+                    stdio_client(parameters, errlog=errlog) as streams,
+                    Client(
+                        _StreamPairTransport(streams),
+                        client_info=self._client_info,
+                        elicitation_callback=self._elicitation_callback,
+                        message_handler=self._on_incoming,
+                        read_timeout_seconds=self._config.request_timeout_s,
+                    ) as client,
+                ):
+                    if job is not None:
+                        await self._confine_child(job, parameters.command, known_children)
+                    yield client
         finally:
             self._stderr.close()
 
@@ -622,6 +650,43 @@ class McpConnection:
             ) as client,
         ):
             yield client
+
+    async def _confine_child(self, job: SandboxedJob, command: str, known: frozenset[int]) -> None:
+        """Place the server process this launch just started into its job.
+
+        The SDK owns the spawn and does not report the child's identity, so
+        the new process is found by diffing this process's children around
+        the spawn. When it cannot be found the launch is abandoned rather
+        than continued unconfined: an operator who asked for a sandbox and
+        silently did not get one is worse off than one whose server refused
+        to start.
+
+        Args:
+            job: The open job the child belongs in.
+            command: The launch command, used to recognise the child.
+            known: Child process ids that existed before the spawn.
+
+        Raises:
+            McpConnectionError: If the child could not be identified or
+                could not be confined.
+        """
+        expected = Path(command).stem.lower()
+        deadline = asyncio.get_running_loop().time() + SANDBOX_ADOPT_TIMEOUT_S
+        while asyncio.get_running_loop().time() < deadline:
+            candidates = [pid for pid in _child_pids() - known if _process_matches(pid, expected)]
+            if len(candidates) == 1:
+                try:
+                    job.adopt(candidates[0])
+                except (McpError, OSError) as exc:
+                    message = f"server '{self.server_id}': the sandbox could not confine the server process: {exc}"
+                    raise McpConnectionError(message) from exc
+                return
+            await asyncio.sleep(SANDBOX_ADOPT_POLL_S)
+        message = (
+            f"server '{self.server_id}': the sandbox could not identify the server process it just started, "
+            f"so it cannot confine it. Refusing to leave the server running unconfined."
+        )
+        raise McpConnectionError(message)
 
     async def _serve_once(self) -> None:
         """Hold one connection open until a stop is requested.
@@ -996,6 +1061,34 @@ class McpConnection:
             listener(self.server_id)
         except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
             _logger.warning("mcp_change_listener_failed", server_id=self.server_id, error=str(exc))
+
+
+def _child_pids() -> frozenset[int]:
+    """List the process ids of this process's direct and indirect children.
+
+    Returns:
+        frozenset[int]: The child process ids, empty when they cannot be
+        enumerated.
+    """
+    with contextlib.suppress(psutil.Error, OSError):
+        return frozenset(child.pid for child in psutil.Process().children(recursive=True))
+    return frozenset()
+
+
+def _process_matches(pid: int, expected_stem: str) -> bool:
+    """Report whether one process looks like the server that was just started.
+
+    Args:
+        pid: The process to inspect.
+        expected_stem: The launch command's file name without its extension,
+            lower-cased.
+
+    Returns:
+        bool: ``True`` when the process's executable name matches.
+    """
+    with contextlib.suppress(psutil.Error, OSError):
+        return Path(psutil.Process(pid).name()).stem.lower() == expected_stem
+    return False
 
 
 async def _maybe_await(value: object) -> Any:  # noqa: ANN401

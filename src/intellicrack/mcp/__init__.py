@@ -23,6 +23,14 @@ package through the callables it accepts.
 
 from __future__ import annotations
 
+from intellicrack.mcp.auth import (
+    KeyringTokenStorage,
+    build_oauth_provider,
+    has_stored_credentials,
+    issuer_for,
+    resolve_client_identity,
+    sign_out,
+)
 from intellicrack.mcp.catalog import (
     McpToolCatalog,
     McpToolEntry,
@@ -70,6 +78,23 @@ from intellicrack.mcp.errors import (
     McpProtocolError,
 )
 from intellicrack.mcp.policy import ToolCost, enabled_entries, estimate_tool_cost
+from intellicrack.mcp.resources import (
+    PromptSummary,
+    ResourceSummary,
+    get_prompt,
+    list_prompts,
+    list_resources,
+    read_resource,
+)
+from intellicrack.mcp.sandbox_launch import (
+    ENVIRONMENT_ALLOWLIST,
+    JobLimits,
+    SandboxedJob,
+    SandboxedLaunch,
+    apply_job_limits,
+    build_sandboxed_startup,
+    sandbox_supported,
+)
 from intellicrack.mcp.secrets import MCP_SECRET_NAMESPACE, McpSecretResolver
 from intellicrack.mcp.tool_source import (
     UNTRUSTED_BLOCK_END,
@@ -81,9 +106,11 @@ from intellicrack.mcp.tool_source import (
     source_label,
     validate_structured_content,
 )
+from intellicrack.mcp.validation import SchemaViolation, validate_against_schema
 
 
 __all__ = [
+    "ENVIRONMENT_ALLOWLIST",
     "MCP_CONFIG_FILENAME",
     "MCP_SECRET_NAMESPACE",
     "NAMESPACE_PREFIX",
@@ -94,6 +121,8 @@ __all__ = [
     "ApprovalStore",
     "DangerousPattern",
     "HttpServerSpec",
+    "JobLimits",
+    "KeyringTokenStorage",
     "McpAuthError",
     "McpConfigDocument",
     "McpConfigError",
@@ -115,22 +144,40 @@ __all__ = [
     "McpToolEntry",
     "McpToolSource",
     "McpTransportKind",
+    "PromptSummary",
+    "ResourceSummary",
+    "SandboxedJob",
+    "SandboxedLaunch",
+    "SchemaViolation",
     "StdioServerSpec",
     "ToolCost",
     "TrustState",
     "TrustStore",
+    "apply_job_limits",
+    "build_oauth_provider",
+    "build_sandboxed_startup",
     "compute_generation",
     "describe_launch",
     "enabled_entries",
     "estimate_tool_cost",
     "fetch_catalog",
     "from_canonical_name",
+    "get_prompt",
+    "has_stored_credentials",
     "is_mcp_namespace",
+    "issuer_for",
+    "list_prompts",
+    "list_resources",
     "map_result",
     "map_tool_to_function",
+    "read_resource",
+    "resolve_client_identity",
+    "sandbox_supported",
     "sanitize_untrusted_text",
     "scan_command_for_dangerous_patterns",
+    "sign_out",
     "source_label",
     "to_canonical_name",
+    "validate_against_schema",
     "validate_structured_content",
 ]
