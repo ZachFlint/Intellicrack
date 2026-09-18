@@ -28,13 +28,14 @@ import asyncio
 import hashlib
 import json
 import webbrowser
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Final
 
 from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.auth.utils import create_client_info_from_metadata_url, credentials_match_issuer, is_valid_client_metadata_url
 from mcp.shared.auth import AuthorizationCodeResult, OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
 from pydantic import AnyUrl, ValidationError
 
+from intellicrack.core.json_payload import is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.oauth import OAuthCallbackError, OAuthCallbackServer
@@ -362,10 +363,7 @@ async def resolve_client_identity(
 
     if metadata_url is not None:
         if not is_valid_client_metadata_url(metadata_url):
-            message = (
-                f"OAuth metadata URL {metadata_url!r} is not usable as a client id: it must be an HTTPS URL "
-                f"with a non-root path."
-            )
+            message = f"OAuth metadata URL {metadata_url!r} is not usable as a client id: it must be an HTTPS URL with a non-root path."
             raise McpAuthError(message)
         _logger.info("mcp_oauth_identity_cimd", metadata_url=metadata_url)
         return create_client_info_from_metadata_url(metadata_url, [AnyUrl(redirect_uri())])
@@ -518,7 +516,7 @@ async def has_stored_credentials(store: CredentialStore, server_id: str, issuer:
     if credentials is None or not credentials.api_key:
         return False
     try:
-        decoded: Any = json.loads(credentials.api_key)
+        decoded: object = json.loads(credentials.api_key)
     except json.JSONDecodeError:
         return False
-    return isinstance(decoded, dict) and bool(decoded.get("access_token"))
+    return is_json_object(decoded) and bool(decoded.get("access_token"))

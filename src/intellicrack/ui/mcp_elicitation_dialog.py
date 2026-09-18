@@ -43,7 +43,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.core.json_payload import is_json_object
+from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.tool_source import sanitize_untrusted_text
 
@@ -153,8 +153,7 @@ class McpElicitationDialog(QDialog):
         layout.addWidget(message)
 
         caution = QLabel(
-            "A server must never ask you for a password, an API key or any other credential this way. "
-            "If it is asking for one, decline.",
+            "A server must never ask you for a password, an API key or any other credential this way. If it is asking for one, decline.",
         )
         caution.setObjectName("mcp_elicit_caution")
         caution.setWordWrap(True)
@@ -199,10 +198,10 @@ class McpElicitationDialog(QDialog):
         """
         form = QFormLayout()
         form.setSpacing(10)
-        schema = getattr(self._params, "requested_schema", None)
-        properties = schema.get("properties") if is_json_object(schema) else None
-        required = schema.get("required") if is_json_object(schema) else None
-        if isinstance(required, list):
+        schema: object = getattr(self._params, "requested_schema", None)
+        properties: object = schema.get("properties") if is_json_object(schema) else None
+        required: object = schema.get("required") if is_json_object(schema) else None
+        if is_json_array(required):
             self._required = {name for name in required if isinstance(name, str)}
         if not is_json_object(properties):
             form.addRow(QLabel("The server requested no specific fields."))
@@ -251,11 +250,11 @@ class McpElicitationDialog(QDialog):
             QWidget: A combo box for an enumeration, a check box for a
             boolean, a spin box for a number, and a line edit otherwise.
         """
-        choices = definition.get("enum")
-        if isinstance(choices, list) and choices:
+        choices: object = definition.get("enum")
+        if is_json_array(choices) and choices:
             combo = QComboBox()
-            names = definition.get("enumNames")
-            labels = names if isinstance(names, list) and len(names) == len(choices) else choices
+            names: object = definition.get("enumNames")
+            labels: list[Any] = names if is_json_array(names) and len(names) == len(choices) else choices
             for value, caption in zip(choices, labels, strict=False):
                 combo.addItem(str(caption), value)
             return combo

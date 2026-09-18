@@ -1104,12 +1104,12 @@ class SessionStore:
         Returns:
             dict[str, McpServerState]: The rebuilt states, keyed by server id.
         """
-        if not isinstance(data, dict):
-            return {}
         states: dict[str, McpServerState] = {}
+        if not is_json_object(data):
+            return states
         for key, value in data.items():
-            if not isinstance(key, str) or not isinstance(value, dict):
-                _logger.warning("mcp_server_state_malformed", server_id=str(key))
+            if not is_json_object(value):
+                _logger.warning("mcp_server_state_malformed", server_id=key)
                 continue
             health = value.get("health")
             tool_count = value.get("tool_count", 0)
