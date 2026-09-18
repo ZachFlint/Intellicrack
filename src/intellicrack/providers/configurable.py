@@ -630,9 +630,8 @@ class ConfigurableProvider(LLMProviderBase):
     async def cancel_request(self) -> None:
         """Cancel any in-flight request.
 
-        Setting the flag stops the stream loop at its next event, which closes
-        the ``httpx`` streaming context and disconnects server-side rather
-        than draining the response.
+        Setting the flag stops the stream loop at its next event, which closes the ``httpx`` streaming context and disconnects server-side
+        rather than draining the response.
         """
         self._cancel_requested = True
         self._logger.info("configurable_request_cancelled")

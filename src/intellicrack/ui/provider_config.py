@@ -425,12 +425,9 @@ def _normalize_timeout_value(value: int) -> int:
 class _TimeoutSpinBox(QSpinBox):
     """Spin box selecting a request timeout in seconds or the provider default.
 
-    Its minimum value is shown as "Provider default" and means no timeout
-    override; every other value lies between ``_TIMEOUT_MIN_SECONDS`` and
-    ``_TIMEOUT_MAX_SECONDS``. Stepping moves directly between the provider
-    default and the smallest real timeout, and a typed value below the smallest
-    real timeout is raised to it when editing finishes, so the control never
-    reports a timeout the dialog does not offer.
+    Its minimum value is shown as "Provider default" and means no timeout override; every other value lies between ``_TIMEOUT_MIN_SECONDS``
+    and ``_TIMEOUT_MAX_SECONDS``. Stepping moves directly between the provider default and the smallest real timeout, and a typed value
+    below the smallest real timeout is raised to it when editing finishes, so the control never reports a timeout the dialog does not offer.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -1771,11 +1768,9 @@ class ModelRefreshWorker(RetainedWorker):
 class ProviderInstanceDialog(QDialog):
     """Collects the identity of a new or duplicated provider instance.
 
-    Only the fields that decide *which endpoint* this is are asked for here --
-    id, label, preset, dialect and base URL. Everything else (headers, body
-    parameters, per-model capabilities, the key) is edited in the provider's
-    own settings page once it exists, so adding an endpoint is one short step
-    rather than a form.
+    Only the fields that decide *which endpoint* this is are asked for here -- id, label, preset, dialect and base URL. Everything else
+    (headers, body parameters, per-model capabilities, the key) is edited in the provider's own settings page once it exists, so adding an
+    endpoint is one short step rather than a form.
     """
 
     def __init__(
@@ -2401,9 +2396,8 @@ class ProviderConfigDialog(QDialog):
     def _on_import_instances(self) -> None:
         """Import instances from a JSON file, confirming any unknown host.
 
-        An instance whose base-URL host matches no known preset is shown with
-        its host and its headers before it goes live, because an imported
-        record can point a credential at an endpoint the user did not choose.
+        An instance whose base-URL host matches no known preset is shown with its host and its headers before it goes live, because an
+        imported record can point a credential at an endpoint the user did not choose.
         """
         path_text, _ = QFileDialog.getOpenFileName(self, "Import Provider Instances", "", "JSON (*.json)")
         if not path_text:
@@ -3286,8 +3280,7 @@ class ProviderSettingsWidget(QFrame):
     def _save_instance_fields(self) -> None:
         """Write the custom-endpoint editors back to the saved instance record.
 
-        Malformed extra-body JSON is reported and the previous value kept,
-        rather than silently discarding what the user typed.
+        Malformed extra-body JSON is reported and the previous value kept, rather than silently discarding what the user typed.
         """
         if not self.is_custom_instance:
             return
@@ -4355,10 +4348,8 @@ class ProviderSettingsWidget(QFrame):
     def save_settings(self) -> None:
         """Save current settings: preferences to ``providers.json``, credentials and endpoints to ``.env``.
 
-        Every provider keeps its ``providers.json`` section whether or not it
-        has an API key, so its enabled flag, timeout, model and device options
-        survive. The API key, base URL and organization are persisted only in
-        ``.env``, which startup reads.
+        Every provider keeps its ``providers.json`` section whether or not it has an API key, so its enabled flag, timeout, model and device
+        options survive. The API key, base URL and organization are persisted only in ``.env``, which startup reads.
         """
         _logger.info(
             "provider_settings_save_starting",
@@ -4391,10 +4382,9 @@ class ProviderSettingsWidget(QFrame):
     def _persist_api_key_to_env(self) -> None:
         """Persist the API key field to the .env file.
 
-        A changed key is written, an unchanged key -- including one inherited
-        from the process environment -- is left as it is, and a cleared key is
-        removed from ``.env`` so a value set outside the application applies
-        again. Providers without an editable credential field persist nothing.
+        A changed key is written, an unchanged key -- including one inherited from the process environment -- is left as it is, and a
+        cleared key is removed from ``.env`` so a value set outside the application applies again. Providers without an editable credential
+        field persist nothing.
         """
         if self.provider_id in _PROVIDERS_WITHOUT_CREDENTIAL_FIELDS:
             return
@@ -4443,10 +4433,9 @@ class ProviderSettingsWidget(QFrame):
     def _persist_endpoints_to_env(self) -> None:
         """Persist the base URL and organization fields to the ``.env`` file.
 
-        Runs for every provider exposing these fields, with or without an API
-        key, so a keyless Ollama host is saved too. A cleared field -- or a
-        base URL equal to the provider's default endpoint -- removes the saved
-        override so a value set outside the application applies again.
+        Runs for every provider exposing these fields, with or without an API key, so a keyless Ollama host is saved too. A cleared field --
+        or a base URL equal to the provider's default endpoint -- removes the saved override so a value set outside the application applies
+        again.
         """
         provider_name = self.provider_id
         loader = _resolve_widget_loader(self)

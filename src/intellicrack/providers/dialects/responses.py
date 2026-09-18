@@ -4,21 +4,16 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """The OpenAI Responses dialect.
 
-Responses is the API OpenAI recommends for new projects and the only one that
-carries reasoning items, which current reasoning models require to be replayed
-on every turn that also carries a function call. From GPT-5.4 Chat Completions
-additionally refuses tool calling with any ``reasoning_effort`` other than
-``none``, so reasoning plus tool calling is only fully available here.
+Responses is the API OpenAI recommends for new projects and the only one that carries reasoning items, which current reasoning models
+require to be replayed on every turn that also carries a function call. From GPT-5.4 Chat Completions additionally refuses tool calling with
+any ``reasoning_effort`` other than ``none``, so reasoning plus tool calling is only fully available here.
 
-Two properties shape everything below. Function definitions are internally
-tagged and flat -- ``{"type": "function", "name": ..., "parameters": ...}``
-rather than Chat Completions' nested ``function`` object -- and every item in a
-turn correlates by ``call_id`` rather than by position.
+Two properties shape everything below. Function definitions are internally tagged and flat -- ``{"type": "function", "name": ...,
+"parameters": ...}`` rather than Chat Completions' nested ``function`` object -- and every item in a turn correlates by ``call_id`` rather
+than by position.
 
-The default posture is ``store: false`` with
-``include: ["reasoning.encrypted_content"]``: multi-turn reasoning keeps
-working, and OpenAI retains none of the binary-analysis context that passes
-through it.
+The default posture is ``store: false`` with ``include: ["reasoning.encrypted_content"]``: multi-turn reasoning keeps working, and OpenAI
+retains none of the binary-analysis context that passes through it.
 """
 
 from __future__ import annotations
@@ -83,9 +78,10 @@ _EFFORT_LOW_THRESHOLD: Final[int] = 4000
 _EFFORT_MEDIUM_THRESHOLD: Final[int] = 16000
 
 _TOOL_SEARCH_ITEM_TYPES: Final[frozenset[str]] = frozenset({"tool_search_call", "tool_search_output"})
-"""Output items a tool search produces. A search result is not a tool call: it
-makes a deferred tool callable, and returning a ``function_call_output`` for
-one is a protocol error."""
+"""Output items a tool search produces.
+
+A search result is not a tool call: it makes a deferred tool callable, and returning a ``function_call_output`` for one is a protocol error.
+"""
 
 _TOOL_SEARCH_EVENT_TYPES: Final[frozenset[str]] = frozenset({
     "response.tool_search_call.in_progress",

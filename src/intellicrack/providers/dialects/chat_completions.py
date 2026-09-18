@@ -4,14 +4,11 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """The OpenAI Chat Completions dialect.
 
-This is the format every OpenAI-compatible gateway mirrors -- LiteLLM, vLLM,
-Together, Groq, Cerebras, DeepSeek, Ollama, OpenRouter, Grok, HuggingFace -- so
-it is the fallback an unknown endpoint is assumed to speak until it says
-otherwise.
+This is the format every OpenAI-compatible gateway mirrors -- LiteLLM, vLLM, Together, Groq, Cerebras, DeepSeek, Ollama, OpenRouter, Grok,
+HuggingFace -- so it is the fallback an unknown endpoint is assumed to speak until it says otherwise.
 
-Two deviations are configurable because real endpoints require them: Ollama
-takes tool-call arguments as an object rather than a JSON string and omits the
-``type`` discriminator, and both are per-endpoint rather than per-dialect.
+Two deviations are configurable because real endpoints require them: Ollama takes tool-call arguments as an object rather than a JSON string
+and omits the ``type`` discriminator, and both are per-endpoint rather than per-dialect.
 """
 
 from __future__ import annotations

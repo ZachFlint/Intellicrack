@@ -4,12 +4,10 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Search index over the live tool registry for dynamic tool loading.
 
-Intellicrack's tool registry exposes hundreds of tool functions across seven
-bridges. Advertising all of them to an LLM provider on every request is both
-too large for providers with a tool-count cap and wasteful of context budget.
-:class:`ToolSearchIndex` lets the orchestrator's ``tools.search`` meta-tool
-resolve a natural-language query against the live registry so the model can
-discover and load only the functions relevant to its current task.
+Intellicrack's tool registry exposes hundreds of tool functions across seven bridges. Advertising all of them to an LLM provider on every
+request is both too large for providers with a tool-count cap and wasteful of context budget. :class:`ToolSearchIndex` lets the
+orchestrator's ``tools.search`` meta-tool resolve a natural-language query against the live registry so the model can discover and load only
+the functions relevant to its current task.
 """
 
 from __future__ import annotations
@@ -114,12 +112,9 @@ class ToolSearchMatch:
 class ToolSearchIndex:
     """Ranks tool functions from a registry snapshot against a text query.
 
-    The index is a thin wrapper over a list of :class:`ToolDefinition`
-    instances (typically :meth:`ToolRegistry.get_tool_definitions`'s live
-    result) rather than a persistent structure: the registry rarely changes
-    within a session, and re-scanning a few hundred functions per query is
-    fast enough that no incremental index maintenance is worth the
-    complexity.
+    The index is a thin wrapper over a list of :class:`ToolDefinition` instances (typically :meth:`ToolRegistry.get_tool_definitions`'s live
+    result) rather than a persistent structure: the registry rarely changes within a session, and re-scanning a few hundred functions per
+    query is fast enough that no incremental index maintenance is worth the complexity.
     """
 
     def __init__(self, definitions: list[ToolDefinition]) -> None:

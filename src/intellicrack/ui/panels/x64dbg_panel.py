@@ -1723,12 +1723,10 @@ class X64DbgPanel(AnalysisPanelBase):
     def _refresh_mirror_frame(self) -> None:
         """Capture and display the current frame of the mirrored debugger window.
 
-        Invoked on the mirror-refresh timer. A single capture failure (for
-        example a transient state while the debugger window repaints, or a
-        momentary ``PrintWindow`` rejection) leaves the last successfully
-        rendered frame on screen rather than clearing it, since one failed
-        poll does not mean the window is gone; the timer only stops once
-        the mirror itself is torn down via :meth:`_stop_mirror_timer`.
+        Invoked on the mirror-refresh timer. A single capture failure (for example a transient state while the debugger window repaints, or
+        a momentary ``PrintWindow`` rejection) leaves the last successfully rendered frame on screen rather than clearing it, since one
+        failed poll does not mean the window is gone; the timer only stops once the mirror itself is torn down via
+        :meth:`_stop_mirror_timer`.
         """
         if self._mirror_hwnd is None or self._mirror_label is None:
             self._stop_mirror_timer()
@@ -2133,12 +2131,9 @@ class X64DbgPanel(AnalysisPanelBase):
     def _on_step_into_user_code(self) -> None:
         """Step into repeatedly until reaching user-module code.
 
-        Does not disable ``_step_user_btn`` before dispatch: the shared
-        ``_on_step_success``/``_on_step_error`` handlers this reuses for
-        console-message formatting only re-enable ``_step_into_btn``/
-        ``_step_over_btn``/``_step_out_btn``, so disabling a button they
-        never re-enable would leave it permanently disabled after the
-        first click.
+        Does not disable ``_step_user_btn`` before dispatch: the shared ``_on_step_success``/``_on_step_error`` handlers this reuses for
+        console-message formatting only re-enable ``_step_into_btn``/ ``_step_over_btn``/``_step_out_btn``, so disabling a button they never
+        re-enable would leave it permanently disabled after the first click.
         """
         if self._bridge is None:
             return
@@ -2156,8 +2151,7 @@ class X64DbgPanel(AnalysisPanelBase):
     def _on_step_into_system_code(self) -> None:
         """Step into repeatedly until reaching system-module code.
 
-        Does not disable ``_step_system_btn`` before dispatch, for the
-        same reason :meth:`_on_step_into_user_code` does not disable
+        Does not disable ``_step_system_btn`` before dispatch, for the same reason :meth:`_on_step_into_user_code` does not disable
         ``_step_user_btn``.
         """
         if self._bridge is None:

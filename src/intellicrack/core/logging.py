@@ -604,7 +604,6 @@ def log_provider_request(
             Recorded so operators can see the requested value even when a
             provider does not forward it to its backend (for example
             Anthropic, whose current models reject the parameter).
-
     """
     slog = get_logger("providers")
     slog.info(

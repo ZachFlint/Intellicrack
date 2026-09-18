@@ -3752,10 +3752,8 @@ class GhidraPanel(AnalysisPanelBase):
     def _on_create_memory_block(self) -> None:
         """Create a new memory block in the program.
 
-        Dispatches to ``create_memory_block`` for the default
-        "initialized" block type, or to ``create_uninitialized_block``,
-        ``create_byte_mapped_block``, or ``create_bit_mapped_block``
-        depending on the selected block type.
+        Dispatches to ``create_memory_block`` for the default "initialized" block type, or to ``create_uninitialized_block``,
+        ``create_byte_mapped_block``, or ``create_bit_mapped_block`` depending on the selected block type.
         """
         bridge = self._require_connected()
         if bridge is None:
