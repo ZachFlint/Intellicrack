@@ -35,7 +35,8 @@ from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox, QWidget
 
 from intellicrack.core.session import Session, SessionManager
-from intellicrack.core.types import BinaryInfo, Message, ProviderName
+from intellicrack.core.types import BinaryInfo, Message
+from intellicrack.providers import ids as provider_ids
 from intellicrack.ui import session_manager as session_manager_module
 from intellicrack.ui.chat import ChatPanel
 from intellicrack.ui.panels.async_bridge import drain_bridge_workers_for, run_bridge_coroutine
@@ -114,7 +115,7 @@ def _build_saved_session(manager: SessionManager, tmp_path: Path) -> Session:
     Returns:
         Session: The persisted session, with two messages and one active binary.
     """
-    session = run_bridge_coroutine(manager.create(ProviderName.OLLAMA, "test-model", "Restorable Session"))
+    session = run_bridge_coroutine(manager.create(provider_ids.OLLAMA, "test-model", "Restorable Session"))
     assert isinstance(session, Session)
 
     session.add_message(Message(role="user", content="What does this binary do?"))

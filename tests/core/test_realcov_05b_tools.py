@@ -37,7 +37,8 @@ import pytest_asyncio
 from intellicrack.bridges.hex_editor import HexEditorBridge
 from intellicrack.core.session import Session
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import BreakpointInfo, ProviderName, ToolError, ToolName
+from intellicrack.core.types import BreakpointInfo, ToolError, ToolName
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -240,8 +241,8 @@ class TestToolDefinitionsRealSchema:
         for tool_name in initialized_registry.get_available_tools():
             bridge = initialized_registry.get(tool_name)
             assert bridge is not None
-            assert by_name[tool_name].description == bridge.tool_definition.description
-            func_names = {fn.name for fn in by_name[tool_name].functions}
+            assert by_name[tool_name.value].description == bridge.tool_definition.description
+            func_names = {fn.name for fn in by_name[tool_name.value].functions}
             assert func_names == {fn.name for fn in bridge.tool_definition.functions}
             assert func_names, f"{tool_name.value} exposes no functions"
 
@@ -256,7 +257,7 @@ class TestToolDefinitionsRealSchema:
             initialized_registry: Fully initialized real ToolRegistry.
         """
         definitions = initialized_registry.get_tool_definitions()
-        hex_def = next(d for d in definitions if d.tool_name == ToolName.HEX_EDITOR)
+        hex_def = next(d for d in definitions if d.tool_name == ToolName.HEX_EDITOR.value)
         advertised = {fn.name for fn in hex_def.functions}
         assert any(name.endswith("open_file") for name in advertised), f"hex editor must advertise open_file, got {sorted(advertised)}"
 
@@ -280,7 +281,7 @@ class TestSetSessionPropagation:
         if not await bridge.is_available():
             pytest.skip("hex editor Rust core (intellicrack_hexcore) is not available")
 
-        session = Session.create(provider=ProviderName.OLLAMA, model="test-model")
+        session = Session.create(provider=provider_ids.OLLAMA, model="test-model")
         initialized_registry.set_session(session)
 
         await initialized_registry.execute_tool_call(

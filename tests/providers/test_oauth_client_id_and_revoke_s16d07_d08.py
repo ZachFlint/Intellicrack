@@ -47,7 +47,7 @@ import pytest
 from keyring.compat import properties
 from keyring.errors import PasswordDeleteError
 
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.credentials.oauth import (
     OAUTH_CONFIGS,
@@ -57,6 +57,7 @@ from intellicrack.credentials.oauth import (
     OAuthProvider,
 )
 from intellicrack.credentials.store import CredentialStore
+from intellicrack.providers import ids as provider_ids
 from intellicrack.ui import provider_config
 from intellicrack.ui.provider_config import ProviderConfigDialog
 
@@ -312,7 +313,7 @@ class _RevokeCredentialFn(Protocol):
 
     def __call__(
         self,
-        provider_name: ProviderName,
+        provider_name: str,
         oauth_provider: OAuthProvider | None,
         *,
         store: CredentialStore | None = None,
@@ -365,7 +366,7 @@ class TestRevokeApiKeyProvider:
         store = _isolated_store()
         assert store.keyring_available, "the in-memory backend must report itself as a usable keyring"
 
-        provider = ProviderName.OLLAMA
+        provider = provider_ids.OLLAMA
         marker = f"s16d08-{uuid.uuid4().hex}"
         key_id = getattr(store, "_get_keyring_key")(provider)
 
@@ -430,7 +431,7 @@ class TestRevokeApiKeyProvider:
                 _RevokeOutcomeLike: The outcome returned by ``_revoke_credential``.
             """
             revoke = _revoke_credential_fn()
-            return cast("_RevokeOutcomeLike", await revoke(ProviderName.OPENROUTER, None, store=store))
+            return cast("_RevokeOutcomeLike", await revoke(provider_ids.OPENROUTER, None, store=store))
 
         outcome = asyncio.run(_run())
 

@@ -39,7 +39,6 @@ from intellicrack.core.types import (
     PatchInfo,
     ProcessInfo,
     ProviderError,
-    ProviderName,
     RateLimitError,
     RegisterState,
     SandboxError,
@@ -56,6 +55,8 @@ from intellicrack.core.types import (
     ToolState,
     VariableInfo,
 )
+from intellicrack.providers import ids as provider_ids
+from intellicrack.providers.ids import normalize_provider_id
 
 
 # ---------------------------------------------------------------------------
@@ -797,27 +798,33 @@ def test_tool_name_invalid_value_raises_value_error_with_name() -> None:
 
 
 def test_provider_name_invalid_value_raises_value_error_with_name() -> None:
-    """ProviderName raises ValueError containing the invalid value for an unrecognized string."""
-    with pytest.raises(ValueError, match="nonexistent_provider"):
-        ProviderName("nonexistent_provider")
+    """Provider id raises ValueError containing the invalid value for a malformed string.
+
+    An unregistered but well-formed id is a legitimate custom instance, so the
+    rejection is for ids that break the grammar, not for ids nobody has seen.
+    """
+    with pytest.raises(ValueError, match="not a provider!"):
+        normalize_provider_id("not a provider!")
+    with pytest.raises(ValueError, match="Invalid provider id"):
+        normalize_provider_id("   ")
 
 
 def test_session_add_tag_whitespace_raises_value_error_with_message() -> None:
     """Session.add_tag raises ValueError with the documented message for whitespace tags."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     with pytest.raises(ValueError, match="non-empty"):
         session.add_tag("   ")
 
 
 def test_session_add_tag_empty_raises_value_error_with_message() -> None:
     """Session.add_tag raises ValueError with the documented message for empty tags."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     with pytest.raises(ValueError, match="non-empty"):
         session.add_tag("")
 
 
 # ---------------------------------------------------------------------------
-# ToolName and ProviderName enum membership and values
+# ToolName and provider id enum membership and values
 # Independent oracle: documented string values required by external tool bridges
 # ---------------------------------------------------------------------------
 
@@ -833,12 +840,12 @@ def test_tool_name_enum_values_exact() -> None:
 
 
 def test_provider_name_enum_values_exact() -> None:
-    """ProviderName enum members have the exact string values required by provider bridges."""
-    assert ProviderName.ANTHROPIC.value == "anthropic"
-    assert ProviderName.OPENAI.value == "openai"
-    assert ProviderName.GOOGLE.value == "google"
-    assert ProviderName.OLLAMA.value == "ollama"
-    assert ProviderName.OPENROUTER.value == "openrouter"
+    """Provider id enum members have the exact string values required by provider bridges."""
+    assert provider_ids.ANTHROPIC == "anthropic"
+    assert provider_ids.OPENAI == "openai"
+    assert provider_ids.GOOGLE == "google"
+    assert provider_ids.OLLAMA == "ollama"
+    assert provider_ids.OPENROUTER == "openrouter"
 
 
 def test_tool_name_roundtrip_from_value() -> None:
@@ -849,9 +856,16 @@ def test_tool_name_roundtrip_from_value() -> None:
 
 
 def test_provider_name_roundtrip_from_value() -> None:
-    """ProviderName can be reconstructed from its string value (used by session deserializer)."""
-    assert ProviderName("anthropic") is ProviderName.ANTHROPIC
-    assert ProviderName("openai") is ProviderName.OPENAI
+    """Provider id can be reconstructed from its string value (used by session deserializer).
+
+    Stored rows may carry any casing or stray whitespace a user typed, so the
+    round trip normalizes rather than requiring an exact match, and a custom
+    instance id survives it exactly as a built-in one does.
+    """
+    assert normalize_provider_id("anthropic") == provider_ids.ANTHROPIC
+    assert normalize_provider_id("openai") == provider_ids.OPENAI
+    assert normalize_provider_id(" Anthropic ") == provider_ids.ANTHROPIC
+    assert normalize_provider_id("my-gateway") == "my-gateway"
 
 
 # ---------------------------------------------------------------------------
@@ -866,32 +880,32 @@ _UUID4_PATTERN = re.compile(
 
 def test_session_create_generates_uuid4_id() -> None:
     """Session.create produces a UUID v4 session ID conforming to RFC 4122."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022", name="Test")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022", name="Test")
     assert _UUID4_PATTERN.match(session.id), f"Session ID {session.id!r} is not a valid UUID v4"
 
 
 def test_session_create_ids_are_unique() -> None:
     """Session.create produces a different ID for each call (probabilistic UUID uniqueness)."""
-    ids = {Session.create(provider=ProviderName.OPENAI, model="gpt-4o").id for _ in range(10)}
+    ids = {Session.create(provider=provider_ids.OPENAI, model="gpt-4o").id for _ in range(10)}
     assert len(ids) == 10
 
 
 def test_session_create_stores_provider_and_model() -> None:
     """Session.create stores provider and model exactly as passed."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-opus-4-5-20251101")
-    assert session.provider is ProviderName.ANTHROPIC
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-opus-4-5-20251101")
+    assert session.provider is provider_ids.ANTHROPIC
     assert session.model == "claude-opus-4-5-20251101"
 
 
 def test_session_create_uses_provided_name() -> None:
     """Session.create stores the explicit name when one is provided."""
-    session = Session.create(provider=ProviderName.OPENAI, model="gpt-4o", name="My Analysis Session")
+    session = Session.create(provider=provider_ids.OPENAI, model="gpt-4o", name="My Analysis Session")
     assert session.name == "My Analysis Session"
 
 
 def test_session_create_starts_with_empty_collections() -> None:
     """Session.create produces a session with no binaries, messages, patches, or tags."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     assert session.binaries == []
     assert session.messages == []
     assert session.patches == []
@@ -900,7 +914,7 @@ def test_session_create_starts_with_empty_collections() -> None:
 
 def test_session_active_binary_none_when_no_binaries() -> None:
     """Session.active_binary returns None before any binary is added."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     assert session.active_binary is None
 
 
@@ -912,7 +926,7 @@ def test_session_active_binary_none_when_no_binaries() -> None:
 
 def test_session_add_binary_makes_it_active() -> None:
     """Adding the first binary sets active_binary_index=0 and active_binary points to it."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     binary = _make_binary("target.exe")
     session.add_binary(binary)
     assert session.active_binary_index == 0
@@ -922,7 +936,7 @@ def test_session_add_binary_makes_it_active() -> None:
 
 def test_session_add_two_binaries_first_remains_active() -> None:
     """Adding a second binary does not change the active index away from 0."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     session.add_binary(_make_binary("first.exe"))
     session.add_binary(_make_binary("second.exe"))
     assert session.active_binary_index == 0
@@ -932,7 +946,7 @@ def test_session_add_two_binaries_first_remains_active() -> None:
 
 def test_session_active_binary_respects_index_change() -> None:
     """Session.active_binary follows active_binary_index when changed manually."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     session.add_binary(_make_binary("first.exe"))
     session.add_binary(_make_binary("second.exe"))
     session.active_binary_index = 1
@@ -942,7 +956,7 @@ def test_session_active_binary_respects_index_change() -> None:
 
 def test_session_active_binary_out_of_range_returns_none() -> None:
     """Session.active_binary returns None when index is out of bounds."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     session.add_binary(_make_binary())
     session.active_binary_index = 99
     assert session.active_binary is None
@@ -956,14 +970,14 @@ def test_session_active_binary_out_of_range_returns_none() -> None:
 
 def test_session_add_tag_returns_true_for_new_tag() -> None:
     """Session.add_tag returns True when the tag is freshly added."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     assert session.add_tag("malware") is True
     assert "malware" in session.tags
 
 
 def test_session_add_tag_returns_false_for_duplicate() -> None:
     """Session.add_tag returns False and does not duplicate when tag already exists."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     session.add_tag("malware")
     result = session.add_tag("malware")
     assert result is False
@@ -972,7 +986,7 @@ def test_session_add_tag_returns_false_for_duplicate() -> None:
 
 def test_session_add_tag_strips_whitespace() -> None:
     """Session.add_tag normalises tags by stripping leading/trailing whitespace."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     session.add_tag("  ransomware  ")
     assert "ransomware" in session.tags
     assert "  ransomware  " not in session.tags
@@ -980,7 +994,7 @@ def test_session_add_tag_strips_whitespace() -> None:
 
 def test_session_remove_tag_returns_true_when_present() -> None:
     """Session.remove_tag returns True and removes the tag when it exists."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     session.add_tag("malware")
     result = session.remove_tag("malware")
     assert result is True
@@ -989,14 +1003,14 @@ def test_session_remove_tag_returns_true_when_present() -> None:
 
 def test_session_remove_tag_returns_false_when_absent() -> None:
     """Session.remove_tag returns False without error when tag does not exist."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     result = session.remove_tag("nonexistent")
     assert result is False
 
 
 def test_session_remove_tag_strips_whitespace_to_match() -> None:
     """Session.remove_tag matches against normalised tag (strips whitespace)."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     session.add_tag("pe_binary")
     result = session.remove_tag("  pe_binary  ")
     assert result is True
@@ -1011,7 +1025,7 @@ def test_session_remove_tag_strips_whitespace_to_match() -> None:
 
 def test_session_set_tool_state_stores_state() -> None:
     """Session.set_tool_state stores the ToolState and makes it retrievable."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     state = ToolState(tool=ToolName.GHIDRA, connected=True, process_attached=False, target_path=None, last_error=None)
     session.set_tool_state(state)
     assert ToolName.GHIDRA in session.tool_states
@@ -1022,7 +1036,7 @@ def test_session_set_tool_state_stores_state() -> None:
 
 def test_session_set_tool_state_overwrites_previous() -> None:
     """Session.set_tool_state replaces the previous state for the same tool."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     s1 = ToolState(tool=ToolName.FRIDA, connected=True, process_attached=False, target_path=None, last_error=None)
     s2 = ToolState(tool=ToolName.FRIDA, connected=False, process_attached=False, target_path=None, last_error="detached")
     session.set_tool_state(s1)
@@ -1033,7 +1047,7 @@ def test_session_set_tool_state_overwrites_previous() -> None:
 
 def test_session_clear_tool_state_returns_true_and_removes() -> None:
     """Session.clear_tool_state returns True and removes the entry when present."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     state = ToolState(tool=ToolName.GHIDRA, connected=True, process_attached=False, target_path=None, last_error=None)
     session.set_tool_state(state)
     result = session.clear_tool_state(ToolName.GHIDRA)
@@ -1043,7 +1057,7 @@ def test_session_clear_tool_state_returns_true_and_removes() -> None:
 
 def test_session_clear_tool_state_returns_false_when_absent() -> None:
     """Session.clear_tool_state returns False without error when no state is stored."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     result = session.clear_tool_state(ToolName.X64DBG)
     assert result is False
 
@@ -1151,7 +1165,7 @@ def test_tool_definition_functions_accessible_by_index() -> None:
     p = ToolParameter(name="address", type="integer", description="Address to read", required=True)
     f1 = ToolFunction(name="read_memory", description="Read bytes from process memory", parameters=[p], returns="bytes")
     f2 = ToolFunction(name="list_modules", description="List loaded modules", parameters=[], returns="list")
-    tool = ToolDefinition(tool_name=ToolName.FRIDA, description="Frida dynamic instrumentation", functions=[f1, f2])
+    tool = ToolDefinition(tool_name=ToolName.FRIDA.value, description="Frida dynamic instrumentation", functions=[f1, f2])
     assert tool.functions[0].name == "read_memory"
     assert tool.functions[1].name == "list_modules"
     assert tool.functions[0].signature == "read_memory(address: integer) -> bytes"
@@ -1216,7 +1230,7 @@ def test_bridge_analysis_summary_has_complete_field() -> None:
 
 def test_session_add_and_get_bridge_analysis() -> None:
     """Session.add_bridge_analysis stores and get_bridge_analysis retrieves the same object."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     analysis = BridgeAnalysisSummary(
         binary_name="target.exe",
         strings=[StringInfo(address=0x401010, value="Invalid License", encoding="ascii", section=".rdata")],
@@ -1242,7 +1256,7 @@ def test_session_add_and_get_bridge_analysis() -> None:
 
 def test_session_get_bridge_analysis_returns_none_for_unknown() -> None:
     """Session.get_bridge_analysis returns None when the binary name has no stored analysis."""
-    session = Session.create(provider=ProviderName.ANTHROPIC, model="claude-3-5-sonnet-20241022")
+    session = Session.create(provider=provider_ids.ANTHROPIC, model="claude-3-5-sonnet-20241022")
     result = session.get_bridge_analysis("not_loaded.exe")
     assert result is None
 

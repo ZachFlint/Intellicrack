@@ -22,7 +22,7 @@ F13 - HexEditorBridge.get_selection exact tuple (hex_editor.py:5928)
 
 F09 is architecturally unreachable: get_schema_for_provider uses an exhaustive
 if/elif/else chain whose else clause calls _assert_never.  Because every
-ProviderName value is handled by a named branch, the else is dead code that
+provider id value is handled by a named branch, the else is dead code that
 cannot be reached through any legal caller.  There is no production-code path
 that exercises it.  Marking it UNTESTABLE per WAVE5-INSTRUCTIONS.md.
 """
@@ -931,7 +931,7 @@ class TestValidateToolParameterArrayObjectsNoItemProperties:
 # ---------------------------------------------------------------------------
 # Architecturally unreachable: get_schema_for_provider uses an exhaustive
 # if/elif/else chain whose final else calls _assert_never.  Because every
-# ProviderName enum value has a dedicated branch, the else clause is dead
+# provider id enum value has a dedicated branch, the else clause is dead
 # code.  No legal caller can reach it without bypassing the exhaustive
 # dispatch.  No fake gate is written; the finding is documented here as
 # UNTESTABLE per WAVE5-INSTRUCTIONS.md.

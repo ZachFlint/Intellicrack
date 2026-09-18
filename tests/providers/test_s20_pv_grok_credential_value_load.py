@@ -13,13 +13,13 @@ field was always left empty on load -- regardless of what ``.env`` or
 component that drives the "Source:" label) and
 :class:`~intellicrack.credentials.store.CredentialStore` both already
 resolved Grok's environment variable correctly via the canonical
-``CredentialLoader.PROVIDER_MAPPINGS`` (``ProviderName.GROK`` ->
+``CredentialLoader.PROVIDER_MAPPINGS`` (``provider_ids.GROK`` ->
 ``XAI_API_KEY``). The result was the reported bug: Source shows ".env file"
 / ENV_FILE, but the API Key field and Test Connection see nothing.
 
 The fix replaces the local dict with
 ``ProviderSettingsWidget._resolve_env_api_key``, which delegates to
-``get_credential_loader().get_credentials(ProviderName(self.provider_id))`` --
+``get_credential_loader().get_credentials(normalize_provider_id(self.provider_id))`` --
 the exact same environment-variable mapping every other credential-source
 consumer in the codebase uses -- so the value path and the source path can
 never disagree again about which variable a provider reads from.
@@ -46,9 +46,9 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
-from intellicrack.core.types import ProviderName
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.credentials.store import CredentialSource, CredentialStore
+from intellicrack.providers import ids as provider_ids
 from intellicrack.ui import provider_config as provider_config_module
 from intellicrack.ui.provider_config import ProviderSettingsWidget
 
@@ -224,7 +224,7 @@ def test_resolve_env_api_key_grok_matches_store_get_source_env_file(
     )
     store = _make_keyring_free_store(CredentialLoader(env_path=env_path))
 
-    source = asyncio.run(store.get_source(ProviderName.GROK))
+    source = asyncio.run(store.get_source(provider_ids.GROK))
     resolved_key = _resolve_env_api_key("grok")
 
     assert source is CredentialSource.ENV_FILE

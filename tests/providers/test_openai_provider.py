@@ -30,8 +30,8 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.openai import OpenAIProvider
 
 
@@ -64,7 +64,7 @@ async def openai_provider(
         pytest.skip("OPENAI_API_KEY not configured in .env")
 
     provider = OpenAIProvider()
-    credentials = credential_loader.get_credentials(ProviderName.OPENAI)
+    credentials = credential_loader.get_credentials(provider_ids.OPENAI)
     assert credentials is not None, "Expected credentials after has_openai_key validation"
 
     try:
@@ -139,7 +139,7 @@ class TestOpenAIModelListing:
             assert len(model.id) > 0, f"Model id must be non-empty; got {model.id!r}"
             assert isinstance(model.name, str), f"Model name must be a str; got {type(model.name)}"
             assert len(model.name) > 0, f"Model name must be non-empty; got {model.name!r}"
-            assert model.provider == ProviderName.OPENAI, f"Expected OPENAI provider, got {model.provider}"
+            assert model.provider == provider_ids.OPENAI, f"Expected OPENAI provider, got {model.provider}"
             assert isinstance(model.context_window, int), f"Model {model.id} context_window must be int; got {type(model.context_window)}"
             assert model.context_window > 0, f"Model {model.id} context_window must be positive; got {model.context_window!r}"
             assert isinstance(model.supports_tools, bool), f"supports_tools must be bool for {model.id}"
@@ -189,7 +189,7 @@ class TestOpenAIModelListing:
                 f"gpt-4o-mini supports_streaming must be {_GPT4O_MINI_SUPPORTS_STREAMING} "
                 f"(OpenAI documented streaming); bridge returned {model.supports_streaming} for {model.id!r}"
             )
-            assert model.provider == ProviderName.OPENAI, f"gpt-4o-mini must report provider OPENAI; got {model.provider} for {model.id!r}"
+            assert model.provider == provider_ids.OPENAI, f"gpt-4o-mini must report provider OPENAI; got {model.provider} for {model.id!r}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -204,7 +204,7 @@ class TestOpenAIModelListing:
         models = await openai_provider.list_models()
 
         for model in models:
-            assert model.provider == ProviderName.OPENAI, f"Model {model.id} has wrong provider {model.provider}"
+            assert model.provider == provider_ids.OPENAI, f"Model {model.id} has wrong provider {model.provider}"
             assert model.id, "Model has empty id"
             assert model.context_window > 0, f"Model {model.id} has invalid context window"
 
@@ -253,7 +253,7 @@ class TestOpenAIConnection:
         Args:
             openai_provider: Connected OpenAI provider fixture.
         """
-        assert openai_provider.name == ProviderName.OPENAI
+        assert openai_provider.name == provider_ids.OPENAI
 
     @pytest.mark.asyncio
     @staticmethod
@@ -359,7 +359,7 @@ class TestOpenAIConnection:
             pytest.skip("OPENAI_API_KEY not configured")
 
         provider = OpenAIProvider()
-        credentials = credential_loader.get_credentials(ProviderName.OPENAI)
+        credentials = credential_loader.get_credentials(provider_ids.OPENAI)
         assert credentials is not None
 
         await provider.connect(credentials)

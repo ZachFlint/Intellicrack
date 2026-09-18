@@ -71,7 +71,6 @@ from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
-    ProviderName,
     ToolCall,
     ToolDefinition,
     ToolError,
@@ -79,7 +78,10 @@ from intellicrack.core.types import (
     ToolName,
     ToolParameter,
 )
+from intellicrack.providers import ids as provider_ids
+from intellicrack.providers.anthropic import AnthropicProvider
 from intellicrack.providers.base import LLMProviderBase
+from intellicrack.providers.capabilities import TIKTOKEN_O200K
 from intellicrack.providers.registry import ProviderRegistry
 
 
@@ -1132,6 +1134,8 @@ def test_pending_confirmation_dataclass_fields() -> None:
 _DEFAULT_CONTEXT_WINDOW: Final[int] = 32_000
 _TINY_CONTEXT_WINDOW: Final[int] = 256
 _MODEL_ID: Final[str] = "audit6-model"
+_UNDESCRIBED_INSTANCE_ID: Final[str] = "audit6-gateway"
+"""A custom instance id no preset describes, so nothing supplies a context window."""
 
 
 class _FakeProvider(LLMProviderBase):
@@ -1139,7 +1143,7 @@ class _FakeProvider(LLMProviderBase):
 
     def __init__(
         self,
-        provider_name: ProviderName = ProviderName.OPENAI,
+        provider_name: str = provider_ids.OPENAI,
         *,
         context_window: int | None = _DEFAULT_CONTEXT_WINDOW,
         chat_response: Message | None = None,
@@ -1170,11 +1174,11 @@ class _FakeProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The provider name.
 
         Returns:
-            ProviderName: Configured provider name.
+            str: Configured provider name.
         """
         return self._provider_name
 
@@ -1408,7 +1412,7 @@ def _make_stub_bridge(
         ]
     )
     definition = ToolDefinition(
-        tool_name=tool_name,
+        tool_name=tool_name.value,
         description="Stub bridge for orchestrator audit tests.",
         functions=[
             ToolFunction(
@@ -1514,7 +1518,7 @@ async def test_load_session_marks_current_and_starts_autosave(tmp_path: Path) ->
     orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path)
     async with _AutoStopSessionManager(session_manager):
         created = await session_manager.create(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
         await session_manager.close()
@@ -1543,7 +1547,7 @@ async def test_system_prompt_lists_only_registered_tools(tmp_path: Path) -> None
     orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path, bridge=bridge)
     async with _AutoStopSessionManager(session_manager):
         await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
 
@@ -1562,27 +1566,33 @@ def test_estimate_tokens_uses_tiktoken_for_openai() -> None:
     naive = len(sample) // 4
     encoder = tiktoken.get_encoding("o200k_base")
     real = len(encoder.encode(sample))
-    estimate = Orchestrator.estimate_tokens(sample, ProviderName.OPENAI)
+    estimate = Orchestrator.estimate_tokens(sample, provider_ids.OPENAI)
 
     assert estimate == real
     assert estimate != naive
 
 
 def test_estimate_tokens_uses_cl100k_for_anthropic() -> None:
-    """F-0004: Anthropic estimation must use the conservative cl100k_base encoding."""
+    """F-0004: Anthropic estimation must use the conservative cl100k_base encoding.
+
+    The encoding comes from the model's capability record, so the tokenizer is
+    resolved the way the orchestrator resolves it before counting.
+    """
     sample = "Decompile the license validation function and propose a bypass."
+    tokenizer = AnthropicProvider().capabilities_for("claude-opus-4-7").tokenizer
+    assert tokenizer == "cl100k_base"
 
     encoder = tiktoken.get_encoding("cl100k_base")
     real = len(encoder.encode(sample))
-    estimate = Orchestrator.estimate_tokens(sample, ProviderName.ANTHROPIC)
+    estimate = Orchestrator.estimate_tokens(sample, tokenizer)
 
     assert estimate == real
 
 
 def test_estimate_tokens_handles_empty_string() -> None:
     """F-0004: Empty input must produce zero tokens for any provider."""
-    assert Orchestrator.estimate_tokens("", ProviderName.OPENAI) == 0
-    assert Orchestrator.estimate_tokens("", ProviderName.ANTHROPIC) == 0
+    assert Orchestrator.estimate_tokens("", provider_ids.OPENAI) == 0
+    assert Orchestrator.estimate_tokens("", provider_ids.ANTHROPIC) == 0
 
 
 def test_trim_messages_raises_when_context_window_missing() -> None:
@@ -1623,7 +1633,7 @@ def test_trim_messages_uses_provider_specific_encoding() -> None:
     trimmed = Orchestrator.trim_messages_to_context_window(
         list(messages),
         budget_window,
-        provider=ProviderName.OPENAI,
+        tokenizer=TIKTOKEN_O200K,
     )
 
     assert len(trimmed) == 1
@@ -1646,7 +1656,7 @@ async def test_user_message_not_persisted_on_loop_failure(tmp_path: Path) -> Non
     )
     async with _AutoStopSessionManager(session_manager):
         session = await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
         baseline_message_count = len(session.messages)
@@ -1673,7 +1683,7 @@ async def test_user_message_persisted_on_loop_success(tmp_path: Path) -> None:
     orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path, bridge=bridge)
     async with _AutoStopSessionManager(session_manager):
         session = await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
 
@@ -1695,7 +1705,7 @@ async def test_broken_tool_schema_raises_tool_error(tmp_path: Path) -> None:
     broken_bridge = _StubBridge(
         name=ToolName.PROCESS,
         definition=ToolDefinition(
-            tool_name=ToolName.PROCESS,
+            tool_name=ToolName.PROCESS.value,
             description="Bridge with a broken function definition.",
             functions=[
                 ToolFunction(
@@ -1710,7 +1720,7 @@ async def test_broken_tool_schema_raises_tool_error(tmp_path: Path) -> None:
     orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path, bridge=broken_bridge)
     async with _AutoStopSessionManager(session_manager):
         await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
 
@@ -1726,7 +1736,7 @@ async def test_missing_context_window_raises_tool_error(tmp_path: Path) -> None:
         tmp_path: Pytest temporary directory.
     """
     bridge = _make_stub_bridge()
-    provider_no_window = _FakeProvider(context_window=None)
+    provider_no_window = _FakeProvider(context_window=None, provider_name=_UNDESCRIBED_INSTANCE_ID)
     orch, _provider, _tools, session_manager = _build_orchestrator(
         tmp_path,
         provider=provider_no_window,
@@ -1734,7 +1744,7 @@ async def test_missing_context_window_raises_tool_error(tmp_path: Path) -> None:
     )
     async with _AutoStopSessionManager(session_manager):
         await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=_UNDESCRIBED_INSTANCE_ID,
             model=_MODEL_ID,
         )
 
@@ -1762,7 +1772,7 @@ async def test_context_window_override_bypasses_provider_lookup(tmp_path: Path) 
     )
     async with _AutoStopSessionManager(session_manager):
         await orch.start_session(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
         )
 

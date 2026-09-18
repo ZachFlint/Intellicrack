@@ -31,8 +31,8 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.huggingface import HuggingFaceProvider
 
 
@@ -68,7 +68,7 @@ async def huggingface_provider(
         pytest.skip("HUGGINGFACE_API_TOKEN not configured in .env")
 
     provider = HuggingFaceProvider()
-    credentials = credential_loader.get_credentials(ProviderName.HUGGINGFACE)
+    credentials = credential_loader.get_credentials(provider_ids.HUGGINGFACE)
     assert credentials is not None, "Expected credentials after validation"
 
     try:
@@ -152,7 +152,7 @@ class TestHuggingFaceModelListing:
 
         for model in sample:
             assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
-            assert model.provider is ProviderName.HUGGINGFACE, f"Model {model.id!r} has provider {model.provider!r}, expected HUGGINGFACE"
+            assert model.provider is provider_ids.HUGGINGFACE, f"Model {model.id!r} has provider {model.provider!r}, expected HUGGINGFACE"
             assert model.supports_streaming is True, (
                 f"Model {model.id!r} has supports_streaming={model.supports_streaming!r}; HuggingFace builder always sets this True"
             )
@@ -251,7 +251,7 @@ class TestHuggingFaceConnection:
         Args:
             huggingface_provider: Connected HuggingFace provider fixture.
         """
-        assert huggingface_provider.name == ProviderName.HUGGINGFACE
+        assert huggingface_provider.name == provider_ids.HUGGINGFACE
 
     @pytest.mark.asyncio
     @staticmethod
@@ -289,7 +289,7 @@ class TestHuggingFaceConnection:
             pytest.skip("HUGGINGFACE_API_TOKEN not configured")
 
         provider = HuggingFaceProvider()
-        credentials = credential_loader.get_credentials(ProviderName.HUGGINGFACE)
+        credentials = credential_loader.get_credentials(provider_ids.HUGGINGFACE)
         assert credentials is not None
 
         try:

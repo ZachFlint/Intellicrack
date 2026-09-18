@@ -41,12 +41,14 @@ from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderError,
-    ProviderName,
     ToolCall,
     ToolChoice,
     ToolChoiceMode,
 )
-from intellicrack.providers import huggingface
+from intellicrack.providers import (
+    huggingface,
+    ids as provider_ids,
+)
 from intellicrack.providers.huggingface import HuggingFaceProvider
 from intellicrack.providers.tool_names import to_wire_name
 
@@ -260,7 +262,7 @@ class TestBuildModelInfoList:
         assert by_id["org/tool-model"].supports_tools is True
         assert by_id["org/tool-model"].supports_vision is False
         assert by_id["org/vision-model"].supports_vision is True
-        assert all(m.provider is ProviderName.HUGGINGFACE for m in models)
+        assert all(m.provider is provider_ids.HUGGINGFACE for m in models)
         assert by_id["org/tool-model"].name == "tool-model"
 
     @staticmethod
@@ -439,7 +441,7 @@ class TestHuggingFaceLiveChat:
             pytest.skip("HUGGINGFACE_API_TOKEN not configured")
 
         provider = HuggingFaceProvider()
-        credentials = credential_loader.get_credentials(ProviderName.HUGGINGFACE)
+        credentials = credential_loader.get_credentials(provider_ids.HUGGINGFACE)
         assert credentials is not None
         await provider.connect(credentials)
         try:

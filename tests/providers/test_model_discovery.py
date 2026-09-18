@@ -22,7 +22,8 @@ if TYPE_CHECKING:
     from intellicrack.credentials.env_loader import CredentialLoader
     from intellicrack.providers.base import LLMProviderBase
 
-from intellicrack.core.types import ModelInfo, ProviderCredentials, ProviderError, ProviderName
+from intellicrack.core.types import ModelInfo, ProviderCredentials, ProviderError
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.anthropic import AnthropicProvider
 from intellicrack.providers.google import GoogleProvider
 from intellicrack.providers.ollama import OllamaProvider
@@ -80,7 +81,7 @@ def _is_offline_error(exc: BaseException) -> bool:
 async def _query_provider_count(
     provider: LLMProviderBase,
     credential_loader: CredentialLoader,
-    provider_name: ProviderName,
+    provider_name: str,
     label: str,
 ) -> int:
     """Connect a provider, list its models, assert non-empty, then disconnect.
@@ -145,8 +146,8 @@ class TestOllamaLocalModelListing:
 
         for model in models:
             assert model.id, f"Ollama model must have a non-empty id; got {model.id!r}"
-            assert model.provider == ProviderName.OLLAMA, (
-                f"Ollama model {model.id!r} must carry ProviderName.OLLAMA, got {model.provider!r}"
+            assert model.provider == provider_ids.OLLAMA, (
+                f"Ollama model {model.id!r} must carry provider_ids.OLLAMA, got {model.provider!r}"
             )
             assert model.context_window > 0, f"Ollama model {model.id!r} must have a positive context_window, got {model.context_window}"
 
@@ -196,7 +197,7 @@ class TestAllProvidersModelCount:
                 await _query_provider_count(
                     OpenAIProvider(),
                     credential_loader,
-                    ProviderName.OPENAI,
+                    provider_ids.OPENAI,
                     "OpenAI",
                 )
                 if has_openai_key
@@ -208,7 +209,7 @@ class TestAllProvidersModelCount:
             results["Google"] = await _query_provider_count(
                 GoogleProvider(),
                 credential_loader,
-                ProviderName.GOOGLE,
+                provider_ids.GOOGLE,
                 "Google",
             )
         else:
@@ -218,7 +219,7 @@ class TestAllProvidersModelCount:
             results["OpenRouter"] = await _query_provider_count(
                 OpenRouterProvider(),
                 credential_loader,
-                ProviderName.OPENROUTER,
+                provider_ids.OPENROUTER,
                 "OpenRouter",
             )
         else:
@@ -228,7 +229,7 @@ class TestAllProvidersModelCount:
             results["Anthropic"] = await _query_provider_count(
                 AnthropicProvider(),
                 credential_loader,
-                ProviderName.ANTHROPIC,
+                provider_ids.ANTHROPIC,
                 "Anthropic",
             )
         else:
@@ -236,7 +237,7 @@ class TestAllProvidersModelCount:
 
         if has_ollama_available:
             ollama_prov = OllamaProvider()
-            ol_creds: ProviderCredentials | None = credential_loader.get_credentials(ProviderName.OLLAMA)
+            ol_creds: ProviderCredentials | None = credential_loader.get_credentials(provider_ids.OLLAMA)
             if ol_creds is None:
                 ol_creds = ProviderCredentials(api_base="http://localhost:11434")
             await ollama_prov.connect(ol_creds)

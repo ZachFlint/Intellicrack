@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 from anthropic.types import (
     Message as AnthropicMessage,
-    MessageParam,
     TextBlock,
     ThinkingBlock,
     ToolUseBlock,
@@ -37,7 +36,7 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
+    ReasoningKind,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
@@ -55,16 +54,36 @@ from intellicrack.providers.tool_names import to_wire_name
 if TYPE_CHECKING:
     from intellicrack.credentials.env_loader import CredentialLoader
     from intellicrack.providers.base import UsageInfo
+from intellicrack.providers import ids as provider_ids
 
 
 _KNOWN_CLAUDE_PREFIX: str = "claude-"
 _CONTEXT_WINDOW_200K: int = 200_000
 
 _build_model_info: Any = getattr(AnthropicProvider, "_build_model_info")
-_build_api_kwargs: Any = getattr(AnthropicProvider, "_build_api_kwargs")
+_build_api_kwargs: Any = getattr(AnthropicProvider(), "_build_api_kwargs")
 _apply_cache_breakpoints: Any = getattr(AnthropicProvider, "_apply_cache_breakpoints")
 _cache_last_message_block: Any = getattr(AnthropicProvider, "_cache_last_message_block")
 _build_usage_from_message: Any = getattr(AnthropicProvider, "_build_usage_from_message")
+
+
+def _one_tool(function_name: str) -> list[ToolDefinition]:
+    """Build a single-function tool definition for the tool_choice tests.
+
+    Args:
+        function_name: Canonical dotted name of the one function.
+
+    Returns:
+        list[ToolDefinition]: One definition carrying that function.
+    """
+    namespace = function_name.split(".", 1)[0]
+    return [
+        ToolDefinition(
+            tool_name=namespace,
+            description="A tool",
+            functions=[ToolFunction(name=function_name, description="A tool", parameters=[], returns="text")],
+        ),
+    ]
 
 
 class TestBuildModelInfo:
@@ -87,7 +106,7 @@ class TestBuildModelInfo:
 
         assert model.id == "claude-3-5-sonnet-20241022"
         assert model.name == "Claude 3.5 Sonnet"
-        assert model.provider == ProviderName.ANTHROPIC
+        assert model.provider == provider_ids.ANTHROPIC
         assert model.context_window == _CONTEXT_WINDOW_200K
         assert model.supports_tools is True
         assert model.supports_vision is True
@@ -127,11 +146,11 @@ class TestBuildModelInfo:
             )
 
     def test_provider_is_always_anthropic(self) -> None:
-        """Provider field is always ProviderName.ANTHROPIC regardless of model ID."""
+        """Provider field is always provider_ids.ANTHROPIC regardless of model ID."""
         model: ModelInfo = _build_model_info("claude-3-5-haiku-20241022", "Claude 3.5 Haiku")
 
-        assert model.provider is ProviderName.ANTHROPIC
-        assert model.provider.value == "anthropic"
+        assert model.provider is provider_ids.ANTHROPIC
+        assert model.provider == "anthropic"
 
 
 class TestBuildApiKwargs:
@@ -144,7 +163,7 @@ class TestBuildApiKwargs:
 
     def test_basic_kwargs_structure_without_optional_fields(self) -> None:
         """Required fields appear and optional ones are absent when not specified."""
-        msgs: list[MessageParam] = [MessageParam(role="user", content="hello")]
+        msgs: list[Message] = [Message(role="user", content="hello")]
 
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
@@ -162,7 +181,7 @@ class TestBuildApiKwargs:
         )
         assert "top_p" not in result
         assert "top_k" not in result
-        assert result["messages"] is msgs
+        assert result["messages"] == [{"role": "user", "content": "hello"}]
         assert "system" not in result, "system must be absent when system_prompt is None"
         assert "tools" not in result, "tools must be absent when tools arg is None"
         assert "tool_choice" not in result
@@ -173,7 +192,7 @@ class TestBuildApiKwargs:
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            messages=cast("list[MessageParam]", []),
+            messages=[],
             system_prompt="You are a binary analysis expert",
             tools=None,
         )
@@ -182,18 +201,12 @@ class TestBuildApiKwargs:
 
     def test_tool_choice_auto_mode_produces_correct_dict(self) -> None:
         """ToolChoiceMode.AUTO translates to the wire form ``{'type': 'auto'}``."""
-        dummy_tool: dict[str, object] = {
-            "name": "my_tool",
-            "description": "A tool",
-            "input_schema": {"type": "object", "properties": {}, "required": []},
-        }
-
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            messages=cast("list[MessageParam]", []),
+            messages=[],
             system_prompt=None,
-            tools=[dummy_tool],
+            tools=_one_tool("sample.my_tool"),
             tool_choice=ToolChoice(mode=ToolChoiceMode.AUTO),
         )
 
@@ -201,18 +214,12 @@ class TestBuildApiKwargs:
 
     def test_tool_choice_required_mode_produces_any_dict(self) -> None:
         """ToolChoiceMode.REQUIRED translates to the wire form ``{'type': 'any'}``."""
-        dummy_tool: dict[str, object] = {
-            "name": "my_tool",
-            "description": "A tool",
-            "input_schema": {"type": "object", "properties": {}, "required": []},
-        }
-
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            messages=cast("list[MessageParam]", []),
+            messages=[],
             system_prompt=None,
-            tools=[dummy_tool],
+            tools=_one_tool("sample.my_tool"),
             tool_choice=ToolChoice(mode=ToolChoiceMode.REQUIRED),
         )
 
@@ -220,18 +227,12 @@ class TestBuildApiKwargs:
 
     def test_tool_choice_specific_mode_names_exact_function(self) -> None:
         """ToolChoiceMode.SPECIFIC maps to ``{'type': 'tool', 'name': <fn>}``."""
-        dummy_tool: dict[str, object] = {
-            "name": "ghidra.decompile",
-            "description": "Decompile function",
-            "input_schema": {"type": "object", "properties": {}, "required": []},
-        }
-
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            messages=cast("list[MessageParam]", []),
+            messages=[],
             system_prompt=None,
-            tools=[dummy_tool],
+            tools=_one_tool("ghidra.decompile"),
             tool_choice=ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name="ghidra.decompile"),
         )
 
@@ -239,18 +240,12 @@ class TestBuildApiKwargs:
 
     def test_tool_choice_none_mode_removes_tools_from_kwargs(self) -> None:
         """ToolChoiceMode.NONE removes the tools key so no tools are offered."""
-        dummy_tool: dict[str, object] = {
-            "name": "my_tool",
-            "description": "A tool",
-            "input_schema": {"type": "object", "properties": {}, "required": []},
-        }
-
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            messages=cast("list[MessageParam]", []),
+            messages=[],
             system_prompt=None,
-            tools=[dummy_tool],
+            tools=_one_tool("sample.my_tool"),
             tool_choice=ToolChoice(mode=ToolChoiceMode.NONE),
         )
 
@@ -269,7 +264,7 @@ class TestBuildApiKwargs:
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-7-sonnet-20250219",
             max_tokens=100,
-            messages=cast("list[MessageParam]", []),
+            messages=[],
             system_prompt=None,
             tools=None,
             thinking=ThinkingConfig(enabled=True, budget_tokens=5000),
@@ -289,7 +284,7 @@ class TestBuildApiKwargs:
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            messages=cast("list[MessageParam]", []),
+            messages=[],
             system_prompt=None,
             tools=None,
             thinking=ThinkingConfig(enabled=False, budget_tokens=10000),
@@ -304,7 +299,7 @@ class TestBuildApiKwargs:
         result: dict[str, Any] = _build_api_kwargs(
             model="claude-3-7-sonnet-20250219",
             max_tokens=50000,
-            messages=cast("list[MessageParam]", []),
+            messages=[],
             system_prompt=None,
             tools=None,
             thinking=ThinkingConfig(enabled=True, budget_tokens=5000),
@@ -589,10 +584,12 @@ class TestParseResponseBlocks:
         )
 
         parse_blocks: Any = getattr(provider, "_parse_response_blocks")
-        text, tool_calls, thinking = parse_blocks(msg)
+        text, tool_calls, reasoning = parse_blocks(msg)
 
         assert text == "The function is a decryption routine."
-        assert thinking == "Let me reason step by step..."
+        assert [(item.kind, item.text, item.signature) for item in reasoning] == [
+            (ReasoningKind.THINKING, "Let me reason step by step...", "sig123"),
+        ]
         assert tool_calls == []
 
     def test_tool_use_block_tool_name_extracted_from_dotted_function_name(self) -> None:
@@ -652,10 +649,12 @@ class TestParseResponseBlocks:
         )
 
         parse_blocks: Any = getattr(provider, "_parse_response_blocks")
-        text, tool_calls, thinking = parse_blocks(msg)
+        text, tool_calls, reasoning = parse_blocks(msg)
 
         assert text == "I will call the tool."
-        assert thinking == "Reasoning block."
+        assert [(item.kind, item.text, item.signature) for item in reasoning] == [
+            (ReasoningKind.THINKING, "Reasoning block.", "sig456"),
+        ]
         assert len(tool_calls) == 1
         assert tool_calls[0].tool_name == "x64dbg"
         assert tool_calls[0].function_name == "x64dbg.get_registers"
@@ -826,7 +825,7 @@ class TestConvertToolsToProviderFormat:
         """One ToolFunction produces one AnthropicToolSchema with exact field values."""
         provider = AnthropicProvider()
         tool_def = ToolDefinition(
-            tool_name=ToolName.GHIDRA,
+            tool_name=ToolName.GHIDRA.value,
             description="Ghidra binary analysis tool",
             functions=[
                 ToolFunction(
@@ -872,7 +871,7 @@ class TestConvertToolsToProviderFormat:
         """Only required=True params appear in the required array."""
         provider = AnthropicProvider()
         tool_def = ToolDefinition(
-            tool_name=ToolName.FRIDA,
+            tool_name=ToolName.FRIDA.value,
             description="Frida instrumentation tool",
             functions=[
                 ToolFunction(
@@ -899,11 +898,11 @@ class TestProviderNameAndConnectedState:
     """Unit tests for AnthropicProvider name property and is_connected state."""
 
     def test_name_property_returns_anthropic_enum_value(self) -> None:
-        """The name property returns exactly ProviderName.ANTHROPIC."""
+        """The name property returns exactly provider_ids.ANTHROPIC."""
         provider = AnthropicProvider()
 
-        assert provider.name is ProviderName.ANTHROPIC
-        assert provider.name.value == "anthropic"
+        assert provider.name is provider_ids.ANTHROPIC
+        assert provider.name == "anthropic"
 
     def test_is_connected_false_before_connect(self) -> None:
         """is_connected is False immediately after construction."""
@@ -1079,7 +1078,7 @@ class TestAnthropicModelListing:
     async def test_list_models_all_have_anthropic_provider_tag(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Every returned model carries ProviderName.ANTHROPIC.
+        """Every returned model carries provider_ids.ANTHROPIC.
 
         Args:
             anthropic_provider: Connected Anthropic provider fixture.
@@ -1088,7 +1087,7 @@ class TestAnthropicModelListing:
 
         assert models
         for model in models:
-            assert model.provider is ProviderName.ANTHROPIC, f"Model {model.id!r} must have provider=ANTHROPIC, got {model.provider}"
+            assert model.provider is provider_ids.ANTHROPIC, f"Model {model.id!r} must have provider=ANTHROPIC, got {model.provider}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -1146,13 +1145,13 @@ class TestAnthropicConnection:
     async def test_provider_name_is_anthropic_enum_value(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Connected provider's name property is ProviderName.ANTHROPIC.
+        """Connected provider's name property is provider_ids.ANTHROPIC.
 
         Args:
             anthropic_provider: Connected Anthropic provider fixture.
         """
-        assert anthropic_provider.name is ProviderName.ANTHROPIC
-        assert anthropic_provider.name.value == "anthropic"
+        assert anthropic_provider.name is provider_ids.ANTHROPIC
+        assert anthropic_provider.name == "anthropic"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -1171,7 +1170,7 @@ class TestAnthropicConnection:
             pytest.skip("ANTHROPIC_API_KEY not configured")
 
         provider = AnthropicProvider()
-        credentials = credential_loader.get_credentials(ProviderName.ANTHROPIC)
+        credentials = credential_loader.get_credentials(provider_ids.ANTHROPIC)
         assert credentials is not None
 
         await provider.connect(credentials)

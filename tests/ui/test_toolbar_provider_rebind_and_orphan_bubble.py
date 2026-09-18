@@ -42,7 +42,8 @@ from intellicrack.core.config import Config
 from intellicrack.core.orchestrator import Orchestrator, OrchestratorConfig
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import Message, ModelInfo, ProviderCredentials, ProviderName
+from intellicrack.core.types import Message, ModelInfo, ProviderCredentials
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui.app import MainWindow
@@ -71,7 +72,7 @@ class _RecordingProvider(LLMProviderBase):
     orchestrator actually sent.
     """
 
-    def __init__(self, provider_name: ProviderName, model_id: str) -> None:
+    def __init__(self, provider_name: str, model_id: str) -> None:
         """Initialize the provider with its identity and advertised model.
 
         Args:
@@ -86,11 +87,11 @@ class _RecordingProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The configured provider identity.
 
         Returns:
-            ProviderName: The configured provider identity.
+            str: The configured provider identity.
         """
         return self._name
 
@@ -157,7 +158,7 @@ class _RecordingProvider(LLMProviderBase):
         """
         del messages, tools, temperature, max_tokens, tool_choice, thinking, enable_cache
         self.calls.append(model)
-        return Message(role="assistant", content=f"reply from {self._name.value}:{model}"), None
+        return Message(role="assistant", content=f"reply from {self._name}:{model}"), None
 
     @override
     async def chat_stream(
@@ -192,7 +193,7 @@ class _RecordingProvider(LLMProviderBase):
         """
         del messages, tools, temperature, max_tokens, tool_choice, thinking, enable_cache
         self.calls.append(model)
-        yield f"reply from {self._name.value}:{model}"
+        yield f"reply from {self._name}:{model}"
 
     @override
     def _convert_tools_to_provider_format(self, tools: list[ToolDefinition]) -> list[dict[str, object]]:
@@ -232,7 +233,7 @@ class _StreamingProvider(LLMProviderBase):
     application code rather than a mocked chat panel.
     """
 
-    def __init__(self, provider_name: ProviderName, model_id: str) -> None:
+    def __init__(self, provider_name: str, model_id: str) -> None:
         """Initialize the provider with its identity and advertised model.
 
         Args:
@@ -247,11 +248,11 @@ class _StreamingProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The configured provider identity.
 
         Returns:
-            ProviderName: The configured provider identity.
+            str: The configured provider identity.
         """
         return self._name
 
@@ -510,11 +511,11 @@ def test_toolbar_model_switch_rebinds_active_session(
         qtbot: pytest-qt bot fixture driving the Qt event loop while the
             persistent bridge loop delivers async results.
     """
-    provider_a = _RecordingProvider(ProviderName.OPENAI, "model-a")
-    provider_b = _RecordingProvider(ProviderName.ANTHROPIC, "model-b")
+    provider_a = _RecordingProvider(provider_ids.OPENAI, "model-a")
+    provider_b = _RecordingProvider(provider_ids.ANTHROPIC, "model-b")
     window = window_factory([provider_a, provider_b])
 
-    idx_a = window._provider_combo.findData(ProviderName.OPENAI)
+    idx_a = window._provider_combo.findData(provider_ids.OPENAI)
     assert idx_a >= 0
     window._provider_combo.setCurrentIndex(idx_a)
     window.model_combo.setCurrentText("model-a")
@@ -527,10 +528,10 @@ def test_toolbar_model_switch_rebinds_active_session(
     session_id = session.id
     assert provider_a.calls == ["model-a"]
     assert provider_b.calls == []
-    assert session.provider == ProviderName.OPENAI
+    assert session.provider == provider_ids.OPENAI
     assert session.model == "model-a"
 
-    idx_b = window._provider_combo.findData(ProviderName.ANTHROPIC)
+    idx_b = window._provider_combo.findData(provider_ids.ANTHROPIC)
     assert idx_b >= 0
     window._provider_combo.setCurrentIndex(idx_b)
     window.model_combo.setCurrentText("model-b")
@@ -544,7 +545,7 @@ def test_toolbar_model_switch_rebinds_active_session(
     rebound_session = window._orchestrator.current_session
     assert rebound_session is not None
     assert rebound_session.id == session_id, "toolbar switch started a new session instead of rebinding the active one"
-    assert rebound_session.provider == ProviderName.ANTHROPIC
+    assert rebound_session.provider == provider_ids.ANTHROPIC
     assert rebound_session.model == "model-b"
 
 
@@ -566,10 +567,10 @@ def test_non_stream_completion_leaves_single_assistant_bubble(
         qtbot: pytest-qt bot fixture driving the Qt event loop while the
             persistent bridge loop delivers async results.
     """
-    provider = _RecordingProvider(ProviderName.OPENAI, "solo-model")
+    provider = _RecordingProvider(provider_ids.OPENAI, "solo-model")
     window = window_factory([provider])
 
-    idx = window._provider_combo.findData(ProviderName.OPENAI)
+    idx = window._provider_combo.findData(provider_ids.OPENAI)
     assert idx >= 0
     window._provider_combo.setCurrentIndex(idx)
     window.model_combo.setCurrentText("solo-model")
@@ -612,10 +613,10 @@ def test_streamed_completion_leaves_single_assistant_bubble(
         qtbot: pytest-qt bot fixture driving the Qt event loop while the
             persistent bridge loop delivers async results.
     """
-    provider = _StreamingProvider(ProviderName.OPENAI, "stream-model")
+    provider = _StreamingProvider(provider_ids.OPENAI, "stream-model")
     window = streaming_window_factory([provider])
 
-    idx = window._provider_combo.findData(ProviderName.OPENAI)
+    idx = window._provider_combo.findData(provider_ids.OPENAI)
     assert idx >= 0
     window._provider_combo.setCurrentIndex(idx)
     window.model_combo.setCurrentText("stream-model")

@@ -42,7 +42,8 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from intellicrack.core.session import Session
 from intellicrack.core.tools import ToolError
-from intellicrack.core.types import BinaryInfo, ProviderName
+from intellicrack.core.types import BinaryInfo
+from intellicrack.providers import ids as provider_ids
 from intellicrack.ui.app import MainWindow
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
@@ -109,7 +110,7 @@ class TestRunFullAnalysisWithNoBackendConnected:
         assert isinstance(binary_info, BinaryInfo)
 
         session = run_bridge_coroutine(
-            window._orchestrator._sessions.create(ProviderName.OLLAMA, "test-model", "no-backend-session"),
+            window._orchestrator._sessions.create(provider_ids.OLLAMA, "test-model", "no-backend-session"),
         )
         assert isinstance(session, Session)
         session.add_binary(binary_info)

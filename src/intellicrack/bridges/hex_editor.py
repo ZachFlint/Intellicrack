@@ -533,7 +533,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             ToolDefinition: ToolDefinition with all hex editor functions.
         """
         return ToolDefinition(
-            tool_name=ToolName.HEX_EDITOR,
+            tool_name=ToolName.HEX_EDITOR.value,
             description="Built-in hex editor with Rust-powered piece table, search, hash, templates, and diff.",
             functions=[
                 ToolFunction(

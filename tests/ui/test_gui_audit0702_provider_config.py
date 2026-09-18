@@ -46,7 +46,7 @@ import pytest
 from PyQt6.QtWidgets import QSplitter
 
 import intellicrack.ui.provider_config as provider_config_module
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.oauth import OAuthProvider
 from intellicrack.ui.provider_config import ProviderConfigDialog, ProviderSettingsWidget
 
@@ -274,9 +274,9 @@ class _FakeModelDiscovery:
 
     def __init__(self) -> None:
         """Initialise the fake discovery service with an empty call log."""
-        self.discover_calls: list[ProviderName] = []
+        self.discover_calls: list[str] = []
 
-    async def discover_provider(self, provider_name: ProviderName) -> None:
+    async def discover_provider(self, provider_name: str) -> None:
         """Record a discovery invocation without a real network round-trip.
 
         Args:
@@ -319,10 +319,10 @@ class _FakeCredentialStore:
 
     async def migrate_from_env(
         self,
-        providers: list[ProviderName] | None = None,
+        providers: list[str] | None = None,
         *,
         overwrite: bool = False,
-    ) -> dict[ProviderName, bool]:
+    ) -> dict[str, bool]:
         """Report an empty migration result without touching the keyring.
 
         Args:
@@ -330,7 +330,7 @@ class _FakeCredentialStore:
             overwrite: Ignored overwrite flag.
 
         Returns:
-            dict[ProviderName, bool]: Always empty.
+            dict[str, bool]: Always empty.
         """
         del providers, overwrite
         return {}

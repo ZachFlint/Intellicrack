@@ -18,8 +18,8 @@ from intellicrack.core.types import (
     ConfigurationError,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
 )
+from intellicrack.providers.ids import normalize_provider_id
 
 
 if TYPE_CHECKING:
@@ -40,10 +40,10 @@ class CredentialLoaderProtocol(Protocol):
     """Protocol for objects that can load provider credentials.
 
     Any object exposing
-    ``get_credentials(ProviderName) -> ProviderCredentials | None`` is acceptable.
+    ``get_credentials(str) -> ProviderCredentials | None`` is acceptable.
     """
 
-    def get_credentials(self, provider: ProviderName) -> ProviderCredentials | None:
+    def get_credentials(self, provider: str) -> ProviderCredentials | None:
         """Return credentials for the given provider, or None when unavailable.
 
         Args:
@@ -69,9 +69,9 @@ class ProviderRegistry:
         Args:
             credential_loader: Optional credential loader for auto-connecting providers.
         """
-        self._providers: dict[ProviderName, LLMProviderBase] = {}
-        self._provider_classes: dict[ProviderName, type[LLMProviderBase]] = {}
-        self._active_provider: ProviderName | None = None
+        self._providers: dict[str, LLMProviderBase] = {}
+        self._provider_classes: dict[str, type[LLMProviderBase]] = {}
+        self._active_provider: str | None = None
         self._credential_loader = credential_loader
         self._lock = threading.RLock()
         _logger.info(
@@ -92,17 +92,17 @@ class ProviderRegistry:
             If a provider with the same name is already registered, it will be
             replaced with a warning logged.
         """
-        name = provider.name
+        name = normalize_provider_id(provider.name)
         with self._lock:
             if name in self._providers:
-                _logger.warning("provider_already_registered", provider=name.value)
+                _logger.warning("provider_already_registered", provider=name)
             self._providers[name] = provider
             self._provider_classes[name] = type(provider)
-            _logger.info("provider_registered", provider=name.value)
+            _logger.info("provider_registered", provider=name)
 
     def register_class(
         self,
-        name: ProviderName,
+        name: str,
         provider_class: type[LLMProviderBase],
     ) -> None:
         """Register a provider class without instantiating it.
@@ -112,14 +112,15 @@ class ProviderRegistry:
         :class:`CredentialLoaderProtocol`.
 
         Args:
-            name: The provider name to associate with the class.
+            name: The provider instance id to associate with the class.
             provider_class: Concrete provider class to register.
         """
+        normalized = normalize_provider_id(name)
         with self._lock:
-            self._provider_classes[name] = provider_class
-            _logger.info("provider_class_registered", provider=name.value)
+            self._provider_classes[normalized] = provider_class
+            _logger.info("provider_class_registered", provider=normalized)
 
-    def unregister(self, name: ProviderName) -> bool:
+    def unregister(self, name: str) -> bool:
         """Unregister a provider.
 
         Args:
@@ -135,11 +136,11 @@ class ProviderRegistry:
                     del self._provider_classes[name]
                 if self._active_provider == name:
                     self._active_provider = None
-                _logger.info("provider_unregistered", provider=name.value)
+                _logger.info("provider_unregistered", provider=name)
                 return True
             return False
 
-    def get(self, name: ProviderName) -> LLMProviderBase | None:
+    def get(self, name: str) -> LLMProviderBase | None:
         """Get a registered provider by name.
 
         Args:
@@ -151,7 +152,7 @@ class ProviderRegistry:
         with self._lock:
             return self._providers.get(name)
 
-    def get_or_raise(self, name: ProviderName) -> LLMProviderBase:
+    def get_or_raise(self, name: str) -> LLMProviderBase:
         """Get a registered provider by name, raising if not found.
 
         Args:
@@ -166,32 +167,32 @@ class ProviderRegistry:
         with self._lock:
             provider = self._providers.get(name)
         if provider is None:
-            _logger.error("provider_not_registered", provider=name.value)
-            raise ProviderError(_MSG_NOT_REGISTERED, provider_name=name.value)
+            _logger.error("provider_not_registered", provider=name)
+            raise ProviderError(_MSG_NOT_REGISTERED, provider_name=name)
         return provider
 
-    def list_registered(self) -> list[ProviderName]:
+    def list_registered(self) -> list[str]:
         """List all registered providers.
 
         Returns:
-            list[ProviderName]: List of registered provider names.
+            list[str]: List of registered provider names.
         """
         with self._lock:
             return list(self._providers.keys())
 
-    def list_connected(self) -> list[ProviderName]:
+    def list_connected(self) -> list[str]:
         """List all connected providers.
 
         Returns:
-            list[ProviderName]: List of connected provider names.
+            list[str]: List of connected provider names.
         """
         with self._lock:
-            connected: list[ProviderName] = [name for name, provider in self._providers.items() if provider.is_connected]
+            connected: list[str] = [name for name, provider in self._providers.items() if provider.is_connected]
         return connected
 
     async def connect_provider(
         self,
-        name: ProviderName,
+        name: str,
         credentials: ProviderCredentials | None = None,
     ) -> bool:
         """Connect a specific provider.
@@ -230,30 +231,30 @@ class ProviderRegistry:
             credentials = self._credential_loader.get_credentials(name)
 
         if credentials is None:
-            _logger.error("provider_connect_no_credentials", provider=name.value)
-            raise ProviderError(_MSG_NO_CREDENTIALS, provider_name=name.value)
+            _logger.error("provider_connect_no_credentials", provider=name)
+            raise ProviderError(_MSG_NO_CREDENTIALS, provider_name=name)
 
         try:
             await provider.connect(credentials)
         except (AuthenticationError, ProviderError, ConfigurationError) as exc:
             _logger.warning(
                 "provider_connection_failed",
-                provider=name.value,
+                provider=name,
                 error=str(exc),
             )
             raise
         except (ConnectionError, TimeoutError, OSError, RuntimeError, ValueError) as exc:
             _logger.warning(
                 "provider_connection_failed",
-                provider=name.value,
+                provider=name,
                 error=str(exc),
             )
             raise
 
-        _logger.info("provider_connected", provider=name.value)
+        _logger.info("provider_connected", provider=name)
         return True
 
-    def _get_or_construct(self, name: ProviderName) -> LLMProviderBase:
+    def _get_or_construct(self, name: str) -> LLMProviderBase:
         """Return the registered instance, constructing one from a class if needed.
 
         Args:
@@ -273,25 +274,25 @@ class ProviderRegistry:
 
             provider_class = self._provider_classes.get(name)
             if provider_class is None:
-                _logger.error("provider_not_registered", provider=name.value)
-                raise ProviderError(_MSG_NOT_REGISTERED, provider_name=name.value)
+                _logger.error("provider_not_registered", provider=name)
+                raise ProviderError(_MSG_NOT_REGISTERED, provider_name=name)
 
             try:
                 instance = provider_class()
             except (TypeError, ValueError, RuntimeError) as exc:
                 _logger.warning(
                     "provider_construction_failed",
-                    provider=name.value,
+                    provider=name,
                     error=str(exc),
                 )
                 msg = f"{_MSG_NO_CLASS_REGISTERED}: construction failed: {exc}"
-                raise ProviderError(msg, provider_name=name.value) from exc
+                raise ProviderError(msg, provider_name=name) from exc
 
             self._providers[name] = instance
-            _logger.info("provider_constructed_from_class", provider=name.value)
+            _logger.info("provider_constructed_from_class", provider=name)
             return instance
 
-    async def disconnect_provider(self, name: ProviderName) -> None:
+    async def disconnect_provider(self, name: str) -> None:
         """Disconnect a specific provider.
 
         Clears ``_active_provider`` if it pointed at the disconnected provider.
@@ -303,11 +304,11 @@ class ProviderRegistry:
             provider = self._providers.get(name)
         if provider is not None and provider.is_connected:
             await provider.disconnect()
-            _logger.info("provider_disconnected", provider=name.value)
+            _logger.info("provider_disconnected", provider=name)
         with self._lock:
             if self._active_provider == name:
                 self._active_provider = None
-                _logger.info("active_provider_cleared", provider=name.value)
+                _logger.info("active_provider_cleared", provider=name)
 
     async def disconnect_all(self) -> None:
         """Disconnect from all providers, aggregating any failures.
@@ -330,10 +331,10 @@ class ProviderRegistry:
             except (ProviderError, ConnectionError, OSError, RuntimeError, ValueError) as exc:
                 _logger.warning(
                     "provider_disconnect_failed",
-                    provider=name.value,
+                    provider=name,
                     error=str(exc),
                 )
-                errors.append({"provider": name.value, "error": str(exc)})
+                errors.append({"provider": name, "error": str(exc)})
 
         if errors:
             raise ProviderError(
@@ -341,7 +342,7 @@ class ProviderRegistry:
                 details={"errors": errors},
             )
 
-    def set_active(self, name: ProviderName) -> None:
+    def set_active(self, name: str) -> None:
         """Set the active provider.
 
         Args:
@@ -352,11 +353,11 @@ class ProviderRegistry:
         """
         provider = self.get_or_raise(name)
         if not provider.is_connected:
-            _logger.error("set_active_provider_not_connected", provider=name.value)
-            raise ProviderError(_MSG_NOT_CONNECTED, provider_name=name.value)
+            _logger.error("set_active_provider_not_connected", provider=name)
+            raise ProviderError(_MSG_NOT_CONNECTED, provider_name=name)
         with self._lock:
             self._active_provider = name
-        _logger.info("active_provider_set", provider=name.value)
+        _logger.info("active_provider_set", provider=name)
 
     @property
     def active(self) -> LLMProviderBase | None:
@@ -371,11 +372,11 @@ class ProviderRegistry:
             return self._providers.get(self._active_provider)
 
     @property
-    def active_name(self) -> ProviderName | None:
+    def active_name(self) -> str | None:
         """The name of the currently active provider.
 
         Returns:
-            ProviderName | None: The active provider name or None if none set.
+            str | None: The active provider name or None if none set.
         """
         with self._lock:
             return self._active_provider

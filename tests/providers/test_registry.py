@@ -20,7 +20,6 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     ToolCall,
 )
 from intellicrack.providers.base import LLMProviderBase
@@ -36,12 +35,13 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from intellicrack.core.types import ThinkingConfig, ToolChoice, ToolDefinition
+from intellicrack.providers import ids as provider_ids
 
 
 class ConcreteTestProvider(LLMProviderBase):
     """Minimal concrete provider for registry testing."""
 
-    def __init__(self, provider_name: ProviderName = ProviderName.ANTHROPIC) -> None:
+    def __init__(self, provider_name: str = provider_ids.ANTHROPIC) -> None:
         """Initialize the test provider with the given name.
 
         Args:
@@ -52,11 +52,11 @@ class ConcreteTestProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The provider name.
 
         Returns:
-            ProviderName: Configured ProviderName.
+            str: Configured provider id.
         """
         return self._name
 
@@ -175,7 +175,7 @@ class ConcreteTestProvider(LLMProviderBase):
 
 
 def _make_provider(
-    name: ProviderName = ProviderName.ANTHROPIC,
+    name: str = provider_ids.ANTHROPIC,
 ) -> ConcreteTestProvider:
     """Create a test provider instance.
 
@@ -189,7 +189,7 @@ def _make_provider(
 
 
 def _make_connected(
-    name: ProviderName = ProviderName.ANTHROPIC,
+    name: str = provider_ids.ANTHROPIC,
 ) -> ConcreteTestProvider:
     """Create a connected test provider.
 
@@ -217,7 +217,7 @@ def test_register_provider() -> None:
     """Verify provider registration."""
     reg = ProviderRegistry()
     reg.register(_make_provider())
-    assert ProviderName.ANTHROPIC in reg.list_registered()
+    assert provider_ids.ANTHROPIC in reg.list_registered()
 
 
 def test_register_replaces_existing() -> None:
@@ -227,29 +227,29 @@ def test_register_replaces_existing() -> None:
     p2 = _make_provider()
     reg.register(p1)
     reg.register(p2)
-    assert reg.get(ProviderName.ANTHROPIC) is p2
+    assert reg.get(provider_ids.ANTHROPIC) is p2
 
 
 def test_unregister_provider() -> None:
     """Verify provider unregistration."""
     reg = ProviderRegistry()
     reg.register(_make_provider())
-    assert reg.unregister(ProviderName.ANTHROPIC) is True
+    assert reg.unregister(provider_ids.ANTHROPIC) is True
     assert reg.list_registered() == []
 
 
 def test_unregister_nonexistent() -> None:
     """Verify unregistering non-existent provider returns False."""
     reg = ProviderRegistry()
-    assert reg.unregister(ProviderName.ANTHROPIC) is False
+    assert reg.unregister(provider_ids.ANTHROPIC) is False
 
 
 def test_unregister_clears_active() -> None:
     """Verify unregistering active provider clears active."""
     reg = ProviderRegistry()
     reg.register(_make_connected())
-    reg.set_active(ProviderName.ANTHROPIC)
-    reg.unregister(ProviderName.ANTHROPIC)
+    reg.set_active(provider_ids.ANTHROPIC)
+    reg.unregister(provider_ids.ANTHROPIC)
     assert reg.active_name is None
 
 
@@ -258,13 +258,13 @@ def test_get_registered() -> None:
     reg = ProviderRegistry()
     provider = _make_provider()
     reg.register(provider)
-    assert reg.get(ProviderName.ANTHROPIC) is provider
+    assert reg.get(provider_ids.ANTHROPIC) is provider
 
 
 def test_get_not_registered() -> None:
     """Verify get returns None for unregistered provider."""
     reg = ProviderRegistry()
-    assert reg.get(ProviderName.ANTHROPIC) is None
+    assert reg.get(provider_ids.ANTHROPIC) is None
 
 
 def test_get_or_raise_success() -> None:
@@ -272,14 +272,14 @@ def test_get_or_raise_success() -> None:
     reg = ProviderRegistry()
     provider = _make_provider()
     reg.register(provider)
-    assert reg.get_or_raise(ProviderName.ANTHROPIC) is provider
+    assert reg.get_or_raise(provider_ids.ANTHROPIC) is provider
 
 
 def test_get_or_raise_not_registered() -> None:
     """Verify get_or_raise raises ProviderError for unregistered."""
     reg = ProviderRegistry()
     with pytest.raises(ProviderError):
-        reg.get_or_raise(ProviderName.ANTHROPIC)
+        reg.get_or_raise(provider_ids.ANTHROPIC)
 
 
 def test_list_connected_empty() -> None:
@@ -293,7 +293,7 @@ def test_list_connected_with_connected() -> None:
     """Verify list_connected includes connected providers."""
     reg = ProviderRegistry()
     reg.register(_make_connected())
-    assert ProviderName.ANTHROPIC in reg.list_connected()
+    assert provider_ids.ANTHROPIC in reg.list_connected()
 
 
 def test_set_active_success() -> None:
@@ -301,8 +301,8 @@ def test_set_active_success() -> None:
     reg = ProviderRegistry()
     provider = _make_connected()
     reg.register(provider)
-    reg.set_active(ProviderName.ANTHROPIC)
-    assert reg.active_name == ProviderName.ANTHROPIC
+    reg.set_active(provider_ids.ANTHROPIC)
+    assert reg.active_name == provider_ids.ANTHROPIC
     assert reg.active is provider
 
 
@@ -310,7 +310,7 @@ def test_set_active_not_registered() -> None:
     """Verify set_active raises for unregistered provider."""
     reg = ProviderRegistry()
     with pytest.raises(ProviderError):
-        reg.set_active(ProviderName.ANTHROPIC)
+        reg.set_active(provider_ids.ANTHROPIC)
 
 
 def test_set_active_not_connected() -> None:
@@ -318,7 +318,7 @@ def test_set_active_not_connected() -> None:
     reg = ProviderRegistry()
     reg.register(_make_provider())
     with pytest.raises(ProviderError):
-        reg.set_active(ProviderName.ANTHROPIC)
+        reg.set_active(provider_ids.ANTHROPIC)
 
 
 def test_has_connected_provider_false() -> None:
@@ -338,11 +338,11 @@ def test_has_connected_provider_true() -> None:
 def test_multiple_providers() -> None:
     """Verify registry handles multiple providers."""
     reg = ProviderRegistry()
-    reg.register(_make_provider(ProviderName.ANTHROPIC))
-    reg.register(_make_provider(ProviderName.OPENAI))
+    reg.register(_make_provider(provider_ids.ANTHROPIC))
+    reg.register(_make_provider(provider_ids.OPENAI))
     registered = reg.list_registered()
-    assert ProviderName.ANTHROPIC in registered
-    assert ProviderName.OPENAI in registered
+    assert provider_ids.ANTHROPIC in registered
+    assert provider_ids.OPENAI in registered
 
 
 def _reraise(err: BaseException) -> None:
@@ -366,7 +366,7 @@ class _ConnectFails(ConcreteTestProvider):
     def __init__(
         self,
         error: BaseException,
-        provider_name: ProviderName = ProviderName.ANTHROPIC,
+        provider_name: str = provider_ids.ANTHROPIC,
     ) -> None:
         """Initialize with the configured error and name.
 
@@ -394,7 +394,7 @@ class _DisconnectFails(ConcreteTestProvider):
     def __init__(
         self,
         error: BaseException,
-        provider_name: ProviderName = ProviderName.ANTHROPIC,
+        provider_name: str = provider_ids.ANTHROPIC,
     ) -> None:
         """Initialize with the configured error and name.
 
@@ -419,7 +419,7 @@ class _DisconnectTracksCalls(ConcreteTestProvider):
 
     def __init__(
         self,
-        provider_name: ProviderName = ProviderName.OPENAI,
+        provider_name: str = provider_ids.OPENAI,
     ) -> None:
         """Initialize with a provider name and prepare disconnect tracking.
 
@@ -440,16 +440,16 @@ class _DisconnectTracksCalls(ConcreteTestProvider):
 class _StaticCredentialLoader:
     """Credential loader returning a configured credential mapping."""
 
-    def __init__(self, creds: dict[ProviderName, ProviderCredentials]) -> None:
+    def __init__(self, creds: dict[str, ProviderCredentials]) -> None:
         """Initialize the loader with a static credential mapping.
 
         Args:
-            creds: Mapping of ProviderName to ProviderCredentials.
+            creds: Mapping of provider id to ProviderCredentials.
         """
         self._creds = creds
-        self.calls: list[ProviderName] = []
+        self.calls: list[str] = []
 
-    def get_credentials(self, provider: ProviderName) -> ProviderCredentials | None:
+    def get_credentials(self, provider: str) -> ProviderCredentials | None:
         """Return the configured credentials for ``provider``.
 
         Args:
@@ -476,12 +476,12 @@ class TestF0001ConnectExceptionTuple:
         """AuthenticationError raised by connect must propagate to the caller."""
         reg = ProviderRegistry()
         provider = _ConnectFails(
-            AuthenticationError("bad key", provider_name=ProviderName.ANTHROPIC.value),
+            AuthenticationError("bad key", provider_name=provider_ids.ANTHROPIC),
         )
         reg.register(provider)
         creds = ProviderCredentials(api_key="x")
         with pytest.raises(AuthenticationError):
-            await reg.connect_provider(ProviderName.ANTHROPIC, creds)
+            await reg.connect_provider(provider_ids.ANTHROPIC, creds)
 
     @pytest.mark.asyncio
     @staticmethod
@@ -489,12 +489,12 @@ class TestF0001ConnectExceptionTuple:
         """ProviderError raised by connect must propagate to the caller."""
         reg = ProviderRegistry()
         provider = _ConnectFails(
-            ProviderError("nope", provider_name=ProviderName.ANTHROPIC.value),
+            ProviderError("nope", provider_name=provider_ids.ANTHROPIC),
         )
         reg.register(provider)
         creds = ProviderCredentials(api_key="x")
         with pytest.raises(ProviderError):
-            await reg.connect_provider(ProviderName.ANTHROPIC, creds)
+            await reg.connect_provider(provider_ids.ANTHROPIC, creds)
 
     @pytest.mark.asyncio
     @staticmethod
@@ -507,7 +507,7 @@ class TestF0001ConnectExceptionTuple:
         reg.register(provider)
         creds = ProviderCredentials(api_key="x")
         with pytest.raises(ConfigurationError):
-            await reg.connect_provider(ProviderName.ANTHROPIC, creds)
+            await reg.connect_provider(provider_ids.ANTHROPIC, creds)
 
 
 class TestF0002ConnectReturnsExplicitTrue:
@@ -521,7 +521,7 @@ class TestF0002ConnectReturnsExplicitTrue:
         provider = _make_provider()
         reg.register(provider)
         creds = ProviderCredentials(api_key="x")
-        result = await reg.connect_provider(ProviderName.ANTHROPIC, creds)
+        result = await reg.connect_provider(provider_ids.ANTHROPIC, creds)
         assert result is True
 
 
@@ -533,12 +533,12 @@ class TestF0003CredentialLoaderConsumed:
     async def test_loader_called_when_credentials_omitted() -> None:
         """When credentials are omitted, the loader must be queried."""
         creds = ProviderCredentials(api_key="loaded")
-        loader = _StaticCredentialLoader({ProviderName.ANTHROPIC: creds})
+        loader = _StaticCredentialLoader({provider_ids.ANTHROPIC: creds})
         reg = ProviderRegistry(credential_loader=loader)
         provider = _make_provider()
         reg.register(provider)
-        assert await reg.connect_provider(ProviderName.ANTHROPIC) is True
-        assert ProviderName.ANTHROPIC in loader.calls
+        assert await reg.connect_provider(provider_ids.ANTHROPIC) is True
+        assert provider_ids.ANTHROPIC in loader.calls
         assert provider.is_connected
 
     @pytest.mark.asyncio
@@ -549,7 +549,7 @@ class TestF0003CredentialLoaderConsumed:
         reg = ProviderRegistry(credential_loader=loader)
         reg.register(_make_provider())
         creds = ProviderCredentials(api_key="explicit")
-        assert await reg.connect_provider(ProviderName.ANTHROPIC, creds) is True
+        assert await reg.connect_provider(provider_ids.ANTHROPIC, creds) is True
         assert loader.calls == []
 
     @pytest.mark.asyncio
@@ -560,7 +560,7 @@ class TestF0003CredentialLoaderConsumed:
         reg = ProviderRegistry(credential_loader=loader)
         reg.register(_make_provider())
         with pytest.raises(ProviderError):
-            await reg.connect_provider(ProviderName.ANTHROPIC)
+            await reg.connect_provider(provider_ids.ANTHROPIC)
 
 
 class TestF0004GetProviderRegistryExport:
@@ -574,7 +574,7 @@ class TestF0004GetProviderRegistryExport:
 
 
 class TestF0005NameToClassMapping:
-    """F-0005: Registry can map a ProviderName to a class for construction."""
+    """F-0005: Registry can map a provider id to a class for construction."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -582,10 +582,10 @@ class TestF0005NameToClassMapping:
         """connect_provider must instantiate from a class registered without an instance."""
         reset_provider_registry()
         reg = ProviderRegistry()
-        reg.register_class(ProviderName.ANTHROPIC, ConcreteTestProvider)
+        reg.register_class(provider_ids.ANTHROPIC, ConcreteTestProvider)
         creds = ProviderCredentials(api_key="x")
-        assert await reg.connect_provider(ProviderName.ANTHROPIC, creds) is True
-        instance = reg.get(ProviderName.ANTHROPIC)
+        assert await reg.connect_provider(provider_ids.ANTHROPIC, creds) is True
+        instance = reg.get(provider_ids.ANTHROPIC)
         assert isinstance(instance, ConcreteTestProvider)
         assert instance.is_connected
 
@@ -601,11 +601,11 @@ class TestF0005NameToClassMapping:
         reg = ProviderRegistry()
         instance = _make_provider()
         reg.register(instance)
-        provider_classes: dict[ProviderName, type[LLMProviderBase]] = cast(
-            "dict[ProviderName, type[LLMProviderBase]]",
+        provider_classes: dict[str, type[LLMProviderBase]] = cast(
+            "dict[str, type[LLMProviderBase]]",
             getattr(reg, "_provider_classes"),
         )
-        recorded: type[LLMProviderBase] | None = provider_classes.get(ProviderName.ANTHROPIC)
+        recorded: type[LLMProviderBase] | None = provider_classes.get(provider_ids.ANTHROPIC)
         assert recorded is ConcreteTestProvider
 
 
@@ -619,9 +619,9 @@ class TestF0013DisconnectAllAggregates:
         reg = ProviderRegistry()
         failing = _DisconnectFails(
             RuntimeError("disc-fail"),
-            provider_name=ProviderName.ANTHROPIC,
+            provider_name=provider_ids.ANTHROPIC,
         )
-        ok_provider = _DisconnectTracksCalls(provider_name=ProviderName.OPENAI)
+        ok_provider = _DisconnectTracksCalls(provider_name=provider_ids.OPENAI)
         reg.register(failing)
         reg.register(ok_provider)
         with pytest.raises(ProviderError) as info:
@@ -630,7 +630,7 @@ class TestF0013DisconnectAllAggregates:
         raw_errors: object = details.get("errors", [])
         assert isinstance(raw_errors, list)
         errors: list[dict[str, str]] = cast("list[dict[str, str]]", raw_errors)
-        assert any(entry.get("provider") == ProviderName.ANTHROPIC.value for entry in errors)
+        assert any(entry.get("provider") == provider_ids.ANTHROPIC for entry in errors)
         assert ok_provider.disconnect_called is True
 
 
@@ -642,8 +642,8 @@ class TestF0014ProviderErrorsCarryProviderName:
         """get_or_raise must include the missing provider name."""
         reg = ProviderRegistry()
         with pytest.raises(ProviderError) as info:
-            reg.get_or_raise(ProviderName.OPENAI)
-        assert info.value.provider_name == ProviderName.OPENAI.value
+            reg.get_or_raise(provider_ids.OPENAI)
+        assert info.value.provider_name == provider_ids.OPENAI
 
     @staticmethod
     def test_set_active_unconnected_carries_provider_name() -> None:
@@ -651,8 +651,8 @@ class TestF0014ProviderErrorsCarryProviderName:
         reg = ProviderRegistry()
         reg.register(_make_provider())
         with pytest.raises(ProviderError) as info:
-            reg.set_active(ProviderName.ANTHROPIC)
-        assert info.value.provider_name == ProviderName.ANTHROPIC.value
+            reg.set_active(provider_ids.ANTHROPIC)
+        assert info.value.provider_name == provider_ids.ANTHROPIC
 
     @pytest.mark.asyncio
     @staticmethod
@@ -661,8 +661,8 @@ class TestF0014ProviderErrorsCarryProviderName:
         reg = ProviderRegistry()
         reg.register(_make_provider())
         with pytest.raises(ProviderError) as info:
-            await reg.connect_provider(ProviderName.ANTHROPIC)
-        assert info.value.provider_name == ProviderName.ANTHROPIC.value
+            await reg.connect_provider(provider_ids.ANTHROPIC)
+        assert info.value.provider_name == provider_ids.ANTHROPIC
 
 
 class TestF0015SingletonResetAndDI:
@@ -696,11 +696,11 @@ class TestF0016DisconnectClearsActive:
     async def test_disconnecting_active_clears_active() -> None:
         """The active provider must be cleared after disconnect."""
         reg = ProviderRegistry()
-        provider = _DisconnectTracksCalls(provider_name=ProviderName.ANTHROPIC)
+        provider = _DisconnectTracksCalls(provider_name=provider_ids.ANTHROPIC)
         reg.register(provider)
-        reg.set_active(ProviderName.ANTHROPIC)
-        assert reg.active_name == ProviderName.ANTHROPIC
-        await reg.disconnect_provider(ProviderName.ANTHROPIC)
+        reg.set_active(provider_ids.ANTHROPIC)
+        assert reg.active_name == provider_ids.ANTHROPIC
+        await reg.disconnect_provider(provider_ids.ANTHROPIC)
         assert reg.active_name is None
         assert reg.active is None
         assert provider.disconnect_called is True
@@ -710,13 +710,13 @@ class TestF0016DisconnectClearsActive:
     async def test_disconnecting_inactive_does_not_touch_active() -> None:
         """Disconnecting a non-active provider must keep active unchanged."""
         reg = ProviderRegistry()
-        a = _DisconnectTracksCalls(provider_name=ProviderName.ANTHROPIC)
-        b = _DisconnectTracksCalls(provider_name=ProviderName.OPENAI)
+        a = _DisconnectTracksCalls(provider_name=provider_ids.ANTHROPIC)
+        b = _DisconnectTracksCalls(provider_name=provider_ids.OPENAI)
         reg.register(a)
         reg.register(b)
-        reg.set_active(ProviderName.ANTHROPIC)
-        await reg.disconnect_provider(ProviderName.OPENAI)
-        assert reg.active_name == ProviderName.ANTHROPIC
+        reg.set_active(provider_ids.ANTHROPIC)
+        await reg.disconnect_provider(provider_ids.OPENAI)
+        assert reg.active_name == provider_ids.ANTHROPIC
 
 
 class TestF0022ThreadSafeRegister:
@@ -726,7 +726,7 @@ class TestF0022ThreadSafeRegister:
     def test_concurrent_register_does_not_corrupt_state() -> None:
         """Spawn many threads each calling register; final state is consistent."""
         reg = ProviderRegistry()
-        names = list(ProviderName)
+        names = provider_ids.BUILTIN_PROVIDER_IDS
 
         errors: list[BaseException] = []
 
@@ -771,7 +771,7 @@ class TestGetActiveProviderHelper:
         reg = ProviderRegistry()
         provider = _make_connected()
         reg.register(provider)
-        reg.set_active(ProviderName.ANTHROPIC)
+        reg.set_active(provider_ids.ANTHROPIC)
         assert reg.get_active_provider() is provider
 
 
@@ -784,7 +784,7 @@ class TestUnregisterDropsClassMapping:
         """After unregister, connect_provider must raise ProviderError."""
         reg = ProviderRegistry()
         reg.register(_make_provider())
-        assert reg.unregister(ProviderName.ANTHROPIC) is True
+        assert reg.unregister(provider_ids.ANTHROPIC) is True
         creds = ProviderCredentials(api_key="x")
         with pytest.raises(ProviderError):
-            await reg.connect_provider(ProviderName.ANTHROPIC, creds)
+            await reg.connect_provider(provider_ids.ANTHROPIC, creds)

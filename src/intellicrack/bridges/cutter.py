@@ -1837,7 +1837,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
             ToolDefinition: ToolDefinition with all available functions.
         """
         return ToolDefinition(
-            tool_name=ToolName.CUTTER,
+            tool_name=ToolName.CUTTER.value,
             description="Cutter/Rizin reverse engineering - disassembly, analysis, patching",
             functions=_build_tool_functions(),
         )

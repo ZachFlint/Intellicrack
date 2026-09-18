@@ -1763,7 +1763,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             ToolDefinition: ToolDefinition with all available functions.
         """
         return ToolDefinition(
-            tool_name=ToolName.FRIDA,
+            tool_name=ToolName.FRIDA.value,
             description="Frida dynamic instrumentation - hooking, tracing, memory manipulation",
             functions=_FRIDA_FUNCTIONS,
         )
