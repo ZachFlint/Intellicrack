@@ -151,7 +151,7 @@ class _WrongTypeBridge(ToolBridgeBase):
             ToolDefinition: A minimal placeholder definition.
         """
         return ToolDefinition(
-            tool_name=ToolName.GHIDRA,
+            tool_name=ToolName.GHIDRA.value,
             description="Wrong-type bridge for getter tests.",
             functions=[
                 ToolFunction(name="ghidra.probe", description="probe", parameters=[], returns="dict"),

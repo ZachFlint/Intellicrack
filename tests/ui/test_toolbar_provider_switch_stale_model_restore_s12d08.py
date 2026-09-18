@@ -44,7 +44,8 @@ from intellicrack.core.logging import setup_logging
 from intellicrack.core.orchestrator import Orchestrator, OrchestratorConfig
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import Message, ModelInfo, ProviderCredentials, ProviderName
+from intellicrack.core.types import Message, ModelInfo, ProviderCredentials
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.discovery import ModelDiscovery
 from intellicrack.providers.registry import ProviderRegistry
@@ -93,7 +94,7 @@ class _CatalogProvider(LLMProviderBase):
     are implemented for interface completeness but never invoked.
     """
 
-    def __init__(self, provider_name: ProviderName, model_ids: list[str]) -> None:
+    def __init__(self, provider_name: str, model_ids: list[str]) -> None:
         """Initialize the provider with its identity and model catalog.
 
         Args:
@@ -107,11 +108,11 @@ class _CatalogProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The configured provider identity.
 
         Returns:
-            ProviderName: The configured provider identity.
+            str: The configured provider identity.
         """
         return self._name
 
@@ -178,7 +179,7 @@ class _CatalogProvider(LLMProviderBase):
                 provider/model that produced it, and no tool calls.
         """
         del messages, tools, temperature, max_tokens, tool_choice, thinking, enable_cache
-        return Message(role="assistant", content=f"reply from {self._name.value}:{model}"), None
+        return Message(role="assistant", content=f"reply from {self._name}:{model}"), None
 
     @override
     async def chat_stream(
@@ -209,7 +210,7 @@ class _CatalogProvider(LLMProviderBase):
             str: A single reply chunk identifying the provider/model.
         """
         del messages, tools, temperature, max_tokens, tool_choice, thinking, enable_cache
-        yield f"reply from {self._name.value}:{model}"
+        yield f"reply from {self._name}:{model}"
 
     @override
     def _convert_tools_to_provider_format(self, tools: list[ToolDefinition]) -> list[dict[str, object]]:
@@ -413,8 +414,8 @@ def test_cold_cache_provider_switch_restores_new_provider_model(
     """
     log_file = _configure_logging(tmp_path / "logs")
 
-    provider_a = _CatalogProvider(ProviderName.OPENAI, ["model-a1", "model-a2"])
-    provider_b = _CatalogProvider(ProviderName.ANTHROPIC, ["model-b1", "model-b2"])
+    provider_a = _CatalogProvider(provider_ids.OPENAI, ["model-a1", "model-a2"])
+    provider_b = _CatalogProvider(provider_ids.ANTHROPIC, ["model-b1", "model-b2"])
 
     settings = QSettings(_TEST_ORG, _TEST_APP)
     settings.setValue("last_model/openai", "model-a1")
@@ -423,7 +424,7 @@ def test_cold_cache_provider_switch_restores_new_provider_model(
 
     window = window_factory([provider_a, provider_b])
 
-    idx_a = window._provider_combo.findData(ProviderName.OPENAI)
+    idx_a = window._provider_combo.findData(provider_ids.OPENAI)
     assert idx_a >= 0
     with QSignalBlocker(window._provider_combo):
         window._provider_combo.setCurrentIndex(idx_a)
@@ -433,9 +434,9 @@ def test_cold_cache_provider_switch_restores_new_provider_model(
         window.model_combo.setCurrentText("model-a1")
 
     assert window.model_discovery is not None
-    assert window.model_discovery.cache.get(ProviderName.ANTHROPIC) is None, "cache must start COLD for provider B"
+    assert window.model_discovery.cache.get(provider_ids.ANTHROPIC) is None, "cache must start COLD for provider B"
 
-    idx_b = window._provider_combo.findData(ProviderName.ANTHROPIC)
+    idx_b = window._provider_combo.findData(provider_ids.ANTHROPIC)
     assert idx_b >= 0
     window._provider_combo.setCurrentIndex(idx_b)
 

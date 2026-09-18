@@ -32,7 +32,6 @@ from intellicrack.core.types import (
     AuthenticationError,
     ModelInfo,
     ProviderCredentials,
-    ProviderName,
 )
 from intellicrack.credentials.oauth import (
     OAUTH_CONFIGS,
@@ -42,6 +41,7 @@ from intellicrack.credentials.oauth import (
     OAuthProvider,
     verify_pkce_pair,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.google import GoogleProvider
 from intellicrack.providers.huggingface import HuggingFaceProvider
 from intellicrack.providers.openrouter import OpenRouterProvider
@@ -468,7 +468,7 @@ class TestOpenRouterPricingConversion:
     def test_model_info_provider_is_openrouter(self) -> None:
         """Verify ``_build_model_info`` tags the model as the OpenRouter provider.
 
-        Confirms the parsed ``ModelInfo`` carries ``ProviderName.OPENROUTER`` and
+        Confirms the parsed ``ModelInfo`` carries ``provider_ids.OPENROUTER`` and
         propagates the model id, proving the conversion runs the real builder
         rather than a stand-in.
         """
@@ -479,5 +479,5 @@ class TestOpenRouterPricingConversion:
             "pricing": {"prompt": "0.000001", "completion": "0.000002"},
         }
         info = self._build_model_info(model_data)
-        assert info.provider is ProviderName.OPENROUTER, f"provider tag mismatch: {info.provider!r}"
+        assert info.provider is provider_ids.OPENROUTER, f"provider tag mismatch: {info.provider!r}"
         assert info.id == "openrouter/tagged-model", f"model id not propagated: {info.id!r}"

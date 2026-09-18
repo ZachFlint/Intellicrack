@@ -977,7 +977,7 @@ class SessionManagerDialog(QDialog):
                 "created_at": metadata.created_at,
                 "updated_at": metadata.updated_at,
                 "message_count": metadata.message_count,
-                "provider": str(metadata.provider.value) if hasattr(metadata.provider, "value") else str(metadata.provider),
+                "provider": metadata.provider,
                 "model": metadata.model,
                 "binaries": [],
                 "binary_count": metadata.binary_count,

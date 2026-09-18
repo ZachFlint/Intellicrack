@@ -82,7 +82,7 @@ class TestToolDefinitionCompleteness:
             bridge: X64DbgBridge fixture.
         """
         tool_def = bridge.tool_definition
-        assert tool_def.tool_name == ToolName.X64DBG
+        assert tool_def.tool_name == ToolName.X64DBG.value
 
     def test_total_function_count(self, bridge: X64DbgBridge) -> None:
         """Verify all expected tool functions are present.

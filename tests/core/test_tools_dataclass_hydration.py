@@ -104,7 +104,7 @@ class _ConfigurableBridge(ToolBridgeBase):
             ToolDefinition: A definition exposing the ``configure`` function.
         """
         return ToolDefinition(
-            tool_name=ToolName.SANDBOX,
+            tool_name=ToolName.SANDBOX.value,
             description="Fake bridge for dataclass tool-parameter hydration tests.",
             functions=[
                 ToolFunction(

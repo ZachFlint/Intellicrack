@@ -45,13 +45,13 @@ from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
-    ProviderName,
     ToolCall,
     ToolDefinition,
     ToolFunction,
     ToolName,
     ToolParameter,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.registry import ProviderRegistry
 
@@ -156,7 +156,7 @@ class _BreakpointBridge(ToolBridgeBase):
             ToolDefinition: Definitions for ``set_breakpoint`` and ``run``.
         """
         return ToolDefinition(
-            tool_name=ToolName.X64DBG,
+            tool_name=ToolName.X64DBG.value,
             description="x64dbg debugger control: breakpoints, execution control, memory access.",
             functions=[
                 ToolFunction(
@@ -226,13 +226,13 @@ class _ScriptedProviderBase(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """Provider name constant.
 
         Returns:
-            ProviderName: Always OPENAI (an arbitrary real enum member).
+            str: Always OPENAI (an arbitrary real enum member).
         """
-        return ProviderName.OPENAI
+        return provider_ids.OPENAI
 
     @override
     async def connect(self, credentials: ProviderCredentials) -> None:
@@ -254,7 +254,7 @@ class _ScriptedProviderBase(LLMProviderBase):
             ModelInfo(
                 id=_MODEL_ID,
                 name=_MODEL_ID,
-                provider=ProviderName.OPENAI,
+                provider=provider_ids.OPENAI,
                 context_window=8192,
                 supports_tools=True,
                 supports_vision=False,
@@ -393,7 +393,7 @@ class _ProbeBridge(ToolBridgeBase):
             ToolDefinition: Definition for ``probe``.
         """
         return ToolDefinition(
-            tool_name=ToolName.PROCESS,
+            tool_name=ToolName.PROCESS.value,
             description="Minimal process bridge for Part 0 testing.",
             functions=[ToolFunction(name="process.probe", description="Read-only probe.", parameters=[], returns="dict")],
         )
@@ -446,7 +446,7 @@ class TestPart0EmptyContentToolOnlyTurn:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("run a probe")
 
         asyncio.run(_run())
@@ -476,7 +476,7 @@ class TestPart0EmptyContentToolOnlyTurn:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("run a probe")
 
         asyncio.run(_run())
@@ -546,7 +546,12 @@ class _DynamicLoadingProvider(_ScriptedProviderBase):
 
         no_tool_mode = False
         if not no_tool_mode and _BREAKPOINT_FUNCTION not in active_names and self._call_count == 1:
-            call = ToolCall(id="call_search_1", tool_name="tools", function_name=_TOOLS_SEARCH_FUNCTION, arguments={"query": "set a breakpoint"})
+            call = ToolCall(
+                id="call_search_1",
+                tool_name="tools",
+                function_name=_TOOLS_SEARCH_FUNCTION,
+                arguments={"query": "set a breakpoint"},
+            )
             return Message(role="assistant", content=""), [call]
 
         if _BREAKPOINT_FUNCTION in active_names and self._call_count <= 2:
@@ -575,7 +580,7 @@ class TestDynamicToolLoadingFullLoop:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("please set a breakpoint at the entry point")
 
         asyncio.run(_run())
@@ -609,7 +614,7 @@ class TestDynamicToolLoadingFullLoop:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("please set a breakpoint at the entry point")
 
         asyncio.run(_run())
@@ -675,7 +680,7 @@ class TestDynamicToolLoadingFullLoop:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge)
 
         async def _run() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
             await orch.process_user_input("set a breakpoint immediately, no searching")
 
         asyncio.run(_run())
@@ -717,14 +722,14 @@ class TestMetaToolAndCoreNeverTrimmed:
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
 
         async def _prepare() -> None:
-            await orch.start_session(ProviderName.OPENAI, _MODEL_ID)
+            await orch.start_session(provider_ids.OPENAI, _MODEL_ID)
 
         asyncio.run(_prepare())
 
         all_definitions = orch.tool_registry.get_tool_definitions()
         active_resolver: Any = getattr(orch, _ACTIVE_TOOL_DEFINITIONS_ATTR)
         active = active_resolver(all_definitions)
-        assert active[0].tool_name == ToolName.TOOLS, "meta-tool must be first in the active set"
+        assert active[0].tool_name == ToolName.TOOLS.value, "meta-tool must be first in the active set"
 
         class _TinyCapProvider(LLMProviderBase):
             """Throwaway provider whose only purpose is a tiny TOOL_COUNT_CAP."""
@@ -733,8 +738,8 @@ class TestMetaToolAndCoreNeverTrimmed:
 
             @property
             @override
-            def name(self) -> ProviderName:
-                return ProviderName.GROK
+            def name(self) -> str:
+                return provider_ids.GROK
 
             @override
             async def connect(self, credentials: ProviderCredentials) -> None:
@@ -791,6 +796,6 @@ class TestMetaToolAndCoreNeverTrimmed:
         trimmed = cap_enforcer(active)
 
         assert trimmed, "expected at least the meta-tool to survive the cap"
-        assert trimmed[0].tool_name == ToolName.TOOLS, "meta-tool must survive a tail-truncating cap by being placed first"
+        assert trimmed[0].tool_name == ToolName.TOOLS.value, "meta-tool must survive a tail-truncating cap by being placed first"
         meta_functions = [func.name for func in trimmed[0].functions]
         assert _TOOLS_SEARCH_FUNCTION in meta_functions

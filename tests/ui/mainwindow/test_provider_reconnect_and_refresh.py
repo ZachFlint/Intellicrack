@@ -30,7 +30,7 @@ from intellicrack.core.config import Config, get_env_file
 from intellicrack.core.orchestrator import Orchestrator
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import ProviderName
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.openai import OpenAIProvider
 from intellicrack.providers.openrouter import OpenRouterProvider
 from intellicrack.providers.registry import ProviderRegistry
@@ -136,7 +136,7 @@ def _apply_provider_settings(window: MainWindow, settings: dict[str, dict[str, o
     cast("Callable[[dict[str, dict[str, object]]], None]", getattr(window, "_apply_provider_settings"))(settings)
 
 
-def _is_connected(registry: ProviderRegistry, name: ProviderName) -> bool:
+def _is_connected(registry: ProviderRegistry, name: str) -> bool:
     """Report whether a registered provider is connected.
 
     Args:
@@ -186,15 +186,15 @@ def test_accepting_settings_constructs_and_connects_a_provider_missing_from_the_
     """
     window = window_factory()
     registry = _registry(window)
-    registry.register_class(ProviderName.OPENAI, OpenAIProvider)
-    assert registry.get(ProviderName.OPENAI) is None
+    registry.register_class(provider_ids.OPENAI, OpenAIProvider)
+    assert registry.get(provider_ids.OPENAI) is None
 
     _apply_provider_settings(
         window,
         {"openai": _dialog_settings(api_key=_ACCEPTED_KEY, api_base=gateway.openai_compatible_base_url, timeout_seconds=44)},
     )
 
-    qtbot.waitUntil(lambda: _is_connected(registry, ProviderName.OPENAI), timeout=_CONNECT_TIMEOUT_MS)
+    qtbot.waitUntil(lambda: _is_connected(registry, provider_ids.OPENAI), timeout=_CONNECT_TIMEOUT_MS)
     probe = gateway.requests(OPENAI_COMPATIBLE_MODELS_PATH)[-1]
     assert probe.headers["authorization"] == f"Bearer {_ACCEPTED_KEY}"
     assert probe.headers["x-stainless-read-timeout"] == "44.0"
@@ -225,8 +225,8 @@ def test_rejected_reconnect_does_not_block_the_next_provider(
         },
     )
 
-    qtbot.waitUntil(lambda: _is_connected(registry, ProviderName.OPENROUTER), timeout=_CONNECT_TIMEOUT_MS)
-    assert not _is_connected(registry, ProviderName.OPENAI)
+    qtbot.waitUntil(lambda: _is_connected(registry, provider_ids.OPENROUTER), timeout=_CONNECT_TIMEOUT_MS)
+    assert not _is_connected(registry, provider_ids.OPENAI)
     authorizations = [request.headers["authorization"] for request in gateway.requests(OPENAI_COMPATIBLE_MODELS_PATH)]
     assert authorizations == [f"Bearer sk-{'w' * 48}", f"Bearer {_ACCEPTED_KEY}"]
 
@@ -250,7 +250,7 @@ def test_toolbar_refresh_uses_saved_base_url_for_an_unconnected_provider(
     )
     provider_combo: object = getattr(window, "_provider_combo")
     assert isinstance(provider_combo, QComboBox)
-    index = provider_combo.findData(ProviderName.OPENAI)
+    index = provider_combo.findData(provider_ids.OPENAI)
     assert index >= 0
     with QSignalBlocker(provider_combo):
         provider_combo.setCurrentIndex(index)

@@ -138,7 +138,7 @@ def test_real_bridge_schemas_emit_valid_array_items(
         for declaration in builder(definition):
             properties = extract(declaration)
             for name, prop in properties.items():
-                validated_arrays += _assert_array_items(prop, f"{label}:{definition.tool_name.value}:{name}")
+                validated_arrays += _assert_array_items(prop, f"{label}:{definition.tool_name}:{name}")
 
     assert validated_arrays >= _EXPECTED_TOP_LEVEL_ARRAYS, (
         f"{label}: validated {validated_arrays} arrays but the bridges declare {_EXPECTED_TOP_LEVEL_ARRAYS} top-level array parameters"
@@ -176,7 +176,7 @@ def test_non_array_parameters_carry_correct_type_in_schema() -> None:
                     prop_type = str(prop.get("type", "")).lower()
                     if prop_type in {"array", "object"}:
                         continue
-                    path = f"{label}:{definition.tool_name.value}:{param_name}"
+                    path = f"{label}:{definition.tool_name}:{param_name}"
                     if not prop_type:
                         missing.append(path)
                     elif prop_type not in valid_primitive_types:

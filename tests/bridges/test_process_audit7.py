@@ -286,7 +286,7 @@ class TestF0019GetHandlesResolvesTypeNames:
         """Verify the registered tool-def ``returns`` text reflects new schema."""
         bridge = ProcessBridge()
         tool_def = bridge.tool_definition
-        assert tool_def.tool_name == ToolName.PROCESS
+        assert tool_def.tool_name == ToolName.PROCESS.value
         get_handles_func = next(
             (f for f in tool_def.functions if f.name == "process.get_handles"),
             None,

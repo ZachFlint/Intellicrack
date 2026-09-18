@@ -48,7 +48,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from intellicrack.core.session import Session, SessionManager, SessionStore
-from intellicrack.core.types import ProviderName
+from intellicrack.providers import ids as provider_ids
 from intellicrack.ui import session_manager as session_manager_module
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.session_manager import SessionManagerDialog
@@ -104,7 +104,7 @@ def _create_session(manager: SessionManager, name: str) -> Session:
     Returns:
         Session: The created session.
     """
-    session = run_bridge_coroutine(manager.create(ProviderName.OLLAMA, "test-model", name))
+    session = run_bridge_coroutine(manager.create(provider_ids.OLLAMA, "test-model", name))
     assert isinstance(session, Session)
     return session
 
@@ -148,7 +148,7 @@ def _write_import_json(path: Path, session_id: str, name: str) -> None:
             "name": name,
             "created_at": now,
             "updated_at": now,
-            "provider": ProviderName.OLLAMA.value,
+            "provider": provider_ids.OLLAMA,
             "model": "test-model",
             "tags": [],
         },
@@ -425,8 +425,8 @@ def test_h29_parent_orchestrator_wires_live_manager_and_active_session(
         real_orchestrator: Real Orchestrator fixture with a SQLite-backed session manager.
     """
     manager = real_orchestrator._sessions
-    active = run_bridge_coroutine(manager.create(ProviderName.OLLAMA, "active-model", "Active Session"))
-    other = run_bridge_coroutine(manager.create(ProviderName.OLLAMA, "other-model", "Other Session"))
+    active = run_bridge_coroutine(manager.create(provider_ids.OLLAMA, "active-model", "Active Session"))
+    other = run_bridge_coroutine(manager.create(provider_ids.OLLAMA, "other-model", "Other Session"))
     assert isinstance(active, Session)
     assert isinstance(other, Session)
     real_orchestrator._current_session = active
@@ -473,7 +473,7 @@ def test_h29_from_orchestrator_factory_wires_manager_and_active_session(
         real_orchestrator: Real Orchestrator fixture with a SQLite-backed session manager.
     """
     manager = real_orchestrator._sessions
-    active = run_bridge_coroutine(manager.create(ProviderName.OLLAMA, "active-model", "Active Session"))
+    active = run_bridge_coroutine(manager.create(provider_ids.OLLAMA, "active-model", "Active Session"))
     assert isinstance(active, Session)
     real_orchestrator._current_session = active
 

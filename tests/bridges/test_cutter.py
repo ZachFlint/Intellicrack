@@ -318,7 +318,7 @@ class TestBridgeInstantiation:
         assert caps.supports_decompilation is True
         assert caps.supports_patching is True
         td = b.tool_definition
-        assert td.tool_name == ToolName.CUTTER
+        assert td.tool_name == ToolName.CUTTER.value
         names = [f.name for f in td.functions]
         assert len(names) == _EXPECTED_TOOL_FUNC_COUNT
         resolved = [n for n in names if callable(getattr(b, n.removeprefix("cutter."), None))]
@@ -424,7 +424,7 @@ class TestToolDefinition:
         """
         td = bridge.tool_definition
         assert td is not None
-        assert td.tool_name == ToolName.CUTTER
+        assert td.tool_name == ToolName.CUTTER.value
 
     def test_expected_function_count(self, bridge: CutterBridge) -> None:
         """Verify the tool function count is exact, unique, and fully backed.

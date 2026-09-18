@@ -15,7 +15,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
-from intellicrack.core.types import Message, ProviderCredentials, ProviderError, ProviderName, ToolCall
+from intellicrack.core.types import Message, ProviderCredentials, ProviderError, ToolCall
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -382,7 +383,7 @@ class TestLocalTransformersProviderInitialization:
     def test_provider_name() -> None:
         """Provider should have correct name."""
         provider = LocalTransformersProvider()
-        assert provider.name == ProviderName.LOCAL_TRANSFORMERS
+        assert provider.name == provider_ids.LOCAL_TRANSFORMERS
 
     @staticmethod
     def test_provider_not_connected_initially() -> None:
@@ -662,7 +663,7 @@ class TestProviderListModels:
         model = models[0]
         assert model.id, f"model.id is falsy: {model.id!r}"
         assert model.name, f"model.name is falsy: {model.name!r}"
-        assert model.provider == ProviderName.LOCAL_TRANSFORMERS, f"model.provider={model.provider!r} != ProviderName.LOCAL_TRANSFORMERS"
+        assert model.provider == provider_ids.LOCAL_TRANSFORMERS, f"model.provider={model.provider!r} != provider_ids.LOCAL_TRANSFORMERS"
         assert isinstance(model.context_window, int), f"model.context_window={model.context_window!r} must be int"
         assert model.context_window > 0, f"model.context_window={model.context_window!r} must be positive"
         assert isinstance(model.supports_tools, bool), f"model.supports_tools={model.supports_tools!r} must be bool"
