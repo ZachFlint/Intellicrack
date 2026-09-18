@@ -13,7 +13,13 @@ from typing import TYPE_CHECKING, Any, cast
 from PyQt6.QtWidgets import QLabel, QTreeWidget, QTreeWidgetItem, QWidget
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, discard_worker, run_bridge_coroutine, worker_is_running
+from intellicrack.ui.panels.async_bridge import (
+    GenericCallableWorker,
+    discard_worker,
+    run_bridge_coroutine,
+    run_callable_async,
+    worker_is_running,
+)
 from intellicrack.ui.panels.hex_editor.base import (
     BYTE_TYPE_DIST_MIN_LEN,
     BYTE_VALUES_COUNT,
@@ -433,25 +439,15 @@ class StatisticsMixin:
 
         parent_obj: QWidget | None = self if isinstance(self, QWidget) else None
         bridge: HexEditorBridge | None = getattr(self, "_bridge", None)
-        worker = (
-            GenericCallableWorker(
-                compute_statistics_via_bridge,
-                bridge,
-                ENTROPY_BLOCK_SIZE,
-                parent=parent_obj,
-            )
-            if bridge is not None
-            else GenericCallableWorker(
-                compute_statistics,
-                self.document,
-                ENTROPY_BLOCK_SIZE,
-                parent=parent_obj,
-            )
+        compute_fn, source = (compute_statistics_via_bridge, bridge) if bridge is not None else (compute_statistics, self.document)
+        self._statistics_worker = run_callable_async(
+            compute_fn,
+            source,
+            ENTROPY_BLOCK_SIZE,
+            on_success=self._on_statistics_computed,
+            on_error=self._on_statistics_error,
+            parent=parent_obj,
         )
-        _: object = worker.call_finished.connect(self._on_statistics_computed)
-        _ = worker.call_error.connect(self._on_statistics_error)
-        self._statistics_worker = worker
-        worker.start()
 
     def _set_statistics_computing(self) -> None:
         """Set all statistics labels to the in-progress status text."""
@@ -648,23 +644,14 @@ class StatisticsMixin:
         discard_worker(worker_attr)
 
         parent_obj: QWidget | None = self if isinstance(self, QWidget) else None
-        worker = (
-            GenericCallableWorker(
-                compute_digram_matrix_via_bridge,
-                bridge,
-                parent=parent_obj,
-            )
-            if bridge is not None
-            else GenericCallableWorker(
-                compute_digram_matrix,
-                self.document,
-                parent=parent_obj,
-            )
+        digram_fn, source = (compute_digram_matrix_via_bridge, bridge) if bridge is not None else (compute_digram_matrix, self.document)
+        self._digram_worker = run_callable_async(
+            digram_fn,
+            source,
+            on_success=self._on_digram_matrix_computed,
+            on_error=self._on_digram_matrix_error,
+            parent=parent_obj,
         )
-        _: object = worker.call_finished.connect(self._on_digram_matrix_computed)
-        _ = worker.call_error.connect(self._on_digram_matrix_error)
-        self._digram_worker = worker
-        worker.start()
 
     def _on_digram_matrix_computed(self, result: object) -> None:
         """Open the digram matrix dialog with the computed matrix.

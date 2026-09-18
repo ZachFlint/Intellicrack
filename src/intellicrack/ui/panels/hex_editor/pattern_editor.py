@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.hexpat.completer import HexPatCompleter
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import HexPatSyntaxHighlighter
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, worker_is_running
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_callable_async, worker_is_running
 from intellicrack.ui.panels.hex_editor.base import (
     SPLITTER_MAIN_RATIO,
     SPLITTER_PATTERN_RATIO,
@@ -486,21 +486,18 @@ class PatternEditorMixin:
         if self._pattern_status_label is not None:
             self._pattern_status_label.setText("Executing...")
 
-        parent = self if isinstance(self, QWidget) else None
-        worker = GenericCallableWorker(
+        _logger.info("pattern_interpreter_worker_starting", offset=offset)
+        worker = run_callable_async(
             interpreter.execute,
             source,
             self.document,
             offset,
+            on_success=partial(self._on_interpreter_apply_finished, offset),
+            on_error=self._on_interpreter_apply_error,
+            parent=self if isinstance(self, QWidget) else None,
             exceptions=(ValueError, TypeError, AttributeError),
-            parent=parent,
         )
-
-        _: object = worker.call_finished.connect(partial(self._on_interpreter_apply_finished, offset))
-        _ = worker.call_error.connect(self._on_interpreter_apply_error)
         self._pattern_apply_worker = worker
-        _logger.info("pattern_interpreter_worker_starting", offset=offset)
-        worker.start()
         if worker.wait(_PATTERN_APPLY_SYNC_WAIT_MS):
             QCoreApplication.processEvents()
 

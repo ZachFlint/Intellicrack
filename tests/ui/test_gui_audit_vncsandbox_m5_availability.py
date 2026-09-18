@@ -16,15 +16,21 @@ These tests assert the fix:
   ``is_windows_sandbox_available`` function, without constructing any QDialog.
 * ``SandboxConfigDialog.__init__`` computes availability off the GUI thread
   (via a background worker), never running the PowerShell probe synchronously.
+  The worker is dispatched through ``run_callable_async``, so it records the
+  dialog as its owner without becoming the dialog's Qt child - closing the
+  dialog while the probe is still running must not destroy the thread.
 * The extracted probe result is cached so repeated queries do not re-spawn the
   subprocess.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Final
+
+from PyQt6.QtCore import QThread
 
 from intellicrack.ui import sandbox_config, tools
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 from intellicrack.ui.sandbox_config import (
     SandboxConfigDialog,
     check_windows_sandbox_availability,
@@ -33,60 +39,11 @@ from intellicrack.ui.sandbox_config import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     import pytest
+    from PyQt6.QtWidgets import QApplication
 
 
-class _StubSignal:
-    """Minimal stand-in for a ``pyqtSignal`` bound signal."""
-
-    def __init__(self) -> None:
-        """Initialise the stub with no connected callbacks."""
-        self.callbacks: list[Callable[..., object]] = []
-
-    def connect(self, callback: Callable[..., object]) -> None:
-        """Record a connected callback.
-
-        Args:
-            callback: Slot that would receive the signal.
-        """
-        self.callbacks.append(callback)
-
-
-class _StubWorker:
-    """Recording stand-in for ``GenericCallableWorker`` that never runs a thread."""
-
-    instances: ClassVar[list[_StubWorker]] = []
-
-    def __init__(
-        self,
-        func: Callable[..., object],
-        /,
-        *args: object,
-        exceptions: tuple[type[BaseException], ...] | None = None,
-        parent: object = None,
-        **kwargs: object,
-    ) -> None:
-        """Capture the callable and connection surface without starting a thread.
-
-        Args:
-            func: Callable the real worker would execute off-thread.
-            *args: Positional arguments (ignored).
-            exceptions: Exception tuple (ignored).
-            parent: Qt parent (ignored).
-            **kwargs: Keyword arguments (ignored).
-        """
-        _ = (args, exceptions, parent, kwargs)
-        self.func: Callable[..., object] = func
-        self.call_finished: _StubSignal = _StubSignal()
-        self.call_error: _StubSignal = _StubSignal()
-        self.started: bool = False
-        _StubWorker.instances.append(self)
-
-    def start(self) -> None:
-        """Record that the worker was started without executing the callable."""
-        self.started = True
+_WORKER_JOIN_MS: Final[int] = 30_000
 
 
 class TestTabAddUsesExtractedCheck:
@@ -143,38 +100,47 @@ class TestDialogInitNonBlocking:
     """M5: the dialog constructor must not run the PowerShell probe synchronously."""
 
     @staticmethod
-    def test_init_dispatches_probe_off_thread(qapp: object, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_init_dispatches_probe_off_thread(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
         """Dialog __init__ must hand the probe to a worker and not call it synchronously.
 
+        Drives the real dispatch: the only thing replaced is the subprocess
+        boundary, which records the thread it is called on. The dialog must end
+        up holding a real, started worker that belongs to it, and the probe must
+        never have run on the GUI thread.
+
         Args:
-            qapp: Session QApplication fixture (ensures a Qt app exists).
-            monkeypatch: Fixture used to stub the worker and spy the subprocess probe.
+            qapp: Session QApplication fixture, whose thread the probe must avoid.
+            monkeypatch: Fixture used to clear the availability cache and record the probe's thread.
         """
-        _ = qapp
-        _StubWorker.instances.clear()
+        probe_threads: list[QThread | None] = []
 
-        probe_calls: list[bool] = []
-
-        def _spy_query() -> tuple[str, int]:
-            """Record any synchronous invocation of the subprocess probe.
+        def _recording_query() -> tuple[str, int]:
+            """Record the thread the subprocess probe runs on.
 
             Returns:
                 tuple[str, int]: A benign ``(install_state, returncode)`` pair.
             """
-            probe_calls.append(True)
+            probe_threads.append(QThread.currentThread())
             return "", 0
 
-        monkeypatch.setattr(sandbox_config, "GenericCallableWorker", _StubWorker)
-        monkeypatch.setattr(sandbox_config, "_query_sandbox_optional_feature", _spy_query)
+        monkeypatch.setattr(getattr(sandbox_config, "_AvailabilityCache"), "value", None)
+        monkeypatch.setattr(sandbox_config, "_query_sandbox_optional_feature", _recording_query)
 
         dialog = SandboxConfigDialog()
-
-        assert len(_StubWorker.instances) == 1
-        worker = _StubWorker.instances[0]
-        assert worker.started
-        assert worker.func is check_windows_sandbox_availability
-        assert not probe_calls
-        dialog.deleteLater()
+        try:
+            worker = dialog._availability_worker
+            assert isinstance(worker, GenericCallableWorker), "the dialog did not dispatch the availability probe to a worker"
+            assert worker.owner() is dialog, "the dialog is not the availability worker's recorded owner"
+            assert worker.parent() is None, (
+                "the availability worker is a Qt child of the dialog; closing the dialog mid-probe would destroy the running thread"
+            )
+            assert worker.wait(_WORKER_JOIN_MS), "the availability worker never finished"
+            assert worker.isFinished(), "the availability worker was never started, so the probe was not dispatched at all"
+            assert qapp.thread() not in probe_threads, "the PowerShell probe ran on the GUI thread inside the dialog constructor"
+            cached = getattr(sandbox_config, "_AvailabilityCache").value
+            assert cached is not None, "the dispatched callable was not the availability probe: it left the cache unpopulated"
+        finally:
+            dialog.deleteLater()
 
 
 class TestAvailabilityFunction:

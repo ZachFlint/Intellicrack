@@ -13,7 +13,7 @@ import html
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, override
 
-from PyQt6.QtCore import QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QDialog,
     QFormLayout,
@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import RetainedWorker
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
@@ -113,7 +114,7 @@ class _StatusSnapshot:
     requirements_warnings: tuple[str, ...]
 
 
-class _RequirementsCheckWorker(QThread):
+class _RequirementsCheckWorker(RetainedWorker):
     """Background worker that runs :func:`check_windows_requirements` off the GUI thread.
 
     Emits :attr:`result_ready` with a :class:`_RequirementsResult` on success and :attr:`check_failed` with an error message on exception.
@@ -122,6 +123,15 @@ class _RequirementsCheckWorker(QThread):
 
     result_ready = pyqtSignal(object)
     check_failed = pyqtSignal(str)
+
+    def __init__(self, *, owner: QWidget | None = None) -> None:
+        """Initialise the probe worker with the dialog that owns it.
+
+        Args:
+            owner: Dialog that started this probe. It is recorded for scoped draining, never used as a Qt parent: Qt destroys a parent's
+                children with it, and destroying a running ``QThread`` aborts the process.
+        """
+        super().__init__(owner=owner)
 
     @override
     def run(self) -> None:
@@ -589,7 +599,7 @@ class XPUStatusDialog(QDialog):
 
         self.requirements_text.setPlainText("Checking system requirements...")
 
-        worker = _RequirementsCheckWorker(self)
+        worker = _RequirementsCheckWorker(owner=self)
         worker.result_ready.connect(self._on_requirements_ready)
         worker.check_failed.connect(self._on_requirements_failed)
         worker.finished.connect(self._on_requirements_worker_finished)

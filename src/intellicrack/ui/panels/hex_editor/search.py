@@ -32,6 +32,7 @@ from intellicrack.ui.dialogs_helpers import show_warning
 from intellicrack.ui.panels.async_bridge import (
     GenericCallableWorker,
     run_bridge_coroutine_logged,
+    run_callable_async,
     worker_is_running,
 )
 from intellicrack.ui.panels.hex_editor.base import (
@@ -476,17 +477,17 @@ class SearchMixin:
             max_results=MAX_SEARCH_RESULTS,
         )
 
-        self._search_worker = GenericCallableWorker(
+        self._search_worker = run_callable_async(
             execute_text_search,
             document,
             mode,
             query,
             encoding,
             MAX_SEARCH_RESULTS,
+            on_success=self._on_search_finished_obj,
+            on_error=self._on_search_error,
+            parent=self if isinstance(self, QWidget) else None,
         )
-        _: object = self._search_worker.call_finished.connect(self._on_search_finished_obj)
-        _ = self._search_worker.call_error.connect(self._on_search_error)
-        self._search_worker.start()
 
     def _on_search_finished_obj(self, results: object) -> None:
         """Forward results from the generic worker to the typed handler.
@@ -855,7 +856,7 @@ class SearchMixin:
             max_results=MAX_SEARCH_RESULTS,
         )
 
-        self._numeric_search_worker = GenericCallableWorker(
+        self._numeric_search_worker = run_callable_async(
             execute_numeric_search,
             document,
             min_val,
@@ -864,6 +865,9 @@ class SearchMixin:
             fmt_info.byte_width,
             params.alignment,
             MAX_SEARCH_RESULTS,
+            on_success=self._on_numeric_search_finished_obj,
+            on_error=self._on_numeric_search_error,
+            parent=self if isinstance(self, QWidget) else None,
             use_native=use_native,
             size=fmt_info.byte_width,
             signed=fmt_info.is_signed,
@@ -871,9 +875,6 @@ class SearchMixin:
             is_range=(params.range_mode and bool(params.max_text)),
             is_float=fmt_info.is_float,
         )
-        _: object = self._numeric_search_worker.call_finished.connect(self._on_numeric_search_finished_obj)
-        _ = self._numeric_search_worker.call_error.connect(self._on_numeric_search_error)
-        self._numeric_search_worker.start()
 
     def _on_numeric_search_finished_obj(self, results: object) -> None:
         """Forward numeric search results from the generic worker to the typed handler.

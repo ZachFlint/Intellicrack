@@ -11,10 +11,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, TrackedEntry
+from intellicrack.ui.panels.async_bridge import RetainedWorker
 
 
 if TYPE_CHECKING:
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 
-class TrackedRefreshWorker(QThread):
+class TrackedRefreshWorker(RetainedWorker):
     """Background worker for fetching tracked process data without blocking the UI.
 
     Queries ProcessManager for all tracked processes and their running state
@@ -40,13 +41,14 @@ class TrackedRefreshWorker(QThread):
     refresh_finished: pyqtSignal = pyqtSignal(list)
     refresh_error: pyqtSignal = pyqtSignal(str)
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, *, owner: QWidget | None = None) -> None:
         """Initialize the TrackedRefreshWorker.
 
         Args:
-            parent: Parent widget.
+            owner: Tab that dispatched this refresh. It is recorded for scoped draining and delivery guards, never as a Qt parent: Qt
+                destroys a parent's children with it, and destroying a running ``QThread`` aborts the process.
         """
-        super().__init__(parent)
+        super().__init__(owner=owner)
 
     @staticmethod
     def _collect_tracked_snapshot() -> list[dict[str, str | int | None]]:
