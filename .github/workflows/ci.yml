@@ -115,6 +115,16 @@ jobs:
         run: pixi run pip install -e .
       - name: Fix PyQt6 stubs
         run: pixi run python scripts/fix_pyqt6_stubs.py
+      - name: Install hexcore type stubs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $site = (pixi run python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])").Trim()
+          $stubs = Join-Path $site 'intellicrack_hexcore-stubs'
+          New-Item -ItemType Directory -Force -Path $stubs | Out-Null
+          Copy-Item src/intellicrack-hexcore/intellicrack_hexcore.pyi (Join-Path $stubs '__init__.pyi')
+          Copy-Item src/intellicrack-hexcore/intellicrack_hexcore.pyi (Join-Path $stubs 'intellicrack_hexcore.pyi')
+          Write-Host "installed hexcore stubs in $stubs"
       - name: Type check with basedpyright
         run: |
           pixi run basedpyright src/
