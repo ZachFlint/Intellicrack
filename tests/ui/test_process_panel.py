@@ -519,7 +519,7 @@ class TestToolDefinition:
         """
         b = ProcessBridge()
         td = b.tool_definition
-        assert td.tool_name is ToolName.PROCESS
+        assert td.tool_name == ToolName.PROCESS.value
         actual_names: frozenset[str] = frozenset(f.name for f in td.functions)
         missing = _CANONICAL_PROCESS_FUNCTION_NAMES - actual_names
         extra = actual_names - _CANONICAL_PROCESS_FUNCTION_NAMES

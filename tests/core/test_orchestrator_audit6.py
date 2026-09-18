@@ -79,6 +79,7 @@ from intellicrack.core.types import (
     ToolParameter,
 )
 from intellicrack.providers import ids as provider_ids
+from intellicrack.providers.anthropic import AnthropicProvider
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.capabilities import TIKTOKEN_O200K
 from intellicrack.providers.registry import ProviderRegistry
@@ -1133,6 +1134,8 @@ def test_pending_confirmation_dataclass_fields() -> None:
 _DEFAULT_CONTEXT_WINDOW: Final[int] = 32_000
 _TINY_CONTEXT_WINDOW: Final[int] = 256
 _MODEL_ID: Final[str] = "audit6-model"
+_UNDESCRIBED_INSTANCE_ID: Final[str] = "audit6-gateway"
+"""A custom instance id no preset describes, so nothing supplies a context window."""
 
 
 class _FakeProvider(LLMProviderBase):
@@ -1570,12 +1573,18 @@ def test_estimate_tokens_uses_tiktoken_for_openai() -> None:
 
 
 def test_estimate_tokens_uses_cl100k_for_anthropic() -> None:
-    """F-0004: Anthropic estimation must use the conservative cl100k_base encoding."""
+    """F-0004: Anthropic estimation must use the conservative cl100k_base encoding.
+
+    The encoding comes from the model's capability record, so the tokenizer is
+    resolved the way the orchestrator resolves it before counting.
+    """
     sample = "Decompile the license validation function and propose a bypass."
+    tokenizer = AnthropicProvider().capabilities_for("claude-opus-4-7").tokenizer
+    assert tokenizer == "cl100k_base"
 
     encoder = tiktoken.get_encoding("cl100k_base")
     real = len(encoder.encode(sample))
-    estimate = Orchestrator.estimate_tokens(sample, provider_ids.ANTHROPIC)
+    estimate = Orchestrator.estimate_tokens(sample, tokenizer)
 
     assert estimate == real
 
@@ -1727,7 +1736,7 @@ async def test_missing_context_window_raises_tool_error(tmp_path: Path) -> None:
         tmp_path: Pytest temporary directory.
     """
     bridge = _make_stub_bridge()
-    provider_no_window = _FakeProvider(context_window=None)
+    provider_no_window = _FakeProvider(context_window=None, provider_name=_UNDESCRIBED_INSTANCE_ID)
     orch, _provider, _tools, session_manager = _build_orchestrator(
         tmp_path,
         provider=provider_no_window,
@@ -1735,7 +1744,7 @@ async def test_missing_context_window_raises_tool_error(tmp_path: Path) -> None:
     )
     async with _AutoStopSessionManager(session_manager):
         await orch.start_session(
-            provider=provider_ids.OPENAI,
+            provider=_UNDESCRIBED_INSTANCE_ID,
             model=_MODEL_ID,
         )
 

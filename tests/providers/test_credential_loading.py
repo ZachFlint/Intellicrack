@@ -49,33 +49,33 @@ def _load_and_validate(env_path: Path, provider: str) -> tuple[bool, str | None]
     return CredentialLoader(env_path=env_path).validate_credentials(provider)
 
 
-def _assert_msg_mentions(msg: str | None, expected_prefix: str, provider: str) -> None:
-    """Assert that msg is a non-empty str containing expected_prefix.
+def _assert_msg_mentions(msg: str | None, expected_fragment: str, provider: str) -> None:
+    """Assert that msg is a non-empty str containing expected_fragment.
 
     Args:
         msg: The error message returned by validate_credentials.
-        expected_prefix: The prefix substring that must appear in msg.
+        expected_fragment: The substring that must appear in msg.
         provider: Provider name used in assertion failure messages.
     """
     assert isinstance(msg, str), f"{provider}: error message must be str, got {type(msg)}"
     assert len(msg) > 0, f"{provider}: error message must be non-empty"
-    assert expected_prefix in msg, f"{provider}: error {msg!r} must mention {expected_prefix!r}"
+    assert expected_fragment in msg, f"{provider}: error {msg!r} must mention {expected_fragment!r}"
 
 
-def _assert_invalid_key(provider: str, env_var: str, bad_key: str, expected_prefix: str) -> None:
-    """Assert that a key with the wrong prefix fails validation with a diagnostic message.
+def _assert_invalid_key(provider: str, env_var: str, bad_key: str, expected_fragment: str) -> None:
+    """Assert that an unusable key fails validation with a diagnostic message.
 
     Args:
         provider: The provider to validate.
         env_var: The environment variable name for this provider's key.
-        bad_key: A key value that does not have the correct prefix.
-        expected_prefix: The prefix that should appear in the error message.
+        bad_key: A key value no endpoint could accept.
+        expected_fragment: A substring the error message must contain.
     """
-    env_path = _make_env_file(f"{env_var}={bad_key}\n")
+    env_path = _make_env_file(f'{env_var}="{bad_key}"\n')
     try:
         is_valid, msg = _load_and_validate(env_path, provider)
-        assert is_valid is False, f"{provider}: key without prefix {expected_prefix!r} must fail"
-        _assert_msg_mentions(msg, expected_prefix, provider)
+        assert is_valid is False, f"{provider}: unusable key {bad_key!r} must fail"
+        _assert_msg_mentions(msg, expected_fragment, provider)
     finally:
         env_path.unlink()
 
@@ -193,21 +193,22 @@ class TestCredentialValidation:
 
     @staticmethod
     def test_validate_credentials_invalid_key_returns_false_with_message() -> None:
-        """Invalid API key formats produce (False, diagnostic-str) for format-checked providers.
+        """Unusable keys produce (False, diagnostic-str); foreign prefixes validate.
 
         Uses a controlled env file so the test is unconditional and deterministic.
-        Each provider with format validation receives a key with the wrong prefix;
-        the validation must return False and a non-empty diagnostic string that
-        names the expected prefix.
+        A key in a gateway's own format must validate for every provider, and a
+        key with embedded whitespace must return False with a diagnostic naming
+        the whitespace.
         """
-        cases: list[tuple[str, str, str, str]] = [
-            (provider_ids.ANTHROPIC, "ANTHROPIC_API_KEY", "wrongprefix-key12345", "sk-ant-"),
-            (provider_ids.OPENAI, "OPENAI_API_KEY", "wrongprefix-key12345", "sk-"),
-            (provider_ids.OPENROUTER, "OPENROUTER_API_KEY", "wrongprefix-key12345", "sk-or-"),
-            (provider_ids.GROK, "XAI_API_KEY", "wrongprefix-key12345", "xai-"),
+        cases: list[tuple[str, str]] = [
+            (provider_ids.ANTHROPIC, "ANTHROPIC_API_KEY"),
+            (provider_ids.OPENAI, "OPENAI_API_KEY"),
+            (provider_ids.OPENROUTER, "OPENROUTER_API_KEY"),
+            (provider_ids.GROK, "XAI_API_KEY"),
         ]
-        for provider, env_var, bad_key, expected_prefix in cases:
-            _assert_invalid_key(provider, env_var, bad_key, expected_prefix)
+        for provider, env_var in cases:
+            _assert_valid_key(provider, env_var, "gateway-issued-key12345")
+            _assert_invalid_key(provider, env_var, "gateway issued key12345", "whitespace")
 
     @staticmethod
     def test_validate_credentials_valid_key_format_returns_true() -> None:
@@ -356,17 +357,18 @@ class TestApiKeyFormatValidation:
         _assert_valid_key(provider_ids.ANTHROPIC, "ANTHROPIC_API_KEY", "sk-ant-api03-" + "A" * 95)
 
     @staticmethod
-    def test_anthropic_key_wrong_prefix_fails_validation() -> None:
-        """Anthropic key with wrong prefix is rejected with a diagnostic message.
+    def test_anthropic_key_with_a_foreign_prefix_validates() -> None:
+        """An Anthropic-dialect key without ``sk-ant-`` validates.
 
-        Unconditional: uses a synthetic bad key injected via a controlled env file.
+        A gateway in front of Anthropic issues keys in its own format, so a
+        foreign prefix is not grounds for rejection.
         """
-        _assert_invalid_key(
-            provider_ids.ANTHROPIC,
-            "ANTHROPIC_API_KEY",
-            "sk-wrongprefix-" + "A" * 60,
-            "sk-ant-",
-        )
+        _assert_valid_key(provider_ids.ANTHROPIC, "ANTHROPIC_API_KEY", "sk-wrongprefix-" + "A" * 60)
+
+    @staticmethod
+    def test_anthropic_key_with_embedded_whitespace_fails_validation() -> None:
+        """A key carrying whitespace is rejected, since no header can carry it intact."""
+        _assert_invalid_key(provider_ids.ANTHROPIC, "ANTHROPIC_API_KEY", "sk-ant key with space", "whitespace")
 
     @staticmethod
     def test_openai_key_correct_prefix_validates() -> None:

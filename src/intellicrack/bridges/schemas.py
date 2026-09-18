@@ -407,6 +407,30 @@ def validate_tool_definition(tool: ToolDefinition) -> list[ValidationError]:
     return errors
 
 
+def _one_entry_per_function(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Unwrap Gemini's grouped declarations so every dialect yields one entry per function.
+
+    Chat Completions, Responses and Messages already render one tool entry per
+    function. Gemini groups every declaration under a single
+    ``functionDeclarations`` tool, which is how its request body wants them but
+    not what a schema getter promises its caller.
+
+    Args:
+        entries: Tool entries as a dialect adapter rendered them.
+
+    Returns:
+        list[dict[str, Any]]: The same schemas, one entry per function.
+    """
+    flattened: list[dict[str, Any]] = []
+    for entry in entries:
+        grouped = entry.get("functionDeclarations")
+        if is_json_array(grouped):
+            flattened.extend(member for member in grouped if is_json_object(member))
+        else:
+            flattened.append(entry)
+    return flattened
+
+
 def _schemas_for(tool: ToolDefinition, dialect: ApiDialect) -> list[dict[str, Any]]:
     """Build one tool's schemas through the adapter that owns the wire format.
 
@@ -415,10 +439,11 @@ def _schemas_for(tool: ToolDefinition, dialect: ApiDialect) -> list[dict[str, An
         dialect: The target wire format.
 
     Returns:
-        list[dict[str, Any]]: Tool schemas in the dialect's format.
+        list[dict[str, Any]]: Tool schemas in the dialect's format, one entry
+        per function.
     """
     adapter = adapter_for(dialect)
-    return adapter.build_tool_schemas([tool], adapter.default_capabilities())
+    return _one_entry_per_function(adapter.build_tool_schemas([tool], adapter.default_capabilities()))
 
 
 def to_anthropic_schema(tool: ToolDefinition) -> list[AnthropicToolSchema]:
@@ -458,13 +483,7 @@ def to_google_schema(tool: ToolDefinition) -> list[GoogleFunctionDeclaration]:
     Returns:
         list[GoogleFunctionDeclaration]: List of function declarations in Google's format.
     """
-    declarations: list[GoogleFunctionDeclaration] = []
-    for entry in _schemas_for(tool, ApiDialect.GEMINI):
-        raw = entry.get("functionDeclarations")
-        if is_json_array(raw):
-            members: list[Any] = raw
-            declarations.extend(cast("GoogleFunctionDeclaration", member) for member in members)
-    return declarations
+    return [cast("GoogleFunctionDeclaration", entry) for entry in _schemas_for(tool, ApiDialect.GEMINI)]
 
 
 def to_ollama_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
@@ -531,7 +550,7 @@ def get_all_schemas_for_dialect(
         dialect's format.
     """
     adapter = adapter_for(dialect)
-    return adapter.build_tool_schemas(tools, adapter.default_capabilities())
+    return _one_entry_per_function(adapter.build_tool_schemas(tools, adapter.default_capabilities()))
 
 
 def validate_tool_for_dialect(

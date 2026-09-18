@@ -798,9 +798,15 @@ def test_tool_name_invalid_value_raises_value_error_with_name() -> None:
 
 
 def test_provider_name_invalid_value_raises_value_error_with_name() -> None:
-    """Provider id raises ValueError containing the invalid value for an unrecognized string."""
-    with pytest.raises(ValueError, match="nonexistent_provider"):
-        normalize_provider_id("nonexistent_provider")
+    """Provider id raises ValueError containing the invalid value for a malformed string.
+
+    An unregistered but well-formed id is a legitimate custom instance, so the
+    rejection is for ids that break the grammar, not for ids nobody has seen.
+    """
+    with pytest.raises(ValueError, match="not a provider!"):
+        normalize_provider_id("not a provider!")
+    with pytest.raises(ValueError, match="Invalid provider id"):
+        normalize_provider_id("   ")
 
 
 def test_session_add_tag_whitespace_raises_value_error_with_message() -> None:
@@ -850,9 +856,16 @@ def test_tool_name_roundtrip_from_value() -> None:
 
 
 def test_provider_name_roundtrip_from_value() -> None:
-    """Provider id can be reconstructed from its string value (used by session deserializer)."""
-    assert normalize_provider_id("anthropic") is provider_ids.ANTHROPIC
-    assert normalize_provider_id("openai") is provider_ids.OPENAI
+    """Provider id can be reconstructed from its string value (used by session deserializer).
+
+    Stored rows may carry any casing or stray whitespace a user typed, so the
+    round trip normalizes rather than requiring an exact match, and a custom
+    instance id survives it exactly as a built-in one does.
+    """
+    assert normalize_provider_id("anthropic") == provider_ids.ANTHROPIC
+    assert normalize_provider_id("openai") == provider_ids.OPENAI
+    assert normalize_provider_id(" Anthropic ") == provider_ids.ANTHROPIC
+    assert normalize_provider_id("my-gateway") == "my-gateway"
 
 
 # ---------------------------------------------------------------------------

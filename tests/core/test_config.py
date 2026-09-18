@@ -663,13 +663,16 @@ def test_config_from_dict_invalid_provider_fallback() -> None:
     the same fallback both times (determinism).
     """
     data: dict[str, Any] = {
-        "general": {"default_provider": "nonexistent_provider_xyz"},
+        "general": {"default_provider": "Not A Provider!"},
     }
     config1 = Config.from_dict(data)
     config2 = Config.from_dict(data)
     assert config1.default_provider == provider_ids.ANTHROPIC
     assert config2.default_provider == provider_ids.ANTHROPIC
     assert config1.default_provider is not None
+
+    custom = Config.from_dict({"general": {"default_provider": "My-Gateway"}})
+    assert custom.default_provider == "my-gateway", "A well-formed custom instance may be the default"
 
 
 def test_config_from_dict_invalid_confirmation_fallback() -> None:
@@ -698,13 +701,16 @@ def test_config_parse_providers_unknown_skipped() -> None:
     """
     providers_data: dict[str, Any] = {
         "anthropic": {"enabled": False},
-        "unknown_provider": {"enabled": True},
+        "Not A Provider!": {"enabled": True},
+        "my-gateway": {"enabled": True},
     }
     result = Config.parse_providers(providers_data)
     assert result[provider_ids.ANTHROPIC].enabled is False
 
-    unknown_values: list[str] = list(result)
-    assert "unknown_provider" not in unknown_values, "Unknown provider key must not appear in the parsed result"
+    parsed_ids: list[str] = list(result)
+    assert "Not A Provider!" not in parsed_ids, "A key that breaks the id grammar must not appear in the parsed result"
+    assert "not a provider!" not in parsed_ids, "A malformed key must not survive by being case-folded"
+    assert "my-gateway" in parsed_ids, "A well-formed custom instance id must keep its saved configuration"
 
     assert provider_ids.GROK in result, "GROK must be present as a default provider"
     assert result[provider_ids.GROK].enabled is True, "Unprovided GROK must retain default enabled=True"
@@ -713,7 +719,9 @@ def test_config_parse_providers_unknown_skipped() -> None:
     assert provider_ids.OPENAI in result
     assert result[provider_ids.OPENAI].enabled is True
 
-    assert set(result.keys()) == _EXPECTED_PROVIDERS, "parse_providers must return exactly the expected provider set"
+    assert set(result.keys()) == _EXPECTED_PROVIDERS | {"my-gateway"}, (
+        "parse_providers must return exactly the built-ins plus the well-formed custom instance"
+    )
 
 
 def test_config_parse_tools_unknown_skipped() -> None:

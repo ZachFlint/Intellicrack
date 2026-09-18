@@ -317,8 +317,11 @@ def test_validate_accepts_correct_anthropic_prefix(anthropic_clean: str) -> None
     assert error is None
 
 
-def test_validate_rejects_wrong_anthropic_prefix(anthropic_clean: str) -> None:
-    """``validate`` rejects an Anthropic key missing the ``sk-ant-`` prefix.
+def test_validate_accepts_a_foreign_anthropic_prefix(anthropic_clean: str) -> None:
+    """``validate`` accepts an Anthropic key without the ``sk-ant-`` prefix.
+
+    A gateway in front of Anthropic issues keys in its own format, so the
+    prefix alone is no longer grounds for rejection.
 
     Args:
         anthropic_clean: Purged ANTHROPIC provider name.
@@ -339,9 +342,8 @@ def test_validate_rejects_wrong_anthropic_prefix(anthropic_clean: str) -> None:
         return await store.validate(anthropic_clean)
 
     valid, error = asyncio.run(_run())
-    assert valid is False
-    assert error is not None
-    assert error
+    assert valid is True
+    assert error is None
 
 
 @pytest.mark.parametrize(
@@ -360,12 +362,12 @@ def test_validate_per_provider_prefix_branches(
     good_key: str,
     bad_key: str,
 ) -> None:
-    """Each per-provider prefix branch accepts a valid key and rejects a bad one.
+    """Native and foreign prefixes validate; a key carrying whitespace does not.
 
     Args:
         provider: Provider whose validate branch is exercised.
-        good_key: Prefix that should validate as correct.
-        bad_key: Prefix that should be rejected.
+        good_key: The prefix that provider's own keys carry.
+        bad_key: A foreign prefix, as a gateway in front of it might issue.
     """
     if not _keyring_usable():
         pytest.skip("Keyring backend is not available on this host.")
@@ -373,22 +375,27 @@ def test_validate_per_provider_prefix_branches(
     store = CredentialStore()
     suffix = uuid.uuid4().hex
     good = ProviderCredentials(api_key=f"{good_key}{suffix}", api_base=None, organization_id=None, project_id=None)
-    bad = ProviderCredentials(api_key=f"{bad_key}{suffix}", api_base=None, organization_id=None, project_id=None)
+    foreign = ProviderCredentials(api_key=f"{bad_key}{suffix}", api_base=None, organization_id=None, project_id=None)
+    unsendable = ProviderCredentials(api_key=f"{good_key} {suffix}", api_base=None, organization_id=None, project_id=None)
 
-    async def _run() -> tuple[tuple[bool, str | None], tuple[bool, str | None]]:
+    async def _run() -> tuple[tuple[bool, str | None], tuple[bool, str | None], tuple[bool, str | None]]:
         try:
             await store.set(provider, good)
-            ok = await store.validate(provider)
-            await store.set(provider, bad)
-            rejected = await store.validate(provider)
+            native_result = await store.validate(provider)
+            await store.set(provider, foreign)
+            foreign_result = await store.validate(provider)
+            await store.set(provider, unsendable)
+            unsendable_result = await store.validate(provider)
         finally:
             await store.delete(provider)
-        return ok, rejected
+        return native_result, foreign_result, unsendable_result
 
-    (ok_valid, ok_error), (bad_valid, bad_error) = asyncio.run(_run())
-    assert ok_valid is True, f"{provider} good key was rejected: {ok_error}"
+    (ok_valid, ok_error), (foreign_valid, foreign_error), (bad_valid, bad_error) = asyncio.run(_run())
+    assert ok_valid is True, f"{provider} native key was rejected: {ok_error}"
     assert ok_error is None
-    assert bad_valid is False, f"{provider} bad key was accepted"
+    assert foreign_valid is True, f"{provider} foreign-prefix key was rejected: {foreign_error}"
+    assert foreign_error is None
+    assert bad_valid is False, f"{provider} key with whitespace was accepted"
     assert bad_error
 
 

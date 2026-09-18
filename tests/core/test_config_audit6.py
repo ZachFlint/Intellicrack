@@ -126,8 +126,9 @@ class TestF0021ParseProvidersRoundTrip:
 
     @staticmethod
     def test_unknown_provider_skipped() -> None:
-        """A non-enum provider name is skipped without raising."""
-        parsed = Config.parse_providers({"definitely_not_a_provider": {"enabled": True}})
+        """A key that breaks the id grammar is skipped without raising."""
+        parsed = Config.parse_providers({"definitely not a provider": {"enabled": True}, "custom-instance": {"enabled": True}})
         for member in provider_ids.BUILTIN_PROVIDER_IDS:
             assert member in parsed
-        assert "definitely_not_a_provider" not in set(parsed)
+        assert "definitely not a provider" not in set(parsed)
+        assert "custom-instance" in set(parsed)
