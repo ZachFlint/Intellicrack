@@ -555,7 +555,7 @@ class TestToolDefinitionsRegistration:
         Args:
             bridge: HexEditorBridge fixture.
         """
-        assert bridge.tool_definition.tool_name is ToolName.HEX_EDITOR
+        assert bridge.tool_definition.tool_name == ToolName.HEX_EDITOR.value
 
 
 class TestSectionTableSize:

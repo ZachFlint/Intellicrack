@@ -849,7 +849,7 @@ class TestReadPebToolDefinitionAdvertisesAddress:
             bridge: Bridge fixture.
         """
         tool_def = bridge.tool_definition
-        assert tool_def.tool_name == ToolName.X64DBG
+        assert tool_def.tool_name == ToolName.X64DBG.value
         peb_tool = next(
             (f for f in tool_def.functions if f.name == "x64dbg.read_peb"),
             None,

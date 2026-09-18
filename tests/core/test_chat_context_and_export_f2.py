@@ -32,10 +32,10 @@ from intellicrack.core.types import (
     BridgeAnalysisSummary,
     FunctionInfo,
     ImportInfo,
-    ProviderName,
     SectionInfo,
     StringInfo,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.registry import ProviderRegistry
 
 
@@ -143,7 +143,7 @@ def test_system_prompt_injects_bridge_analysis_summary(tmp_path: Path) -> None:
         tmp_path: Pytest temporary directory.
     """
     orch = _make_orchestrator(tmp_path)
-    session = Session.create(provider=ProviderName.OPENAI, model=_MODEL_ID, name="f2")
+    session = Session.create(provider=provider_ids.OPENAI, model=_MODEL_ID, name="f2")
     binary = _make_binary("target.exe")
     session.binaries.append(binary)
     session.active_binary_index = 0

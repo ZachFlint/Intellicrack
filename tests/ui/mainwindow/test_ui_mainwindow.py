@@ -62,7 +62,8 @@ from intellicrack.core.config import Config
 from intellicrack.core.orchestrator import Orchestrator
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import ConfirmationLevel, ModelInfo, ProviderError, ProviderName
+from intellicrack.core.types import ConfirmationLevel, ModelInfo, ProviderError
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui import (
     app as app_module,
@@ -216,7 +217,7 @@ class _DummyHolder:
         self._refresh_memory_status: object = None
         self._refresh_model_discovery_status: object = None
         self.model_discovery: object = None
-        self._persist_provider_selection: Callable[[ProviderName], None] = lambda _provider: None
+        self._persist_provider_selection: Callable[[str], None] = lambda _provider: None
 
     @classmethod
     def for_save_binary(cls, stub_panel: object) -> _DummyHolder:
@@ -1069,7 +1070,7 @@ class TestApplyProviderSettingsHandlesDisabled:
             is_connected: bool = True
 
         class _FakeRegistry:
-            def get(self, _name: ProviderName) -> _FakeProvider:
+            def get(self, _name: str) -> _FakeProvider:
                 """Return a connected provider stub.
 
                 Args:
@@ -1237,7 +1238,7 @@ class TestOrphanSignalWiringRuntime:
         ``_on_provider_dialog_updated`` emits ``"Provider configuration updated:
         openai"`` and ``_on_active_provider_changed`` emits ``"Active provider:
         openai"`` (the latter also parses ``"openai"`` through
-        :class:`ProviderName`). Both messages are computed here independently.
+        provider instance id). Both messages are computed here independently.
 
         Args:
             real_window: Real MainWindow fixture.
@@ -1255,14 +1256,14 @@ class TestOrphanSignalWiringRuntime:
         dialog = dialogs[0]
 
         statuses.clear()
-        dialog.provider_updated.emit(ProviderName.OPENAI.value)
-        assert any(f"Provider configuration updated: {ProviderName.OPENAI.value}" in msg for msg in statuses), (
+        dialog.provider_updated.emit(provider_ids.OPENAI)
+        assert any(f"Provider configuration updated: {provider_ids.OPENAI}" in msg for msg in statuses), (
             f"provider_updated emission did not reach _on_provider_dialog_updated; observed {statuses}"
         )
 
         statuses.clear()
-        dialog.active_provider_changed.emit(ProviderName.OPENAI.value)
-        assert any(f"Active provider: {ProviderName.OPENAI.value}" in msg for msg in statuses), (
+        dialog.active_provider_changed.emit(provider_ids.OPENAI)
+        assert any(f"Active provider: {provider_ids.OPENAI}" in msg for msg in statuses), (
             f"active_provider_changed emission did not reach _on_active_provider_changed; observed {statuses}"
         )
 
@@ -1287,7 +1288,7 @@ class TestOrphanSignalWiringRuntime:
             ModelInfo(
                 id="gpt-4o",
                 name="GPT-4o",
-                provider=ProviderName.OPENAI,
+                provider=provider_ids.OPENAI,
                 context_window=128_000,
                 supports_tools=True,
                 supports_vision=True,
@@ -1579,7 +1580,7 @@ class TestModelSelectionDialogGetsContext:
         monkeypatch.setattr(app_module, "ModelSelectionDialog", _RecordingModelDialog)
 
         class _FakeActiveProvider:
-            name: ProviderName = ProviderName.OPENAI
+            name: str = provider_ids.OPENAI
 
         class _FakeProviderRegistry:
             active: _FakeActiveProvider = _FakeActiveProvider()
@@ -1621,7 +1622,7 @@ class TestModelSelectionDialogGetsContext:
             ModelInfo(
                 id="gpt-4o",
                 name="GPT-4o",
-                provider=ProviderName.OPENAI,
+                provider=provider_ids.OPENAI,
                 context_window=128_000,
                 supports_tools=True,
                 supports_vision=True,
@@ -1636,7 +1637,7 @@ class TestModelSelectionDialogGetsContext:
         assert len(captured_kwargs) == 1, f"ModelSelectionDialog must be constructed once; got {len(captured_kwargs)}"
         kw = captured_kwargs[0]
         assert "provider_name" in kw, f"expected 'provider_name' kwarg; got keys {list(kw)}"
-        assert kw["provider_name"] == ProviderName.OPENAI, f"expected provider_name=OPENAI; got {kw['provider_name']!r}"
+        assert kw["provider_name"] == provider_ids.OPENAI, f"expected provider_name=OPENAI; got {kw['provider_name']!r}"
         assert "current_model" in kw, f"expected 'current_model' kwarg; got keys {list(kw)}"
         assert "discovery" in kw, f"expected 'discovery' kwarg; got keys {list(kw)}"
 
@@ -1675,9 +1676,9 @@ class _RegistryDouble:
         """
         self._provider = provider
         self._raise = raise_provider_error
-        self.set_active_calls: list[ProviderName] = []
+        self.set_active_calls: list[str] = []
 
-    def get(self, _name: ProviderName) -> _ProviderDouble | None:
+    def get(self, _name: str) -> _ProviderDouble | None:
         """Return the configured provider double.
 
         Args:
@@ -1688,7 +1689,7 @@ class _RegistryDouble:
         """
         return self._provider
 
-    def set_active(self, name: ProviderName) -> None:
+    def set_active(self, name: str) -> None:
         """Record the call and optionally raise.
 
         Args:
@@ -1700,7 +1701,7 @@ class _RegistryDouble:
         self.set_active_calls.append(name)
         if self._raise:
             msg = "forced"
-            raise ProviderError(msg, provider_name=name.value)
+            raise ProviderError(msg, provider_name=name)
 
 
 class _ProviderComboDouble(QComboBox):
@@ -1757,7 +1758,7 @@ def _build_provider_holder(
     registry = _RegistryDouble(provider, raise_provider_error=raise_provider_error)
     recorder = _StatusEmissionRecorder()
     holder = _DummyHolder.for_provider_changed(
-        _ProviderComboDouble(ProviderName.OPENAI),
+        _ProviderComboDouble(provider_ids.OPENAI),
         _OrchestratorDouble(registry),
         recorder,
     )
@@ -1774,7 +1775,7 @@ class TestProviderChangedSetsActive:
             provider=_ProviderDouble(is_connected=True),
         )
         getattr(MainWindow, "_on_provider_changed")(cast("MainWindow", holder), 0)
-        assert registry.set_active_calls == [ProviderName.OPENAI]
+        assert registry.set_active_calls == [provider_ids.OPENAI]
 
     @staticmethod
     def test_disconnected_provider_not_activated() -> None:
@@ -1838,7 +1839,7 @@ class TestProviderChangedSetsActive:
             raise_provider_error=True,
         )
         getattr(MainWindow, "_on_provider_changed")(cast("MainWindow", holder), 0)
-        assert registry.set_active_calls == [ProviderName.OPENAI]
+        assert registry.set_active_calls == [provider_ids.OPENAI]
 
 
 # ---------------------------------------------------------------------------

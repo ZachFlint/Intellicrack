@@ -20,8 +20,9 @@ from functools import cached_property
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import IntellicrackError, ProviderCredentials, ProviderName
-from intellicrack.credentials.env_loader import CredentialLoader, get_credential_loader
+from intellicrack.core.types import IntellicrackError, ProviderCredentials
+from intellicrack.credentials.env_loader import CredentialLoader, get_credential_loader, validate_key_format
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -47,9 +48,31 @@ class _KeyringFallbackError(Exception):
 
 
 if _keyring_errors_module is not None:
-    _KeyringError: type[BaseException] = _keyring_errors_module.KeyringError
+    _KeyringError: type[Exception] = _keyring_errors_module.KeyringError
 else:
     _KeyringError = _KeyringFallbackError
+
+
+try:
+    from win32ctypes.pywin32.pywintypes import error as _win32_credential_error
+except ImportError:
+    _logger.debug("win32_credential_error_unavailable")
+    _win32_credential_error = None
+
+
+class _Win32CredentialFallbackError(Exception):
+    """Sentinel exception used when the Win32 credential shim is unavailable.
+
+    This class is never raised. It exists only to keep the ``except`` tuples
+    type-consistent on platforms where ``win32ctypes`` is not installed,
+    mirroring :class:`_KeyringFallbackError`.
+    """
+
+
+if _win32_credential_error is not None:
+    _Win32CredentialError: type[Exception] = _win32_credential_error
+else:
+    _Win32CredentialError = _Win32CredentialFallbackError
 
 
 class CredentialStoreError(IntellicrackError):
@@ -78,14 +101,14 @@ class StoredCredential:
     """Metadata for a stored credential.
 
     Attributes:
-        provider: Provider this credential belongs to.
+        provider: Instance id of the provider this credential belongs to.
         key_name: Human-readable name or label for the credential.
         created_at: When the credential was first stored.
         updated_at: When the credential was last updated.
         source: Where the credential originated from.
     """
 
-    provider: ProviderName
+    provider: str
     key_name: str
     created_at: datetime
     updated_at: datetime
@@ -150,7 +173,7 @@ class CredentialStore:
 
         try:
             backend = _keyring_module.get_keyring()
-        except (OSError, RuntimeError, KeyError, ValueError, _KeyringError) as e:
+        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError, RuntimeError) as e:
             _logger.warning("keyring_unavailable", error=str(e), exc_info=True)
             return False
 
@@ -190,7 +213,7 @@ class CredentialStore:
         """
         return self._check_keyring()
 
-    def _get_keyring_key(self, provider: ProviderName) -> str:
+    def _get_keyring_key(self, provider: str) -> str:
         """Get the keyring key name for a provider.
 
         Args:
@@ -199,7 +222,7 @@ class CredentialStore:
         Returns:
             str: The key name for keyring storage.
         """
-        return f"{self.SERVICE_NAME}_{provider.value}"
+        return f"{self.SERVICE_NAME}_{provider}"
 
     @staticmethod
     def _serialize_credentials(creds: ProviderCredentials) -> str:
@@ -251,7 +274,7 @@ class CredentialStore:
             str: JSON string representation.
         """
         data = {
-            "provider": metadata.provider.value,
+            "provider": metadata.provider,
             "key_name": metadata.key_name,
             "created_at": metadata.created_at.isoformat(),
             "updated_at": metadata.updated_at.isoformat(),
@@ -260,7 +283,7 @@ class CredentialStore:
         return json.dumps(data, ensure_ascii=False)
 
     @staticmethod
-    def _deserialize_metadata(data: str, provider: ProviderName) -> StoredCredential:
+    def _deserialize_metadata(data: str, provider: str) -> StoredCredential:
         """Deserialize credential metadata from JSON.
 
         Args:
@@ -273,24 +296,24 @@ class CredentialStore:
         try:
             parsed = json.loads(data)
             return StoredCredential(
-                provider=ProviderName(parsed["provider"]),
-                key_name=parsed.get("key_name", provider.value),
+                provider=str(parsed["provider"]),
+                key_name=parsed.get("key_name", provider),
                 created_at=datetime.fromisoformat(parsed["created_at"]),
                 updated_at=datetime.fromisoformat(parsed["updated_at"]),
                 source=CredentialSource(parsed["source"]),
             )
         except (json.JSONDecodeError, TypeError, KeyError, ValueError):
-            _logger.debug("metadata_deserialize_fallback", provider=provider.value, exc_info=True)
+            _logger.debug("metadata_deserialize_fallback", provider=provider, exc_info=True)
             now = datetime.now(UTC)
             return StoredCredential(
                 provider=provider,
-                key_name=provider.value,
+                key_name=provider,
                 created_at=now,
                 updated_at=now,
                 source=CredentialSource.KEYRING,
             )
 
-    async def _get_from_keyring(self, provider: ProviderName) -> ProviderCredentials | None:
+    async def _get_from_keyring(self, provider: str) -> ProviderCredentials | None:
         """Get credentials directly from keyring.
 
         Args:
@@ -317,13 +340,13 @@ class CredentialStore:
         try:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_credentials(data) if data else None
-        except (OSError, KeyError, ValueError, _KeyringError, CredentialStoreError) as e:
-            _logger.warning("keyring_get_failed", provider=provider.value, error=str(e), exc_info=True)
+        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError, CredentialStoreError) as e:
+            _logger.warning("keyring_get_failed", provider=provider, error=str(e), exc_info=True)
             return None
 
     async def _set_to_keyring(
         self,
-        provider: ProviderName,
+        provider: str,
         credentials: ProviderCredentials,
         key_name: str | None = None,
         source: CredentialSource = CredentialSource.KEYRING,
@@ -341,7 +364,7 @@ class CredentialStore:
             CredentialStoreError: If storage fails.
         """
         if self._keyring is None:
-            _logger.warning("credential_set_keyring_unavailable", provider=provider.value)
+            _logger.warning("credential_set_keyring_unavailable", provider=provider)
             msg = "Keyring is not available"
             raise KeyringUnavailableError(msg)
 
@@ -354,7 +377,7 @@ class CredentialStore:
 
         metadata = StoredCredential(
             provider=provider,
-            key_name=key_name or provider.value,
+            key_name=key_name or provider,
             created_at=existing_metadata.created_at if existing_metadata else now,
             updated_at=now,
             source=source,
@@ -369,13 +392,13 @@ class CredentialStore:
 
         try:
             await asyncio.to_thread(_store)
-            _logger.info("credentials_stored", provider=provider.value, store="keyring")
-        except (OSError, KeyError, ValueError, _KeyringError) as e:
-            _logger.warning("credential_store_failed", provider=provider.value, error=str(e), exc_info=True)
+            _logger.info("credentials_stored", provider=provider, store="keyring")
+        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError) as e:
+            _logger.warning("credential_store_failed", provider=provider, error=str(e), exc_info=True)
             msg = f"Failed to store credentials: {e}"
             raise CredentialStoreError(msg) from e
 
-    async def _get_metadata(self, provider: ProviderName) -> StoredCredential | None:
+    async def _get_metadata(self, provider: str) -> StoredCredential | None:
         """Get credential metadata from keyring.
 
         Args:
@@ -402,11 +425,11 @@ class CredentialStore:
         try:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_metadata(data, provider) if data else None
-        except (OSError, KeyError, ValueError, _KeyringError):
-            _logger.debug("metadata_get_failed", provider=provider.value, exc_info=True)
+        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError):
+            _logger.debug("metadata_get_failed", provider=provider, exc_info=True)
             return None
 
-    async def _get_unlocked(self, provider: ProviderName) -> ProviderCredentials | None:
+    async def _get_unlocked(self, provider: str) -> ProviderCredentials | None:
         """Get credentials without acquiring ``self._lock``.
 
         This private helper performs the actual keyring read and env
@@ -425,10 +448,10 @@ class CredentialStore:
             if creds is not None and creds.api_key:
                 return creds
 
-        _logger.debug("credential_fallback_to_env", provider=provider.value)
+        _logger.debug("credential_fallback_to_env", provider=provider)
         return await asyncio.to_thread(self._fallback_loader.get_credentials, provider)
 
-    async def get(self, provider: ProviderName) -> ProviderCredentials | None:
+    async def get(self, provider: str) -> ProviderCredentials | None:
         """Get credentials for a provider.
 
         Checks keyring first, then falls back to env loader.
@@ -439,18 +462,18 @@ class CredentialStore:
         Returns:
             ProviderCredentials | None: ProviderCredentials if found, None otherwise.
         """
-        _logger.debug("credential_get_started", provider=provider.value, key_id=self._get_keyring_key(provider))
+        _logger.debug("credential_get_started", provider=provider, key_id=self._get_keyring_key(provider))
         async with self._lock:
             result = await self._get_unlocked(provider)
         _logger.debug(
             "credential_get_completed",
-            provider=provider.value,
+            provider=provider,
             key_id=self._get_keyring_key(provider),
             credential_found=result is not None and bool(result.api_key),
         )
         return result
 
-    async def get_or_raise(self, provider: ProviderName) -> ProviderCredentials:
+    async def get_or_raise(self, provider: str) -> ProviderCredentials:
         """Get credentials for a provider, raising if not found.
 
         Args:
@@ -464,14 +487,14 @@ class CredentialStore:
         """
         creds = await self.get(provider)
         if creds is None:
-            _logger.warning("credential_get_or_raise_missing", provider=provider.value)
-            msg = f"No credentials found for {provider.value}"
+            _logger.warning("credential_get_or_raise_missing", provider=provider)
+            msg = f"No credentials found for {provider}"
             raise CredentialNotFoundError(msg)
         return creds
 
     async def set(
         self,
-        provider: ProviderName,
+        provider: str,
         credentials: ProviderCredentials,
         key_name: str | None = None,
         source: CredentialSource = CredentialSource.KEYRING,
@@ -489,12 +512,12 @@ class CredentialStore:
         """
         _logger.debug(
             "credential_set_started",
-            provider=provider.value,
+            provider=provider,
             key_id=self._get_keyring_key(provider),
             source=source.value,
         )
         if not self.keyring_available:
-            _logger.warning("credential_set_keyring_unavailable", provider=provider.value)
+            _logger.warning("credential_set_keyring_unavailable", provider=provider)
             msg = (
                 "Keyring is not available. Install keyring package and ensure "
                 "a backend is available (Windows Credential Manager, macOS Keychain, etc.)"
@@ -504,7 +527,7 @@ class CredentialStore:
         async with self._lock:
             await self._set_to_keyring(provider, credentials, key_name, source)
 
-    async def delete(self, provider: ProviderName) -> bool:
+    async def delete(self, provider: str) -> bool:
         """Delete credentials for a provider from keyring.
 
         Args:
@@ -517,14 +540,14 @@ class CredentialStore:
             KeyringUnavailableError: If keyring is not available.
         """
         if not self.keyring_available or self._keyring is None:
-            _logger.warning("credential_delete_keyring_unavailable", provider=provider.value)
+            _logger.warning("credential_delete_keyring_unavailable", provider=provider)
             msg = "Keyring is not available"
             raise KeyringUnavailableError(msg)
 
         key = self._get_keyring_key(provider)
         metadata_key = f"{key}{self.METADATA_KEY}"
         keyring = self._keyring
-        _logger.info("credential_delete_started", provider=provider.value, key_id=key)
+        _logger.info("credential_delete_started", provider=provider, key_id=key)
 
         def _delete() -> bool:
             """Remove credential and metadata entries for the provider keys.
@@ -535,19 +558,19 @@ class CredentialStore:
             """
             try:
                 keyring.delete_password(self.SERVICE_NAME, key)
-            except (OSError, KeyError, ValueError, _KeyringError):
-                _logger.exception("keyring_delete_credential_failed", provider=provider.value)
+            except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError):
+                _logger.exception("keyring_delete_credential_failed", provider=provider)
                 return False
             try:
                 keyring.delete_password(self.SERVICE_NAME, metadata_key)
-            except (OSError, KeyError, ValueError, _KeyringError):
-                _logger.exception("keyring_delete_metadata_failed", provider=provider.value)
+            except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError):
+                _logger.exception("keyring_delete_metadata_failed", provider=provider)
             return True
 
         async with self._lock:
             result = await asyncio.to_thread(_delete)
             if result:
-                _logger.info("credentials_deleted", provider=provider.value, key_id=key, store="keyring")
+                _logger.info("credentials_deleted", provider=provider, key_id=key, store="keyring")
             return result
 
     async def list_providers(self) -> list[StoredCredential]:
@@ -560,7 +583,7 @@ class CredentialStore:
         results: list[StoredCredential] = []
 
         async with self._lock:
-            for provider in ProviderName:
+            for provider in provider_ids.BUILTIN_PROVIDER_IDS:
                 creds = await self._get_unlocked(provider)
                 if creds is not None and creds.api_key:
                     metadata = await self._get_metadata(provider)
@@ -571,7 +594,7 @@ class CredentialStore:
                         results.append(
                             StoredCredential(
                                 provider=provider,
-                                key_name=provider.value,
+                                key_name=provider,
                                 created_at=now,
                                 updated_at=now,
                                 source=CredentialSource.ENV_FILE,
@@ -583,10 +606,10 @@ class CredentialStore:
 
     async def migrate_from_env(
         self,
-        providers: list[ProviderName] | None = None,
+        providers: list[str] | None = None,
         *,
         overwrite: bool = False,
-    ) -> dict[ProviderName, bool]:
+    ) -> dict[str, bool]:
         """Migrate credentials from .env file to keyring.
 
         Args:
@@ -594,14 +617,14 @@ class CredentialStore:
             overwrite: Whether to overwrite existing keyring credentials.
 
         Returns:
-            dict[ProviderName, bool]: Dict mapping provider to success status.
+            dict[str, bool]: Dict mapping provider to success status.
 
         Raises:
             KeyringUnavailableError: If keyring is not available.
         """
         _logger.debug(
             "credential_migration_started",
-            provider_count=len(providers) if providers is not None else len(list(ProviderName)),
+            provider_count=len(providers) if providers is not None else len(provider_ids.BUILTIN_PROVIDER_IDS),
             overwrite=overwrite,
         )
         if not self.keyring_available:
@@ -609,8 +632,8 @@ class CredentialStore:
             msg = "Keyring is not available for migration"
             raise KeyringUnavailableError(msg)
 
-        target_providers = providers or list(ProviderName)
-        results: dict[ProviderName, bool] = {}
+        target_providers = providers or list(provider_ids.BUILTIN_PROVIDER_IDS)
+        results: dict[str, bool] = {}
 
         async with self._lock:
             for provider in target_providers:
@@ -622,7 +645,7 @@ class CredentialStore:
                 if not overwrite:
                     existing = await self._get_from_keyring(provider)
                     if existing is not None and existing.api_key:
-                        _logger.info("credential_migration_skipped", provider=provider.value, reason="exists")
+                        _logger.info("credential_migration_skipped", provider=provider, reason="exists")
                         results[provider] = True
                         continue
 
@@ -633,51 +656,39 @@ class CredentialStore:
                         source=CredentialSource.ENV_FILE,
                     )
                     results[provider] = True
-                    _logger.info("credentials_migrated", provider=provider.value, source="env", destination="keyring")
-                except (OSError, KeyError, ValueError, _KeyringError, CredentialStoreError) as exc:
-                    _logger.warning("credential_migration_failed", provider=provider.value, error=str(exc), exc_info=True)
+                    _logger.info("credentials_migrated", provider=provider, source="env", destination="keyring")
+                except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError, CredentialStoreError) as exc:
+                    _logger.warning("credential_migration_failed", provider=provider, error=str(exc), exc_info=True)
                     results[provider] = False
 
         return results
 
-    async def validate(self, provider: ProviderName) -> tuple[bool, str | None]:
-        """Validate credentials exist and are properly formatted.
+    async def validate(self, provider: str) -> tuple[bool, str | None]:
+        """Validate that a credential exists and is usable.
+
+        Shape validation is deliberately minimal and delegates to
+        :func:`~intellicrack.credentials.env_loader.validate_key_format`. The
+        old rule rejected a key that did not start with the prefix the
+        built-in provider of that name uses, which was wrong as soon as a
+        provider id could name any endpoint: a gateway in front of Anthropic,
+        an Azure deployment or a LiteLLM proxy all issue their own keys, and
+        refusing them made the endpoint unusable for a cosmetic reason.
 
         Args:
-            provider: The provider to validate.
+            provider: The provider instance to validate.
 
         Returns:
             tuple[bool, str | None]: Tuple of (is_valid, error_message).
         """
-        _logger.debug("credentials_validate_started", provider=provider.value)
+        _logger.debug("credentials_validate_started", provider=provider)
         creds = await self.get(provider)
         if creds is None or not creds.api_key:
-            _logger.debug("credentials_validate_no_credentials", provider=provider.value)
-            return False, f"No credentials found for {provider.value}"
+            _logger.debug("credentials_validate_no_credentials", provider=provider)
+            return False, f"No credentials found for {provider}"
+        problem = validate_key_format(provider, creds.api_key)
+        return (problem is None), problem
 
-        if provider == ProviderName.ANTHROPIC:
-            if not creds.api_key.startswith("sk-ant-"):
-                return False, "Anthropic API key should start with 'sk-ant-'"
-
-        elif provider == ProviderName.OPENAI:
-            if not creds.api_key.startswith("sk-"):
-                return False, "OpenAI API key should start with 'sk-'"
-
-        elif provider == ProviderName.OPENROUTER and not creds.api_key.startswith("sk-or-"):
-            return False, "OpenRouter API key should start with 'sk-or-'"
-
-        elif provider == ProviderName.GOOGLE and not creds.api_key.startswith("AIza"):
-            return False, "Google API key should start with 'AIza'"
-
-        elif provider == ProviderName.GROK and not creds.api_key.startswith("xai-"):
-            return False, "Grok API key should start with 'xai-'"
-
-        elif provider == ProviderName.HUGGINGFACE and not creds.api_key.startswith("hf_"):
-            return False, "HuggingFace API token should start with 'hf_'"
-
-        return True, None
-
-    async def get_source(self, provider: ProviderName) -> CredentialSource | None:
+    async def get_source(self, provider: str) -> CredentialSource | None:
         """Get the source of credentials for a provider.
 
         Args:
@@ -686,24 +697,24 @@ class CredentialStore:
         Returns:
             CredentialSource | None: CredentialSource or None if no credentials found.
         """
-        _logger.debug("credentials_get_source_started", provider=provider.value)
+        _logger.debug("credentials_get_source_started", provider=provider)
         if self.keyring_available:
             keyring_creds = await self._get_from_keyring(provider)
             if keyring_creds is not None and keyring_creds.api_key:
                 metadata = await self._get_metadata(provider)
                 source = metadata.source if metadata is not None else CredentialSource.KEYRING
-                _logger.debug("credentials_get_source_completed", provider=provider.value, source=str(source))
+                _logger.debug("credentials_get_source_completed", provider=provider, source=str(source))
                 return source
         env_creds = await asyncio.to_thread(self._fallback_loader.get_credentials, provider)
         if env_creds is not None and env_creds.api_key:
             is_valid, source_desc = await asyncio.to_thread(self._fallback_loader.validate_credentials, provider)
             if is_valid and source_desc and "environment" in source_desc.lower():
-                _logger.debug("credentials_get_source_completed", provider=provider.value, source="env_var")
+                _logger.debug("credentials_get_source_completed", provider=provider, source="env_var")
                 return CredentialSource.ENV_VAR
-            _logger.debug("credentials_get_source_completed", provider=provider.value, source="env_file")
+            _logger.debug("credentials_get_source_completed", provider=provider, source="env_file")
             return CredentialSource.ENV_FILE
 
-        _logger.debug("credentials_get_source_completed", provider=provider.value, source="unset")
+        _logger.debug("credentials_get_source_completed", provider=provider, source="unset")
         return None
 
 
@@ -740,7 +751,7 @@ def get_credential_store() -> CredentialStore:
     return _store_holder.instance
 
 
-async def get_credentials(provider: ProviderName) -> ProviderCredentials | None:
+async def get_credentials(provider: str) -> ProviderCredentials | None:
     """Get credentials for a provider using the global store.
 
     Args:

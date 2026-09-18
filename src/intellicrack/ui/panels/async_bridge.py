@@ -29,6 +29,7 @@ __all__ = [
     "WORKER_DEFAULT_EXCEPTIONS",
     "BridgeCallWorker",
     "GenericCallableWorker",
+    "RetainedWorker",
     "cancel_pending_main_loop_tasks",
     "discard_worker",
     "drain_bridge_workers",
@@ -132,7 +133,7 @@ def _retain_worker(worker: QThread) -> None:
         _WorkerRegistry.workers.add(worker)
 
 
-class _RetainedWorker(QThread):
+class RetainedWorker(QThread):
     """``QThread`` base that pins itself against premature GC on ``start``.
 
     Subclasses are retained in :class:`_WorkerRegistry` for the lifetime of their OS thread, preventing the ``QThread: Destroyed while
@@ -149,6 +150,10 @@ class _RetainedWorker(QThread):
         """
         _retain_worker(self)
         super().start(priority)
+
+
+_RetainedWorker = RetainedWorker
+"""Original private name of :class:`RetainedWorker`, kept for existing references."""
 
 
 _LOOP_READY_TIMEOUT: float = 2.0

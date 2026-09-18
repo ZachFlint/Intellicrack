@@ -31,7 +31,8 @@ import pytest
 from intellicrack.core.orchestrator import Orchestrator, OrchestratorConfig
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import Message, ModelInfo, ProviderName
+from intellicrack.core.types import Message, ModelInfo
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.registry import ProviderRegistry
 
@@ -81,13 +82,13 @@ class _BlockingProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The advertised provider name.
 
         Returns:
-            ProviderName: The OpenAI provider identity.
+            str: The OpenAI provider identity.
         """
-        return ProviderName.OPENAI
+        return provider_ids.OPENAI
 
     @override
     async def connect(self, credentials: ProviderCredentials) -> None:
@@ -110,7 +111,7 @@ class _BlockingProvider(LLMProviderBase):
             ModelInfo(
                 id=_MODEL_ID,
                 name=_MODEL_ID,
-                provider=ProviderName.OPENAI,
+                provider=provider_ids.OPENAI,
                 context_window=_CONTEXT_WINDOW,
                 supports_tools=True,
                 supports_vision=False,
@@ -291,7 +292,7 @@ async def test_cancelled_turn_settles_state_and_clears_flag(tmp_path: Path) -> N
     """
     provider = _BlockingProvider()
     orch = _build_orchestrator(tmp_path, provider)
-    await orch.start_session(provider=ProviderName.OPENAI, model=_MODEL_ID)
+    await orch.start_session(provider=provider_ids.OPENAI, model=_MODEL_ID)
 
     turn = asyncio.create_task(orch.process_user_input("hold the line"))
     await asyncio.wait_for(provider.entered.wait(), timeout=_ENTER_TIMEOUT_S)

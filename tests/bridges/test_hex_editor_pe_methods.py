@@ -128,7 +128,7 @@ class TestToolDefinitionsRegistered:
         Args:
             bridge: HexEditorBridge fixture.
         """
-        assert bridge.tool_definition.tool_name is ToolName.HEX_EDITOR
+        assert bridge.tool_definition.tool_name == ToolName.HEX_EDITOR.value
 
         registry = ToolRegistry(tools_dir=Path())
         registry.register_bridge(ToolName.HEX_EDITOR, bridge)

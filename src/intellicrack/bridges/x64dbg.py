@@ -1163,7 +1163,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
             ToolDefinition: ToolDefinition with all available functions.
         """
         return ToolDefinition(
-            tool_name=ToolName.X64DBG,
+            tool_name=ToolName.X64DBG.value,
             description="x64dbg debugger - breakpoints, stepping, register/memory manipulation",
             functions=[
                 ToolFunction(
