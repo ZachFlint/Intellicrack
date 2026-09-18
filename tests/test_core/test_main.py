@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import importlib
 import sqlite3
+import threading
 import time
 from collections.abc import Callable
 from contextlib import AbstractContextManager
@@ -25,12 +26,14 @@ from typing import TYPE_CHECKING, cast
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Generator
     from pathlib import Path
 
     from PyQt6.QtWidgets import QApplication
     from structlog.stdlib import BoundLogger
 
 import pytest
+import pytest_asyncio
 
 from intellicrack.core.config import Config, get_config_dir
 from intellicrack.core.logging import get_logger
@@ -40,6 +43,7 @@ from intellicrack.core.template_manager import TemplateManager
 from intellicrack.main import init_script_engine, init_template_manager
 from intellicrack.providers import ids as provider_ids
 from intellicrack.ui.panels.async_bridge import BridgeCallWorker, ensure_loop
+from tests._helpers.thread_leaks import find_leaked_background_threads
 
 
 _drain_and_stop_bridge_loop = cast(
@@ -75,6 +79,46 @@ def _store_connection(store: SessionStore) -> AbstractContextManager[sqlite3.Con
 DEFAULT_SAVE_INTERVAL = 300
 CUSTOM_SAVE_INTERVAL = 60
 EXPECTED_MIN_SESSION_COUNT = 2
+
+_AUTOSAVE_LEAK_GRACE_SECONDS = 5.0
+_AUTOSAVE_LEAK_POLL_SECONDS = 0.1
+
+
+@pytest.fixture(autouse=True, scope="module")
+def no_leaked_autosave_threads() -> Generator[None]:
+    """Fail this module if a SessionManager fixture leaves an auto-save worker running.
+
+    The ``manager`` fixture starts a ``session-autosave`` daemon worker through
+    ``SessionManager.create`` and must stop it by closing the manager on
+    teardown. This module-scoped guard snapshots the threads alive when the
+    module begins and, after its tests finish, asserts that no ``session-autosave``
+    worker started here is still running, so removing the fixture's
+    ``await session_manager.close()`` fails loudly instead of silently leaking a
+    daemon thread. The worker is a daemon and does not block interpreter
+    shutdown, so the session-wide non-daemon guard in ``tests/conftest.py`` does
+    not catch it; scoping to this module keeps the check from flagging auto-save
+    workers left running by unrelated modules.
+
+    Yields:
+        None: Yields control to this module's tests.
+
+    Raises:
+        AssertionError: If a ``session-autosave`` worker started by this module's
+            tests is still alive after a bounded grace period.
+    """
+    baseline = frozenset(thread.ident for thread in threading.enumerate() if thread.ident is not None)
+    yield
+    deadline = time.monotonic() + _AUTOSAVE_LEAK_GRACE_SECONDS
+    leaked = find_leaked_background_threads(baseline, managed_daemon_prefixes=("session-autosave",))
+    while leaked and time.monotonic() < deadline:
+        time.sleep(_AUTOSAVE_LEAK_POLL_SECONDS)
+        leaked = find_leaked_background_threads(baseline, managed_daemon_prefixes=("session-autosave",))
+    if leaked:
+        message = (
+            f"{len(leaked)} session-autosave worker(s) leaked from this module's tests; "
+            "the manager fixture must close its SessionManager on teardown"
+        )
+        raise AssertionError(message)
 
 
 class TestSessionStoreInitialization:
@@ -267,18 +311,29 @@ class TestSessionManagerOperations:
     """Test SessionManager CRUD operations."""
 
     @staticmethod
-    @pytest.fixture
-    def manager(tmp_path: Path) -> SessionManager:
-        """Create a SessionManager with temporary database.
+    @pytest_asyncio.fixture
+    async def manager(tmp_path: Path) -> AsyncGenerator[SessionManager]:
+        """Create a SessionManager with temporary database, stopped after use.
+
+        The manager is closed on teardown so its auto-save worker thread is
+        stopped rather than left running past the test. A leaked auto-save
+        thread does not itself block interpreter shutdown (it is a daemon), but
+        leaving background workers running is the class of defect that produced
+        the whole-suite shutdown hang, so fixtures clean up after themselves.
 
         Args:
             tmp_path: Pytest temporary directory.
 
-        Returns:
-            SessionManager: A session manager with a temporary database.
+        Yields:
+            SessionManager: A session manager with a temporary database whose
+            auto-save worker is stopped on teardown.
         """
         store = SessionStore(tmp_path / "sessions.db")
-        return SessionManager(store)
+        session_manager = SessionManager(store)
+        try:
+            yield session_manager
+        finally:
+            await session_manager.close()
 
     @staticmethod
     @pytest.mark.asyncio
@@ -318,12 +373,14 @@ class TestSessionManagerOperations:
 
         new_store = SessionStore(manager.store.db_path)
         new_manager = SessionManager(new_store)
+        try:
+            loaded = await new_manager.load(session_id)
 
-        loaded = await new_manager.load(session_id)
-
-        assert loaded is not None
-        assert loaded.name == "Persistent Session"
-        assert loaded.provider == provider_ids.OPENAI
+            assert loaded is not None
+            assert loaded.name == "Persistent Session"
+            assert loaded.provider == provider_ids.OPENAI
+        finally:
+            await new_manager.close()
 
     @staticmethod
     @pytest.mark.asyncio
