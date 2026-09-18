@@ -20,7 +20,7 @@ all done together or not at all.
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.session import McpServerState
@@ -39,6 +39,7 @@ from intellicrack.ui.mcp_config import McpConfigDialog
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import httpx2
     from PyQt6.QtWidgets import QWidget
 
     from intellicrack.core.orchestrator import Orchestrator
@@ -139,7 +140,7 @@ class McpService:
         """
         return self._approvals
 
-    def _build_auth(self, config: McpServerConfig) -> Any:  # noqa: ANN401
+    def _build_auth(self, config: McpServerConfig) -> httpx2.Auth | None:
         """Build the authentication handler for one HTTP server.
 
         OAuth is attached only when the server carries no ``Authorization``
@@ -151,8 +152,9 @@ class McpService:
             config: The server, with its headers already resolved.
 
         Returns:
-            Any: An ``httpx2`` auth handler, or ``None`` when the server
-            authenticates some other way or not at all.
+            httpx2.Auth | None: The handler to sign requests with, or
+            ``None`` when the server authenticates some other way or not at
+            all.
         """
         spec = config.http
         if spec is None:

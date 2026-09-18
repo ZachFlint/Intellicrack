@@ -30,11 +30,12 @@ import enum
 import os
 import threading
 from collections import deque
+from collections.abc import Callable
 from contextlib import ExitStack, asynccontextmanager, suppress
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, TextIO
 
 import psutil
 from mcp import Client
@@ -52,7 +53,7 @@ from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, op
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable
+    from collections.abc import AsyncIterator
 
     import httpx2
     from mcp.client.session import ElicitationFnT
@@ -65,6 +66,9 @@ if TYPE_CHECKING:
 
 _logger = get_logger(__name__)
 
+
+AuthFactory = Callable[["McpServerConfig"], "httpx2.Auth | None"]
+"""Builds the authentication handler for one HTTP server, or ``None``."""
 
 CLIENT_NAME: Final[str] = "Intellicrack"
 """Client identity sent to every server during the handshake."""
@@ -236,16 +240,16 @@ class _StderrCapture:
     """
 
     lines: deque[str] = field(default_factory=lambda: deque(maxlen=STDERR_RING_LINES))
-    _write_handle: Any = field(default=None, repr=False)
-    _read_handle: Any = field(default=None, repr=False)
+    _write_handle: TextIO | None = field(default=None, repr=False)
+    _read_handle: TextIO | None = field(default=None, repr=False)
     _thread: threading.Thread | None = field(default=None, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
-    def open(self) -> Any:  # noqa: ANN401
+    def open(self) -> TextIO:
         """Create the pipe and start draining it.
 
         Returns:
-            Any: The writable end, to be passed to the SDK as ``errlog``.
+            TextIO: The writable end, to be passed to the SDK as ``errlog``.
 
         Raises:
             McpConnectionError: If the pipe cannot be created.
@@ -345,7 +349,7 @@ class McpConnection:
         client_info: Implementation | None = None,
         elicitation_callback: ElicitationFnT | None = None,
         consent: McpConsentGate | None = None,
-        auth_factory: Callable[[McpServerConfig], Any] | None = None,
+        auth_factory: AuthFactory | None = None,
     ) -> None:
         """Initialize the connection.
 
@@ -625,9 +629,7 @@ class McpConnection:
             sandbox=self._config.sandbox,
             request_timeout_s=self._config.request_timeout_s,
         )
-        auth: httpx2.Auth | None = None
-        if self._auth_factory is not None:
-            auth = await _maybe_await(self._auth_factory(resolved))
+        auth = self._auth_factory(resolved) if self._auth_factory is not None else None
 
         http_spec = resolved.http
         if http_spec is None:
@@ -879,14 +881,27 @@ class McpConnection:
             message = f"server '{self.server_id}': {self._last_error}"
             raise McpConnectionError(message) from exc
 
-        if self._health is not McpHealth.READY:
-            failure = self._failure
-            detail = self._last_error or "the server did not complete its handshake"
+        health, reported, failure = self._settled_outcome()
+        if health is not McpHealth.READY:
+            detail = reported or "the server did not complete its handshake"
             await self.disconnect()
             if isinstance(failure, McpConsentDeniedError):
                 raise failure
             message = f"server '{self.server_id}': {detail}"
             raise McpConnectionError(message) from failure
+
+    def _settled_outcome(self) -> tuple[McpHealth, str | None, BaseException | None]:
+        """Read the state the supervisor task settled on.
+
+        The supervisor runs as a separate task, so these attributes change
+        underneath :meth:`connect` while it waits. Reading them together,
+        once, through one call keeps the three consistent with each other.
+
+        Returns:
+            tuple[McpHealth, str | None, BaseException | None]: The health,
+            the reported error text, and the exception behind it.
+        """
+        return self._health, self._last_error, self._failure
 
     async def disconnect(self) -> None:
         """Tear the connection down, leaving no child process behind.
@@ -1091,20 +1106,6 @@ def _process_matches(pid: int, expected_stem: str) -> bool:
     return False
 
 
-async def _maybe_await(value: object) -> Any:  # noqa: ANN401
-    """Await a value when it is awaitable, otherwise return it unchanged.
-
-    Args:
-        value: The value produced by a factory that may be sync or async.
-
-    Returns:
-        Any: The resolved value.
-    """
-    if asyncio.iscoroutine(value):
-        return await value
-    return value
-
-
 class _StreamPairTransport:
     """Adapts an already-open stream pair to the SDK's transport protocol.
 
@@ -1154,7 +1155,7 @@ class McpConnectionManager:
         consent: McpConsentGate,
         *,
         elicitation_factory: Callable[[str], ElicitationFnT] | None = None,
-        auth_factory: Callable[[McpServerConfig], Any] | None = None,
+        auth_factory: AuthFactory | None = None,
     ) -> None:
         """Initialize the manager.
 
