@@ -25,6 +25,8 @@ Sandbox isolation itself is handled by the Docker-based harness at
 
 from __future__ import annotations
 
+import threading
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -37,6 +39,7 @@ from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.xpu_utils import is_arc_b580, is_xpu_available
+from tests._helpers import frida_isolation
 from tests._helpers.host_native import (
     HOST_NATIVE_MARKER,
     deselect_host_native,
@@ -60,6 +63,7 @@ from tests._helpers.real_binaries import (
     resolve_real_pe_dlls,
     resolve_real_pe_exe,
 )
+from tests._helpers.thread_leaks import find_leaked_background_threads
 
 
 if TYPE_CHECKING:
@@ -83,6 +87,9 @@ _HOST_NATIVE_MARKER_HELP = (
     "elevation); executed only by the host-native pass "
     "(scripts.host_native_tests), and deselected inside the container."
 )
+
+_LEAK_GUARD_GRACE_SECONDS = 10.0
+_LEAK_GUARD_POLL_SECONDS = 0.25
 
 _logger = get_logger("tests.conftest")
 
@@ -121,6 +128,7 @@ def pytest_configure(config: pytest.Config) -> None:
         f"{_SPAWNS_PROCESS_MARKER}: test spawns external OS processes; runs only inside the Docker sandbox",
     )
     config.addinivalue_line("markers", _HOST_NATIVE_MARKER_HELP)
+    frida_isolation.install(config)
 
 
 def pytest_collection_modifyitems(
@@ -193,6 +201,53 @@ def process_orphan_killer() -> Generator[None]:
                 sandboxed=is_sandboxed(),
                 sandbox_env=SANDBOX_ENV_VAR,
             )
+
+
+@pytest.fixture(autouse=True, scope="session")
+def no_leaked_background_threads() -> Generator[None]:
+    """Fail the session when a test leaks a background thread that blocks shutdown.
+
+    A non-daemon thread left running by a test or fixture blocks
+    ``threading._shutdown`` at interpreter exit, which is exactly the failure
+    that made the non-UI sandbox suite print its summary and then hang until the
+    container's hard timeout killed it (exit 124). The canonical instance was a
+    ``NamedPipeClient`` reader whose ``asyncio`` default-executor worker was
+    orphaned because the client was never closed, which then left
+    ``loop.shutdown_default_executor``'s non-daemon ``_do_shutdown`` thread
+    joining that worker forever.
+
+    The guard records the threads alive at session start and, once every test
+    has finished, waits a bounded grace period for stragglers to exit before
+    asserting that no new non-daemon thread is still running. It only
+    *enumerates* threads and never joins them, so the guard itself can never
+    hang. Daemon workers are deliberately ignored: they cannot block interpreter
+    shutdown, so they are not the cause of the exit-124 hang this guard exists to
+    prevent (a per-module guard covers the ``session-autosave`` daemon worker
+    where a fixture is expected to stop it).
+
+    Yields:
+        None: Yields control to the whole test session.
+
+    Raises:
+        AssertionError: If any thread started during the session is still alive
+            after the grace period and is non-daemon or a managed daemon worker.
+    """
+    baseline = frozenset(thread.ident for thread in threading.enumerate() if thread.ident is not None)
+    yield
+    deadline = time.monotonic() + _LEAK_GUARD_GRACE_SECONDS
+    leaked = find_leaked_background_threads(baseline)
+    while leaked and time.monotonic() < deadline:
+        time.sleep(_LEAK_GUARD_POLL_SECONDS)
+        leaked = find_leaked_background_threads(baseline)
+    if leaked:
+        detail = ", ".join(f"{thread.name!r}(daemon={thread.daemon})" for thread in leaked)
+        message = (
+            f"{len(leaked)} non-daemon thread(s) survived the test session and would block interpreter "
+            f"shutdown (the exit-124 whole-suite hang): {detail}. A test or fixture left a non-daemon "
+            f"worker running -- for example an asyncio default-executor thread orphaned by a client that "
+            f"was never closed. Join or close it in the owning fixture's teardown."
+        )
+        raise AssertionError(message)
 
 
 @pytest.fixture(autouse=True)
