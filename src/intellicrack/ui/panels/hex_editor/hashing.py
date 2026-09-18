@@ -22,7 +22,13 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_warning
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, discard_worker, run_bridge_coroutine, worker_is_running
+from intellicrack.ui.panels.async_bridge import (
+    GenericCallableWorker,
+    discard_worker,
+    run_bridge_coroutine,
+    run_callable_async,
+    worker_is_running,
+)
 from intellicrack.ui.panels.hex_editor.widgets import CustomCrcDialog
 
 
@@ -245,6 +251,9 @@ class HashingMixin:
     ) -> GenericCallableWorker | None:
         """Start a background ``GenericCallableWorker`` unless one is already running.
 
+        Dispatch goes through :func:`run_callable_async`, so the worker is owned by this mixin's widget without being its Qt child: a
+        hash that is still streaming when the editor closes is neither destroyed mid-flight nor delivered into a deleted widget.
+
         Args:
             existing: The previously tracked worker for this operation category, if any.
             func: Callable executed on the background thread.
@@ -261,12 +270,8 @@ class HashingMixin:
             return None
         discard_worker(existing)
 
-        parent = self if isinstance(self, QWidget) else None
-        worker = GenericCallableWorker(func, *args, parent=parent)
-        _: object = worker.call_finished.connect(on_success)
-        _ = worker.call_error.connect(on_error)
-        worker.start()
-        return worker
+        owner = self if isinstance(self, QWidget) else None
+        return run_callable_async(func, *args, on_success=on_success, on_error=on_error, parent=owner)
 
     def _on_custom_crc(self) -> None:
         """Open the custom CRC dialog wired to the streaming worker.

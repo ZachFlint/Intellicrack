@@ -35,9 +35,11 @@ __all__ = [
     "discard_worker",
     "drain_bridge_workers",
     "drain_bridge_workers_for",
+    "guarded_delivery",
     "run_bridge_coroutine",
     "run_bridge_coroutine_async",
     "run_bridge_coroutine_logged",
+    "run_callable_async",
     "shutdown_bridge_loop",
     "worker_is_running",
 ]
@@ -391,6 +393,7 @@ class GenericCallableWorker(_RetainedWorker):
         *args: object,
         exceptions: tuple[type[BaseException], ...] = WORKER_DEFAULT_EXCEPTIONS,
         parent: QObject | None = None,
+        owner: QObject | None = None,
         **kwargs: object,
     ) -> None:
         """Initialise the worker with the callable and its arguments.
@@ -401,10 +404,12 @@ class GenericCallableWorker(_RetainedWorker):
             exceptions: Exception classes captured and re-emitted via
                 ``call_error``. Anything outside this tuple propagates and
                 terminates the thread.
-            parent: Parent QObject for Qt ownership and cleanup.
+            parent: Parent QObject for Qt ownership and cleanup. Dispatch sites leave this ``None`` and pass ``owner`` instead, so that
+                closing the widget cannot destroy a thread that is still running its callable.
+            owner: Widget that dispatched this worker, recorded for scoped draining and delivery guards without becoming its Qt parent.
             **kwargs: Keyword arguments forwarded to ``func``.
         """
-        super().__init__(parent)
+        super().__init__(parent, owner=owner)
         self._func: Callable[..., object] = func
         self._args: tuple[object, ...] = args
         self._kwargs: dict[str, Any] = dict(kwargs)
@@ -588,19 +593,29 @@ def cancel_pending_main_loop_tasks() -> int:
     return cancelled
 
 
-def _delivery_slot(
+def guarded_delivery(
     callback: Callable[[object], None],
     owner: QObject | None,
     kind: Literal["success", "error"],
 ) -> Callable[[object], None]:
     """Wrap ``callback`` so a late result never reaches a destroyed ``owner``.
 
-    A bridge worker outlives the widget that dispatched it (see :func:`run_bridge_coroutine_async`), so its result can arrive after that
-    widget's C++ object is gone: the panel was closed, the tab detached, or the dialog dismissed while the call was still in flight.
-    Invoking the caller's callback then raises ``RuntimeError: wrapped C/C++ object ... has been deleted`` out of a Qt slot, the same class
-    of late-callback crash the Cutter tabs and the log viewer already guard with ``sip.isdeleted``. The check runs at delivery time rather
-    than at dispatch because the owner can die at any point while the coroutine runs. Holding ``owner`` in the closure for as long as the
-    connection lives is what keeps ``sip.isdeleted`` answerable, instead of a probe against a garbage-collected wrapper.
+    A worker outlives the widget that dispatched it (see :func:`run_bridge_coroutine_async` and :func:`run_callable_async`), so its result
+    can arrive after that widget's C++ object is gone: the panel was closed, the tab detached, or the dialog dismissed while the call was
+    still in flight. Invoking the caller's callback then raises ``RuntimeError: wrapped C/C++ object ... has been deleted`` out of a Qt
+    slot, the same class of late-callback crash the Cutter tabs and the log viewer already guard with ``sip.isdeleted``. The check runs at
+    delivery time rather than at dispatch because the owner can die at any point while the work runs. Holding ``owner`` in the closure for
+    as long as the connection lives is what keeps ``sip.isdeleted`` answerable, instead of a probe against a garbage-collected wrapper.
+
+    Both dispatch helpers wrap their callbacks with this, so a call site needs it directly only when it builds its own worker - a site
+    whose callback must capture the worker instance it belongs to, for instance, since such a callback cannot be handed to a helper that
+    creates the worker itself.
+
+    The guard is what covers the callbacks Qt cannot help with. PyQt breaks a connection by itself when the slot is a bound method of a
+    ``QObject`` and that object's C++ side is destroyed, so those late results are simply never delivered. A closure, a ``functools.partial``
+    or any other plain callable has no receiver ``QObject`` to detect, so Qt delivers into it regardless and the call raises out of the slot.
+    Dispatch sites pass both kinds - a panel's own handler here, a closure capturing a PID or a worker instance there - so the helpers wrap
+    every callback rather than leaving each site to reason about which kind it has.
 
     Args:
         callback: Caller-supplied success or error callback.
@@ -617,7 +632,7 @@ def _delivery_slot(
         """Invoke the wrapped callback unless the owner has already been deleted.
 
         Args:
-            payload: Result object or exception emitted by the bridge worker.
+            payload: Result object or exception emitted by the worker.
         """
         if sip.isdeleted(owner):
             _logger.debug("bridge_result_dropped", delivery=kind, owner_type=type(owner).__name__)
@@ -643,7 +658,7 @@ def run_bridge_coroutine_async(
     ``QThread`` along with that caller - which is what closing a panel or dialog mid-call does - and Qt answers that with a native access
     violation that takes the whole process down with no Python traceback. The worker is therefore dispatched unparented and pinned in
     :class:`_WorkerRegistry` until its OS thread finishes, with ``parent`` recorded as its owner so :func:`drain_bridge_workers_for` still
-    finds it and so :func:`_delivery_slot` can drop a result that arrives once ``parent`` is gone.
+    finds it and so :func:`guarded_delivery` can drop a result that arrives once ``parent`` is gone.
 
     Args:
         coro: Coroutine to execute.
@@ -654,9 +669,9 @@ def run_bridge_coroutine_async(
     """
     worker = BridgeCallWorker(coro, owner=parent)
     if on_success is not None:
-        _ = worker.call_finished.connect(_delivery_slot(on_success, parent, "success"))
+        _ = worker.call_finished.connect(guarded_delivery(on_success, parent, "success"))
     if on_error is not None:
-        _ = worker.call_error.connect(_delivery_slot(on_error, parent, "error"))
+        _ = worker.call_error.connect(guarded_delivery(on_error, parent, "error"))
     worker.start()
 
 
@@ -725,6 +740,56 @@ def run_bridge_coroutine_logged(
             on_error(exc)
 
     run_bridge_coroutine_async(coro, _logged_success, _logged_error, parent)
+
+
+def run_callable_async(
+    func: Callable[..., object],
+    /,
+    *args: object,
+    on_success: Callable[[object], None] | None = None,
+    on_error: Callable[[object], None] | None = None,
+    parent: QObject | None = None,
+    exceptions: tuple[type[BaseException], ...] = WORKER_DEFAULT_EXCEPTIONS,
+    **kwargs: object,
+) -> GenericCallableWorker:
+    """Run a synchronous callable on a background thread without blocking the Qt main thread.
+
+    The synchronous counterpart to :func:`run_bridge_coroutine_async`, and it treats ``parent`` the same way: as the delivery context
+    rather than the worker's Qt parent. A worker parented to the calling widget is destroyed together with that widget, and Qt answers the
+    destruction of a still-running ``QThread`` with a native access violation that takes the process down with no Python traceback - which
+    is what closing a panel or dialog during a long entropy scan, signature scan or pattern search used to do. The worker is therefore
+    created unparented and pinned in :class:`_WorkerRegistry` until its OS thread finishes, with ``parent`` recorded as its owner so
+    :func:`drain_bridge_workers_for` still finds it, and both callbacks are wrapped by :func:`guarded_delivery` so a result arriving after
+    ``parent`` is gone is dropped instead of raising out of a Qt slot.
+
+    The started worker is returned because call sites track it: they gate a re-arm on :func:`worker_is_running`, ask it to stop through
+    ``requestInterruption``, or wait on it. Callbacks are connected before the thread starts, so a callable that finishes immediately
+    cannot emit into a worker with no connections yet.
+
+    Args:
+        func: Synchronous callable to execute on the background thread.
+        *args: Positional arguments forwarded to ``func``.
+        on_success: Callback invoked on the delivery context's thread with the callable's return value.
+        on_error: Callback invoked on the delivery context's thread with the raised exception.
+        parent: Widget whose lifetime bounds callback delivery and whose :func:`drain_bridge_workers_for` calls should find this worker.
+            ``None`` delivers unconditionally, which is what a non-widget caller (a plain dialog helper, a unit test) wants.
+        exceptions: Exception classes captured by the worker and re-emitted through ``on_error``. Anything outside this tuple propagates
+            and terminates the thread.
+        **kwargs: Keyword arguments forwarded to ``func``. They are re-bound through a ``dict[str, Any]`` before construction because the
+            worker's own ``exceptions`` / ``parent`` / ``owner`` keywords share this namespace; a call site that shadows one of those
+            names is a ``TypeError`` at construction, exactly as it is on the worker itself.
+
+    Returns:
+        GenericCallableWorker: The started worker, for callers that track or join it.
+    """
+    forwarded: dict[str, Any] = dict(kwargs)
+    worker = GenericCallableWorker(func, *args, exceptions=exceptions, owner=parent, **forwarded)
+    if on_success is not None:
+        _ = worker.call_finished.connect(guarded_delivery(on_success, parent, "success"))
+    if on_error is not None:
+        _ = worker.call_error.connect(guarded_delivery(on_error, parent, "error"))
+    worker.start()
+    return worker
 
 
 def drain_bridge_workers(timeout_ms: int = _WORKER_DRAIN_TIMEOUT_MS) -> int:
