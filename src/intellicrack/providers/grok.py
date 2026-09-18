@@ -175,7 +175,7 @@ class GrokProvider(LLMProviderBase):
             if "api key" in error_str or "incorrect" in error_str:
                 raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
             raise ProviderError(_ERR_API_REQUEST % e) from e
-        except (ConnectionError, TimeoutError, OSError) as e:
+        except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
             self.connected = False
             self.client = None
             self._logger.warning("grok_connect_failed", error=str(e))
