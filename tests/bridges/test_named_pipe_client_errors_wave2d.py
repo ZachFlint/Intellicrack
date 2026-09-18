@@ -312,8 +312,7 @@ async def connected_client(fake_pipe: _FakePipe) -> AsyncIterator[NamedPipeClien
     try:
         yield client
     finally:
-        if client.is_connected:
-            await client.close()
+        await client.close()
 
 
 # ---------------------------------------------------------------------------
@@ -570,8 +569,7 @@ async def test_reader_loop_response_missing_id_logs_warning(
         fake_pipe.push_server_frame({"type": "response", "result": "no-id-field"})
         ok = await asyncio.to_thread(sink.event_seen.wait, 3.0)
     finally:
-        if client.is_connected:
-            await client.close()
+        await client.close()
 
     assert ok, "pipe_response_missing_id was never logged within 3 seconds"
     matching = [r for r in sink.records if r[1] == "pipe_response_missing_id"]
@@ -617,8 +615,7 @@ async def test_reader_loop_no_waiter_for_id_logs_debug(
         fake_pipe.push_server_frame({"id": 77777, "type": "response", "data": "orphan"})
         ok = await asyncio.to_thread(sink.event_seen.wait, 3.0)
     finally:
-        if client.is_connected:
-            await client.close()
+        await client.close()
 
     assert ok, "pipe_response_no_waiter was never logged within 3 seconds"
     matching = [r for r in sink.records if r[1] == "pipe_response_no_waiter"]
