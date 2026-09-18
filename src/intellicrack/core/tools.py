@@ -44,6 +44,14 @@ list of :class:`~intellicrack.core.types.ToolResultPart` entries for one whose
 output is more than text.
 """
 
+ExternalDefinitionProvider = Callable[[], list[ToolDefinition]]
+"""Signature an external namespace's definition provider must satisfy.
+
+Called every time the registry is asked what tools exist, so a source whose
+catalog changes at runtime -- a server that added a tool, or one the operator
+just turned off -- is reflected on the next turn without re-registering.
+"""
+
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -76,14 +84,25 @@ class ExternalToolRegistry:
     def __init__(self) -> None:
         """Initialize an empty external-tool registry."""
         self._executors: dict[str, ExternalToolExecutor] = {}
+        self._definitions: dict[str, ExternalDefinitionProvider] = {}
 
-    def register(self, namespace: str, executor: ExternalToolExecutor) -> None:
-        """Register an executor for one external namespace.
+    def register(
+        self,
+        namespace: str,
+        executor: ExternalToolExecutor,
+        *,
+        definitions: ExternalDefinitionProvider | None = None,
+    ) -> None:
+        """Register an executor, and optionally a definition provider, for one namespace.
 
         Args:
-            namespace: The namespace the executor serves, e.g. ``mcp_files``.
+            namespace: The namespace the executor serves, e.g. ``mcp-files``.
             executor: Awaitable callable invoked with the canonical dotted
                 function name and the parsed arguments.
+            definitions: Callable returning this namespace's tool definitions,
+                consulted every time the registry is asked what exists. A
+                namespace registered without one can still be dispatched to,
+                it is simply never advertised.
 
         Raises:
             ToolError: If the namespace is empty, malformed, or reserved for
@@ -97,10 +116,12 @@ class ExternalToolRegistry:
             _logger.warning("external_tool_namespace_reserved", namespace=key)
             raise ToolError(_ERR_RESERVED_NAMESPACE, tool_name=key)
         self._executors[key] = executor
-        _logger.info("external_tool_namespace_registered", namespace=key)
+        if definitions is not None:
+            self._definitions[key] = definitions
+        _logger.info("external_tool_namespace_registered", namespace=key, advertises=definitions is not None)
 
     def unregister(self, namespace: str) -> bool:
-        """Remove an external namespace's executor.
+        """Remove an external namespace's executor and definition provider.
 
         Args:
             namespace: The namespace to remove.
@@ -108,10 +129,35 @@ class ExternalToolRegistry:
         Returns:
             bool: ``True`` when an executor was removed.
         """
-        removed = self._executors.pop(namespace.strip().lower(), None) is not None
+        key = namespace.strip().lower()
+        removed = self._executors.pop(key, None) is not None
+        _ = self._definitions.pop(key, None)
         if removed:
             _logger.info("external_tool_namespace_unregistered", namespace=namespace)
         return removed
+
+    def definitions(self) -> list[ToolDefinition]:
+        """Collect the tool definitions every registered namespace advertises.
+
+        Each provider is isolated: one that raises contributes nothing and the
+        rest still report, so a single unreachable server cannot empty the
+        catalog and leave the model with no tools at all.
+
+        Returns:
+            list[ToolDefinition]: Definitions in registration order.
+        """
+        collected: list[ToolDefinition] = []
+        for namespace, provider in self._definitions.items():
+            try:
+                collected.extend(provider())
+            except (OSError, RuntimeError, ValueError, TypeError, AttributeError, KeyError, ToolError) as exc:
+                _logger.warning(
+                    "external_tool_definitions_failed",
+                    namespace=namespace,
+                    error=str(exc),
+                    error_type=type(exc).__name__,
+                )
+        return collected
 
     def get(self, namespace: str) -> ExternalToolExecutor | None:
         """Look up the executor serving a namespace.
@@ -932,6 +978,10 @@ class ToolRegistry:
     def get_tool_definitions(self) -> list[ToolDefinition]:
         """Get tool definitions for LLM function calling.
 
+        Bridge definitions come first and externally-sourced ones follow, so
+        a provider that truncates a long tool list at its own cap drops
+        third-party tools before it drops an Intellicrack bridge.
+
         Returns:
             list[ToolDefinition]: List of ToolDefinition instances.
         """
@@ -943,6 +993,8 @@ class ToolRegistry:
                 definitions.append(bridge.tool_definition)
             except (AttributeError, RuntimeError, ToolError) as e:
                 _logger.warning("tool_definition_retrieval_failed", error=str(e))
+
+        definitions.extend(self._external_tools.definitions())
 
         function_count = sum(len(definition.functions) for definition in definitions)
         _logger.debug(
