@@ -46,6 +46,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.tool_source import sanitize_untrusted_text
+from intellicrack.ui.dialogs_helpers import plain_tooltip
 
 
 if TYPE_CHECKING:
@@ -147,6 +148,7 @@ class McpElicitationDialog(QDialog):
         layout.addWidget(header)
 
         message = QLabel(sanitize_untrusted_text(self._params.message, limit=_MESSAGE_MAX_CHARS))
+        message.setTextFormat(Qt.TextFormat.PlainText)
         message.setObjectName("mcp_elicit_message")
         message.setWordWrap(True)
         message.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -178,6 +180,7 @@ class McpElicitationDialog(QDialog):
 
         url = str(getattr(self._params, "url", ""))
         label = QLabel(f"It wants you to visit:\n{url}")
+        label.setTextFormat(Qt.TextFormat.PlainText)
         label.setObjectName("mcp_elicit_url")
         label.setWordWrap(True)
         label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -234,9 +237,10 @@ class McpElicitationDialog(QDialog):
         if name in self._required:
             caption = f"{caption} *"
         label = QLabel(caption)
+        label.setTextFormat(Qt.TextFormat.PlainText)
         description = definition.get("description")
         if isinstance(description, str) and description:
-            label.setToolTip(sanitize_untrusted_text(description, limit=_MESSAGE_MAX_CHARS))
+            label.setToolTip(plain_tooltip(sanitize_untrusted_text(description, limit=_MESSAGE_MAX_CHARS)))
         return label
 
     @staticmethod

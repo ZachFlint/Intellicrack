@@ -12,6 +12,12 @@ offering.
 
 Everything a server returns is still untrusted, so text arrives bounded and
 fenced, exactly as tool output does.
+
+Every request here catches transport failures and re-raises them as
+:class:`~intellicrack.mcp.errors.McpConnectionError`.
+:class:`asyncio.CancelledError` is deliberately not among them: it propagates
+untouched, so cancelling a caller mid-request unwinds rather than being
+recorded as a server fault.
 """
 
 from __future__ import annotations
@@ -125,7 +131,6 @@ async def list_resources(connection: McpConnection) -> list[ResourceSummary]:
     Raises:
         McpConnectionError: If the server is not connected, or the listing
             could not be retrieved.
-        asyncio.CancelledError: If the caller is cancelled mid-request.
     """
     client = _require_client(connection)
     summaries: list[ResourceSummary] = []
@@ -168,7 +173,6 @@ async def read_resource(connection: McpConnection, uri: str) -> list[ToolResultP
     Raises:
         McpConnectionError: If the server is not connected, or the read
             failed.
-        asyncio.CancelledError: If the caller is cancelled mid-request.
     """
     client = _require_client(connection)
     try:
@@ -207,7 +211,6 @@ async def list_prompts(connection: McpConnection) -> list[PromptSummary]:
     Raises:
         McpConnectionError: If the server is not connected, or the listing
             could not be retrieved.
-        asyncio.CancelledError: If the caller is cancelled mid-request.
     """
     client = _require_client(connection)
     summaries: list[PromptSummary] = []
@@ -286,7 +289,6 @@ async def get_prompt(connection: McpConnection, name: str, arguments: Mapping[st
     Raises:
         McpConnectionError: If the server is not connected, or the prompt
             could not be fetched.
-        asyncio.CancelledError: If the caller is cancelled mid-request.
     """
     client = _require_client(connection)
     try:

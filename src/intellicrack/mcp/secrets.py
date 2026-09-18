@@ -94,10 +94,9 @@ class McpSecretResolver:
             value. A value carrying no reference is returned unchanged
             without touching the keyring.
 
-        Raises:
-            McpConfigError: If a referenced input has no stored value.
-            McpAuthError: If the keyring is unusable, so no value could be
-                read.
+        A referenced input with no stored value propagates
+        :class:`McpConfigError`, and an unusable keyring propagates
+        :class:`McpAuthError`, both from :meth:`resolve_input`.
         """
         references = referenced_input_ids(template)
         if not references:
