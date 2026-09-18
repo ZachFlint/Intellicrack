@@ -17,6 +17,7 @@ from intellicrack.bridges.schemas import (
     ValidationError,
     build_schema_parameters,
     build_schema_property,
+    dialect_for_provider,
     get_all_schemas_for_provider,
     get_schema_for_provider,
     normalize_type,
@@ -123,7 +124,7 @@ def _tool(
         ToolDefinition: Configured ToolDefinition instance.
     """
     return ToolDefinition(
-        tool_name=ToolName.GHIDRA,
+        tool_name=ToolName.GHIDRA.value,
         description=_TOOL_DESC,
         functions=functions or [_func()],
     )
@@ -613,14 +614,14 @@ def test_validate_definition_valid() -> None:
 
 def test_validate_definition_empty_description() -> None:
     """Verify empty description produces warning."""
-    t = ToolDefinition(tool_name=ToolName.GHIDRA, description="", functions=[_func()])
+    t = ToolDefinition(tool_name=ToolName.GHIDRA.value, description="", functions=[_func()])
     errors = validate_tool_definition(t)
     assert any("description" in e.message.lower() for e in errors)
 
 
 def test_validate_definition_no_functions() -> None:
     """Verify zero functions produces error."""
-    t = ToolDefinition(tool_name=ToolName.GHIDRA, description="desc", functions=[])
+    t = ToolDefinition(tool_name=ToolName.GHIDRA.value, description="desc", functions=[])
     errors = validate_tool_definition(t)
     assert any("at least one" in e.message.lower() for e in errors)
 
@@ -738,10 +739,10 @@ def test_get_schema_for_provider_all(provider: str) -> None:
             f"Unhandled provider {provider!r}; add it to _OPENAI_FORMAT_PROVIDERS or a dedicated branch"
         )
         assert schema.get("type") == "function", (
-            f"{provider.value!r} must use OpenAI format with type='function'; got type={schema.get('type')!r}"
+            f"{provider!r} must use OpenAI format with type='function'; got type={schema.get('type')!r}"
         )
         assert "input_schema" not in schema, (
-            f"{provider.value!r} must NOT use Anthropic format ('input_schema' found); "
+            f"{provider!r} must NOT use Anthropic format ('input_schema' found); "
             "HUGGINGFACE, GROK, LOCAL_TRANSFORMERS, OLLAMA, OPENROUTER all route to OpenAI schema"
         )
 
@@ -788,7 +789,7 @@ def test_get_all_schemas_multiple() -> None:
 
 def test_validate_and_convert_valid() -> None:
     """Verify valid tool converts with no error-level issues."""
-    schemas, errors = validate_and_convert(_tool(), provider_ids.OPENAI)
+    schemas, errors = validate_and_convert(_tool(), dialect_for_provider(provider_ids.OPENAI))
     assert len(schemas) == 1
     error_level = [e for e in errors if e.severity == "error"]
     assert not error_level
@@ -796,8 +797,8 @@ def test_validate_and_convert_valid() -> None:
 
 def test_validate_and_convert_invalid() -> None:
     """Verify invalid tool returns empty schemas."""
-    t = ToolDefinition(tool_name=ToolName.GHIDRA, description="d", functions=[])
-    schemas, errors = validate_and_convert(t, provider_ids.OPENAI)
+    t = ToolDefinition(tool_name=ToolName.GHIDRA.value, description="d", functions=[])
+    schemas, errors = validate_and_convert(t, dialect_for_provider(provider_ids.OPENAI))
     assert schemas == []
     assert len(errors) > 0
 
@@ -805,10 +806,10 @@ def test_validate_and_convert_invalid() -> None:
 def test_validate_and_convert_warnings_still_convert() -> None:
     """Verify warnings-only tool still converts successfully."""
     t = ToolDefinition(
-        tool_name=ToolName.GHIDRA,
+        tool_name=ToolName.GHIDRA.value,
         description="",
         functions=[_func()],
     )
-    schemas, errors = validate_and_convert(t, provider_ids.OPENAI)
+    schemas, errors = validate_and_convert(t, dialect_for_provider(provider_ids.OPENAI))
     assert len(schemas) == 1
     assert len(errors) > 0

@@ -121,7 +121,7 @@ class _ProbeBridge(ToolBridgeBase):
             ToolDefinition: Definitions for ``probe`` and ``terminate``.
         """
         return ToolDefinition(
-            tool_name=ToolName.PROCESS,
+            tool_name=ToolName.PROCESS.value,
             description="Minimal process bridge for orchestrator-guard testing.",
             functions=[
                 ToolFunction(

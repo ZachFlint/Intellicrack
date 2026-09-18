@@ -52,6 +52,7 @@ from intellicrack.providers.dialects.base import (
     UsageInfo,
     image_parts,
     parse_tool_call,
+    render_parts_as_text,
     structured_parts,
     tool_result_text,
     wire_function_name,
@@ -70,6 +71,10 @@ GEMINI_API_KEY_HEADER: Final[str] = "x-goog-api-key"
 """Header Gemini authenticates with when the key is not in the query string."""
 
 _THOUGHT_SIGNATURE_KEY: Final[str] = "thought_signature"
+
+
+_NARRATIVE_KEY: Final[str] = "content"
+"""Reserved ``functionResponse.response`` key carrying the non-structured parts."""
 
 
 class GeminiAdapter(DialectAdapter):
@@ -405,7 +410,11 @@ class GeminiAdapter(DialectAdapter):
         """Render a tool result as a Gemini ``functionResponse`` part.
 
         ``functionResponse.response`` takes structured JSON natively, so a
-        structured part is passed through rather than serialized to text.
+        structured part is passed through rather than serialized to text. A
+        result that mixes structured output with text or resource parts keeps
+        both: the structured fields at the top level and the rest rendered
+        into a reserved key, because discarding them would hand the model a
+        JSON object and silently drop everything the tool said in prose.
         Images ride as ``inlineData`` parts in the same user content when the
         model reports vision, and degrade to the shared deterministic text
         description when it does not.
@@ -427,6 +436,9 @@ class GeminiAdapter(DialectAdapter):
             response: dict[str, Any] = {}
             for part in structured:
                 response.update(part.content)
+            narrative = render_parts_as_text([part for part in result.content or () if part not in structured])
+            if narrative:
+                response[_NARRATIVE_KEY] = narrative
         elif result.content:
             response = {"result": tool_result_text(result)}
         else:

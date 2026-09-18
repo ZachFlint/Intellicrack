@@ -114,7 +114,7 @@ def _make_tool(
         )
 
     return ToolDefinition(
-        tool_name=ToolName.GHIDRA,
+        tool_name=ToolName.GHIDRA.value,
         description="Ghidra analysis tool",
         functions=functions,
     )
@@ -127,7 +127,7 @@ def _make_empty_tool() -> ToolDefinition:
         ToolDefinition: An empty ToolDefinition.
     """
     return ToolDefinition(
-        tool_name=ToolName.GHIDRA,
+        tool_name=ToolName.GHIDRA.value,
         description="Empty tool",
         functions=[],
     )
@@ -379,7 +379,7 @@ def test_google_uppercase_conversion(
         expected_google_type: Expected Google-format type string after conversion.
     """
     tool = ToolDefinition(
-        tool_name=ToolName.GHIDRA,
+        tool_name=ToolName.GHIDRA.value,
         description="Test",
         functions=[
             ToolFunction(
@@ -412,7 +412,7 @@ def _make_array_tool() -> ToolDefinition:
             array parameters.
     """
     return ToolDefinition(
-        tool_name=ToolName.GHIDRA,
+        tool_name=ToolName.GHIDRA.value,
         description="Array schema tool",
         functions=[
             ToolFunction(

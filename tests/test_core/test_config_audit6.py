@@ -121,7 +121,7 @@ class TestF0021ParseProvidersRoundTrip:
         rebuilt = Config.from_dict(serialised)
 
         for provider in provider_ids.BUILTIN_PROVIDER_IDS:
-            assert provider in rebuilt.providers, f"round-trip lost {provider.value!r}"
+            assert provider in rebuilt.providers, f"round-trip lost {provider!r}"
             assert rebuilt.providers[provider] == config.providers[provider]
 
     @staticmethod
@@ -130,4 +130,4 @@ class TestF0021ParseProvidersRoundTrip:
         parsed = Config.parse_providers({"definitely_not_a_provider": {"enabled": True}})
         for member in provider_ids.BUILTIN_PROVIDER_IDS:
             assert member in parsed
-        assert "definitely_not_a_provider" not in {key.value for key in parsed}
+        assert "definitely_not_a_provider" not in set(parsed)

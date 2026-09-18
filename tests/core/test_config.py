@@ -703,7 +703,7 @@ def test_config_parse_providers_unknown_skipped() -> None:
     result = Config.parse_providers(providers_data)
     assert result[provider_ids.ANTHROPIC].enabled is False
 
-    unknown_values: list[str] = [pn.value for pn in result]
+    unknown_values: list[str] = list(result)
     assert "unknown_provider" not in unknown_values, "Unknown provider key must not appear in the parsed result"
 
     assert provider_ids.GROK in result, "GROK must be present as a default provider"
