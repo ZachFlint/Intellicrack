@@ -303,6 +303,31 @@ class SessionMetadata:
 
 
 @dataclass
+class McpServerState:
+    """What one Model Context Protocol server was doing during a session.
+
+    Recorded so reopening a session shows which third-party servers its work
+    depended on, and which of them were healthy at the time. This is a
+    separate field from :attr:`Session.tool_states` on purpose: that mapping
+    is keyed by :class:`ToolName` and deserialized with ``ToolName(key)``, so
+    writing a server id into it would make the session fail to load.
+
+    Attributes:
+        server_id: The server's configured id.
+        health: The server's health at the time, as its enum value.
+        tool_count: Tools the server was publishing.
+        generation: Digest of the server's tool listing, or ``None``.
+        last_error: Why the server was not usable, or ``None``.
+    """
+
+    server_id: str
+    health: str
+    tool_count: int = 0
+    generation: str | None = None
+    last_error: str | None = None
+
+
+@dataclass
 class Session:
     """Complete session state.
 
@@ -328,6 +353,10 @@ class Session:
             from configuration and is unioned in at advertise time, not
             stored here. An ordered list rather than a set so cap-trimming
             order stays deterministic.
+        mcp_servers: State of each Model Context Protocol server that took
+            part in this session, keyed by server id. Absent from a session
+            file written before MCP support existed, which loads as an empty
+            mapping.
     """
 
     id: str
@@ -345,6 +374,7 @@ class Session:
     notes: str = ""
     tags: list[str] = field(default_factory=list)
     loaded_tools: list[str] = field(default_factory=list)
+    mcp_servers: dict[str, McpServerState] = field(default_factory=dict)
 
     def add_loaded_tool(self, canonical_name: str) -> bool:
         """Record a discovered tool-function name, skipping duplicates.
@@ -361,6 +391,30 @@ class Session:
             return False
         self.loaded_tools.append(canonical_name)
         return True
+
+    def set_mcp_server_state(self, state: McpServerState) -> None:
+        """Record the current state of one MCP server.
+
+        Args:
+            state: The server state to store, replacing any earlier entry
+                for the same server.
+        """
+        self.mcp_servers[state.server_id] = state
+        self.updated_at = datetime.now(tz=UTC)
+
+    def clear_mcp_server_state(self, server_id: str) -> bool:
+        """Forget one MCP server's recorded state.
+
+        Args:
+            server_id: The server to forget.
+
+        Returns:
+            bool: ``True`` when an entry was removed.
+        """
+        removed = self.mcp_servers.pop(server_id, None) is not None
+        if removed:
+            self.updated_at = datetime.now(tz=UTC)
+        return removed
 
     @classmethod
     def create(
@@ -683,6 +737,7 @@ class SessionStore:
             "patches": [self._serialize_patch(p) for p in session.patches],
             "bridge_analyses": {name: self._serialize_bridge_analysis(analysis) for name, analysis in session.bridge_analyses.items()},
             "loaded_tools": list(session.loaded_tools),
+            "mcp_servers": {key: self._serialize_mcp_server(value) for key, value in session.mcp_servers.items()},
         }
 
         conn = sqlite3.connect(str(self.db_path), isolation_level=None)
@@ -740,6 +795,7 @@ class SessionStore:
                 patches=[self._deserialize_patch(p) for p in data.get("patches", [])],
                 bridge_analyses={name: self._deserialize_bridge_analysis(value) for name, value in data.get("bridge_analyses", {}).items()},
                 loaded_tools=list(data.get("loaded_tools", [])),
+                mcp_servers=self._deserialize_mcp_servers(data.get("mcp_servers", {})),
             )
 
             _logger.debug("session_loaded", session_id=session_id)
@@ -1016,6 +1072,57 @@ class SessionStore:
         )
 
     @staticmethod
+    def _serialize_mcp_server(state: McpServerState) -> dict[str, Any]:
+        """Serialize one MCP server state to a JSON-compatible mapping.
+
+        Args:
+            state: The server state to serialize.
+
+        Returns:
+            dict[str, Any]: The serialized state.
+        """
+        return {
+            "server_id": state.server_id,
+            "health": state.health,
+            "tool_count": state.tool_count,
+            "generation": state.generation,
+            "last_error": state.last_error,
+        }
+
+    @staticmethod
+    def _deserialize_mcp_servers(data: object) -> dict[str, McpServerState]:
+        """Rebuild the MCP server states of a stored session.
+
+        A session written before MCP support existed carries no entry at
+        all, and an entry that is not a well-formed object is skipped rather
+        than failing the whole load: a stale diagnostic record is never worth
+        losing a conversation over.
+
+        Args:
+            data: The stored ``mcp_servers`` value, of any shape.
+
+        Returns:
+            dict[str, McpServerState]: The rebuilt states, keyed by server id.
+        """
+        if not isinstance(data, dict):
+            return {}
+        states: dict[str, McpServerState] = {}
+        for key, value in data.items():
+            if not isinstance(key, str) or not isinstance(value, dict):
+                _logger.warning("mcp_server_state_malformed", server_id=str(key))
+                continue
+            health = value.get("health")
+            tool_count = value.get("tool_count", 0)
+            states[key] = McpServerState(
+                server_id=str(value.get("server_id", key)),
+                health=health if isinstance(health, str) else "disconnected",
+                tool_count=tool_count if isinstance(tool_count, int) and not isinstance(tool_count, bool) else 0,
+                generation=_optional_str(value.get("generation")),
+                last_error=_optional_str(value.get("last_error")),
+            )
+        return states
+
+    @staticmethod
     def _serialize_patch(patch: PatchInfo) -> dict[str, Any]:
         """Serialize PatchInfo to dictionary.
 
@@ -1169,6 +1276,7 @@ class SessionStore:
                 "patches": [self._serialize_patch(p) for p in session.patches],
                 "bridge_analyses": {name: self._serialize_bridge_analysis(analysis) for name, analysis in session.bridge_analyses.items()},
                 "loaded_tools": list(session.loaded_tools),
+                "mcp_servers": {key: self._serialize_mcp_server(value) for key, value in session.mcp_servers.items()},
             },
         }
 
@@ -1233,6 +1341,7 @@ class SessionStore:
                 name: self._deserialize_bridge_analysis(value) for name, value in session_data.get("bridge_analyses", {}).items()
             },
             loaded_tools=list(session_data.get("loaded_tools", [])),
+            mcp_servers=self._deserialize_mcp_servers(session_data.get("mcp_servers", {})),
         )
 
         _logger.info("session_imported", session_id=session.id, path=str(path))
