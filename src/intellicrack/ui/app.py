@@ -1443,6 +1443,7 @@ class MainWindow(QMainWindow):
             _logger.warning("mcp_service_unavailable", error=str(exc), error_type=type(exc).__name__)
             return
         self._mcp_service = service
+        service.set_attachment_handler(self._chat_panel.insert_context_text)
         run_bridge_coroutine_async(
             service.start(),
             on_success=lambda _result: _logger.info("mcp_service_ready"),

@@ -64,6 +64,7 @@ from intellicrack.mcp.config import (
 from intellicrack.mcp.connection import McpHealth, McpServerStatus
 from intellicrack.mcp.errors import McpError
 from intellicrack.mcp.policy import estimate_tool_cost, total_cost
+from intellicrack.mcp.resources import list_resources, read_resource, summarize_parts
 from intellicrack.mcp.tool_source import map_tool_to_function
 from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
 from intellicrack.ui.panels.async_bridge import BridgeCallWorker, discard_worker, worker_is_running
@@ -92,6 +93,7 @@ _SPLIT_RIGHT: Final[int] = 700
 _LOG_MIN_HEIGHT: Final[int] = 220
 _CODE_FONT_POINT_SIZE: Final[int] = 9
 _STDERR_TAIL_LINES: Final[int] = 400
+_RESOURCE_PREVIEW_CHARS: Final[int] = 4000
 _MIN_TIMEOUT_S: Final[int] = 1
 _MAX_TIMEOUT_S: Final[int] = 3600
 
@@ -639,7 +641,14 @@ class McpConfigDialog(QDialog):
     Owns the configuration document while it is open, applies the operator's
     edits to it, and hands each server operation to the connection manager on
     the background loop.
+
+    Emits ``resource_attached(text)`` when the operator sends a server
+    resource to the conversation. The dialog does not reach into the chat
+    itself: it fetches the resource and forwards the rendered text, leaving
+    the main window to decide where a conversation attachment goes.
     """
+
+    resource_attached = pyqtSignal(str)
 
     def __init__(
         self,
@@ -764,7 +773,149 @@ class McpConfigDialog(QDialog):
         refresh_button.clicked.connect(self._refresh_log)
         log_column.addWidget(refresh_button)
         self._tabs.addTab(log_pane, "Status and log")
+        self._tabs.addTab(self._build_resources_pane(), "Resources")
         return self._tabs
+
+    def _build_resources_pane(self) -> QWidget:
+        """Build the resource browser for the selected server.
+
+        Returns:
+            QWidget: The resources pane.
+        """
+        pane = QWidget()
+        column = QVBoxLayout(pane)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(8)
+
+        note = QLabel(
+            "Resources are documents a server offers. Reading one does not run anything, and what it "
+            "returns is the server's own content, so it is attached to the conversation as quoted data.",
+        )
+        note.setObjectName("mcp_resources_note")
+        note.setWordWrap(True)
+        column.addWidget(note)
+
+        self._resource_list = QListWidget()
+        self._resource_list.setObjectName("mcp_resource_list")
+        column.addWidget(self._resource_list)
+
+        self._resource_preview = QPlainTextEdit()
+        self._resource_preview.setObjectName("mcp_resource_preview")
+        self._resource_preview.setReadOnly(True)
+        self._resource_preview.setFont(FontManager.get_instance().get_code_font(_CODE_FONT_POINT_SIZE))
+        column.addWidget(self._resource_preview)
+
+        row = QHBoxLayout()
+        row.setSpacing(8)
+        refresh = QPushButton("List resources")
+        refresh.setObjectName("mcp_list_resources")
+        refresh.clicked.connect(self._on_list_resources)
+        row.addWidget(refresh)
+
+        read = QPushButton("Read selected")
+        read.setObjectName("mcp_read_resource")
+        read.clicked.connect(self._on_read_resource)
+        row.addWidget(read)
+
+        attach = QPushButton("Attach to chat")
+        attach.setObjectName("mcp_attach_resource")
+        attach.clicked.connect(self._on_attach_resource)
+        row.addWidget(attach)
+        row.addStretch()
+        column.addLayout(row)
+        return pane
+
+    def _on_list_resources(self) -> None:
+        """Fetch the selected server's resource listing."""
+        config = self._selected_config()
+        connection = self._manager.connection(config.server_id) if config is not None else None
+        if config is None or connection is None or not connection.is_ready:
+            show_info(self, "Resources", "Start the server before listing what it offers.")
+            return
+        self._resource_list.clear()
+
+        def _listed(result: object) -> None:
+            """Populate the list from the server's listing.
+
+            Args:
+                result: The list of resource summaries.
+            """
+            if not isinstance(result, list):
+                return
+            for summary in result:
+                item = QListWidgetItem(f"{getattr(summary, 'title', None) or summary.name} - {summary.uri}")
+                item.setData(Qt.ItemDataRole.UserRole, summary.uri)
+                item.setToolTip(getattr(summary, "description", None) or summary.uri)
+                self._resource_list.addItem(item)
+            if not result:
+                show_info(self, "Resources", "This server offers no resources.")
+
+        self._start_worker(list_resources(connection), _listed, self._on_worker_error)
+
+    def _selected_resource_uri(self) -> str | None:
+        """Read the URI of the selected resource.
+
+        Returns:
+            str | None: The URI, or ``None`` when nothing is selected.
+        """
+        item = self._resource_list.currentItem()
+        if item is None:
+            return None
+        value: object = item.data(Qt.ItemDataRole.UserRole)
+        return value if isinstance(value, str) else None
+
+    def _fetch_resource(self, on_text: Callable[[str], None]) -> None:
+        """Read the selected resource and hand its rendered text to a callback.
+
+        Args:
+            on_text: Called on the GUI thread with the rendered content.
+        """
+        config = self._selected_config()
+        connection = self._manager.connection(config.server_id) if config is not None else None
+        uri = self._selected_resource_uri()
+        if connection is None or uri is None or not connection.is_ready:
+            show_info(self, "Resources", "Select a resource on a running server first.")
+            return
+
+        def _read(result: object) -> None:
+            """Render the fetched parts.
+
+            Args:
+                result: The list of result parts the read produced.
+            """
+            if not isinstance(result, list):
+                return
+            on_text(summarize_parts(result))
+
+        self._start_worker(read_resource(connection, uri), _read, self._on_worker_error)
+
+    def _on_read_resource(self) -> None:
+        """Read the selected resource into the preview."""
+
+        def _show(text: str) -> None:
+            """Put the rendered content in the preview.
+
+            Args:
+                text: The rendered content.
+            """
+            self._resource_preview.setPlainText(text[:_RESOURCE_PREVIEW_CHARS])
+
+        self._fetch_resource(_show)
+
+    def _on_attach_resource(self) -> None:
+        """Send the selected resource's content to the conversation."""
+
+        def _attach(text: str) -> None:
+            """Forward the rendered content to whoever is listening.
+
+            Args:
+                text: The rendered content.
+            """
+            self._resource_preview.setPlainText(text[:_RESOURCE_PREVIEW_CHARS])
+            self.resource_attached.emit(text)
+            _logger.info("mcp_resource_attached", length=len(text))
+
+        self._fetch_resource(_attach)
 
     def _build_action_row(self) -> QHBoxLayout:
         """Build the per-server action buttons.

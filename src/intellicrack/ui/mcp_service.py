@@ -37,6 +37,8 @@ from intellicrack.ui.mcp_config import McpConfigDialog
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from PyQt6.QtWidgets import QWidget
 
     from intellicrack.core.orchestrator import Orchestrator
@@ -96,6 +98,7 @@ class McpService:
         )
         self._source = McpToolSource(self._manager, tool_registry)
         self._manager.set_change_listener(self._on_server_changed)
+        self._attachment_handler: Callable[[str], None] | None = None
         ToolConfirmationDialog.set_approval_store(self._approvals)
         orchestrator.set_mcp_tool_source(self._source)
         _logger.info("mcp_service_assembled")
@@ -273,6 +276,16 @@ class McpService:
         ToolConfirmationDialog.set_approval_store(None)
         _logger.info("mcp_service_stopped")
 
+    def set_attachment_handler(self, handler: Callable[[str], None] | None) -> None:
+        """Install what happens when the operator attaches a server resource.
+
+        Args:
+            handler: Called with the rendered resource text, or ``None`` to
+                drop the current handler, in which case the Attach button
+                does nothing beyond previewing.
+        """
+        self._attachment_handler = handler
+
     def open_settings(self, parent: QWidget | None = None) -> None:
         """Show the MCP settings dialog.
 
@@ -281,6 +294,9 @@ class McpService:
                 service's own parent.
         """
         dialog = McpConfigDialog(self._manager, self._resolver, parent if parent is not None else self._parent)
+        handler = self._attachment_handler
+        if handler is not None:
+            dialog.resource_attached.connect(handler)
         dialog.refresh_auth_state()
         _ = dialog.exec()
         self._source.register_all()
