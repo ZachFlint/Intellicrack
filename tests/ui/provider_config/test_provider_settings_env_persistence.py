@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import QCheckBox, QComboBox, QLineEdit, QPushButton, QSpinB
 
 from intellicrack.core.config import get_env_file
 from intellicrack.credentials.env_loader import CredentialField, CredentialLoader, EnvPersistAction
-from intellicrack.credentials.provider_settings import ProviderSettingsStore
+from intellicrack.credentials.provider_settings import SETTINGS_SCHEMA_VERSION, ProviderSettingsStore
 from intellicrack.providers import ids as provider_ids
 from intellicrack.ui.provider_config import (
     ConnectionTestWorker,
@@ -320,7 +320,7 @@ def test_saving_base_url_and_organization_writes_env_not_providers_json(
     assert next_launch.organization_id == "org-typed"
     openai_section = _read_sections(tmp_path)["openai"]
     assert {"api_key", "api_base", "organization_id"}.isdisjoint(openai_section)
-    assert openai_section["schema_version"] == 2
+    assert openai_section["schema_version"] == SETTINGS_SCHEMA_VERSION
 
 
 def test_clearing_base_url_removes_the_override_and_os_value_applies(
@@ -561,7 +561,7 @@ def test_versioned_120_second_timeout_is_kept(
     assert timeout.timeout_seconds() == 120
     saved = _read_sections(tmp_path)["anthropic"]
     assert saved["timeout_seconds"] == 120
-    assert saved["schema_version"] == 2
+    assert saved["schema_version"] == SETTINGS_SCHEMA_VERSION
 
 
 def test_timeout_control_steps_between_provider_default_and_real_timeouts(
