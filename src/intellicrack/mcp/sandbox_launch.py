@@ -32,7 +32,7 @@ import sys
 from ctypes import wintypes
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, Self
+from typing import TYPE_CHECKING, ClassVar, Final, Self
 
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.errors import McpConfigError
@@ -135,7 +135,7 @@ _ERR_UNSUPPORTED_PLATFORM = (
 class _IoCounters(ctypes.Structure):
     """Win32 ``IO_COUNTERS``, present only to size the structure that embeds it."""
 
-    _fields_: Final = [
+    _fields_: ClassVar = [
         ("ReadOperationCount", ctypes.c_ulonglong),
         ("WriteOperationCount", ctypes.c_ulonglong),
         ("OtherOperationCount", ctypes.c_ulonglong),
@@ -148,7 +148,7 @@ class _IoCounters(ctypes.Structure):
 class _JobBasicLimitInformation(ctypes.Structure):
     """Win32 ``JOBOBJECT_BASIC_LIMIT_INFORMATION``."""
 
-    _fields_: Final = [
+    _fields_: ClassVar = [
         ("PerProcessUserTimeLimit", ctypes.c_longlong),
         ("PerJobUserTimeLimit", ctypes.c_longlong),
         ("LimitFlags", wintypes.DWORD),
@@ -164,7 +164,7 @@ class _JobBasicLimitInformation(ctypes.Structure):
 class _JobExtendedLimitInformation(ctypes.Structure):
     """Win32 ``JOBOBJECT_EXTENDED_LIMIT_INFORMATION``."""
 
-    _fields_: Final = [
+    _fields_: ClassVar = [
         ("BasicLimitInformation", _JobBasicLimitInformation),
         ("IoInfo", _IoCounters),
         ("ProcessMemoryLimit", ctypes.c_size_t),
@@ -177,7 +177,7 @@ class _JobExtendedLimitInformation(ctypes.Structure):
 class _JobBasicUiRestrictions(ctypes.Structure):
     """Win32 ``JOBOBJECT_BASIC_UI_RESTRICTIONS``."""
 
-    _fields_: Final = [("UIRestrictionsClass", wintypes.DWORD)]
+    _fields_: ClassVar = [("UIRestrictionsClass", wintypes.DWORD)]
 
 
 @dataclass(frozen=True, slots=True)
