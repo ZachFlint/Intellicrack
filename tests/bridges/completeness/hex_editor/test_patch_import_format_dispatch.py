@@ -287,9 +287,11 @@ class TestBpsUpsImportUsesNativeAwareBridgeMethod:
             priv_method(panel, "_on_import_patches")()
             _pump_until(
                 qapp,
-                lambda: bool(bridge.import_patches_bps_calls)
-                and bridge.document is not None
-                and bytes(bridge.document.read(0, 128)) == bytes(modified_bytes),
+                lambda: (
+                    bool(bridge.import_patches_bps_calls)
+                    and bridge.document is not None
+                    and bytes(bridge.document.read(0, 128)) == bytes(modified_bytes)
+                ),
             )
 
             assert len(bridge.import_patches_bps_calls) == 1
@@ -340,9 +342,11 @@ class TestBpsUpsImportUsesNativeAwareBridgeMethod:
             priv_method(panel, "_on_import_patches")()
             _pump_until(
                 qapp,
-                lambda: bool(bridge.import_patches_ups_calls)
-                and bridge.document is not None
-                and bytes(bridge.document.read(0, 96)) == bytes(modified_bytes),
+                lambda: (
+                    bool(bridge.import_patches_ups_calls)
+                    and bridge.document is not None
+                    and bytes(bridge.document.read(0, 96)) == bytes(modified_bytes)
+                ),
             )
 
             assert len(bridge.import_patches_ups_calls) == 1

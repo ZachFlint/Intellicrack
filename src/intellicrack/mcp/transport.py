@@ -4,18 +4,14 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Transport construction for Model Context Protocol connections.
 
-Two shapes reach the SDK from here. A local server becomes a
-:class:`~mcp.client.stdio.StdioServerParameters` whose argv is resolved
-without a shell, and a remote server becomes a Streamable HTTP stream pair
-built on an ``httpx2`` client that carries the configured headers, the
+Two shapes reach the SDK from here. A local server becomes a :class:`~mcp.client.stdio.StdioServerParameters` whose argv is resolved without
+a shell, and a remote server becomes a Streamable HTTP stream pair built on an ``httpx2`` client that carries the configured headers, the
 composed query string, and any OAuth handler.
 
-The stdio path is the security-sensitive one. ``StdioServerParameters``
-launches ``command`` with ``args`` directly, never through a shell, so a
-metacharacter in the command is not interpreted -- but a command containing
-one is still a sign the operator pasted a shell pipeline where a program name
-belongs, and running its first word alone is not what they asked for. Those
-commands are refused outright rather than silently truncated.
+The stdio path is the security-sensitive one. ``StdioServerParameters`` launches ``command`` with ``args`` directly, never through a shell,
+so a metacharacter in the command is not interpreted -- but a command containing one is still a sign the operator pasted a shell pipeline
+where a program name belongs, and running its first word alone is not what they asked for. Those commands are refused outright rather than
+silently truncated.
 """
 
 from __future__ import annotations
@@ -103,9 +99,8 @@ def open_web_url(url: str) -> bool:
 class McpTransport(Protocol):
     """An async context manager yielding an MCP read/write stream pair.
 
-    Both transports the client uses satisfy this shape, which is also what
-    :class:`mcp.Client` accepts for its ``server`` argument, so a connection
-    can be opened without the client caring which one it got.
+    Both transports the client uses satisfy this shape, which is also what :class:`mcp.Client` accepts for its ``server`` argument, so a
+    connection can be opened without the client caring which one it got.
     """
 
     async def __aenter__(self) -> tuple[Any, Any]:

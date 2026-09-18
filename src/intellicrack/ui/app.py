@@ -104,7 +104,6 @@ _logger = get_logger(__name__)
 _MCP_SHUTDOWN_TIMEOUT_S: Final[float] = 15.0
 """How long MCP teardown may take before the shared loop is stopped anyway."""
 
-
 try:
     from intellicrack.providers.model_loader import get_global_model_cache, set_global_cache_size
 except ImportError:
@@ -354,10 +353,10 @@ class MainWindow(QMainWindow):
     def _apply_smart_window_size(self) -> None:
         """Size and center the window to fill the available screen geometry.
 
-        Detects the primary monitor's usable area (excluding taskbar) and sizes the window to that full area, minus a small margin, so
-        the 3-column layout and every embedded tool panel get the entire screen to work with rather than being clamped to a fixed size on
-        large monitors. Floors at the splitter panes' combined minimum width (:data:`_WINDOW_MIN_WIDTH`) by 600px minimum so the window
-        never opens smaller than the layout can support. Falls back to that same minimum-viable size if screen detection fails.
+        Detects the primary monitor's usable area (excluding taskbar) and sizes the window to that full area, minus a small margin, so the
+        3-column layout and every embedded tool panel get the entire screen to work with rather than being clamped to a fixed size on large
+        monitors. Floors at the splitter panes' combined minimum width (:data:`_WINDOW_MIN_WIDTH`) by 600px minimum so the window never
+        opens smaller than the layout can support. Falls back to that same minimum-viable size if screen detection fails.
         """
         min_w, min_h = _WINDOW_MIN_WIDTH, 600
         margin_w, margin_h = 6, 8
@@ -856,21 +855,15 @@ class MainWindow(QMainWindow):
     def _on_toggle_chat_panel(self) -> None:
         """Collapse the Chat pane to give the tool panel the full width, or restore it.
 
-        The Chat pane is the only collapsible splitter child (:meth:`_setup_ui` sets
-        ``setCollapsible(0, True)``), so a user can also collapse it by dragging the
-        splitter handle to the left edge -- but a fully collapsed pane has no visible
-        control of its own to reopen it (D14/D16). This toggle is that control: it
-        remembers the pane's last non-collapsed width in :attr:`_chat_panel_expanded_width`
-        and restores exactly that width, rather than an arbitrary default, when invoked
-        again.
+        The Chat pane is the only collapsible splitter child (:meth:`_setup_ui` sets ``setCollapsible(0, True)``), so a user can also
+        collapse it by dragging the splitter handle to the left edge -- but a fully collapsed pane has no visible control of its own to
+        reopen it (D14/D16). This toggle is that control: it remembers the pane's last non-collapsed width in
+        :attr:`_chat_panel_expanded_width` and restores exactly that width, rather than an arbitrary default, when invoked again.
 
-        ``QSplitter.setCollapsible`` only stops the splitter from refusing a
-        requested size of 0 in its own bookkeeping -- it does not override a
-        child widget's own ``minimumWidth``, so ``setSizes([0, ...])`` alone
-        leaves :attr:`_chat_panel` clamped to :data:`_CHAT_PANEL_MIN_WIDTH` on
-        screen even though ``sizes()`` reports 0. The pane's minimum width is
-        therefore cleared before collapsing and restored before expanding, so
-        the actual widget geometry matches the splitter's logical sizes.
+        ``QSplitter.setCollapsible`` only stops the splitter from refusing a requested size of 0 in its own bookkeeping -- it does not
+        override a child widget's own ``minimumWidth``, so ``setSizes([0, ...])`` alone leaves :attr:`_chat_panel` clamped to
+        :data:`_CHAT_PANEL_MIN_WIDTH` on screen even though ``sizes()`` reports 0. The pane's minimum width is therefore cleared before
+        collapsing and restored before expanding, so the actual widget geometry matches the splitter's logical sizes.
         """
         sizes = self._splitter.sizes()
         if len(sizes) != _SPLITTER_PANE_COUNT:
@@ -1783,9 +1776,7 @@ class MainWindow(QMainWindow):
         ) as exc:
             _logger.warning("implicit_provider_connect_failed", provider=provider, error=str(exc))
             message = (
-                f"Could not connect to provider '{provider}'. "
-                "Configure its credentials in Preferences, then try again.\n\n"
-                f"Details: {exc}"
+                f"Could not connect to provider '{provider}'. Configure its credentials in Preferences, then try again.\n\nDetails: {exc}"
             )
             raise RuntimeError(message) from exc
 

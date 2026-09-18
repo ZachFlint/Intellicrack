@@ -162,9 +162,7 @@ def compile_schema_pattern(expression: str) -> re.Pattern[str] | None:
 
 
 MAX_VIOLATIONS: Final[int] = 32
-"""Most violations collected before reporting stops, so one badly-shaped
-result cannot produce an unbounded error message.
-"""
+"""Most violations collected before reporting stops, so one badly-shaped result cannot produce an unbounded error message."""
 
 _TYPE_CHECKS: Final[dict[str, str]] = {
     "null": "null",

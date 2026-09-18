@@ -139,9 +139,7 @@ def test_applications_tab_is_reachable_beside_processes_tab() -> None:
         applications_index = labels.index("Applications")
         tab_page = panel._target_tabs.widget(applications_index)
         assert tab_page is not None
-        assert tab_page.isAncestorOf(panel._application_table), (
-            "the application table must actually live inside the Applications tab page"
-        )
+        assert tab_page.isAncestorOf(panel._application_table), "the application table must actually live inside the Applications tab page"
     finally:
         panel.close()
 

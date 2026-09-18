@@ -4,20 +4,16 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Dialog answering an MCP server's request for information from the operator.
 
-A server may pause mid-call and ask for something it needs: a directory to
-work in, a confirmation, a choice between options. The protocol calls this
-elicitation, and it arrives in one of two shapes. A form request carries a
-small JSON Schema describing the fields it wants; a URL request asks the
-operator to go somewhere and come back.
+A server may pause mid-call and ask for something it needs: a directory to work in, a confirmation, a choice between options. The protocol
+calls this elicitation, and it arrives in one of two shapes. A form request carries a small JSON Schema describing the fields it wants; a
+URL request asks the operator to go somewhere and come back.
 
-Three answers exist and they are not interchangeable. Accepting returns the
-values. Declining says no to the request while leaving the call running.
-Cancelling abandons the exchange. Closing the window is a cancel, never an
-accept, so a dismissed dialog can never be read as consent.
+Three answers exist and they are not interchangeable. Accepting returns the values. Declining says no to the request while leaving the call
+running. Cancelling abandons the exchange. Closing the window is a cancel, never an accept, so a dismissed dialog can never be read as
+consent.
 
-A server must never ask for a credential this way. The dialog says so, every
-time, because the operator is the only one who can tell whether a field
-labelled "API key" is a legitimate request.
+A server must never ask for a credential this way. The dialog says so, every time, because the operator is the only one who can tell whether
+a field labelled "API key" is a legitimate request.
 """
 
 from __future__ import annotations
@@ -73,8 +69,7 @@ _MAX_FIELDS: Final[int] = 32
 class McpElicitationDialog(QDialog):
     """Collects one server's requested values, or refuses on the operator's behalf.
 
-    Emits ``answered(action: str)`` with ``accept``, ``decline`` or
-    ``cancel`` once the operator has decided.
+    Emits ``answered(action: str)`` with ``accept``, ``decline`` or ``cancel`` once the operator has decided.
     """
 
     answered = pyqtSignal(str)
@@ -356,11 +351,9 @@ class McpElicitationDialog(QDialog):
     def _on_open_url(self) -> None:
         """Open the server's URL in the operator's browser.
 
-        The address is the server's, not the operator's, so it goes through
-        :func:`~intellicrack.mcp.transport.open_web_url`, which opens only
-        ``http`` and ``https``. A refusal is shown rather than swallowed: a
-        button that does nothing reads as a bug, and the operator should know
-        the server asked for something other than a web page.
+        The address is the server's, not the operator's, so it goes through :func:`~intellicrack.mcp.transport.open_web_url`, which opens
+        only ``http`` and ``https``. A refusal is shown rather than swallowed: a button that does nothing reads as a bug, and the operator
+        should know the server asked for something other than a web page.
         """
         if not self._url:
             return

@@ -4,17 +4,13 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Declarative configuration for third-party Model Context Protocol servers.
 
-Servers are described in ``<config_dir>/mcp.json``. The file shape is Visual
-Studio Code's ``mcp.json``: a ``servers`` object keyed by server id, plus an
-``inputs`` array declaring the values the user is prompted for. The older
-``mcpServers`` root that several other clients emit is accepted on import and
-normalized to the native shape, so an existing configuration can be pasted in
-without hand-editing.
+Servers are described in ``<config_dir>/mcp.json``. The file shape is Visual Studio Code's ``mcp.json``: a ``servers`` object keyed by
+server id, plus an ``inputs`` array declaring the values the user is prompted for. The older ``mcpServers`` root that several other clients
+emit is accepted on import and normalized to the native shape, so an existing configuration can be pasted in without hand-editing.
 
-No secret is ever stored here. A value that needs one carries a
-``${input:<id>}`` reference which :mod:`intellicrack.mcp.secrets` resolves
-from the operating system keyring at connect time; a value that looks like a
-literal credential is refused at parse time with the offending field named.
+No secret is ever stored here. A value that needs one carries a ``${input:<id>}`` reference which :mod:`intellicrack.mcp.secrets` resolves
+from the operating system keyring at connect time; a value that looks like a literal credential is refused at parse time with the offending
+field named.
 """
 
 from __future__ import annotations
@@ -43,10 +39,8 @@ _logger = get_logger(__name__)
 SERVER_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[a-z0-9][a-z0-9-]{0,31}$")
 """Accepted shape of a server id.
 
-Lower-case alphanumerics and hyphens only, at most 32 characters. The hyphen
-is what keeps the namespace unambiguous at the provider boundary: the wire
-layer maps ``.`` to ``__``, and a namespace that can never contain ``_`` or
-``.`` can never collide with that separator.
+Lower-case alphanumerics and hyphens only, at most 32 characters. The hyphen is what keeps the namespace unambiguous at the provider
+boundary: the wire layer maps ``.`` to ``__``, and a namespace that can never contain ``_`` or ``.`` can never collide with that separator.
 """
 
 MCP_CONFIG_FILENAME: Final[str] = "mcp.json"
@@ -471,9 +465,8 @@ class McpServerConfig:
 TOOL_NAME_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
 """Accepted shape of a tool name as the server publishes it.
 
-Taken verbatim from the 2026-07-28 tools specification. A server's own name
-is used unchanged, dots included: the canonical name splits on its first dot
-only, so every later dot stays part of the tool name and routes correctly.
+Taken verbatim from the 2026-07-28 tools specification. A server's own name is used unchanged, dots included: the canonical name splits on
+its first dot only, so every later dot stays part of the tool name and routes correctly.
 """
 
 
@@ -955,9 +948,8 @@ def _serialize_server(config: McpServerConfig) -> dict[str, Any]:
 class McpConfigStore:
     """Reads and writes ``mcp.json``.
 
-    The store owns the file's location and its two accepted root shapes. It
-    performs no I/O in its constructor, so a caller can build one to parse an
-    imported document without touching the configured path.
+    The store owns the file's location and its two accepted root shapes. It performs no I/O in its constructor, so a caller can build one to
+    parse an imported document without touching the configured path.
     """
 
     def __init__(self, path: Path | None = None) -> None:

@@ -45,20 +45,17 @@ PROVIDER_SETTINGS_FILENAME: Final[str] = "providers.json"
 SETTINGS_SCHEMA_VERSION: Final[int] = 3
 """Schema version written into every provider section.
 
-Version 3 only *adds* the top-level ``instances`` section; every v2 key stays
-exactly where it was. A v2 build tests a section against its own floor of 2,
-which a v3 section clears, so it reads a v3 file as versioned and loses only
-the custom instances it could not have used anyway.
+Version 3 only *adds* the top-level ``instances`` section; every v2 key stays exactly where it was. A v2 build tests a section against its
+own floor of 2, which a v3 section clears, so it reads a v3 file as versioned and loses only the custom instances it could not have used
+anyway.
 """
 
 VERSIONED_SCHEMA_FLOOR: Final[int] = 2
 """The first schema version that stored ``null`` for the provider default.
 
-From this version on, every positive timeout a section holds was chosen
-deliberately. It is fixed history, not the current version: comparing against
-:data:`SETTINGS_SCHEMA_VERSION` instead would reclassify every section written
-by an older versioned build as pre-versioning legacy each time the schema
-advanced.
+From this version on, every positive timeout a section holds was chosen deliberately. It is fixed history, not the current version:
+comparing against :data:`SETTINGS_SCHEMA_VERSION` instead would reclassify every section written by an older versioned build as pre-
+versioning legacy each time the schema advanced.
 """
 
 SCHEMA_VERSION_KEY: Final[str] = "schema_version"
@@ -68,9 +65,9 @@ MODEL_OVERRIDES_KEY: Final[str] = "model_overrides"
 INSTANCES_KEY: Final[str] = "instances"
 """Top-level key holding user-defined provider instances.
 
-It is a sibling of the per-provider sections rather than one of them, so it is
-excluded from provider-section reads by name.
+It is a sibling of the per-provider sections rather than one of them, so it is excluded from provider-section reads by name.
 """
+
 ENABLED_KEY: Final[str] = "enabled"
 TIMEOUT_SECONDS_KEY: Final[str] = "timeout_seconds"
 LEGACY_DEFAULT_TIMEOUT_SECONDS: Final[int] = 120

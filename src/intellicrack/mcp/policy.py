@@ -4,15 +4,12 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """What a server's tools cost, and which of them the operator has turned on.
 
-Advertising a tool is not free: its name, description and argument schema all
-occupy the same context window the conversation does. A server with three
-hundred tools would consume the budget before the first message. This module
-prices a tool so the settings dialog can show what enabling it costs, and
-resolves which tools a server is actually allowed to contribute.
+Advertising a tool is not free: its name, description and argument schema all occupy the same context window the conversation does. A server
+with three hundred tools would consume the budget before the first message. This module prices a tool so the settings dialog can show what
+enabling it costs, and resolves which tools a server is actually allowed to contribute.
 
-Token counting uses ``tiktoken`` directly rather than reaching into the
-orchestrator, which would make this package depend on the layer that depends
-on it. A caller that already has the active model's own counter can inject it.
+Token counting uses ``tiktoken`` directly rather than reaching into the orchestrator, which would make this package depend on the layer that
+depends on it. A caller that already has the active model's own counter can inject it.
 """
 
 from __future__ import annotations
@@ -39,9 +36,8 @@ _logger = get_logger(__name__)
 DEFAULT_ENCODING_NAME: Final[str] = "o200k_base"
 """Encoding used when the caller supplies no model-specific counter.
 
-It overcounts against most real tokenizers rather than undercounting, so a
-cost estimate errs toward warning the operator off rather than toward a
-prompt that silently overflows.
+It overcounts against most real tokenizers rather than undercounting, so a cost estimate errs toward warning the operator off rather than
+toward a prompt that silently overflows.
 """
 
 TokenCounter = Callable[[str], int]

@@ -61,17 +61,14 @@ _logger = get_logger(__name__)
 API_KEY_PLACEHOLDER: Final[str] = "${apiKey}"
 """Placeholder a user header uses to request the instance's API key.
 
-Follows VS Code's custom-endpoint contract, where a header value containing
-``${apiKey}`` receives the configured key at request time.
+Follows VS Code's custom-endpoint contract, where a header value containing ``${apiKey}`` receives the configured key at request time.
 """
 
 AUTH_HEADER_NAMES: Final[frozenset[str]] = frozenset({"authorization", "api-key", "x-api-key"})
 """Headers that carry a credential.
 
-A user-supplied header with one of these names suppresses the adapter's
-inferred auth header, so a gateway or APIM front end never receives two
-conflicting credentials. This follows VS Code rather than Zed, which forbids
-the override outright and makes such gateways unusable.
+A user-supplied header with one of these names suppresses the adapter's inferred auth header, so a gateway or APIM front end never receives
+two conflicting credentials. This follows VS Code rather than Zed, which forbids the override outright and makes such gateways unusable.
 """
 
 PROTOCOL_HEADER_NAMES: Final[frozenset[str]] = frozenset({"host", "content-length", "transfer-encoding", "connection"})

@@ -267,8 +267,7 @@ class McpService:
     async def stop(self) -> None:
         """Disconnect every server and unregister their tools.
 
-        Runs before the background loop is torn down, so no server process
-        outlives the application and no worker is left awaiting a stopped
+        Runs before the background loop is torn down, so no server process outlives the application and no worker is left awaiting a stopped
         loop.
         """
         self._source.unregister_all()

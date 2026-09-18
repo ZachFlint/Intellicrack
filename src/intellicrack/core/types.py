@@ -463,9 +463,8 @@ class StructuredResultPart:
 ToolResultPart = TextResultPart | ImageResultPart | AudioResultPart | ResourceLinkPart | EmbeddedResourcePart | StructuredResultPart
 """One part of a multi-part tool result.
 
-Dialects that support a native multi-part tool result render each part
-directly; the rest degrade through the single shared text fallback defined in
-``intellicrack.providers.dialects.base`` so every dialect degrades identically.
+Dialects that support a native multi-part tool result render each part directly; the rest degrade through the single shared text fallback
+defined in ``intellicrack.providers.dialects.base`` so every dialect degrades identically.
 """
 
 

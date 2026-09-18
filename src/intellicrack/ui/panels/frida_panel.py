@@ -1862,11 +1862,9 @@ class FridaPanel(AnalysisPanelBase):
     def _on_application_double_click(self) -> None:
         """Target the double-clicked application.
 
-        A running application (nonzero PID) is attached to immediately,
-        mirroring :meth:`_on_process_double_click`. An application with no
-        running instance has no process to attach to, so its identifier is
-        copied into the target field for reference instead and the console
-        explains why no attach was attempted.
+        A running application (nonzero PID) is attached to immediately, mirroring :meth:`_on_process_double_click`. An application with no
+        running instance has no process to attach to, so its identifier is copied into the target field for reference instead and the
+        console explains why no attach was attempted.
         """
         row = self._application_table.currentRow()
         if row < 0:

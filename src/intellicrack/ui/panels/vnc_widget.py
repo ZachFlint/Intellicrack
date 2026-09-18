@@ -1907,8 +1907,7 @@ class VNCWidget(QWidget):
     def popout(self) -> None:
         """Move this widget into its own resizable, maximized top-level window.
 
-        A no-op when already popped out (the existing window is simply
-        raised and activated instead of a second one being created).
+        A no-op when already popped out (the existing window is simply raised and activated instead of a second one being created).
         """
         if self._popout_window is not None:
             self._popout_window.raise_()
@@ -1933,8 +1932,7 @@ class VNCWidget(QWidget):
     def redock(self) -> None:
         """Move this widget back into its configured host tab widget.
 
-        A no-op when not currently popped out, so it is safe to call from
-        both the popout window's close event and a direct "Re-dock" click.
+        A no-op when not currently popped out, so it is safe to call from both the popout window's close event and a direct "Re-dock" click.
         """
         window = self._popout_window
         if window is None:

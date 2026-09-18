@@ -60,9 +60,8 @@ ELICITATION_TIMEOUT_S: Final[float] = 600.0
 class QtMcpPrompts(QObject):
     """Presents MCP consent and elicitation questions on the GUI thread.
 
-    One instance serves every server. Signals are emitted from the background
-    loop and delivered on the GUI thread, which is what makes it safe to
-    build a dialog in response to them.
+    One instance serves every server. Signals are emitted from the background loop and delivered on the GUI thread, which is what makes it
+    safe to build a dialog in response to them.
     """
 
     consent_requested = pyqtSignal(object)

@@ -4,20 +4,14 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Reversible mapping between canonical dotted tool names and provider wire names.
 
-OpenAI, Anthropic, Grok, and OpenRouter all require tool/function names to
-match ``^[A-Za-z0-9_-]{1,64}$``. Intellicrack's canonical tool-function names
-are dotted (``"frida.spawn"``), which every one of those providers rejects.
-This module provides a stateless, collision-safe bijection between the
-canonical dotted form used everywhere inside Intellicrack (routing,
-classification, confirmation, persistence) and the provider-safe "wire" form
-that only ever appears at the provider boundary.
+OpenAI, Anthropic, Grok, and OpenRouter all require tool/function names to match ``^[A-Za-z0-9_-]{1,64}$``. Intellicrack's canonical tool-
+function names are dotted (``"frida.spawn"``), which every one of those providers rejects. This module provides a stateless, collision-safe
+bijection between the canonical dotted form used everywhere inside Intellicrack (routing, classification, confirmation, persistence) and the
+provider-safe "wire" form that only ever appears at the provider boundary.
 
-The primary mapping (``.`` <-> ``__``) is pure and requires no shared state.
-A registered fallback (deterministic hash suffix) exists only for names that
-cannot round-trip through the primary mapping -- none of Intellicrack's
-current ~715 tool-function names hit it, but a local or third-party model
-could echo an unexpected name, or a future tool name could collide with the
-``__`` separator.
+The primary mapping (``.`` <-> ``__``) is pure and requires no shared state. A registered fallback (deterministic hash suffix) exists only
+for names that cannot round-trip through the primary mapping -- none of Intellicrack's current ~715 tool-function names hit it, but a local
+or third-party model could echo an unexpected name, or a future tool name could collide with the ``__`` separator.
 """
 
 from __future__ import annotations

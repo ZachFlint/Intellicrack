@@ -4,18 +4,13 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """The Google Gemini dialect.
 
-Gemini differs from the other three in almost every structural detail: the
-model travels in the URL rather than the body, types are uppercase, messages
-are ``contents`` with an assistant role of ``model``, and a tool result
-identifies itself by *function name* rather than by call id -- so the layer has
-to remember which name each call used.
+Gemini differs from the other three in almost every structural detail: the model travels in the URL rather than the body, types are
+uppercase, messages are ``contents`` with an assistant role of ``model``, and a tool result identifies itself by *function name* rather than
+by call id -- so the layer has to remember which name each call used.
 
-Two Gemini-specific pieces of state matter for multi-turn tool use. Gemini 3.x
-signs each function call with a ``thought_signature`` that must be echoed back
-verbatim or the next request fails with ``Function call is missing a
-thought_signature``; and ``functionResponse.response`` takes structured JSON
-natively, so a structured tool-result part survives here without degrading to
-text.
+Two Gemini-specific pieces of state matter for multi-turn tool use. Gemini 3.x signs each function call with a ``thought_signature`` that
+must be echoed back verbatim or the next request fails with ``Function call is missing a thought_signature``; and
+``functionResponse.response`` takes structured JSON natively, so a structured tool-result part survives here without degrading to text.
 """
 
 from __future__ import annotations

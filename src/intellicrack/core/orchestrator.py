@@ -138,8 +138,7 @@ _TOOL_CATALOG_REPRESENTATIVE_SAMPLE: int = 4
 _MODEL_VARIANT_SEPARATORS: tuple[str, ...] = (":", "@")
 """Separators that introduce a variant suffix on an otherwise known model id.
 
-Endpoints routinely advertise ``my-model:free`` or ``my-model@2026-01`` for
-what is, for every purpose here, the same model.
+Endpoints routinely advertise ``my-model:free`` or ``my-model@2026-01`` for what is, for every purpose here, the same model.
 """
 
 
