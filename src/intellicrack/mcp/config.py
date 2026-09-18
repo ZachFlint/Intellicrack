@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 from intellicrack.core.config import get_config_file
+from intellicrack.core.json_payload import JsonObject, is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.errors import McpConfigError
 
@@ -264,7 +265,7 @@ class StdioServerSpec:
     command: str
     args: tuple[str, ...] = ()
     cwd: str | None = None
-    env: Mapping[str, str] = field(default_factory=dict)
+    env: Mapping[str, str] = field(default_factory=dict[str, str])
     env_file: str | None = None
 
 
@@ -284,8 +285,8 @@ class HttpServerSpec:
     """
 
     url: str
-    headers: Mapping[str, str] = field(default_factory=dict)
-    query: Mapping[str, str] = field(default_factory=dict)
+    headers: Mapping[str, str] = field(default_factory=dict[str, str])
+    query: Mapping[str, str] = field(default_factory=dict[str, str])
     oauth_client_id: str | None = None
     oauth_metadata_url: str | None = None
 
@@ -617,7 +618,7 @@ class McpConfigDocument:
         return replace(self, inputs=replaced)
 
 
-def _require_object(value: object, message: str) -> dict[str, Any]:
+def _require_object(value: object, message: str) -> JsonObject:
     """Narrow a JSON value to an object.
 
     Args:
@@ -625,12 +626,12 @@ def _require_object(value: object, message: str) -> dict[str, Any]:
         message: Error text used when the value is not an object.
 
     Returns:
-        dict[str, Any]: The value as a mapping.
+        JsonObject: The value as a mapping.
 
     Raises:
         McpConfigError: If the value is not a JSON object.
     """
-    if not isinstance(value, dict):
+    if not is_json_object(value):
         raise McpConfigError(message)
     return value
 
@@ -676,10 +677,10 @@ def _str_sequence(data: Mapping[str, Any], key: str, *, server_id: str) -> tuple
     value = data.get(key)
     if value is None:
         return ()
-    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+    if not is_json_array(value) or any(not isinstance(item, str) for item in value):
         message = f"server '{server_id}': field '{key}' must be an array of strings"
         raise McpConfigError(message)
-    return tuple(str(item) for item in value)
+    return tuple(item for item in value if isinstance(item, str))
 
 
 def _str_mapping(data: Mapping[str, Any], key: str, *, server_id: str) -> dict[str, str]:
@@ -697,15 +698,15 @@ def _str_mapping(data: Mapping[str, Any], key: str, *, server_id: str) -> dict[s
         McpConfigError: If the field is present but is not an object of
             string values.
     """
+    entries: dict[str, str] = {}
     value = data.get(key)
     if value is None:
-        return {}
-    if not isinstance(value, dict):
+        return entries
+    if not is_json_object(value):
         message = f"server '{server_id}': field '{key}' must be an object"
         raise McpConfigError(message)
-    entries: dict[str, str] = {}
     for name, item in value.items():
-        if not isinstance(name, str) or not isinstance(item, str):
+        if not isinstance(item, str):
             message = f"server '{server_id}': every entry of '{key}' must map a string name to a string value"
             raise McpConfigError(message)
         entries[name] = item
@@ -805,7 +806,7 @@ def _parse_sandbox(data: Mapping[str, Any], *, server_id: str) -> McpSandboxSpec
     raw = data.get("sandbox")
     if raw is None:
         return _DEFAULT_SANDBOX
-    if not isinstance(raw, dict):
+    if not is_json_object(raw):
         message = f"server '{server_id}': field 'sandbox' must be an object"
         raise McpConfigError(message)
     return McpSandboxSpec(
@@ -1086,7 +1087,7 @@ class McpConfigStore:
         raw_inputs = data.get("inputs")
         inputs: tuple[McpInputSpec, ...] = ()
         if raw_inputs is not None:
-            if not isinstance(raw_inputs, list):
+            if not is_json_array(raw_inputs):
                 raise McpConfigError(_ERR_INPUTS_NOT_AN_ARRAY)
             inputs = tuple(_parse_input(entry, index) for index, entry in enumerate(raw_inputs))
             seen: set[str] = set()

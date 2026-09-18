@@ -34,7 +34,7 @@ from intellicrack.mcp.errors import McpConfigError
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Mapping
+    from collections.abc import AsyncGenerator, Mapping
 
     from intellicrack.mcp.config import HttpServerSpec, StdioServerSpec
 
@@ -245,7 +245,7 @@ async def open_http_transport(
     headers: Mapping[str, str],
     auth: httpx2.Auth | None,
     timeout_s: float,
-) -> AsyncIterator[tuple[Any, Any]]:
+) -> AsyncGenerator[tuple[Any, Any]]:
     """Open a Streamable HTTP transport for a remote server.
 
     The SDK's ``StreamableHTTPTransport`` takes only a URL: headers and

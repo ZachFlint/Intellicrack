@@ -35,7 +35,7 @@ from contextlib import ExitStack, asynccontextmanager, suppress
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, TextIO
+from typing import TYPE_CHECKING, Any, Final, TextIO, cast
 
 import psutil
 from mcp import Client
@@ -53,7 +53,7 @@ from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, op
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator
 
     import httpx2
     from mcp.client.session import ElicitationFnT
@@ -143,8 +143,9 @@ def failure_leaves(exc: BaseException) -> list[BaseException]:
         list[BaseException]: Every non-group exception it carries, in order.
     """
     if isinstance(exc, BaseExceptionGroup):
+        group = cast("BaseExceptionGroup[BaseException]", exc)
         flattened: list[BaseException] = []
-        for nested in exc.exceptions:
+        for nested in group.exceptions:
             flattened.extend(failure_leaves(nested))
         return flattened
     return [exc]
@@ -505,7 +506,7 @@ class McpConnection:
         return {**from_file, **inline}
 
     @asynccontextmanager
-    async def _open_transport(self) -> AsyncIterator[Client]:
+    async def _open_transport(self) -> AsyncGenerator[Client]:
         """Open the SDK client for this server's transport.
 
         Yields:
@@ -526,7 +527,7 @@ class McpConnection:
         raise McpConnectionError(message)
 
     @asynccontextmanager
-    async def _open_stdio_client(self) -> AsyncIterator[Client]:
+    async def _open_stdio_client(self) -> AsyncGenerator[Client]:
         """Spawn a local server and open a client over its stdio streams.
 
         Teardown is the SDK's: closing the transport closes stdin, waits out
@@ -577,7 +578,7 @@ class McpConnection:
             argument_count=len(parameters.args),
             sandboxed=sandbox.enabled,
         )
-        known_children = _child_pids() if sandbox.enabled else frozenset()
+        known_children: frozenset[int] = _child_pids() if sandbox.enabled else frozenset()
         try:
             with ExitStack() as guards:
                 job = guards.enter_context(SandboxedJob(sandbox)) if sandbox.enabled else None
@@ -598,7 +599,7 @@ class McpConnection:
             self._stderr.close()
 
     @asynccontextmanager
-    async def _open_http_client(self) -> AsyncIterator[Client]:
+    async def _open_http_client(self) -> AsyncGenerator[Client]:
         """Open a client against a remote HTTP server.
 
         Yields:
@@ -1474,9 +1475,7 @@ class McpConnectionManager:
             list[McpConnection]: Ready connections, in start order.
         """
         return [
-            connection
-            for server_id in self._order
-            if (connection := self._connections.get(server_id)) is not None and connection.is_ready
+            connection for server_id in self._order if (connection := self._connections.get(server_id)) is not None and connection.is_ready
         ]
 
     def stderr_tail(self, server_id: str, limit: int = 200) -> list[str]:
