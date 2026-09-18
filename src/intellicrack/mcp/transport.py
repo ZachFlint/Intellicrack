@@ -20,6 +20,7 @@ commands are refused outright rather than silently truncated.
 
 from __future__ import annotations
 
+import webbrowser
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Protocol, runtime_checkable
@@ -52,6 +53,50 @@ _QUOTED_VALUE_MIN_CHARS: Final[int] = 2
 """Shortest value that can be a pair of matching quotes around content."""
 
 _ERR_EMPTY_COMMAND = "the launch command is empty"
+
+WEB_URL_SCHEMES: Final[frozenset[str]] = frozenset({"http", "https"})
+"""Schemes a URL from a server may be handed to the operator's browser."""
+
+
+def is_web_url(url: str) -> bool:
+    """Report whether a URL is safe to hand to the platform's URL handler.
+
+    Args:
+        url: The URL to test.
+
+    Returns:
+        bool: ``True`` for an ``http`` or ``https`` URL that names a host.
+    """
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return False
+    return parts.scheme.lower() in WEB_URL_SCHEMES and bool(parts.netloc)
+
+
+def open_web_url(url: str) -> bool:
+    """Open a URL in the operator's browser, refusing anything but the web.
+
+    Neither of the URLs Intellicrack opens on a server's behalf -- an
+    elicitation destination and an OAuth authorization page -- is written by
+    the operator. :func:`webbrowser.open` falls back to the platform handler,
+    which on Windows is ``ShellExecute``: it launches whatever the shell
+    associates with the string, so a ``file://`` URL naming an executable, a
+    UNC path, or a scheme some installed program registered would start a
+    program rather than open a page. Restricting the scheme is what keeps a
+    single click on a dialog from doing that.
+
+    Args:
+        url: The URL to open.
+
+    Returns:
+        bool: ``True`` when the URL was handed to the browser, ``False``
+        when it was refused or no browser could be launched.
+    """
+    if not is_web_url(url):
+        _logger.warning("mcp_url_open_refused", scheme=urlsplit(url).scheme[:32] if "//" in url else "")
+        return False
+    return webbrowser.open(url)
 
 
 @runtime_checkable

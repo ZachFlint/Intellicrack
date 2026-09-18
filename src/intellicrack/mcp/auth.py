@@ -27,7 +27,6 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-import webbrowser
 from typing import TYPE_CHECKING, Final
 
 from mcp.client.auth import OAuthClientProvider, TokenStorage
@@ -42,6 +41,7 @@ from intellicrack.credentials.oauth import OAuthCallbackError, OAuthCallbackServ
 from intellicrack.credentials.store import CredentialStoreError
 from intellicrack.mcp.errors import McpAuthError
 from intellicrack.mcp.secrets import MCP_SECRET_NAMESPACE
+from intellicrack.mcp.transport import is_web_url, open_web_url
 
 
 if TYPE_CHECKING:
@@ -384,13 +384,23 @@ async def open_authorization_page(url: str) -> None:
     """Send the operator to the authorization page in their browser.
 
     Launching a browser blocks for as long as the platform's handler takes
-    to return, so it runs off the event loop.
+    to return, so it runs off the event loop. The URL is built from metadata
+    the authorization server published, so it goes through
+    :func:`~intellicrack.mcp.transport.open_web_url` rather than straight to
+    the platform handler.
 
     Args:
         url: The authorization URL the SDK built.
+
+    Raises:
+        McpAuthError: If the URL is not an ``http`` or ``https`` address, so
+            the operator was never sent anywhere.
     """
+    if not is_web_url(url):
+        message = f"the authorization server asked Intellicrack to open {url[:64]!r}, which is not a web address"
+        raise McpAuthError(message)
     _logger.info("mcp_oauth_browser_opened", host=url.split("/", maxsplit=3)[2] if "//" in url else "")
-    _ = await asyncio.to_thread(webbrowser.open, url)
+    _ = await asyncio.to_thread(open_web_url, url)
 
 
 async def await_authorization_callback() -> AuthorizationCodeResult:

@@ -23,7 +23,6 @@ labelled "API key" is a legitimate request.
 from __future__ import annotations
 
 import asyncio
-import webbrowser
 from typing import TYPE_CHECKING, Any, Final, override
 
 from mcp_types import ElicitResult
@@ -46,7 +45,8 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.tool_source import sanitize_untrusted_text
-from intellicrack.ui.dialogs_helpers import plain_tooltip
+from intellicrack.mcp.transport import open_web_url
+from intellicrack.ui.dialogs_helpers import plain_tooltip, show_warning
 
 
 if TYPE_CHECKING:
@@ -354,10 +354,27 @@ class McpElicitationDialog(QDialog):
         return [name for name in self._required if not str(values.get(name, "")).strip()]
 
     def _on_open_url(self) -> None:
-        """Open the server's URL in the operator's browser."""
-        if self._url:
-            _logger.info("mcp_elicit_url_opened", server_id=self._server_id)
-            _ = webbrowser.open(self._url)
+        """Open the server's URL in the operator's browser.
+
+        The address is the server's, not the operator's, so it goes through
+        :func:`~intellicrack.mcp.transport.open_web_url`, which opens only
+        ``http`` and ``https``. A refusal is shown rather than swallowed: a
+        button that does nothing reads as a bug, and the operator should know
+        the server asked for something other than a web page.
+        """
+        if not self._url:
+            return
+        if not open_web_url(self._url):
+            _logger.warning("mcp_elicit_url_refused", server_id=self._server_id)
+            show_warning(
+                self,
+                "Address not opened",
+                f"The server '{self._server_id}' asked you to open an address that is not a web page, "
+                f"so Intellicrack did not open it. Opening it could have started a program rather than "
+                f"shown you a page.",
+            )
+            return
+        _logger.info("mcp_elicit_url_opened", server_id=self._server_id)
 
     def _on_accept(self) -> None:
         """Handle the send button."""
