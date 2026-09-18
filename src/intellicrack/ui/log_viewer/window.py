@@ -49,7 +49,7 @@ from intellicrack.ui.log_viewer._model import LogRecordTableModel
 from intellicrack.ui.log_viewer._proxy import LogFilterProxyModel, level_name_to_int
 from intellicrack.ui.log_viewer._record import LogRecordDict, record_to_json_text
 from intellicrack.ui.log_viewer._tail_reader import LogFileTailReader
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.panels.async_bridge import run_callable_async
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -701,10 +701,14 @@ class LogViewerWindow(QMainWindow):
             error_obj = exc if isinstance(exc, BaseException) else RuntimeError(repr(exc))
             QMessageBox.warning(self, "Save Logs", f"Failed to save log records: {error_obj}")
 
-        worker = GenericCallableWorker(_write_records_jsonl, target, records, parent=self)
-        worker.call_finished.connect(_on_finished)
-        worker.call_error.connect(_on_error)
-        worker.start()
+        _ = run_callable_async(
+            _write_records_jsonl,
+            target,
+            records,
+            on_success=_on_finished,
+            on_error=_on_error,
+            parent=self,
+        )
 
     def _on_open_logs_folder(self) -> None:
         """Open the logs directory in the operating system file browser."""

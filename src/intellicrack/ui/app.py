@@ -85,6 +85,7 @@ from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.async_bridge import (
     GenericCallableWorker,
     drain_bridge_workers,
+    guarded_delivery,
     run_bridge_coroutine,
     run_bridge_coroutine_async,
     run_bridge_coroutine_logged,
@@ -2898,7 +2899,7 @@ class MainWindow(QMainWindow):
         if self.model_discovery is not None:
             run_bridge_coroutine_async(self.model_discovery.discover_all(), parent=self)
 
-        self.model_refresh_worker = ModelRefreshWorker(provider_id, api_key, api_base, provider=connected_instance, parent=self)
+        self.model_refresh_worker = ModelRefreshWorker(provider_id, api_key, api_base, provider=connected_instance, owner=self)
 
         def _refresh_slot(s: int, m: list[str], msg: str) -> None:
             """Adapt the model-refresh worker signal into the typed handler.
@@ -2911,7 +2912,7 @@ class MainWindow(QMainWindow):
             """
             self._on_models_refresh_finished(success=bool(s), models=m, message=msg)
 
-        self.model_refresh_worker.refresh_finished.connect(_refresh_slot)
+        self.model_refresh_worker.refresh_finished.connect(guarded_delivery(_refresh_slot, self, "success"))
         self.model_refresh_worker.start()
 
     def _on_models_refresh_finished(self, *, success: bool, models: list[str], message: str) -> None:
@@ -3732,7 +3733,7 @@ class MainWindow(QMainWindow):
             _logger.debug("hexcore_unavailable_for_process_memory", pid=pid)
             return
 
-        worker = GenericCallableWorker(_hexcore.HexDocument.list_process_memory_regions, pid)
+        worker = GenericCallableWorker(_hexcore.HexDocument.list_process_memory_regions, pid, owner=self)
         self._process_regions_worker = worker
 
         def _on_finished(result: object) -> None:
@@ -3759,8 +3760,8 @@ class MainWindow(QMainWindow):
             if self._process_regions_worker is worker:
                 self._on_process_regions_failed(pid, exc)
 
-        _ = worker.call_finished.connect(_on_finished)
-        _ = worker.call_error.connect(_on_error)
+        _ = worker.call_finished.connect(guarded_delivery(_on_finished, self, "success"))
+        _ = worker.call_error.connect(guarded_delivery(_on_error, self, "error"))
         worker.start()
 
     def _on_process_regions_failed(self, pid: int, exc: object) -> None:

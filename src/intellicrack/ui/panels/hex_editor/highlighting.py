@@ -63,7 +63,12 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_logged, worker_is_running
+from intellicrack.ui.panels.async_bridge import (
+    GenericCallableWorker,
+    run_bridge_coroutine_logged,
+    run_callable_async,
+    worker_is_running,
+)
 from intellicrack.ui.panels.hex_editor_widget import HighlightRule
 
 
@@ -303,16 +308,16 @@ class HighlightingMixin:
         self._pending_pattern_add_bridge = bridge
         self._pending_pattern_add_pattern = pattern
         self._pending_pattern_add_color = color
-        self._pattern_rule_worker = GenericCallableWorker(
+        self._begin_pattern_search_busy()
+        self._pattern_rule_worker = run_callable_async(
             _locked_search_hex,
             search_fn,
             pattern,
             _HIGHLIGHT_PATTERN_MAX_MATCHES,
+            on_success=self._on_pattern_rule_search_finished,
+            on_error=self._on_pattern_rule_search_error,
+            parent=self if isinstance(self, QWidget) else None,
         )
-        _ = self._pattern_rule_worker.call_finished.connect(self._on_pattern_rule_search_finished)
-        _ = self._pattern_rule_worker.call_error.connect(self._on_pattern_rule_search_error)
-        self._begin_pattern_search_busy()
-        self._pattern_rule_worker.start()
 
     def _on_pattern_rule_search_finished(self, matches: object) -> None:
         """Dispatch the pending pattern highlight rule once its offsets resolve.
@@ -626,11 +631,15 @@ class HighlightingMixin:
             return
 
         self._pattern_refresh_pending = False
-        self._pattern_refresh_worker = GenericCallableWorker(_resolve_pattern_offsets, search_fn, specs)
-        _ = self._pattern_refresh_worker.call_finished.connect(self._on_pattern_refresh_finished)
-        _ = self._pattern_refresh_worker.call_error.connect(self._on_pattern_refresh_error)
         self._begin_pattern_search_busy()
-        self._pattern_refresh_worker.start()
+        self._pattern_refresh_worker = run_callable_async(
+            _resolve_pattern_offsets,
+            search_fn,
+            specs,
+            on_success=self._on_pattern_refresh_finished,
+            on_error=self._on_pattern_refresh_error,
+            parent=self if isinstance(self, QWidget) else None,
+        )
 
     def _on_pattern_refresh_finished(self, result: object) -> None:
         """Apply resolved pattern-highlight offsets from the background refresh worker.

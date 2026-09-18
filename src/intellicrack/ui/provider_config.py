@@ -751,7 +751,8 @@ class ConnectionTestWorker(RetainedWorker):
         provider_id: str,
         api_key: str,
         api_base: str | None = None,
-        parent: QWidget | None = None,
+        *,
+        owner: QWidget | None = None,
     ) -> None:
         """Initialize the ConnectionTestWorker for a provider.
 
@@ -759,9 +760,11 @@ class ConnectionTestWorker(RetainedWorker):
             provider_id: Identifier of the provider to test.
             api_key: API key to use for the connection test.
             api_base: Optional custom API base URL.
-            parent: Parent widget.
+            owner: Widget that started the test. It is recorded for scoped draining and delivery guards, never as a Qt parent: a probe
+                against a slow or unreachable endpoint runs for up to the request timeout, and closing the settings page must not destroy
+                the thread waiting on it.
         """
-        super().__init__(parent)
+        super().__init__(owner=owner)
         self.provider_id = provider_id
         self._api_key = api_key
         self._api_base = api_base
@@ -1201,7 +1204,8 @@ class ModelRefreshWorker(RetainedWorker):
         api_key: str,
         api_base: str | None = None,
         provider: LLMProviderBase | None = None,
-        parent: QWidget | None = None,
+        *,
+        owner: QWidget | None = None,
     ) -> None:
         """Initialize the ModelRefreshWorker for a provider.
 
@@ -1210,9 +1214,11 @@ class ModelRefreshWorker(RetainedWorker):
             api_key: API key to authenticate with the provider.
             api_base: Optional custom API base URL.
             provider: Optional pre-connected provider instance to use directly.
-            parent: Parent widget.
+            owner: Widget that started the refresh. It is recorded for scoped draining and delivery guards, never as a Qt parent: a model
+                list from an arbitrary endpoint can take the full request timeout, and closing the settings page must not destroy the
+                thread fetching it.
         """
-        super().__init__(parent)
+        super().__init__(owner=owner)
         self.provider_id = provider_id
         self._api_key = api_key
         self._api_base = api_base
@@ -4120,7 +4126,7 @@ class ProviderSettingsWidget(QFrame):
             api_key,
             api_base,
             provider=provider,
-            parent=None,
+            owner=self,
         )
         self._refresh_worker.refresh_finished.connect(self._on_refresh_worker_finished)
         self._refresh_worker.start()
@@ -4218,7 +4224,7 @@ class ProviderSettingsWidget(QFrame):
             self._test_btn.setEnabled(True)
             return
 
-        self._test_worker = ConnectionTestWorker(self.provider_id, api_key, api_base, None)
+        self._test_worker = ConnectionTestWorker(self.provider_id, api_key, api_base, owner=self)
         self._test_worker.test_finished.connect(self._on_test_worker_finished)
         self._test_worker.start()
 
