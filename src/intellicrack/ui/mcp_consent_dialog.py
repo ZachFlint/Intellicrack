@@ -4,15 +4,12 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Consent dialog shown before a local Model Context Protocol server is started.
 
-A configured server is a program on the operator's machine that Intellicrack
-is about to run with their own account and their own privileges. This dialog
-is the last point at which they can say no, so it shows them exactly what will
-run: the command, every argument in full, the working directory, and the names
-of the environment entries it will receive.
+A configured server is a program on the operator's machine that Intellicrack is about to run with their own account and their own
+privileges. This dialog is the last point at which they can say no, so it shows them exactly what will run: the command, every argument in
+full, the working directory, and the names of the environment entries it will receive.
 
-Nothing here is truncated, elided, or reflowed away. A long argument is the
-one most worth reading, and an argument the operator cannot see is one they
-cannot refuse.
+Nothing here is truncated, elided, or reflowed away. A long argument is the one most worth reading, and an argument the operator cannot see
+is one they cannot refuse.
 """
 
 from __future__ import annotations
@@ -58,17 +55,15 @@ _CODE_FONT_POINT_SIZE: Final[int] = 9
 _FLAG_BACKGROUND: Final[QColor] = QColor(255, 176, 0, 96)
 """Amber wash behind a flagged fragment.
 
-Alpha-blended so it reads against both the light and the dark theme without
-the dialog having to know which one is active.
+Alpha-blended so it reads against both the light and the dark theme without the dialog having to know which one is active.
 """
 
 
 class _DangerousPatternHighlighter(QSyntaxHighlighter):
     """Marks the fragments the consent scan flagged, wherever they appear.
 
-    The rendered description already lists the findings at the end. Painting
-    them in the command itself is what stops a flagged argument from being
-    read past in a wall of monospace text.
+    The rendered description already lists the findings at the end. Painting them in the command itself is what stops a flagged argument
+    from being read past in a wall of monospace text.
     """
 
     def __init__(self, document: QTextDocument | None, patterns: Sequence[DangerousPattern]) -> None:
@@ -207,8 +202,7 @@ class McpServerConsentDialog(QDialog):
 
         if self._findings:
             warning = QLabel(
-                f"{len(self._findings)} part(s) of this command matched Intellicrack's list of risky patterns. "
-                "They are highlighted below.",
+                f"{len(self._findings)} part(s) of this command matched Intellicrack's list of risky patterns. They are highlighted below.",
             )
             warning.setObjectName("mcp_consent_warning")
             warning.setWordWrap(True)

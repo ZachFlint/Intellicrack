@@ -23,8 +23,7 @@ class McpError(IntellicrackError):
 class McpConfigError(McpError):
     """A server configuration is malformed, unsafe, or unresolvable.
 
-    Raised for a bad ``serverId``, a literal secret written into
-    ``mcp.json``, an unresolvable ``${input:id}`` reference, and shell
+    Raised for a bad ``serverId``, a literal secret written into ``mcp.json``, an unresolvable ``${input:id}`` reference, and shell
     metacharacters in a launch command.
     """
 
@@ -36,23 +35,20 @@ class McpConnectionError(McpError):
 class McpConsentDeniedError(McpError):
     """The operator refused consent for an action that requires it.
 
-    Raised before a local server process is spawned when the consent gate
-    reports refusal, so nothing is launched.
+    Raised before a local server process is spawned when the consent gate reports refusal, so nothing is launched.
     """
 
 
 class McpProtocolError(McpError):
     """A server violated the protocol contract it advertised.
 
-    Raised when a tool result fails the ``outputSchema`` the server itself
-    published, and for a tool listing that cannot be interpreted.
+    Raised when a tool result fails the ``outputSchema`` the server itself published, and for a tool listing that cannot be interpreted.
     """
 
 
 class McpAuthError(McpError):
     """Authorization against an HTTP server failed or is unavailable.
 
-    Raised when the keyring backing per-server tokens is unusable, when an
-    issuer check rejects stored credentials, and when an interactive sign-in
-    cannot be completed.
+    Raised when the keyring backing per-server tokens is unusable, when an issuer check rejects stored credentials, and when an interactive
+    sign-in cannot be completed.
     """

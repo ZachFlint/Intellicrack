@@ -4,15 +4,12 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Keyring-backed resolution of ``${input:id}`` references in MCP configuration.
 
-``mcp.json`` never holds a credential. Wherever one is needed it carries a
-``${input:<id>}`` reference, and this module exchanges that reference for the
-real value held in the operating system keyring under a per-input key.
+``mcp.json`` never holds a credential. Wherever one is needed it carries a ``${input:<id>}`` reference, and this module exchanges that
+reference for the real value held in the operating system keyring under a per-input key.
 
-Resolution is strict in both directions that matter. A reference with no
-stored value raises rather than expanding to an empty string, because an
-empty API key reaches the server as an anonymous request and produces a
-confusing authorization failure instead of an actionable one. An unusable
-keyring likewise raises, so a server never starts unauthenticated.
+Resolution is strict in both directions that matter. A reference with no stored value raises rather than expanding to an empty string,
+because an empty API key reaches the server as an anonymous request and produces a confusing authorization failure instead of an actionable
+one. An unusable keyring likewise raises, so a server never starts unauthenticated.
 """
 
 from __future__ import annotations
@@ -39,8 +36,7 @@ _logger = get_logger(__name__)
 MCP_SECRET_NAMESPACE: Final[str] = NAMESPACE_PREFIX.removesuffix("-")
 """Prefix of every credential-store key this module owns.
 
-Derived from the tool-namespace prefix so a server's tools and its stored
-inputs are always filed under the same identifier.
+Derived from the tool-namespace prefix so a server's tools and its stored inputs are always filed under the same identifier.
 """
 
 _INPUT_KEY_TEMPLATE: Final[str] = MCP_SECRET_NAMESPACE + ":input:{input_id}"
@@ -61,9 +57,8 @@ def input_credential_key(input_id: str) -> str:
 class McpSecretResolver:
     """Expands ``${input:id}`` references from the credential store.
 
-    One resolver serves every configured server. Values are read on demand
-    rather than cached, so a credential rotated in the keyring takes effect
-    on the next connection without restarting the application.
+    One resolver serves every configured server. Values are read on demand rather than cached, so a credential rotated in the keyring takes
+    effect on the next connection without restarting the application.
     """
 
     def __init__(self, store: CredentialStore) -> None:
@@ -225,10 +220,7 @@ class McpSecretResolver:
         try:
             credentials = await self._store.get(input_credential_key(input_id))
         except CredentialStoreError as exc:
-            message = (
-                f"cannot read MCP input {input_id!r} from the keyring: {exc}. The server will not be started "
-                f"without it."
-            )
+            message = f"cannot read MCP input {input_id!r} from the keyring: {exc}. The server will not be started without it."
             raise McpAuthError(message) from exc
         if credentials is None or not credentials.api_key:
             message = (

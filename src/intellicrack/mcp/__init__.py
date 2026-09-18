@@ -4,21 +4,16 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Model Context Protocol client for Intellicrack.
 
-Third-party MCP servers appear inside Intellicrack as ordinary tools: they are
-configured in ``mcp.json``, connected over stdio or Streamable HTTP, and
-registered into the same tool registry the built-in bridges use, so the
-orchestrator, the confirmation dialog and the chat transcript treat them
-exactly as they treat Ghidra or Frida.
+Third-party MCP servers appear inside Intellicrack as ordinary tools: they are configured in ``mcp.json``, connected over stdio or
+Streamable HTTP, and registered into the same tool registry the built-in bridges use, so the orchestrator, the confirmation dialog and the
+chat transcript treat them exactly as they treat Ghidra or Frida.
 
-What is deliberately different is trust. A bridge ships with the application;
-a server does not. Nothing local is launched without the operator seeing the
-exact command first, a server's claims about its own tools count for nothing
-until the operator marks it trusted, and every piece of text a server sends is
-bounded and fenced before it reaches the model.
+What is deliberately different is trust. A bridge ships with the application; a server does not. Nothing local is launched without the
+operator seeing the exact command first, a server's claims about its own tools count for nothing until the operator marks it trusted, and
+every piece of text a server sends is bounded and fenced before it reaches the model.
 
-This package imports no Qt and is importable headless. The dialogs that ask
-the operator anything live under :mod:`intellicrack.ui`, and reach this
-package through the callables it accepts.
+This package imports no Qt and is importable headless. The dialogs that ask the operator anything live under :mod:`intellicrack.ui`, and
+reach this package through the callables it accepts.
 """
 
 from __future__ import annotations

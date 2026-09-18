@@ -175,8 +175,7 @@ class ToolConfirmationDialog(QDialog):
     def clear_remembered_decisions(cls) -> None:
         """Clear all session-remembered decisions.
 
-        Intended for end-of-session teardown and test isolation. Persistent
-        ``always`` answers are left alone, which is what makes them
+        Intended for end-of-session teardown and test isolation. Persistent ``always`` answers are left alone, which is what makes them
         persistent.
         """
         cls._remembered_decisions.clear()

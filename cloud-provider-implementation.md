@@ -385,6 +385,7 @@ Implement the phases in order. Each phase depends on the ones before it.
 | 1.9 Consolidate schema builders | `base.py:1523 create_openai_tool_schema` folded into `ChatCompletionsAdapter`; `to_wire_name` applied on the one path |
 
 **Behavioural contract** (the local session gates these; you cannot):
+
 - An instance with id `"my-gateway"` registers, connects, lists models and
   completes a tool-calling chat. Today `ui/app.py:331` drops it.
 - `grep -rn "ProviderName" src/` returns zero hits.
@@ -411,6 +412,7 @@ Implement the phases in order. Each phase depends on the ones before it.
 | 2.6 Dispatch boundary | `core/tools.py:796 execute_tool_call`, `:821 ToolName(tool_name.lower())` → bridge registry first, then **new** external-executor registry; `_bridges` keying unchanged |
 
 **Behavioural contract:**
+
 - A tool declared with a raw 2020-12 schema using `$ref`/`$defs`/`anyOf` is
   accepted; refs intact for Messages, inlined for Responses strict mode,
   reduced for Gemini.
@@ -441,6 +443,7 @@ Implement the phases in order. Each phase depends on the ones before it.
 | 3.6 UI surfacing | `ui/provider_config.py` per-model context-window override; remove truncation at `:1274` (`[:20]`), `:1388` (`[:50]`), `:1456` (`[:30]`); model combo `setEditable(True)` (`:3384`) |
 
 **Behavioural contract:**
+
 - A `/models` payload advertising `context_length`, `max_completion_tokens`,
   function calling, vision and pricing resolves to `ModelCapabilities` matching
   it field-for-field.
@@ -463,6 +466,7 @@ Implement the phases in order. Each phase depends on the ones before it.
 | 4.6 Startup | `main.py:764-789` builds from presets + saved instances instead of the hardcoded 8-tuple |
 
 **Behavioural contract:**
+
 - Two instances of the same dialect with different base URLs and keys connect
   concurrently with separate credentials.
 - The built-in OpenAI entry can be duplicated and the copy pointed at a proxy,
@@ -490,6 +494,7 @@ Implement the phases in order. Each phase depends on the ones before it.
 | 5.6 Report back | **new** `SentToolReport` (sent / deferred / truncated / dropped) + `get_last_sent_tools()`, mirroring `get_pending_tool_calls`/`get_pending_usage`/`get_pending_thinking` (`base.py:521-553`) |
 
 **Behavioural contract:**
+
 - All ~715 tool functions are sent to a Messages endpoint with exactly one
   non-deferred head; a request deferring *every* tool is rejected before it
   leaves the process (Anthropic 400s on that).

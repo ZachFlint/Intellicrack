@@ -6,20 +6,15 @@
 
 Three decisions live here, and they are deliberately separate.
 
-Launch consent gates spawning a local server. The operator is shown the exact
-command with every argument untruncated, the names of the environment entries
-it will receive, its working directory, and the warning that it runs with
-their own privileges. Nothing is spawned before they agree. The decision is
-bound to a digest of that exact launch, so changing an argument asks again.
+Launch consent gates spawning a local server. The operator is shown the exact command with every argument untruncated, the names of the
+environment entries it will receive, its working directory, and the warning that it runs with their own privileges. Nothing is spawned
+before they agree. The decision is bound to a digest of that exact launch, so changing an argument asks again.
 
-Trust decides whether a server's own claims about its tools may be believed.
-An untrusted server's ``readOnlyHint`` buys it nothing: every call it offers
-is classified destructive and confirmed.
+Trust decides whether a server's own claims about its tools may be believed. An untrusted server's ``readOnlyHint`` buys it nothing: every
+call it offers is classified destructive and confirmed.
 
-Approval records per-tool answers under ``once``, ``session`` or ``always``,
-keyed by the server's tool-listing generation. A server that changes what its
-tools are produces a new generation, which invalidates what the operator
-approved of the old ones.
+Approval records per-tool answers under ``once``, ``session`` or ``always``, keyed by the server's tool-listing generation. A server that
+changes what its tools are produces a new generation, which invalidates what the operator approved of the old ones.
 """
 
 from __future__ import annotations
@@ -343,8 +338,7 @@ def _write_json_object(path: Path, data: Mapping[str, Any]) -> None:
 class TrustStore:
     """Per-server trust state, approved launches, and the last seen generation.
 
-    Persisted so an operator's answer survives a restart, and reloaded on
-    every read so an external edit to the file takes effect without
+    Persisted so an operator's answer survives a restart, and reloaded on every read so an external edit to the file takes effect without
     restarting the application.
     """
 
@@ -479,10 +473,8 @@ class TrustStore:
 class ApprovalStore:
     """Per-tool approvals, keyed by namespace, function name and generation.
 
-    ``session`` answers live in memory for the life of the process.
-    ``always`` answers are persisted. Both are keyed by the generation of the
-    server's tool listing, so an answer never carries over to a tool whose
-    definition has changed underneath it.
+    ``session`` answers live in memory for the life of the process. ``always`` answers are persisted. Both are keyed by the generation of
+    the server's tool listing, so an answer never carries over to a tool whose definition has changed underneath it.
     """
 
     def __init__(self, path: Path | None = None) -> None:
@@ -598,24 +590,19 @@ class ApprovalStore:
 LaunchPrompt = Callable[["McpServerConfig", str, list["DangerousPattern"]], "bool | Awaitable[bool]"]
 """Presents a proposed launch and returns the operator's answer.
 
-Receives the server configuration, the rendered description from
-:func:`describe_launch`, and the findings from
+Receives the server configuration, the rendered description from :func:`describe_launch`, and the findings from
 :func:`scan_command_for_dangerous_patterns`.
 
-The answer may be awaitable. A prompt that shows a window has to hand the
-question to the GUI thread and wait for it, and awaiting that wait keeps the
-loop free to serve every other server in the meantime -- rather than blocking
-all of them behind one modal dialog.
+The answer may be awaitable. A prompt that shows a window has to hand the question to the GUI thread and wait for it, and awaiting that wait
+keeps the loop free to serve every other server in the meantime -- rather than blocking all of them behind one modal dialog.
 """
 
 
 class McpConsentGate:
     """Decides whether a local server may be launched, asking when it must.
 
-    A gate is consulted before anything is spawned. It answers from a
-    recorded decision when the launch is byte-identical to one already
-    approved, and otherwise asks -- which, headless, means refusing, because
-    no prompt is available to ask through.
+    A gate is consulted before anything is spawned. It answers from a recorded decision when the launch is byte-identical to one already
+    approved, and otherwise asks -- which, headless, means refusing, because no prompt is available to ask through.
     """
 
     def __init__(

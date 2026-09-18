@@ -4,23 +4,17 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """The Anthropic Messages dialect.
 
-Messages is the richest of the four wire formats for this workload: tool
-results carry text and images natively along with an explicit ``is_error``
-flag, prompt caching is explicit and placed by the caller, and extended
-thinking is a first-class content block.
+Messages is the richest of the four wire formats for this workload: tool results carry text and images natively along with an explicit
+``is_error`` flag, prompt caching is explicit and placed by the caller, and extended thinking is a first-class content block.
 
-Two of its properties drive the code below. Thinking blocks are *signed*, and
-Anthropic rejects a replayed block whose signature is missing or altered, so
-the signature is captured and echoed verbatim rather than reconstructed from
-the display text. And tool search lets all ~715 of Intellicrack's tool
-functions ship at once: every definition is still sent on every request, but
-all but one are marked ``defer_loading`` so only the non-deferred head is in
-reach at the start of a turn. At least one tool must stay non-deferred, which
-is enforced here rather than left to a 400 from the endpoint.
+Two of its properties drive the code below. Thinking blocks are *signed*, and Anthropic rejects a replayed block whose signature is missing
+or altered, so the signature is captured and echoed verbatim rather than reconstructed from the display text. And tool search lets all ~715
+of Intellicrack's tool functions ship at once: every definition is still sent on every request, but all but one are marked ``defer_loading``
+so only the non-deferred head is in reach at the start of a turn. At least one tool must stay non-deferred, which is enforced here rather
+than left to a 400 from the endpoint.
 
-Sampling parameters are deliberately absent: the anthropic 1.x SDK removed
-``temperature``/``top_p``/``top_k`` from ``messages.create``, and current
-Claude models reject them at the API layer.
+Sampling parameters are deliberately absent: the anthropic 1.x SDK removed ``temperature``/``top_p``/``top_k`` from ``messages.create``, and
+current Claude models reject them at the API layer.
 """
 
 from __future__ import annotations
@@ -610,8 +604,7 @@ class MessagesAdapter(DialectAdapter):
     def reset_stream_state(self) -> None:
         """Discard any partially accumulated thinking blocks.
 
-        Called when a stream ends or is cancelled so a subsequent stream on
-        the same adapter cannot inherit a half-built block.
+        Called when a stream ends or is cancelled so a subsequent stream on the same adapter cannot inherit a half-built block.
         """
         self._open_blocks.clear()
 

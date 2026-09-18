@@ -102,8 +102,7 @@ class TestEnumerateHeapsDistinctFromGetHeapsL1:
         shallow_ids = {h["heap_id"] for h in shallow}
         deep_ids = {h["id"] for h in deep}
         assert len(deep_ids & shallow_ids) > 0, (
-            f"enumerate_heaps and get_heaps must walk the same real heap list; "
-            f"shallow={shallow_ids!r} deep={deep_ids!r} share no ids"
+            f"enumerate_heaps and get_heaps must walk the same real heap list; shallow={shallow_ids!r} deep={deep_ids!r} share no ids"
         )
 
         heaps_with_blocks = [h for h in deep if h["blocks"]]
@@ -147,9 +146,7 @@ class TestEnumerateHeapsToolDefRegistrationL2:
             process_bridge: Module-scoped ProcessBridge fixture.
         """
         functions_by_name = {f.name: f for f in process_bridge.tool_definition.functions}
-        assert "process.enumerate_heaps" in functions_by_name, (
-            "process.enumerate_heaps must appear in the registered tool definitions"
-        )
+        assert "process.enumerate_heaps" in functions_by_name, "process.enumerate_heaps must appear in the registered tool definitions"
         func = functions_by_name["process.enumerate_heaps"]
         actual_params = {p.name for p in func.parameters}
         assert actual_params == {"pid"}, f"process.enumerate_heaps's tool-def parameters {actual_params} do not match {{'pid'}}"

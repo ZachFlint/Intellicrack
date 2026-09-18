@@ -126,10 +126,9 @@ TRANSPORT_FAILURES: Final[tuple[type[BaseException], ...]] = (
 )
 """Everything a transport can fail with.
 
-``BaseExceptionGroup`` is in the tuple because the SDK's transports are built
-on ``anyio`` task groups, which report a child task's failure as a group even
-when only one task failed. Catching the leaf types alone would let a dropped
-connection escape as an unhandled task exception.
+``BaseExceptionGroup`` is in the tuple because the SDK's transports are built on ``anyio`` task groups, which report a child task's failure
+as a group even when only one task failed. Catching the leaf types alone would let a dropped connection escape as an unhandled task
+exception.
 """
 
 
@@ -336,10 +335,8 @@ def reconnect_delay(attempt: int) -> float:
 class McpConnection:
     """One configured server, its transport, and its current tool listing.
 
-    A connection is inert until :meth:`connect` is awaited. It then owns a
-    supervisor task that keeps the SDK client entered, reconnecting with
-    bounded backoff when the server drops, until :meth:`disconnect` is
-    awaited.
+    A connection is inert until :meth:`connect` is awaited. It then owns a supervisor task that keeps the SDK client entered, reconnecting
+    with bounded backoff when the server drops, until :meth:`disconnect` is awaited.
     """
 
     def __init__(
@@ -1114,10 +1111,9 @@ def _process_matches(pid: int, expected_stem: str) -> bool:
 class _StreamPairTransport:
     """Adapts an already-open stream pair to the SDK's transport protocol.
 
-    The HTTP transport is opened as a context manager so its client and task
-    group unwind correctly. The SDK's ``Client`` wants a transport it can
-    enter itself, so the open pair is wrapped in one whose entry is a no-op
-    and whose exit leaves the real teardown to the surrounding context.
+    The HTTP transport is opened as a context manager so its client and task group unwind correctly. The SDK's ``Client`` wants a transport
+    it can enter itself, so the open pair is wrapped in one whose entry is a no-op and whose exit leaves the real teardown to the
+    surrounding context.
     """
 
     def __init__(self, streams: tuple[Any, Any]) -> None:
@@ -1147,10 +1143,8 @@ class _StreamPairTransport:
 class McpConnectionManager:
     """Owns every configured server's connection for the life of the process.
 
-    The manager is the single place that knows which servers exist, which
-    are up, and how to bring them up or down. Every coroutine it exposes
-    must be awaited on one event loop -- inside the GUI, the persistent
-    background loop the async bridge owns.
+    The manager is the single place that knows which servers exist, which are up, and how to bring them up or down. Every coroutine it
+    exposes must be awaited on one event loop -- inside the GUI, the persistent background loop the async bridge owns.
     """
 
     def __init__(

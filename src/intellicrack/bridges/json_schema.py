@@ -4,20 +4,16 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Reductions of raw JSON Schema to what each API dialect actually accepts.
 
-An externally-sourced tool describes its arguments with real JSON Schema
-(2020-12): ``$ref``, ``$defs``, ``anyOf``, keyword composition. Intellicrack's
-own ``ToolParameter`` model cannot express any of that, so a raw schema rides
-through untouched -- but the three dialects that receive it disagree sharply on
-what they will accept.
+An externally-sourced tool describes its arguments with real JSON Schema (2020-12): ``$ref``, ``$defs``, ``anyOf``, keyword composition.
+Intellicrack's own ``ToolParameter`` model cannot express any of that, so a raw schema rides through untouched -- but the three dialects
+that receive it disagree sharply on what they will accept.
 
-Anthropic Messages and OpenAI Chat Completions take 2020-12 as-is. OpenAI
-Responses enforces strict mode, which forbids ``$ref`` indirection, demands
-every property be listed in ``required`` and demands ``additionalProperties:
-false`` on every object. Google Gemini takes a small, uppercase-typed subset.
+Anthropic Messages and OpenAI Chat Completions take 2020-12 as-is. OpenAI Responses enforces strict mode, which forbids ``$ref``
+indirection, demands every property be listed in ``required`` and demands ``additionalProperties: false`` on every object. Google Gemini
+takes a small, uppercase-typed subset.
 
-Each reduction here is total: it either produces a schema the dialect accepts,
-or it reports that it could not, so the caller can fall back rather than send
-something the endpoint will reject.
+Each reduction here is total: it either produces a schema the dialect accepts, or it reports that it could not, so the caller can fall back
+rather than send something the endpoint will reject.
 """
 
 from __future__ import annotations
@@ -83,9 +79,8 @@ _GEMINI_ALLOWED_KEYWORDS: Final[frozenset[str]] = frozenset({
 _SCHEMA_MAP_KEYWORDS: Final[frozenset[str]] = frozenset({"properties"})
 """Keywords whose value maps a caller-chosen name to a subschema.
 
-A reduction recurses into the values of these and leaves the names alone. The
-names are the tool's own property names, not schema vocabulary, so filtering
-them against a keyword allowlist would delete every argument the tool declares.
+A reduction recurses into the values of these and leaves the names alone. The names are the tool's own property names, not schema
+vocabulary, so filtering them against a keyword allowlist would delete every argument the tool declares.
 """
 
 _SCHEMA_LIST_KEYWORDS: Final[frozenset[str]] = frozenset({"anyOf", "oneOf", "allOf", "prefixItems"})

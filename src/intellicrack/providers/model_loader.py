@@ -173,7 +173,9 @@ def validate_local_checkpoint(model_id: str) -> None:
         return
     folder_norm = os.path.normpath(folder.absolute())
     try:
-        index_files = sorted(child for child in Path(folder_norm).iterdir() if child.name.endswith(_SHARD_INDEX_SUFFIXES) and child.is_file())
+        index_files = sorted(
+            child for child in Path(folder_norm).iterdir() if child.name.endswith(_SHARD_INDEX_SUFFIXES) and child.is_file()
+        )
     except OSError as exc:
         _logger.warning("checkpoint_dir_listing_failed", checkpoint_dir=folder_norm, error=str(exc))
         return
