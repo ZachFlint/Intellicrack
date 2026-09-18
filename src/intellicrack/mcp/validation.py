@@ -43,6 +43,124 @@ _logger = get_logger(__name__)
 MAX_VALIDATION_DEPTH: Final[int] = 64
 """Deepest nesting the checker descends before giving up on a branch."""
 
+MAX_PATTERN_CHARS: Final[int] = 1024
+"""Longest ``pattern`` the checker will compile at all."""
+
+_UNBOUNDED_QUANTIFIERS: Final[frozenset[str]] = frozenset({"*", "+"})
+"""Repetition operators with no upper bound, written as a single character."""
+
+
+def _scan_for_unbounded_repetition(expression: str) -> bool:
+    """Report whether an unbounded quantifier repeats a compound group.
+
+    Catastrophic backtracking needs two things: a group whose body can match
+    the same text more than one way, and an unbounded quantifier repeating
+    that group. ``(a+)+`` has both, and matching it against thirty
+    characters takes longer than any operator will wait. A bounded
+    quantifier cannot blow up exponentially, so an ordinary IPv4 pattern,
+    whose outer group repeats exactly three times, is left alone.
+
+    The scan walks the expression once, tracking escapes, character classes
+    where a quantifier is a literal, and group nesting, so it judges only
+    quantifiers that really are quantifiers.
+
+    Args:
+        expression: The regular expression source.
+
+    Returns:
+        bool: ``True`` when an unbounded quantifier repeats a group that
+        itself contains an unbounded quantifier or an alternation.
+    """
+    starts: list[int] = []
+    risky: list[bool] = []
+    in_class = False
+    escaped = False
+    for index, character in enumerate(expression):
+        if escaped:
+            escaped = False
+            continue
+        if character == "\\":
+            escaped = True
+            continue
+        if in_class:
+            in_class = character != "]"
+            continue
+        if character == "[":
+            in_class = True
+        elif character == "(":
+            starts.append(index)
+            risky.append(False)
+        elif character == ")":
+            if not starts:
+                continue
+            _ = starts.pop()
+            body_risky = risky.pop()
+            following = expression[index + 1 : index + 2]
+            if body_risky and (following in _UNBOUNDED_QUANTIFIERS or _is_unbounded_brace(expression, index + 1)):
+                return True
+            if risky and body_risky:
+                risky[-1] = True
+        elif (character == "|" or character in _UNBOUNDED_QUANTIFIERS or _is_unbounded_brace(expression, index)) and risky:
+            risky[-1] = True
+    return False
+
+
+def _is_unbounded_brace(expression: str, index: int) -> bool:
+    """Report whether a ``{n,}`` repetition starts at one offset.
+
+    Args:
+        expression: The regular expression source.
+        index: Offset to test.
+
+    Returns:
+        bool: ``True`` when the offset begins a brace repetition with no
+        upper bound.
+    """
+    if index >= len(expression) or expression[index] != "{":
+        return False
+    close = expression.find("}", index)
+    if close == -1:
+        return False
+    body = expression[index + 1 : close]
+    return body.endswith(",") and body[:-1].isdigit()
+
+
+def compile_schema_pattern(expression: str) -> re.Pattern[str] | None:
+    """Compile a schema-supplied regular expression, or refuse it.
+
+    The ``pattern`` and ``patternProperties`` keywords of an output schema
+    are written by the server, and so is the text they are matched against.
+    Python's regular expression engine backtracks, so those two together are
+    enough for a server to hang the client: ``(a+)+$`` against thirty
+    characters does not finish. ``re`` offers no time limit and holds the
+    GIL while it matches, so no timeout or worker thread can take the
+    process back.
+
+    A pattern this function refuses is simply not checked. That loses one
+    assertion about a server's own output, which is a far smaller cost than
+    a frozen event loop.
+
+    Args:
+        expression: The regular expression from the schema.
+
+    Returns:
+        re.Pattern[str] | None: The compiled pattern, or ``None`` when it is
+        too long, will not compile, or repeats a compound group without
+        bound.
+    """
+    if len(expression) > MAX_PATTERN_CHARS:
+        _logger.warning("json_schema_pattern_too_long", length=len(expression), limit=MAX_PATTERN_CHARS)
+        return None
+    if _scan_for_unbounded_repetition(expression):
+        _logger.warning("json_schema_pattern_refused_unbounded_repetition", pattern=expression[:128])
+        return None
+    try:
+        return re.compile(expression)
+    except re.error:
+        _logger.debug("json_schema_pattern_invalid", pattern=expression[:128])
+        return None
+
+
 MAX_VIOLATIONS: Final[int] = 32
 """Most violations collected before reporting stops, so one badly-shaped
 result cannot produce an unbounded error message.
@@ -235,12 +353,8 @@ def _check_string(value: object, schema: Mapping[str, Any], path: str) -> Iterat
         yield SchemaViolation(path=path, message=f"must be at most {maximum} characters")
     pattern = schema.get("pattern")
     if isinstance(pattern, str):
-        try:
-            compiled = re.compile(pattern)
-        except re.error:
-            _logger.debug("json_schema_pattern_invalid", pattern=pattern[:128])
-            return
-        if compiled.search(value) is None:
+        compiled = compile_schema_pattern(pattern)
+        if compiled is not None and compiled.search(value) is None:
             yield SchemaViolation(path=path, message=f"must match {pattern!r}")
 
 
@@ -357,13 +471,12 @@ def _pattern_matches(expression: str, name: str) -> bool:
 
     Returns:
         bool: ``True`` when the expression matches, ``False`` when it does
-        not or cannot be compiled.
+        not, cannot be compiled, or was refused as unsafe to run.
     """
-    try:
-        return re.compile(expression).search(name) is not None
-    except re.error:
-        _logger.debug("json_schema_property_pattern_invalid", pattern=expression[:128])
+    compiled = compile_schema_pattern(expression)
+    if compiled is None:
         return False
+    return compiled.search(name) is not None
 
 
 def _check_combinators(value: object, schema: Mapping[str, Any], path: str, depth: int) -> Iterator[SchemaViolation]:
