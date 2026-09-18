@@ -1131,8 +1131,8 @@ class FunctionDisasmTab(QWidget):
 class FunctionDetailsTab(QWidget):
     """Tab showing full per-function detail: parameters, local variables, and calling convention.
 
-    Complements :class:`BasicBlocksTab` and :class:`FunctionDisasmTab` by exposing ``CutterBridge.get_function`` (``afij``/``afvj``), the only
-    per-function call that resolves real parameter and local-variable storage locations and sizes together with the function's calling
+    Complements :class:`BasicBlocksTab` and :class:`FunctionDisasmTab` by exposing ``CutterBridge.get_function`` (``afij``/``afvj``), the
+    only per-function call that resolves real parameter and local-variable storage locations and sizes together with the function's calling
     convention and return type, distinct from the function-list sidebar's bare name/address/size summary.
     """
 

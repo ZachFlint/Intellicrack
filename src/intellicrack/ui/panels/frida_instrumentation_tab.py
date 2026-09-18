@@ -625,9 +625,9 @@ class MemoryPatchStringControls(QWidget):
 class InstructionDisassembleControls(QWidget):
     """Single-instruction disassembly controls for the Memory section.
 
-    Exposes ``disassemble_instruction`` (backed by Frida's ``Instruction.parse``), decoding one instruction at a
-    target address and rendering its address, next-instruction address, size, mnemonic, operand string, and full
-    textual form, distinct from the raw byte-oriented Read/Write/Scan controls already present in the Memory tab.
+    Exposes ``disassemble_instruction`` (backed by Frida's ``Instruction.parse``), decoding one instruction at a target address and
+    rendering its address, next-instruction address, size, mnemonic, operand string, and full textual form, distinct from the raw byte-
+    oriented Read/Write/Scan controls already present in the Memory tab.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -764,8 +764,8 @@ class TypedMemoryAccessControls(QWidget):
     """Typed NativePointer read/write controls for the Memory section.
 
     One coherent entry point for ``read_typed_value``/``write_typed_value``, with a single type-selector combo
-    (pointer/cstring/utf8/u8../s8../float/double) driving both the Read and Write actions, distinct from the
-    raw-hex Read/Write controls already present in the Memory tab.
+    (pointer/cstring/utf8/u8../s8../float/double) driving both the Read and Write actions, distinct from the raw-hex Read/Write controls
+    already present in the Memory tab.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

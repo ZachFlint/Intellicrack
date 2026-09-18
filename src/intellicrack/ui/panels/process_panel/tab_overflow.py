@@ -5,11 +5,11 @@
 """Overflow-aware degrade helper for nested :class:`QTabWidget` tab bars.
 
 The Process panel nests three tab levels (top-level Processes/Memory/Threads/Modules/System, the Processes tab's System
-Processes/Tracked/Process Info sub-tabs, and the System tab's Registry Value Keys/Data sub-tabs). A plain
-:class:`QTabWidget` tab bar that cannot fit every label falls back to Qt's built-in scroll arrows, which page one sliver of
-a tab at a time and give no indication of what the remaining tabs are named (S20-D16). :func:`install_tab_overflow` keeps
-those scroll arrows for keyboard/mouse paging but adds a corner dropdown that lists every tab by name and jumps straight
-to it, and switches the bar to elide long labels instead of letting Qt clip them mid-glyph.
+Processes/Tracked/Process Info sub-tabs, and the System tab's Registry Value Keys/Data sub-tabs). A plain :class:`QTabWidget` tab bar that
+cannot fit every label falls back to Qt's built-in scroll arrows, which page one sliver of a tab at a time and give no indication of what
+the remaining tabs are named (S20-D16). :func:`install_tab_overflow` keeps those scroll arrows for keyboard/mouse paging but adds a corner
+dropdown that lists every tab by name and jumps straight to it, and switches the bar to elide long labels instead of letting Qt clip them
+mid-glyph.
 """
 
 from __future__ import annotations

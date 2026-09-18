@@ -360,10 +360,8 @@ def poll_and_embed(
 class _BitmapInfoHeader(ctypes.Structure):
     """Win32 ``BITMAPINFOHEADER`` describing an uncompressed 32bpp top-down DIB.
 
-    Used with ``GetDIBits`` to pull a captured window's pixels out of a GDI
-    bitmap in a layout (``BGRX``, top-down rows) that matches
-    :class:`PyQt6.QtGui.QImage`'s ``Format_RGB32`` directly, with no channel
-    reordering or row-flipping required.
+    Used with ``GetDIBits`` to pull a captured window's pixels out of a GDI bitmap in a layout (``BGRX``, top-down rows) that matches
+    :class:`PyQt6.QtGui.QImage`'s ``Format_RGB32`` directly, with no channel reordering or row-flipping required.
     """
 
     _fields_: ClassVar = [

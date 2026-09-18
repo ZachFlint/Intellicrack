@@ -159,9 +159,7 @@ def test_grok_wire_payload_keeps_leading_functions_in_order() -> None:
     wire_tools = provider.convert_tools_to_provider_format(_REAL_TOOL_DEFINITIONS)
     wire_names = _wire_function_names(wire_tools)
 
-    all_function_names = [
-        to_wire_name(function.name) for definition in _REAL_TOOL_DEFINITIONS for function in definition.functions
-    ]
+    all_function_names = [to_wire_name(function.name) for definition in _REAL_TOOL_DEFINITIONS for function in definition.functions]
     expected_prefix = all_function_names[: len(wire_names)]
 
     assert wire_names == expected_prefix

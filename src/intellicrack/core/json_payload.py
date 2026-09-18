@@ -4,17 +4,13 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Type narrowing for decoded JSON payloads.
 
-Every value that arrives from :func:`json.loads`, an HTTP response body or a
-raw JSON Schema is statically an :class:`object`. A bare ``isinstance(value,
-dict)`` narrows it to ``dict[Unknown, Unknown]``, because the check proves
-nothing about the key or value types, and that partial unknown then propagates
-through every expression downstream.
+Every value that arrives from :func:`json.loads`, an HTTP response body or a raw JSON Schema is statically an :class:`object`. A bare
+``isinstance(value, dict)`` narrows it to ``dict[Unknown, Unknown]``, because the check proves nothing about the key or value types, and
+that partial unknown then propagates through every expression downstream.
 
-JSON itself does carry that guarantee: an object always has string keys, and
-its members are always JSON values. The predicates here state that guarantee
-once, as :data:`typing.TypeIs`, so a caller narrows straight to a usable type
-in both the positive and the negative branch and nothing downstream is
-unknown.
+JSON itself does carry that guarantee: an object always has string keys, and its members are always JSON values. The predicates here state
+that guarantee once, as :data:`typing.TypeIs`, so a caller narrows straight to a usable type in both the positive and the negative branch
+and nothing downstream is unknown.
 """
 
 from __future__ import annotations
@@ -23,7 +19,10 @@ from typing import Any, TypeIs
 
 
 JsonObject = dict[str, Any]
-"""A decoded JSON object. Keys are always strings; values are JSON values."""
+"""A decoded JSON object.
+
+Keys are always strings; values are JSON values.
+"""
 
 JsonArray = list[Any]
 """A decoded JSON array."""

@@ -2,15 +2,19 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Shared QMessageBox dialog helpers for Intellicrack UI panels.
+"""Shared dialog helpers for Intellicrack UI panels.
 
 Provides a single canonical implementation of the error / warning / information popup pattern used across the configuration dialogs and hex
 editor panel mixins. Centralising these calls gives every UI surface consistent structured logging and a single seam for future theming or
 accessibility tweaks.
+
+:func:`plain_tooltip` covers the other shared concern: a tooltip Qt decides is rich text, which is how externally-supplied text reaches a
+markup renderer.
 """
 
 from __future__ import annotations
 
+import html
 from typing import TYPE_CHECKING
 
 from PyQt6.QtWidgets import QMessageBox
@@ -119,3 +123,21 @@ def show_info(
     """
     _logger.info("dialog_info", title=title, dialog_message=message)
     return QMessageBox.information(parent, title, message)
+
+
+def plain_tooltip(text: str) -> str:
+    """Render text as a tooltip that cannot be interpreted as markup.
+
+    Qt has no plain-text mode for a tooltip: it guesses, and renders anything
+    that looks like markup as rich text, which for externally supplied text
+    means a remote ``<img>`` fetches on hover. Escaping the text and stating
+    the document type removes the guess, and ``pre-wrap`` keeps the line
+    breaks a plain-text tooltip would have shown.
+
+    Args:
+        text: The text to show, from any source.
+
+    Returns:
+        str: A rich-text document displaying ``text`` verbatim.
+    """
+    return f"<html><body><p style='white-space:pre-wrap'>{html.escape(text)}</p></body></html>"

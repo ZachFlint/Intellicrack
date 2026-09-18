@@ -474,9 +474,15 @@ class PreferencesDialog(QDialog):
 
     Attributes:
         settings_changed: Qt signal for settings changed.
+        mcp_settings_requested: Qt signal asking the main window to open the
+            MCP server settings. Preferences does not own the MCP client --
+            connections are application-lifetime and live on the background
+            loop -- so it forwards the request rather than building a second
+            dialog against state it cannot reach.
     """
 
     settings_changed = pyqtSignal(Config)
+    mcp_settings_requested = pyqtSignal()
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
         """Initialize the PreferencesDialog with application configuration.
@@ -490,6 +496,10 @@ class PreferencesDialog(QDialog):
         self._settings_widgets: list[GeneralSettingsWidget | AppearanceSettingsWidget | SessionSettingsWidget | LoggingSettingsWidget] = []
         self._config_path: Path | None = None
         self._setup_ui()
+
+    def _on_open_mcp_settings(self) -> None:
+        """Ask the main window to open the MCP server settings."""
+        self.mcp_settings_requested.emit()
 
     def set_config_path(self, path: Path) -> None:
         """Set the configuration file path for saving.
@@ -551,6 +561,11 @@ class PreferencesDialog(QDialog):
         button_container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         button_layout = QHBoxLayout(button_container)
         button_layout.setContentsMargins(16, 12, 16, 12)
+
+        mcp_button = QPushButton("MCP Servers...")
+        mcp_button.setObjectName("preferences_mcp_button")
+        mcp_button.clicked.connect(self._on_open_mcp_settings)
+        button_layout.addWidget(mcp_button)
 
         button_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Apply,

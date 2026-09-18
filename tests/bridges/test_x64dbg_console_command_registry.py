@@ -197,11 +197,7 @@ def _exec_commands(fake: _FakePipeClient) -> list[str]:
     Returns:
         list[str]: The ``command`` field of each ``exec`` call, in order.
     """
-    return [
-        str(params["command"])
-        for command, params in fake.sent
-        if command == "exec" and params is not None and "command" in params
-    ]
+    return [str(params["command"]) for command, params in fake.sent if command == "exec" and params is not None and "command" in params]
 
 
 def _assert_no_unregistered_command(fake: _FakePipeClient) -> None:
@@ -212,9 +208,7 @@ def _assert_no_unregistered_command(fake: _FakePipeClient) -> None:
     """
     for sent in _exec_commands(fake):
         head = sent.split(" ", 1)[0].rstrip(",")
-        assert head not in _UNREGISTERED_COMMANDS, (
-            f"bridge emitted unregistered x64dbg command {head!r} (full command: {sent!r})"
-        )
+        assert head not in _UNREGISTERED_COMMANDS, f"bridge emitted unregistered x64dbg command {head!r} (full command: {sent!r})"
 
 
 @pytest.fixture

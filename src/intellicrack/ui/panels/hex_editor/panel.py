@@ -873,10 +873,8 @@ class HexEditorPanel(
     def _on_save(self) -> None:
         """Save the current document.
 
-        Routes the write through the attached ``HexEditorBridge`` when one
-        is present, via :func:`run_bridge_coroutine`, so the bridge's own
-        ``target_path`` bookkeeping and ``DOCUMENT_SAVED`` notification stay
-        current instead of drifting from what the GUI just wrote. Falls
+        Routes the write through the attached ``HexEditorBridge`` when one is present, via :func:`run_bridge_coroutine`, so the bridge's own
+        ``target_path`` bookkeeping and ``DOCUMENT_SAVED`` notification stay current instead of drifting from what the GUI just wrote. Falls
         back to saving the document directly when no bridge is attached.
         """
         if self.document is None:
@@ -1120,12 +1118,9 @@ class HexEditorPanel(
     def _on_get_ai_context(self) -> None:
         """Fetch the bridge's full AI context bundle and push it to the AI chat surface.
 
-        Routes through the real ``HexEditorBridge.get_context_for_ai``
-        tool (cursor window, data inspection, selection, and bookmarks)
-        rather than the lighter ad hoc payload :meth:`_on_send_to_ai`
-        builds locally, then delivers the result through the same
-        :attr:`context_push_requested` signal already wired to the AI
-        chat surface.
+        Routes through the real ``HexEditorBridge.get_context_for_ai`` tool (cursor window, data inspection, selection, and bookmarks)
+        rather than the lighter ad hoc payload :meth:`_on_send_to_ai` builds locally, then delivers the result through the same
+        :attr:`context_push_requested` signal already wired to the AI chat surface.
         """
         if self.document is None:
             return

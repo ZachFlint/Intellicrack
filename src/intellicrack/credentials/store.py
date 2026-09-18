@@ -63,9 +63,8 @@ except ImportError:
 class _Win32CredentialFallbackError(Exception):
     """Sentinel exception used when the Win32 credential shim is unavailable.
 
-    This class is never raised. It exists only to keep the ``except`` tuples
-    type-consistent on platforms where ``win32ctypes`` is not installed,
-    mirroring :class:`_KeyringFallbackError`.
+    This class is never raised. It exists only to keep the ``except`` tuples type-consistent on platforms where ``win32ctypes`` is not
+    installed, mirroring :class:`_KeyringFallbackError`.
     """
 
 

@@ -1972,10 +1972,8 @@ class _FridaBridgeBase(InstrumentationBridge):
     def _reset_session_child_gating_state(self) -> None:
         """Best-effort reset of session-child-gating bookkeeping when a session is torn down.
 
-        Called from both the explicit ``detach()`` path and the
-        ``session.on("detached", ...)`` listener so a leaked device-level
-        ``"child-added"``/``"child-removed"`` handler never outlives its
-        session.
+        Called from both the explicit ``detach()`` path and the ``session.on("detached", ...)`` listener so a leaked device-level ``"child-
+        added"``/``"child-removed"`` handler never outlives its session.
         """
         self._detach_session_child_gating_handlers()
         self._session_child_gating_enabled = False
@@ -5798,15 +5796,11 @@ class _FridaBridgeBase(InstrumentationBridge):
     def _detach_device_lost_handler(self) -> None:
         """Drop the registered device "lost" handler if one is currently active.
 
-        Detaches from the device the handler was actually registered on
-        (tracked separately in ``self._device_lost_handler_target``) rather
-        than the bridge's current ``self._device``, since the handler's own
-        callback clears ``self._device`` the moment the signal fires -
-        by the time this runs, the device that is now lost may no longer be
-        reachable through ``self._device`` at all. Shared core for
-        :meth:`disable_device_lost_notifications` and
-        :meth:`_teardown_device_lost_notifications`; the public methods
-        differ only in whether errors are surfaced or logged.
+        Detaches from the device the handler was actually registered on (tracked separately in ``self._device_lost_handler_target``) rather
+        than the bridge's current ``self._device``, since the handler's own callback clears ``self._device`` the moment the signal fires -
+        by the time this runs, the device that is now lost may no longer be reachable through ``self._device`` at all. Shared core for
+        :meth:`disable_device_lost_notifications` and :meth:`_teardown_device_lost_notifications`; the public methods differ only in whether
+        errors are surfaced or logged.
         """
         if not self._device_lost_notifications_enabled:
             return
@@ -5876,11 +5870,9 @@ class _FridaBridgeBase(InstrumentationBridge):
 class _FridaBridgeSessionChildGatingMixin(_FridaBridgeBase):
     """Session-scoped (``Session.enable_child_gating``) true child-process gating for the Frida bridge.
 
-    Kept as a separate mixin from :class:`_FridaBridgeAnalysisMixin` purely
-    to keep each class's own public method count under this project's
-    ``too-many-public-methods`` lint ceiling; the four methods below are
-    still reachable as ordinary ``FridaBridge`` methods via the normal
-    method-resolution order.
+    Kept as a separate mixin from :class:`_FridaBridgeAnalysisMixin` purely to keep each class's own public method count under this
+    project's ``too-many-public-methods`` lint ceiling; the four methods below are still reachable as ordinary ``FridaBridge`` methods via
+    the normal method-resolution order.
     """
 
     async def enable_session_child_gating(self) -> None:
@@ -6096,11 +6088,9 @@ class _FridaBridgeSessionChildGatingMixin(_FridaBridgeBase):
 class _FridaBridgeScriptControlMixin(_FridaBridgeSessionChildGatingMixin):
     """Per-script debugger attach/detach controls for the Frida bridge.
 
-    Kept as a separate mixin from :class:`_FridaBridgeAnalysisMixin` purely
-    to keep each class's own public method count under this project's
-    ``too-many-public-methods`` lint ceiling; the methods below are still
-    reachable as ordinary ``FridaBridge`` methods via the normal
-    method-resolution order.
+    Kept as a separate mixin from :class:`_FridaBridgeAnalysisMixin` purely to keep each class's own public method count under this
+    project's ``too-many-public-methods`` lint ceiling; the methods below are still reachable as ordinary ``FridaBridge`` methods via the
+    normal method-resolution order.
     """
 
     async def enable_script_debugger(self, script_id: str, port: int = _DEFAULT_SCRIPT_DEBUGGER_PORT) -> bool:
