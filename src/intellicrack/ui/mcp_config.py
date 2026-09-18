@@ -281,8 +281,7 @@ class McpInputPromptDialog(QDialog):
 class McpServerEditor(QWidget):
     """Edits one server's transport and connection settings.
 
-    Emits ``changed()`` whenever a field is edited, so the dialog knows there
-    is something unsaved.
+    Emits ``changed()`` whenever a field is edited, so the dialog knows there is something unsaved.
     """
 
     changed = pyqtSignal()
@@ -1442,6 +1441,23 @@ class McpConfigDialog(QDialog):
             show_warning(self, "Unsaved changes", "Your MCP settings were not saved. Reopen the dialog and press Save to keep them.")
         self._release_workers()
         super().closeEvent(a0)
+
+    @override
+    def done(self, a0: int) -> None:
+        """Release background workers on every way this dialog is dismissed.
+
+        ``closeEvent`` covers the window being closed, but ``accept``,
+        ``reject`` and the Escape key all route through here without sending a
+        close event. A worker left attached at that point is destroyed with the
+        dialog while its OS thread still runs, which aborts the process rather
+        than failing anything. Releasing is idempotent, so the close path
+        running both is harmless.
+
+        Args:
+            a0: The dialog result code.
+        """
+        self._release_workers()
+        super().done(a0)
 
 
 def _as_object_list(value: object) -> list[object]:
