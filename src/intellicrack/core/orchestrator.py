@@ -18,7 +18,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal, Protocol, cast
 from uuid import uuid4
 
 import lief
@@ -191,6 +191,27 @@ def _get_token_encoder(tokenizer: str | None) -> tiktoken.Encoding:
             encoder = tiktoken.get_encoding(encoding_name)
     _token_encoder_cache[encoding_name] = encoder
     return encoder
+
+
+def _serialize_for_tokens(value: object) -> str:
+    """Render any payload to text for token counting.
+
+    Args:
+        value: Tool arguments, a tool result, or one result part.
+
+    Returns:
+        str: A JSON encoding, falling back to ``repr`` for a value JSON
+        cannot express. Measuring is the point, so an unencodable payload
+        must still be measured rather than counted as free.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    try:
+        return json.dumps(value, default=str, separators=(",", ":"))
+    except (TypeError, ValueError):
+        return repr(value)
 
 
 def _count_tokens(text: str, tokenizer: str | None) -> int:
@@ -622,6 +643,112 @@ classification, which the orchestrator treats as destructive so that newly added
 """
 
 
+class McpClassifier(Protocol):
+    """Answers whether one canonical MCP tool call is read-only.
+
+    Implemented by :class:`~intellicrack.mcp.tool_source.McpToolSource`, which
+    only answers ``True`` for a tool on a server the operator has marked
+    trusted.
+    """
+
+    def owns_namespace(self, namespace: str) -> bool:
+        """Report whether a tool namespace belongs to an MCP server.
+
+        Args:
+            namespace: The namespace half of a canonical tool name.
+
+        Returns:
+            bool: ``True`` when this source owns the namespace.
+        """
+        ...
+
+    def is_read_only(self, canonical_name: str) -> bool:
+        """Report whether a canonical MCP tool call mutates nothing.
+
+        Args:
+            canonical_name: ``mcp-<serverId>.<toolName>``.
+
+        Returns:
+            bool: ``True`` only when the call is known to be read-only.
+        """
+        ...
+
+    def catalog_lines(self) -> list[str]:
+        """Render this source's prompt section.
+
+        The source renders its own section because it is the thing that knows
+        which servers exist, how healthy they are, and which parts of the text
+        came from a server and therefore have to be fenced before they reach
+        the model. The orchestrator only splices the result in.
+
+        Returns:
+            list[str]: Prompt lines, with every server-supplied fragment
+            already sanitized and fenced.
+        """
+        ...
+
+
+class _McpClassifierHolder:
+    """Holder for the process-wide MCP classifier.
+
+    :func:`classify_tool_call` is a module-level function with a fixed
+    signature that callers and tests already depend on, so the classifier
+    reaches it through here rather than through a new parameter.
+
+    Attributes:
+        instance: The installed classifier, or ``None`` when no MCP tool
+            source has been wired up, in which case every MCP namespace
+            classifies as destructive.
+    """
+
+    instance: McpClassifier | None = None
+
+
+_mcp_classifier_holder = _McpClassifierHolder()
+
+
+def set_mcp_classifier(classifier: McpClassifier | None) -> None:
+    """Install the classifier consulted for MCP tool calls.
+
+    Args:
+        classifier: The classifier to install, or ``None`` to remove the
+            current one and return every MCP call to the destructive default.
+    """
+    _mcp_classifier_holder.instance = classifier
+    _logger.info("mcp_classifier_installed", installed=classifier is not None)
+
+
+def _classify_external_call(tool_name: str, function_name: str) -> DestructiveClassification | None:
+    """Classify a call whose namespace an installed tool source claims.
+
+    The deny-by-default posture is preserved exactly. Without an installed
+    classifier the namespace is not claimed at all, falls through to the
+    :class:`ToolName` lookup, resolves to ``unknown`` and is confirmed as
+    before. With one installed, only a trusted server's explicit read-only
+    annotation earns anything less than ``destructive``.
+
+    Args:
+        tool_name: The namespace half of the call.
+        function_name: The canonical dotted function name.
+
+    Returns:
+        DestructiveClassification | None: The classification, or ``None``
+        when no installed source claims the namespace.
+    """
+    classifier = _mcp_classifier_holder.instance
+    if classifier is None:
+        return None
+    canonical = function_name if "." in function_name else f"{tool_name}.{function_name}"
+    try:
+        if not classifier.owns_namespace(tool_name):
+            return None
+        read_only = classifier.is_read_only(canonical)
+    except (RuntimeError, ValueError, AttributeError, KeyError) as exc:
+        _logger.warning("mcp_classification_failed", tool_name=tool_name, error=str(exc))
+        return "destructive"
+    return "read_only" if read_only else "destructive"
+
+
 def _split_tool_function_name(call: ToolCall) -> tuple[str, str]:
     """Resolve a tool call to a ``(tool_name, method_leaf)`` pair.
 
@@ -658,6 +785,12 @@ def classify_tool_call(call: ToolCall) -> DestructiveClassification:
     is empty. Method names are looked up by their leaf (the segment after the
     ``"."``).
 
+    A namespace claimed by an installed external tool source -- an MCP
+    server -- is answered by that source instead of falling through the
+    :class:`ToolName` lookup to ``unknown``. It still answers ``destructive``
+    for everything except a trusted server's explicitly read-only tool, so the
+    deny-by-default posture is unchanged and simply becomes answerable.
+
     Args:
         call: The :class:`ToolCall` to classify.
 
@@ -671,6 +804,9 @@ def classify_tool_call(call: ToolCall) -> DestructiveClassification:
     tool_name, method_leaf = _split_tool_function_name(call)
     if not tool_name:
         return "unknown"
+    external = _classify_external_call(tool_name.lower(), call.function_name)
+    if external is not None:
+        return external
     try:
         tool_enum = ToolName(tool_name.lower())
     except ValueError:
@@ -810,6 +946,7 @@ class Orchestrator:
 
         self._script_manager: ScriptManager | None = None
         self._shutdown_called: bool = False
+        self._mcp_source: McpClassifier | None = None
 
         self._on_message: Callable[[Message], None] | None = None
         self._on_tool_call: Callable[[ToolCall], None] | None = None
@@ -833,6 +970,30 @@ class Orchestrator:
             ToolRegistry: The registry of initialized tool bridges.
         """
         return self._tools
+
+    @property
+    def mcp_source(self) -> McpClassifier | None:
+        """The installed external tool source, when one is wired up.
+
+        Returns:
+            McpClassifier | None: The source, or ``None``.
+        """
+        return self._mcp_source
+
+    def set_mcp_tool_source(self, source: McpClassifier | None) -> None:
+        """Wire up the Model Context Protocol tool source.
+
+        Installed at runtime rather than taken in the constructor so
+        :mod:`intellicrack.core.orchestrator` never imports
+        :mod:`intellicrack.mcp` and the two layers stay independent. Without
+        one, an MCP namespace resolves to ``unknown`` and is confirmed as
+        destructive, which is the correct default.
+
+        Args:
+            source: The source to install, or ``None`` to remove it.
+        """
+        self._mcp_source = source
+        set_mcp_classifier(source)
 
     @property
     def state(self) -> OrchestratorState:
@@ -1367,16 +1528,17 @@ class Orchestrator:
             iteration += 1
             _logger.debug("agent_loop_iteration", iteration=iteration)
 
+            active_tool_definitions = self._active_tool_definitions(tool_definitions)
+
             messages = self._build_messages()
-            messages = self.trim_messages_to_context_window(
+            messages = self._trim_messages_for_provider(
                 messages,
                 context_window,
                 tokenizer=provider.capabilities_for(self._current_session.model).tokenizer,
+                definitions=active_tool_definitions,
             )
 
             iteration_tool_choice_override: ToolChoice | None = ToolChoice(mode=ToolChoiceMode.NONE) if force_no_tools_next else None
-
-            active_tool_definitions = self._active_tool_definitions(tool_definitions)
 
             response, tool_calls = await self._call_llm(
                 provider=provider,
@@ -1750,7 +1912,7 @@ class Orchestrator:
             grouped[definition.tool_name].append(func)
 
         active_definitions = [self._build_meta_tool_definition()]
-        for tool_name in order:
+        for tool_name in self._advertise_order(order):
             source = definition_by_tool[tool_name]
             active_definitions.append(
                 ToolDefinition(
@@ -1760,6 +1922,36 @@ class Orchestrator:
                 ),
             )
         return active_definitions
+
+    def _advertise_order(self, namespaces: list[str]) -> list[str]:
+        """Order the advertised namespaces so external ones come last.
+
+        A provider that caps how many tools it accepts truncates the tail, so
+        the tail has to be the part Intellicrack can afford to lose: the
+        meta-tool is already first and the built-in bridges follow, leaving
+        third-party server tools last. Tool discovery therefore survives a cap
+        smaller than the number of tools a server publishes.
+
+        Args:
+            namespaces: Contributing namespaces in discovery order.
+
+        Returns:
+            list[str]: The same namespaces, external ones moved to the end
+            with relative order preserved.
+        """
+        source = self._mcp_source
+        if source is None:
+            return namespaces
+        internal: list[str] = []
+        external: list[str] = []
+        for namespace in namespaces:
+            try:
+                owned = source.owns_namespace(namespace)
+            except (RuntimeError, ValueError, AttributeError) as exc:
+                _logger.warning("mcp_namespace_check_failed", namespace=namespace, error=str(exc))
+                owned = False
+            (external if owned else internal).append(namespace)
+        return internal + external
 
     def _render_tool_catalog(self) -> list[str]:
         """Render the tool catalog as a list of prompt lines.
@@ -1831,12 +2023,15 @@ class Orchestrator:
             "### Bridge menu",
         ]
         for definition in tool_definitions:
+            if self._is_external_namespace(definition.tool_name):
+                continue
             tool_name_value = definition.tool_name
             description = (definition.description or "").strip()
             sample_names = [func.name for func in definition.functions[:_TOOL_CATALOG_REPRESENTATIVE_SAMPLE]]
             sample_suffix = f"; e.g. {', '.join(sample_names)}" if sample_names else ""
             lines.append(f"- **{tool_name_value}** ({len(definition.functions)} functions){sample_suffix}: {description}")
 
+        lines.extend(self._render_external_sources())
         lines.extend(["", "### Currently loaded functions"])
         loaded_lines = [
             self._render_tool_function(func)
@@ -1851,6 +2046,46 @@ class Orchestrator:
 
         lines.append(f"- `{_TOOLS_SEARCH_FUNCTION_NAME}(query: string, limit: integer) -> object` - search the full registry")
         return lines
+
+    def _is_external_namespace(self, namespace: str) -> bool:
+        """Report whether a namespace belongs to an installed external source.
+
+        Args:
+            namespace: The namespace to check.
+
+        Returns:
+            bool: ``True`` when an external tool source claims it.
+        """
+        source = self._mcp_source
+        if source is None:
+            return False
+        try:
+            return source.owns_namespace(namespace)
+        except (RuntimeError, ValueError, AttributeError) as exc:
+            _logger.warning("mcp_namespace_check_failed", namespace=namespace, error=str(exc))
+            return False
+
+    def _render_external_sources(self) -> list[str]:
+        """Render the prompt section describing connected external sources.
+
+        The source renders its own lines, because it is the layer that knows
+        which servers exist and which text in them came from a server and so
+        has to be fenced. A source that raises contributes nothing rather than
+        failing the whole prompt.
+
+        Returns:
+            list[str]: Prompt lines, empty when no source is installed or the
+            installed one has nothing to report.
+        """
+        source = self._mcp_source
+        if source is None:
+            return []
+        try:
+            rendered = source.catalog_lines()
+        except (RuntimeError, ValueError, AttributeError, KeyError, OSError) as exc:
+            _logger.warning("mcp_catalog_lines_failed", error=str(exc))
+            return []
+        return list(rendered)
 
     @staticmethod
     def _render_tool_function(func: ToolFunction) -> str:
@@ -2033,18 +2268,84 @@ class Orchestrator:
         raise ToolError(error_message)
 
     @staticmethod
+    def _message_tokens(message: Message, tokenizer: str | None = None) -> int:
+        """Count every token one message will actually occupy.
+
+        Counting ``content`` alone understates a tool-heavy turn badly: a tool
+        message carries no content at all, and everything it costs lives in
+        its results. A single directory listing or decompilation can run to
+        tens of thousands of tokens, so a history whose results alone exceed
+        the window would be measured as nearly free and never trimmed.
+
+        Args:
+            message: The message to measure.
+            tokenizer: ``tiktoken`` encoding name from the model's capability
+                record, or ``None`` for the default encoding.
+
+        Returns:
+            int: Tokens for the content, the serialized tool-call arguments,
+            and the tool results including their multi-part content.
+        """
+        total = Orchestrator._estimate_tokens(message.content, tokenizer)
+        for call in message.tool_calls or ():
+            total += Orchestrator._estimate_tokens(call.function_name, tokenizer)
+            total += Orchestrator._estimate_tokens(_serialize_for_tokens(call.arguments), tokenizer)
+        for result in message.tool_results or ():
+            total += Orchestrator._estimate_tokens(result.error or "", tokenizer)
+            total += Orchestrator._estimate_tokens(_serialize_for_tokens(result.result), tokenizer)
+            for part in result.content or ():
+                total += Orchestrator._estimate_tokens(_serialize_for_tokens(part), tokenizer)
+        for item in message.reasoning or ():
+            total += Orchestrator._estimate_tokens(item.text, tokenizer)
+        return total
+
+    @staticmethod
+    def _tool_definitions_tokens(definitions: list[ToolDefinition], tokenizer: str | None = None) -> int:
+        """Count what advertising a set of tools costs in the same request.
+
+        Tool definitions share the context window with the conversation. A
+        large third-party tool set can occupy a substantial share of it, and
+        history trimmed against the full window would still overflow once the
+        tools were added alongside it.
+
+        Args:
+            definitions: The definitions that will be advertised.
+            tokenizer: ``tiktoken`` encoding name from the model's capability
+                record, or ``None`` for the default encoding.
+
+        Returns:
+            int: Tokens the advertised set occupies.
+        """
+        total = 0
+        for definition in definitions:
+            total += Orchestrator._estimate_tokens(f"{definition.tool_name}\n{definition.description}", tokenizer)
+            for function in definition.functions:
+                total += Orchestrator._estimate_tokens(f"{function.name}\n{function.description}\n{function.returns}", tokenizer)
+                if function.input_schema:
+                    total += Orchestrator._estimate_tokens(_serialize_for_tokens(function.input_schema), tokenizer)
+                    continue
+                for parameter in function.parameters:
+                    total += Orchestrator._estimate_tokens(
+                        f"{parameter.name}\n{parameter.type}\n{parameter.description}",
+                        tokenizer,
+                    )
+        return total
+
+    @staticmethod
     def trim_messages_to_context_window(
         messages: list[Message],
         context_window: int | None,
         *,
         tokenizer: str | None = None,
+        tool_overhead_tokens: int = 0,
     ) -> list[Message]:
         """Remove oldest non-system messages until within context budget.
 
         Keeps 85% of the context window as the token budget to leave headroom
-        for the response. Token counting uses :func:`_count_tokens`, which
-        uses the model's own tiktoken encoding when ``tokenizer`` is supplied
-        and falls back to the default encoding otherwise.
+        for the response, then subtracts whatever the advertised tools will
+        occupy in the same request. Token counting uses
+        :meth:`_message_tokens`, which measures tool calls and tool results as
+        well as message content.
 
         ``context_window=None`` is treated as a hard error rather than a
         silent passthrough so callers cannot accidentally send unbounded
@@ -2058,12 +2359,15 @@ class Orchestrator:
                 ``ToolError`` instead of skipping trimming.
             tokenizer: ``tiktoken`` encoding name from the model's
                 capability record, used for token counting.
+            tool_overhead_tokens: Tokens the advertised tool definitions will
+                occupy in the same request, subtracted from the budget.
 
         Returns:
             list[Message]: Trimmed list of messages.
 
         Raises:
-            ToolError: If ``context_window`` is ``None``.
+            ToolError: If ``context_window`` is ``None``, or if the advertised
+                tools leave no room for any conversation at all.
         """
         if context_window is None:
             _logger.warning("trim_messages_context_window_unknown")
@@ -2073,8 +2377,20 @@ class Orchestrator:
                 "context_window value; refusing to send unbounded history."
             )
             raise ToolError(error_message)
-        budget = int(context_window * 0.85)
-        total = sum(Orchestrator._estimate_tokens(m.content, tokenizer) for m in messages)
+        budget = int(context_window * 0.85) - tool_overhead_tokens
+        if budget <= 0:
+            _logger.error(
+                "trim_messages_budget_exhausted_by_tools",
+                context_window=context_window,
+                tool_overhead_tokens=tool_overhead_tokens,
+            )
+            error_message = (
+                f"The advertised tools need {tool_overhead_tokens} tokens, which leaves no room for the "
+                f"conversation in a {context_window}-token context window. Disable some MCP servers or "
+                f"individual tools in MCP Settings, or choose a model with a larger context window."
+            )
+            raise ToolError(error_message)
+        total = sum(Orchestrator._message_tokens(m, tokenizer) for m in messages)
         while total > budget and len(messages) > 1:
             oldest_idx = next(
                 (i for i, m in enumerate(messages) if m.role != "system"),
@@ -2083,7 +2399,7 @@ class Orchestrator:
             if oldest_idx < 0:
                 break
             removed = messages.pop(oldest_idx)
-            removed_tokens = Orchestrator._estimate_tokens(removed.content, tokenizer)
+            removed_tokens = Orchestrator._message_tokens(removed, tokenizer)
             total -= removed_tokens
             _logger.debug(
                 "message_trimmed_for_context",
@@ -2093,6 +2409,35 @@ class Orchestrator:
                 budget=budget,
             )
         return messages
+
+    def _trim_messages_for_provider(
+        self,
+        messages: list[Message],
+        context_window: int,
+        *,
+        tokenizer: str | None,
+        definitions: list[ToolDefinition],
+    ) -> list[Message]:
+        """Trim history against the budget the advertised tools leave behind.
+
+        Args:
+            messages: List of messages to trim. Mutated in place.
+            context_window: The provider's resolved context window.
+            tokenizer: ``tiktoken`` encoding name from the model's capability
+                record.
+            definitions: The tool definitions this turn will advertise.
+
+        Returns:
+            list[Message]: Trimmed list of messages.
+        """
+        overhead = self._tool_definitions_tokens(definitions, tokenizer)
+        _logger.debug("tool_overhead_measured", definition_count=len(definitions), overhead_tokens=overhead)
+        return self.trim_messages_to_context_window(
+            messages,
+            context_window,
+            tokenizer=tokenizer,
+            tool_overhead_tokens=overhead,
+        )
 
     async def _call_llm(
         self,
@@ -2503,6 +2848,8 @@ class Orchestrator:
             return None
         if call.function_name in self._current_session.loaded_tools:
             return None
+        if self._resolve_loaded_external_name(call) is not None:
+            return None
 
         _logger.debug("meta_tool_guard_unloaded_call", function=call.function_name)
         return ToolResult(
@@ -2512,6 +2859,33 @@ class Orchestrator:
             error=(f"'{call.function_name}' is not loaded. Call {_TOOLS_SEARCH_FUNCTION_NAME}(query) to discover and load it first."),
             duration_ms=0,
         )
+
+    def _resolve_loaded_external_name(self, call: ToolCall) -> str | None:
+        """Resolve a call against the loaded set, allowing for a bare leaf name.
+
+        An external tool's canonical name carries its namespace, and a model
+        that answers with the leaf alone -- ``read_file`` where the loaded
+        name is ``mcp-files.read_file`` -- is asking for a tool it did
+        discover. Rejoining the namespace recovers it instead of telling the
+        model to search for something it already found.
+
+        Args:
+            call: The tool call to resolve.
+
+        Returns:
+            str | None: The loaded canonical name, or ``None`` when the call
+            does not name a loaded external tool.
+        """
+        session = self._current_session
+        if session is None or "." in call.function_name or not call.tool_name:
+            return None
+        if not self._is_external_namespace(call.tool_name.lower()):
+            return None
+        candidate = f"{call.tool_name}.{call.function_name}"
+        if candidate in session.loaded_tools:
+            call.function_name = candidate
+            return candidate
+        return None
 
     async def _execute_tool_calls(
         self,
