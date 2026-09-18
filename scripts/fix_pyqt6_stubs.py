@@ -3,20 +3,29 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Fix PyQt6 type stubs that use ``collections.abc`` without importing it.
+"""Fix two defects PyQt6 ships in its type stubs.
 
-PyQt6 ships its ``.pyi`` stubs with ``import collections, re, typing, enum``
-and then references ``collections.abc.Callable``, ``collections.abc.Iterable``
-and friends throughout. The ``abc`` submodule is never imported, so with
-``useLibraryCodeForTypes`` disabled basedpyright resolves every such
-annotation to Unknown. The most visible casualty is ``pyqtBoundSignal.connect``,
-whose slot parameter becomes ``Unknown | pyqtBoundSignal`` and turns every
-signal connection in the UI into a "partially unknown" error.
+PyQt6 6.11.0 ships 35 ``.pyi`` stubs with the same two mistakes, and with
+``useLibraryCodeForTypes`` disabled each one makes basedpyright resolve part
+of a type to Unknown:
 
-PyQt6 6.11.0 ships 35 affected stubs, ``QtCore.pyi`` among them. This script
-used to patch only ``QtWidgets.pyi``, so an environment whose other stubs had
-been fixed by hand type-checked clean while a fresh install -- CI's -- reported
-over a thousand errors. Every affected stub in the package is patched now.
+* The stubs ``import collections, re, typing, enum`` and then use
+  ``collections.abc.Callable`` and friends throughout, without ever importing
+  the ``abc`` submodule.
+* They define the slot type as ``PYQT_SLOT = typing.Union[
+  collections.abc.Callable[..., Any], ...]``, but import ``typing`` as a module
+  and never import a bare ``Any``, so the slot's return type is undefined.
+
+Between them they give every ``pyqtBoundSignal.connect``, ``disconnect``,
+``QTimer.singleShot`` and ``addAction`` a partially unknown slot parameter, and
+turn every signal connection in the UI into a basedpyright error. The return
+type becomes ``object``: a slot's return value is discarded, so any callable
+is acceptable, and ``object`` states that without falling back to ``Any``.
+
+This script used to fix only the import, and only in ``QtWidgets.pyi``. An
+environment whose other stubs had been fixed by hand type-checked clean while
+a fresh install -- CI's -- reported over a thousand errors. Both defects are
+fixed now, in every affected stub.
 
 The script is **idempotent**: a second run changes nothing, and a line an
 earlier version damaged with repeated ``collections.abc`` entries is repaired
@@ -36,6 +45,16 @@ _COLLECTIONS_ABC_REFERENCE = "collections.abc."
 
 _COLLECTIONS_IMPORT = re.compile(r"^import[ \t]+collections(?![.\w])(?P<rest>[^\n#]*)$", re.MULTILINE)
 """The ``import collections, ...`` line, excluding ``import collections.abc`` itself."""
+
+_PYQT_SLOT_ANY = re.compile(
+    r"^(?P<head>PYQT_SLOT\s*=\s*typing\.Union\[collections\.abc\.Callable\[\.\.\.,\s*)Any(?P<tail>\])",
+    re.MULTILINE,
+)
+"""The module-level ``PYQT_SLOT`` definition whose return type names an undefined ``Any``.
+
+Anchored to that one definition: ``QtGui.pyi`` also declares a class-level
+enum member called ``Any``, which must be left alone.
+"""
 
 
 def _pyqt6_package_dir() -> Path | None:
@@ -88,7 +107,7 @@ def _canonical_import(rest: str) -> str:
 
 
 def _needs_patch(text: str) -> bool:
-    """Return *True* when the import line is not already in canonical form.
+    """Return *True* when the stub is not already in its corrected form.
 
     Defined through :func:`_apply_patch` rather than by a separate pattern, so
     the two can never disagree: a line the patch would leave alone is never
@@ -106,26 +125,29 @@ def _needs_patch(text: str) -> bool:
 
 
 def _apply_patch(text: str) -> str:
-    """Rewrite the ``import collections`` line into its canonical form.
+    """Rewrite a stub's ``import collections`` line and ``PYQT_SLOT`` definition.
 
-    Adds ``collections.abc`` when it is missing and collapses the duplicate
-    entries a non-idempotent earlier version of this script accumulated.
+    The import gains ``collections.abc`` when it is missing, with the
+    duplicate entries a non-idempotent earlier version of this script
+    accumulated collapsed to one, and ``PYQT_SLOT``'s undefined ``Any`` return
+    type becomes ``object``.
 
     Args:
         text: Full text content of the type hint file.
 
     Returns:
-        str: The text with its ``import collections`` line canonicalized.
+        str: The text with both definitions corrected.
     """
-    return _COLLECTIONS_IMPORT.sub(lambda match: _canonical_import(match.group("rest")), text, count=1)
+    text = _COLLECTIONS_IMPORT.sub(lambda match: _canonical_import(match.group("rest")), text, count=1)
+    return _PYQT_SLOT_ANY.sub(r"\g<head>object\g<tail>", text, count=1)
 
 
 def patch_stub_directory(directory: Path) -> list[Path]:
-    """Patch every stub in ``directory`` that uses ``collections.abc`` unimported.
+    """Patch every stub in ``directory`` that carries either shipped defect.
 
-    A stub is rewritten only when it both references ``collections.abc.`` and
-    has an import line that leaves the submodule out, so a stub that never
-    touches ``collections.abc`` is left byte-for-byte alone.
+    A stub is rewritten only when it references ``collections.abc.`` and the
+    patch would change it, so a stub that never touches ``collections.abc`` is
+    left byte-for-byte alone.
 
     Args:
         directory: Directory holding the ``.pyi`` stubs, typically the
@@ -161,7 +183,7 @@ def main() -> int:
         return 0
 
     names = ", ".join(pyi.name for pyi in patched)
-    print(f"Patched {len(patched)} PyQt6 stub(s) to import collections.abc in {package_dir}: {names}")
+    print(f"Patched {len(patched)} PyQt6 stub(s) in {package_dir}: {names}")
     return 0
 
 
