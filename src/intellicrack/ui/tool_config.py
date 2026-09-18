@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Final, TypedDict, cast
 
 import httpx
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -51,6 +51,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.subprocess_compat import TimeoutExpired
 from intellicrack.ui.dialogs_helpers import show_info, show_warning
+from intellicrack.ui.panels.async_bridge import RetainedWorker, guarded_delivery
 from intellicrack.ui.resources import IconManager
 
 
@@ -114,7 +115,7 @@ class ToolStatusEntry(TypedDict):
     message: str
 
 
-class ToolInstallWorker(QThread):
+class ToolInstallWorker(RetainedWorker):
     """Worker thread for installing tools.
 
     Downloads and installs tools in a separate thread to avoid blocking UI.
@@ -148,16 +149,19 @@ class ToolInstallWorker(QThread):
         self,
         tool_id: str,
         install_path: Path,
-        parent: QWidget | None = None,
+        *,
+        owner: QWidget | None = None,
     ) -> None:
         """Initialize the ToolInstallWorker for a specific tool.
 
         Args:
             tool_id: Identifier of the tool to install.
             install_path: Filesystem path where the tool should be installed.
-            parent: Parent widget.
+            owner: Widget that started the install. It is recorded for scoped draining and delivery guards, never as a Qt parent: a
+                download and extraction runs for as long as it runs, and closing the dialog must not destroy the thread doing it. The
+                install therefore finishes even if its dialog is gone, and only the result is dropped.
         """
-        super().__init__(parent)
+        super().__init__(owner=owner)
         self._tool_id = tool_id
         self._install_path = install_path
 
@@ -628,7 +632,7 @@ class ToolInstallWorker(QThread):
         return None
 
 
-class ToolStatusCheckWorker(QThread):
+class ToolStatusCheckWorker(RetainedWorker):
     """Worker thread for checking tool status.
 
     Attributes:
@@ -641,16 +645,17 @@ class ToolStatusCheckWorker(QThread):
         self,
         tool_id: str,
         tool_path: str,
-        parent: QWidget | None = None,
+        *,
+        owner: QWidget | None = None,
     ) -> None:
         """Initialize the ToolStatusCheckWorker for a specific tool.
 
         Args:
             tool_id: Identifier of the tool to check.
             tool_path: Filesystem path to the tool executable.
-            parent: Parent widget.
+            owner: Widget that started the check, recorded for scoped draining and delivery guards rather than as a Qt parent.
         """
-        super().__init__(parent)
+        super().__init__(owner=owner)
         self._tool_id = tool_id
         self._tool_path = tool_path
 
@@ -1179,7 +1184,7 @@ class ToolSettingsWidget(QFrame):
         self._status_worker = ToolStatusCheckWorker(
             self._tool_id,
             self._path_input.text().strip(),
-            self,
+            owner=self,
         )
 
         def _status_slot(tid: str, avail: int, msg: str) -> None:
@@ -1192,7 +1197,7 @@ class ToolSettingsWidget(QFrame):
             """
             self._on_status_checked(tid, is_available=bool(avail), message=msg)
 
-        self._status_worker.status_checked.connect(_status_slot)
+        self._status_worker.status_checked.connect(guarded_delivery(_status_slot, self, "success"))
         self._status_worker.start()
 
     def _on_status_checked(self, tool_id: str, *, is_available: bool, message: str) -> None:
@@ -1267,7 +1272,7 @@ class ToolSettingsWidget(QFrame):
             self._install_progress.setValue(0)
             self._install_btn.setEnabled(False)
 
-            self._install_worker = ToolInstallWorker(self._tool_id, install_path, self)
+            self._install_worker = ToolInstallWorker(self._tool_id, install_path, owner=self)
             self._install_worker.progress.connect(self._install_progress.setValue)
 
             def _install_slot(s: int, m: str) -> None:
@@ -1279,7 +1284,7 @@ class ToolSettingsWidget(QFrame):
                 """
                 self._on_install_finished(success=bool(s), message=m)
 
-            self._install_worker.install_finished.connect(_install_slot)
+            self._install_worker.install_finished.connect(guarded_delivery(_install_slot, self, "success"))
             _logger.info(
                 "tool_install_requested",
                 tool_id=self._tool_id,
@@ -1757,7 +1762,7 @@ class ToolStatusDialog(QDialog):
             tool_settings = saved_settings.get(tool_id, {})
             tool_path = tool_settings.get("path", "")
 
-            worker = ToolStatusCheckWorker(tool_id, tool_path, self)
+            worker = ToolStatusCheckWorker(tool_id, tool_path, owner=self)
 
             def _tool_status_slot(tid: str, avail: int, msg: str) -> None:
                 """Forward one tool's dialog status-check result to the list UI.
@@ -1769,7 +1774,7 @@ class ToolStatusDialog(QDialog):
                 """
                 self._on_tool_status_received(tid, is_available=bool(avail), message=msg)
 
-            worker.status_checked.connect(_tool_status_slot)
+            worker.status_checked.connect(guarded_delivery(_tool_status_slot, self, "success"))
             self._status_workers.append(worker)
             worker.start()
 
