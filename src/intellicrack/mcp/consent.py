@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 from intellicrack.core.config import get_config_file
+from intellicrack.core.json_payload import JsonObject, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.catalog import canonical_json
 from intellicrack.mcp.errors import McpConsentDeniedError
@@ -296,7 +297,7 @@ def launch_digest(spec: StdioServerSpec, env: Mapping[str, str]) -> str:
     return hashlib.blake2b(material.encode("utf-8"), digest_size=_LAUNCH_DIGEST_BYTES).hexdigest()
 
 
-def _read_json_object(path: Path) -> dict[str, Any]:
+def _read_json_object(path: Path) -> JsonObject:
     """Read a JSON object from disk, treating any fault as an empty document.
 
     A consent record that cannot be read must not be guessed at. Returning
@@ -307,18 +308,19 @@ def _read_json_object(path: Path) -> dict[str, Any]:
         path: File to read.
 
     Returns:
-        dict[str, Any]: The decoded object, or an empty mapping.
+        JsonObject: The decoded object, or an empty mapping.
     """
+    empty: JsonObject = {}
     if not path.exists():
-        return {}
+        return empty
     try:
         decoded: object = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         _logger.warning("mcp_consent_store_unreadable", path=str(path), error=str(exc))
-        return {}
-    if not isinstance(decoded, dict):
+        return empty
+    if not is_json_object(decoded):
         _logger.warning("mcp_consent_store_malformed", path=str(path))
-        return {}
+        return empty
     return decoded
 
 
@@ -364,17 +366,17 @@ class TrustStore:
         """
         return self._path
 
-    def _entry(self, server_id: str) -> dict[str, Any]:
+    def _entry(self, server_id: str) -> JsonObject:
         """Read one server's record.
 
         Args:
             server_id: The server to read.
 
         Returns:
-            dict[str, Any]: The record, or an empty mapping.
+            JsonObject: The record, or an empty mapping.
         """
         entry = _read_json_object(self._path).get(server_id)
-        return entry if isinstance(entry, dict) else {}
+        return entry if is_json_object(entry) else {}
 
     def _update(self, server_id: str, changes: Mapping[str, Any]) -> None:
         """Merge changes into one server's record and persist.
@@ -385,7 +387,7 @@ class TrustStore:
         """
         data = _read_json_object(self._path)
         entry = data.get(server_id)
-        merged: dict[str, Any] = dict(entry) if isinstance(entry, dict) else {}
+        merged: dict[str, Any] = dict(entry) if is_json_object(entry) else {}
         merged.update(changes)
         data[server_id] = merged
         _write_json_object(self._path, data)

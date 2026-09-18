@@ -21,7 +21,7 @@ easily outlive the operator's patience with the window.
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Any, Final, TypeGuard, override
+from typing import TYPE_CHECKING, Any, Final, TypeGuard, cast, override
 
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -49,6 +49,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ToolResultPart
 from intellicrack.mcp.auth import has_stored_credentials, issuer_for, sign_out
 from intellicrack.mcp.config import (
     SERVER_ID_PATTERN,
@@ -64,7 +65,7 @@ from intellicrack.mcp.config import (
 from intellicrack.mcp.connection import McpHealth, McpServerStatus
 from intellicrack.mcp.errors import McpError
 from intellicrack.mcp.policy import estimate_tool_cost, total_cost
-from intellicrack.mcp.resources import list_resources, read_resource, summarize_parts
+from intellicrack.mcp.resources import ResourceSummary, list_resources, read_resource, summarize_parts
 from intellicrack.mcp.tool_source import map_tool_to_function
 from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
 from intellicrack.ui.panels.async_bridge import BridgeCallWorker, discard_worker, worker_is_running
@@ -840,14 +841,13 @@ class McpConfigDialog(QDialog):
             Args:
                 result: The list of resource summaries.
             """
-            if not isinstance(result, list):
-                return
-            for summary in result:
-                item = QListWidgetItem(f"{getattr(summary, 'title', None) or summary.name} - {summary.uri}")
+            summaries = [entry for entry in _as_object_list(result) if isinstance(entry, ResourceSummary)]
+            for summary in summaries:
+                item = QListWidgetItem(f"{summary.title or summary.name} - {summary.uri}")
                 item.setData(Qt.ItemDataRole.UserRole, summary.uri)
-                item.setToolTip(getattr(summary, "description", None) or summary.uri)
+                item.setToolTip(summary.description or summary.uri)
                 self._resource_list.addItem(item)
-            if not result:
+            if not summaries:
                 show_info(self, "Resources", "This server offers no resources.")
 
         self._start_worker(list_resources(connection), _listed, self._on_worker_error)
@@ -883,9 +883,8 @@ class McpConfigDialog(QDialog):
             Args:
                 result: The list of result parts the read produced.
             """
-            if not isinstance(result, list):
-                return
-            on_text(summarize_parts(result))
+            parts = [entry for entry in _as_object_list(result) if isinstance(entry, ToolResultPart)]
+            on_text(summarize_parts(parts))
 
         self._start_worker(read_resource(connection, uri), _read, self._on_worker_error)
 
@@ -1008,16 +1007,8 @@ class McpConfigDialog(QDialog):
     def _refresh_list(self) -> None:
         """Rebuild the server list from the document and live statuses."""
         statuses = {status.server_id: status for status in self._manager.statuses()}
-        rows = [
-            (config, statuses[config.server_id])
-            for config in self._document.servers
-            if config.server_id in statuses
-        ]
-        rows.extend(
-            (config, self._offline_status(config))
-            for config in self._document.servers
-            if config.server_id not in statuses
-        )
+        rows = [(config, statuses[config.server_id]) for config in self._document.servers if config.server_id in statuses]
+        rows.extend((config, self._offline_status(config)) for config in self._document.servers if config.server_id not in statuses)
         self._model.set_rows(rows)
         if self._current_id is not None:
             row = self._model.row_for(self._current_id)
@@ -1157,8 +1148,7 @@ class McpConfigDialog(QDialog):
             show_warning(
                 self,
                 "Server id",
-                f"'{candidate.server_id}' is not a usable server id. Use lower-case letters, digits and "
-                f"hyphens, up to 32 characters.",
+                f"'{candidate.server_id}' is not a usable server id. Use lower-case letters, digits and hyphens, up to 32 characters.",
             )
             return None
         try:
@@ -1449,6 +1439,26 @@ class McpConfigDialog(QDialog):
             show_warning(self, "Unsaved changes", "Your MCP settings were not saved. Reopen the dialog and press Save to keep them.")
         self._release_workers()
         super().closeEvent(a0)
+
+
+def _as_object_list(value: object) -> list[object]:
+    """Narrow a background worker's result to a list of individually-checked items.
+
+    A worker delivers whatever its coroutine returned as a plain ``object``,
+    so the element type has to be re-established on arrival. Returning
+    ``list[object]`` keeps every element explicitly unchecked until the
+    caller tests it, rather than assuming what the worker produced.
+
+    Args:
+        value: The value the worker produced.
+
+    Returns:
+        list[object]: The elements, or an empty list when the result was not
+        a list at all.
+    """
+    if not isinstance(value, list):
+        return []
+    return cast("list[object]", value)
 
 
 def _is_status(value: object) -> TypeGuard[McpServerStatus]:
