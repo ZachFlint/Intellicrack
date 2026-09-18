@@ -47,7 +47,7 @@ from intellicrack.core.types import (
     ToolResultPart,
 )
 from intellicrack.mcp.config import NAMESPACE_PREFIX, from_canonical_name, is_mcp_namespace, to_canonical_name
-from intellicrack.mcp.errors import McpConnectionError, McpProtocolError
+from intellicrack.mcp.errors import McpConnectionError, McpError, McpProtocolError
 from intellicrack.mcp.policy import ToolCost, enabled_entries, estimate_tool_cost
 from intellicrack.mcp.validation import validate_against_schema
 from intellicrack.providers.tool_names import to_wire_name
@@ -123,9 +123,7 @@ def source_label(canonical_name: str) -> str:
     """
     try:
         server_id, _ = from_canonical_name(canonical_name)
-    except McpProtocolError:
-        return canonical_name.partition(".")[0]
-    except ValueError:
+    except McpError:
         return canonical_name.partition(".")[0]
     return f"MCP server '{server_id}'"
 
@@ -326,10 +324,8 @@ def validate_structured_content(entry: McpToolEntry, content: Mapping[str, Any])
 class McpToolSource:
     """Registers every connected server's tools into the tool registry.
 
-    One executor is registered per server namespace, alongside a definition
-    provider the registry calls each time it is asked what tools exist. That
-    indirection is what lets a server appear, disappear, or change its tool
-    list without anything re-registering.
+    One executor is registered per server namespace, alongside a definition provider the registry calls each time it is asked what tools
+    exist. That indirection is what lets a server appear, disappear, or change its tool list without anything re-registering.
     """
 
     def __init__(self, manager: McpConnectionManager, registry: ToolRegistry) -> None:
