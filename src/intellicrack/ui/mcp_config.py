@@ -67,7 +67,7 @@ from intellicrack.mcp.errors import McpError
 from intellicrack.mcp.policy import estimate_tool_cost, total_cost
 from intellicrack.mcp.resources import ResourceSummary, list_resources, read_resource, summarize_parts
 from intellicrack.mcp.tool_source import map_tool_to_function
-from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
+from intellicrack.ui.dialogs_helpers import plain_tooltip, show_error, show_info, show_warning
 from intellicrack.ui.panels.async_bridge import BridgeCallWorker, discard_worker, worker_is_running
 from intellicrack.ui.resources.font_manager import FontManager
 
@@ -242,6 +242,7 @@ class McpInputPromptDialog(QDialog):
         layout.setSpacing(12)
 
         description = QLabel(spec.description or f"Enter the value for '{spec.id}'.")
+        description.setTextFormat(Qt.TextFormat.PlainText)
         description.setObjectName("mcp_input_description")
         description.setWordWrap(True)
         layout.addWidget(description)
@@ -562,6 +563,7 @@ class McpToolToggleView(QWidget):
 
         self._summary = QLabel("Connect a server to see its tools.")
         self._summary.setObjectName("mcp_tools_summary")
+        self._summary.setTextFormat(Qt.TextFormat.PlainText)
         self._summary.setWordWrap(True)
         layout.addWidget(self._summary)
 
@@ -595,7 +597,7 @@ class McpToolToggleView(QWidget):
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Unchecked if entry.name in disabled else Qt.CheckState.Checked)
             item.setData(Qt.ItemDataRole.UserRole, entry.name)
-            item.setToolTip(entry.description[:512] or entry.name)
+            item.setToolTip(plain_tooltip(entry.description[:512] or entry.name))
             self._list.addItem(item)
         self._loading = False
 
@@ -758,6 +760,7 @@ class McpConfigDialog(QDialog):
         log_column.setSpacing(8)
 
         self._status_label = QLabel("Select a server.")
+        self._status_label.setTextFormat(Qt.TextFormat.PlainText)
         self._status_label.setObjectName("mcp_status_label")
         self._status_label.setWordWrap(True)
         log_column.addWidget(self._status_label)
@@ -845,7 +848,7 @@ class McpConfigDialog(QDialog):
             for summary in summaries:
                 item = QListWidgetItem(f"{summary.title or summary.name} - {summary.uri}")
                 item.setData(Qt.ItemDataRole.UserRole, summary.uri)
-                item.setToolTip(summary.description or summary.uri)
+                item.setToolTip(plain_tooltip(summary.description or summary.uri))
                 self._resource_list.addItem(item)
             if not summaries:
                 show_info(self, "Resources", "This server offers no resources.")

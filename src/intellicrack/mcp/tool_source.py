@@ -607,10 +607,12 @@ class McpToolSource:
             returned as parts with the failure recorded, not raised, so the
             model sees what the tool said went wrong.
 
+        A tool that violated its own output schema propagates
+        :class:`McpProtocolError` from the structured-content check.
+
         Raises:
             McpConnectionError: If the server is not connected, or the call
                 could not be delivered.
-            McpProtocolError: If the tool violated its own output schema.
         """
         connection = self._manager.connection(server_id)
         if connection is None:
@@ -643,13 +645,13 @@ class McpToolSource:
             function_name: Canonical dotted function name.
             arguments: Parsed call arguments.
 
+        A name that does not belong to an MCP server propagates
+        :class:`McpProtocolError` from :func:`from_canonical_name`, and a
+        server that is not connected, or a call that could not be delivered,
+        propagates :class:`McpConnectionError` from :meth:`_execute_on`.
+
         Returns:
             object: The mapped result parts.
-
-        Raises:
-            McpProtocolError: If the name does not belong to an MCP server.
-            McpConnectionError: If the server is not connected, or the call
-                could not be delivered.
         """
         server_id, _ = from_canonical_name(function_name)
         return await self._execute_on(server_id, function_name, arguments)

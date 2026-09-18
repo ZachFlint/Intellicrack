@@ -314,6 +314,7 @@ class MessageBubble(QFrame):
         """
         label = QLabel()
         label.setObjectName("tool_result_image")
+        label.setTextFormat(Qt.TextFormat.PlainText)
         if len(part.data) > _MAX_IMAGE_BYTES:
             label.setText(f"[image of type {part.mime_type} too large to display]")
             return label
@@ -358,6 +359,7 @@ class MessageBubble(QFrame):
 
         label = QLabel(text if len(text) <= _MAX_PART_DISPLAY_LEN else f"{text[: _MAX_PART_DISPLAY_LEN - 3]}...")
         label.setObjectName("tool_result_part")
+        label.setTextFormat(Qt.TextFormat.PlainText)
         label.setFont(FontManager.get_instance().get_code_font(8))
         label.setWordWrap(True)
         label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -390,6 +392,7 @@ class MessageBubble(QFrame):
 
         if result.error:
             error_label = QLabel(result.error)
+            error_label.setTextFormat(Qt.TextFormat.PlainText)
             error_label.setFont(FontManager.get_instance().get_code_font(8))
             error_label.setObjectName("error_text")
             error_label.setWordWrap(True)

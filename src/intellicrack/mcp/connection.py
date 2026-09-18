@@ -694,8 +694,8 @@ class McpConnection:
     async def _serve_once(self) -> None:
         """Hold one connection open until a stop is requested.
 
-        Raises:
-            McpConnectionError: If the tool listing cannot be retrieved.
+        A tool listing that cannot be retrieved propagates
+        :class:`McpConnectionError` from :func:`fetch_catalog`.
         """
         async with self._open_transport() as client:
             catalog = await fetch_catalog(client, self.server_id)
@@ -796,8 +796,12 @@ class McpConnection:
         Raises:
             asyncio.CancelledError: If the supervisor task is cancelled,
                 which unwinds the transport in the task that opened it.
-            BaseException: If a transport failure carried a leaf that is not
-                an ordinary exception, such as interpreter shutdown.
+            fatal: The leaf :func:`fatal_leaf` found, when a transport
+                failure carried one that is not an ordinary exception, such
+                as interpreter shutdown. It is re-raised as itself, rather
+                than as its type, so the loop sees the original and the
+                failure unwinds instead of being recorded as a connection
+                fault.
         """
         attempt = 0
         while not self._stop.is_set():
@@ -887,7 +891,7 @@ class McpConnection:
             detail = reported or "the server did not complete its handshake"
             await self.disconnect()
             if isinstance(failure, McpConsentDeniedError):
-                raise failure
+                raise McpConsentDeniedError(str(failure)) from failure
             message = f"server '{self.server_id}': {detail}"
             raise McpConnectionError(message) from failure
 
@@ -1368,15 +1372,15 @@ class McpConnectionManager:
     async def restart_server(self, server_id: str) -> McpServerStatus:
         """Bring one server down and straight back up.
 
+        A server that is not configured, or a fresh connection that failed,
+        propagates :class:`McpConnectionError` from
+        :meth:`start_server`.
+
         Args:
             server_id: The server to restart.
 
         Returns:
             McpServerStatus: The server's state after restarting.
-
-        Raises:
-            McpConnectionError: If the server is not configured, or the
-                fresh connection failed.
         """
         await self.stop_server(server_id)
         self._document = self._store.load()

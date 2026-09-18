@@ -243,8 +243,7 @@ class KeyringTokenStorage(TokenStorage):
             OAuthToken | None: The tokens, or ``None`` when none are stored
             or the stored value can no longer be parsed.
 
-        Raises:
-            McpAuthError: If the keyring is unusable.
+        An unusable keyring propagates :class:`McpAuthError` from the read.
         """
         payload = await self._read(_TOKENS_SUFFIX)
         if payload is None:
@@ -258,11 +257,10 @@ class KeyringTokenStorage(TokenStorage):
     async def set_tokens(self, tokens: OAuthToken) -> None:
         """Store access and refresh tokens.
 
+        An unusable keyring propagates :class:`McpAuthError` from the write.
+
         Args:
             tokens: The tokens to store.
-
-        Raises:
-            McpAuthError: If the keyring is unusable.
         """
         await self._write(_TOKENS_SUFFIX, tokens.model_dump_json(exclude_none=True))
         _logger.info("mcp_oauth_tokens_stored", server_id=self._server_id)
@@ -275,8 +273,7 @@ class KeyringTokenStorage(TokenStorage):
             when none is stored, it cannot be parsed, or it is bound to a
             different authorization server than the one now in use.
 
-        Raises:
-            McpAuthError: If the keyring is unusable.
+        An unusable keyring propagates :class:`McpAuthError` from the read.
         """
         payload = await self._read(_CLIENT_SUFFIX)
         if payload is None:
@@ -299,11 +296,10 @@ class KeyringTokenStorage(TokenStorage):
     async def set_client_info(self, client_info: OAuthClientInformationFull) -> None:
         """Store a client registration, binding it to the current issuer.
 
+        An unusable keyring propagates :class:`McpAuthError` from the write.
+
         Args:
             client_info: The registration to store.
-
-        Raises:
-            McpAuthError: If the keyring is unusable.
         """
         bound = client_info.model_copy(update={"issuer": client_info.issuer or self._issuer})
         await self._write(_CLIENT_SUFFIX, bound.model_dump_json(exclude_none=True))

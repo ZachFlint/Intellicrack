@@ -372,14 +372,16 @@ def _kernel32() -> ctypes.WinDLL:
 def create_job_object() -> int:
     """Create the job object a sandboxed server runs inside.
 
+    A platform with no sandbox propagates :class:`McpConfigError` from
+    :func:`_kernel32`.
+
     Returns:
         int: The job handle. The caller owns it and must pass it to
         :func:`close_job_object`, which is also what terminates everything
         inside it.
 
     Raises:
-        McpConfigError: If the platform has no sandbox.
-        WinError: If the job object could not be created.
+        ctypes.WinError: If the job object could not be created.
     """
     kernel32 = _kernel32()
     handle = kernel32.CreateJobObjectW(None, None)
@@ -402,10 +404,12 @@ def apply_job_limits(handle: int, sandbox: McpSandboxSpec) -> None:
         sandbox: The server's sandbox settings, checked so a disabled
             sandbox cannot be applied by mistake.
 
+    A platform with no sandbox propagates :class:`McpConfigError` from
+    :func:`_kernel32`.
+
     Raises:
-        McpConfigError: If the platform has no sandbox, or the sandbox is not
-            enabled for this server.
-        WinError: If a limit could not be set.
+        McpConfigError: If the sandbox is not enabled for this server.
+        ctypes.WinError: If a limit could not be set.
     """
     if not sandbox.enabled:
         message = "sandboxing is not enabled for this server"
@@ -453,13 +457,15 @@ def apply_job_limits(handle: int, sandbox: McpSandboxSpec) -> None:
 def assign_process_to_job(handle: int, pid: int) -> None:
     """Place a running process, and everything it later spawns, into a job.
 
+    A platform with no sandbox propagates :class:`McpConfigError` from
+    :func:`_kernel32`.
+
     Args:
         handle: The job handle.
         pid: The process to place in it.
 
     Raises:
-        McpConfigError: If the platform has no sandbox.
-        WinError: If the process could not be opened or assigned.
+        ctypes.WinError: If the process could not be opened or assigned.
     """
     kernel32 = _kernel32()
     process = kernel32.OpenProcess(
@@ -480,12 +486,12 @@ def assign_process_to_job(handle: int, pid: int) -> None:
 def terminate_job(handle: int, exit_code: int = 1) -> None:
     """Terminate every process in a job.
 
+    A platform with no sandbox propagates :class:`McpConfigError` from
+    :func:`_kernel32`.
+
     Args:
         handle: The job handle.
         exit_code: Exit code reported for the terminated processes.
-
-    Raises:
-        McpConfigError: If the platform has no sandbox.
     """
     kernel32 = _kernel32()
     if not kernel32.TerminateJobObject(wintypes.HANDLE(handle), wintypes.UINT(exit_code)):
@@ -495,11 +501,11 @@ def terminate_job(handle: int, exit_code: int = 1) -> None:
 def close_job_object(handle: int) -> None:
     """Close a job handle, terminating everything still inside it.
 
+    A platform with no sandbox propagates :class:`McpConfigError` from
+    :func:`_kernel32`.
+
     Args:
         handle: The job handle.
-
-    Raises:
-        McpConfigError: If the platform has no sandbox.
     """
     kernel32 = _kernel32()
     if not kernel32.CloseHandle(wintypes.HANDLE(handle)):
@@ -571,12 +577,14 @@ class SandboxedJob:
     def adopt(self, pid: int) -> None:
         """Place a running process into this job.
 
+        A process that could not be opened or assigned propagates
+        :class:`ctypes.WinError` from :func:`assign_process_to_job`.
+
         Args:
             pid: The process to confine.
 
         Raises:
             McpConfigError: If the job is not open.
-            WinError: If the process could not be assigned.
         """
         handle = self._handle
         if handle is None:
