@@ -556,7 +556,8 @@ class OpenAIProvider(LLMProviderBase):
         Returns:
             bool: True if the model expects ``max_completion_tokens``.
         """
-        return self.capabilities_for(model_id).token_limit_field is TokenLimitField.MAX_COMPLETION_TOKENS
+        field = self._chat_adapter.token_limit_field(self.capabilities_for(model_id))
+        return field == TokenLimitField.MAX_COMPLETION_TOKENS.value
 
     def _effective_temperature(self, model_id: str, temperature: float) -> float:
         """Resolve the temperature a model will actually accept.
