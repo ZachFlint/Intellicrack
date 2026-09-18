@@ -1152,7 +1152,7 @@ def test_tool_definition_functions_accessible_by_index() -> None:
     p = ToolParameter(name="address", type="integer", description="Address to read", required=True)
     f1 = ToolFunction(name="read_memory", description="Read bytes from process memory", parameters=[p], returns="bytes")
     f2 = ToolFunction(name="list_modules", description="List loaded modules", parameters=[], returns="list")
-    tool = ToolDefinition(tool_name=ToolName.FRIDA, description="Frida dynamic instrumentation", functions=[f1, f2])
+    tool = ToolDefinition(tool_name=ToolName.FRIDA.value, description="Frida dynamic instrumentation", functions=[f1, f2])
     assert tool.functions[0].name == "read_memory"
     assert tool.functions[1].name == "list_modules"
     assert tool.functions[0].signature == "read_memory(address: integer) -> bytes"

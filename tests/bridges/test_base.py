@@ -71,7 +71,7 @@ class _MinimalBridge(ToolBridgeBase):
         Returns:
             ToolDefinition: Minimal ToolDefinition with no functions.
         """
-        return ToolDefinition(tool_name=self._tool_name, description="test bridge", functions=[])
+        return ToolDefinition(tool_name=self._tool_name.value, description="test bridge", functions=[])
 
     async def initialize(self, tool_path: pathlib.Path | None = None) -> None:
         """No-op initialize.

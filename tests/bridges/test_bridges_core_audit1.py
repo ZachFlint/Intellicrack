@@ -89,7 +89,7 @@ def _make_tool(*params: ToolParameter) -> ToolDefinition:
         ToolDefinition: A small tool definition suitable for schema tests.
     """
     return ToolDefinition(
-        tool_name=ToolName.PROCESS,
+        tool_name=ToolName.PROCESS.value,
         description="audit1 fixture tool",
         functions=[
             ToolFunction(
@@ -215,7 +215,7 @@ def test_f0003_validate_tool_for_provider_returns_errors_only() -> None:
 def test_f0003_validate_tool_for_provider_flags_missing_function() -> None:
     """Tool with no functions must produce an error-level diagnostic."""
     tool = ToolDefinition(
-        tool_name=ToolName.PROCESS,
+        tool_name=ToolName.PROCESS.value,
         description="empty tool",
         functions=[],
     )

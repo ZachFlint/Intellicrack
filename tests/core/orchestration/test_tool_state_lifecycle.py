@@ -57,7 +57,7 @@ class _FakeBridge(ToolBridgeBase):
         Returns:
             ToolDefinition: Definition with no functions.
         """
-        return ToolDefinition(tool_name=self._tool_name, description="fake bridge", functions=[])
+        return ToolDefinition(tool_name=self._tool_name.value, description="fake bridge", functions=[])
 
     async def initialize(self, tool_path: Path | None = None) -> None:
         """Mark the bridge connected.

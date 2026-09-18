@@ -156,7 +156,7 @@ class _BreakpointBridge(ToolBridgeBase):
             ToolDefinition: Definitions for ``set_breakpoint`` and ``run``.
         """
         return ToolDefinition(
-            tool_name=ToolName.X64DBG,
+            tool_name=ToolName.X64DBG.value,
             description="x64dbg debugger control: breakpoints, execution control, memory access.",
             functions=[
                 ToolFunction(
@@ -393,7 +393,7 @@ class _ProbeBridge(ToolBridgeBase):
             ToolDefinition: Definition for ``probe``.
         """
         return ToolDefinition(
-            tool_name=ToolName.PROCESS,
+            tool_name=ToolName.PROCESS.value,
             description="Minimal process bridge for Part 0 testing.",
             functions=[ToolFunction(name="process.probe", description="Read-only probe.", parameters=[], returns="dict")],
         )
@@ -546,7 +546,12 @@ class _DynamicLoadingProvider(_ScriptedProviderBase):
 
         no_tool_mode = False
         if not no_tool_mode and _BREAKPOINT_FUNCTION not in active_names and self._call_count == 1:
-            call = ToolCall(id="call_search_1", tool_name="tools", function_name=_TOOLS_SEARCH_FUNCTION, arguments={"query": "set a breakpoint"})
+            call = ToolCall(
+                id="call_search_1",
+                tool_name="tools",
+                function_name=_TOOLS_SEARCH_FUNCTION,
+                arguments={"query": "set a breakpoint"},
+            )
             return Message(role="assistant", content=""), [call]
 
         if _BREAKPOINT_FUNCTION in active_names and self._call_count <= 2:

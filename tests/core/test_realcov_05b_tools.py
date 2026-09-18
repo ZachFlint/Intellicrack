@@ -241,8 +241,8 @@ class TestToolDefinitionsRealSchema:
         for tool_name in initialized_registry.get_available_tools():
             bridge = initialized_registry.get(tool_name)
             assert bridge is not None
-            assert by_name[tool_name].description == bridge.tool_definition.description
-            func_names = {fn.name for fn in by_name[tool_name].functions}
+            assert by_name[tool_name.value].description == bridge.tool_definition.description
+            func_names = {fn.name for fn in by_name[tool_name.value].functions}
             assert func_names == {fn.name for fn in bridge.tool_definition.functions}
             assert func_names, f"{tool_name.value} exposes no functions"
 

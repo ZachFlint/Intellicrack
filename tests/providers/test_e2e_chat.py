@@ -135,7 +135,7 @@ def _make_test_tool() -> list[ToolDefinition]:
     """
     return [
         ToolDefinition(
-            tool_name=ToolName.GHIDRA,
+            tool_name=ToolName.GHIDRA.value,
             description="Binary analysis tools",
             functions=[
                 ToolFunction(
@@ -338,23 +338,23 @@ def _assert_model_listing(
         required_model: A model id that must appear in the listing (the
             configured chat-model constant), or ``None`` to skip the check.
     """
-    assert models, f"{provider.value} returned an empty model listing"
+    assert models, f"{provider} returned an empty model listing"
     ids: list[str] = []
     for model in models:
-        assert isinstance(model, ModelInfo), f"{provider.value} returned a non-ModelInfo entry"
-        assert model.id, f"{provider.value} returned a model with an empty id"
-        assert id_substring in model.id.lower(), f"{provider.value} model id lacks {id_substring!r}: {model.id!r}"
-        assert isinstance(model.name, str), f"{provider.value} model {model.id!r} name was not a string"
-        assert model.name, f"{provider.value} model {model.id!r} had an empty name"
-        assert model.provider == provider, f"{provider.value} model {model.id!r} mislabelled provider as {model.provider!r}"
+        assert isinstance(model, ModelInfo), f"{provider} returned a non-ModelInfo entry"
+        assert model.id, f"{provider} returned a model with an empty id"
+        assert id_substring in model.id.lower(), f"{provider} model id lacks {id_substring!r}: {model.id!r}"
+        assert isinstance(model.name, str), f"{provider} model {model.id!r} name was not a string"
+        assert model.name, f"{provider} model {model.id!r} had an empty name"
+        assert model.provider == provider, f"{provider} model {model.id!r} mislabelled provider as {model.provider!r}"
         assert model.context_window >= _MIN_CONTEXT_WINDOW, (
-            f"{provider.value} model {model.id!r} had unrealistic context window {model.context_window}"
+            f"{provider} model {model.id!r} had unrealistic context window {model.context_window}"
         )
-        assert isinstance(model.supports_tools, bool), f"{provider.value} model {model.id!r} supports_tools was not bool"
-        assert isinstance(model.supports_streaming, bool), f"{provider.value} model {model.id!r} supports_streaming was not bool"
+        assert isinstance(model.supports_tools, bool), f"{provider} model {model.id!r} supports_tools was not bool"
+        assert isinstance(model.supports_streaming, bool), f"{provider} model {model.id!r} supports_streaming was not bool"
         ids.append(model.id)
     if required_model is not None:
-        assert required_model in ids, f"{provider.value} listing omitted the configured model {required_model!r}"
+        assert required_model in ids, f"{provider} listing omitted the configured model {required_model!r}"
 
 
 def _walk_exception_chain(exc: BaseException) -> list[BaseException]:
@@ -1189,7 +1189,7 @@ class TestCrossProviderConsistency:
             if creds is None:
                 continue
             await provider.connect(creds)
-            providers.append((provider_name.value, model_id, provider))
+            providers.append((provider_name, model_id, provider))
 
         ollama_available = False
         try:

@@ -74,7 +74,7 @@ def _purge(provider: str) -> None:
     Args:
         provider: The provider whose keyring keys should be removed.
     """
-    key = f"{_SERVICE_NAME}_{provider.value}"
+    key = f"{_SERVICE_NAME}_{provider}"
     for name in (key, f"{key}_metadata"):
         try:
             keyring.delete_password(_SERVICE_NAME, name)
@@ -218,7 +218,7 @@ def test_migrate_from_env_copies_into_keyring(
     result = asyncio.run(_run())
     assert result[ollama_clean] is True
 
-    stored = keyring.get_password(_SERVICE_NAME, f"{_SERVICE_NAME}_{ollama_clean.value}")
+    stored = keyring.get_password(_SERVICE_NAME, f"{_SERVICE_NAME}_{ollama_clean}")
     assert stored is not None
     assert marker in stored
 
@@ -386,9 +386,9 @@ def test_validate_per_provider_prefix_branches(
         return ok, rejected
 
     (ok_valid, ok_error), (bad_valid, bad_error) = asyncio.run(_run())
-    assert ok_valid is True, f"{provider.value} good key was rejected: {ok_error}"
+    assert ok_valid is True, f"{provider} good key was rejected: {ok_error}"
     assert ok_error is None
-    assert bad_valid is False, f"{provider.value} bad key was accepted"
+    assert bad_valid is False, f"{provider} bad key was accepted"
     assert bad_error
 
 

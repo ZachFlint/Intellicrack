@@ -187,7 +187,7 @@ class _RealBinaryAnalysisBridge(ToolBridgeBase):
                 accepts a ``binary_path`` string argument.
         """
         return ToolDefinition(
-            tool_name=ToolName.PROCESS,
+            tool_name=ToolName.PROCESS.value,
             description="Read-only binary inspection backed by lief parsing.",
             functions=[
                 ToolFunction(

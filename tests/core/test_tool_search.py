@@ -201,7 +201,7 @@ class TestSyntheticWeightOrdering:
         """
         return [
             ToolDefinition(
-                tool_name=ToolName.GHIDRA,
+                tool_name=ToolName.GHIDRA.value,
                 description="Static analysis",
                 functions=[
                     ToolFunction(
@@ -213,7 +213,7 @@ class TestSyntheticWeightOrdering:
                 ],
             ),
             ToolDefinition(
-                tool_name=ToolName.FRIDA,
+                tool_name=ToolName.FRIDA.value,
                 description="Dynamic instrumentation",
                 functions=[
                     ToolFunction(
@@ -239,14 +239,14 @@ class TestSyntheticWeightOrdering:
         """A query containing the exact bridge name (``"frida"``) boosts that bridge's function over a same-scoring rival."""
         definitions = [
             ToolDefinition(
-                tool_name=ToolName.GHIDRA,
+                tool_name=ToolName.GHIDRA.value,
                 description="d",
                 functions=[
                     ToolFunction(name="ghidra.inspect", description="Inspect state", parameters=[], returns="r"),
                 ],
             ),
             ToolDefinition(
-                tool_name=ToolName.FRIDA,
+                tool_name=ToolName.FRIDA.value,
                 description="d",
                 functions=[
                     ToolFunction(name="frida.inspect", description="Inspect state", parameters=[], returns="r"),

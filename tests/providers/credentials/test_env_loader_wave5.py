@@ -184,7 +184,7 @@ def test_all_provider_names_in_mapping_making_unknown_branch_dead() -> None:
     Mutation: adding a new provider id member without a corresponding
     PROVIDER_MAPPINGS entry would break the invariant and turn this test red.
     """
-    all_names: set[str] = provider_ids.BUILTIN_PROVIDER_IDS
+    all_names: set[str] = set(provider_ids.BUILTIN_PROVIDER_IDS)
     mapped_names: set[str] = set(CredentialLoader.PROVIDER_MAPPINGS.keys())
     assert all_names == mapped_names
 
@@ -268,7 +268,7 @@ def test_get_api_key_env_var_mapping_exact_values() -> None:
     assert mapping["huggingface"] == "HUGGINGFACE_API_TOKEN"
     assert mapping["grok"] == "XAI_API_KEY"
     assert mapping["local_transformers"] == "LOCAL_TRANSFORMERS_HF_TOKEN"
-    assert set(mapping.keys()) == {p.value for p in provider_ids.BUILTIN_PROVIDER_IDS}
+    assert set(mapping.keys()) == set(provider_ids.BUILTIN_PROVIDER_IDS)
 
 
 def test_create_env_template_contains_required_placeholders(tmp_path: pathlib.Path) -> None:

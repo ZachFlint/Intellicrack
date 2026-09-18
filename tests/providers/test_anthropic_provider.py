@@ -131,7 +131,7 @@ class TestBuildModelInfo:
         model: ModelInfo = _build_model_info("claude-3-5-haiku-20241022", "Claude 3.5 Haiku")
 
         assert model.provider is provider_ids.ANTHROPIC
-        assert model.provider.value == "anthropic"
+        assert model.provider == "anthropic"
 
 
 class TestBuildApiKwargs:
@@ -826,7 +826,7 @@ class TestConvertToolsToProviderFormat:
         """One ToolFunction produces one AnthropicToolSchema with exact field values."""
         provider = AnthropicProvider()
         tool_def = ToolDefinition(
-            tool_name=ToolName.GHIDRA,
+            tool_name=ToolName.GHIDRA.value,
             description="Ghidra binary analysis tool",
             functions=[
                 ToolFunction(
@@ -872,7 +872,7 @@ class TestConvertToolsToProviderFormat:
         """Only required=True params appear in the required array."""
         provider = AnthropicProvider()
         tool_def = ToolDefinition(
-            tool_name=ToolName.FRIDA,
+            tool_name=ToolName.FRIDA.value,
             description="Frida instrumentation tool",
             functions=[
                 ToolFunction(
@@ -903,7 +903,7 @@ class TestProviderNameAndConnectedState:
         provider = AnthropicProvider()
 
         assert provider.name is provider_ids.ANTHROPIC
-        assert provider.name.value == "anthropic"
+        assert provider.name == "anthropic"
 
     def test_is_connected_false_before_connect(self) -> None:
         """is_connected is False immediately after construction."""
@@ -1152,7 +1152,7 @@ class TestAnthropicConnection:
             anthropic_provider: Connected Anthropic provider fixture.
         """
         assert anthropic_provider.name is provider_ids.ANTHROPIC
-        assert anthropic_provider.name.value == "anthropic"
+        assert anthropic_provider.name == "anthropic"
 
     @pytest.mark.asyncio
     @staticmethod

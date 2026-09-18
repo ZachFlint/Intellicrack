@@ -1409,7 +1409,7 @@ def _make_stub_bridge(
         ]
     )
     definition = ToolDefinition(
-        tool_name=tool_name,
+        tool_name=tool_name.value,
         description="Stub bridge for orchestrator audit tests.",
         functions=[
             ToolFunction(
@@ -1696,7 +1696,7 @@ async def test_broken_tool_schema_raises_tool_error(tmp_path: Path) -> None:
     broken_bridge = _StubBridge(
         name=ToolName.PROCESS,
         definition=ToolDefinition(
-            tool_name=ToolName.PROCESS,
+            tool_name=ToolName.PROCESS.value,
             description="Bridge with a broken function definition.",
             functions=[
                 ToolFunction(

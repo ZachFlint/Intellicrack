@@ -97,7 +97,7 @@ class _StreamProbeBridge(ToolBridgeBase):
             ToolDefinition: Definition for ``process.probe``.
         """
         return ToolDefinition(
-            tool_name=ToolName.PROCESS,
+            tool_name=ToolName.PROCESS.value,
             description="Minimal process bridge for S16-D04 streaming tests.",
             functions=[
                 ToolFunction(

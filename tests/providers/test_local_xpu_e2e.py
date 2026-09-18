@@ -251,7 +251,7 @@ def _make_test_tool() -> list[ToolDefinition]:
     """
     return [
         ToolDefinition(
-            tool_name=ToolName.GHIDRA,
+            tool_name=ToolName.GHIDRA.value,
             description="Binary analysis tools",
             functions=[
                 ToolFunction(

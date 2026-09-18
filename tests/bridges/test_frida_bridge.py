@@ -790,7 +790,7 @@ def test_tool_definition_returns_frida_tool() -> None:
     bridge = FridaBridge()
     defn = bridge.tool_definition
     assert defn.tool_name == ToolName.FRIDA
-    assert defn.tool_name.value == "frida"
+    assert defn.tool_name == "frida"
     assert defn.description, "tool_definition must have a non-empty description"
     assert "frida" in defn.description.lower(), "description must mention Frida"
 
