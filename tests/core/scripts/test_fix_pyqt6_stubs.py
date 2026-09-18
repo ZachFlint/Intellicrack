@@ -4,16 +4,18 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gate for the PyQt6 stub fixer that keeps CI's type check honest.
 
-PyQt6 6.11.0 ships 35 ``.pyi`` stubs that reference ``collections.abc.*``
-while importing only ``collections``. Left unpatched, basedpyright resolves
-the slot type of every ``signal.connect`` to Unknown, and a fresh environment
-reports over a thousand errors that a hand-patched one does not. The fixer
-used to patch only ``QtWidgets.pyi``.
+PyQt6 6.11.0 ships 35 ``.pyi`` stubs with two defects: they use
+``collections.abc.*`` while importing only ``collections``, and they define
+``PYQT_SLOT`` with a return type of ``Any`` that is never imported. Left
+unpatched, basedpyright resolves the slot type of every ``signal.connect`` to
+partially Unknown, and a fresh environment reports over a thousand errors that
+a hand-patched one does not. The fixer used to repair only the import, and
+only in ``QtWidgets.pyi``.
 
-The gate works on copies of the real installed stubs with the import line
-restored to the exact form the 6.11.0 wheel ships, so it exercises the real
-files without depending on whether the local environment was already patched,
-and without modifying it.
+The gate works on copies of the real installed stubs with both lines restored
+to the exact form the 6.11.0 wheel ships, so it exercises the real files
+without depending on whether the local environment was already patched, and
+without modifying it.
 """
 
 from __future__ import annotations
@@ -35,6 +37,11 @@ _SHIPPED_IMPORT = "import collections, re, typing, enum"
 """The import line PyQt6 6.11.0 ships in every affected stub."""
 
 _PATCHED_IMPORT = re.compile(r"^import\s+collections\s*,\s*collections\.abc\b", re.MULTILINE)
+
+_SHIPPED_SLOT = re.compile(r"^PYQT_SLOT = typing\.Union\[collections\.abc\.Callable\[\.\.\., Any\]", re.MULTILINE)
+"""``PYQT_SLOT`` as the wheel ships it, returning the undefined ``Any``."""
+
+_PATCHED_SLOT = re.compile(r"^PYQT_SLOT = typing\.Union\[collections\.abc\.Callable\[\.\.\., object\]", re.MULTILINE)
 
 
 def _load_script() -> ModuleType:
@@ -71,12 +78,19 @@ def shipped_stubs(tmp_path: Path) -> Path:
     for pyi in installed.glob("*.pyi"):
         text = pyi.read_text(encoding="utf-8")
         restored = re.sub(r"^import\s+collections\s*,\s*collections\.abc\s*,", "import collections,", text, count=1, flags=re.MULTILINE)
+        restored = re.sub(
+            r"^(PYQT_SLOT = typing\.Union\[collections\.abc\.Callable\[\.\.\., )object(\])",
+            r"\1Any\2",
+            restored,
+            count=1,
+            flags=re.MULTILINE,
+        )
         _ = (target / pyi.name).write_text(restored, encoding="utf-8")
     return target
 
 
 def _stubs_missing_the_import(directory: Path) -> list[str]:
-    """List stubs that use ``collections.abc`` without importing it.
+    """List stubs that still carry either shipped defect.
 
     Args:
         directory: Directory of ``.pyi`` stubs.
@@ -87,7 +101,8 @@ def _stubs_missing_the_import(directory: Path) -> list[str]:
     missing: list[str] = []
     for pyi in sorted(directory.glob("*.pyi")):
         text = pyi.read_text(encoding="utf-8")
-        if "collections.abc." in text and _PATCHED_IMPORT.search(text) is None:
+        unimported = "collections.abc." in text and _PATCHED_IMPORT.search(text) is None
+        if unimported or _SHIPPED_SLOT.search(text) is not None:
             missing.append(pyi.name)
     return missing
 
@@ -122,6 +137,28 @@ def test_every_affected_stub_is_patched(shipped_stubs: Path) -> None:
     assert _stubs_missing_the_import(shipped_stubs) == []
     core = (shipped_stubs / "QtCore.pyi").read_text(encoding="utf-8")
     assert _PATCHED_IMPORT.search(core) is not None
+    assert _PATCHED_SLOT.search(core) is not None
+
+
+def test_the_slot_fix_leaves_the_qfontdatabase_any_member_alone(shipped_stubs: Path) -> None:
+    """Only the module-level ``PYQT_SLOT`` changes; QtGui's enum member keeps its name.
+
+    ``QFontDatabase.WritingSystem`` has a member literally called ``Any``. A
+    fix that rewrote every ``Any`` would rename it and break the stub.
+
+    Args:
+        shipped_stubs: Stubs carrying the wheel's own defects.
+    """
+    script = _load_script()
+    gui = shipped_stubs / "QtGui.pyi"
+    member_lines = [line for line in gui.read_text(encoding="utf-8").splitlines() if re.match(r"^\s+Any = \.\.\.", line)]
+    assert member_lines, "QtGui.pyi no longer declares the Any enum member this gate protects"
+
+    _ = script.patch_stub_directory(shipped_stubs)
+
+    patched_lines = gui.read_text(encoding="utf-8").splitlines()
+    for line in member_lines:
+        assert line in patched_lines
 
 
 def test_patching_is_idempotent_and_leaves_other_stubs_alone(shipped_stubs: Path) -> None:
@@ -171,7 +208,8 @@ def test_the_restored_line_matches_what_the_wheel_ships(shipped_stubs: Path) -> 
     """Guard the fixture itself against drifting from the real shipped text.
 
     Args:
-        shipped_stubs: Stubs carrying the wheel's own import line.
+        shipped_stubs: Stubs carrying the wheel's own defects.
     """
     core = (shipped_stubs / "QtCore.pyi").read_text(encoding="utf-8")
     assert _SHIPPED_IMPORT in core
+    assert _SHIPPED_SLOT.search(core) is not None
