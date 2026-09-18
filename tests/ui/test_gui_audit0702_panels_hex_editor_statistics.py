@@ -5,15 +5,22 @@
 
 """Regression gates for GUI audit findings M10 and M11 in ``StatisticsMixin``.
 
-M10 -- ``_update_statistics`` computed the ``GenericCallableWorker``'s Qt
-parent with ``self if isinstance(self, QThread) else None``. ``self`` here is
-the ``HexEditorPanel`` (a ``QWidget``-derived object), never a ``QThread``,
-so that check is always ``False`` and the statistics worker was always
-parented to ``None`` -- unlike every other worker-launch site in the
-``hex_editor`` package, which correctly checks ``isinstance(self, QWidget)``.
-An unparented worker never joins the panel's Qt object tree, so it is not
-torn down by normal Qt parent-child cascade deletion. The fix replaces the
-``QThread`` check with a ``QWidget`` check, matching the sibling mixins.
+M10 -- ``_update_statistics`` resolved the widget that owns its worker with
+``self if isinstance(self, QThread) else None``. ``self`` here is the
+``HexEditorPanel`` (a ``QWidget``-derived object), never a ``QThread``, so
+that check was always ``False`` and the statistics worker belonged to no
+widget at all -- unlike every other worker-launch site in the ``hex_editor``
+package, which correctly checks ``isinstance(self, QWidget)``. A worker that
+belongs to no widget is not joined by the panel's scoped drain and its result
+is not gated on the panel still existing. The fix replaces the ``QThread``
+check with a ``QWidget`` check, matching the sibling mixins.
+
+That widget is the worker's recorded owner, not its Qt parent. Qt destroys a
+parent's children with it, and destroying a ``QThread`` whose OS thread is
+still running aborts the process, so ``run_callable_async`` dispatches the
+worker unparented and records the owner instead (see
+``ui/panels/async_bridge.py``). Both halves are gated below: the harness must
+be the owner, and it must not be the Qt parent.
 
 M11 -- ``_on_show_digram_matrix`` called the native ``document.digram_matrix``
 FFI scan and the subsequent 65536-element Python list conversion directly
@@ -176,15 +183,17 @@ class _StatisticsHarness(QWidget, StatisticsMixin):
         super()._on_digram_matrix_computed(result)
 
 
-def test_m10_statistics_worker_parented_to_widget(qtbot: QtBot) -> None:
-    """M10: the statistics worker's Qt parent must be the panel widget itself.
+def test_m10_statistics_worker_owned_by_widget(qtbot: QtBot) -> None:
+    """M10: the statistics worker must be owned by the panel widget, and unparented.
 
-    Pre-fix, ``_update_statistics`` computed ``parent_obj`` with
+    Pre-fix, ``_update_statistics`` resolved its owner with
     ``self if isinstance(self, QThread) else None``. ``self`` is a
     ``QWidget``-derived harness, never a ``QThread``, so that check is
-    always ``False`` and ``worker.parent()`` would always be ``None``. The
-    fix checks ``isinstance(self, QWidget)`` instead, so the worker must now
-    be parented to the harness widget.
+    always ``False`` and the worker belonged to no widget. The fix checks
+    ``isinstance(self, QWidget)`` instead, so the harness must now be the
+    worker's recorded owner -- while remaining absent from its Qt parent
+    chain, since Qt would otherwise destroy the running thread along with
+    the harness.
 
     Args:
         qtbot: pytest-qt bot fixture used to wait on the worker's completion
@@ -196,10 +205,13 @@ def test_m10_statistics_worker_parented_to_widget(qtbot: QtBot) -> None:
 
         worker = harness.statistics_worker()
         assert isinstance(worker, GenericCallableWorker), "_update_statistics did not dispatch a GenericCallableWorker"
-        assert worker.parent() is harness, (
-            "statistics worker is not parented to the panel widget; pre-fix "
+        assert worker.owner() is harness, (
+            "the panel widget is not the statistics worker's recorded owner; pre-fix "
             "isinstance(self, QThread) is always False for a QWidget-derived "
-            "panel, so parent_obj was always None"
+            "panel, so the worker belonged to no widget"
+        )
+        assert worker.parent() is None, (
+            "the statistics worker is a Qt child of the panel widget; deleting the panel mid-scan would destroy the running thread"
         )
 
         with qtbot.waitSignal(worker.call_finished, timeout=_WAIT_TIMEOUT_MS):

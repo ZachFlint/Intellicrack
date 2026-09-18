@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import QComboBox, QLabel, QTreeWidget, QTreeWidgetItem, QWi
 
 from intellicrack.bridges.pe_format import detect_format
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, guarded_delivery, run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor.base import (
     PREVIEW_BYTES,
     hexpat_interpreter_available,
@@ -331,15 +331,19 @@ class SectionsMixin:
             max_results=_STRINGS_MAX_RESULTS,
         )
 
+        owner = self if isinstance(self, QWidget) else None
         worker = GenericCallableWorker(
             execute_strings_extraction,
             self.document,
             _STRINGS_MIN_LENGTH,
             _STRINGS_MAX_RESULTS,
+            owner=owner,
         )
         self._strings_worker = worker
-        _: object = worker.call_finished.connect(partial(self._on_strings_worker_finished, worker))
-        _ = worker.call_error.connect(partial(self._on_strings_worker_error, worker))
+        finished_slot = guarded_delivery(partial(self._on_strings_worker_finished, worker), owner, "success")
+        error_slot = guarded_delivery(partial(self._on_strings_worker_error, worker), owner, "error")
+        _: object = worker.call_finished.connect(finished_slot)
+        _ = worker.call_error.connect(error_slot)
         worker.start()
 
     def _on_strings_worker_finished(self, worker: GenericCallableWorker, results: object) -> None:

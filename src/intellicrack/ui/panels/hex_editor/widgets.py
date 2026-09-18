@@ -33,7 +33,12 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine, worker_is_running
+from intellicrack.ui.panels.async_bridge import (
+    GenericCallableWorker,
+    run_bridge_coroutine,
+    run_callable_async,
+    worker_is_running,
+)
 from intellicrack.ui.panels.hex_editor.base import (
     BYTE_VALUES_COUNT,
     ENTROPY_HIGH_THRESHOLD,
@@ -594,7 +599,7 @@ class CustomCrcDialog(QDialog):
 
         self._result_label.setText("Computing\u2026")
         self._result_label.setToolTip("Computing\u2026")
-        worker = GenericCallableWorker(
+        self._worker = run_callable_async(
             _compute_custom_crc_for_worker,
             self._bridge,
             self._file_path,
@@ -603,15 +608,13 @@ class CustomCrcDialog(QDialog):
             width,
             poly,
             init,
+            on_success=self._on_worker_finished,
+            on_error=self._on_worker_error,
+            parent=self._worker_parent,
             ref_in=ref_in,
             ref_out=ref_out,
             xor_out=xor_out,
-            parent=self._worker_parent,
         )
-        _: object = worker.call_finished.connect(self._on_worker_finished)
-        _ = worker.call_error.connect(self._on_worker_error)
-        self._worker = worker
-        worker.start()
 
     def _on_worker_finished(self, result: object) -> None:
         """Display the computed CRC and emit ``crc_computed`` for observers.

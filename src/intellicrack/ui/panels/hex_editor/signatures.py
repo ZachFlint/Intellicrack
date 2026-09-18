@@ -30,6 +30,7 @@ from intellicrack.core.yara_scanner import YaraScanner
 from intellicrack.ui.panels.async_bridge import (
     GenericCallableWorker,
     run_bridge_coroutine_logged,
+    run_callable_async,
     worker_is_running,
 )
 
@@ -619,17 +620,16 @@ class SignaturesMixin:
             self._scan_signatures_via_bridge(bridge, db_type)
             return
 
-        worker = GenericCallableWorker(
+        self._sig_worker = run_callable_async(
             execute_signature_scan_from_source,
             fp_str,
             self.document,
             db_type,
             self._sig_db_path,
+            on_success=self._on_sig_scan_finished_obj,
+            on_error=self._on_sig_scan_error_obj,
+            parent=self if isinstance(self, QWidget) else None,
         )
-        _: object = worker.call_finished.connect(self._on_sig_scan_finished_obj)
-        _ = worker.call_error.connect(self._on_sig_scan_error_obj)
-        self._sig_worker = worker
-        worker.start()
 
     def _scan_signatures_via_bridge(self, bridge: HexEditorBridge, db_type: str) -> None:
         """Dispatch a DIE/ClamAV/custom signature scan to the matching bridge method.
