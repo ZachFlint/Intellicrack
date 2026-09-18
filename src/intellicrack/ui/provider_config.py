@@ -20,7 +20,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, cast, override
 from urllib.parse import urlsplit
 
 import httpx
-from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
+from PyQt6 import sip
+from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QColor, QDesktopServices
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -83,7 +84,7 @@ from intellicrack.providers.instances import ProviderInstance, TransportRisk, cl
 from intellicrack.providers.model_metadata import ingest_models
 from intellicrack.providers.presets import all_presets, preset_for
 from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import RetainedWorker, run_bridge_coroutine, run_bridge_coroutine_async
 from intellicrack.ui.resources import IconManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
@@ -734,7 +735,7 @@ class CredentialSourceDetector:
         return colors.get(key, colors["default"])
 
 
-class ConnectionTestWorker(QThread):
+class ConnectionTestWorker(RetainedWorker):
     """Worker thread for testing provider connections.
 
     Runs connection tests in a separate thread to avoid blocking the UI.
@@ -1185,7 +1186,7 @@ class ConnectionTestWorker(QThread):
         )
 
 
-class ModelRefreshWorker(QThread):
+class ModelRefreshWorker(RetainedWorker):
     """Worker thread for refreshing model lists from provider APIs.
 
     Attributes:
@@ -4119,22 +4120,28 @@ class ProviderSettingsWidget(QFrame):
             api_key,
             api_base,
             provider=provider,
-            parent=self,
+            parent=None,
         )
-
-        def _refresh_finished_slot(s: int, m: list[str], msg: str) -> None:
-            """Adapt the model-refresh worker signal into the typed handler.
-
-            Args:
-                s: Success flag from the worker as an integer (nonzero means
-                    the refresh succeeded).
-                m: Model identifiers returned for this provider.
-                msg: Status or error message produced by the refresh worker.
-            """
-            self._on_models_refreshed(success=bool(s), models=m, message=msg)
-
-        self._refresh_worker.refresh_finished.connect(_refresh_finished_slot)
+        self._refresh_worker.refresh_finished.connect(self._on_refresh_worker_finished)
         self._refresh_worker.start()
+
+    def _on_refresh_worker_finished(self, success: int, models: list[str], message: str) -> None:
+        """Deliver a finished model refresh to this widget.
+
+        The worker is unparented so that closing the widget mid-request cannot
+        destroy a running thread, which means it can finish after the widget
+        is gone. A result that arrives for a deleted widget is dropped.
+
+        Args:
+            success: Success flag from the worker (nonzero means the refresh
+                succeeded).
+            models: Model identifiers returned for this provider.
+            message: Status or error message produced by the refresh.
+        """
+        if sip.isdeleted(self):
+            _logger.debug("model_refresh_result_dropped", provider=self.provider_id, reason="widget_deleted")
+            return
+        self._on_models_refreshed(success=bool(success), models=models, message=message)
 
     def _auto_refresh_models(self) -> None:
         """Auto-refresh models if no refresh is already running."""
@@ -4211,20 +4218,25 @@ class ProviderSettingsWidget(QFrame):
             self._test_btn.setEnabled(True)
             return
 
-        self._test_worker = ConnectionTestWorker(self.provider_id, api_key, api_base, self)
-
-        def _test_finished_slot(s: int, m: str) -> None:
-            """Adapt the connection-test worker signal into the typed handler.
-
-            Args:
-                s: Success flag from the worker as an integer (nonzero means
-                    the connection test succeeded).
-                m: Status message describing the connection test outcome.
-            """
-            self._on_connection_tested(success=bool(s), message=m)
-
-        self._test_worker.test_finished.connect(_test_finished_slot)
+        self._test_worker = ConnectionTestWorker(self.provider_id, api_key, api_base, None)
+        self._test_worker.test_finished.connect(self._on_test_worker_finished)
         self._test_worker.start()
+
+    def _on_test_worker_finished(self, success: int, message: str) -> None:
+        """Deliver a finished connection test to this widget.
+
+        As with the model refresh, the worker outlives the widget if the
+        widget closes mid-test, and a result for a deleted widget is dropped.
+
+        Args:
+            success: Success flag from the worker (nonzero means the
+                connection test succeeded).
+            message: Status message describing the outcome.
+        """
+        if sip.isdeleted(self):
+            _logger.debug("connection_test_result_dropped", provider=self.provider_id, reason="widget_deleted")
+            return
+        self._on_connection_tested(success=bool(success), message=message)
 
     def _on_connection_tested(self, *, success: bool, message: str) -> None:
         """Handle connection test completion.
