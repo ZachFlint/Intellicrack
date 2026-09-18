@@ -2857,7 +2857,7 @@ class MainWindow(QMainWindow):
         if self.model_discovery is not None:
             run_bridge_coroutine_async(self.model_discovery.discover_all(), parent=self)
 
-        self.model_refresh_worker = ModelRefreshWorker(provider_id, api_key, api_base, provider=connected_instance, parent=self)
+        self.model_refresh_worker = ModelRefreshWorker(provider_id, api_key, api_base, provider=connected_instance, owner=self)
 
         def _refresh_slot(s: int, m: list[str], msg: str) -> None:
             """Adapt the model-refresh worker signal into the typed handler.
@@ -2870,7 +2870,7 @@ class MainWindow(QMainWindow):
             """
             self._on_models_refresh_finished(success=bool(s), models=m, message=msg)
 
-        self.model_refresh_worker.refresh_finished.connect(_refresh_slot)
+        self.model_refresh_worker.refresh_finished.connect(guarded_delivery(_refresh_slot, self, "success"))
         self.model_refresh_worker.start()
 
     def _on_models_refresh_finished(self, *, success: bool, models: list[str], message: str) -> None:

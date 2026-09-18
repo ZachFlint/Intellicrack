@@ -30,6 +30,7 @@ __all__ = [
     "WORKER_DEFAULT_EXCEPTIONS",
     "BridgeCallWorker",
     "GenericCallableWorker",
+    "RetainedWorker",
     "bridge_workers_for",
     "cancel_pending_main_loop_tasks",
     "discard_worker",
@@ -136,17 +137,23 @@ def _retain_worker(worker: QThread) -> None:
         _WorkerRegistry.workers.add(worker)
 
 
-class _RetainedWorker(QThread):
+class RetainedWorker(QThread):
     """``QThread`` base that pins itself against premature GC on ``start``.
 
     Subclasses are retained in :class:`_WorkerRegistry` for the lifetime of their OS thread, preventing the ``QThread: Destroyed while
     thread is still running`` abort that occurs when an unparented worker's only Python reference goes out of scope while the thread is
-    still executing.
+    still executing. Subclasses name this class directly rather than an alias, so that a source gate walking the class graph can find
+    every worker thread in the package from its bases alone.
 
     A worker may additionally record the widget that dispatched it as its *owner*. The owner is deliberately not the worker's Qt parent:
     Qt destroys a parent's children along with it, and destroying a ``QThread`` whose OS thread is still running aborts the process with a
     native access violation and no Python traceback. Recording the owner separately keeps :func:`drain_bridge_workers_for` able to find a
     widget's in-flight workers without handing that widget the power to delete them mid-flight.
+
+    Every worker thread in the UI derives from this, whether it is dispatched through :func:`run_bridge_coroutine_async` /
+    :func:`run_callable_async` or hand-rolled for one widget (the tool installer, the sandbox test, the model refresh and the rest). The
+    hand-rolled ones take only ``owner``: nothing in the application has a reason to make a worker thread someone's Qt child, and leaving
+    the parameter out is what stops the crash from being reintroduced one constructor argument at a time.
     """
 
     def __init__(self, parent: QObject | None = None, *, owner: QObject | None = None) -> None:
@@ -272,7 +279,7 @@ def ensure_loop() -> asyncio.AbstractEventLoop:
     return _ensure_loop()
 
 
-class BridgeCallWorker(_RetainedWorker):
+class BridgeCallWorker(RetainedWorker):
     """Worker thread for non-blocking bridge coroutine execution.
 
     Submits a coroutine to the persistent bridge event loop and
@@ -366,7 +373,7 @@ class BridgeCallWorker(_RetainedWorker):
             self.call_error.emit(exc)
 
 
-class GenericCallableWorker(_RetainedWorker):
+class GenericCallableWorker(RetainedWorker):
     """Worker thread for non-blocking execution of synchronous callables.
 
     Runs an arbitrary synchronous ``func(*args, **kwargs)`` on a background
@@ -594,10 +601,10 @@ def cancel_pending_main_loop_tasks() -> int:
 
 
 def guarded_delivery(
-    callback: Callable[[object], None],
+    callback: Callable[..., None],
     owner: QObject | None,
     kind: Literal["success", "error"],
-) -> Callable[[object], None]:
+) -> Callable[..., None]:
     """Wrap ``callback`` so a late result never reaches a destroyed ``owner``.
 
     A worker outlives the widget that dispatched it (see :func:`run_bridge_coroutine_async` and :func:`run_callable_async`), so its result
@@ -617,27 +624,31 @@ def guarded_delivery(
     Dispatch sites pass both kinds - a panel's own handler here, a closure capturing a PID or a worker instance there - so the helpers wrap
     every callback rather than leaving each site to reason about which kind it has.
 
+    The wrapper forwards whatever the signal carries. The dispatch helpers emit a single result object, while the hand-rolled workers
+    emit typed signals of two or three arguments (a tool id with its availability and message, a success flag with its text), and Qt hands
+    every argument to a variadic slot.
+
     Args:
-        callback: Caller-supplied success or error callback.
+        callback: Caller-supplied success or error callback, taking as many arguments as the signal it is connected to.
         owner: Widget whose lifetime bounds delivery, or ``None`` to deliver unconditionally.
         kind: Which delivery this wraps, recorded on the drop log entry.
 
     Returns:
-        Callable[[object], None]: ``callback`` itself when there is no owner to outlive, otherwise a guarded wrapper around it.
+        Callable[..., None]: ``callback`` itself when there is no owner to outlive, otherwise a guarded wrapper around it.
     """
     if owner is None:
         return callback
 
-    def _deliver(payload: object) -> None:
+    def _deliver(*payload: object) -> None:
         """Invoke the wrapped callback unless the owner has already been deleted.
 
         Args:
-            payload: Result object or exception emitted by the worker.
+            *payload: Arguments carried by the worker's signal.
         """
         if sip.isdeleted(owner):
             _logger.debug("bridge_result_dropped", delivery=kind, owner_type=type(owner).__name__)
             return
-        callback(payload)
+        callback(*payload)
 
     return _deliver
 
@@ -868,7 +879,7 @@ def _worker_is_owned_by(worker: QThread, root: QObject) -> bool:
     """
     if _object_chain_contains(worker, root):
         return True
-    owner = worker.owner() if isinstance(worker, _RetainedWorker) else None
+    owner = worker.owner() if isinstance(worker, RetainedWorker) else None
     return _object_chain_contains(owner, root)
 
 

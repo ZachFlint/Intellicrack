@@ -11,14 +11,14 @@ log rotations propagate into the live view.
 from __future__ import annotations
 
 import contextlib
-import threading
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, ClassVar, Final, cast, override
+from typing import TYPE_CHECKING, Final, cast, override
 
-from PyQt6.QtCore import QFileSystemWatcher, QObject, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QFileSystemWatcher, QObject, QTimer, pyqtSignal
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.log_viewer._record import LogRecordDict, parse_json_line
+from intellicrack.ui.panels.async_bridge import RetainedWorker
 
 
 if TYPE_CHECKING:
@@ -31,51 +31,6 @@ _logger = get_logger(__name__)
 _INITIAL_LOAD_DEFAULT_BYTES: Final[int] = 5 * 1024 * 1024
 _MAX_INCREMENTAL_BYTES: Final[int] = 1 * 1024 * 1024
 _READ_RESCHEDULE_MS: Final[int] = 0
-
-
-class _InitialWorkerRegistry:
-    """Strong references to in-flight :class:`InitialLoadWorker` threads.
-
-    A fire-and-forget ``QThread`` whose only Python reference is dropped
-    (e.g. by :meth:`LogFileTailReader.stop` detaching from a still-running
-    worker) is eligible for collection by Python's cyclic garbage
-    collector even though the underlying OS thread is still executing:
-    ``worker.finished.connect(worker.deleteLater)`` forms a reference
-    cycle (the bound method holds ``worker``, Qt's connection registry
-    holds the bound method) that ordinary refcounting cannot break, but
-    cyclic GC can and does reap it non-deterministically. If that happens
-    while the thread is still running, Qt aborts the process with
-    ``QThread: Destroyed while thread is still running``. Retaining each
-    started worker here until it has fully finished keeps it alive
-    independent of any other Python reference.
-    """
-
-    workers: ClassVar[set[QThread]] = set()
-    lock: ClassVar[threading.Lock] = threading.Lock()
-
-
-def _retain_initial_worker(worker: QThread) -> None:
-    """Pin ``worker`` against premature garbage collection until it finishes.
-
-    Fully finished workers already in the registry are pruned first so the
-    set stays bounded. ``isFinished`` is queried defensively: if a worker's
-    ``deleteLater`` has already destroyed the underlying C++ object the sip
-    wrapper raises ``RuntimeError``, which simply means the worker is done
-    and can be dropped.
-
-    Args:
-        worker: The worker thread being started.
-    """
-    with _InitialWorkerRegistry.lock:
-        stale: set[QThread] = set()
-        for existing in _InitialWorkerRegistry.workers:
-            try:
-                if existing.isFinished():
-                    stale.add(existing)
-            except RuntimeError:
-                stale.add(existing)
-        _InitialWorkerRegistry.workers.difference_update(stale)
-        _InitialWorkerRegistry.workers.add(worker)
 
 
 def _read_tail_bytes(path: Path, max_bytes: int) -> tuple[bytes, int]:
@@ -119,7 +74,7 @@ def _parse_tail_lines(raw: bytes, *, skip_first_line: bool) -> list[LogRecordDic
     return records
 
 
-class InitialLoadWorker(QThread):
+class InitialLoadWorker(RetainedWorker):
     """Background worker that performs the historical tail read.
 
     Reads up to ``max_bytes`` from the end of the log file, drops the
@@ -127,12 +82,14 @@ class InitialLoadWorker(QThread):
     emits ``records_ready`` with the resulting list. ``offset_ready``
     reports the byte offset where live tailing should resume.
 
-    :meth:`start` pins the running OS thread in :class:`_InitialWorkerRegistry`
-    until it finishes, which prevents the ``QThread: Destroyed while thread
-    is still running`` abort that would otherwise be possible if the
+    :class:`RetainedWorker` pins the running OS thread in the shared worker
+    registry until it finishes, which prevents the ``QThread: Destroyed while
+    thread is still running`` abort that would otherwise be possible if the
     reader's only strong reference to this worker is dropped (e.g. by
-    :meth:`LogFileTailReader.stop`) while a slow read is still in flight
-    and the C++ object is later reaped by cyclic GC.
+    :meth:`LogFileTailReader.stop`) while a slow read is still in flight and
+    the C++ object is later reaped by cyclic GC. Being in that registry also
+    means the application's shutdown drain and the test-teardown drain wait
+    for this read like every other worker thread.
 
     Attributes:
         records_ready: Emitted with the parsed historical records.
@@ -142,27 +99,17 @@ class InitialLoadWorker(QThread):
     records_ready = pyqtSignal(list)
     offset_ready = pyqtSignal(int)
 
-    def __init__(self, log_path: Path, max_bytes: int, parent: QObject | None = None) -> None:
+    def __init__(self, log_path: Path, max_bytes: int, *, owner: QObject | None = None) -> None:
         """Initialize the worker with the file to read and max-bytes cap.
 
         Args:
             log_path: Absolute path to the JSON-Lines log file.
             max_bytes: Maximum number of trailing bytes to read.
-            parent: Parent :class:`QObject`.
+            owner: Reader that started this load, recorded for scoped draining rather than as a Qt parent.
         """
-        super().__init__(parent)
+        super().__init__(owner=owner)
         self._log_path = log_path
         self._max_bytes = max_bytes
-
-    @override
-    def start(self, priority: QThread.Priority = QThread.Priority.InheritPriority) -> None:
-        """Retain this worker against premature GC, then start its OS thread.
-
-        Args:
-            priority: Scheduling priority forwarded to ``QThread.start``.
-        """
-        _retain_initial_worker(self)
-        super().start(priority)
 
     @override
     def run(self) -> None:
@@ -262,7 +209,7 @@ class LogFileTailReader(QObject):
         """
         if self._stopped or self._initial_worker is not None:
             return
-        worker = InitialLoadWorker(self._log_path, self._max_initial_bytes)
+        worker = InitialLoadWorker(self._log_path, self._max_initial_bytes, owner=self)
         worker.records_ready.connect(self._on_initial_records)
         worker.offset_ready.connect(self._on_initial_offset)
         worker.finished.connect(self._on_initial_finished)
@@ -277,12 +224,11 @@ class LogFileTailReader(QObject):
         created with no parent in :meth:`start`), so it is safe to detach
         from it here even while it is still running: dropping
         ``self._initial_worker`` does not risk premature collection of the
-        still-running :class:`QThread` because :meth:`InitialLoadWorker.start`
-        already pinned it in :class:`_InitialWorkerRegistry`, a module-level
-        registry that is immune to Python's cyclic garbage collector. The
-        worker keeps running in the background, is dropped from that
-        registry once it finishes, and deletes itself via its own
-        ``finished`` signal once the read completes. This avoids both a
+        still-running :class:`QThread` because :class:`RetainedWorker` already
+        pinned it in the shared worker registry, which is immune to Python's
+        cyclic garbage collector. The worker keeps running in the background,
+        is dropped from that registry once it finishes, and deletes itself via
+        its own ``finished`` signal once the read completes. This avoids both a
         synchronous GUI-thread wait and the Qt crash that results from
         destroying a :class:`QThread` while it is still running.
         """

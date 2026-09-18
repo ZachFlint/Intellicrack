@@ -18,7 +18,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, cast, override
 
 import httpx
-from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QColor, QDesktopServices
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -69,7 +69,12 @@ from intellicrack.credentials.store import CredentialStore, get_credential_store
 from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
 from intellicrack.providers.huggingface import fetch_router_served_model_ids
 from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import (
+    RetainedWorker,
+    guarded_delivery,
+    run_bridge_coroutine,
+    run_bridge_coroutine_async,
+)
 from intellicrack.ui.resources import IconManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
@@ -591,7 +596,7 @@ class CredentialSourceDetector:
         return colors.get(key, colors["default"])
 
 
-class ConnectionTestWorker(QThread):
+class ConnectionTestWorker(RetainedWorker):
     """Worker thread for testing provider connections.
 
     Runs connection tests in a separate thread to avoid blocking the UI.
@@ -607,7 +612,8 @@ class ConnectionTestWorker(QThread):
         provider_id: str,
         api_key: str,
         api_base: str | None = None,
-        parent: QWidget | None = None,
+        *,
+        owner: QWidget | None = None,
     ) -> None:
         """Initialize the ConnectionTestWorker for a provider.
 
@@ -615,9 +621,11 @@ class ConnectionTestWorker(QThread):
             provider_id: Identifier of the provider to test.
             api_key: API key to use for the connection test.
             api_base: Optional custom API base URL.
-            parent: Parent widget.
+            owner: Widget that started the test. It is recorded for scoped draining and delivery guards, never as a Qt parent: a probe
+                against a slow or unreachable endpoint runs for up to the request timeout, and closing the settings page must not destroy
+                the thread waiting on it.
         """
-        super().__init__(parent)
+        super().__init__(owner=owner)
         self.provider_id = provider_id
         self._api_key = api_key
         self._api_base = api_base
@@ -1006,7 +1014,7 @@ class ConnectionTestWorker(QThread):
         )
 
 
-class ModelRefreshWorker(QThread):
+class ModelRefreshWorker(RetainedWorker):
     """Worker thread for refreshing model lists from provider APIs.
 
     Attributes:
@@ -1021,7 +1029,8 @@ class ModelRefreshWorker(QThread):
         api_key: str,
         api_base: str | None = None,
         provider: LLMProviderBase | None = None,
-        parent: QWidget | None = None,
+        *,
+        owner: QWidget | None = None,
     ) -> None:
         """Initialize the ModelRefreshWorker for a provider.
 
@@ -1030,9 +1039,11 @@ class ModelRefreshWorker(QThread):
             api_key: API key to authenticate with the provider.
             api_base: Optional custom API base URL.
             provider: Optional pre-connected provider instance to use directly.
-            parent: Parent widget.
+            owner: Widget that started the refresh. It is recorded for scoped draining and delivery guards, never as a Qt parent: a model
+                list from an arbitrary endpoint can take the full request timeout, and closing the settings page must not destroy the
+                thread fetching it.
         """
-        super().__init__(parent)
+        super().__init__(owner=owner)
         self.provider_id = provider_id
         self._api_key = api_key
         self._api_base = api_base
@@ -3336,7 +3347,7 @@ class ProviderSettingsWidget(QFrame):
             api_key,
             api_base,
             provider=provider,
-            parent=self,
+            owner=self,
         )
 
         def _refresh_finished_slot(s: int, m: list[str], msg: str) -> None:
@@ -3350,7 +3361,7 @@ class ProviderSettingsWidget(QFrame):
             """
             self._on_models_refreshed(success=bool(s), models=m, message=msg)
 
-        self._refresh_worker.refresh_finished.connect(_refresh_finished_slot)
+        self._refresh_worker.refresh_finished.connect(guarded_delivery(_refresh_finished_slot, self, "success"))
         self._refresh_worker.start()
 
     def _auto_refresh_models(self) -> None:
@@ -3426,7 +3437,7 @@ class ProviderSettingsWidget(QFrame):
             self._test_btn.setEnabled(True)
             return
 
-        self._test_worker = ConnectionTestWorker(self.provider_id, api_key, api_base, self)
+        self._test_worker = ConnectionTestWorker(self.provider_id, api_key, api_base, owner=self)
 
         def _test_finished_slot(s: int, m: str) -> None:
             """Adapt the connection-test worker signal into the typed handler.
@@ -3438,7 +3449,7 @@ class ProviderSettingsWidget(QFrame):
             """
             self._on_connection_tested(success=bool(s), message=m)
 
-        self._test_worker.test_finished.connect(_test_finished_slot)
+        self._test_worker.test_finished.connect(guarded_delivery(_test_finished_slot, self, "success"))
         self._test_worker.start()
 
     def _on_connection_tested(self, *, success: bool, message: str) -> None:

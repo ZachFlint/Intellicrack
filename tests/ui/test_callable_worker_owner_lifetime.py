@@ -33,6 +33,7 @@ import ast
 import json
 import socket
 import threading
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
@@ -79,7 +80,7 @@ _EXPECTED_WORKERS: Final[int] = 1
 _EXPECTED_DELIVERIES: Final[int] = 1
 _DOCUMENT_BYTES: Final[bytes] = bytes(range(256)) * 4096
 _CALL_EXCEPTIONS: Final[tuple[type[BaseException], ...]] = (*WORKER_DEFAULT_EXCEPTIONS, httpx.HTTPError)
-_WORKER_CLASSES: Final[frozenset[str]] = frozenset({"BridgeCallWorker", "GenericCallableWorker"})
+_QTHREAD: Final[str] = "QThread"
 _COMPUTING_TEXT: Final[str] = "Computing..."
 _ENTROPY_UNITS: Final[str] = "bits/byte"
 _UNIFORM_ENTROPY: Final[float] = 8.0
@@ -346,23 +347,102 @@ def _delete(widget: QWidget, qtbot: QtBot) -> None:
     qtbot.waitUntil(lambda: sip.isdeleted(widget), timeout=_DELETE_WAIT_MS)
 
 
-def _worker_call_name(node: ast.Call) -> str | None:
-    """Return the called name when ``node`` constructs a worker class.
+@dataclass(frozen=True)
+class _WorkerClass:
+    """One ``QThread``-derived class as the source gate sees it.
+
+    Attributes:
+        bases: Names of the class's immediate bases, as written.
+        positional: Names of its ``__init__``'s positional parameters without ``self``, or ``None`` when it declares no ``__init__`` and
+            therefore inherits one.
+    """
+
+    bases: tuple[str, ...]
+    positional: tuple[str, ...] | None
+
+
+def _base_names(node: ast.ClassDef) -> tuple[str, ...]:
+    """Return the written names of a class's immediate bases.
 
     Args:
-        node: Call node from a parsed source file.
+        node: Class definition from a parsed source file.
 
     Returns:
-        str | None: The worker class name being constructed, or ``None`` for any other call.
+        tuple[str, ...]: Base names, with dotted bases reduced to their attribute (``QtCore.QThread`` becomes ``QThread``).
     """
-    func = node.func
-    if isinstance(func, ast.Name):
-        name = func.id
-    elif isinstance(func, ast.Attribute):
-        name = func.attr
-    else:
-        return None
-    return name if name in _WORKER_CLASSES else None
+    names: list[str] = []
+    for base in node.bases:
+        if isinstance(base, ast.Name):
+            names.append(base.id)
+        elif isinstance(base, ast.Attribute):
+            names.append(base.attr)
+    return tuple(names)
+
+
+def _worker_classes(root: Path) -> dict[str, _WorkerClass]:
+    """Collect every class under ``root`` that reaches ``QThread`` through its bases.
+
+    Discovering the classes instead of listing them is what makes the gate cover workers that do not exist yet: a new ``QThread``
+    subclass is picked up by the next run with no change here.
+
+    Args:
+        root: Package directory whose Python sources are parsed.
+
+    Returns:
+        dict[str, _WorkerClass]: Worker class names mapped to what the gate needs to know about their constructors.
+    """
+    found: dict[str, _WorkerClass] = {}
+    for path in sorted(root.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            init = next((item for item in node.body if isinstance(item, ast.FunctionDef) and item.name == "__init__"), None)
+            positional = tuple(arg.arg for arg in [*init.args.posonlyargs, *init.args.args][1:]) if init is not None else None
+            found[node.name] = _WorkerClass(_base_names(node), positional)
+
+    def _derives(name: str, seen: tuple[str, ...] = ()) -> bool:
+        """Report whether ``name`` reaches ``QThread`` through the collected class graph.
+
+        Args:
+            name: Class name to resolve.
+            seen: Names already visited on this path, guarding against a cycle.
+
+        Returns:
+            bool: True when the chain of bases ends at ``QThread``.
+        """
+        if name == _QTHREAD:
+            return True
+        if name in seen or name not in found:
+            return False
+        return any(_derives(base, (*seen, name)) for base in found[name].bases)
+
+    return {name: info for name, info in found.items() if name != _QTHREAD and _derives(name)}
+
+
+def _parent_slot(name: str, classes: dict[str, _WorkerClass]) -> int | None:
+    """Return the positional index at which ``name``'s constructor takes a Qt parent.
+
+    A class that declares its own ``__init__`` either names ``parent`` among its positional parameters or has no positional parent at
+    all. A class that declares none inherits one, so the search walks its bases; falling off the end of the package means it inherits
+    ``QThread.__init__``, whose first positional argument is the parent.
+
+    Args:
+        name: Worker class name.
+        classes: The collected worker classes.
+
+    Returns:
+        int | None: Index of the parent argument, or ``None`` when the constructor cannot take one positionally.
+    """
+    seen: set[str] = set()
+    current = name
+    while current in classes and current not in seen:
+        seen.add(current)
+        positional = classes[current].positional
+        if positional is not None:
+            return positional.index("parent") if "parent" in positional else None
+        current = next((base for base in classes[current].bases if base in classes), "")
+    return 0
 
 
 def _parented_worker_sites(root: Path) -> list[str]:
@@ -374,18 +454,21 @@ def _parented_worker_sites(root: Path) -> list[str]:
     Returns:
         list[str]: One ``<path>:<line>`` description per offending construction, empty when every site is unparented.
     """
+    classes = _worker_classes(root)
     offenders: list[str] = []
     for path in sorted(root.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
-            name = _worker_call_name(node)
-            if name is None:
+            func = node.func
+            name = func.id if isinstance(func, ast.Name) else func.attr if isinstance(func, ast.Attribute) else None
+            if name is None or name not in classes:
                 continue
             if any(keyword.arg == "parent" for keyword in node.keywords):
                 offenders.append(f"{path}:{node.lineno} passes parent= to {name}")
-            if name == "BridgeCallWorker" and len(node.args) > 1:
+            slot = _parent_slot(name, classes)
+            if slot is not None and len(node.args) > slot:
                 offenders.append(f"{path}:{node.lineno} passes a positional Qt parent to {name}")
     return offenders
 
@@ -504,10 +587,15 @@ def test_drain_bridge_workers_for_joins_an_unparented_callable_worker(qtbot: QtB
 def test_no_dispatch_site_parents_its_worker_to_a_widget() -> None:
     """No worker construction anywhere in the package may take a Qt parent.
 
-    The behavioural gates cover the dispatch helpers; this one covers the sites. Every ``GenericCallableWorker`` and ``BridgeCallWorker``
-    construction in the package must leave the Qt parent unset and pass the widget as ``owner`` instead, because a parented worker is
-    destroyed with its widget and takes the process down with it when its thread is still running. Re-parenting any single site - or
-    restoring the old positional parent on a bridge worker - turns this red and names the file and line.
+    The behavioural gates cover individual workers; this one covers every site at once. The gate discovers each class that reaches
+    ``QThread`` through its bases - the two dispatch workers, the hand-rolled ones behind the tool installer, the sandbox test, the
+    requirements probe, the tracked-process refresh, the log tail load and the provider model refresh and connection test - and requires
+    every construction of them to leave the Qt parent unset and pass the widget as ``owner`` instead. A parented worker is destroyed with
+    its widget and takes the process down with it when its thread is still running.
+
+    Both ways of handing one over are covered: the ``parent=`` keyword, and a positional argument landing in a constructor's parent slot.
+    Re-parenting any single site turns this red and names the file and line, and a worker class added later is covered without touching
+    this test.
     """
     root = Path(str(intellicrack.__file__)).parent
     offenders = _parented_worker_sites(root)

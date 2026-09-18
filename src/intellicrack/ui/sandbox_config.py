@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Final, cast, override
 
-from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -75,6 +75,8 @@ from .dialogs_helpers import show_info, show_warning
 from .panels.async_bridge import (
     WORKER_DEFAULT_EXCEPTIONS,
     GenericCallableWorker,
+    RetainedWorker,
+    guarded_delivery,
     run_bridge_coroutine,
     run_bridge_coroutine_async,
     run_callable_async,
@@ -310,7 +312,7 @@ def is_windows_sandbox_available(*, use_cache: bool = True) -> bool:
     return available
 
 
-class SandboxTestWorker(QThread):
+class SandboxTestWorker(RetainedWorker):
     """Worker thread for testing Windows Sandbox.
 
     Launches Windows Sandbox with a test configuration and monitors
@@ -331,7 +333,7 @@ class SandboxTestWorker(QThread):
         memory_limit_mb: int = 2048,
         shared_folder: str | None = None,
         read_only: bool = False,
-        parent: QObject | None = None,
+        owner: QObject | None = None,
     ) -> None:
         """Initialize the SandboxTestWorker with sandbox configuration.
 
@@ -340,9 +342,10 @@ class SandboxTestWorker(QThread):
             memory_limit_mb: Memory limit in MB for the sandbox.
             shared_folder: Path to the host-side shared folder.
             read_only: Whether the shared folder is read-only.
-            parent: Parent QObject that owns this worker thread.
+            owner: Dialog that started this test. It is recorded for scoped draining and delivery guards, never as a Qt parent: closing
+                the dialog while Windows Sandbox is still being launched or verified would otherwise destroy this running thread.
         """
-        super().__init__(parent)
+        super().__init__(owner=owner)
         self._network_enabled = network_enabled
         self._memory_limit_mb = memory_limit_mb
         self._shared_folder = shared_folder
@@ -1141,7 +1144,7 @@ class SandboxConfigDialog(QDialog):
             memory_limit_mb=self._memory_spin.value(),
             shared_folder=self._shared_folder_input.text(),
             read_only=self._read_only_checkbox.isChecked(),
-            parent=self,
+            owner=self,
         )
 
         def _test_finished_slot(s: int, m: str) -> None:
@@ -1153,7 +1156,7 @@ class SandboxConfigDialog(QDialog):
             """
             self._on_test_finished(success=bool(s), message=m)
 
-        self._test_worker.finished.connect(_test_finished_slot)
+        self._test_worker.finished.connect(guarded_delivery(_test_finished_slot, self, "success"))
         self._test_worker.output.connect(self._on_test_output)
         _logger.info(
             "sandbox_test_started",
