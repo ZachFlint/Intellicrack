@@ -179,7 +179,7 @@ class _CatalogProvider(LLMProviderBase):
                 provider/model that produced it, and no tool calls.
         """
         del messages, tools, temperature, max_tokens, tool_choice, thinking, enable_cache
-        return Message(role="assistant", content=f"reply from {self._name.value}:{model}"), None
+        return Message(role="assistant", content=f"reply from {self._name}:{model}"), None
 
     @override
     async def chat_stream(
@@ -210,7 +210,7 @@ class _CatalogProvider(LLMProviderBase):
             str: A single reply chunk identifying the provider/model.
         """
         del messages, tools, temperature, max_tokens, tool_choice, thinking, enable_cache
-        yield f"reply from {self._name.value}:{model}"
+        yield f"reply from {self._name}:{model}"
 
     @override
     def _convert_tools_to_provider_format(self, tools: list[ToolDefinition]) -> list[dict[str, object]]:
