@@ -22,7 +22,12 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine, worker_is_running
+from intellicrack.ui.panels.async_bridge import (
+    GenericCallableWorker,
+    run_bridge_coroutine,
+    run_callable_async,
+    worker_is_running,
+)
 
 
 _logger = get_logger(__name__)
@@ -267,11 +272,15 @@ class ComparisonMixin:
             used_tempfile=self._diff_temp_path is not None,
         )
 
-        worker = GenericCallableWorker(execute_diff, bridge, path_a, compare_path)
-        _: object = worker.call_finished.connect(self._on_diff_finished_obj)
-        _ = worker.call_error.connect(self._on_diff_error_obj)
-        self._diff_worker = worker
-        worker.start()
+        self._diff_worker = run_callable_async(
+            execute_diff,
+            bridge,
+            path_a,
+            compare_path,
+            on_success=self._on_diff_finished_obj,
+            on_error=self._on_diff_error_obj,
+            parent=self if isinstance(self, QWidget) else None,
+        )
 
     def _on_diff_finished_obj(self, result: object) -> None:
         """Forward worker results to the typed diff handler.

@@ -77,6 +77,7 @@ from .panels.async_bridge import (
     GenericCallableWorker,
     run_bridge_coroutine,
     run_bridge_coroutine_async,
+    run_callable_async,
 )
 from .resources import IconManager
 from .win32_embed import find_window_by_pid
@@ -929,15 +930,13 @@ class SandboxConfigDialog(QDialog):
         worker completes, so the dialog still shows an accurate result when it is actually opened.
         """
         _logger.debug("sandbox_availability_check_started")
-        worker = GenericCallableWorker(
+        self._availability_worker = run_callable_async(
             check_windows_sandbox_availability,
-            exceptions=WORKER_DEFAULT_EXCEPTIONS,
+            on_success=self._on_availability_checked,
+            on_error=self._on_availability_error,
             parent=self,
+            exceptions=WORKER_DEFAULT_EXCEPTIONS,
         )
-        self._availability_worker = worker
-        _ = worker.call_finished.connect(self._on_availability_checked)
-        _ = worker.call_error.connect(self._on_availability_error)
-        worker.start()
 
     @staticmethod
     def _coerce_availability_result(result: object) -> tuple[bool, str]:
@@ -1659,16 +1658,6 @@ class SandboxMonitorWidget(QFrame):
             return
 
         process_manager = ProcessManager.get_instance()
-        worker = GenericCallableWorker(
-            process_manager.run_tracked,
-            ["taskkill", "/F", "/PID", str(pid)],
-            name="taskkill-sandbox-pid",
-            check=False,
-            timeout=10,
-            creationflags=CREATE_NO_WINDOW,
-            exceptions=(*WORKER_DEFAULT_EXCEPTIONS, TimeoutExpired),
-            parent=self,
-        )
 
         def _pid_kill_finished_slot(_result: object) -> None:
             """Continue stop-sandbox cleanup after PID ``taskkill`` completes.
@@ -1686,9 +1675,18 @@ class SandboxMonitorWidget(QFrame):
             """
             self._on_pid_kill_failed(pid, exc)
 
-        _ = worker.call_finished.connect(_pid_kill_finished_slot)
-        _ = worker.call_error.connect(_pid_kill_error_slot)
-        worker.start()
+        _ = run_callable_async(
+            process_manager.run_tracked,
+            ["taskkill", "/F", "/PID", str(pid)],
+            name="taskkill-sandbox-pid",
+            check=False,
+            timeout=10,
+            creationflags=CREATE_NO_WINDOW,
+            on_success=_pid_kill_finished_slot,
+            on_error=_pid_kill_error_slot,
+            parent=self,
+            exceptions=(*WORKER_DEFAULT_EXCEPTIONS, TimeoutExpired),
+        )
 
     def _on_pid_kill_succeeded(self, pid: int) -> None:
         """Handle successful completion of a PID-based ``taskkill``.
@@ -1724,19 +1722,18 @@ class SandboxMonitorWidget(QFrame):
 
         _logger.info("sandbox_terminate_by_name_started")
         process_manager = ProcessManager.get_instance()
-        worker = GenericCallableWorker(
+        _ = run_callable_async(
             process_manager.run_tracked,
             ["taskkill", "/F", "/IM", "WindowsSandbox.exe"],
             name="taskkill-sandbox-name",
             check=False,
             timeout=10,
             creationflags=CREATE_NO_WINDOW,
-            exceptions=(*WORKER_DEFAULT_EXCEPTIONS, TimeoutExpired),
+            on_success=self._on_name_kill_succeeded,
+            on_error=self._on_name_kill_failed,
             parent=self,
+            exceptions=(*WORKER_DEFAULT_EXCEPTIONS, TimeoutExpired),
         )
-        _ = worker.call_finished.connect(self._on_name_kill_succeeded)
-        _ = worker.call_error.connect(self._on_name_kill_failed)
-        worker.start()
 
     def _on_name_kill_succeeded(self, result: object) -> None:
         """Handle successful completion of the name-based ``taskkill``.

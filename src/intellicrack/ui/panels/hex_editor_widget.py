@@ -33,7 +33,7 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import QAbstractScrollArea, QApplication, QMenu, QWidget
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.panels.async_bridge import run_callable_async
 from intellicrack.ui.panels.qt_compat import key_event_key, qt_key_page_down, qt_key_page_up, wheel_angle_delta_y
 from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
@@ -603,8 +603,10 @@ class HexEditorWidget(QAbstractScrollArea):
         """Start a background worker that populates the entropy cache.
 
         No-ops when no document is attached, the cache is already populated, or a scan is already in flight. Running
-        ``document.entropy_map`` on a :class:`GenericCallableWorker` background thread keeps a full-document entropy scan from blocking the
-        GUI thread on every edit while the entropy minimap or the entropy color mode is active.
+        ``document.entropy_map`` on a background worker thread keeps a full-document entropy scan from blocking the GUI thread on every
+        edit while the entropy minimap or the entropy color mode is active. Dispatch goes through :func:`run_callable_async`, so the
+        worker is not this widget's Qt child: closing the editor mid-scan cannot destroy the running thread, and the scan's result is
+        dropped if it lands after the widget is gone.
         """
         if self._document is None or self._entropy_cache or self._entropy_scan_active:
             return
@@ -613,10 +615,13 @@ class HexEditorWidget(QAbstractScrollArea):
             return
         self._entropy_scan_active = True
         self._entropy_scan_request_generation = self._entropy_scan_generation
-        worker = GenericCallableWorker(entropy_fn, self._entropy_block_size(), parent=self)
-        _: object = worker.call_finished.connect(self._on_entropy_scan_finished)
-        _ = worker.call_error.connect(self._on_entropy_scan_failed)
-        worker.start()
+        _ = run_callable_async(
+            entropy_fn,
+            self._entropy_block_size(),
+            on_success=self._on_entropy_scan_finished,
+            on_error=self._on_entropy_scan_failed,
+            parent=self,
+        )
 
     def _on_entropy_scan_finished(self, result: object) -> None:
         """Store a completed background entropy scan and refresh dependent views.
@@ -686,8 +691,8 @@ class HexEditorWidget(QAbstractScrollArea):
         """Start a background worker that populates the content-class cache.
 
         No-ops when no document is attached, the cache is already populated, or a scan is already in flight. Running
-        ``document.content_classification`` on a :class:`GenericCallableWorker` background thread keeps a full-document classification scan
-        from blocking the GUI thread.
+        ``document.content_classification`` on a background worker thread keeps a full-document classification scan from blocking the GUI
+        thread. Dispatch goes through :func:`run_callable_async`, so the worker outlives this widget instead of being destroyed with it.
         """
         if self._document is None or self._content_class_cache or self._content_class_scan_active:
             return
@@ -696,10 +701,13 @@ class HexEditorWidget(QAbstractScrollArea):
             return
         self._content_class_scan_active = True
         self._content_class_scan_request_generation = self._content_class_scan_generation
-        worker = GenericCallableWorker(class_fn, _CONTENT_CLASS_BLOCK_SIZE, parent=self)
-        _: object = worker.call_finished.connect(self._on_content_class_scan_finished)
-        _ = worker.call_error.connect(self._on_content_class_scan_failed)
-        worker.start()
+        _ = run_callable_async(
+            class_fn,
+            _CONTENT_CLASS_BLOCK_SIZE,
+            on_success=self._on_content_class_scan_finished,
+            on_error=self._on_content_class_scan_failed,
+            parent=self,
+        )
 
     def _on_content_class_scan_finished(self, result: object) -> None:
         """Store a completed background content-classification scan.

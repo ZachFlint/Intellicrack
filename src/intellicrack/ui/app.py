@@ -83,6 +83,7 @@ from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.async_bridge import (
     GenericCallableWorker,
     drain_bridge_workers,
+    guarded_delivery,
     run_bridge_coroutine,
     run_bridge_coroutine_async,
     run_bridge_coroutine_logged,
@@ -3691,7 +3692,7 @@ class MainWindow(QMainWindow):
             _logger.debug("hexcore_unavailable_for_process_memory", pid=pid)
             return
 
-        worker = GenericCallableWorker(_hexcore.HexDocument.list_process_memory_regions, pid)
+        worker = GenericCallableWorker(_hexcore.HexDocument.list_process_memory_regions, pid, owner=self)
         self._process_regions_worker = worker
 
         def _on_finished(result: object) -> None:
@@ -3718,8 +3719,8 @@ class MainWindow(QMainWindow):
             if self._process_regions_worker is worker:
                 self._on_process_regions_failed(pid, exc)
 
-        _ = worker.call_finished.connect(_on_finished)
-        _ = worker.call_error.connect(_on_error)
+        _ = worker.call_finished.connect(guarded_delivery(_on_finished, self, "success"))
+        _ = worker.call_error.connect(guarded_delivery(_on_error, self, "error"))
         worker.start()
 
     def _on_process_regions_failed(self, pid: int, exc: object) -> None:
