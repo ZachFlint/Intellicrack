@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Final, cast, override
 
-from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -75,8 +75,11 @@ from .dialogs_helpers import show_info, show_warning
 from .panels.async_bridge import (
     WORKER_DEFAULT_EXCEPTIONS,
     GenericCallableWorker,
+    RetainedWorker,
+    guarded_delivery,
     run_bridge_coroutine,
     run_bridge_coroutine_async,
+    run_callable_async,
 )
 from .resources import IconManager
 from .win32_embed import find_window_by_pid
@@ -309,7 +312,7 @@ def is_windows_sandbox_available(*, use_cache: bool = True) -> bool:
     return available
 
 
-class SandboxTestWorker(QThread):
+class SandboxTestWorker(RetainedWorker):
     """Worker thread for testing Windows Sandbox.
 
     Launches Windows Sandbox with a test configuration and monitors
@@ -330,7 +333,7 @@ class SandboxTestWorker(QThread):
         memory_limit_mb: int = 2048,
         shared_folder: str | None = None,
         read_only: bool = False,
-        parent: QObject | None = None,
+        owner: QObject | None = None,
     ) -> None:
         """Initialize the SandboxTestWorker with sandbox configuration.
 
@@ -339,9 +342,10 @@ class SandboxTestWorker(QThread):
             memory_limit_mb: Memory limit in MB for the sandbox.
             shared_folder: Path to the host-side shared folder.
             read_only: Whether the shared folder is read-only.
-            parent: Parent QObject that owns this worker thread.
+            owner: Dialog that started this test. It is recorded for scoped draining and delivery guards, never as a Qt parent: closing
+                the dialog while Windows Sandbox is still being launched or verified would otherwise destroy this running thread.
         """
-        super().__init__(parent)
+        super().__init__(owner=owner)
         self._network_enabled = network_enabled
         self._memory_limit_mb = memory_limit_mb
         self._shared_folder = shared_folder
@@ -929,15 +933,13 @@ class SandboxConfigDialog(QDialog):
         worker completes, so the dialog still shows an accurate result when it is actually opened.
         """
         _logger.debug("sandbox_availability_check_started")
-        worker = GenericCallableWorker(
+        self._availability_worker = run_callable_async(
             check_windows_sandbox_availability,
-            exceptions=WORKER_DEFAULT_EXCEPTIONS,
+            on_success=self._on_availability_checked,
+            on_error=self._on_availability_error,
             parent=self,
+            exceptions=WORKER_DEFAULT_EXCEPTIONS,
         )
-        self._availability_worker = worker
-        _ = worker.call_finished.connect(self._on_availability_checked)
-        _ = worker.call_error.connect(self._on_availability_error)
-        worker.start()
 
     @staticmethod
     def _coerce_availability_result(result: object) -> tuple[bool, str]:
@@ -1142,7 +1144,7 @@ class SandboxConfigDialog(QDialog):
             memory_limit_mb=self._memory_spin.value(),
             shared_folder=self._shared_folder_input.text(),
             read_only=self._read_only_checkbox.isChecked(),
-            parent=self,
+            owner=self,
         )
 
         def _test_finished_slot(s: int, m: str) -> None:
@@ -1154,7 +1156,7 @@ class SandboxConfigDialog(QDialog):
             """
             self._on_test_finished(success=bool(s), message=m)
 
-        self._test_worker.finished.connect(_test_finished_slot)
+        self._test_worker.finished.connect(guarded_delivery(_test_finished_slot, self, "success"))
         self._test_worker.output.connect(self._on_test_output)
         _logger.info(
             "sandbox_test_started",
@@ -1659,16 +1661,6 @@ class SandboxMonitorWidget(QFrame):
             return
 
         process_manager = ProcessManager.get_instance()
-        worker = GenericCallableWorker(
-            process_manager.run_tracked,
-            ["taskkill", "/F", "/PID", str(pid)],
-            name="taskkill-sandbox-pid",
-            check=False,
-            timeout=10,
-            creationflags=CREATE_NO_WINDOW,
-            exceptions=(*WORKER_DEFAULT_EXCEPTIONS, TimeoutExpired),
-            parent=self,
-        )
 
         def _pid_kill_finished_slot(_result: object) -> None:
             """Continue stop-sandbox cleanup after PID ``taskkill`` completes.
@@ -1686,9 +1678,18 @@ class SandboxMonitorWidget(QFrame):
             """
             self._on_pid_kill_failed(pid, exc)
 
-        _ = worker.call_finished.connect(_pid_kill_finished_slot)
-        _ = worker.call_error.connect(_pid_kill_error_slot)
-        worker.start()
+        _ = run_callable_async(
+            process_manager.run_tracked,
+            ["taskkill", "/F", "/PID", str(pid)],
+            name="taskkill-sandbox-pid",
+            check=False,
+            timeout=10,
+            creationflags=CREATE_NO_WINDOW,
+            on_success=_pid_kill_finished_slot,
+            on_error=_pid_kill_error_slot,
+            parent=self,
+            exceptions=(*WORKER_DEFAULT_EXCEPTIONS, TimeoutExpired),
+        )
 
     def _on_pid_kill_succeeded(self, pid: int) -> None:
         """Handle successful completion of a PID-based ``taskkill``.
@@ -1724,19 +1725,18 @@ class SandboxMonitorWidget(QFrame):
 
         _logger.info("sandbox_terminate_by_name_started")
         process_manager = ProcessManager.get_instance()
-        worker = GenericCallableWorker(
+        _ = run_callable_async(
             process_manager.run_tracked,
             ["taskkill", "/F", "/IM", "WindowsSandbox.exe"],
             name="taskkill-sandbox-name",
             check=False,
             timeout=10,
             creationflags=CREATE_NO_WINDOW,
-            exceptions=(*WORKER_DEFAULT_EXCEPTIONS, TimeoutExpired),
+            on_success=self._on_name_kill_succeeded,
+            on_error=self._on_name_kill_failed,
             parent=self,
+            exceptions=(*WORKER_DEFAULT_EXCEPTIONS, TimeoutExpired),
         )
-        _ = worker.call_finished.connect(self._on_name_kill_succeeded)
-        _ = worker.call_error.connect(self._on_name_kill_failed)
-        worker.start()
 
     def _on_name_kill_succeeded(self, result: object) -> None:
         """Handle successful completion of the name-based ``taskkill``.

@@ -33,7 +33,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, worker_is_running
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_callable_async, worker_is_running
 from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
@@ -1365,12 +1365,15 @@ class ScriptingMixin:
         if self._script_status is not None:
             self._script_status.setText("Running...")
 
-        worker = GenericCallableWorker(execute_script, source, doc_api)
-        _: object = worker.call_finished.connect(self._on_script_finished_obj)
-        _ = worker.call_error.connect(self._on_script_error_obj)
-        self._script_worker = worker
         _logger.info("script_worker_starting", source_length=len(source))
-        worker.start()
+        self._script_worker = run_callable_async(
+            execute_script,
+            source,
+            doc_api,
+            on_success=self._on_script_finished_obj,
+            on_error=self._on_script_error_obj,
+            parent=self if isinstance(self, QWidget) else None,
+        )
 
     def _build_panel_encoding_provider(self) -> Callable[[], str | None]:
         """Construct an encoding-resolver callback bound to the panel's combo.

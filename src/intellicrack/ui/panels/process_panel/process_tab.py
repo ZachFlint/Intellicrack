@@ -920,7 +920,7 @@ class ProcessTab(QWidget):
         self._tracked_refresh_btn.setEnabled(False)
         self._tracked_refresh_btn.setText("Refreshing...")
 
-        self._tracked_worker = TrackedRefreshWorker(self)
+        self._tracked_worker = TrackedRefreshWorker(owner=self)
         self._tracked_worker.refresh_finished.connect(self._on_tracked_finished)
         self._tracked_worker.refresh_error.connect(self._on_tracked_error)
         self._tracked_worker.start()
