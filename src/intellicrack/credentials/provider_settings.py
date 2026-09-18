@@ -46,11 +46,19 @@ SETTINGS_SCHEMA_VERSION: Final[int] = 3
 """Schema version written into every provider section.
 
 Version 3 only *adds* the top-level ``instances`` section; every v2 key stays
-exactly where it was. ``_uses_current_schema`` tests ``version >=
-SETTINGS_SCHEMA_VERSION``, so an older build reading a v3 file already treats
-it as legacy and applies its own defaults rather than failing. A v3 file is
-therefore still readable by a v2 build, which loses only the custom instances
-it could not have used anyway.
+exactly where it was. A v2 build tests a section against its own floor of 2,
+which a v3 section clears, so it reads a v3 file as versioned and loses only
+the custom instances it could not have used anyway.
+"""
+
+VERSIONED_SCHEMA_FLOOR: Final[int] = 2
+"""The first schema version that stored ``null`` for the provider default.
+
+From this version on, every positive timeout a section holds was chosen
+deliberately. It is fixed history, not the current version: comparing against
+:data:`SETTINGS_SCHEMA_VERSION` instead would reclassify every section written
+by an older versioned build as pre-versioning legacy each time the schema
+advanced.
 """
 
 SCHEMA_VERSION_KEY: Final[str] = "schema_version"
@@ -118,18 +126,18 @@ def coerce_timeout_seconds(value: object) -> float | None:
     return seconds
 
 
-def _uses_current_schema(section: Mapping[str, object]) -> bool:
-    """Report whether a provider section was written by the versioned schema.
+def _is_versioned_section(section: Mapping[str, object]) -> bool:
+    """Report whether a provider section was written by any versioned schema.
 
     Args:
         section: One provider's saved settings.
 
     Returns:
         bool: True when the section carries a schema version of at least
-        :data:`SETTINGS_SCHEMA_VERSION`.
+        :data:`VERSIONED_SCHEMA_FLOOR`.
     """
     version = section.get(SCHEMA_VERSION_KEY)
-    return isinstance(version, int) and not isinstance(version, bool) and version >= SETTINGS_SCHEMA_VERSION
+    return isinstance(version, int) and not isinstance(version, bool) and version >= VERSIONED_SCHEMA_FLOOR
 
 
 def saved_timeout_seconds(section: Mapping[str, object]) -> float | None:
@@ -150,7 +158,7 @@ def saved_timeout_seconds(section: Mapping[str, object]) -> float | None:
     timeout = coerce_timeout_seconds(section.get(TIMEOUT_SECONDS_KEY))
     if timeout is None:
         return None
-    if timeout == LEGACY_DEFAULT_TIMEOUT_SECONDS and not _uses_current_schema(section):
+    if timeout == LEGACY_DEFAULT_TIMEOUT_SECONDS and not _is_versioned_section(section):
         return None
     return timeout
 

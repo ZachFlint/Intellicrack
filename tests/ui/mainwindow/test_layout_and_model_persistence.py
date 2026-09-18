@@ -129,7 +129,7 @@ def _select_provider(window: MainWindow, provider: str) -> None:
     """
     combo = getattr(window, "_provider_combo")
     idx = combo.findData(provider)
-    assert idx >= 0, f"provider combo is missing {provider.value}"
+    assert idx >= 0, f"provider combo is missing {provider}"
     with QSignalBlocker(combo):
         combo.setCurrentIndex(idx)
 

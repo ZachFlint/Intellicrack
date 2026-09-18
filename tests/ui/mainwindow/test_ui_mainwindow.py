@@ -1701,7 +1701,7 @@ class _RegistryDouble:
         self.set_active_calls.append(name)
         if self._raise:
             msg = "forced"
-            raise ProviderError(msg, provider_name=name.value)
+            raise ProviderError(msg, provider_name=name)
 
 
 class _ProviderComboDouble(QComboBox):
