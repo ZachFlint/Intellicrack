@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from tests._helpers.frida_isolation import run_target_isolated
+from tests._helpers.frida_isolation import run_module_isolated, run_target_isolated
 
 
 if TYPE_CHECKING:
@@ -76,3 +76,31 @@ def test_isolation_contains_a_hard_child_crash(pytestconfig: pytest.Config, monk
     assert crash_outcome == "failed", "a child process that aborts must be reported as a failed test"
     assert crash_detail is not None
     assert "exited" in crash_detail, f"the crash must be observed as a non-zero child exit, got: {crash_detail}"
+
+
+def test_run_module_isolated_recovers_per_test_outcomes(pytestconfig: pytest.Config) -> None:
+    """A whole module run in one child still yields an outcome for each of its tests.
+
+    Per-module isolation only pays for itself if the parent can still report each
+    test individually, which depends on the child streaming its results out to the
+    result file. This runs a real sibling module in a real child and checks the
+    outcomes come back per test.
+
+    Falsifiable: if the child stopped writing results, or the parent parsed or
+    keyed them wrongly, the recovered mapping would be empty (or miss the known
+    test names) and this fails -- which is exactly the regression that would make
+    every isolated test report as a spurious failure.
+
+    Args:
+        pytestconfig: Session config, used for the rootdir the child runs from.
+    """
+    rootpath = pytestconfig.rootpath
+    sibling = Path(__file__).resolve().parent / "test_thread_leak_guard.py"
+    module_rel = sibling.relative_to(rootpath).as_posix()
+
+    result = run_module_isolated(module_rel, str(rootpath))
+
+    assert result.complete, f"the sibling module must run cleanly in a child: {result.detail}"
+    assert result.outcomes, "the child must report per-test outcomes back to the parent"
+    assert "test_find_leaked_ignores_idle_thread_pool_worker" in result.outcomes
+    assert all(outcome == "passed" for outcome in result.outcomes.values()), f"unexpected outcomes: {result.outcomes}"

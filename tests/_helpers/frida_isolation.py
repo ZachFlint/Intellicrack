@@ -5,24 +5,28 @@
 
 """Subprocess isolation for the real self-attach Frida bridge tests.
 
-Every test that self-attaches Frida into the pytest process (the ones that
-request the ``self_attached_bridge`` fixture) is run in a dedicated child
-``pytest`` process. Frida self-attach exercises native frida-core/Gum code that,
-rarely and non-deterministically, raises a ``Windows fatal exception: access
-violation`` deep in a full-suite run -- a native abort that terminates the whole
-pytest process (exit 255, no junit) rather than failing a single test, which is
-why the ``python-test`` CI job never reports.
+Frida self-attach exercises native frida-core/Gum code that, rarely and
+non-deterministically, raises a ``Windows fatal exception: access violation``
+deep in a full-suite run -- a native abort that terminates the whole pytest
+process (exit 255, no junit) instead of failing one test, which is why the
+``python-test`` CI job can fail to report at all.
 
-Because a child process that faults returns its exit code to the parent instead
-of taking the parent down with it, running each self-attach test in a child
-contains such a crash: the parent records that one test as failed (with the
-child's output) and the rest of the suite completes. Isolation is keyed on the
-``self_attached_bridge`` fixture -- the only real ``attach(os.getpid())`` surface
--- so the fake-backed Frida tests keep running in-process at full speed.
+Because a child process that faults returns its exit code to the parent rather
+than taking the parent down, running those tests in a child contains the crash:
+the suite still completes and the crash is reported as ordinary failures.
+
+Isolation is per *module*, not per test. A module that self-attaches Frida is
+run once in a child, and the child appends every test result to a file as it
+goes, so per-test outcomes are still reported individually by the parent. Per-
+test isolation was measured at roughly 32s per test (each child re-imports
+PyQt6, intellicrack and frida), which would add close to an hour to the suite;
+per-module isolation pays that start-up once per module instead. If the child
+dies part-way through, the results it already flushed are still used and only
+the tests it never reported are failed with the crash detail.
 
 The plugin is registered from ``tests/conftest.py`` so it loads for the whole
 session regardless of optional native modules; its hooks are no-ops for every
-test that is not a Frida self-attach test.
+test that is not in a Frida self-attach module.
 """
 
 from __future__ import annotations
@@ -30,7 +34,10 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tempfile
 import time
+from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import pytest
@@ -51,14 +58,35 @@ _Outcome = Literal["passed", "failed", "skipped"]
 MARKER_NAME = "frida_selfattach"
 _MARKER_DESCRIPTION = (
     "run this test in an isolated child pytest process so a native Frida self-attach crash "
-    "(access violation) fails only this test instead of aborting the whole run; auto-applied "
-    "to every test that requests the self_attached_bridge fixture"
+    "(access violation) fails only these tests instead of aborting the whole run; auto-applied "
+    "to every test in a module that uses the self_attached_bridge fixture"
 )
 _SELF_ATTACH_FIXTURE = "self_attached_bridge"
 _CHILD_ENV_FLAG = "IC_FRIDA_SELFATTACH_ISOLATED_CHILD"
-_CHILD_TIMEOUT_SECONDS = 240.0
+_RESULT_FILE_ENV = "IC_FRIDA_SELFATTACH_RESULT_FILE"
+_CHILD_TIMEOUT_SECONDS = 1800.0
 _STDOUT_TAIL = 6000
 _STDERR_TAIL = 2000
+
+_MODULE_RESULTS: dict[str, ModuleResult] = {}
+"""Per-module child results, keyed by the module's rootdir-relative path."""
+
+
+@dataclass(frozen=True)
+class ModuleResult:
+    """Outcomes recovered from one isolated module run.
+
+    Attributes:
+        outcomes: Node key (the part of a node id after ``::``) mapped to the
+            outcome the child reported for it.
+        detail: The child's tail output, present when the child exited non-zero.
+        complete: ``True`` when the child exited cleanly; ``False`` when it
+            crashed or timed out, so unreported tests must be failed.
+    """
+
+    outcomes: Mapping[str, _Outcome]
+    detail: str | None
+    complete: bool
 
 
 def in_isolated_child() -> bool:
@@ -85,68 +113,85 @@ def install(config: pytest.Config) -> None:
         config.pluginmanager.register(sys.modules[__name__], "ic_frida_isolation")
 
 
+def _node_key(nodeid: str) -> str:
+    """Return the within-module portion of ``nodeid``.
+
+    The path component differs between parent and child when the parent
+    addressed tests as importable ``--pyargs`` targets, so only the part after
+    the first ``::`` -- unique within one module -- is used to match them up.
+
+    Args:
+        nodeid: A pytest node id.
+
+    Returns:
+        str: Everything after the first ``::``, or the whole id when absent.
+    """
+    _, separator, node_part = nodeid.partition("::")
+    return node_part if separator else nodeid
+
+
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Mark every self-attach Frida test for subprocess isolation.
+    """Mark every test in a self-attach Frida module for isolation.
+
+    Whole modules are marked (not just the tests requesting the fixture) so the
+    module can be run once in a child without any of its tests also running
+    in-process in the parent.
 
     Args:
         items: The collected test items, modified in place.
     """
+    self_attach_modules = {str(item.location[0]) for item in items if _SELF_ATTACH_FIXTURE in getattr(item, "fixturenames", ())}
+    if not self_attach_modules:
+        return
     for item in items:
-        if _SELF_ATTACH_FIXTURE in getattr(item, "fixturenames", ()):
+        if str(item.location[0]) in self_attach_modules:
             item.add_marker(MARKER_NAME)
+
+
+def pytest_runtest_logreport(report: TestReport) -> None:
+    """Record one phase result when running inside an isolation child.
+
+    Appends (and flushes) each phase as it happens so that a child which dies
+    part-way through still leaves usable results for the tests it completed.
+
+    Args:
+        report: The phase report pytest just produced.
+    """
+    if not in_isolated_child():
+        return
+    result_path = os.environ.get(_RESULT_FILE_ENV)
+    if not result_path:
+        return
+    with Path(result_path).open("a", encoding="utf-8") as handle:
+        _ = handle.write(f"{report.nodeid}\t{report.when}\t{report.outcome}\n")
 
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> bool | None:
-    """Run a marked self-attach Frida test in an isolated child process.
+    """Serve a marked item from its module's isolated child run.
+
+    The first marked item of a module triggers the child run; every later item
+    of that module is answered from the cached results.
 
     Args:
         item: The test item about to run.
         nextitem: The next scheduled item (unused; the child owns teardown).
 
     Returns:
-        bool | None: ``True`` when this hook fully handled a marked item in a
-            child process (short-circuiting the default protocol); ``None`` to let
-            pytest run the item normally (unmarked tests, and every test inside the
-            isolation child itself).
+        bool | None: ``True`` when this hook handled a marked item, ``None`` to
+            let pytest run the item normally (unmarked tests, and every test
+            inside the isolation child itself).
     """
     _ = nextitem
     if in_isolated_child() or item.get_closest_marker(MARKER_NAME) is None:
         return None
-    _run_item_isolated(item)
+    module_key = str(item.location[0])
+    result = _MODULE_RESULTS.get(module_key)
+    if result is None:
+        result = run_module_isolated(module_key, str(item.config.rootpath))
+        _MODULE_RESULTS[module_key] = result
+    _emit_reports(item, result)
     return True
-
-
-def _child_target(item: pytest.Item) -> str:
-    """Return the collectable ``file::node`` target for ``item``'s own file.
-
-    Uses ``item.location`` (the file path relative to the rootdir) rather than the
-    node id's path component so the child collects the real file regardless of how
-    the parent addressed it (``--pyargs`` rewrites the path component to a dotted
-    module).
-
-    Args:
-        item: The test item to address in the child.
-
-    Returns:
-        str: A pytest target such as ``tests/bridges/.../test_x.py::TestC::test_y``.
-    """
-    file_rel = str(item.location[0])
-    _, separator, node_part = item.nodeid.partition("::")
-    return f"{file_rel}::{node_part}" if separator else file_rel
-
-
-def _run_child(item: pytest.Item) -> tuple[_Outcome, str | None]:
-    """Run ``item`` in a child pytest process and classify the result.
-
-    Args:
-        item: The self-attach Frida test to run in isolation.
-
-    Returns:
-        tuple[_Outcome, str | None]: The outcome reported by
-            :func:`run_target_isolated` for this item's own target.
-    """
-    return run_target_isolated(_child_target(item), str(item.config.rootpath))
 
 
 def run_target_isolated(
@@ -154,6 +199,7 @@ def run_target_isolated(
     rootpath: str,
     *,
     timeout_seconds: float = _CHILD_TIMEOUT_SECONDS,
+    result_path: str | None = None,
 ) -> tuple[_Outcome, str | None]:
     """Run one pytest ``target`` in a child process and classify the result.
 
@@ -163,15 +209,16 @@ def run_target_isolated(
     and turns it into an ordinary failure instead of dying with the child.
 
     Args:
-        target: A pytest target such as ``tests/.../test_x.py::TestC::test_y``.
+        target: A pytest target such as ``tests/.../test_x.py`` or one node id.
         rootpath: Directory to run the child from (the session's rootdir).
         timeout_seconds: Wall-clock ceiling for the child run.
+        result_path: Optional file the child appends per-test results to.
 
     Returns:
         tuple[_Outcome, str | None]: ``("passed", None)`` when the child exited 0,
             otherwise ``("failed", <diagnostic>)`` carrying the child's tail
             output. A native crash surfaces as a non-zero child exit code and is
-            therefore reported as a normal failure of this one test.
+            therefore reported as a failure rather than aborting the whole run.
     """
     command = [
         sys.executable,
@@ -189,6 +236,8 @@ def run_target_isolated(
     ]
     child_env = dict(os.environ)
     child_env[_CHILD_ENV_FLAG] = "1"
+    if result_path is not None:
+        child_env[_RESULT_FILE_ENV] = result_path
     try:
         completed = subprocess.run(
             command,
@@ -207,9 +256,77 @@ def run_target_isolated(
     detail = f"{completed.stdout[-_STDOUT_TAIL:]}\n{completed.stderr[-_STDERR_TAIL:]}"
     return "failed", (
         f"isolated subprocess for {target} exited {completed.returncode}; a native crash "
-        f"(such as a frida-core access violation) surfaces here as a failure of only this test rather than "
-        f"aborting the whole run.\n{detail}"
+        f"(such as a frida-core access violation) surfaces here as a failure of only these tests rather "
+        f"than aborting the whole run.\n{detail}"
     )
+
+
+def _read_child_results(result_path: str) -> dict[str, _Outcome]:
+    """Aggregate the per-phase lines a child wrote into one outcome per test.
+
+    A test counts as failed when any phase failed, skipped when it was skipped
+    and never failed, and passed otherwise.
+
+    Args:
+        result_path: File the child appended ``nodeid<TAB>phase<TAB>outcome`` to.
+
+    Returns:
+        dict[str, _Outcome]: Node key mapped to its aggregated outcome.
+    """
+    outcomes: dict[str, _Outcome] = {}
+    raw = Path(result_path)
+    if not raw.is_file():
+        return outcomes
+    for line in raw.read_text(encoding="utf-8").splitlines():
+        parts = line.split("\t")
+        expected_parts = 3
+        if len(parts) != expected_parts:
+            continue
+        key = _node_key(parts[0])
+        reported = parts[2]
+        current = outcomes.get(key)
+        if reported == "failed" or current is None:
+            outcomes[key] = "failed" if reported == "failed" else _as_outcome(reported)
+        elif current != "failed" and reported == "skipped":
+            outcomes[key] = "skipped"
+    return outcomes
+
+
+def _as_outcome(reported: str) -> _Outcome:
+    """Narrow a child-reported outcome string to a known outcome.
+
+    Args:
+        reported: The outcome text the child wrote.
+
+    Returns:
+        _Outcome: The matching outcome, defaulting to ``"passed"``.
+    """
+    if reported == "failed":
+        return "failed"
+    if reported == "skipped":
+        return "skipped"
+    return "passed"
+
+
+def run_module_isolated(module_file: str, rootpath: str) -> ModuleResult:
+    """Run one whole module in a child process and collect its per-test results.
+
+    Args:
+        module_file: The module's rootdir-relative path.
+        rootpath: Directory to run the child from (the session's rootdir).
+
+    Returns:
+        ModuleResult: The outcomes the child reported, plus the child's tail
+            output and whether it finished cleanly.
+    """
+    handle, result_path = tempfile.mkstemp(prefix="ic_frida_isolation_", suffix=".tsv")
+    os.close(handle)
+    try:
+        outcome, detail = run_target_isolated(module_file, rootpath, result_path=result_path)
+        outcomes = _read_child_results(result_path)
+    finally:
+        Path(result_path).unlink(missing_ok=True)
+    return ModuleResult(outcomes=outcomes, detail=detail, complete=outcome == "passed")
 
 
 def _synthetic_report(item: pytest.Item, when: _Phase, outcome: _Outcome, longrepr: str | None, start: float, stop: float) -> TestReport:
@@ -218,7 +335,7 @@ def _synthetic_report(item: pytest.Item, when: _Phase, outcome: _Outcome, longre
     Args:
         item: The isolated test item.
         when: The run phase (``"setup"``, ``"call"`` or ``"teardown"``).
-        outcome: ``"passed"`` or ``"failed"``.
+        outcome: The outcome to record for the phase.
         longrepr: Failure text for a failed phase, else ``None``.
         start: Phase start time (``time.time()``).
         stop: Phase stop time (``time.time()``).
@@ -242,23 +359,27 @@ def _synthetic_report(item: pytest.Item, when: _Phase, outcome: _Outcome, longre
     )
 
 
-def _run_item_isolated(item: pytest.Item) -> None:
-    """Drive one item through an isolated child run and emit its reports.
+def _emit_reports(item: pytest.Item, result: ModuleResult) -> None:
+    """Emit this item's reports from its module's isolated child results.
 
-    Emits a passed ``setup`` and ``teardown`` (the child owns real setup and
-    teardown) around a ``call`` report whose outcome is the child's result, so
-    pytest counts the test and writes it to junit exactly as an in-process run.
+    A test the child never reported -- because the child crashed before reaching
+    it -- is failed with the child's diagnostic rather than silently vanishing.
 
     Args:
-        item: The self-attach Frida test to run in isolation.
+        item: The self-attach Frida test being served from cached results.
+        result: The cached result of its module's child run.
     """
+    outcome = result.outcomes.get(_node_key(item.nodeid))
+    if outcome is None:
+        outcome = "failed"
+        longrepr = result.detail or f"the isolated child running {item.location[0]} never reported a result for this test"
+    else:
+        longrepr = result.detail if outcome == "failed" else None
+
     ihook = item.ihook
     ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
-    setup_at = time.time()
-    ihook.pytest_runtest_logreport(report=_synthetic_report(item, "setup", "passed", None, setup_at, setup_at))
-    call_start = time.time()
-    outcome, longrepr = _run_child(item)
-    call_stop = time.time()
-    ihook.pytest_runtest_logreport(report=_synthetic_report(item, "call", outcome, longrepr, call_start, call_stop))
-    ihook.pytest_runtest_logreport(report=_synthetic_report(item, "teardown", "passed", None, call_stop, call_stop))
+    at = time.time()
+    ihook.pytest_runtest_logreport(report=_synthetic_report(item, "setup", "passed", None, at, at))
+    ihook.pytest_runtest_logreport(report=_synthetic_report(item, "call", outcome, longrepr, at, at))
+    ihook.pytest_runtest_logreport(report=_synthetic_report(item, "teardown", "passed", None, at, at))
     ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
