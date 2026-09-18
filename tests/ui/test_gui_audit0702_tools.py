@@ -97,7 +97,7 @@ class _RecordingBridge(ToolBridgeBase):
         Returns:
             ToolDefinition: Definition with no callable functions.
         """
-        return ToolDefinition(tool_name=self._tool_name, description="test bridge", functions=[])
+        return ToolDefinition(tool_name=self._tool_name.value, description="test bridge", functions=[])
 
     async def initialize(self, tool_path: Path | None = None) -> None:
         """No-op initialize.

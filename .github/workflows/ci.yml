@@ -115,6 +115,19 @@ jobs:
         run: pixi run pip install -e .
       - name: Fix PyQt6 stubs
         run: pixi run python scripts/fix_pyqt6_stubs.py
+      - name: Build and install native hexcore module
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pixi run maturin build --release --manifest-path src/intellicrack-hexcore/Cargo.toml --out target/wheels
+          if ($LASTEXITCODE -ne 0) { throw 'maturin build failed' }
+          $wheel = Get-ChildItem target/wheels/intellicrack_hexcore-*.whl | Select-Object -First 1
+          if (-not $wheel) { throw 'intellicrack_hexcore wheel not produced' }
+          pixi run pip install --no-deps --force-reinstall $wheel.FullName
+          if ($LASTEXITCODE -ne 0) { throw 'intellicrack_hexcore wheel install failed' }
+          pixi run python -c "import intellicrack_hexcore"
+          if ($LASTEXITCODE -ne 0) { throw 'intellicrack_hexcore import verification failed' }
+        timeout-minutes: 20
       - name: Type check with basedpyright
         run: |
           pixi run basedpyright src/
@@ -191,6 +204,8 @@ jobs:
           pixi run pytest tests/ -v --cov=src/intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
         env:
           PYTHONDONTWRITEBYTECODE: 1
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: 1
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7

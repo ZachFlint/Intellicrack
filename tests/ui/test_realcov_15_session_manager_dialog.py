@@ -28,7 +28,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox
 
 from intellicrack.core.session import Session, SessionManager, SessionStore
-from intellicrack.core.types import ProviderName
+from intellicrack.providers import ids as provider_ids
 from intellicrack.ui import session_manager as session_manager_module
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.session_manager import SessionManagerDialog
@@ -66,7 +66,7 @@ def _create_session(manager: SessionManager, name: str) -> Session:
     Returns:
         Session: The created session.
     """
-    session = run_bridge_coroutine(manager.create(ProviderName.OLLAMA, "test-model", name))
+    session = run_bridge_coroutine(manager.create(provider_ids.OLLAMA, "test-model", name))
     assert isinstance(session, Session)
     return session
 

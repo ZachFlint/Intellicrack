@@ -17,6 +17,7 @@ from intellicrack.bridges.schemas import (
     ValidationError,
     build_schema_parameters,
     build_schema_property,
+    dialect_for_provider,
     get_all_schemas_for_provider,
     get_schema_for_provider,
     normalize_type,
@@ -31,12 +32,13 @@ from intellicrack.bridges.schemas import (
     validate_tool_parameter,
 )
 from intellicrack.core.types import (
-    ProviderName,
     ToolDefinition,
     ToolFunction,
     ToolName,
     ToolParameter,
 )
+from intellicrack.providers import ids as provider_ids
+from intellicrack.providers.tool_names import from_wire_name, to_wire_name
 
 
 _FUNC_NAME: Final[str] = "binary.analyze"
@@ -46,13 +48,13 @@ _TOOL_DESC: Final[str] = "Binary analysis tool"
 _ENUM_LIST: Final[list[str]] = ["a", "b", "c"]
 _MULTI_COUNT: Final[int] = 2
 
-_OPENAI_FORMAT_PROVIDERS: Final[frozenset[ProviderName]] = frozenset({
-    ProviderName.OPENAI,
-    ProviderName.OLLAMA,
-    ProviderName.OPENROUTER,
-    ProviderName.HUGGINGFACE,
-    ProviderName.GROK,
-    ProviderName.LOCAL_TRANSFORMERS,
+_OPENAI_FORMAT_PROVIDERS: Final[frozenset[str]] = frozenset({
+    provider_ids.OPENAI,
+    provider_ids.OLLAMA,
+    provider_ids.OPENROUTER,
+    provider_ids.HUGGINGFACE,
+    provider_ids.GROK,
+    provider_ids.LOCAL_TRANSFORMERS,
 })
 
 
@@ -123,7 +125,7 @@ def _tool(
         ToolDefinition: Configured ToolDefinition instance.
     """
     return ToolDefinition(
-        tool_name=ToolName.GHIDRA,
+        tool_name=ToolName.GHIDRA.value,
         description=_TOOL_DESC,
         functions=functions or [_func()],
     )
@@ -613,14 +615,14 @@ def test_validate_definition_valid() -> None:
 
 def test_validate_definition_empty_description() -> None:
     """Verify empty description produces warning."""
-    t = ToolDefinition(tool_name=ToolName.GHIDRA, description="", functions=[_func()])
+    t = ToolDefinition(tool_name=ToolName.GHIDRA.value, description="", functions=[_func()])
     errors = validate_tool_definition(t)
     assert any("description" in e.message.lower() for e in errors)
 
 
 def test_validate_definition_no_functions() -> None:
     """Verify zero functions produces error."""
-    t = ToolDefinition(tool_name=ToolName.GHIDRA, description="desc", functions=[])
+    t = ToolDefinition(tool_name=ToolName.GHIDRA.value, description="desc", functions=[])
     errors = validate_tool_definition(t)
     assert any("at least one" in e.message.lower() for e in errors)
 
@@ -649,7 +651,8 @@ def test_to_anthropic_schema_single() -> None:
     schemas = to_anthropic_schema(_tool())
     assert len(schemas) == 1
     s = schemas[0]
-    assert s["name"] == _FUNC_NAME
+    assert s["name"] == to_wire_name(_FUNC_NAME)
+    assert from_wire_name(s["name"]) == _FUNC_NAME
     assert "input_schema" in s
     assert s["input_schema"]["type"] == "object"
 
@@ -667,7 +670,8 @@ def test_to_openai_schema_single() -> None:
     assert len(schemas) == 1
     s = schemas[0]
     assert s["type"] == "function"
-    assert s["function"]["name"] == _FUNC_NAME
+    assert s["function"]["name"] == to_wire_name(_FUNC_NAME)
+    assert from_wire_name(s["function"]["name"]) == _FUNC_NAME
     assert "parameters" in s["function"]
 
 
@@ -683,7 +687,8 @@ def test_to_google_schema_single() -> None:
     schemas = to_google_schema(_tool())
     assert len(schemas) == 1
     s = schemas[0]
-    assert s["name"] == _FUNC_NAME
+    assert s["name"] == to_wire_name(_FUNC_NAME)
+    assert from_wire_name(s["name"]) == _FUNC_NAME
     assert s["parameters"]["type"] == "OBJECT"
     assert s["parameters"]["properties"]["target"].get("type") == "STRING"
 
@@ -707,8 +712,8 @@ def test_openrouter_matches_openai() -> None:
     assert to_openrouter_schema(t) == to_openai_schema(t)
 
 
-@pytest.mark.parametrize("provider", list(ProviderName))
-def test_get_schema_for_provider_all(provider: ProviderName) -> None:
+@pytest.mark.parametrize("provider", provider_ids.BUILTIN_PROVIDER_IDS)
+def test_get_schema_for_provider_all(provider: str) -> None:
     """Verify schema generation works for every provider and routes to the correct format.
 
     The format discriminators mirror the dispatch logic in ``get_schema_for_provider``:
@@ -726,10 +731,10 @@ def test_get_schema_for_provider_all(provider: ProviderName) -> None:
     assert len(result) == 1
     schema = result[0]
 
-    if provider == ProviderName.ANTHROPIC:
+    if provider == provider_ids.ANTHROPIC:
         assert "input_schema" in schema, f"ANTHROPIC must use Anthropic format with 'input_schema' key; got keys: {list(schema.keys())}"
         assert schema.get("type") != "function", "ANTHROPIC format must NOT have type='function' at top level"
-    elif provider == ProviderName.GOOGLE:
+    elif provider == provider_ids.GOOGLE:
         params: dict[str, Any] = cast(dict[str, Any], schema.get("parameters") or {})
         assert params.get("type") == "OBJECT", f"GOOGLE must have parameters.type='OBJECT' (uppercase); got {params.get('type')!r}"
         assert "input_schema" not in schema, "GOOGLE must NOT use Anthropic input_schema format"
@@ -738,10 +743,10 @@ def test_get_schema_for_provider_all(provider: ProviderName) -> None:
             f"Unhandled provider {provider!r}; add it to _OPENAI_FORMAT_PROVIDERS or a dedicated branch"
         )
         assert schema.get("type") == "function", (
-            f"{provider.value!r} must use OpenAI format with type='function'; got type={schema.get('type')!r}"
+            f"{provider!r} must use OpenAI format with type='function'; got type={schema.get('type')!r}"
         )
         assert "input_schema" not in schema, (
-            f"{provider.value!r} must NOT use Anthropic format ('input_schema' found); "
+            f"{provider!r} must NOT use Anthropic format ('input_schema' found); "
             "HUGGINGFACE, GROK, LOCAL_TRANSFORMERS, OLLAMA, OPENROUTER all route to OpenAI schema"
         )
 
@@ -751,7 +756,7 @@ def test_get_schema_for_provider_google_uppercase() -> None:
     tool = _tool()
     typed_result = to_google_schema(tool)
     assert typed_result[0]["parameters"]["type"] == "OBJECT"
-    result = get_schema_for_provider(tool, ProviderName.GOOGLE)
+    result = get_schema_for_provider(tool, provider_ids.GOOGLE)
     assert result == [dict(s) for s in typed_result]
 
 
@@ -760,7 +765,7 @@ def test_get_schema_for_provider_anthropic_input_schema() -> None:
     tool = _tool()
     typed_result = to_anthropic_schema(tool)
     assert typed_result[0]["input_schema"]["type"] == "object"
-    result = get_schema_for_provider(tool, ProviderName.ANTHROPIC)
+    result = get_schema_for_provider(tool, provider_ids.ANTHROPIC)
     assert result == [dict(s) for s in typed_result]
 
 
@@ -769,26 +774,26 @@ def test_get_schema_for_provider_openai_function_type() -> None:
     tool = _tool()
     typed_result = to_openai_schema(tool)
     assert typed_result[0]["type"] == "function"
-    result = get_schema_for_provider(tool, ProviderName.OPENAI)
+    result = get_schema_for_provider(tool, provider_ids.OPENAI)
     assert result == [dict(s) for s in typed_result]
 
 
 def test_get_all_schemas_empty() -> None:
     """Verify empty tool list produces empty schema list."""
-    result = get_all_schemas_for_provider([], ProviderName.OPENAI)
+    result = get_all_schemas_for_provider([], provider_ids.OPENAI)
     assert result == []
 
 
 def test_get_all_schemas_multiple() -> None:
     """Verify multiple tools are flattened into one list."""
     tools = [_tool(), _tool()]
-    result = get_all_schemas_for_provider(tools, ProviderName.OPENAI)
+    result = get_all_schemas_for_provider(tools, provider_ids.OPENAI)
     assert len(result) == _MULTI_COUNT
 
 
 def test_validate_and_convert_valid() -> None:
     """Verify valid tool converts with no error-level issues."""
-    schemas, errors = validate_and_convert(_tool(), ProviderName.OPENAI)
+    schemas, errors = validate_and_convert(_tool(), dialect_for_provider(provider_ids.OPENAI))
     assert len(schemas) == 1
     error_level = [e for e in errors if e.severity == "error"]
     assert not error_level
@@ -796,8 +801,8 @@ def test_validate_and_convert_valid() -> None:
 
 def test_validate_and_convert_invalid() -> None:
     """Verify invalid tool returns empty schemas."""
-    t = ToolDefinition(tool_name=ToolName.GHIDRA, description="d", functions=[])
-    schemas, errors = validate_and_convert(t, ProviderName.OPENAI)
+    t = ToolDefinition(tool_name=ToolName.GHIDRA.value, description="d", functions=[])
+    schemas, errors = validate_and_convert(t, dialect_for_provider(provider_ids.OPENAI))
     assert schemas == []
     assert len(errors) > 0
 
@@ -805,10 +810,10 @@ def test_validate_and_convert_invalid() -> None:
 def test_validate_and_convert_warnings_still_convert() -> None:
     """Verify warnings-only tool still converts successfully."""
     t = ToolDefinition(
-        tool_name=ToolName.GHIDRA,
+        tool_name=ToolName.GHIDRA.value,
         description="",
         functions=[_func()],
     )
-    schemas, errors = validate_and_convert(t, ProviderName.OPENAI)
+    schemas, errors = validate_and_convert(t, dialect_for_provider(provider_ids.OPENAI))
     assert len(schemas) == 1
     assert len(errors) > 0

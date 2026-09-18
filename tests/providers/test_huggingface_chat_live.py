@@ -19,7 +19,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from intellicrack.core.types import Message, ProviderName
+from intellicrack.core.types import Message
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.huggingface import HuggingFaceProvider, UsageInfo
 
 
@@ -46,7 +47,7 @@ async def test_live_chat_returns_content_and_usage(
     if not has_huggingface_key:
         pytest.skip("HUGGINGFACE_API_TOKEN / HUGGINGFACE_TOKEN not configured")
 
-    credentials = credential_loader.get_credentials(ProviderName.HUGGINGFACE)
+    credentials = credential_loader.get_credentials(provider_ids.HUGGINGFACE)
     assert credentials is not None, "Expected credentials after validation"
 
     provider = HuggingFaceProvider()
@@ -102,7 +103,7 @@ async def test_live_chat_stream_yields_and_captures_usage(
     if not has_huggingface_key:
         pytest.skip("HUGGINGFACE_API_TOKEN / HUGGINGFACE_TOKEN not configured")
 
-    credentials = credential_loader.get_credentials(ProviderName.HUGGINGFACE)
+    credentials = credential_loader.get_credentials(provider_ids.HUGGINGFACE)
     assert credentials is not None, "Expected credentials after validation"
 
     provider = HuggingFaceProvider()

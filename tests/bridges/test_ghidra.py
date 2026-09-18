@@ -87,7 +87,7 @@ def test_bridge_instantiation_initializes_real_state() -> None:
     ]
 
     tool_def = b.tool_definition
-    assert tool_def.tool_name is ToolName.GHIDRA
+    assert tool_def.tool_name == ToolName.GHIDRA.value
     assert len(tool_def.functions) == _EXPECTED_TOOL_COUNT
 
 
@@ -120,7 +120,7 @@ def test_tool_definition_exists(bridge: GhidraBridge) -> None:
     """
     tool_def = bridge.tool_definition
     assert tool_def is not None
-    assert tool_def.tool_name == ToolName.GHIDRA
+    assert tool_def.tool_name == ToolName.GHIDRA.value
 
 
 def test_tool_definition_original_functions(bridge: GhidraBridge) -> None:

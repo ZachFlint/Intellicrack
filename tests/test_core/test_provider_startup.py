@@ -13,8 +13,9 @@ from typing import TYPE_CHECKING, cast
 import pytest
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ProviderCredentials, ProviderError, ProviderName
+from intellicrack.core.types import ProviderCredentials, ProviderError
 from intellicrack.credentials.env_loader import CredentialLoader
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.local_transformers import LocalTransformersProvider
 from intellicrack.providers.registry import ProviderRegistry
 
@@ -92,12 +93,12 @@ async def test_initialize_providers_connects_no_key_provider_without_credentials
     registry = ProviderRegistry()
     logger: BoundLogger = get_logger(__name__)
     loader = _loader_without_credentials(tmp_path / "absent.env", monkeypatch)
-    assert loader.get_credentials(ProviderName.LOCAL_TRANSFORMERS) is None
+    assert loader.get_credentials(provider_ids.LOCAL_TRANSFORMERS) is None
     await _initialize_providers(registry, loader, logger)
 
     assert len(connect_calls) == 1
     assert connect_calls[0].api_key is None
-    registered = registry.get(ProviderName.LOCAL_TRANSFORMERS)
+    registered = registry.get(provider_ids.LOCAL_TRANSFORMERS)
     assert registered is not None
     assert registered.is_connected is True
 
@@ -130,6 +131,6 @@ async def test_initialize_providers_registers_no_key_provider_after_connect_fail
     loader = _loader_without_credentials(tmp_path / "absent.env", monkeypatch)
     await _initialize_providers(registry, loader, logger)
 
-    registered = registry.get(ProviderName.LOCAL_TRANSFORMERS)
+    registered = registry.get(provider_ids.LOCAL_TRANSFORMERS)
     assert registered is not None
     assert registered.is_connected is False

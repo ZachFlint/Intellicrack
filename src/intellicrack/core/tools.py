@@ -17,7 +17,7 @@ import importlib
 import inspect
 import time
 import types
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, fields, is_dataclass
 from typing import TYPE_CHECKING, Any, Union, cast, get_args, get_origin, get_type_hints
 
@@ -29,9 +29,20 @@ from intellicrack.bridges.hex_editor import HexEditorBridge
 from intellicrack.bridges.installer import ToolInstaller
 from intellicrack.bridges.process import ProcessBridge
 from intellicrack.bridges.sandbox_bridge import SandboxBridge
+from intellicrack.bridges.schemas import RESERVED_TOOL_NAMESPACES
 from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.logging import get_logger, log_tool_call
 from intellicrack.core.types import ToolDefinition, ToolError, ToolName
+
+
+ExternalToolExecutor = Callable[[str, dict[str, Any]], Awaitable[object]]
+"""Signature an external namespace's executor must satisfy.
+
+It receives the canonical dotted function name and the parsed arguments, and
+returns whatever the tool produced -- a plain value for a simple tool, or a
+list of :class:`~intellicrack.core.types.ToolResultPart` entries for one whose
+output is more than text.
+"""
 
 
 if TYPE_CHECKING:
@@ -42,6 +53,86 @@ if TYPE_CHECKING:
 
 
 _logger = get_logger(__name__)
+
+_ERR_RESERVED_NAMESPACE = "namespace is reserved for an Intellicrack bridge"
+_ERR_INVALID_NAMESPACE = "namespace must be a non-empty identifier"
+_ERR_EXTERNAL_FAILED = "external tool call failed"
+
+
+class ExternalToolRegistry:
+    """Namespaces served by tool executors outside Intellicrack's own bridges.
+
+    The wire contract for externally-sourced tools -- raw JSON Schema,
+    multi-part results, reversible wire names -- is complete without any
+    particular source of such tools, so this registry ships now and stays
+    empty until something registers into it. An MCP client is the obvious
+    first tenant.
+
+    Bridge namespaces are refused at registration rather than shadowed at
+    dispatch, so the failure is a clear error at the point of the mistake
+    instead of a bridge silently stopping working.
+    """
+
+    def __init__(self) -> None:
+        """Initialize an empty external-tool registry."""
+        self._executors: dict[str, ExternalToolExecutor] = {}
+
+    def register(self, namespace: str, executor: ExternalToolExecutor) -> None:
+        """Register an executor for one external namespace.
+
+        Args:
+            namespace: The namespace the executor serves, e.g. ``mcp_files``.
+            executor: Awaitable callable invoked with the canonical dotted
+                function name and the parsed arguments.
+
+        Raises:
+            ToolError: If the namespace is empty, malformed, or reserved for
+                an Intellicrack bridge.
+        """
+        key = namespace.strip().lower()
+        if not key or not key.replace("_", "").replace("-", "").isalnum():
+            _logger.warning("external_tool_namespace_invalid", namespace=namespace)
+            raise ToolError(_ERR_INVALID_NAMESPACE, tool_name=namespace)
+        if key in RESERVED_TOOL_NAMESPACES:
+            _logger.warning("external_tool_namespace_reserved", namespace=key)
+            raise ToolError(_ERR_RESERVED_NAMESPACE, tool_name=key)
+        self._executors[key] = executor
+        _logger.info("external_tool_namespace_registered", namespace=key)
+
+    def unregister(self, namespace: str) -> bool:
+        """Remove an external namespace's executor.
+
+        Args:
+            namespace: The namespace to remove.
+
+        Returns:
+            bool: ``True`` when an executor was removed.
+        """
+        removed = self._executors.pop(namespace.strip().lower(), None) is not None
+        if removed:
+            _logger.info("external_tool_namespace_unregistered", namespace=namespace)
+        return removed
+
+    def get(self, namespace: str) -> ExternalToolExecutor | None:
+        """Look up the executor serving a namespace.
+
+        Args:
+            namespace: The namespace to resolve.
+
+        Returns:
+            ExternalToolExecutor | None: The executor, or ``None`` when the
+            namespace is not registered.
+        """
+        return self._executors.get(namespace.strip().lower())
+
+    def namespaces(self) -> list[str]:
+        """List every registered external namespace.
+
+        Returns:
+            list[str]: Registered namespaces, in registration order.
+        """
+        return list(self._executors)
+
 
 _ERR_BRIDGE_NA = "bridge not available"
 _ERR_UNKNOWN_TOOL = "unknown tool"
@@ -335,11 +426,93 @@ class ToolRegistry:
             tools_dir: Directory for tool installations.
         """
         self._bridges: dict[ToolName, ToolBridgeBase] = {}
+        self._external_tools = ExternalToolRegistry()
         self._installer = ToolInstaller(tools_dir)
         self._tools_dir = tools_dir
         self._initialized = False
         self._session: Session | None = None
         _logger.debug("tool_registry_init", tools_dir=str(tools_dir))
+
+    @property
+    def external_tools(self) -> ExternalToolRegistry:
+        """The registry of namespaces served outside Intellicrack's bridges.
+
+        Returns:
+            ExternalToolRegistry: The registry a tool source registers into.
+        """
+        return self._external_tools
+
+    def _resolve_bridge(self, namespace: str) -> ToolBridgeBase | None:
+        """Resolve a namespace against the bridge registry.
+
+        The bridge registry is consulted first and its keying is unchanged, so
+        every existing bridge call routes exactly as it did. Only a namespace
+        no bridge owns reaches the external registry.
+
+        Args:
+            namespace: The already-normalized tool namespace.
+
+        Returns:
+            ToolBridgeBase | None: The bridge owning the namespace, or
+            ``None`` when no bridge does.
+
+        Raises:
+            ToolError: If a bridge owns the namespace but is not registered.
+        """
+        try:
+            tool_enum = ToolName(namespace)
+        except ValueError:
+            return None
+        bridge = self._bridges.get(tool_enum)
+        if bridge is None:
+            _logger.debug("execute_tool_call_not_registered", tool_name=namespace)
+            raise ToolError(_ERR_NOT_REGISTERED)
+        return bridge
+
+    @staticmethod
+    async def _execute_external(
+        *,
+        namespace: str,
+        executor: ExternalToolExecutor,
+        function_name: str,
+        arguments: dict[str, Any],
+    ) -> object:
+        """Run one externally-registered tool call.
+
+        Args:
+            namespace: The external namespace serving the call.
+            executor: The registered executor.
+            function_name: Canonical dotted function name to invoke.
+            arguments: Parsed function arguments.
+
+        Returns:
+            object: Whatever the executor produced.
+
+        Raises:
+            ToolError: If the executor raised.
+        """
+        start = time.monotonic()
+        success = True
+        try:
+            return await executor(function_name, arguments)
+        except (OSError, RuntimeError, ValueError, TypeError, ToolError, KeyError, AttributeError) as exc:
+            success = False
+            _logger.warning(
+                "external_tool_call_failed",
+                namespace=namespace,
+                function_name=function_name,
+                error=str(exc),
+            )
+            message = f"{_ERR_EXTERNAL_FAILED}: {exc}"
+            raise ToolError(message, tool_name=namespace) from exc
+        finally:
+            log_tool_call(
+                tool_name=namespace,
+                function_name=function_name,
+                arguments=arguments,
+                duration_ms=(time.monotonic() - start) * 1000,
+                success=success,
+            )
 
     def set_session(self, session: Session | None) -> None:
         """Attach (or detach) the active session for every registered bridge.
@@ -817,24 +990,26 @@ class ToolRegistry:
             tool_name=tool_name,
             function_name=function_name,
         )
-        try:
-            tool_enum = ToolName(tool_name.lower())
-        except ValueError:
-            _logger.exception("execute_tool_call_invalid_name", tool_name=tool_name)
-            raise ToolError(_ERR_UNKNOWN_TOOL) from None
-
-        _logger.debug("execute_tool_call_resolved", tool_enum=tool_enum.value)
-        bridge = self._bridges.get(tool_enum)
+        namespace = tool_name.strip().lower()
+        bridge = self._resolve_bridge(namespace)
         if bridge is None:
-            _logger.debug("execute_tool_call_not_registered", tool_name=tool_enum.value)
-            raise ToolError(_ERR_NOT_REGISTERED)
+            executor = self._external_tools.get(namespace)
+            if executor is not None:
+                return await self._execute_external(
+                    namespace=namespace,
+                    executor=executor,
+                    function_name=function_name,
+                    arguments=arguments,
+                )
+            _logger.debug("execute_tool_call_unresolved", tool_name=tool_name)
+            raise ToolError(_ERR_UNKNOWN_TOOL)
 
         attr_name = function_name.split(".", maxsplit=1)[-1] if "." in function_name else function_name
         method = getattr(bridge, attr_name, None)
         if method is None:
             _logger.debug(
                 "execute_tool_call_unknown_func",
-                tool_name=tool_enum.value,
+                tool_name=namespace,
                 function_name=function_name,
                 attr_name=attr_name,
             )
@@ -843,31 +1018,17 @@ class ToolRegistry:
         if not callable(method):
             _logger.debug(
                 "execute_tool_call_not_callable",
-                tool_name=tool_enum.value,
+                tool_name=namespace,
                 function_name=function_name,
             )
             raise ToolError(_ERR_NOT_CALLABLE)
 
-        caps = getattr(bridge, "capabilities", None)
-        required_capability = TOOL_CAPABILITY_MAP.get(function_name) or TOOL_CAPABILITY_MAP.get(attr_name)
-        if caps is not None and required_capability is not None:
-            has_cap = caps.has_capability(required_capability)
-            _logger.debug(
-                "execute_tool_call_capability_check",
-                tool_name=tool_enum.value,
-                function_name=function_name,
-                capability=required_capability,
-                has_capability=has_cap,
-            )
-            if not has_cap:
-                _logger.warning(
-                    "execute_tool_call_missing_capability",
-                    tool_name=tool_enum.value,
-                    function_name=function_name,
-                    capability=required_capability,
-                )
-                missing_message = f"{_ERR_MISSING_CAPABILITY}: {tool_enum.value} lacks supports_{required_capability}"
-                raise ToolError(missing_message)
+        self._require_capability(
+            bridge=bridge,
+            namespace=namespace,
+            function_name=function_name,
+            attr_name=attr_name,
+        )
 
         dispatch_arguments = _coerce_hex_string_arguments(method, arguments)
         dispatch_arguments = _hydrate_dataclass_arguments(method, dispatch_arguments)
@@ -901,6 +1062,47 @@ class ToolRegistry:
                 state.clear_error()
 
         return result
+
+    @staticmethod
+    def _require_capability(
+        *,
+        bridge: ToolBridgeBase,
+        namespace: str,
+        function_name: str,
+        attr_name: str,
+    ) -> None:
+        """Refuse a call whose bridge does not advertise the needed capability.
+
+        Args:
+            bridge: The bridge that owns the function.
+            namespace: The tool namespace, for log records.
+            function_name: Canonical dotted function name.
+            attr_name: Bare method name on the bridge.
+
+        Raises:
+            ToolError: If the bridge lacks the capability the function needs.
+        """
+        caps = getattr(bridge, "capabilities", None)
+        required_capability = TOOL_CAPABILITY_MAP.get(function_name) or TOOL_CAPABILITY_MAP.get(attr_name)
+        if caps is None or required_capability is None:
+            return
+        has_cap = caps.has_capability(required_capability)
+        _logger.debug(
+            "execute_tool_call_capability_check",
+            tool_name=namespace,
+            function_name=function_name,
+            capability=required_capability,
+            has_capability=has_cap,
+        )
+        if not has_cap:
+            _logger.warning(
+                "execute_tool_call_missing_capability",
+                tool_name=namespace,
+                function_name=function_name,
+                capability=required_capability,
+            )
+            missing_message = f"{_ERR_MISSING_CAPABILITY}: {namespace} lacks supports_{required_capability}"
+            raise ToolError(missing_message)
 
     async def ensure_tool_ready(self, name: ToolName) -> bool:
         """Ensure a tool is ready for use.

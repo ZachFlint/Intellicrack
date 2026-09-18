@@ -30,8 +30,8 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.grok import GrokProvider
 
 
@@ -64,7 +64,7 @@ async def grok_provider(
         pytest.skip("XAI_API_KEY not configured in .env")
 
     provider = GrokProvider()
-    credentials = credential_loader.get_credentials(ProviderName.GROK)
+    credentials = credential_loader.get_credentials(provider_ids.GROK)
     assert credentials is not None, "Expected credentials after validation"
 
     try:
@@ -164,7 +164,7 @@ class TestGrokModelListing:
             assert len(model.id) > 0, f"Model id must be non-empty, got {model.id!r}"
             assert isinstance(model.name, str), f"Model name must be str, got {type(model.name)}"
             assert len(model.name) > 0, f"Model name must be non-empty, got {model.name!r}"
-            assert model.provider == ProviderName.GROK, f"Expected ProviderName.GROK, got {model.provider!r}"
+            assert model.provider == provider_ids.GROK, f"Expected provider_ids.GROK, got {model.provider!r}"
             assert isinstance(model.context_window, int), f"context_window must be int, got {type(model.context_window)}"
             assert model.context_window > 0, f"context_window must be positive, got {model.context_window!r}"
             assert isinstance(model.supports_tools, bool), f"supports_tools must be bool, got {type(model.supports_tools)}"
@@ -277,7 +277,7 @@ class TestGrokConnection:
         Args:
             grok_provider: Connected Grok provider fixture.
         """
-        assert grok_provider.name == ProviderName.GROK
+        assert grok_provider.name == provider_ids.GROK
 
     @pytest.mark.asyncio
     @staticmethod
@@ -335,7 +335,7 @@ class TestGrokConnection:
             pytest.skip("XAI_API_KEY not configured")
 
         provider = GrokProvider()
-        credentials = credential_loader.get_credentials(ProviderName.GROK)
+        credentials = credential_loader.get_credentials(provider_ids.GROK)
         assert credentials is not None
 
         await provider.connect(credentials)

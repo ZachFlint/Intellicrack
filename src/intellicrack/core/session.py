@@ -17,25 +17,34 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 from uuid import uuid4
 
+from .json_payload import is_json_array, is_json_object
 from .logging import get_logger, log_session_operation
 from .types import (
+    AudioResultPart,
     BinaryInfo,
     BridgeAnalysisSummary,
+    EmbeddedResourcePart,
     ExportInfo,
     FunctionInfo,
+    ImageResultPart,
     ImportInfo,
     Message,
     ParameterInfo,
     PatchInfo,
-    ProviderName,
+    ReasoningItem,
+    ReasoningKind,
+    ResourceLinkPart,
     SectionInfo,
     StringInfo,
+    StructuredResultPart,
+    TextResultPart,
     ToolCall,
     ToolName,
     ToolResult,
+    ToolResultPart,
     ToolState,
     VariableInfo,
 )
@@ -53,6 +62,219 @@ _ERR_NO_CURRENT_SESSION = "no current session"
 _ERR_EMPTY_TAG = "session tag must be a non-empty, non-whitespace string"
 
 _logger = get_logger(__name__)
+
+
+def _serialize_reasoning_item(item: ReasoningItem) -> dict[str, Any]:
+    """Serialize a reasoning block, payload intact.
+
+    The provider-opaque fields are what make a reasoning block replayable:
+    an Anthropic signature or an OpenAI Responses item id has to come back
+    verbatim on the next tool-use turn. Dropping them on save would mean a
+    reloaded session silently loses extended thinking the moment it calls a
+    tool, so they are stored exactly as received.
+
+    Args:
+        item: The reasoning block to serialize.
+
+    Returns:
+        dict[str, Any]: JSON-compatible record.
+    """
+    return {
+        "kind": item.kind.value,
+        "text": item.text,
+        "signature": item.signature,
+        "item_id": item.item_id,
+        "encrypted_content": item.encrypted_content,
+        "redacted_data": item.redacted_data,
+        "summary": list(item.summary),
+    }
+
+
+def _deserialize_reasoning_item(data: dict[str, Any]) -> ReasoningItem:
+    """Rebuild a reasoning block from its stored record.
+
+    Args:
+        data: A record previously produced by
+            :func:`_serialize_reasoning_item`.
+
+    Returns:
+        ReasoningItem: The reconstructed block. An unrecognised kind falls
+        back to a plain thinking block, which is displayable and simply
+        not replayed.
+    """
+    try:
+        kind = ReasoningKind(data.get("kind", ReasoningKind.THINKING.value))
+    except ValueError:
+        kind = ReasoningKind.THINKING
+    raw_summary = data.get("summary")
+    return ReasoningItem(
+        kind=kind,
+        text=str(data.get("text", "")),
+        signature=data.get("signature"),
+        item_id=data.get("item_id"),
+        encrypted_content=data.get("encrypted_content"),
+        redacted_data=data.get("redacted_data"),
+        summary=tuple(str(part) for part in raw_summary) if is_json_array(raw_summary) else (),
+    )
+
+
+_PART_TYPE_TEXT: Final[str] = "text"
+_PART_TYPE_IMAGE: Final[str] = "image"
+_PART_TYPE_AUDIO: Final[str] = "audio"
+_PART_TYPE_RESOURCE_LINK: Final[str] = "resource_link"
+_PART_TYPE_EMBEDDED_RESOURCE: Final[str] = "embedded_resource"
+_PART_TYPE_STRUCTURED: Final[str] = "structured"
+
+
+def _optional_str(value: object) -> str | None:
+    """Coerce a stored field to an optional string.
+
+    Args:
+        value: Value read from a session record.
+
+    Returns:
+        str | None: ``None`` when the field was absent or null, otherwise its
+        text.
+    """
+    return None if value is None else str(value)
+
+
+def _serialize_result_part(part: ToolResultPart) -> dict[str, Any]:
+    """Serialize one part of a multi-part tool result.
+
+    Args:
+        part: The part to serialize.
+
+    Returns:
+        dict[str, Any]: JSON-compatible record tagged with the part kind.
+    """
+    if isinstance(part, TextResultPart):
+        return {"type": _PART_TYPE_TEXT, "text": part.text}
+    if isinstance(part, ImageResultPart):
+        return {"type": _PART_TYPE_IMAGE, "data": part.data, "mime_type": part.mime_type}
+    if isinstance(part, AudioResultPart):
+        return {"type": _PART_TYPE_AUDIO, "data": part.data, "mime_type": part.mime_type}
+    if isinstance(part, ResourceLinkPart):
+        return {
+            "type": _PART_TYPE_RESOURCE_LINK,
+            "uri": part.uri,
+            "name": part.name,
+            "mime_type": part.mime_type,
+            "description": part.description,
+        }
+    if isinstance(part, EmbeddedResourcePart):
+        return {
+            "type": _PART_TYPE_EMBEDDED_RESOURCE,
+            "uri": part.uri,
+            "text": part.text,
+            "data": part.data,
+            "mime_type": part.mime_type,
+        }
+    return {"type": _PART_TYPE_STRUCTURED, "content": dict(part.content)}
+
+
+def _deserialize_referenced_part(part_type: str, data: dict[str, Any]) -> ToolResultPart | None:
+    """Rebuild the part kinds that carry media or a resource reference.
+
+    Args:
+        part_type: The stored part-kind tag.
+        data: The stored record for that part.
+
+    Returns:
+        ToolResultPart | None: The reconstructed part, or ``None`` when
+        ``part_type`` names no media or resource kind.
+    """
+    if part_type == _PART_TYPE_IMAGE:
+        return ImageResultPart(data=str(data.get("data", "")), mime_type=str(data.get("mime_type", "")))
+    if part_type == _PART_TYPE_AUDIO:
+        return AudioResultPart(data=str(data.get("data", "")), mime_type=str(data.get("mime_type", "")))
+    if part_type == _PART_TYPE_RESOURCE_LINK:
+        return ResourceLinkPart(
+            uri=str(data.get("uri", "")),
+            name=_optional_str(data.get("name")),
+            mime_type=_optional_str(data.get("mime_type")),
+            description=_optional_str(data.get("description")),
+        )
+    if part_type == _PART_TYPE_EMBEDDED_RESOURCE:
+        return EmbeddedResourcePart(
+            uri=str(data.get("uri", "")),
+            text=_optional_str(data.get("text")),
+            data=_optional_str(data.get("data")),
+            mime_type=_optional_str(data.get("mime_type")),
+        )
+    return None
+
+
+def _deserialize_result_part(data: dict[str, Any]) -> ToolResultPart:
+    """Rebuild one part of a multi-part tool result from its stored record.
+
+    Args:
+        data: A record previously produced by :func:`_serialize_result_part`.
+
+    Returns:
+        ToolResultPart: The reconstructed part. A kind this build does not
+        recognise degrades to text carrying the stored record, so a session
+        written by a newer build still loads without losing the content.
+    """
+    part_type = str(data.get("type", ""))
+    if part_type == _PART_TYPE_TEXT:
+        return TextResultPart(text=str(data.get("text", "")))
+    if part_type == _PART_TYPE_STRUCTURED:
+        content = data.get("content")
+        return StructuredResultPart(content=dict(content) if is_json_object(content) else {})
+    referenced = _deserialize_referenced_part(part_type, data)
+    if referenced is not None:
+        return referenced
+    return TextResultPart(text=json.dumps(data, sort_keys=True, default=str))
+
+
+def _serialize_tool_result(result: ToolResult) -> dict[str, Any]:
+    """Serialize a tool result, multi-part content included.
+
+    Args:
+        result: The tool result to serialize.
+
+    Returns:
+        dict[str, Any]: JSON-compatible record. ``content`` is written only
+        when the tool produced parts, so a text-only result keeps the record
+        shape it had before multi-part results existed.
+    """
+    record: dict[str, Any] = {
+        "call_id": result.call_id,
+        "success": result.success,
+        "result": result.result,
+        "error": result.error,
+        "duration_ms": result.duration_ms,
+        "is_error": result.is_error,
+    }
+    if result.content:
+        record["content"] = [_serialize_result_part(part) for part in result.content]
+    return record
+
+
+def _deserialize_tool_result(data: dict[str, Any]) -> ToolResult:
+    """Rebuild a tool result from its stored record.
+
+    Args:
+        data: A record previously produced by :func:`_serialize_tool_result`.
+            Records written before multi-part results existed carry no
+            ``content`` or ``is_error`` key and load as a text-only success
+            or failure, exactly as they did before.
+
+    Returns:
+        ToolResult: The reconstructed result.
+    """
+    raw_content = data.get("content")
+    content = [_deserialize_result_part(part) for part in raw_content] if is_json_array(raw_content) else None
+    return ToolResult(
+        call_id=str(data.get("call_id", "")),
+        success=bool(data.get("success")),
+        result=data.get("result"),
+        error=_optional_str(data.get("error")),
+        duration_ms=float(data.get("duration_ms", 0.0)),
+        content=content,
+        is_error=bool(data.get("is_error")),
+    )
 
 
 @dataclass
@@ -74,7 +296,7 @@ class SessionMetadata:
     name: str
     created_at: datetime
     updated_at: datetime
-    provider: ProviderName
+    provider: str
     model: str
     binary_count: int = 0
     message_count: int = 0
@@ -89,7 +311,7 @@ class Session:
         name: Human-readable session name.
         created_at: Timestamp when the session was created.
         updated_at: Timestamp of the last session update.
-        provider: LLM provider used for this session.
+        provider: Instance id of the LLM provider used for this session.
         model: Model identifier used for this session.
         binaries: List of loaded binaries.
         active_binary_index: Index of active binary.
@@ -112,7 +334,7 @@ class Session:
     name: str
     created_at: datetime
     updated_at: datetime
-    provider: ProviderName
+    provider: str
     model: str
     binaries: list[BinaryInfo] = field(default_factory=list)
     active_binary_index: int = -1
@@ -143,14 +365,14 @@ class Session:
     @classmethod
     def create(
         cls,
-        provider: ProviderName,
+        provider: str,
         model: str,
         name: str | None = None,
     ) -> Session:
         """Create a new session.
 
         Args:
-            provider: LLM provider to use.
+            provider: Instance id of the LLM provider to use.
             model: Model identifier.
             name: Optional session name.
 
@@ -359,21 +581,18 @@ class SessionStore:
                 NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL, active_binary_index INTEGER DEFAULT -1, notes TEXT DEFAULT '',
 
                 data TEXT NOT NULL )
-                """
-                   ,
+                """,
             )
 
             conn.execute(
-                """CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions (updated_at DESC)"""
-                                                                                                   ,
+                """CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions (updated_at DESC)""",
             )
 
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS session_tags ( session_id TEXT NOT NULL, tag TEXT NOT NULL, PRIMARY KEY (session_id, tag),
 
                 FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE )
-                """
-                   ,
+                """,
             )
 
             _logger.debug("database_schema_initialized", db_path=str(self.db_path))
@@ -409,14 +628,13 @@ class SessionStore:
             conn.execute(
                 """INSERT OR REPLACE INTO sessions (id, name, created_at, updated_at, provider, model, active_binary_index, notes, data)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """
-                   ,
+                """,
                 (
                     session.id,
                     session.name,
                     session.created_at.isoformat(),
                     session.updated_at.isoformat(),
-                    session.provider.value,
+                    session.provider,
                     session.model,
                     session.active_binary_index,
                     session.notes,
@@ -511,7 +729,7 @@ class SessionStore:
                 name=row["name"],
                 created_at=datetime.fromisoformat(row["created_at"]),
                 updated_at=datetime.fromisoformat(row["updated_at"]),
-                provider=ProviderName(row["provider"]),
+                provider=str(row["provider"]),
                 model=row["model"],
                 active_binary_index=row["active_binary_index"],
                 notes=row["notes"],
@@ -561,8 +779,7 @@ class SessionStore:
         _logger.debug("session_list_all_query", limit=limit)
         with self._connection() as conn:
             rows = conn.execute(
-                """SELECT id, name, created_at, updated_at, provider, model, data FROM sessions ORDER BY updated_at DESC LIMIT ?"""
-                                                                                                                                   ,
+                """SELECT id, name, created_at, updated_at, provider, model, data FROM sessions ORDER BY updated_at DESC LIMIT ?""",
                 (limit,),
             ).fetchall()
 
@@ -575,7 +792,7 @@ class SessionStore:
                         name=row["name"],
                         created_at=datetime.fromisoformat(row["created_at"]),
                         updated_at=datetime.fromisoformat(row["updated_at"]),
-                        provider=ProviderName(row["provider"]),
+                        provider=str(row["provider"]),
                         model=row["model"],
                         binary_count=len(data.get("binaries", [])),
                         message_count=len(data.get("messages", [])),
@@ -616,7 +833,7 @@ class SessionStore:
                         name=row["name"],
                         created_at=datetime.fromisoformat(row["created_at"]),
                         updated_at=datetime.fromisoformat(row["updated_at"]),
-                        provider=ProviderName(row["provider"]),
+                        provider=str(row["provider"]),
                         model=row["model"],
                         binary_count=len(data.get("binaries", [])),
                         message_count=len(data.get("messages", [])),
@@ -724,16 +941,10 @@ class SessionStore:
             result["tool_calls"] = [asdict(tc) for tc in message.tool_calls]
 
         if message.tool_results:
-            result["tool_results"] = [
-                {
-                    "call_id": tr.call_id,
-                    "success": tr.success,
-                    "result": tr.result,
-                    "error": tr.error,
-                    "duration_ms": tr.duration_ms,
-                }
-                for tr in message.tool_results
-            ]
+            result["tool_results"] = [_serialize_tool_result(tr) for tr in message.tool_results]
+
+        if message.reasoning:
+            result["reasoning"] = [_serialize_reasoning_item(item) for item in message.reasoning]
 
         return result
 
@@ -753,7 +964,11 @@ class SessionStore:
 
         tool_results = None
         if "tool_results" in data:
-            tool_results = [ToolResult(**tr) for tr in data["tool_results"]]
+            tool_results = [_deserialize_tool_result(tr) for tr in data["tool_results"]]
+
+        reasoning = None
+        if "reasoning" in data:
+            reasoning = [_deserialize_reasoning_item(item) for item in data["reasoning"]]
 
         return Message(
             role=data["role"],
@@ -761,6 +976,7 @@ class SessionStore:
             timestamp=datetime.fromisoformat(data["timestamp"]),
             tool_calls=tool_calls,
             tool_results=tool_results,
+            reasoning=reasoning,
         )
 
     @staticmethod
@@ -942,7 +1158,7 @@ class SessionStore:
                 "name": session.name,
                 "created_at": session.created_at.isoformat(),
                 "updated_at": session.updated_at.isoformat(),
-                "provider": session.provider.value,
+                "provider": session.provider,
                 "model": session.model,
                 "active_binary_index": session.active_binary_index,
                 "notes": session.notes,
@@ -1004,7 +1220,7 @@ class SessionStore:
             name=session_data.get("name", "Imported Session"),
             created_at=datetime.fromisoformat(session_data["created_at"]),
             updated_at=datetime.fromisoformat(session_data["updated_at"]),
-            provider=ProviderName(session_data["provider"]),
+            provider=str(session_data["provider"]),
             model=session_data.get("model", "unknown"),
             active_binary_index=session_data.get("active_binary_index", -1),
             notes=session_data.get("notes", ""),
@@ -1205,14 +1421,14 @@ class SessionManager:
 
     async def create(
         self,
-        provider: ProviderName,
+        provider: str,
         model: str,
         name: str | None = None,
     ) -> Session:
         """Create a new session.
 
         Args:
-            provider: LLM provider to use.
+            provider: Instance id of the LLM provider to use.
             model: Model identifier.
             name: Optional session name.
 
@@ -1228,7 +1444,7 @@ class SessionManager:
         await self.save()
         await self._start_auto_save()
 
-        log_session_operation("create", session.id, provider=provider.value, model=model)
+        log_session_operation("create", session.id, provider=provider, model=model)
         _logger.info("session_created", session_id=session.id)
         return session
 

@@ -19,7 +19,7 @@ import pytest
 from intellicrack.core.orchestrator import Orchestrator
 from intellicrack.core.session import Session, SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import ProviderName
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui.session_manager import TagChipsWidget
 
@@ -36,7 +36,7 @@ def _build_session() -> Session:
     Returns:
         Session: A fresh ``Session`` instance.
     """
-    return Session.create(provider=ProviderName.OPENAI, model="gpt-4")
+    return Session.create(provider=provider_ids.OPENAI, model="gpt-4")
 
 
 def test_widget_adds_tag_via_input(qapp: QApplication) -> None:
@@ -176,7 +176,7 @@ def test_orchestrator_tag_current_session_api(tmp_path: Path) -> None:
         session_manager=SessionManager(store=store),
     )
 
-    session = asyncio.run(orchestrator._sessions.create(provider=ProviderName.OPENAI, model="gpt-4"))
+    session = asyncio.run(orchestrator._sessions.create(provider=provider_ids.OPENAI, model="gpt-4"))
     orchestrator._current_session = session
 
     assert orchestrator.tag_current_session("important") is True

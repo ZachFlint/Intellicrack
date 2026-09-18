@@ -24,13 +24,13 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     RateLimitError,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
     LLMProviderBase,
     OpenAIErrorMessages,
@@ -38,6 +38,7 @@ from intellicrack.providers.base import (
     is_permanent_quota_error,
     map_thinking_budget_to_effort,
 )
+from intellicrack.providers.capabilities import ApiDialect
 
 
 _GROK_4_CONTEXT_WINDOW = 256000
@@ -120,13 +121,23 @@ class GrokProvider(LLMProviderBase):
         self._logger.info("grok_provider_initialized")
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: ProviderName.GROK
+            str: The ``grok`` built-in provider id.
         """
-        return ProviderName.GROK
+        return provider_ids.GROK
+
+    @property
+    @override
+    def dialect(self) -> ApiDialect:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect: Always :data:`ApiDialect.CHAT_COMPLETIONS`.
+        """
+        return ApiDialect.CHAT_COMPLETIONS
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to X.AI Grok API.
@@ -164,7 +175,7 @@ class GrokProvider(LLMProviderBase):
             if "api key" in error_str or "incorrect" in error_str:
                 raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
             raise ProviderError(_ERR_API_REQUEST % e) from e
-        except (ConnectionError, TimeoutError, OSError) as e:
+        except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
             self.connected = False
             self.client = None
             self._logger.warning("grok_connect_failed", error=str(e))
@@ -298,7 +309,7 @@ class GrokProvider(LLMProviderBase):
                 ModelInfo(
                     id=model_id,
                     name=model_id,
-                    provider=ProviderName.GROK,
+                    provider=provider_ids.GROK,
                     context_window=self._infer_context_window(model_id),
                     supports_tools=True,
                     supports_vision=self._infer_supports_vision(model_id),

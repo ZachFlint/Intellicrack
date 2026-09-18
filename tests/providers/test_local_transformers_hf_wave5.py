@@ -109,7 +109,7 @@ def _make_binary_tool() -> ToolDefinition:
         ToolDefinition: A definition exposing ``binary.get_file_size``.
     """
     return ToolDefinition(
-        tool_name=ToolName.GHIDRA,
+        tool_name=ToolName.GHIDRA.value,
         description="Binary analysis tools",
         functions=[
             ToolFunction(

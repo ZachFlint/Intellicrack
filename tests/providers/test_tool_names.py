@@ -68,6 +68,7 @@ from intellicrack.core.types import (
     ToolChoice,
     ToolChoiceMode,
     ToolDefinition,
+    ToolFunction,
     ToolResult,
 )
 from intellicrack.providers import (
@@ -408,14 +409,18 @@ class TestAnthropicRoundTrip:
 
     def test_tool_choice_specific_emits_wire_name(self) -> None:
         """``_build_api_kwargs`` names the wire form for SPECIFIC mode."""
-        build_kwargs: Any = getattr(AnthropicProvider, _ANTHROPIC_BUILD_API_KWARGS_ATTR)
-        dummy_tool: dict[str, object] = {"name": _WIRE, "description": "d", "input_schema": {"type": "object", "properties": {}}}
+        build_kwargs: Any = getattr(AnthropicProvider(), _ANTHROPIC_BUILD_API_KWARGS_ATTR)
+        tool = ToolDefinition(
+            tool_name=_CANONICAL.split(".", 1)[0],
+            description="d",
+            functions=[ToolFunction(name=_CANONICAL, description="d", parameters=[], returns="text")],
+        )
         result = build_kwargs(
             model="claude-3-5-sonnet-20241022",
             max_tokens=1024,
             messages=[],
             system_prompt=None,
-            tools=[dummy_tool],
+            tools=[tool],
             tool_choice=ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name=_CANONICAL),
         )
         assert result["tool_choice"] == {"type": "tool", "name": _WIRE}

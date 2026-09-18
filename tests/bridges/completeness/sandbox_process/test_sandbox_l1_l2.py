@@ -393,7 +393,7 @@ class TestSandboxDispatchL2:
         await registry.initialize()
 
         definitions = registry.get_tool_definitions()
-        sandbox_def = next(d for d in definitions if d.tool_name == ToolName.SANDBOX)
+        sandbox_def = next(d for d in definitions if d.tool_name == ToolName.SANDBOX.value)
         function_names = {f.name for f in sandbox_def.functions}
 
         assert "sandbox.stop" in function_names

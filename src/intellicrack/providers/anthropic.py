@@ -17,10 +17,9 @@ from typing import TYPE_CHECKING, Any, cast, override
 import anthropic
 from anthropic.types import (
     Message as AnthropicMessage,
-    MessageParam,
+    RedactedThinkingBlock,
     TextBlock,
     ThinkingBlock,
-    ToolParam,
     ToolUseBlock,
 )
 
@@ -32,21 +31,22 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     RateLimitError,
+    ReasoningItem,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
-    ToolChoiceMode,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
     LLMProviderBase,
     UsageInfo,
-    create_anthropic_tool_schema,
-    serialize_tool_result,
 )
-from intellicrack.providers.tool_names import from_wire_name, to_wire_name
+from intellicrack.providers.capabilities import ApiDialect
+from intellicrack.providers.dialects.base import DialectRequest
+from intellicrack.providers.dialects.messages import MessagesAdapter, parse_thinking_block
+from intellicrack.providers.tool_names import from_wire_name
 
 
 if TYPE_CHECKING:
@@ -77,18 +77,29 @@ class AnthropicProvider(LLMProviderBase):
         """Initialize the AnthropicProvider instance."""
         super().__init__()
         self._client: anthropic.AsyncAnthropic | None = None
+        self._adapter = MessagesAdapter()
         self._current_task: asyncio.Task[Any] | None = None
         self._logger = get_logger(__name__).bind(provider="anthropic")
         self._logger.info("anthropic_provider_initialized")
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: ProviderName.ANTHROPIC
+            str: The ``anthropic`` built-in provider id.
         """
-        return ProviderName.ANTHROPIC
+        return provider_ids.ANTHROPIC
+
+    @property
+    @override
+    def dialect(self) -> ApiDialect:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect: Always :data:`ApiDialect.MESSAGES`.
+        """
+        return ApiDialect.MESSAGES
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to Anthropic API.
@@ -227,7 +238,7 @@ class AnthropicProvider(LLMProviderBase):
         return ModelInfo(
             id=model_id,
             name=display_name,
-            provider=ProviderName.ANTHROPIC,
+            provider=provider_ids.ANTHROPIC,
             context_window=200000,
             supports_tools=True,
             supports_vision=True,
@@ -236,33 +247,41 @@ class AnthropicProvider(LLMProviderBase):
             output_cost_per_1m_tokens=None,
         )
 
-    @staticmethod
     def _build_api_kwargs(
+        self,
         *,
         model: str,
         max_tokens: int,
-        messages: list[MessageParam],
-        system_prompt: str | None,
-        tools: list[dict[str, object]] | None,
+        messages: list[Message],
+        tools: list[ToolDefinition] | None,
+        system_prompt: str | None = None,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> dict[str, Any]:
         """Build keyword arguments for the Anthropic messages API.
 
+        Delegates the whole body to
+        :class:`~intellicrack.providers.dialects.messages.MessagesAdapter`,
+        which is the single owner of the Messages wire format, so this
+        provider and a user-defined Anthropic-compatible instance produce the
+        same request for the same inputs.
+
         Sampling parameters (``temperature``/``top_p``/``top_k``) are
-        intentionally omitted: the anthropic 1.x SDK removed them from
-        ``messages.create``/``messages.stream``, and current Claude
-        models reject them at the API layer.  Callers still accept a
-        ``temperature`` on the provider interface for cross-provider
-        uniformity; it simply does not reach the Anthropic request.
+        intentionally absent: the anthropic 1.x SDK removed them from
+        ``messages.create``/``messages.stream``, and current Claude models
+        reject them at the API layer. Callers still accept a ``temperature``
+        on the provider interface for cross-provider uniformity; it simply
+        does not reach the Anthropic request.
 
         Args:
             model: Model ID to use.
             max_tokens: Maximum tokens in response.
-            messages: Formatted message list.
-            system_prompt: Optional system prompt text.
-            tools: Optional formatted tools list.
+            messages: Conversation history in Intellicrack's message model.
+            tools: Optional tool definitions to advertise.
+            system_prompt: Explicit system instruction. When given it wins
+                over any ``system``-role message in ``messages``; when omitted
+                the instruction is taken from those messages.
             tool_choice: Tool selection mode.
             thinking: Extended thinking configuration.
             enable_cache: Whether to enable prompt caching.
@@ -270,34 +289,20 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             dict[str, Any]: Keyword arguments dict for messages.create or messages.stream.
         """
-        kwargs: dict[str, Any] = {
-            "model": model,
-            "max_tokens": max_tokens,
-            "messages": messages,
-        }
-        if system_prompt is not None:
-            kwargs["system"] = system_prompt
-        if tools:
-            provider_tools: list[ToolParam] = cast("list[ToolParam]", tools)
-            kwargs["tools"] = provider_tools
-
-        if tool_choice is not None and tools:
-            if tool_choice.mode == ToolChoiceMode.AUTO:
-                kwargs["tool_choice"] = {"type": "auto"}
-            elif tool_choice.mode == ToolChoiceMode.REQUIRED:
-                kwargs["tool_choice"] = {"type": "any"}
-            elif tool_choice.mode == ToolChoiceMode.NONE:
-                kwargs.pop("tools", None)
-            elif tool_choice.mode == ToolChoiceMode.SPECIFIC and tool_choice.function_name:
-                kwargs["tool_choice"] = {"type": "tool", "name": to_wire_name(tool_choice.function_name)}
-
-        if thinking is not None and thinking.enabled:
-            kwargs["thinking"] = {"type": "enabled", "budget_tokens": thinking.budget_tokens}
-            kwargs["max_tokens"] = max(kwargs["max_tokens"], thinking.budget_tokens + 1024)
-
-        if enable_cache:
-            AnthropicProvider._apply_cache_breakpoints(kwargs, system_prompt=system_prompt)
-        return kwargs
+        capabilities = self.capabilities_for(model)
+        return self._adapter.build_request(
+            DialectRequest(
+                model=model,
+                messages=messages,
+                capabilities=capabilities,
+                tools=self._enforce_tool_count_cap(tools, capabilities) if tools else (),
+                max_tokens=max_tokens,
+                system=system_prompt,
+                tool_choice=tool_choice,
+                thinking=thinking,
+                enable_cache=enable_cache,
+            ),
+        )
 
     @staticmethod
     def _apply_cache_breakpoints(
@@ -307,81 +312,35 @@ class AnthropicProvider(LLMProviderBase):
     ) -> None:
         """Insert ``cache_control`` breakpoints across system, tools, and messages.
 
-        Anthropic accepts at most four ``cache_control`` breakpoints
-        per request and renders ``tools`` -> ``system`` -> ``messages``
-        as the cache prefix.  This helper places ephemeral breakpoints
-        on (1) the last/only system block, (2) the last tool entry,
-        and (3) the final content block of the last message turn so
-        callers get the full cross-prefix benefit promised by
-        ``enable_cache``.
+        Delegates to
+        :meth:`~intellicrack.providers.dialects.messages.MessagesAdapter.apply_cache_breakpoints`,
+        which owns the placement rule: Anthropic accepts at most four
+        breakpoints per request and renders ``tools`` -> ``system`` ->
+        ``messages`` as the cache prefix, so one goes on the last system
+        block, one on the last tool entry and one on the final content block
+        of the last turn.
 
         Args:
             kwargs: Mutable request kwargs dict for ``messages.create``
-                or ``messages.stream``.  Updated in place.
+                or ``messages.stream``. Updated in place.
             system_prompt: System prompt text used to construct the
                 request, or ``None`` when no system instruction is set.
                 Required because the helper rewrites ``kwargs["system"]``
                 from a plain string to the structured-block form when a
                 breakpoint is added.
         """
-        if system_prompt is not None:
-            kwargs["system"] = [
-                {
-                    "type": "text",
-                    "text": system_prompt,
-                    "cache_control": {"type": "ephemeral"},
-                },
-            ]
-
-        tools_obj = kwargs.get("tools")
-        if isinstance(tools_obj, list) and tools_obj:
-            tools_list = cast("list[dict[str, Any]]", tools_obj)
-            cached_tools: list[dict[str, Any]] = [dict(tool) for tool in tools_list]
-            cached_tools[-1] = {
-                **cached_tools[-1],
-                "cache_control": {"type": "ephemeral"},
-            }
-            kwargs["tools"] = cast("list[ToolParam]", cached_tools)
-
-        messages_obj = kwargs.get("messages")
-        if isinstance(messages_obj, list) and messages_obj:
-            messages_list = cast("list[dict[str, Any]]", messages_obj)
-            AnthropicProvider._cache_last_message_block(messages_list)
-            kwargs["messages"] = cast("list[MessageParam]", messages_list)
+        MessagesAdapter.apply_cache_breakpoints(kwargs, system_prompt=system_prompt)
 
     @staticmethod
     def _cache_last_message_block(messages: list[dict[str, Any]]) -> None:
         """Tag the last content block of the final user/assistant turn for caching.
-
-        Walks ``messages`` from the end and converts the most recent
-        message's content into the structured block form (a list of
-        block dicts) when needed, then attaches
-        ``cache_control: {"type": "ephemeral"}`` to the final block.
-        Mutates ``messages`` in place.
 
         Args:
             messages: List of message dicts in Anthropic's wire format.
                 Each entry has a ``role`` and a ``content`` value that
                 is either a string or a list of content-block dicts.
         """
-        last_msg = messages[-1]
-        content = last_msg.get("content")
-        if isinstance(content, str):
-            content_blocks: list[dict[str, Any]] = [
-                {
-                    "type": "text",
-                    "text": content,
-                    "cache_control": {"type": "ephemeral"},
-                },
-            ]
-            last_msg["content"] = content_blocks
-            return
-        if isinstance(content, list) and content:
-            blocks_list = cast("list[dict[str, Any]]", content)
-            blocks_list[-1] = {
-                **blocks_list[-1],
-                "cache_control": {"type": "ephemeral"},
-            }
+        MessagesAdapter.cache_last_message_block(cast("list[Any]", messages))
 
     @staticmethod
     def _build_usage_from_message(response: AnthropicMessage) -> UsageInfo | None:
@@ -412,24 +371,31 @@ class AnthropicProvider(LLMProviderBase):
     def _parse_response_blocks(
         self,
         response: AnthropicMessage,
-    ) -> tuple[str, list[ToolCall], str]:
-        """Extract text, tool calls, and thinking from response content blocks.
+    ) -> tuple[str, list[ToolCall], list[ReasoningItem]]:
+        """Extract text, tool calls, and reasoning from response content blocks.
+
+        A thinking block is captured with its ``signature`` and a redacted
+        block with its ``data``. Anthropic requires the signature back
+        verbatim on the next turn that carries a tool result, so dropping it
+        -- which is what happened before -- silently degraded extended
+        thinking plus multi-turn tool calling.
 
         Args:
             response: The Anthropic API response message.
 
         Returns:
-            tuple[str, list[ToolCall], str]: Tuple of (text content, parsed tool calls, thinking text).
+            tuple[str, list[ToolCall], list[ReasoningItem]]: Tuple of (text
+            content, parsed tool calls, captured reasoning blocks).
         """
         content = ""
         tool_calls: list[ToolCall] = []
-        thinking_text = ""
+        reasoning: list[ReasoningItem] = []
 
         for block in response.content:
             if isinstance(block, TextBlock):
                 content += block.text
-            elif isinstance(block, ThinkingBlock):
-                thinking_text += block.thinking
+            elif isinstance(block, (ThinkingBlock, RedactedThinkingBlock)):
+                reasoning.append(parse_thinking_block(block.model_dump()))
             elif isinstance(block, ToolUseBlock):
                 tool_call = self._parse_tool_call_common(
                     call_id=block.id,
@@ -443,7 +409,7 @@ class AnthropicProvider(LLMProviderBase):
                     arguments_count=len(tool_call.arguments),
                 )
 
-        return content, tool_calls, thinking_text
+        return content, tool_calls, reasoning
 
     async def _make_anthropic_api_call(self, api_kwargs: dict[str, Any]) -> AnthropicMessage:
         """Execute the Anthropic messages API call with exception translation.
@@ -530,13 +496,6 @@ class AnthropicProvider(LLMProviderBase):
         self._pending_usage = None
         self._pending_thinking.clear()
 
-        system_prompt = self._extract_system_messages(messages)
-        anthropic_messages = self.convert_messages_to_provider_format(messages)
-        typed_messages = cast("list[MessageParam]", anthropic_messages)
-        anthropic_tools: list[dict[str, object]] | None = None
-        if tools:
-            anthropic_tools = self.convert_tools_to_provider_format(tools)
-
         log_provider_request(
             provider="anthropic",
             model=model,
@@ -549,9 +508,8 @@ class AnthropicProvider(LLMProviderBase):
         api_kwargs = self._build_api_kwargs(
             model=model,
             max_tokens=max_tokens,
-            messages=typed_messages,
-            system_prompt=system_prompt,
-            tools=anthropic_tools,
+            messages=messages,
+            tools=tools,
             tool_choice=tool_choice,
             thinking=thinking,
             enable_cache=enable_cache,
@@ -601,15 +559,15 @@ class AnthropicProvider(LLMProviderBase):
         finally:
             self._current_task = None
         duration_ms = (time.perf_counter() - start_time) * 1000
-        content, tool_calls, thinking_text = self._parse_response_blocks(response)
+        content, tool_calls, reasoning = self._parse_response_blocks(response)
         self._pending_usage = self._build_usage_from_message(response)
-        if thinking_text:
-            self._pending_thinking.append(thinking_text)
+        if reasoning:
+            self._pending_thinking.extend(item.text for item in reasoning if item.text)
             message = Message(
                 role="assistant",
                 content=content,
                 tool_calls=tool_calls or None,
-                thinking_content=thinking_text,
+                reasoning=reasoning,
             )
             log_provider_response(
                 provider="anthropic",
@@ -666,19 +624,11 @@ class AnthropicProvider(LLMProviderBase):
         self._pending_thinking.clear()
 
         log_provider_request("anthropic", model, len(messages), len(tools or []), temperature=temperature)
-        system_prompt = self._extract_system_messages(messages)
-        anthropic_messages = self.convert_messages_to_provider_format(messages)
-        typed_messages = cast("list[MessageParam]", anthropic_messages)
-        anthropic_tools: list[dict[str, object]] | None = None
-        if tools:
-            anthropic_tools = self.convert_tools_to_provider_format(tools)
-
         api_kwargs = self._build_api_kwargs(
             model=model,
             max_tokens=max_tokens,
-            messages=typed_messages,
-            system_prompt=system_prompt,
-            tools=anthropic_tools,
+            messages=messages,
+            tools=tools,
             tool_choice=tool_choice,
             thinking=thinking,
             enable_cache=enable_cache,
@@ -761,7 +711,7 @@ class AnthropicProvider(LLMProviderBase):
         """
         final_message = await stream.get_final_message()
         tool_calls: list[ToolCall] = []
-        thinking_blocks: list[str] = []
+        reasoning: list[ReasoningItem] = []
         for block in final_message.content:
             if block.type == "tool_use":
                 args: dict[str, object] = dict(block.input)
@@ -774,16 +724,18 @@ class AnthropicProvider(LLMProviderBase):
                         arguments=args,
                     ),
                 )
-            elif block.type == "thinking" and hasattr(block, "thinking"):
-                thinking_text = block.thinking
-                thinking_blocks.append(thinking_text)
+            elif block.type in {"thinking", "redacted_thinking"}:
+                item = parse_thinking_block(block.model_dump())
+                reasoning.append(item)
                 self._logger.debug(
                     "stream_thinking_captured",
-                    length=len(thinking_text),
+                    length=len(item.text),
+                    signed=item.signature is not None,
                 )
         self._pending_tool_calls = tool_calls
-        if thinking_blocks:
-            self._pending_thinking.extend(thinking_blocks)
+        self._pending_reasoning = reasoning
+        if reasoning:
+            self._pending_thinking.extend(item.text for item in reasoning if item.text)
         self._pending_usage = self._build_usage_from_message(final_message)
 
     async def cancel_request(self) -> None:
@@ -808,11 +760,10 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             list[dict[str, object]]: List of messages in Anthropic's format.
         """
-        result: list[dict[str, object]] = []
-        for msg in messages:
-            converted = self._convert_single_message(msg)
-            if converted is not None:
-                result.append(converted)
+        result = cast(
+            "list[dict[str, object]]",
+            self._adapter.build_messages(messages, self.capabilities_for("")),
+        )
         self._logger.debug("messages_converted", input_count=len(messages), output_count=len(result))
         return result
 
@@ -825,16 +776,10 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             dict[str, object] | None: Formatted message dict, or None if the role should be skipped.
         """
-        if msg.role == "system":
-            return None
-        if msg.role == "user":
-            return self._format_user_message(msg)
-        if msg.role == "assistant":
-            return self._format_assistant_message(msg)
-        return self._format_tool_message(msg)
+        converted = self._convert_messages_to_provider_format([msg])
+        return converted[0] if converted else None
 
-    @staticmethod
-    def _format_user_message(msg: Message) -> dict[str, object]:
+    def _format_user_message(self, msg: Message) -> dict[str, object]:
         """Format a user message for the Anthropic API.
 
         Args:
@@ -843,10 +788,9 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             dict[str, object]: Anthropic-formatted user message dict.
         """
-        return {"role": "user", "content": msg.content}
+        return self._convert_single_message(msg) or {"role": "user", "content": msg.content}
 
-    @staticmethod
-    def _format_assistant_message(msg: Message) -> dict[str, object]:
+    def _format_assistant_message(self, msg: Message) -> dict[str, object]:
         """Format an assistant message for the Anthropic API.
 
         Args:
@@ -855,23 +799,9 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             dict[str, object]: Anthropic-formatted assistant message dict.
         """
-        content: list[dict[str, object]] = []
-        if msg.content:
-            content.append({"type": "text", "text": msg.content})
-        if msg.tool_calls:
-            content.extend(
-                {
-                    "type": "tool_use",
-                    "id": tc.id,
-                    "name": to_wire_name(tc.function_name),
-                    "input": tc.arguments,
-                }
-                for tc in msg.tool_calls
-            )
-        return {"role": "assistant", "content": content or msg.content}
+        return self._convert_single_message(msg) or {"role": "assistant", "content": msg.content}
 
-    @staticmethod
-    def _format_tool_message(msg: Message) -> dict[str, object] | None:
+    def _format_tool_message(self, msg: Message) -> dict[str, object] | None:
         """Format a tool result message for the Anthropic API.
 
         Args:
@@ -880,18 +810,7 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             dict[str, object] | None: Anthropic-formatted tool result dict, or None if no results.
         """
-        if not msg.tool_results:
-            return None
-        tool_results: list[dict[str, object]] = [
-            {
-                "type": "tool_result",
-                "tool_use_id": tr.call_id,
-                "content": serialize_tool_result(tr.result),
-                "is_error": not tr.success,
-            }
-            for tr in msg.tool_results
-        ]
-        return {"role": "user", "content": tool_results}
+        return self._convert_single_message(msg)
 
     @override
     def _convert_tools_to_provider_format(
@@ -906,8 +825,10 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             list[dict[str, object]]: List of tools in Anthropic's format.
         """
-        anthropic_tools: list[dict[str, object]] = []
-        for tool in tools:
-            tool_schemas = create_anthropic_tool_schema(tool)
-            anthropic_tools.extend(cast("dict[str, object]", schema) for schema in tool_schemas)
-        return anthropic_tools
+        return cast(
+            "list[dict[str, object]]",
+            self._adapter.build_tool_schemas(tools, self.capabilities_for("")),
+        )
+
+
+__all__ = ["AnthropicProvider"]

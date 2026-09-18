@@ -26,7 +26,6 @@ import pytest
 
 import intellicrack.credentials.oauth as _oauth_mod
 import intellicrack.credentials.store as _store_mod
-from intellicrack.core.types import ProviderCredentials, ProviderName
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.credentials.oauth import (
     OAUTH_CONFIGS,
@@ -42,12 +41,15 @@ from intellicrack.credentials.oauth import (
     verify_pkce_pair,
 )
 from intellicrack.credentials.store import CredentialStore
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-_OAUTH_TO_PROVIDER_NAME: dict[OAuthProvider, ProviderName] = cast(Any, _oauth_mod)._OAUTH_TO_PROVIDER_NAME
+    from intellicrack.core.types import ProviderCredentials
+
+_OAUTH_TO_PROVIDER_NAME: dict[OAuthProvider, str] = cast(Any, _oauth_mod)._OAUTH_TO_PROVIDER_NAME
 _oauth_provider_to_name: Any = cast(Any, _oauth_mod)._oauth_provider_to_name
 
 
@@ -575,30 +577,30 @@ def with_fake_keyring(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 
 def test_oauth_provider_to_name_google_returns_provider_google() -> None:
-    """_oauth_provider_to_name(GOOGLE) must return ProviderName.GOOGLE exactly.
+    """_oauth_provider_to_name(GOOGLE) must return provider_ids.GOOGLE exactly.
 
-    Mutation: changing the mapping entry to ProviderName.ANTHROPIC would fail.
+    Mutation: changing the mapping entry to provider_ids.ANTHROPIC would fail.
     """
     result = _oauth_provider_to_name(OAuthProvider.GOOGLE)
-    assert result == ProviderName.GOOGLE
+    assert result == provider_ids.GOOGLE
 
 
 def test_oauth_provider_to_name_anthropic_returns_provider_anthropic() -> None:
-    """_oauth_provider_to_name(ANTHROPIC) must return ProviderName.ANTHROPIC exactly.
+    """_oauth_provider_to_name(ANTHROPIC) must return provider_ids.ANTHROPIC exactly.
 
     Mutation: removing the ANTHROPIC entry would raise KeyError.
     """
     result = _oauth_provider_to_name(OAuthProvider.ANTHROPIC)
-    assert result == ProviderName.ANTHROPIC
+    assert result == provider_ids.ANTHROPIC
 
 
 def test_oauth_provider_to_name_huggingface_returns_provider_huggingface() -> None:
-    """_oauth_provider_to_name(HUGGINGFACE) must return ProviderName.HUGGINGFACE exactly.
+    """_oauth_provider_to_name(HUGGINGFACE) must return provider_ids.HUGGINGFACE exactly.
 
-    Mutation: mapping HUGGINGFACE to the wrong ProviderName would fail.
+    Mutation: mapping HUGGINGFACE to the wrong provider id would fail.
     """
     result = _oauth_provider_to_name(OAuthProvider.HUGGINGFACE)
-    assert result == ProviderName.HUGGINGFACE
+    assert result == provider_ids.HUGGINGFACE
 
 
 # ---------------------------------------------------------------------------
@@ -630,7 +632,7 @@ def test_oauth_provider_to_name_raises_key_error_for_unmapped_provider(
     Args:
         monkeypatch: Pytest fixture used to replace the mapping dict temporarily.
     """
-    reduced: dict[OAuthProvider, ProviderName] = {k: v for k, v in _OAUTH_TO_PROVIDER_NAME.items() if k != OAuthProvider.HUGGINGFACE}
+    reduced: dict[OAuthProvider, str] = {k: v for k, v in _OAUTH_TO_PROVIDER_NAME.items() if k != OAuthProvider.HUGGINGFACE}
     monkeypatch.setattr(_oauth_mod, "_OAUTH_TO_PROVIDER_NAME", reduced)
 
     with pytest.raises(KeyError, match="No provider name mapping"):
