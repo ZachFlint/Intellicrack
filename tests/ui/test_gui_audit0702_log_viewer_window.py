@@ -57,16 +57,17 @@ from intellicrack.ui.log_viewer.window import (
     _FILTER_PANEL_MIN_WIDTH,
     _LOCATION_COLUMN,
     _LOGGER_COLUMN,
-    GenericCallableWorker,
     _LogTableView,
 )
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
     from pathlib import Path
 
     from pytestqt.qtbot import QtBot
+
+    from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 
 
 pytestmark = pytest.mark.usefixtures("qapp")
@@ -273,19 +274,22 @@ def test_m2_save_all_write_executes_on_background_worker_thread(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """M2: the real write must execute on a ``GenericCallableWorker`` thread, not the GUI thread.
+    """M2: the real write must execute on a background worker thread, not the GUI thread.
 
-    Replaces ``GenericCallableWorker`` in the window module with a
-    subclass that records every instance constructed, and wraps
-    ``_write_records_jsonl`` to record the identity of the OS thread that
-    executes it. Pre-fix neither the module attribute
-    ``intellicrack.ui.log_viewer.window.GenericCallableWorker`` nor
-    ``intellicrack.ui.log_viewer.window._write_records_jsonl`` existed (the
+    Wraps the window module's dispatcher, ``run_callable_async``, so the real
+    helper still starts the real worker while this gate records the one it
+    returned, and wraps ``_write_records_jsonl`` to record the identity of the
+    OS thread that executes it. Pre-fix neither dispatch seam existed (the
     write logic was inlined directly in ``_save_records``), so the
     ``monkeypatch.setattr`` calls below would themselves raise
-    ``AttributeError``. Post-fix, exactly one real ``QThread``-backed worker
-    is constructed and the write runs on a different OS thread than the one
-    that triggered the action.
+    ``AttributeError``. Post-fix, exactly one real ``QThread``-backed worker is
+    dispatched and the write runs on a different OS thread than the one that
+    triggered the action.
+
+    The worker also belongs to the window without being its Qt child: Qt
+    destroys a parent's children with it, and destroying a ``QThread`` whose OS
+    thread is still running aborts the process, so closing the log viewer
+    mid-save must not reach the thread writing the file.
 
     Args:
         qtbot: pytest-qt bot fixture.
@@ -311,30 +315,36 @@ def test_m2_save_all_write_executes_on_background_worker_thread(
 
     monkeypatch.setattr("intellicrack.ui.log_viewer.window._write_records_jsonl", _tracking_write)
 
-    created_workers: list[GenericCallableWorker] = []
+    dispatched: list[GenericCallableWorker] = []
+    real_dispatch = log_viewer_window.run_callable_async
 
-    class _TrackingWorker(GenericCallableWorker):
-        """Subclass of the real worker that records each instance created."""
+    def _tracking_dispatch(func: Callable[..., object], /, *args: object, **kwargs: object) -> GenericCallableWorker:
+        """Dispatch through the real helper and record the worker it started.
 
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            """Construct the real worker, then record this instance.
+        Args:
+            func: Callable the window handed to the dispatcher.
+            *args: Positional arguments forwarded to the real dispatcher.
+            **kwargs: Keyword arguments forwarded to the real dispatcher.
 
-            Args:
-                *args: Positional arguments forwarded to the real worker.
-                **kwargs: Keyword arguments forwarded to the real worker.
-            """
-            super().__init__(*args, **kwargs)
-            created_workers.append(self)
+        Returns:
+            GenericCallableWorker: The worker the real dispatcher started.
+        """
+        worker = real_dispatch(func, *args, **kwargs)
+        dispatched.append(worker)
+        return worker
 
-    monkeypatch.setattr("intellicrack.ui.log_viewer.window.GenericCallableWorker", _TrackingWorker)
+    monkeypatch.setattr("intellicrack.ui.log_viewer.window.run_callable_async", _tracking_dispatch)
 
     _trigger_action(window, "Save All As...")
 
     qtbot.waitUntil(lambda: bool(write_thread_ids), timeout=_WAIT_TIMEOUT_MS)
     qtbot.waitUntil(target.exists, timeout=_WAIT_TIMEOUT_MS)
 
-    assert len(created_workers) == 1, f"expected exactly one worker to be dispatched, got {len(created_workers)}"
-    assert isinstance(created_workers[0], QThread), "_save_records did not dispatch a real QThread-backed worker"
+    assert len(dispatched) == 1, f"expected exactly one worker to be dispatched, got {len(dispatched)}"
+    worker = dispatched[0]
+    assert isinstance(worker, QThread), "_save_records did not dispatch a real QThread-backed worker"
+    assert worker.parent() is None, "the save worker is a Qt child of the window, which destroys it mid-write"
+    assert worker.owner() is window, "the window is not the save worker's recorded owner"
     assert write_thread_ids[0] != gui_thread_id, (
         "_write_records_jsonl executed on the GUI thread instead of the worker's background OS thread"
     )
