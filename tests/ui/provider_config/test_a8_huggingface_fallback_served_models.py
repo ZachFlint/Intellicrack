@@ -228,7 +228,6 @@ class TestHuggingFaceFallbackHonorsServedModelsContract:
             "test-token",
             f"http://127.0.0.1:{port}",
             provider=None,
-            parent=None,
         )
 
         success, models, message = _fetch_huggingface_models(worker, httpx.Timeout(5.0))
@@ -264,7 +263,6 @@ class TestHuggingFaceFallbackHonorsServedModelsContract:
             "test-token",
             f"http://127.0.0.1:{closed_port}",
             provider=None,
-            parent=None,
         )
 
         success, models, message = _fetch_huggingface_models(worker, httpx.Timeout(5.0))
