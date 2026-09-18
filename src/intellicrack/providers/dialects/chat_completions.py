@@ -558,20 +558,27 @@ class ChatCompletionsAdapter(DialectAdapter):
     def token_limit_field(self, capabilities: ModelCapabilities) -> str:
         """Return the output-limit field this model expects.
 
+        A record that already names a Chat Completions field is honoured. One
+        naming Responses' ``max_output_tokens`` belongs to a model classified
+        for the Responses API that is being reached through Chat Completions
+        instead -- a per-model dialect override, or a gateway that serves only
+        Chat Completions. OpenAI rejects ``max_tokens`` for reasoning models,
+        so such a model is sent ``max_completion_tokens`` when it reasons and
+        ``max_tokens`` when it does not.
+
         Args:
             capabilities: The resolved capability record for the target model.
 
         Returns:
             str: ``"max_completion_tokens"`` for a reasoning model, otherwise
-            ``"max_tokens"``. A record naming Responses' ``max_output_tokens``
-            is corrected here rather than sent to an endpoint that would
-            reject it.
+            ``"max_tokens"``.
         """
         declared = capabilities.token_limit_field
         if declared in _CHAT_COMPLETIONS_TOKEN_FIELDS:
             return declared.value
-        _logger.warning("chat_completions_token_field_corrected", declared=declared.value)
-        return TokenLimitField.MAX_TOKENS.value
+        translated = TokenLimitField.MAX_COMPLETION_TOKENS if capabilities.reasoning.supported else TokenLimitField.MAX_TOKENS
+        _logger.debug("chat_completions_token_field_translated", declared=declared.value, sent=translated.value)
+        return translated.value
 
 
 def _effort_for_budget(budget_tokens: int, levels: Sequence[str]) -> str | None:

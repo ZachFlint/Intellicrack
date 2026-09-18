@@ -729,7 +729,7 @@ class TestMetaToolAndCoreNeverTrimmed:
         all_definitions = orch.tool_registry.get_tool_definitions()
         active_resolver: Any = getattr(orch, _ACTIVE_TOOL_DEFINITIONS_ATTR)
         active = active_resolver(all_definitions)
-        assert active[0].tool_name == ToolName.TOOLS, "meta-tool must be first in the active set"
+        assert active[0].tool_name == ToolName.TOOLS.value, "meta-tool must be first in the active set"
 
         class _TinyCapProvider(LLMProviderBase):
             """Throwaway provider whose only purpose is a tiny TOOL_COUNT_CAP."""
@@ -796,6 +796,6 @@ class TestMetaToolAndCoreNeverTrimmed:
         trimmed = cap_enforcer(active)
 
         assert trimmed, "expected at least the meta-tool to survive the cap"
-        assert trimmed[0].tool_name == ToolName.TOOLS, "meta-tool must survive a tail-truncating cap by being placed first"
+        assert trimmed[0].tool_name == ToolName.TOOLS.value, "meta-tool must survive a tail-truncating cap by being placed first"
         meta_functions = [func.name for func in trimmed[0].functions]
         assert _TOOLS_SEARCH_FUNCTION in meta_functions

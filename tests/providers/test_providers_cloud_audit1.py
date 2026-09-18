@@ -36,7 +36,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from typing import TYPE_CHECKING, Any, cast, override
+from typing import Any, cast, override
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -62,14 +62,12 @@ from intellicrack.core.types import (
 )
 from intellicrack.providers.anthropic import AnthropicProvider
 from intellicrack.providers.base import LLMProviderBase, UsageInfo
+from intellicrack.providers.capabilities import ApiDialect, CapabilityOverride
 from intellicrack.providers.google import GoogleProvider
 from intellicrack.providers.grok import GrokProvider
 from intellicrack.providers.openai import OpenAIProvider
 from intellicrack.providers.openrouter import OpenRouterProvider
-
-
-if TYPE_CHECKING:
-    from anthropic.types import MessageParam
+from intellicrack.providers.tool_names import to_wire_name
 
 
 # Private-helper accessors --------------------------------------------------
@@ -95,7 +93,7 @@ _CONFIG_ATTR: str = "_config"
 
 _convert_tool_choice: Any = getattr(LLMProviderBase, _CONVERT_TOOL_CHOICE_ATTR)
 _convert_tools_to_openai: Any = getattr(LLMProviderBase, _CONVERT_TOOLS_OPENAI_ATTR)
-_anthropic_build_api_kwargs: Any = getattr(AnthropicProvider, _BUILD_API_KWARGS_ATTR)
+_anthropic_build_api_kwargs: Any = getattr(AnthropicProvider(), _BUILD_API_KWARGS_ATTR)
 _openrouter_apply_cache_control: Any = getattr(OpenRouterProvider, _APPLY_CACHE_CONTROL_ATTR)
 _openrouter_reasoning_effort: Any = getattr(OpenRouterProvider, _REASONING_EFFORT_ATTR)
 
@@ -271,16 +269,21 @@ def test_f0005_enable_cache_marks_system_tools_and_last_message() -> None:
     of the last message turn.  Each breakpoint is the literal
     ephemeral marker.
     """
-    tools_payload: list[dict[str, object]] = [
-        {"name": "tool_a", "description": "A", "input_schema": {"type": "object", "properties": {}, "required": []}},
-        {"name": "tool_b", "description": "B", "input_schema": {"type": "object", "properties": {}, "required": []}},
+    tools_payload = [
+        ToolDefinition(
+            tool_name="sample",
+            description="Sample tools",
+            functions=[
+                ToolFunction(name="sample.tool_a", description="A", parameters=[], returns="text"),
+                ToolFunction(name="sample.tool_b", description="B", parameters=[], returns="text"),
+            ],
+        ),
     ]
-    raw_messages: list[dict[str, object]] = [
-        {"role": "user", "content": "First."},
-        {"role": "assistant", "content": "Mid."},
-        {"role": "user", "content": "Final question."},
+    messages_payload = [
+        Message(role="user", content="First."),
+        Message(role="assistant", content="Mid."),
+        Message(role="user", content="Final question."),
     ]
-    messages_payload = cast("list[MessageParam]", raw_messages)
 
     kwargs: dict[str, Any] = _anthropic_build_api_kwargs(
         model="claude-opus-4-7",
@@ -297,7 +300,7 @@ def test_f0005_enable_cache_marks_system_tools_and_last_message() -> None:
 
     cached_tools = kwargs["tools"]
     assert isinstance(cached_tools, list)
-    assert cached_tools[-1]["name"] == "tool_b"
+    assert cached_tools[-1]["name"] == to_wire_name("sample.tool_b")
     assert cached_tools[-1]["cache_control"] == {"type": "ephemeral"}
     assert "cache_control" not in cached_tools[0]
 
@@ -312,8 +315,7 @@ def test_f0005_enable_cache_disabled_leaves_payload_untouched() -> None:
 
     Confirms there's no silent caching when callers omit the flag.
     """
-    raw_messages: list[dict[str, object]] = [{"role": "user", "content": "hi"}]
-    messages_payload = cast("list[MessageParam]", raw_messages)
+    messages_payload = [Message(role="user", content="hi")]
     kwargs: dict[str, Any] = _anthropic_build_api_kwargs(
         model="claude-opus-4-7",
         max_tokens=4096,
@@ -658,6 +660,7 @@ async def test_f0002_openai_o_series_uses_max_completion_tokens_and_temp_1() -> 
     fake_client.chat.completions = MagicMock()
     fake_client.chat.completions.create = _capture
 
+    provider.set_capability_override("o4-mini", CapabilityOverride(dialect=ApiDialect.CHAT_COMPLETIONS))
     await provider.chat(
         messages=_user_messages("hello"),
         model="o4-mini",
@@ -839,6 +842,7 @@ def test_f0008_orchestrator_records_provider_usage() -> None:
         total_tokens=204,
     )
     fake_provider.get_pending_thinking.return_value = ["First thought.", "Second thought."]
+    fake_provider.get_pending_reasoning.return_value = []
 
     response = Message(role="assistant", content="hi")
 
@@ -1073,6 +1077,7 @@ async def test_f0002_openai_o_series_pins_temperature_without_thinking() -> None
     fake_client.chat.completions = MagicMock()
     fake_client.chat.completions.create = _capture
 
+    provider.set_capability_override("o4-mini", CapabilityOverride(dialect=ApiDialect.CHAT_COMPLETIONS))
     await provider.chat(
         messages=_user_messages("hello"),
         model="o4-mini",

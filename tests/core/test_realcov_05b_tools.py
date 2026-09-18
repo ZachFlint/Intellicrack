@@ -257,7 +257,7 @@ class TestToolDefinitionsRealSchema:
             initialized_registry: Fully initialized real ToolRegistry.
         """
         definitions = initialized_registry.get_tool_definitions()
-        hex_def = next(d for d in definitions if d.tool_name == ToolName.HEX_EDITOR)
+        hex_def = next(d for d in definitions if d.tool_name == ToolName.HEX_EDITOR.value)
         advertised = {fn.name for fn in hex_def.functions}
         assert any(name.endswith("open_file") for name in advertised), f"hex editor must advertise open_file, got {sorted(advertised)}"
 

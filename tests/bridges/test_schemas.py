@@ -38,6 +38,7 @@ from intellicrack.core.types import (
     ToolParameter,
 )
 from intellicrack.providers import ids as provider_ids
+from intellicrack.providers.tool_names import from_wire_name, to_wire_name
 
 
 _FUNC_NAME: Final[str] = "binary.analyze"
@@ -650,7 +651,8 @@ def test_to_anthropic_schema_single() -> None:
     schemas = to_anthropic_schema(_tool())
     assert len(schemas) == 1
     s = schemas[0]
-    assert s["name"] == _FUNC_NAME
+    assert s["name"] == to_wire_name(_FUNC_NAME)
+    assert from_wire_name(s["name"]) == _FUNC_NAME
     assert "input_schema" in s
     assert s["input_schema"]["type"] == "object"
 
@@ -668,7 +670,8 @@ def test_to_openai_schema_single() -> None:
     assert len(schemas) == 1
     s = schemas[0]
     assert s["type"] == "function"
-    assert s["function"]["name"] == _FUNC_NAME
+    assert s["function"]["name"] == to_wire_name(_FUNC_NAME)
+    assert from_wire_name(s["function"]["name"]) == _FUNC_NAME
     assert "parameters" in s["function"]
 
 
@@ -684,7 +687,8 @@ def test_to_google_schema_single() -> None:
     schemas = to_google_schema(_tool())
     assert len(schemas) == 1
     s = schemas[0]
-    assert s["name"] == _FUNC_NAME
+    assert s["name"] == to_wire_name(_FUNC_NAME)
+    assert from_wire_name(s["name"]) == _FUNC_NAME
     assert s["parameters"]["type"] == "OBJECT"
     assert s["parameters"]["properties"]["target"].get("type") == "STRING"
 
