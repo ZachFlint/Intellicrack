@@ -368,8 +368,7 @@ def test_reenable_child_gating_after_disable_does_not_duplicate_handlers() -> No
     _run_async(bridge.enable_child_gating())
 
     assert len(device.listeners.get(_SPAWN_ADDED, [])) == 1, (
-        f"expected exactly one 'spawn-added' listener after a disable/re-enable cycle, "
-        f"got {len(device.listeners.get(_SPAWN_ADDED, []))}"
+        f"expected exactly one 'spawn-added' listener after a disable/re-enable cycle, got {len(device.listeners.get(_SPAWN_ADDED, []))}"
     )
     assert len(device.listeners.get(_SPAWN_REMOVED, [])) == 1, (
         f"expected exactly one 'spawn-removed' listener after a disable/re-enable cycle, "
@@ -382,4 +381,6 @@ def test_reenable_child_gating_after_disable_does_not_duplicate_handlers() -> No
 
     dispatched_pids = _spawn_added_pids(captured)
     occurrences = dispatched_pids.count(321)
-    assert occurrences == 1, f"a duplicated 'spawn-added' handler would dispatch pid 321 more than once, got {occurrences}: {dispatched_pids}"
+    assert occurrences == 1, (
+        f"a duplicated 'spawn-added' handler would dispatch pid 321 more than once, got {occurrences}: {dispatched_pids}"
+    )

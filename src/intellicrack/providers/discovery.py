@@ -32,10 +32,9 @@ if TYPE_CHECKING:
 DISCOVERY_CACHE_VERSION: Final[int] = 2
 """Schema version of the persisted discovery cache.
 
-Version 1 keyed its entries by the removed provider enum's members. The ids
-themselves round-trip byte-identically, but a v1 file predates the capability
-metadata now carried alongside each model, so a v1 file is treated as a cold
-cache and re-fetched. Nothing is lost: it is a TTL cache.
+Version 1 keyed its entries by the removed provider enum's members. The ids themselves round-trip byte-identically, but a v1 file predates
+the capability metadata now carried alongside each model, so a v1 file is treated as a cold cache and re-fetched. Nothing is lost: it is a
+TTL cache.
 """
 
 
@@ -310,9 +309,7 @@ class DiscoveryCache:
             dict[str, list[ModelInfo]]: Dictionary mapping providers to their cached models.
         """
         now = time.time()
-        result: dict[str, list[ModelInfo]] = {
-            provider: entry.models for provider, entry in self._cache.items() if now <= entry.expires_at
-        }
+        result: dict[str, list[ModelInfo]] = {provider: entry.models for provider, entry in self._cache.items() if now <= entry.expires_at}
         return result
 
     async def save_to_disk(self, path: Path) -> None:

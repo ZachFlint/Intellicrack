@@ -4,24 +4,18 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Windows confinement for a local Model Context Protocol server process.
 
-A configured server is somebody else's program running with the operator's own
-account. Consent decides whether it runs at all; this module decides what it
-can reach once it does.
+A configured server is somebody else's program running with the operator's own account. Consent decides whether it runs at all; this module
+decides what it can reach once it does.
 
-Four things are constrained. The child receives an explicit environment
-allowlist rather than an inherited copy, so the API keys, tokens and paths
-Intellicrack's own environment carries do not travel into it. Its working
-directory is confined to a location the operator nominated. It is placed in a
-job object carrying an active-process cap, a per-process and per-job memory
-cap, and UI restrictions, and that job kills everything inside it when it
-closes, so a server that spawns children of its own cannot outlive its
-connection. And it runs with no console window.
+Four things are constrained. The child receives an explicit environment allowlist rather than an inherited copy, so the API keys, tokens and
+paths Intellicrack's own environment carries do not travel into it. Its working directory is confined to a location the operator nominated.
+It is placed in a job object carrying an active-process cap, a per-process and per-job memory cap, and UI restrictions, and that job kills
+everything inside it when it closes, so a server that spawns children of its own cannot outlive its connection. And it runs with no console
+window.
 
-Everything Win32 here is gated on the platform. On anything else a sandboxed
-launch is refused outright, never quietly downgraded to an unconfined one: a
-configuration that says ``"sandbox": {"enabled": true}`` and silently runs
-without one is worse than no sandbox at all, because the operator believes
-they have protection they do not have.
+Everything Win32 here is gated on the platform. On anything else a sandboxed launch is refused outright, never quietly downgraded to an
+unconfined one: a configuration that says ``"sandbox": {"enabled": true}`` and silently runs without one is worse than no sandbox at all,
+because the operator believes they have protection they do not have.
 """
 
 from __future__ import annotations
@@ -78,9 +72,8 @@ ENVIRONMENT_ALLOWLIST: Final[frozenset[str]] = frozenset({
 })
 """Inherited variables a confined child keeps.
 
-Enough for a program to find its interpreter, its DLLs and a scratch
-directory, and nothing that carries a credential. Everything else the server
-needs it must be given explicitly in its own configuration.
+Enough for a program to find its interpreter, its DLLs and a scratch directory, and nothing that carries a credential. Everything else the
+server needs it must be given explicitly in its own configuration.
 """
 
 _JOB_OBJECT_LIMIT_ACTIVE_PROCESS: Final[int] = 0x00000008
@@ -111,9 +104,8 @@ _UI_RESTRICTIONS: Final[int] = (
 )
 """Every UI capability a headless server has no business using.
 
-``HANDLES`` is the load-bearing one: without it the child can reach the
-window handles of processes outside the job, which is a path straight back
-out of the confinement.
+``HANDLES`` is the load-bearing one: without it the child can reach the window handles of processes outside the job, which is a path
+straight back out of the confinement.
 """
 
 _JOB_OBJECT_BASIC_UI_RESTRICTIONS: Final[int] = 4
@@ -517,9 +509,8 @@ def close_job_object(handle: int) -> None:
 class SandboxedJob:
     """Owns one sandboxed server's job object for the life of its connection.
 
-    Entering creates the job and applies the ceilings; a process is placed in
-    it once it exists; leaving closes the handle, which terminates the server
-    and every descendant it started.
+    Entering creates the job and applies the ceilings; a process is placed in it once it exists; leaving closes the handle, which terminates
+    the server and every descendant it started.
     """
 
     def __init__(self, sandbox: McpSandboxSpec) -> None:

@@ -4,22 +4,17 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """OAuth for Model Context Protocol servers reached over HTTP.
 
-Only HTTP servers authorize this way. A local server inherits its credentials
-from the environment Intellicrack launches it with, and the specification says
-plainly that a stdio server should not use OAuth, so nothing here applies to
-one.
+Only HTTP servers authorize this way. A local server inherits its credentials from the environment Intellicrack launches it with, and the
+specification says plainly that a stdio server should not use OAuth, so nothing here applies to one.
 
-Two rules shape the storage layout. Tokens are keyed per server *and* per
-issuer, so a token minted for one server can never be presented to another,
-and a server that moves to a different authorization server cannot silently
-reuse the credentials it held under the old one. Client registrations are
-checked with the SDK's own :func:`credentials_match_issuer` before they are
-handed back, which is the RFC 9207 mix-up defence.
+Two rules shape the storage layout. Tokens are keyed per server *and* per issuer, so a token minted for one server can never be presented to
+another, and a server that moves to a different authorization server cannot silently reuse the credentials it held under the old one. Client
+registrations are checked with the SDK's own :func:`credentials_match_issuer` before they are handed back, which is the RFC 9207 mix-up
+defence.
 
-Client identity is resolved in the order the specification prefers: a Client
-ID Metadata Document when one is configured and the authorization server
-supports it, then a pre-registered client id, and only then dynamic client
-registration, which is deprecated and logged as such.
+Client identity is resolved in the order the specification prefers: a Client ID Metadata Document when one is configured and the
+authorization server supports it, then a pre-registered client id, and only then dynamic client registration, which is deprecated and logged
+as such.
 """
 
 from __future__ import annotations
@@ -71,8 +66,7 @@ _ISSUER_DIGEST_BYTES: Final[int] = 8
 _PUBLIC_CLIENT_AUTH: Final[str] = "none"
 """Token-endpoint authentication method for a public native client.
 
-Intellicrack runs on the operator's machine and can hold no client secret, so
-it authenticates the token endpoint with PKCE alone.
+Intellicrack runs on the operator's machine and can hold no client secret, so it authenticates the token endpoint with PKCE alone.
 """
 
 _URL_PARTS: Final[int] = 2
@@ -156,10 +150,8 @@ def client_metadata(spec: HttpServerSpec, scope: str | None = None) -> OAuthClie
 class KeyringTokenStorage(TokenStorage):
     """Holds one server's OAuth artefacts in the operating system keyring.
 
-    Every read and write is scoped to ``(server_id, issuer)``. A stored
-    client registration bound to a different issuer is refused rather than
-    returned, so credentials obtained from one authorization server can never
-    be replayed against another.
+    Every read and write is scoped to ``(server_id, issuer)``. A stored client registration bound to a different issuer is refused rather
+    than returned, so credentials obtained from one authorization server can never be replayed against another.
     """
 
     def __init__(self, store: CredentialStore, server_id: str, issuer: str) -> None:

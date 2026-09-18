@@ -4,23 +4,19 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Provider and model presets: the first layer of the capability merge.
 
-A preset is data, not logic. It records what is already known about an
-endpoint and its models -- which wire format it speaks, where it lives, which
-environment variable holds its key, and what each model family supports -- so
-the request path never has to infer any of it from a model id.
+A preset is data, not logic. It records what is already known about an endpoint and its models -- which wire format it speaks, where it
+lives, which environment variable holds its key, and what each model family supports -- so the request path never has to infer any of it
+from a model id.
 
-That distinction is the point. Deciding at request time that a model is a
-reasoning model because its id starts with ``"o1"`` is a heuristic that breaks
-the moment an endpoint serves a model it did not name that way; looking the
-same fact up in a preset table, which a user can correct per model, does not.
+That distinction is the point. Deciding at request time that a model is a reasoning model because its id starts with ``"o1"`` is a heuristic
+that breaks the moment an endpoint serves a model it did not name that way; looking the same fact up in a preset table, which a user can
+correct per model, does not.
 
-Presets are the lowest-precedence layer: metadata the endpoint advertises about
-itself overrides them, and the user's own per-model override overrides both.
+Presets are the lowest-precedence layer: metadata the endpoint advertises about itself overrides them, and the user's own per-model override
+overrides both.
 
-Built-in providers are presets too. A built-in materializes as an ordinary
-editable instance, which is what lets a user duplicate OpenAI for a second
-account or pin it at a proxy, and lets deleting a built-in restore it from its
-preset rather than orphan it.
+Built-in providers are presets too. A built-in materializes as an ordinary editable instance, which is what lets a user duplicate OpenAI for
+a second account or pin it at a proxy, and lets deleting a built-in restore it from its preset rather than orphan it.
 """
 
 from __future__ import annotations
@@ -385,8 +381,8 @@ COMPATIBLE_PRESETS: Final[dict[str, ProviderPreset]] = {
 }
 """Starting points for the endpoints users most often add by hand.
 
-Each is a starting point, not a constraint: the base URL, headers, key and
-per-model capabilities all stay editable once an instance is created from one.
+Each is a starting point, not a constraint: the base URL, headers, key and per-model capabilities all stay editable once an instance is
+created from one.
 """
 
 

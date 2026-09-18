@@ -4,21 +4,16 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Ingesting what an endpoint says about its own models.
 
-An arbitrary endpoint is the only authority on what its models can do, and
-several of them say so in their ``/models`` payload: OpenRouter advertises
-``context_length``, ``pricing``, ``modality`` and ``supported_parameters``;
-LiteLLM and vLLM mirror parts of it; an OpenAI-compatible gateway may advertise
-nothing beyond an id.
+An arbitrary endpoint is the only authority on what its models can do, and several of them say so in their ``/models`` payload: OpenRouter
+advertises ``context_length``, ``pricing``, ``modality`` and ``supported_parameters``; LiteLLM and vLLM mirror parts of it; an OpenAI-
+compatible gateway may advertise nothing beyond an id.
 
-This module reads whatever is there. It is layer two of the capability merge,
-between the preset defaults and the user's per-model override, and it never
-asserts a field the payload did not state, so a silent payload leaves the
-preset's answer standing rather than overwriting it with a guess.
+This module reads whatever is there. It is layer two of the capability merge, between the preset defaults and the user's per-model override,
+and it never asserts a field the payload did not state, so a silent payload leaves the preset's answer standing rather than overwriting it
+with a guess.
 
-Fetchers are an ordered registry, following Cherry Studio: each strategy
-declares whether it recognises a payload, the first that does wins, and an
-always-match OpenAI-compatible fallback sits last so an unknown endpoint still
-produces a model list.
+Fetchers are an ordered registry, following Cherry Studio: each strategy declares whether it recognises a payload, the first that does wins,
+and an always-match OpenAI-compatible fallback sits last so an unknown endpoint still produces a model list.
 """
 
 from __future__ import annotations

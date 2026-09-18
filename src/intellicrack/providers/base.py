@@ -271,10 +271,8 @@ _ERR_EMPTY_MESSAGES: Final[str] = "messages must contain at least one message"
 _MODEL_SUFFIX_SEPARATORS: Final[tuple[str, ...]] = (":", "@")
 """Separators that introduce a variant suffix on an otherwise known model id.
 
-An endpoint routinely advertises ``my-model:free`` or ``my-model@2026-01`` for
-what is capability-wise the same model. Stripping the suffix is what lets the
-base record resolve instead of the request being refused for want of a context
-window.
+An endpoint routinely advertises ``my-model:free`` or ``my-model@2026-01`` for what is capability-wise the same model. Stripping the suffix
+is what lets the base record resolve instead of the request being refused for want of a context window.
 """
 
 
@@ -1522,12 +1520,9 @@ class LLMProviderBase(ABC):
 class ToolCallBufferManager:
     """Accumulates streaming tool-call fragments into complete ToolCall objects.
 
-    Every dialect fragments a streamed tool call differently -- Chat
-    Completions by array index, Responses by the output item's id, Messages by
-    content-block index, Gemini not at all -- so fragments are keyed by an
-    opaque correlation token the adapter chooses rather than by any one
-    dialect's shape. Insertion order is preserved, so finalized calls come out
-    in the order the endpoint started them.
+    Every dialect fragments a streamed tool call differently -- Chat Completions by array index, Responses by the output item's id, Messages
+    by content-block index, Gemini not at all -- so fragments are keyed by an opaque correlation token the adapter chooses rather than by
+    any one dialect's shape. Insertion order is preserved, so finalized calls come out in the order the endpoint started them.
     """
 
     def __init__(self) -> None:
