@@ -25,11 +25,11 @@ import pytest
 from intellicrack.core.types import (
     Message,
     ProviderCredentials,
-    ProviderName,
     ThinkingConfig,
 )
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.credentials.store import CredentialStore, get_credential_store
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.anthropic import AnthropicProvider
 from intellicrack.providers.base import UsageInfo
 
@@ -94,7 +94,7 @@ async def _resolve_anthropic_credentials() -> ProviderCredentials | None:
         configured, otherwise ``None``.
     """
     store = get_credential_store()
-    creds = await store.get(ProviderName.ANTHROPIC)
+    creds = await store.get(provider_ids.ANTHROPIC)
     if creds is not None and creds.api_key:
         return creds
 
@@ -102,7 +102,7 @@ async def _resolve_anthropic_credentials() -> ProviderCredentials | None:
         return None
 
     fallback_store = CredentialStore(fallback_loader=CredentialLoader(env_path=_ENV_PATH))
-    return await fallback_store.get(ProviderName.ANTHROPIC)
+    return await fallback_store.get(provider_ids.ANTHROPIC)
 
 
 async def _pick_chat_model(provider: AnthropicProvider) -> str:

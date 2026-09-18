@@ -25,10 +25,10 @@ from typing import TYPE_CHECKING
 from intellicrack.core.session import Session, SessionStore
 from intellicrack.core.types import (
     BridgeAnalysisSummary,
-    ProviderName,
     SectionInfo,
     StringInfo,
 )
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -80,7 +80,7 @@ def _saved_session(tmp_path: Path) -> tuple[SessionStore, Session]:
         tuple[SessionStore, Session]: The live store and the saved session.
     """
     store = SessionStore(tmp_path / "sessions.db")
-    session = Session.create(provider=ProviderName.OLLAMA, model="complete-flag-model")
+    session = Session.create(provider=provider_ids.OLLAMA, model="complete-flag-model")
     session.add_bridge_analysis(_BINARY_NAME, _complete_summary())
     store.save(session)
     return store, session
@@ -131,7 +131,7 @@ def test_an_incomplete_analysis_stays_incomplete(tmp_path: Path) -> None:
         tmp_path: Pytest temporary directory fixture.
     """
     store = SessionStore(tmp_path / "sessions.db")
-    session = Session.create(provider=ProviderName.OLLAMA, model="complete-flag-model")
+    session = Session.create(provider=provider_ids.OLLAMA, model="complete-flag-model")
     empty = BridgeAnalysisSummary(
         binary_name=_BINARY_NAME,
         strings=[],

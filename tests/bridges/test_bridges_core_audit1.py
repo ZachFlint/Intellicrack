@@ -63,12 +63,12 @@ from intellicrack.bridges.win32_types import (
 )
 from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.types import (
-    ProviderName,
     ToolDefinition,
     ToolFunction,
     ToolName,
     ToolParameter,
 )
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -89,7 +89,7 @@ def _make_tool(*params: ToolParameter) -> ToolDefinition:
         ToolDefinition: A small tool definition suitable for schema tests.
     """
     return ToolDefinition(
-        tool_name=ToolName.PROCESS,
+        tool_name=ToolName.PROCESS.value,
         description="audit1 fixture tool",
         functions=[
             ToolFunction(
@@ -206,7 +206,7 @@ def test_f0003_validate_tool_for_provider_returns_errors_only() -> None:
             required=True,
         ),
     )
-    errors = validate_tool_for_provider(tool, ProviderName.OPENAI)
+    errors = validate_tool_for_provider(tool, provider_ids.OPENAI)
     assert isinstance(errors, list)
     assert all(isinstance(e, ValidationError) for e in errors)
     assert not [e for e in errors if e.severity == "error"]
@@ -215,11 +215,11 @@ def test_f0003_validate_tool_for_provider_returns_errors_only() -> None:
 def test_f0003_validate_tool_for_provider_flags_missing_function() -> None:
     """Tool with no functions must produce an error-level diagnostic."""
     tool = ToolDefinition(
-        tool_name=ToolName.PROCESS,
+        tool_name=ToolName.PROCESS.value,
         description="empty tool",
         functions=[],
     )
-    errors = validate_tool_for_provider(tool, ProviderName.OPENAI)
+    errors = validate_tool_for_provider(tool, provider_ids.OPENAI)
     error_messages = [e.message for e in errors if e.severity == "error"]
     assert any("at least one function" in m for m in error_messages)
 

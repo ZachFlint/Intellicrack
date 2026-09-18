@@ -646,7 +646,7 @@ class TestProcessDispatchL2:
         await registry.initialize()
 
         definitions = registry.get_tool_definitions()
-        process_def = next(d for d in definitions if d.tool_name == ToolName.PROCESS)
+        process_def = next(d for d in definitions if d.tool_name == ToolName.PROCESS.value)
         function_names = {f.name for f in process_def.functions}
 
         expected = {

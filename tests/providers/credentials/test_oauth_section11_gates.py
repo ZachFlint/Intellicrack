@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
-from intellicrack.core.types import ProviderName
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.credentials.oauth import (
     OAuthCallbackError,
@@ -41,6 +40,7 @@ from intellicrack.credentials.store import (
     CredentialStore,
     CredentialStoreError,
 )
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -916,7 +916,7 @@ def test_credential_store_get_or_raise_not_found_raises_credential_not_found(
     store = _make_keyring_free_store()
 
     with pytest.raises(CredentialNotFoundError, match="ollama"):
-        asyncio.run(store.get_or_raise(ProviderName.OLLAMA))
+        asyncio.run(store.get_or_raise(provider_ids.OLLAMA))
 
 
 def test_credential_store_get_or_raise_found_returns_credentials() -> None:
@@ -928,7 +928,7 @@ def test_credential_store_get_or_raise_found_returns_credentials() -> None:
     """
     store = _make_keyring_free_store({"OLLAMA_API_KEY": "gate_test_key_section11"})
 
-    creds = asyncio.run(store.get_or_raise(ProviderName.OLLAMA))
+    creds = asyncio.run(store.get_or_raise(provider_ids.OLLAMA))
 
     assert creds.api_key == "gate_test_key_section11"
 

@@ -246,7 +246,7 @@ def test_tool_definition_maps_to_callable_methods(x64dbg_bridge: X64DbgBridge) -
         x64dbg_bridge: Fresh X64DbgBridge instance supplied by the fixture.
     """
     tool_def = x64dbg_bridge.tool_definition
-    assert tool_def.tool_name == ToolName.X64DBG
+    assert tool_def.tool_name == ToolName.X64DBG.value
     assert len(tool_def.functions) > 0
 
     aliases = {"disassemble": "disassemble_at"}

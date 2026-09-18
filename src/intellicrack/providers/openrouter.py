@@ -26,13 +26,13 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    ProviderName,
     RateLimitError,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
     MAX_ERROR_BODY_CHARS,
     HttpErrorMessages,
@@ -42,6 +42,8 @@ from intellicrack.providers.base import (
     map_thinking_budget_to_effort,
     redact_secrets,
 )
+from intellicrack.providers.capabilities import ApiDialect, merge_capabilities
+from intellicrack.providers.model_metadata import ingest_model_entry
 
 
 if TYPE_CHECKING:
@@ -67,6 +69,13 @@ def _response_body_text(response: httpx.Response) -> str:
     except (httpx.ResponseNotRead, httpx.StreamError, UnicodeDecodeError):
         return ""
 
+
+_DEFAULT_CONTEXT_WINDOW: int = 4096
+"""Context window assumed for an entry whose payload states none.
+
+OpenRouter states ``context_length`` for essentially every model, so this is
+the floor for a malformed entry rather than a routine answer.
+"""
 
 _ERR_NOT_CONNECTED = "Not connected to OpenRouter"
 _ERR_KEY_REQUIRED = "OpenRouter API key is required"
@@ -163,13 +172,23 @@ class OpenRouterProvider(LLMProviderBase):
         self._client_loop = target_loop
 
     @property
-    def name(self) -> ProviderName:
-        """The provider's name.
+    def name(self) -> str:
+        """The provider instance id.
 
         Returns:
-            ProviderName: ProviderName.OPENROUTER
+            str: The ``openrouter`` built-in provider id.
         """
-        return ProviderName.OPENROUTER
+        return provider_ids.OPENROUTER
+
+    @property
+    @override
+    def dialect(self) -> ApiDialect:
+        """The wire format this provider speaks.
+
+        Returns:
+            ApiDialect: Always :data:`ApiDialect.CHAT_COMPLETIONS`.
+        """
+        return ApiDialect.CHAT_COMPLETIONS
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to OpenRouter API.
@@ -317,54 +336,49 @@ class OpenRouterProvider(LLMProviderBase):
     def _build_model_info(self, model_data: dict[str, Any]) -> ModelInfo:
         """Convert a raw OpenRouter model dict into a ``ModelInfo``.
 
+        The parsing itself is generic now: OpenRouter's payload is the richest
+        of the ones Intellicrack reads, so what used to be bespoke code here
+        became :func:`~intellicrack.providers.model_metadata.ingest_model_entry`
+        and every endpoint with a comparable payload gets the same treatment.
+
         Args:
             model_data: Single ``data[]`` entry from the OpenRouter
                 ``/models`` response.
 
         Returns:
-            ModelInfo: Parsed model metadata.
+            ModelInfo: Parsed model metadata, carrying the capability record
+            the entry resolved to.
         """
-        model_id = model_data.get("id", "")
-        name = model_data.get("name", model_id)
-        context_length = model_data.get("context_length", 4096)
+        ingested = ingest_model_entry(model_data)
+        if ingested is None:
+            model_id = str(model_data.get("id", ""))
+            self._logger.debug("openrouter_model_entry_skipped", model=model_id)
+            capabilities = self.capabilities_for(model_id)
+            return ModelInfo(
+                id=model_id,
+                name=model_id,
+                provider=provider_ids.OPENROUTER,
+                context_window=capabilities.context_window or _DEFAULT_CONTEXT_WINDOW,
+                supports_tools=capabilities.supports_tools,
+                supports_vision=capabilities.supports_vision,
+                supports_streaming=capabilities.supports_streaming,
+                input_cost_per_1m_tokens=None,
+                output_cost_per_1m_tokens=None,
+                capabilities=capabilities,
+            )
 
-        pricing = model_data.get("pricing", {})
-        input_cost = pricing.get("prompt")
-        output_cost = pricing.get("completion")
-
-        if input_cost is not None:
-            try:
-                input_cost = float(input_cost) * 1000000
-            except (ValueError, TypeError):
-                self._logger.debug("input_cost_parse_failed", model=model_id)
-                input_cost = None
-        if output_cost is not None:
-            try:
-                output_cost = float(output_cost) * 1000000
-            except (ValueError, TypeError):
-                self._logger.debug("output_cost_parse_failed", model=model_id)
-                output_cost = None
-
-        architecture: dict[str, object] = model_data.get("architecture", {})
-        modality = str(architecture.get("modality", ""))
-        supports_vision = "image" in modality
-
-        supported_params: list[str] = [str(p) for p in model_data.get("supported_parameters", [])]
-        supports_tools = "tools" in supported_params or "tool_choice" in supported_params
-        if not supports_tools and not supported_params:
-            supports_tools = any(family in model_id.lower() for family in ("claude", "gpt", "gemini", "llama-3", "qwen"))
-
-        return ModelInfo(
-            id=model_id,
-            name=name,
-            provider=ProviderName.OPENROUTER,
-            context_window=context_length,
-            supports_tools=supports_tools,
-            supports_vision=supports_vision,
-            supports_streaming=True,
-            input_cost_per_1m_tokens=input_cost,
-            output_cost_per_1m_tokens=output_cost,
+        base = self.capabilities_for(ingested.model_id)
+        capabilities = merge_capabilities(base, ingested.capabilities)
+        self.ingest_model_capabilities(ingested.model_id, capabilities)
+        info = ingested.to_model_info(
+            provider_ids.OPENROUTER,
+            capabilities.context_window or _DEFAULT_CONTEXT_WINDOW,
         )
+        info.capabilities = capabilities
+        info.supports_tools = capabilities.supports_tools
+        info.supports_vision = capabilities.supports_vision
+        info.supports_streaming = capabilities.supports_streaming
+        return info
 
     async def chat(
         self,

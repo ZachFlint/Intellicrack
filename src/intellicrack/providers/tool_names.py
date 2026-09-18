@@ -25,8 +25,13 @@ from __future__ import annotations
 import hashlib
 import re
 import threading
+from typing import TYPE_CHECKING
 
 from intellicrack.core.logging import get_logger
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 _logger = get_logger(__name__)
@@ -162,3 +167,94 @@ def from_wire_name(wire: str) -> str:
     if "__" not in wire:
         return wire
     return wire.replace("__", ".")
+
+
+_wire_pair_to_canonical: dict[tuple[str, str], str] = {}
+
+
+def rehydrate_wire_names(canonical_names: Iterable[str]) -> None:
+    """Re-register the fallback wire names for a set of canonical names.
+
+    Reversal of a hash-fallback wire name depends on the process-local
+    registry that :func:`to_wire_name` populates as a side effect. A tool that
+    appears only in *replayed history* -- never in the active set, which is
+    exactly what tool search and deferred loading produce -- would otherwise
+    never have been registered, and its wire name would reverse through the
+    primary ``__`` -> ``.`` path to the wrong canonical name.
+
+    The wire layer therefore calls this over the union of the active tools and
+    every tool referenced in replayed history before it reverses any name. The
+    mapping is a pure function of the canonical name, so nothing is persisted
+    and a cold restart reproduces it exactly.
+
+    Args:
+        canonical_names: Canonical dotted tool-function names to register.
+    """
+    for canonical in canonical_names:
+        to_wire_name(canonical)
+
+
+def to_wire_pair(canonical: str) -> tuple[str, str]:
+    """Split a canonical dotted name into an OpenAI namespace/function pair.
+
+    Under OpenAI tool search the wire identity of a function is the pair
+    ``(namespace, name)`` rather than a single string: ``ghidra.decompile``
+    travels as namespace ``ghidra`` plus function ``decompile``. Intellicrack's
+    dotted bridge names map onto that exactly.
+
+    A name whose halves do not both satisfy the provider name rule -- or that
+    carries more than one dot, where the split would be ambiguous on the way
+    back -- falls back to an empty namespace plus the registered single-string
+    wire name, which still round-trips.
+
+    Args:
+        canonical: Canonical dotted tool-function name.
+
+    Returns:
+        tuple[str, str]: The namespace (empty when the name is not namespaced)
+        and the function name to send.
+    """
+    namespace, separator, name = canonical.partition(".")
+    splittable = bool(separator) and bool(namespace) and bool(name) and "." not in name
+    if splittable and is_valid_wire_name(namespace) and is_valid_wire_name(name):
+        with _registry_lock:
+            existing = _wire_pair_to_canonical.get((namespace, name))
+            if existing is not None and existing != canonical:
+                _logger.error(
+                    "tool_wire_pair_collision",
+                    namespace=namespace,
+                    name=name,
+                    existing=existing,
+                    incoming=canonical,
+                )
+            else:
+                _wire_pair_to_canonical[namespace, name] = canonical
+                return namespace, name
+    wire = to_wire_name(canonical)
+    with _registry_lock:
+        _wire_pair_to_canonical["", wire] = canonical
+    return "", wire
+
+
+def from_wire_pair(namespace: str, name: str) -> str:
+    """Map an OpenAI namespace/function pair back to its canonical name.
+
+    Checks the pair registry first, so a name that fell back to the hash form
+    reverses correctly, then joins the pair. An empty namespace reverses
+    through :func:`from_wire_name`, which is idempotent on names that are
+    already canonical.
+
+    Args:
+        namespace: The namespace the provider reported, or the empty string.
+        name: The function name the provider reported.
+
+    Returns:
+        str: The canonical dotted tool-function name.
+    """
+    with _registry_lock:
+        registered = _wire_pair_to_canonical.get((namespace, name))
+    if registered is not None:
+        return registered
+    if not namespace:
+        return from_wire_name(name)
+    return f"{namespace}.{from_wire_name(name)}"

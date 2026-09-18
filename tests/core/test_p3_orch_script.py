@@ -27,9 +27,9 @@ from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
-    ProviderName,
     ToolDefinition,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.registry import ProviderRegistry
 
@@ -52,7 +52,7 @@ class _FakeProvider(LLMProviderBase):
 
     def __init__(
         self,
-        provider_name: ProviderName = ProviderName.OPENAI,
+        provider_name: str = provider_ids.OPENAI,
         *,
         context_window: int | None = _DEFAULT_CONTEXT_WINDOW,
         chat_error_message: str | None = None,
@@ -74,11 +74,11 @@ class _FakeProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The configured provider name.
 
         Returns:
-            ProviderName: Configured provider name.
+            str: Configured provider name.
         """
         return self._provider_name
 
@@ -326,7 +326,7 @@ async def test_shutdown_clears_current_session(tmp_path: Path) -> None:
     """
     orch, session_manager = _build_orchestrator(tmp_path)
     async with _AutoStopSessionManager(session_manager):
-        await orch.start_session(provider=ProviderName.OPENAI, model=_MODEL_ID)
+        await orch.start_session(provider=provider_ids.OPENAI, model=_MODEL_ID)
         assert orch.current_session is not None
 
         await orch.shutdown()
@@ -350,12 +350,12 @@ async def test_list_sessions_returns_exact_ids_and_names(tmp_path: Path) -> None
     session_manager = _make_session_manager(tmp_path)
     async with _AutoStopSessionManager(session_manager):
         s1 = await session_manager.create(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
             name="AlphaSession",
         )
         s2 = await session_manager.create(
-            provider=ProviderName.ANTHROPIC,
+            provider=provider_ids.ANTHROPIC,
             model=_MODEL_ID,
             name="BetaSession",
         )
@@ -385,12 +385,12 @@ async def test_delete_session_removes_target_leaves_others_intact(tmp_path: Path
     session_manager = _make_session_manager(tmp_path)
     async with _AutoStopSessionManager(session_manager):
         s1 = await session_manager.create(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model=_MODEL_ID,
             name="ToDelete",
         )
         s2 = await session_manager.create(
-            provider=ProviderName.ANTHROPIC,
+            provider=provider_ids.ANTHROPIC,
             model=_MODEL_ID,
             name="ToKeep",
         )
@@ -433,7 +433,7 @@ async def test_mid_pipeline_error_propagates_exact_type_and_message(
     failing_provider = _FakeProvider(chat_error_message=error_text)
     orch, session_manager = _build_orchestrator(tmp_path, provider=failing_provider)
     async with _AutoStopSessionManager(session_manager):
-        await orch.start_session(provider=ProviderName.OPENAI, model=_MODEL_ID)
+        await orch.start_session(provider=provider_ids.OPENAI, model=_MODEL_ID)
 
         with pytest.raises(RuntimeError, match=error_text):
             await orch.process_user_input("trigger the error")
@@ -458,7 +458,7 @@ async def test_json_export_import_round_trips_exact_session_structure(
     session_manager = _make_session_manager(tmp_path)
     async with _AutoStopSessionManager(session_manager):
         session = await session_manager.create(
-            provider=ProviderName.OPENAI,
+            provider=provider_ids.OPENAI,
             model="p3-gpt-4o",
             name="RoundTripSession",
         )
@@ -483,7 +483,7 @@ async def test_json_export_import_round_trips_exact_session_structure(
 
         assert imported.id == session.id
         assert imported.name == "RoundTripSession"
-        assert imported.provider == ProviderName.OPENAI
+        assert imported.provider == provider_ids.OPENAI
         assert imported.model == "p3-gpt-4o"
         assert imported.notes == "p3-round-trip-notes-unique"
         assert len(imported.messages) == 1

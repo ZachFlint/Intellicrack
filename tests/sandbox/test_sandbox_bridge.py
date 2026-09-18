@@ -321,7 +321,7 @@ class TestToolDefinition:
     def test_tool_name_matches(self) -> None:
         """Tool definition tool_name matches bridge name."""
         bridge = SandboxBridge()
-        assert bridge.tool_definition.tool_name == ToolName.SANDBOX
+        assert bridge.tool_definition.tool_name == ToolName.SANDBOX.value
 
 
 @pytest.mark.unit

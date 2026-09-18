@@ -18,7 +18,8 @@ from typing import TYPE_CHECKING
 from intellicrack.bridges.base import BridgeState, ToolBridgeBase
 from intellicrack.core.session import Session
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import ProviderName, ToolDefinition, ToolName
+from intellicrack.core.types import ToolDefinition, ToolName
+from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
@@ -60,7 +61,7 @@ class _CountingBridge(ToolBridgeBase):
         Returns:
             ToolDefinition: Definition with no functions.
         """
-        return ToolDefinition(tool_name=self._tool_name, description="counting bridge", functions=[])
+        return ToolDefinition(tool_name=self._tool_name.value, description="counting bridge", functions=[])
 
     async def initialize(self, tool_path: Path | None = None) -> None:
         """Mark the bridge connected.
@@ -137,7 +138,7 @@ def _build_session() -> Session:
     Returns:
         Session: A fresh ``Session`` instance.
     """
-    return Session.create(provider=ProviderName.OPENAI, model="gpt-4")
+    return Session.create(provider=provider_ids.OPENAI, model="gpt-4")
 
 
 def test_set_session_propagates_to_registered_bridges(tmp_path: Path) -> None:

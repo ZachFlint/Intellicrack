@@ -50,7 +50,6 @@ from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
-    ProviderName,
     SectionInfo,
     ToolCall,
     ToolDefinition,
@@ -59,6 +58,7 @@ from intellicrack.core.types import (
     ToolParameter,
     ToolResult,
 )
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.registry import ProviderRegistry
 
@@ -187,7 +187,7 @@ class _RealBinaryAnalysisBridge(ToolBridgeBase):
                 accepts a ``binary_path`` string argument.
         """
         return ToolDefinition(
-            tool_name=ToolName.PROCESS,
+            tool_name=ToolName.PROCESS.value,
             description="Read-only binary inspection backed by lief parsing.",
             functions=[
                 ToolFunction(
@@ -279,13 +279,13 @@ class _ScriptedProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The provider name.
 
         Returns:
-            ProviderName: Always :data:`ProviderName.OPENAI`.
+            str: Always :data:`provider_ids.OPENAI`.
         """
-        return ProviderName.OPENAI
+        return provider_ids.OPENAI
 
     @override
     async def connect(self, credentials: ProviderCredentials) -> None:
@@ -308,7 +308,7 @@ class _ScriptedProvider(LLMProviderBase):
             ModelInfo(
                 id=_MODEL_ID,
                 name=_MODEL_ID,
-                provider=ProviderName.OPENAI,
+                provider=provider_ids.OPENAI,
                 context_window=_CONTEXT_WINDOW,
                 supports_tools=True,
                 supports_vision=False,
@@ -553,7 +553,7 @@ async def test_process_user_input_dispatches_real_tool_call_to_real_bridge(
     orch.set_tool_call_callback(captured_calls.append)
     orch.set_tool_result_callback(captured_results.append)
 
-    session = await orch.start_session(provider=ProviderName.OPENAI, model=_MODEL_ID)
+    session = await orch.start_session(provider=provider_ids.OPENAI, model=_MODEL_ID)
 
     await orch.process_user_input("inspect the binary and list its imports")
 
@@ -602,7 +602,7 @@ async def test_add_binary_parses_real_pe_and_persists_session(
     bridge_summaries: list[BridgeAnalysisSummary] = []
     orch.set_bridge_analysis_callback(bridge_summaries.append)
 
-    session = await orch.start_session(provider=ProviderName.OPENAI, model=_MODEL_ID)
+    session = await orch.start_session(provider=provider_ids.OPENAI, model=_MODEL_ID)
 
     binary_info = await orch.add_binary(real_pe_dll, run_bridge_analysis=True)
 
@@ -649,7 +649,7 @@ async def test_start_session_with_binary_path_loads_real_elf(
     orch, _session_manager = _build_orchestrator(tmp_path, provider=provider)
 
     session = await orch.start_session(
-        provider=ProviderName.OPENAI,
+        provider=provider_ids.OPENAI,
         model=_MODEL_ID,
         binary_path=real_elf_binary,
         name="ELF analysis",
@@ -685,7 +685,7 @@ async def test_session_add_binary_and_message_roundtrip_through_store(
     store = SessionStore(db_path=tmp_path / "sessions.db")
     manager = SessionManager(store=store, auto_save=False)
 
-    session = await manager.create(provider=ProviderName.OPENAI, model=_MODEL_ID)
+    session = await manager.create(provider=provider_ids.OPENAI, model=_MODEL_ID)
 
     info = _parse_real_binary(real_pe_exe)
     session.add_binary(info)
@@ -728,7 +728,7 @@ async def test_message_callback_fires_for_user_and_assistant_messages(
     observed: list[Message] = []
     orch.set_message_callback(observed.append)
 
-    await orch.start_session(provider=ProviderName.OPENAI, model=_MODEL_ID)
+    await orch.start_session(provider=provider_ids.OPENAI, model=_MODEL_ID)
     await orch.process_user_input("inspect this binary")
 
     observed_pairs = [(msg.role, msg.content) for msg in observed]

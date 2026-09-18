@@ -23,11 +23,13 @@ import math
 import os
 import threading
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialField, EnvPersistAction
+from intellicrack.providers import ids as provider_ids
+from intellicrack.providers.capabilities import CapabilityOverride
 
 
 if TYPE_CHECKING:
@@ -40,8 +42,35 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 PROVIDER_SETTINGS_FILENAME: Final[str] = "providers.json"
-SETTINGS_SCHEMA_VERSION: Final[int] = 2
+SETTINGS_SCHEMA_VERSION: Final[int] = 3
+"""Schema version written into every provider section.
+
+Version 3 only *adds* the top-level ``instances`` section; every v2 key stays
+exactly where it was. A v2 build tests a section against its own floor of 2,
+which a v3 section clears, so it reads a v3 file as versioned and loses only
+the custom instances it could not have used anyway.
+"""
+
+VERSIONED_SCHEMA_FLOOR: Final[int] = 2
+"""The first schema version that stored ``null`` for the provider default.
+
+From this version on, every positive timeout a section holds was chosen
+deliberately. It is fixed history, not the current version: comparing against
+:data:`SETTINGS_SCHEMA_VERSION` instead would reclassify every section written
+by an older versioned build as pre-versioning legacy each time the schema
+advanced.
+"""
+
 SCHEMA_VERSION_KEY: Final[str] = "schema_version"
+MODEL_OVERRIDES_KEY: Final[str] = "model_overrides"
+"""Key holding a provider section's per-model capability overrides."""
+
+INSTANCES_KEY: Final[str] = "instances"
+"""Top-level key holding user-defined provider instances.
+
+It is a sibling of the per-provider sections rather than one of them, so it is
+excluded from provider-section reads by name.
+"""
 ENABLED_KEY: Final[str] = "enabled"
 TIMEOUT_SECONDS_KEY: Final[str] = "timeout_seconds"
 LEGACY_DEFAULT_TIMEOUT_SECONDS: Final[int] = 120
@@ -50,6 +79,32 @@ LEGACY_ENDPOINT_KEYS: Final[tuple[tuple[str, CredentialField], ...]] = (
     ("organization_id", CredentialField.ORGANIZATION_ID),
 )
 _NON_PERSISTED_KEYS: Final[frozenset[str]] = frozenset({"api_key", *(key for key, _ in LEGACY_ENDPOINT_KEYS)})
+
+
+def saved_model_overrides(section: Mapping[str, object]) -> dict[str, CapabilityOverride]:
+    """Read the per-model capability overrides a provider section stores.
+
+    This is the top layer of the capability merge: whatever the user stated
+    for a specific model, which wins over both the endpoint's own metadata and
+    the preset defaults. An entry that is not a JSON object is skipped rather
+    than rejected, so one damaged record cannot cost the user the rest.
+
+    Args:
+        section: The provider's section from ``providers.json``.
+
+    Returns:
+        dict[str, CapabilityOverride]: Overrides keyed by model id.
+    """
+    raw = section.get(MODEL_OVERRIDES_KEY)
+    if not isinstance(raw, dict):
+        return {}
+    overrides: dict[str, CapabilityOverride] = {}
+    for model_id, entry in cast("dict[str, object]", raw).items():
+        if isinstance(entry, dict):
+            overrides[model_id] = CapabilityOverride.from_mapping(cast("dict[str, Any]", entry))
+        else:
+            _logger.warning("model_override_not_an_object", model=model_id)
+    return overrides
 
 
 def coerce_timeout_seconds(value: object) -> float | None:
@@ -71,18 +126,18 @@ def coerce_timeout_seconds(value: object) -> float | None:
     return seconds
 
 
-def _uses_current_schema(section: Mapping[str, object]) -> bool:
-    """Report whether a provider section was written by the versioned schema.
+def _is_versioned_section(section: Mapping[str, object]) -> bool:
+    """Report whether a provider section was written by any versioned schema.
 
     Args:
         section: One provider's saved settings.
 
     Returns:
         bool: True when the section carries a schema version of at least
-        :data:`SETTINGS_SCHEMA_VERSION`.
+        :data:`VERSIONED_SCHEMA_FLOOR`.
     """
     version = section.get(SCHEMA_VERSION_KEY)
-    return isinstance(version, int) and not isinstance(version, bool) and version >= SETTINGS_SCHEMA_VERSION
+    return isinstance(version, int) and not isinstance(version, bool) and version >= VERSIONED_SCHEMA_FLOOR
 
 
 def saved_timeout_seconds(section: Mapping[str, object]) -> float | None:
@@ -103,7 +158,7 @@ def saved_timeout_seconds(section: Mapping[str, object]) -> float | None:
     timeout = coerce_timeout_seconds(section.get(TIMEOUT_SECONDS_KEY))
     if timeout is None:
         return None
-    if timeout == LEGACY_DEFAULT_TIMEOUT_SECONDS and not _uses_current_schema(section):
+    if timeout == LEGACY_DEFAULT_TIMEOUT_SECONDS and not _is_versioned_section(section):
         return None
     return timeout
 
@@ -139,11 +194,11 @@ def build_settings_section(values: Mapping[str, object]) -> dict[str, object]:
     return section
 
 
-def _empty_timeouts() -> dict[ProviderName, float]:
+def _empty_timeouts() -> dict[str, float]:
     """Create an empty timeout mapping for :class:`ProviderConnectPolicy`.
 
     Returns:
-        dict[ProviderName, float]: A new empty mapping.
+        dict[str, float]: A new empty mapping.
     """
     return {}
 
@@ -157,10 +212,10 @@ class ProviderConnectPolicy:
         timeouts: Request timeout overrides in seconds, keyed by provider.
     """
 
-    disabled: frozenset[ProviderName] = frozenset()
-    timeouts: Mapping[ProviderName, float] = field(default_factory=_empty_timeouts)
+    disabled: frozenset[str] = frozenset()
+    timeouts: Mapping[str, float] = field(default_factory=_empty_timeouts)
 
-    def is_enabled(self, provider: ProviderName) -> bool:
+    def is_enabled(self, provider: str) -> bool:
         """Report whether a provider may be connected automatically.
 
         Args:
@@ -171,7 +226,7 @@ class ProviderConnectPolicy:
         """
         return provider not in self.disabled
 
-    def timeout_for(self, provider: ProviderName) -> float | None:
+    def timeout_for(self, provider: str) -> float | None:
         """Return a provider's saved request timeout.
 
         Args:
@@ -182,7 +237,7 @@ class ProviderConnectPolicy:
         """
         return self.timeouts.get(provider)
 
-    def apply_timeout(self, provider: ProviderName, credentials: ProviderCredentials) -> ProviderCredentials:
+    def apply_timeout(self, provider: str, credentials: ProviderCredentials) -> ProviderCredentials:
         """Return credentials carrying the provider's saved request timeout.
 
         Args:
@@ -257,9 +312,92 @@ class ProviderSettingsStore:
 
         sections: dict[str, dict[str, object]] = {}
         for provider_id, section in cast("dict[str, object]", payload).items():
+            if provider_id == INSTANCES_KEY:
+                continue
             if isinstance(section, dict):
                 sections[provider_id] = cast("dict[str, object]", section)
         return sections
+
+    def _load_raw(self) -> dict[str, object]:
+        """Load the whole settings file, including non-provider sections.
+
+        Returns:
+            dict[str, object]: The decoded file, or an empty mapping when it
+            is missing, unreadable or malformed.
+        """
+        try:
+            text = self._path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return {}
+        except OSError as exc:
+            _logger.warning("provider_settings_read_failed", path=str(self._path), error=str(exc))
+            return {}
+        try:
+            payload: object = json.loads(text)
+        except json.JSONDecodeError as exc:
+            _logger.warning("provider_settings_parse_failed", path=str(self._path), error=str(exc))
+            return {}
+        return cast("dict[str, object]", payload) if isinstance(payload, dict) else {}
+
+    def load_instances(self) -> dict[str, dict[str, object]]:
+        """Load every saved provider instance.
+
+        Returns:
+            dict[str, dict[str, object]]: Instance records keyed by instance
+            id. Entries that are not JSON objects are skipped, so one damaged
+            record cannot cost the user the rest.
+        """
+        raw = self._load_raw().get(INSTANCES_KEY)
+        if not isinstance(raw, dict):
+            return {}
+        instances: dict[str, dict[str, object]] = {}
+        for instance_id, record in cast("dict[str, object]", raw).items():
+            if isinstance(record, dict):
+                instances[instance_id] = cast("dict[str, object]", record)
+            else:
+                _logger.warning("provider_instance_record_not_an_object", instance_id=instance_id)
+        return instances
+
+    def write_instance(self, instance_id: str, record: Mapping[str, object]) -> None:
+        """Store one provider instance, preserving every other section.
+
+        Args:
+            instance_id: The instance's id.
+            record: The complete instance record to store. It must never
+                contain a secret; keys live in the credential store. An
+                ``OSError`` from writing the file propagates to the caller and
+                leaves the previous file intact.
+        """
+        with self._lock:
+            payload = self._load_raw()
+            raw = payload.get(INSTANCES_KEY)
+            instances: dict[str, object] = cast("dict[str, object]", raw) if isinstance(raw, dict) else {}
+            instances[instance_id] = dict(record)
+            payload[INSTANCES_KEY] = instances
+            self._write_payload(payload)
+
+    def delete_instance(self, instance_id: str) -> bool:
+        """Remove one saved provider instance.
+
+        Args:
+            instance_id: The instance's id.
+
+        Returns:
+            bool: ``True`` when a record was removed. An ``OSError`` from
+            writing the file propagates to the caller and leaves the previous
+            file intact.
+        """
+        with self._lock:
+            payload = self._load_raw()
+            raw = payload.get(INSTANCES_KEY)
+            if not isinstance(raw, dict):
+                return False
+            instances: dict[str, object] = cast("dict[str, object]", raw)
+            if instances.pop(instance_id, None) is None:
+                return False
+            payload[INSTANCES_KEY] = instances
+            self._write_payload(payload)
+            return True
 
     def section(self, provider_id: str) -> dict[str, object]:
         """Return one provider's saved section.
@@ -283,11 +421,11 @@ class ProviderSettingsStore:
             section: The complete section to store.
         """
         with self._lock:
-            sections = self.load()
-            sections[provider_id] = dict(section)
-            self._write(sections)
+            payload = self._load_raw()
+            payload[provider_id] = dict(section)
+            self._write_payload(payload)
 
-    def timeout_seconds(self, provider: ProviderName) -> float | None:
+    def timeout_seconds(self, provider: str) -> float | None:
         """Return a provider's saved request timeout.
 
         Args:
@@ -296,9 +434,9 @@ class ProviderSettingsStore:
         Returns:
             float | None: The timeout in seconds, or ``None`` for the provider default.
         """
-        return saved_timeout_seconds(self.section(provider.value))
+        return saved_timeout_seconds(self.section(provider))
 
-    def connect_policy(self, config_enabled: Callable[[ProviderName], bool] | None = None) -> ProviderConnectPolicy:
+    def connect_policy(self, config_enabled: Callable[[str], bool] | None = None) -> ProviderConnectPolicy:
         """Build the automatic-connection policy from the saved settings.
 
         Args:
@@ -310,10 +448,10 @@ class ProviderSettingsStore:
             ProviderConnectPolicy: The disabled providers and timeout overrides.
         """
         sections = self.load()
-        disabled: set[ProviderName] = set()
-        timeouts: dict[ProviderName, float] = {}
-        for provider in ProviderName:
-            section = sections.get(provider.value, {})
+        disabled: set[str] = set()
+        timeouts: dict[str, float] = {}
+        for provider in provider_ids.BUILTIN_PROVIDER_IDS:
+            section = sections.get(provider, {})
             if not saved_enabled(section) or (config_enabled is not None and not config_enabled(provider)):
                 disabled.add(provider)
             timeout = saved_timeout_seconds(section)
@@ -347,10 +485,9 @@ class ProviderSettingsStore:
             retained: list[str] = []
             changed = False
             for provider_id, section in sections.items():
-                try:
-                    provider = ProviderName(provider_id)
-                except ValueError:
+                if not provider_ids.is_valid_provider_id(provider_id):
                     continue
+                provider = provider_ids.normalize_provider_id(provider_id)
                 section_imported, section_retained, section_changed = self._migrate_section(loader, provider, section)
                 imported.extend(section_imported)
                 retained.extend(section_retained)
@@ -377,7 +514,7 @@ class ProviderSettingsStore:
     @staticmethod
     def _migrate_section(
         loader: CredentialLoader,
-        provider: ProviderName,
+        provider: str,
         section: dict[str, object],
     ) -> tuple[list[str], list[str], bool]:
         """Migrate one provider section's legacy endpoint fields, mutating it.
@@ -407,11 +544,11 @@ class ProviderSettingsStore:
                 except OSError as exc:
                     _logger.warning(
                         "provider_settings_endpoint_import_failed",
-                        provider=provider.value,
+                        provider=provider,
                         variable=env_var,
                         error=str(exc),
                     )
-                    retained.append(f"{provider.value}.{json_key}")
+                    retained.append(f"{provider}.{json_key}")
                     continue
                 if action is EnvPersistAction.WRITTEN:
                     imported.append(env_var)
@@ -420,10 +557,24 @@ class ProviderSettingsStore:
         return imported, retained, changed
 
     def _write(self, sections: Mapping[str, Mapping[str, object]]) -> None:
-        """Atomically replace the settings file.
+        """Atomically replace the provider sections, preserving other sections.
 
         Args:
-            sections: Every provider section to store.
+            sections: Every provider section to store. An ``OSError`` from
+                writing the file propagates to the caller and leaves the
+                previous file intact.
+        """
+        payload = self._load_raw()
+        for key in [name for name in payload if name != INSTANCES_KEY]:
+            del payload[key]
+        payload.update({name: dict(section) for name, section in sections.items()})
+        self._write_payload(payload)
+
+    def _write_payload(self, payload: Mapping[str, object]) -> None:
+        """Atomically replace the whole settings file.
+
+        Args:
+            payload: The complete file contents to store.
 
         Raises:
             OSError: If the file cannot be written or moved into place.
@@ -431,7 +582,7 @@ class ProviderSettingsStore:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self._path.with_name(f"{self._path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
         try:
-            temporary.write_text(json.dumps(sections, indent=2), encoding="utf-8")
+            temporary.write_text(json.dumps(payload, indent=2), encoding="utf-8")
             temporary.replace(self._path)
         except OSError:
             with contextlib.suppress(OSError):
@@ -441,7 +592,7 @@ class ProviderSettingsStore:
 
 
 def resolve_session_credentials(
-    provider: ProviderName,
+    provider: str,
     stored: ProviderCredentials | None,
     *,
     loader: CredentialLoader,

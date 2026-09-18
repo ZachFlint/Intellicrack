@@ -28,7 +28,6 @@ from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
-    ProviderName,
     ToolCall,
 )
 from intellicrack.providers.base import LLMProviderBase
@@ -40,6 +39,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Mapping, Sequence
 
     from intellicrack.core.types import ThinkingConfig, ToolChoice, ToolDefinition
+from intellicrack.providers import ids as provider_ids
 
 
 class _RaisingProvider(LLMProviderBase):
@@ -53,7 +53,7 @@ class _RaisingProvider(LLMProviderBase):
     BaseException branch of the per-result loop in ``discover_all``.
     """
 
-    def __init__(self, provider_name: ProviderName, error: BaseException) -> None:
+    def __init__(self, provider_name: str, error: BaseException) -> None:
         """Initialize the provider with an enum name and a failure to raise.
 
         Args:
@@ -67,11 +67,11 @@ class _RaisingProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The provider's enum name.
 
         Returns:
-            ProviderName: The configured provider name.
+            str: The configured provider name.
         """
         return self._name
 
@@ -198,7 +198,7 @@ class _SuccessfulProvider(LLMProviderBase):
 
     def __init__(
         self,
-        provider_name: ProviderName,
+        provider_name: str,
         models: list[ModelInfo],
     ) -> None:
         """Initialize the provider with a name and model list.
@@ -214,11 +214,11 @@ class _SuccessfulProvider(LLMProviderBase):
 
     @property
     @override
-    def name(self) -> ProviderName:
+    def name(self) -> str:
         """The provider's enum name.
 
         Returns:
-            ProviderName: The configured provider name.
+            str: The configured provider name.
         """
         return self._name
 
@@ -337,7 +337,7 @@ class _SuccessfulProvider(LLMProviderBase):
         return []
 
 
-def _make_model(provider: ProviderName, model_id: str) -> ModelInfo:
+def _make_model(provider: str, model_id: str) -> ModelInfo:
     """Build a minimal :class:`ModelInfo` with deterministic capabilities.
 
     Args:
@@ -397,21 +397,21 @@ class TestF0021DiscoverAllInvalidatesCacheOnException:
         """
         registry = ProviderRegistry()
         provider = _RaisingProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             error=AttributeError("simulated unexpected attribute access"),
         )
         registry.register(provider)
 
         discovery = ModelDiscovery(registry, cache_ttl=3600)
 
-        seeded_models = [_make_model(ProviderName.OPENAI, "gpt-stale")]
-        await discovery.cache.aset(ProviderName.OPENAI, seeded_models)
-        assert await discovery.cache.aget(ProviderName.OPENAI) is not None
+        seeded_models = [_make_model(provider_ids.OPENAI, "gpt-stale")]
+        await discovery.cache.aset(provider_ids.OPENAI, seeded_models)
+        assert await discovery.cache.aget(provider_ids.OPENAI) is not None
 
         results = await discovery.discover_all(use_cache=False)
 
         assert results == {}
-        assert await discovery.cache.aget(ProviderName.OPENAI) is None
+        assert await discovery.cache.aget(provider_ids.OPENAI) is None
 
     @pytest.mark.asyncio
     @staticmethod
@@ -425,21 +425,21 @@ class TestF0021DiscoverAllInvalidatesCacheOnException:
         """
         registry = ProviderRegistry()
         provider = _RaisingProvider(
-            ProviderName.OPENAI,
+            provider_ids.OPENAI,
             error=TypeError("simulated type mismatch"),
         )
         registry.register(provider)
 
         discovery = ModelDiscovery(registry, cache_ttl=3600)
 
-        seeded_models = [_make_model(ProviderName.OPENAI, "gpt-pre-existing")]
-        await discovery.cache.aset(ProviderName.OPENAI, seeded_models)
-        assert await discovery.cache.aget(ProviderName.OPENAI) is not None
+        seeded_models = [_make_model(provider_ids.OPENAI, "gpt-pre-existing")]
+        await discovery.cache.aset(provider_ids.OPENAI, seeded_models)
+        assert await discovery.cache.aget(provider_ids.OPENAI) is not None
 
         results = await discovery.discover_all(use_cache=False)
 
         assert results == {}
-        assert await discovery.cache.aget(ProviderName.OPENAI) is None
+        assert await discovery.cache.aget(provider_ids.OPENAI) is None
 
     @pytest.mark.asyncio
     @staticmethod
@@ -451,15 +451,15 @@ class TestF0021DiscoverAllInvalidatesCacheOnException:
         """
         registry = ProviderRegistry()
         provider = _RaisingProvider(
-            ProviderName.ANTHROPIC,
+            provider_ids.ANTHROPIC,
             error=AttributeError("simulated"),
         )
         registry.register(provider)
 
         discovery = ModelDiscovery(registry, cache_ttl=3600)
         await discovery.cache.aset(
-            ProviderName.ANTHROPIC,
-            [_make_model(ProviderName.ANTHROPIC, "claude-stale")],
+            provider_ids.ANTHROPIC,
+            [_make_model(provider_ids.ANTHROPIC, "claude-stale")],
         )
 
         with capture_logs() as records:
@@ -473,7 +473,7 @@ class TestF0021DiscoverAllInvalidatesCacheOnException:
         matching = [rec for rec in records if rec.get("event") == "discovery_task_exception"]
         assert matching, "discovery_task_exception event must be emitted"
         record = matching[0]
-        assert record.get("provider") == ProviderName.ANTHROPIC.value
+        assert record.get("provider") == provider_ids.ANTHROPIC
         assert "simulated" in str(record.get("error", ""))
 
     @pytest.mark.asyncio
@@ -487,11 +487,11 @@ class TestF0021DiscoverAllInvalidatesCacheOnException:
         """
         registry = ProviderRegistry()
         good_provider = _SuccessfulProvider(
-            ProviderName.OPENAI,
-            models=[_make_model(ProviderName.OPENAI, "gpt-good")],
+            provider_ids.OPENAI,
+            models=[_make_model(provider_ids.OPENAI, "gpt-good")],
         )
         bad_provider = _RaisingProvider(
-            ProviderName.ANTHROPIC,
+            provider_ids.ANTHROPIC,
             error=AttributeError("boom"),
         )
         registry.register(good_provider)
@@ -499,12 +499,12 @@ class TestF0021DiscoverAllInvalidatesCacheOnException:
 
         discovery = ModelDiscovery(registry, cache_ttl=3600)
         await discovery.cache.aset(
-            ProviderName.ANTHROPIC,
-            [_make_model(ProviderName.ANTHROPIC, "claude-stale")],
+            provider_ids.ANTHROPIC,
+            [_make_model(provider_ids.ANTHROPIC, "claude-stale")],
         )
 
         results = await discovery.discover_all(use_cache=False)
 
-        assert set(results.keys()) == {ProviderName.OPENAI}
-        assert [m.id for m in results[ProviderName.OPENAI]] == ["gpt-good"]
-        assert await discovery.cache.aget(ProviderName.ANTHROPIC) is None
+        assert set(results.keys()) == {provider_ids.OPENAI}
+        assert [m.id for m in results[provider_ids.OPENAI]] == ["gpt-good"]
+        assert await discovery.cache.aget(provider_ids.ANTHROPIC) is None
