@@ -291,6 +291,10 @@ def describe_tool_result_part(part: ToolResultPart) -> str:
     return json.dumps(part.content, sort_keys=True)
 
 
+_TOOL_ERROR_PREFIX: Final[str] = "Tool call failed: "
+"""Prefix marking a failed tool result on dialects with no native error flag."""
+
+
 def render_parts_as_text(parts: Iterable[ToolResultPart]) -> str:
     """Join every part's deterministic description into one text block.
 
@@ -310,9 +314,14 @@ def tool_result_text(result: ToolResult) -> str:
     Multi-part content wins when present, because an externally-sourced tool
     that supplied parts described its own output more precisely than the
     legacy ``result`` value can. Bridge results, which carry no parts, fall
-    through to ``result`` exactly as before -- including on failure, where the
-    failure travels as the dialect's own error signal rather than by replacing
-    the result text.
+    through to ``result``.
+
+    A failure carries its message in the text. Only Anthropic has a native
+    error signal, so on every other dialect a failed call whose ``result`` is
+    ``None`` would otherwise reach the model as the literal ``null`` -- it
+    would learn that the call produced nothing, but not that it failed or
+    why, and would have nothing to act on but a retry. Anthropic gets the
+    message too, alongside its ``is_error`` flag.
 
     Args:
         result: The tool result to render.
@@ -322,6 +331,10 @@ def tool_result_text(result: ToolResult) -> str:
     """
     if result.content:
         return render_parts_as_text(result.content)
+    if not result.success and result.error:
+        if result.result is None:
+            return f"{_TOOL_ERROR_PREFIX}{result.error}"
+        return f"{_TOOL_ERROR_PREFIX}{result.error}\n\n{serialize_tool_result(result.result)}"
     return serialize_tool_result(result.result)
 
 

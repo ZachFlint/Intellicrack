@@ -128,7 +128,7 @@ def _build_text_tool() -> ToolDefinition:
         ],
         returns="The literal string 'pong'.",
     )
-    return ToolDefinition(tool_name=ToolName.PROCESS, description="Audit fixture tool.", functions=[func])
+    return ToolDefinition(tool_name=ToolName.PROCESS.value, description="Audit fixture tool.", functions=[func])
 
 
 def _user_messages(text: str = "Hello, world.") -> list[Message]:

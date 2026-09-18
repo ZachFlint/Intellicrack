@@ -330,7 +330,7 @@ class TestProviderListing:
         configured = set(credential_loader.list_configured_providers())
         missing = set(credential_loader.list_missing_providers())
 
-        all_providers = provider_ids.BUILTIN_PROVIDER_IDS
+        all_providers = set(provider_ids.BUILTIN_PROVIDER_IDS)
         covered = configured.union(missing)
 
         assert covered == all_providers, (
