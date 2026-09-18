@@ -212,7 +212,7 @@ class McpElicitationDialog(QDialog):
             if index >= _MAX_FIELDS:
                 form.addRow(QLabel(f"[{len(properties) - _MAX_FIELDS} further field(s) not shown]"))
                 break
-            if not isinstance(name, str) or not is_json_object(definition):
+            if not is_json_object(definition):
                 continue
             editor = self._build_editor(definition)
             self._editors[name] = editor

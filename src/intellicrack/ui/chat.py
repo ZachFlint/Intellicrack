@@ -36,7 +36,6 @@ from intellicrack.core.types import (
     ImageResultPart,
     Message,
     ResourceLinkPart,
-    StructuredResultPart,
     TextResultPart,
     ToolCall,
     ToolResult,
@@ -354,10 +353,8 @@ class MessageBubble(QFrame):
             text = f"[resource] {part.name or part.uri}: {part.uri}"
         elif isinstance(part, EmbeddedResourcePart):
             text = part.text if part.text is not None else f"[embedded resource {part.uri}, not shown]"
-        elif isinstance(part, StructuredResultPart):
-            text = f"[structured output] {part.content}"
         else:
-            text = str(part)
+            text = f"[structured output] {part.content}"
 
         label = QLabel(text if len(text) <= _MAX_PART_DISPLAY_LEN else f"{text[: _MAX_PART_DISPLAY_LEN - 3]}...")
         label.setObjectName("tool_result_part")

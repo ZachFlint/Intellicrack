@@ -21,7 +21,7 @@ easily outlive the operator's patience with the window.
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Any, Final, override
+from typing import TYPE_CHECKING, Any, Final, TypeGuard, override
 
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -1275,10 +1275,10 @@ class McpConfigDialog(QDialog):
                 result: The :class:`McpServerStatus` the probe produced.
             """
             self._test_button.setEnabled(True)
-            status = result if _is_status(result) else None
-            if status is None:
+            if not _is_status(result):
                 show_warning(self, "Test connection", "The server did not report a usable status.")
                 return
+            status = result
             if status.health is McpHealth.READY:
                 show_info(
                     self,
@@ -1451,13 +1451,16 @@ class McpConfigDialog(QDialog):
         super().closeEvent(a0)
 
 
-def _is_status(value: object) -> bool:
-    """Report whether a worker result is a server status.
+def _is_status(value: object) -> TypeGuard[McpServerStatus]:
+    """Narrow a worker result to a server status.
+
+    A worker delivers its result as a plain object, so the type has to be
+    re-established on arrival rather than assumed.
 
     Args:
         value: The value the worker produced.
 
     Returns:
-        bool: ``True`` when it carries the fields a status carries.
+        TypeGuard[McpServerStatus]: ``True`` when the value is a status.
     """
-    return all(hasattr(value, name) for name in ("server_id", "health", "tool_count", "last_error"))
+    return isinstance(value, McpServerStatus)
