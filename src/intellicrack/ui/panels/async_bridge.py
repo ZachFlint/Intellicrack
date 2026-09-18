@@ -19,6 +19,7 @@ from concurrent.futures import (
 )
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload, override
 
+from PyQt6 import sip
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from intellicrack.core.logging import get_logger
@@ -29,6 +30,7 @@ __all__ = [
     "WORKER_DEFAULT_EXCEPTIONS",
     "BridgeCallWorker",
     "GenericCallableWorker",
+    "bridge_workers_for",
     "cancel_pending_main_loop_tasks",
     "discard_worker",
     "drain_bridge_workers",
@@ -138,7 +140,32 @@ class _RetainedWorker(QThread):
     Subclasses are retained in :class:`_WorkerRegistry` for the lifetime of their OS thread, preventing the ``QThread: Destroyed while
     thread is still running`` abort that occurs when an unparented worker's only Python reference goes out of scope while the thread is
     still executing.
+
+    A worker may additionally record the widget that dispatched it as its *owner*. The owner is deliberately not the worker's Qt parent:
+    Qt destroys a parent's children along with it, and destroying a ``QThread`` whose OS thread is still running aborts the process with a
+    native access violation and no Python traceback. Recording the owner separately keeps :func:`drain_bridge_workers_for` able to find a
+    widget's in-flight workers without handing that widget the power to delete them mid-flight.
     """
+
+    def __init__(self, parent: QObject | None = None, *, owner: QObject | None = None) -> None:
+        """Initialise the worker with an optional Qt parent and owning widget.
+
+        Args:
+            parent: Qt parent for ownership and cleanup. Leave it ``None`` for any worker that may still be running when the widget that
+                started it is destroyed.
+            owner: Widget that dispatched this worker, recorded for scoped draining and delivery guards only. It is never used as a Qt
+                parent, so it cannot destroy the worker.
+        """
+        super().__init__(parent)
+        self._owner: QObject | None = owner
+
+    def owner(self) -> QObject | None:
+        """Return the widget recorded as this worker's owner.
+
+        Returns:
+            QObject | None: The owning object passed at construction, or ``None`` for a worker dispatched without one.
+        """
+        return self._owner
 
     @override
     def start(self, priority: QThread.Priority = QThread.Priority.InheritPriority) -> None:
@@ -263,14 +290,18 @@ class BridgeCallWorker(_RetainedWorker):
         self,
         coro: Coroutine[object, object, object],
         parent: QObject | None = None,
+        *,
+        owner: QObject | None = None,
     ) -> None:
         """Initialize the AsyncBridgeWorker with the given coroutine.
 
         Args:
             coro: Coroutine to execute on the persistent event loop.
-            parent: Parent QObject.
+            parent: Parent QObject. Dispatch sites leave this ``None`` so that closing the calling widget cannot destroy a thread that is
+                still running its coroutine.
+            owner: Widget that dispatched the call, recorded for scoped draining without becoming the worker's Qt parent.
         """
-        super().__init__(parent)
+        super().__init__(parent, owner=owner)
         self._coro: Coroutine[object, object, object] = coro
         _: object = self.finished.connect(self.deleteLater)
 
@@ -557,6 +588,45 @@ def cancel_pending_main_loop_tasks() -> int:
     return cancelled
 
 
+def _delivery_slot(
+    callback: Callable[[object], None],
+    owner: QObject | None,
+    kind: Literal["success", "error"],
+) -> Callable[[object], None]:
+    """Wrap ``callback`` so a late result never reaches a destroyed ``owner``.
+
+    A bridge worker outlives the widget that dispatched it (see :func:`run_bridge_coroutine_async`), so its result can arrive after that
+    widget's C++ object is gone: the panel was closed, the tab detached, or the dialog dismissed while the call was still in flight.
+    Invoking the caller's callback then raises ``RuntimeError: wrapped C/C++ object ... has been deleted`` out of a Qt slot, the same class
+    of late-callback crash the Cutter tabs and the log viewer already guard with ``sip.isdeleted``. The check runs at delivery time rather
+    than at dispatch because the owner can die at any point while the coroutine runs. Holding ``owner`` in the closure for as long as the
+    connection lives is what keeps ``sip.isdeleted`` answerable, instead of a probe against a garbage-collected wrapper.
+
+    Args:
+        callback: Caller-supplied success or error callback.
+        owner: Widget whose lifetime bounds delivery, or ``None`` to deliver unconditionally.
+        kind: Which delivery this wraps, recorded on the drop log entry.
+
+    Returns:
+        Callable[[object], None]: ``callback`` itself when there is no owner to outlive, otherwise a guarded wrapper around it.
+    """
+    if owner is None:
+        return callback
+
+    def _deliver(payload: object) -> None:
+        """Invoke the wrapped callback unless the owner has already been deleted.
+
+        Args:
+            payload: Result object or exception emitted by the bridge worker.
+        """
+        if sip.isdeleted(owner):
+            _logger.debug("bridge_result_dropped", delivery=kind, owner_type=type(owner).__name__)
+            return
+        callback(payload)
+
+    return _deliver
+
+
 def run_bridge_coroutine_async(
     coro: Coroutine[object, object, object],
     on_success: Callable[[object], None] | None = None,
@@ -569,17 +639,24 @@ def run_bridge_coroutine_async(
     persistent background event loop.  Results and errors are delivered
     via Qt signals back to the main thread.
 
+    ``parent`` is the delivery context, not the worker's Qt parent. Parenting the worker to the caller made Qt delete a running
+    ``QThread`` along with that caller - which is what closing a panel or dialog mid-call does - and Qt answers that with a native access
+    violation that takes the whole process down with no Python traceback. The worker is therefore dispatched unparented and pinned in
+    :class:`_WorkerRegistry` until its OS thread finishes, with ``parent`` recorded as its owner so :func:`drain_bridge_workers_for` still
+    finds it and so :func:`_delivery_slot` can drop a result that arrives once ``parent`` is gone.
+
     Args:
         coro: Coroutine to execute.
         on_success: Callback invoked on the main thread with the result.
         on_error: Callback invoked on the main thread with the exception.
-        parent: Parent QObject for worker lifecycle management.
+        parent: Widget whose lifetime bounds callback delivery and whose :func:`drain_bridge_workers_for` calls should find this worker.
+            ``None`` delivers unconditionally, which is what a non-widget caller (a bridge dispatch, a unit test) wants.
     """
-    worker = BridgeCallWorker(coro, parent)
+    worker = BridgeCallWorker(coro, owner=parent)
     if on_success is not None:
-        _ = worker.call_finished.connect(on_success)
+        _ = worker.call_finished.connect(_delivery_slot(on_success, parent, "success"))
     if on_error is not None:
-        _ = worker.call_error.connect(on_error)
+        _ = worker.call_error.connect(_delivery_slot(on_error, parent, "error"))
     worker.start()
 
 
@@ -607,7 +684,9 @@ def run_bridge_coroutine_logged(
         coro: Bridge coroutine to execute.
         on_success: Optional caller success callback invoked after the success log.
         on_error: Optional caller error callback invoked after the failure log.
-        parent: Qt parent for worker lifetime management.
+        parent: Widget whose lifetime bounds delivery, forwarded to :func:`run_bridge_coroutine_async`. It is not the worker's Qt parent;
+            once its C++ object is deleted the whole delivery is dropped, success and failure log entries included, and the drop is logged
+            instead.
         event: Snake-case base event name (e.g. ``"ghidra_rename_function"``).
             ``_started``/``_succeeded``/``_failed`` are appended automatically.
         logger: Caller's module-level ``BoundLogger`` to emit on.
@@ -680,63 +759,93 @@ def drain_bridge_workers(timeout_ms: int = _WORKER_DRAIN_TIMEOUT_MS) -> int:
     return drained
 
 
-def _worker_has_ancestor(worker: QThread, root: QObject) -> bool:
-    """Report whether ``root`` appears anywhere in ``worker``'s Qt parent chain.
+def _object_chain_contains(node: QObject | None, root: QObject) -> bool:
+    """Report whether ``root`` appears anywhere in ``node``'s Qt parent chain.
 
-    Walks ``worker.parent()`` upward comparing each node identity against
-    ``root``. A worker started with ``parent=root`` (or parented to any widget
-    nested inside ``root``, such as a tab reparented into a ``QTabWidget``)
-    resolves to ``True``. If the underlying C++ object of any node has already
-    been destroyed the sip wrapper raises ``RuntimeError``; that is treated as
-    "not a descendant" so a partially torn-down worker is simply skipped.
+    Walks ``node.parent()`` upward comparing each node identity against ``root``. ``node`` itself counts as a match, so an owner whose C++
+    object has already been destroyed still matches itself without any C++ access at all. If a node further up the chain has been
+    destroyed the sip wrapper raises ``RuntimeError``; that is treated as "not a descendant" so a partially torn-down chain is skipped
+    rather than propagated.
 
     Args:
-        worker: The retained worker thread whose ancestry is inspected.
+        node: Object to walk upward from, or ``None`` when there is no chain.
         root: The candidate ancestor object.
 
     Returns:
-        bool: True if ``root`` is ``worker`` itself or one of its Qt ancestors.
+        bool: True if ``root`` is ``node`` itself or one of its Qt ancestors.
     """
     try:
-        node: QObject | None = worker
-        while node is not None:
-            if node is root:
+        current = node
+        while current is not None:
+            if current is root:
                 return True
-            node = node.parent()
+            current = current.parent()
     except RuntimeError:
         return False
     return False
 
 
-def drain_bridge_workers_for(root: QObject, timeout_ms: int = _WORKER_DRAIN_TIMEOUT_MS) -> int:
-    """Block until every retained worker parented under ``root`` has finished.
+def _worker_is_owned_by(worker: QThread, root: QObject) -> bool:
+    """Report whether ``root`` owns ``worker`` by Qt parentage or recorded ownership.
 
-    A scoped counterpart to :func:`drain_bridge_workers`: it waits only for the
-    worker threads whose Qt parent chain includes ``root`` (see
-    :func:`_worker_has_ancestor`), leaving workers owned by unrelated widgets
-    untouched. This is what a panel calls when it is being closed or torn down:
-    its own in-flight refresh / architecture / privilege coroutines are joined so
-    their result callbacks cannot fire against a half-destroyed panel and, more
-    importantly, so the still-running child ``QThread`` objects are not destroyed
-    mid-flight when Qt deletes the panel subtree (which would abort the process
-    with ``QThread: Destroyed while thread is still running``). Draining globally
-    instead would join and flush callbacks for workers belonging to entirely
-    different widgets, which can resurrect their side effects at the wrong time.
+    Two ownership routes are recognised. A worker built with a Qt parent - the ``GenericCallableWorker`` sites in the hex editor, for
+    instance, or a worker parented to a tab nested inside ``root`` - matches through its own parent chain. A worker dispatched by
+    :func:`run_bridge_coroutine_async` is deliberately unparented, because Qt would otherwise destroy the running thread along with the
+    widget, so it carries that widget as its recorded owner instead and the owner's parent chain is matched the same way. A worker with
+    neither belongs to no widget and is left to the global :func:`drain_bridge_workers`.
 
     Args:
-        root: The widget whose owned worker subtree should be joined.
-        timeout_ms: Maximum number of milliseconds to wait for each individual
-            worker thread to finish before moving on to the next one.
+        worker: The retained worker thread whose ownership is inspected.
+        root: The candidate owner.
+
+    Returns:
+        bool: True when ``root`` owns ``worker`` through either route.
+    """
+    if _object_chain_contains(worker, root):
+        return True
+    owner = worker.owner() if isinstance(worker, _RetainedWorker) else None
+    return _object_chain_contains(owner, root)
+
+
+def bridge_workers_for(root: QObject) -> list[QThread]:
+    """Return every retained worker thread that ``root`` owns.
+
+    Args:
+        root: The widget whose in-flight (or finished but not yet reaped) workers are wanted.
+
+    Returns:
+        list[QThread]: The matching workers, in no particular order. The result is a snapshot: a worker in it can finish, and a new one
+            can be dispatched, immediately after it is taken.
+    """
+    with _WorkerRegistry.lock:
+        snapshot = list(_WorkerRegistry.workers)
+    return [worker for worker in snapshot if _worker_is_owned_by(worker, root)]
+
+
+def drain_bridge_workers_for(root: QObject, timeout_ms: int = _WORKER_DRAIN_TIMEOUT_MS) -> int:
+    """Block until every retained worker owned by ``root`` has finished.
+
+    A scoped counterpart to :func:`drain_bridge_workers`: it waits only for the workers ``root`` owns (see :func:`_worker_is_owned_by`),
+    leaving workers owned by unrelated widgets untouched. This is what a panel calls when it is being closed or torn down: its own
+    in-flight refresh / architecture / privilege coroutines are joined so their result callbacks cannot fire against a half-destroyed
+    panel that is still alive, and so the bridge handles those coroutines hold are released before the panel drops its bridge. Draining
+    globally instead would join and flush callbacks for workers belonging to entirely different widgets, which can resurrect their side
+    effects at the wrong time.
+
+    For bridge-call workers this is no longer what keeps Qt from destroying a running thread: they are unparented and pinned in the worker
+    registry (see :func:`run_bridge_coroutine_async`), and a result that outlives ``root`` entirely is dropped at delivery, so one that
+    outlasts the drain budget keeps running safely until :func:`drain_bridge_workers` joins it at shutdown or test teardown. Workers that
+    do carry a Qt parent still depend on this drain completing before that parent is destroyed.
+
+    Args:
+        root: The widget whose owned workers should be joined.
+        timeout_ms: Maximum number of milliseconds to wait for each individual worker thread to finish before moving on to the next one.
 
     Returns:
         int: The number of matching workers confirmed finished (or already gone).
     """
-    with _WorkerRegistry.lock:
-        snapshot = list(_WorkerRegistry.workers)
     drained = 0
-    for worker in snapshot:
-        if not _worker_has_ancestor(worker, root):
-            continue
+    for worker in bridge_workers_for(root):
         try:
             if not worker.isRunning() or worker.wait(timeout_ms):
                 drained += 1
