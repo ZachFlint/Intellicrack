@@ -59,10 +59,8 @@ _logger = get_logger(__name__)
 RESERVED_TOOL_NAMESPACES: frozenset[str] = frozenset(member.value for member in ToolName)
 """Namespaces owned by Intellicrack's own bridges.
 
-An externally-sourced tool may not claim one of these: the dispatch boundary
-resolves a namespace against the bridge registry first, so a tool calling
-itself ``ghidra`` would shadow the real Ghidra bridge rather than sit beside
-it.
+An externally-sourced tool may not claim one of these: the dispatch boundary resolves a namespace against the bridge registry first, so a
+tool calling itself ``ghidra`` would shadow the real Ghidra bridge rather than sit beside it.
 """
 
 

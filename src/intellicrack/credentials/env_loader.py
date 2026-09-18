@@ -76,16 +76,11 @@ class _OverlayRecord:
 class _EnvironmentOverlay:
     """Tracks process-environment variables overridden by ``.env`` entries.
 
-    :class:`CredentialLoader` copies parsed ``.env`` entries into
-    ``os.environ`` so provider SDKs that read their own variables observe the
-    same values. When a saved entry is later removed from ``.env``, the
-    variable must fall back to whatever the operating-system environment
-    supplied before the override, rather than keep the removed value or
-    disappear. The overlay records that pre-override value the first time a
-    variable is overridden, and re-bases the record whenever the environment
-    no longer holds the value the overlay last injected, so an out-of-band
-    change is never undone. Records are process-wide because several loader
-    instances can override the same variable.
+    :class:`CredentialLoader` copies parsed ``.env`` entries into ``os.environ`` so provider SDKs that read their own variables observe the
+    same values. When a saved entry is later removed from ``.env``, the variable must fall back to whatever the operating-system environment
+    supplied before the override, rather than keep the removed value or disappear. The overlay records that pre-override value the first
+    time a variable is overridden, and re-bases the record whenever the environment no longer holds the value the overlay last injected, so
+    an out-of-band change is never undone. Records are process-wide because several loader instances can override the same variable.
     """
 
     def __init__(self) -> None:
@@ -604,8 +599,8 @@ class CredentialLoader:
     def reload(self) -> None:
         """Reload credentials from the .env file.
 
-        Call this method to pick up changes to the .env file without restarting the application. Variables that were removed from the
-        file since the last load fall back to the value the operating-system environment supplied before the file overrode them.
+        Call this method to pick up changes to the .env file without restarting the application. Variables that were removed from the file
+        since the last load fall back to the value the operating-system environment supplied before the file overrode them.
         """
         _logger.debug("env_file_reloading", path=str(self.env_path))
         previous_names = set(self._env_vars)

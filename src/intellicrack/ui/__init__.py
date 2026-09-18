@@ -23,6 +23,10 @@ from intellicrack.ui.highlighter import (
     PythonSyntaxHighlighter,
     get_highlighter_for_language,
 )
+from intellicrack.ui.mcp_config import McpConfigDialog, McpInputPromptDialog, McpServerEditor, McpServerListModel, McpToolToggleView
+from intellicrack.ui.mcp_consent_dialog import McpServerConsentDialog
+from intellicrack.ui.mcp_elicitation_dialog import McpElicitationDialog
+from intellicrack.ui.mcp_service import McpService
 from intellicrack.ui.preferences import PreferencesDialog
 from intellicrack.ui.provider_config import (
     ModelSelectionDialog,
@@ -64,6 +68,14 @@ __all__: list[str] = [
     "IconManager",
     "JavaScriptSyntaxHighlighter",
     "MainWindow",
+    "McpConfigDialog",
+    "McpElicitationDialog",
+    "McpInputPromptDialog",
+    "McpServerConsentDialog",
+    "McpServerEditor",
+    "McpServerListModel",
+    "McpService",
+    "McpToolToggleView",
     "MessageBubble",
     "ModelSelectionDialog",
     "NewSessionDialog",

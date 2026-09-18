@@ -73,8 +73,7 @@ def _response_body_text(response: httpx.Response) -> str:
 _DEFAULT_CONTEXT_WINDOW: int = 4096
 """Context window assumed for an entry whose payload states none.
 
-OpenRouter states ``context_length`` for essentially every model, so this is
-the floor for a malformed entry rather than a routine answer.
+OpenRouter states ``context_length`` for essentially every model, so this is the floor for a malformed entry rather than a routine answer.
 """
 
 _ERR_NOT_CONNECTED = "Not connected to OpenRouter"
