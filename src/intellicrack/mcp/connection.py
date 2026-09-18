@@ -102,7 +102,7 @@ until the next tool call, which would then fail in front of the model. The
 heartbeat turns that silent death into a prompt reconnect instead.
 """
 
-_CONNECTION_ERRORS: Final[tuple[type[BaseException], ...]] = (
+TRANSPORT_FAILURES: Final[tuple[type[BaseException], ...]] = (
     OSError,
     RuntimeError,
     ValueError,
@@ -420,6 +420,17 @@ class McpConnection:
         )
 
     @property
+    def client(self) -> Client | None:
+        """The entered SDK client, while the connection is up.
+
+        Returns:
+            Client | None: The client, or ``None`` when the server is not
+            connected. Requests issued through it from another task are
+            dispatched by the session, which is designed for concurrent use.
+        """
+        return self._client
+
+    @property
     def catalog(self) -> McpToolCatalog | None:
         """The tool listing currently in hand.
 
@@ -706,7 +717,7 @@ class McpConnection:
                 return
             message = f"server '{self.server_id}' stopped responding: {exc}"
             raise McpConnectionError(message) from exc
-        except _CONNECTION_ERRORS as exc:
+        except TRANSPORT_FAILURES as exc:
             failure = representative_failure(exc)
             message = f"server '{self.server_id}' stopped responding: {failure}"
             raise McpConnectionError(message) from failure
@@ -729,7 +740,7 @@ class McpConnection:
                 await self._serve_once()
             except asyncio.CancelledError:
                 raise
-            except _CONNECTION_ERRORS as exc:
+            except TRANSPORT_FAILURES as exc:
                 fatal = fatal_leaf(exc)
                 if fatal is not None:
                     raise fatal from exc
@@ -827,7 +838,7 @@ class McpConnection:
         self._listen_task = None
         if listen_task is not None and not listen_task.done():
             _ = listen_task.cancel()
-            with suppress(asyncio.CancelledError, *_CONNECTION_ERRORS):
+            with suppress(asyncio.CancelledError, *TRANSPORT_FAILURES):
                 await listen_task
 
         self._stop.set()
@@ -840,11 +851,11 @@ class McpConnection:
             except TimeoutError:
                 _logger.warning("mcp_server_teardown_timeout", server_id=self.server_id)
                 _ = task.cancel()
-                with suppress(asyncio.CancelledError, *_CONNECTION_ERRORS):
+                with suppress(asyncio.CancelledError, *TRANSPORT_FAILURES):
                     await task
             except asyncio.CancelledError:
                 raise
-            except _CONNECTION_ERRORS as exc:
+            except TRANSPORT_FAILURES as exc:
                 _logger.warning("mcp_server_teardown_error", server_id=self.server_id, error=str(exc))
 
         self._client = None
@@ -880,7 +891,7 @@ class McpConnection:
             catalog = await fetch_catalog(client, self.server_id)
         except asyncio.CancelledError:
             raise
-        except _CONNECTION_ERRORS as exc:
+        except TRANSPORT_FAILURES as exc:
             failure = representative_failure(exc)
             message = f"server '{self.server_id}': cannot list tools: {failure}"
             raise McpConnectionError(message) from failure
@@ -927,7 +938,7 @@ class McpConnection:
             raise McpConnectionError(message) from exc
         except asyncio.CancelledError:
             raise
-        except _CONNECTION_ERRORS as exc:
+        except TRANSPORT_FAILURES as exc:
             failure = representative_failure(exc)
             message = f"server '{self.server_id}': call to {tool_name!r} failed: {failure}"
             raise McpConnectionError(message) from failure
@@ -960,7 +971,7 @@ class McpConnection:
                     on_change(self.server_id)
         except asyncio.CancelledError:
             raise
-        except _CONNECTION_ERRORS as exc:
+        except TRANSPORT_FAILURES as exc:
             _logger.info("mcp_change_subscription_unavailable", server_id=self.server_id, reason=str(exc))
 
     def start_listening(self, on_change: Callable[[str], None]) -> None:
@@ -1049,7 +1060,7 @@ class McpConnectionManager:
         resolver: McpSecretResolver,
         consent: McpConsentGate,
         *,
-        elicitation_callback: ElicitationFnT | None = None,
+        elicitation_factory: Callable[[str], ElicitationFnT] | None = None,
         auth_factory: Callable[[McpServerConfig], Any] | None = None,
     ) -> None:
         """Initialize the manager.
@@ -1058,14 +1069,17 @@ class McpConnectionManager:
             store: Configuration store the server list is read from.
             resolver: Resolver expanding ``${input:id}`` references.
             consent: Gate consulted before a local server is spawned.
-            elicitation_callback: Handler for server elicitation requests.
+            elicitation_factory: Builds the elicitation handler for one
+                server. It takes the server id because the operator needs to
+                be told which server is asking them for something, and the
+                protocol callback itself does not carry that.
             auth_factory: Builds the authentication handler for an HTTP
                 server.
         """
         self._store = store
         self._resolver = resolver
         self._consent = consent
-        self._elicitation_callback = elicitation_callback
+        self._elicitation_factory = elicitation_factory
         self._auth_factory = auth_factory
         self._document: McpConfigDocument = McpConfigStore.parse_document({})
         self._connections: dict[str, McpConnection] = {}
@@ -1100,6 +1114,43 @@ class McpConnectionManager:
         """
         return self._consent
 
+    def _on_connection_changed(self, server_id: str) -> None:
+        """React to one server's state or tool listing moving.
+
+        The generation is re-checked here rather than only at connect,
+        because a server may publish a new tool listing at any point in its
+        life and the approvals the operator gave about the old one must not
+        outlive it.
+
+        Args:
+            server_id: The server whose state changed.
+        """
+        connection = self._connections.get(server_id)
+        catalog = connection.catalog if connection is not None else None
+        if catalog is not None:
+            _ = self._consent.note_generation(server_id, catalog.generation)
+        listener = self._listener
+        if listener is None:
+            return
+        try:
+            listener(server_id)
+        except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
+            _logger.warning("mcp_manager_listener_failed", server_id=server_id, error=str(exc))
+
+    def _elicitation_for(self, server_id: str) -> ElicitationFnT | None:
+        """Build the elicitation handler for one server.
+
+        Args:
+            server_id: The server the handler will answer for.
+
+        Returns:
+            ElicitationFnT | None: The handler, or ``None`` when no factory
+            is installed, in which case the SDK declines elicitations.
+        """
+        if self._elicitation_factory is None:
+            return None
+        return self._elicitation_factory(server_id)
+
     def set_change_listener(self, listener: Callable[[str], None]) -> None:
         """Install the callback invoked when any server's state moves.
 
@@ -1108,7 +1159,7 @@ class McpConnectionManager:
         """
         self._listener = listener
         for connection in self._connections.values():
-            connection.set_change_listener(listener)
+            connection.set_change_listener(self._on_connection_changed)
 
     def reload(self) -> McpConfigDocument:
         """Re-read the configuration file without touching live connections.
@@ -1156,7 +1207,7 @@ class McpConnectionManager:
                 await connection.disconnect()
             except asyncio.CancelledError:
                 raise
-            except _CONNECTION_ERRORS as exc:
+            except TRANSPORT_FAILURES as exc:
                 _logger.warning("mcp_manager_stop_error", server_id=server_id, error=str(exc))
         self._connections.clear()
         self._order.clear()
@@ -1191,22 +1242,20 @@ class McpConnectionManager:
         connection = McpConnection(
             config,
             self._resolver,
-            elicitation_callback=self._elicitation_callback,
+            elicitation_callback=self._elicitation_for(server_id),
             consent=self._consent,
             auth_factory=self._auth_factory,
         )
-        if self._listener is not None:
-            connection.set_change_listener(self._listener)
+        connection.set_change_listener(self._on_connection_changed)
         self._connections[server_id] = connection
         if server_id not in self._order:
             self._order.append(server_id)
 
         await connection.connect()
         catalog = connection.catalog
-        if catalog is not None and self._consent.note_generation(server_id, catalog.generation):
-            _logger.info("mcp_generation_moved", server_id=server_id, generation=catalog.generation)
-        if self._listener is not None:
-            connection.start_listening(self._listener)
+        if catalog is not None:
+            _ = self._consent.note_generation(server_id, catalog.generation)
+        connection.start_listening(self._on_connection_changed)
         return connection.status
 
     async def stop_server(self, server_id: str) -> None:
@@ -1268,7 +1317,7 @@ class McpConnectionManager:
                 request_timeout_s=config.request_timeout_s,
             ),
             self._resolver,
-            elicitation_callback=self._elicitation_callback,
+            elicitation_callback=self._elicitation_for(config.server_id),
             consent=self._consent,
             auth_factory=self._auth_factory,
         )

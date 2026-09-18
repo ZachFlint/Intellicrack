@@ -15,7 +15,7 @@ import json
 import sys
 import weakref
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast, override
+from typing import TYPE_CHECKING, Any, Final, cast, override
 
 from PyQt6.QtCore import QByteArray, QObject, QSettings, QSignalBlocker, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QScreen, QShowEvent
@@ -101,6 +101,9 @@ from intellicrack.ui.xpu_status import XPUStatusDialog
 
 _logger = get_logger(__name__)
 
+_MCP_SHUTDOWN_TIMEOUT_S: Final[float] = 15.0
+"""How long MCP teardown may take before the shared loop is stopped anyway."""
+
 
 try:
     from intellicrack.providers.model_loader import get_global_model_cache, set_global_cache_size
@@ -128,6 +131,7 @@ if TYPE_CHECKING:
     from intellicrack.core.template_manager import TemplateManager
     from intellicrack.providers.base import LLMProviderBase
     from intellicrack.sandbox.base import SandboxBase
+    from intellicrack.ui.mcp_service import McpService
 
 _MAX_RESULT_DISPLAY_LEN = 500
 _STATUS_REFRESH_FAILURE_THRESHOLD = 5
@@ -227,6 +231,7 @@ class MainWindow(QMainWindow):
         sys.excepthook = _unhandled_exception_hook
         self._config = config
         self._orchestrator = orchestrator
+        self._mcp_service: McpService | None = None
         self._stream_append: Callable[[str], None] | None = None
         self.sandbox_manager = SandboxManager()
         self.model_refresh_worker: ModelRefreshWorker | None = None
@@ -898,6 +903,7 @@ class MainWindow(QMainWindow):
         self._add_menu_action(tools_menu, "Run Full Analysis", self._on_run_full_analysis)
         self._add_menu_action(tools_menu, "Tool Status...", self._on_tool_status)
         self._add_menu_action(tools_menu, "Configure Tools...", self._on_configure_tools)
+        self._add_menu_action(tools_menu, "MCP Servers...", self._on_configure_mcp)
         tools_menu.addSeparator()
 
         embedded_menu: QMenu | None = tools_menu.addMenu("&Embedded Tools")
@@ -1414,6 +1420,80 @@ class MainWindow(QMainWindow):
             _logger.warning("tool_installer_init_skipped")
 
         self._apply_restored_auto_approve()
+        self._start_mcp_service()
+
+    def _start_mcp_service(self) -> None:
+        """Assemble the MCP client and bring its enabled servers up.
+
+        A failure here never stops the application starting: MCP is an
+        optional integration, and an unreadable configuration or an
+        unavailable keyring should cost the operator third-party tools, not
+        their whole session.
+        """
+        try:
+            service_module = importlib.import_module(".mcp_service", "intellicrack.ui")
+            credential_module = importlib.import_module("intellicrack.credentials.store")
+            service = service_module.McpService(
+                self._orchestrator.tool_registry,
+                credential_module.get_credential_store(),
+                self._orchestrator,
+                self,
+            )
+        except (ImportError, OSError, RuntimeError, AttributeError, TypeError, ValueError) as exc:
+            _logger.warning("mcp_service_unavailable", error=str(exc), error_type=type(exc).__name__)
+            return
+        self._mcp_service = service
+        run_bridge_coroutine_async(
+            service.start(),
+            on_success=lambda _result: _logger.info("mcp_service_ready"),
+            on_error=lambda error: _logger.warning("mcp_service_start_failed", error=str(error)),
+            parent=None,
+        )
+
+    def _on_configure_mcp_from(self, parent: QWidget) -> None:
+        """Open the MCP settings dialog over another dialog.
+
+        Args:
+            parent: The dialog the request came from, so the settings window
+                sits over it rather than behind it.
+        """
+        service = self._mcp_service
+        if service is None:
+            QMessageBox.information(
+                parent,
+                "MCP Servers",
+                "The MCP client is not available in this session. Check the log for why it could not start.",
+            )
+            return
+        service.open_settings(parent)
+
+    def _on_configure_mcp(self) -> None:
+        """Open the MCP settings dialog."""
+        service = self._mcp_service
+        if service is None:
+            QMessageBox.information(
+                self,
+                "MCP Servers",
+                "The MCP client is not available in this session. Check the log for why it could not start.",
+            )
+            return
+        service.open_settings(self)
+
+    def _stop_mcp_service(self) -> None:
+        """Disconnect every MCP server before the background loop is stopped.
+
+        Ordering matters: teardown submits coroutines to the shared loop, so
+        it has to finish while that loop is still running. Afterwards no
+        server process and no pending MCP task is left behind.
+        """
+        service = self._mcp_service
+        self._mcp_service = None
+        if service is None:
+            return
+        try:
+            _ = run_bridge_coroutine(service.stop(), timeout_s=_MCP_SHUTDOWN_TIMEOUT_S)
+        except (RuntimeError, OSError, TimeoutError) as exc:
+            _logger.warning("mcp_service_stop_failed", error=str(exc))
 
     def _effective_confirmation_level(self) -> ConfirmationLevel:
         """Resolve the confirmation level the orchestrator should be running at.
@@ -1555,7 +1635,10 @@ class MainWindow(QMainWindow):
         """
         call, future, loop = cast("tuple[ToolCall, asyncio.Future[bool], asyncio.AbstractEventLoop]", payload)
         confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
-        dialog = confirmation_module.ToolConfirmationDialog(call, self)
+        service = self._mcp_service
+        generation = service.generation_for(call) if service is not None else None
+        origin = service.source_label_for(call) if service is not None else None
+        dialog = confirmation_module.ToolConfirmationDialog(call, self, generation=generation, source_label=origin)
         dialog.exec()
         approved: bool = bool(dialog.approved)
         self._orchestrator.resolve_confirmation(approved=approved)
@@ -3430,6 +3513,7 @@ class MainWindow(QMainWindow):
         if callable(set_config_path):
             set_config_path(config_path)
         dialog.settings_changed.connect(self._on_preferences_changed)
+        dialog.mcp_settings_requested.connect(lambda: self._on_configure_mcp_from(dialog))
         if dialog.exec():
             self._config = dialog.get_config()
             self._apply_confirmation_level("preferences_confirmation_level_applied")
@@ -4316,6 +4400,8 @@ class MainWindow(QMainWindow):
             self._log_viewer_window = None
 
         self.tool_panel.close_embedded_tools()
+
+        self._stop_mcp_service()
 
         try:
             run_bridge_coroutine(self.sandbox_manager.destroy_all())

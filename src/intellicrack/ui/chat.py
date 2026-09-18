@@ -9,11 +9,13 @@ This module provides the chat interface for interacting with the AI orchestrator
 
 from __future__ import annotations
 
+import base64
+import binascii
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final, override
 
 from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QPainter, QPalette, QTextLayout, QTextOption
+from PyQt6.QtGui import QPainter, QPalette, QPixmap, QTextLayout, QTextOption
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -28,7 +30,20 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import Message, ToolCall, ToolResult
+from intellicrack.core.types import (
+    AudioResultPart,
+    EmbeddedResourcePart,
+    ImageResultPart,
+    Message,
+    ResourceLinkPart,
+    StructuredResultPart,
+    TextResultPart,
+    ToolCall,
+    ToolResult,
+    ToolResultPart,
+)
+from intellicrack.mcp.config import is_mcp_namespace
+from intellicrack.mcp.tool_source import source_label
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -52,6 +67,10 @@ _HEADER_HEIGHT: Final[int] = 40
 _HEADER_MARGIN_H: Final[int] = 12
 _MSG_AREA_MARGIN: Final[int] = 12
 _MAX_RESULT_DISPLAY_LEN = 200
+_MAX_PART_DISPLAY_LEN: Final[int] = 600
+_MAX_PARTS_DISPLAYED: Final[int] = 12
+_MAX_IMAGE_WIDTH: Final[int] = 480
+_MAX_IMAGE_BYTES: Final[int] = 8 * 1024 * 1024
 _CHAT_INPUT_PLACEHOLDER: Final[str] = "Type a message... (Enter to send, Shift+Enter for newline)"
 
 
@@ -238,6 +257,10 @@ class MessageBubble(QFrame):
         header.setObjectName("tool_call_header")
         layout.addWidget(header)
 
+        badge = MessageBubble._source_badge(call.tool_name, call.function_name)
+        if badge is not None:
+            layout.addWidget(badge)
+
         if call.arguments:
             full_args_text = ", ".join(f"{k}={v!r}" for k, v in call.arguments.items())
             args_text = full_args_text
@@ -252,6 +275,98 @@ class MessageBubble(QFrame):
             layout.addWidget(args_label)
 
         return frame
+
+    @staticmethod
+    def _source_badge(tool_name: str, function_name: str) -> QLabel | None:
+        """Build the badge naming where a tool came from, when it is not a bridge.
+
+        A bridge ships with Intellicrack and needs no attribution. A tool from
+        a third-party server does: the operator reading the transcript should
+        be able to see at a glance which of these calls went somewhere they
+        configured themselves.
+
+        Args:
+            tool_name: The namespace half of the call.
+            function_name: The canonical dotted function name.
+
+        Returns:
+            QLabel | None: The badge, or ``None`` for a built-in bridge tool.
+        """
+        namespace = tool_name.strip().lower()
+        if not is_mcp_namespace(namespace):
+            return None
+        canonical = function_name if "." in function_name else f"{namespace}.{function_name}"
+        badge = QLabel(f"via {source_label(canonical)} (third-party)")
+        badge.setObjectName("tool_source_badge")
+        badge.setFont(FontManager.get_instance().get_code_font(8))
+        badge.setWordWrap(True)
+        return badge
+
+    @staticmethod
+    def _render_image_part(part: ImageResultPart) -> QWidget:
+        """Render an image result part inline.
+
+        Args:
+            part: The image the tool returned.
+
+        Returns:
+            QWidget: A label showing the image, or describing why it could
+            not be shown.
+        """
+        label = QLabel()
+        label.setObjectName("tool_result_image")
+        if len(part.data) > _MAX_IMAGE_BYTES:
+            label.setText(f"[image of type {part.mime_type} too large to display]")
+            return label
+        try:
+            raw = base64.b64decode(part.data, validate=True)
+        except (binascii.Error, ValueError):
+            _logger.debug("tool_result_image_undecodable", mime_type=part.mime_type)
+            label.setText(f"[image of type {part.mime_type} could not be decoded]")
+            return label
+        pixmap = QPixmap()
+        if not pixmap.loadFromData(raw):
+            label.setText(f"[image of type {part.mime_type} could not be displayed]")
+            return label
+        if pixmap.width() > _MAX_IMAGE_WIDTH:
+            pixmap = pixmap.scaledToWidth(_MAX_IMAGE_WIDTH, Qt.TransformationMode.SmoothTransformation)
+        label.setPixmap(pixmap)
+        return label
+
+    @staticmethod
+    def _render_part(part: ToolResultPart) -> QWidget:
+        """Render one part of a multi-part tool result.
+
+        Args:
+            part: The part to render.
+
+        Returns:
+            QWidget: A widget showing the part's content.
+        """
+        if isinstance(part, ImageResultPart):
+            return MessageBubble._render_image_part(part)
+
+        if isinstance(part, TextResultPart):
+            text = part.text
+        elif isinstance(part, AudioResultPart):
+            text = f"[audio of type {part.mime_type}, {len(part.data)} encoded bytes]"
+        elif isinstance(part, ResourceLinkPart):
+            text = f"[resource] {part.name or part.uri}: {part.uri}"
+        elif isinstance(part, EmbeddedResourcePart):
+            text = part.text if part.text is not None else f"[embedded resource {part.uri}, not shown]"
+        elif isinstance(part, StructuredResultPart):
+            text = f"[structured output] {part.content}"
+        else:
+            text = str(part)
+
+        label = QLabel(text if len(text) <= _MAX_PART_DISPLAY_LEN else f"{text[: _MAX_PART_DISPLAY_LEN - 3]}...")
+        label.setObjectName("tool_result_part")
+        label.setFont(FontManager.get_instance().get_code_font(8))
+        label.setWordWrap(True)
+        label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        if len(text) > _MAX_PART_DISPLAY_LEN:
+            label.setToolTip(text[: _MAX_PART_DISPLAY_LEN * 4])
+        return label
 
     @staticmethod
     def _create_tool_result_widget(result: ToolResult) -> QFrame:
@@ -282,7 +397,17 @@ class MessageBubble(QFrame):
             error_label.setObjectName("error_text")
             error_label.setWordWrap(True)
             layout.addWidget(error_label)
-        elif result.result is not None:
+
+        if result.content:
+            for part in result.content[:_MAX_PARTS_DISPLAYED]:
+                layout.addWidget(MessageBubble._render_part(part))
+            omitted = len(result.content) - _MAX_PARTS_DISPLAYED
+            if omitted > 0:
+                more = QLabel(f"[{omitted} further result part(s) not shown]")
+                more.setObjectName("tool_result_part")
+                more.setFont(FontManager.get_instance().get_code_font(8))
+                layout.addWidget(more)
+        elif not result.error and result.result is not None:
             full_result_text = str(result.result)
             result_text = full_result_text
             if len(result_text) > _MAX_RESULT_DISPLAY_LEN:

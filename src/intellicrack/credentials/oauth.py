@@ -407,6 +407,11 @@ class _OAuthCallbackTCPServer(socketserver.TCPServer):
         callback_error: Error string if authorization failed.
         callback_event: Event signalled once a callback has been recorded.
         expected_state: State value the handler should accept (CSRF check).
+        callback_issuer: The RFC 9207 ``iss`` parameter, when the
+            authorization server includes it in the redirect. Recorded so the
+            caller can check the response came from the server it asked,
+            which is what defends a multi-server client against a mix-up
+            attack.
     """
 
     callback_code: str | None = None
@@ -414,6 +419,7 @@ class _OAuthCallbackTCPServer(socketserver.TCPServer):
     callback_error: str | None = None
     callback_event: threading.Event | None = None
     expected_state: str | None = None
+    callback_issuer: str | None = None
 
 
 class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
@@ -444,6 +450,8 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
             else:
                 server.callback_code = params["code"][0]
                 server.callback_state = received_state
+                issuer = params.get("iss")
+                server.callback_issuer = issuer[0] if issuer else None
                 status = 200
                 message = "Authorization successful! You can close this window."
         else:
@@ -519,6 +527,7 @@ class OAuthCallbackServer:
         self._server: _OAuthCallbackTCPServer | None = None
         self._thread: threading.Thread | None = None
         self._event = threading.Event()
+        self._received_issuer: str | None = None
         _logger.debug(
             "oauth_callback_server_initialized",
             port=port,
@@ -547,6 +556,7 @@ class OAuthCallbackServer:
         server.callback_code = None
         server.callback_state = None
         server.callback_error = None
+        server.callback_issuer = None
         server.callback_event = self._event
         server.expected_state = self._expected_state
 
@@ -602,6 +612,20 @@ class OAuthCallbackServer:
 
         return code, state
 
+    @property
+    def received_issuer(self) -> str | None:
+        """The RFC 9207 ``iss`` parameter the authorization server returned.
+
+        Read after :meth:`wait_for_callback`. ``None`` when the server did
+        not include one, which is the common case for an authorization server
+        that does not implement RFC 9207.
+
+        Returns:
+            str | None: The issuer identifier, or ``None``.
+        """
+        server = self._server
+        return server.callback_issuer if server is not None else self._received_issuer
+
     def stop(self) -> None:
         """Stop the callback server and release the bound socket.
 
@@ -611,6 +635,7 @@ class OAuthCallbackServer:
         """
         server = self._server
         if server is not None:
+            self._received_issuer = server.callback_issuer
             server.callback_event = None
             server.expected_state = None
             try:
