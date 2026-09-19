@@ -221,7 +221,7 @@ export function wireTabStrip(strip, options) {
   };
 
   strip.addEventListener('keydown', (event) => {
-    const target = event.target;
+    const {target} = event;
     if (!(target instanceof HTMLElement)) {
       return;
     }

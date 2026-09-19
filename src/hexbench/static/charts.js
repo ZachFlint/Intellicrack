@@ -418,7 +418,7 @@ export class Chart {
     }
     const rect = this.#canvas.getBoundingClientRect();
     const width = Math.floor(rect.width);
-    const height = this.#options.height;
+    const {height} = this.#options;
     if (width < MIN_CANVAS_PX) {
       return;
     }

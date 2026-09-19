@@ -158,9 +158,7 @@ def from_wire_name(wire: str) -> str:
         registered = _wire_to_canonical.get(wire)
     if registered is not None:
         return registered
-    if "__" not in wire:
-        return wire
-    return wire.replace("__", ".")
+    return wire if "__" not in wire else wire.replace("__", ".")
 
 
 _wire_pair_to_canonical: dict[tuple[str, str], str] = {}

@@ -4060,19 +4060,19 @@ class X64DbgPanel(AnalysisPanelBase):
         """Redirect trace-log output to the path entered in the Log File field."""
         if self._bridge is None:
             return
-        path = self._trace_logfile_input.text().strip()
-        if not path:
+        if path := self._trace_logfile_input.text().strip():
+            run_bridge_coroutine_logged(
+                self._bridge.set_trace_log_file(path),
+                on_success=lambda _: self._trace_output.appendPlainText(f"[+] Trace log file set to {path}"),
+                on_error=lambda e: self._on_generic_error("Set Log File", e),
+                parent=self,
+                event="x64dbg_set_trace_log_file",
+                logger=_logger,
+                level="info",
+                path=path,
+            )
+        else:
             return
-        run_bridge_coroutine_logged(
-            self._bridge.set_trace_log_file(path),
-            on_success=lambda _: self._trace_output.appendPlainText(f"[+] Trace log file set to {path}"),
-            on_error=lambda e: self._on_generic_error("Set Log File", e),
-            parent=self,
-            event="x64dbg_set_trace_log_file",
-            logger=_logger,
-            level="info",
-            path=path,
-        )
 
     def _on_get_trace_record(self) -> None:
         """Query the trace-record hit count at the specified address."""

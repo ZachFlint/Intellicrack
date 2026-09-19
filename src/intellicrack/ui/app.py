@@ -300,8 +300,7 @@ class MainWindow(QMainWindow):
         self._restore_window_state()
 
         registry = self._orchestrator.provider_registry
-        connected: list[str] = registry.list_connected()
-        if connected:
+        if connected := registry.list_connected():
             target_provider: str = self._startup_provider(connected)
             try:
                 registry.set_active(target_provider)
@@ -614,8 +613,7 @@ class MainWindow(QMainWindow):
             provider: Provider whose remembered or default model to select.
             models: Model ids currently loaded into the combo, in display order.
         """
-        remembered = self._remembered_model_for(provider)
-        if remembered:
+        if remembered := self._remembered_model_for(provider):
             idx = self.model_combo.findText(remembered)
             if idx >= 0:
                 self.model_combo.setCurrentIndex(idx)
@@ -2759,8 +2757,7 @@ class MainWindow(QMainWindow):
         self.status_update.emit(f"Active provider: {provider_id}")
 
         if self.model_discovery is not None:
-            cached_models = self.model_discovery.cache.get(new_active)
-            if cached_models:
+            if cached_models := self.model_discovery.cache.get(new_active):
                 models_list = [str(m.id) for m in cached_models]
                 with QSignalBlocker(self.model_combo):
                     self.model_combo.clear()
@@ -3155,9 +3152,10 @@ class MainWindow(QMainWindow):
         """
         if isinstance(result, dict):
             res_dict = cast("dict[str, list[ModelInfo]]", result)
-            counts: dict[str, int] = {}
-            for provider_name_obj, models_obj in res_dict.items():
-                counts[provider_name_obj] = len(models_obj)
+            counts: dict[str, int] = {
+                provider_name_obj: len(models_obj)
+                for provider_name_obj, models_obj in res_dict.items()
+            }
             _logger.info("initial_model_discovery_completed", per_provider_counts=counts)
         else:
             _logger.info("initial_model_discovery_completed", provider_count=0)
@@ -3173,8 +3171,7 @@ class MainWindow(QMainWindow):
                         models_list.extend(m.id for m in v)
                         break
             if not models_list and self.model_discovery is not None:
-                cached = self.model_discovery.cache.get(provider_data)
-                if cached:
+                if cached := self.model_discovery.cache.get(provider_data):
                     models_list = [m.id for m in cached]
 
             if models_list:
@@ -3923,10 +3920,16 @@ class MainWindow(QMainWindow):
             int: Index of the first committed region whose base protection is
             readable, or ``0`` when no region qualifies.
         """
-        for index, (_base, _size, protection, state) in enumerate(regions):
-            if state == _MEM_COMMIT_STATE and (protection & _PAGE_PROTECTION_BASE_MASK) in _PAGE_READABLE_PROTECTIONS:
-                return index
-        return 0
+        return next(
+            (
+                index
+                for index, (_base, _size, protection, state) in enumerate(regions)
+                if state == _MEM_COMMIT_STATE
+                and (protection & _PAGE_PROTECTION_BASE_MASK)
+                in _PAGE_READABLE_PROTECTIONS
+            ),
+            0,
+        )
 
     def _on_process_regions_listed(self, pid: int, result: object) -> None:
         """Show the memory-region picker once native enumeration completes.
@@ -4273,8 +4276,7 @@ class MainWindow(QMainWindow):
         self.status_update.emit(f"Active provider: {provider}")
 
         if self.model_discovery is not None:
-            cached_models = self.model_discovery.cache.get(provider)
-            if cached_models:
+            if cached_models := self.model_discovery.cache.get(provider):
                 models_list = [str(m.id) for m in cached_models]
                 with QSignalBlocker(self.model_combo):
                     self.model_combo.clear()

@@ -224,9 +224,7 @@ def _json_type_of(value: object) -> str:
         return "string"
     if is_json_array(value):
         return "array"
-    if is_json_object(value):
-        return "object"
-    return "unknown"
+    return "object" if is_json_object(value) else "unknown"
 
 
 def _matches_type(value: object, declared: str) -> bool:
@@ -472,9 +470,7 @@ def _pattern_matches(expression: str, name: str) -> bool:
         not, cannot be compiled, or was refused as unsafe to run.
     """
     compiled = compile_schema_pattern(expression)
-    if compiled is None:
-        return False
-    return compiled.search(name) is not None
+    return False if compiled is None else compiled.search(name) is not None
 
 
 def _check_combinators(value: object, schema: Mapping[str, Any], path: str, depth: int) -> Iterator[SchemaViolation]:
@@ -500,7 +496,8 @@ def _check_combinators(value: object, schema: Mapping[str, Any], path: str, dept
 
     one_of = schema.get("oneOf")
     if is_json_array(one_of) and one_of:
-        matches = sum(1 for branch in one_of if not _validate(value, branch, path, depth - 1))
+        matches = sum(bool(not _validate(value, branch, path, depth - 1))
+                  for branch in one_of)
         if matches != 1:
             yield SchemaViolation(path=path, message=f"must match exactly one accepted shape, matched {matches}")
 
@@ -510,7 +507,7 @@ def _check_combinators(value: object, schema: Mapping[str, Any], path: str, dept
 
     condition = schema.get("if")
     if condition is not None:
-        branch = schema.get("then") if not _validate(value, condition, path, depth - 1) else schema.get("else")
+        branch = schema.get("else") if _validate(value, condition, path, depth - 1) else schema.get("then")
         if branch is not None:
             yield from _validate(value, branch, path, depth - 1)
 

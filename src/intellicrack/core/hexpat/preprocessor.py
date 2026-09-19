@@ -149,8 +149,7 @@ class HexPatPreprocessor:
                 mime = m.group(1)
                 continue
 
-            m = _PRAGMA_MAGIC_RE.match(stripped)
-            if m:
+            if m := _PRAGMA_MAGIC_RE.match(stripped):
                 offset_val = _parse_int_value(m.group(1))
                 hex_str = m.group(2)
                 magic_bytes = bytes.fromhex(hex_str.replace(" ", ""))
@@ -760,8 +759,7 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
             mime = m.group(1)
             continue
 
-        m = _PRAGMA_MAGIC_RE.match(stripped)
-        if m:
+        if m := _PRAGMA_MAGIC_RE.match(stripped):
             offset_val = _parse_int_value(m.group(1))
             hex_str = m.group(2)
             magic_bytes = bytes.fromhex(hex_str.replace(" ", ""))

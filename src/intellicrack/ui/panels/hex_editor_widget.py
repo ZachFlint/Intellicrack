@@ -818,9 +818,7 @@ class HexEditorWidget(QAbstractScrollArea):
         if index >= len(values):
             return None
         color_key = _CONTENT_CLASS_COLOR_KEYS.get(values[index])
-        if color_key is None:
-            return None
-        return self._colors[color_key]
+        return None if color_key is None else self._colors[color_key]
 
     def _visible_row_count(self) -> int:
         """Calculate the number of rows visible in the viewport.
@@ -1189,8 +1187,9 @@ class HexEditorWidget(QAbstractScrollArea):
                 return "       NaN"
             if math.isinf(val_f):
                 return "       Inf" if val_f > 0 else "      -Inf"
-            return f"{val_f:13.6g}"
-        if mode == "float64":
+            else:
+                return f"{val_f:13.6g}"
+        elif mode == "float64":
             try:
                 val_d = struct.unpack_from("<d", padded)[0]
             except struct.error:

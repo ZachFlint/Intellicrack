@@ -202,8 +202,7 @@ def build_stdio_parameters(spec: StdioServerSpec, env: Mapping[str, str]) -> Std
     if not command:
         raise McpConfigError(_ERR_EMPTY_COMMAND)
 
-    found = find_shell_metacharacters(command)
-    if found:
+    if found := find_shell_metacharacters(command):
         rendered = " ".join(repr(token) for token in found)
         message = (
             f"launch command {command!r} contains shell metacharacters ({rendered}). "

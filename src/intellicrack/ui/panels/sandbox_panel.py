@@ -122,9 +122,7 @@ def _format_file_change_detail(change: dict[str, object]) -> str:
     if isinstance(old_path, str) and old_path:
         return f"renamed from {old_path}"
     size = change.get("size")
-    if isinstance(size, int):
-        return f"{size} bytes"
-    return ""
+    return f"{size} bytes" if isinstance(size, int) else ""
 
 
 class _SandboxCreateConfig(TypedDict):
@@ -1110,9 +1108,7 @@ class SandboxPanel(AnalysisPanelBase):
             the type currently selected in the toolbar combo.
         """
         active_type = self._active_sandbox_type
-        if active_type is not None:
-            return active_type
-        return self._selected_sandbox_type()
+        return self._selected_sandbox_type() if active_type is None else active_type
 
     def _sandbox_create_config(self) -> _SandboxCreateConfig:
         """Read the VM/environment configuration controls for sandbox creation.
@@ -1177,9 +1173,7 @@ class SandboxPanel(AnalysisPanelBase):
             QEMUConfig | None: Configuration loaded from the persisted sandbox
             settings for the ``"qemu"`` type, or None for other backends.
         """
-        if sandbox_type != "qemu":
-            return None
-        return load_qemu_config()
+        return None if sandbox_type != "qemu" else load_qemu_config()
 
     def _on_create(self) -> None:
         """Create a new sandbox environment."""
@@ -1424,8 +1418,9 @@ class SandboxPanel(AnalysisPanelBase):
             if paths:
                 self._append_companions(paths)
         elif chosen is folder_action:
-            folder = QFileDialog.getExistingDirectory(self, "Select companion folder")
-            if folder:
+            if folder := QFileDialog.getExistingDirectory(
+                self, "Select companion folder"
+            ):
                 self._append_companions([folder])
 
     def _on_run_binary(self) -> None:
@@ -1458,8 +1453,7 @@ class SandboxPanel(AnalysisPanelBase):
         sandbox_type = self._selected_sandbox_type()
 
         companions = [entry.strip() for entry in self._companions_input.text().split(_COMPANION_SEPARATOR) if entry.strip()]
-        missing = [entry for entry in companions if not Path(entry).exists()]
-        if missing:
+        if missing := [entry for entry in companions if not Path(entry).exists()]:
             self._log(f"[!] Companion not found: {', '.join(missing)}")
             return
 

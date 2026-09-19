@@ -897,9 +897,7 @@ class TypedMemoryAccessControls(QWidget):
         """
         if value_type in {"float", "double"}:
             return float(raw_text)
-        if value_type == "utf8":
-            return raw_text
-        return int(raw_text, 0)
+        return raw_text if value_type == "utf8" else int(raw_text, 0)
 
     def _on_write_typed_value(self) -> None:
         """Write a single typed value at the entered address via ``write_typed_value``."""

@@ -157,9 +157,7 @@ def _coerce_bool(value: object, *, default: bool) -> bool:
     Returns:
         bool: The coerced boolean value.
     """
-    if isinstance(value, bool):
-        return value
-    return default
+    return value if isinstance(value, bool) else default
 
 
 def _coerce_path(value: object) -> Path | None:
@@ -171,9 +169,7 @@ def _coerce_path(value: object) -> Path | None:
     Returns:
         Path | None: The path when ``value`` is a non-empty string, else None.
     """
-    if not isinstance(value, str) or not value.strip():
-        return None
-    return Path(value)
+    return None if not isinstance(value, str) or not value.strip() else Path(value)
 
 
 def _coerce_guest_os(value: object) -> GuestOS:
@@ -269,8 +265,7 @@ def default_qemu_image() -> Path | None:
             if directory in seen or not directory.is_dir():
                 continue
             seen.add(directory)
-            images = sorted(directory.glob("*.qcow2"))
-            if images:
+            if images := sorted(directory.glob("*.qcow2")):
                 _logger.info("sandbox_bundled_guest_discovered", image=str(images[0]))
                 return images[0]
     return None

@@ -119,10 +119,14 @@ class ProviderPreset:
             the first model preset whose prefix matches.
         """
         lowered = model.strip().lower()
-        for preset in self.model_presets:
-            if lowered.startswith(preset.prefixes):
-                return _merge_overrides(self.base_capabilities, preset.capabilities)
-        return self.base_capabilities
+        return next(
+            (
+                _merge_overrides(self.base_capabilities, preset.capabilities)
+                for preset in self.model_presets
+                if lowered.startswith(preset.prefixes)
+            ),
+            self.base_capabilities,
+        )
 
 
 def _merge_overrides(base: CapabilityOverride, refinement: CapabilityOverride) -> CapabilityOverride:
@@ -393,7 +397,7 @@ def all_presets() -> dict[str, ProviderPreset]:
         dict[str, ProviderPreset]: Presets keyed by their preset id.
     """
     combined: dict[str, ProviderPreset] = dict(BUILTIN_PRESETS)
-    combined.update(COMPATIBLE_PRESETS)
+    combined |= COMPATIBLE_PRESETS
     return combined
 
 

@@ -377,10 +377,7 @@ def _find_json_start(text: str) -> int | None:
         int | None: Zero-based index of the first ``{`` or ``[``, or
         ``None`` when the text contains neither.
     """
-    for index, char in enumerate(text):
-        if char in "{[":
-            return index
-    return None
+    return next((index for index, char in enumerate(text) if char in "{["), None)
 
 
 def _balanced_json_slice(text: str, start: int) -> str | None:

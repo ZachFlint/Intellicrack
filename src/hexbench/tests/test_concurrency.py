@@ -441,8 +441,7 @@ class _AccessTracker:
         """Record that the calling thread has left its innermost document."""
         thread = threading.get_ident()
         with self._state:
-            stack = self._held.get(thread)
-            if stack:
+            if stack := self._held.get(thread):
                 stack.pop()
 
     @property

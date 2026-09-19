@@ -705,7 +705,7 @@ def _safe_body(response: httpx.Response) -> str:
     """
     try:
         return response.text
-    except (httpx.ResponseNotRead, httpx.StreamError, UnicodeDecodeError, ValueError):
+    except (httpx.ResponseNotRead, httpx.StreamError, ValueError):
         return ""
 
 

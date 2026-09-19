@@ -478,7 +478,8 @@ class CFGGraphScene(QGraphicsScene):
                 :meth:`_normalize_ghidra_edges`.
         """
         edges = self._normalize_ghidra_edges(block)
-        conditional_count = sum(1 for edge in edges if edge["is_conditional"])
+        conditional_count = sum(bool(edge["is_conditional"])
+                            for edge in edges)
 
         for edge in edges:
             dest_addr = edge["address"]

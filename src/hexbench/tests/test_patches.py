@@ -221,9 +221,7 @@ def _payload_of(result: InvocationResult) -> bytes:
     Returns:
         bytes: The exported patch as bytes.
     """
-    if result.raw is None:
-        return _text_of(result).encode()
-    return _raw_of(result)
+    return _text_of(result).encode() if result.raw is None else _raw_of(result)
 
 
 def _object_member(payload: dict[str, JsonValue], key: str) -> dict[str, JsonValue]:

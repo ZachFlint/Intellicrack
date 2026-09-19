@@ -24,11 +24,6 @@ WORKFLOWS: list[str] = [
     "ci.yml",
     "claude-code-review.yml",
     "claude.yml",
-    "gemini-dispatch.yml",
-    "gemini-invoke.yml",
-    "gemini-review.yml",
-    "gemini-scheduled-triage.yml",
-    "gemini-triage.yml",
     "qodana_code_quality.yml",
 ]
 

@@ -258,10 +258,11 @@ def _model_overrides_from(saved_settings: dict[str, Any]) -> dict[str, dict[str,
     raw = saved_settings.get(MODEL_OVERRIDES_KEY)
     if not isinstance(raw, dict):
         return {}
-    overrides: dict[str, dict[str, Any]] = {}
-    for model_id, entry in cast("dict[str, Any]", raw).items():
-        if isinstance(entry, dict):
-            overrides[model_id] = cast("dict[str, Any]", entry)
+    overrides: dict[str, dict[str, Any]] = {
+        model_id: cast("dict[str, Any]", entry)
+        for model_id, entry in cast("dict[str, Any]", raw).items()
+        if isinstance(entry, dict)
+    }
     return overrides
 
 
@@ -344,8 +345,7 @@ def _parse_header_lines(raw: str) -> dict[str, str]:
         if not stripped or ":" not in stripped:
             continue
         name, _, value = stripped.partition(":")
-        key = name.strip()
-        if key:
+        if key := name.strip():
             headers[key] = value.strip()
     return headers
 
@@ -3386,8 +3386,7 @@ class ProviderSettingsWidget(QFrame):
     def _update_header_key_notice(self) -> None:
         """Name every header that will receive the interpolated API key."""
         headers = _parse_header_lines(self._headers_edit.toPlainText())
-        carrying = headers_receiving_api_key(headers)
-        if carrying:
+        if carrying := headers_receiving_api_key(headers):
             self._header_key_notice.setText("These headers will carry the API key: " + ", ".join(carrying))
         else:
             self._header_key_notice.setText("")
@@ -3809,11 +3808,11 @@ class ProviderSettingsWidget(QFrame):
         if all_met and not warnings:
             warnings_label.setText("All system requirements met")
             warnings_label.setProperty("status", "success")
-            _restyle(warnings_label)
         else:
             warnings_label.setText("\n".join(warnings))
             warnings_label.setProperty("status", "warning")
-            _restyle(warnings_label)
+
+        _restyle(warnings_label)
 
     def _on_show_device_info(self) -> None:
         """Handle show device info button click."""

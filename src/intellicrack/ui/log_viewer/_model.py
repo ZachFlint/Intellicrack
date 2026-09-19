@@ -401,9 +401,7 @@ class LogRecordTableModel(QAbstractTableModel):
             line = record["line_number"]
             if func:
                 return f"{func}:{line}" if line else func
-            if line:
-                return str(line)
-            return record["module"]
+            return str(line) if line else record["module"]
         if column == _COLUMN_EVENT:
             return _flatten_for_display(record["event"])
         if column == _COLUMN_EXTRAS:

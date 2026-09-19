@@ -316,8 +316,7 @@ def _call_site_references() -> dict[str, frozenset[str]]:
     """
     found: dict[str, frozenset[str]] = {}
     for path in sorted(STATIC_ROOT.glob(_JS_GLOB)):
-        names = _call_sites(path.read_text(encoding=_ENCODING))
-        if names:
+        if names := _call_sites(path.read_text(encoding=_ENCODING)):
             found[path.name] = names
     return found
 

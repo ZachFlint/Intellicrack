@@ -280,7 +280,7 @@ def _fetch(
     if authenticate:
         sent[AUTH_HEADER] = SESSION_TOKEN if token is None else token
     if headers is not None:
-        sent.update(headers)
+        sent |= headers
     connection = http.client.HTTPConnection(_HOST, port, timeout=_HTTP_TIMEOUT)
     try:
         connection.request(method, path, body=body, headers=sent)

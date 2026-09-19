@@ -549,9 +549,7 @@ class OrchestratorStackSource:
             list[StackFrame]: Parsed StackFrame objects, or an empty list when
             no wrapped source is currently active.
         """
-        if self._active is None:
-            return []
-        return self._active.frames_from_raw(raw)
+        return [] if self._active is None else self._active.frames_from_raw(raw)
 
     def is_connected(self) -> bool:
         """Check whether either wrapped tool bridge is currently connected.

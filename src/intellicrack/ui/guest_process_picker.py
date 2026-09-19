@@ -175,7 +175,7 @@ class GuestProcessPickerDialog(QDialog):
                 item = self._table.item(row, column)
                 if item is not None:
                     parts.append(item.text().lower())
-            self._table.setRowHidden(row, not any(needle in part for part in parts))
+            self._table.setRowHidden(row, all(needle not in part for part in parts))
 
     def _on_selection_changed(self) -> None:
         """Enable the OK button only while a row is selected."""

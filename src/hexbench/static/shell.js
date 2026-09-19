@@ -603,7 +603,7 @@ class Dock {
     this.#tabs = root.querySelector('.hb-dock-tabs');
     this.#body = root.querySelector('.hb-dock-body');
     this.#tabs.addEventListener('click', (event) => {
-      const target = event.target;
+      const {target} = event;
       if (!(target instanceof HTMLElement)) {
         return;
       }
@@ -1088,7 +1088,7 @@ export function bindMenubarKeys(menubar, controller) {
   });
 
   menubar.addEventListener('keydown', (event) => {
-    const target = event.target;
+    const {target} = event;
     if (!(target instanceof HTMLElement)) {
       return;
     }
@@ -1194,7 +1194,7 @@ export function carriesFiles(transfer) {
   if (!transfer) {
     return false;
   }
-  const types = transfer.types;
+  const {types} = transfer;
   return types ? [...types].includes('Files') : false;
 }
 
@@ -1401,7 +1401,7 @@ export class Shell {
           render(null);
           return;
         }
-        const offset = context.caret.offset;
+        const {offset} = context.caret;
         const key = inspectorCacheKey(context.document, offset);
         if (key === lastKey) {
           return;
@@ -1813,7 +1813,7 @@ export class Shell {
 
   #bindToolbar() {
     this.#nodes.toolbar.addEventListener('click', (event) => {
-      const target = event.target;
+      const {target} = event;
       if (!(target instanceof HTMLElement)) {
         return;
       }
@@ -1868,7 +1868,7 @@ export class Shell {
 
   #bindTabs() {
     this.#nodes.tabstrip.addEventListener('click', (event) => {
-      const target = event.target;
+      const {target} = event;
       if (!(target instanceof HTMLElement)) {
         return;
       }
@@ -1887,7 +1887,7 @@ export class Shell {
       if (event.button !== 1) {
         return;
       }
-      const target = event.target;
+      const {target} = event;
       if (!(target instanceof HTMLElement)) {
         return;
       }
@@ -2023,7 +2023,7 @@ export class Shell {
   }
 
   #clampDocks() {
-    const workspace = this.#nodes.workspace;
+    const {workspace} = this.#nodes;
     const rect = workspace.getBoundingClientRect();
     const write = (name, value) => {
       const text = `${Math.round(value)}px`;
@@ -2081,7 +2081,7 @@ export class Shell {
   }
 
   #applyDockLayout() {
-    const workspace = this.#nodes.workspace;
+    const {workspace} = this.#nodes;
     this.#nodes.splitterV.hidden = !this.#dockRight.visible;
     this.#nodes.splitterH.hidden = !this.#dockBottom.visible;
     workspace.style.gridTemplateColumns = this.#dockRight.visible
@@ -2133,7 +2133,7 @@ export class Shell {
       if (!binding) {
         return;
       }
-      const target = event.target;
+      const {target} = event;
       const typing = target instanceof HTMLElement
         && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT');
       const nativeSelection = typing ? document.getSelection() : null;
@@ -2400,7 +2400,7 @@ export class Shell {
     if (!this.#active) {
       return;
     }
-    let path = this.#active.path;
+    let {path} = this.#active;
     if (forcePath || !path) {
       const values = await this.#dialogs.form({
         title: forcePath ? 'Save as' : 'Save',
@@ -2834,7 +2834,7 @@ export class Shell {
   }
 
   async fillSelection() {
-    const selection = this.#grid.selection;
+    const {selection} = this.#grid;
     if (selection === null) {
       return;
     }
@@ -2858,7 +2858,7 @@ export class Shell {
 
   /** Overwrite the destination with the selection's bytes, prefilled from it the way {@link Shell#fillSelection} is. */
   async copyBlock() {
-    const selection = this.#grid.selection;
+    const {selection} = this.#grid;
     if (selection === null) {
       return;
     }
@@ -2883,7 +2883,7 @@ export class Shell {
 
   /** Move the selection to the destination, prefilled from it the way {@link Shell#fillSelection} is. */
   async moveBlock() {
-    const selection = this.#grid.selection;
+    const {selection} = this.#grid;
     if (selection === null) {
       return;
     }
@@ -2913,7 +2913,7 @@ export class Shell {
    * length is not asked for; it is always the selection's.
    */
   async swapBlocks() {
-    const selection = this.#grid.selection;
+    const {selection} = this.#grid;
     if (selection === null) {
       return;
     }
@@ -3012,7 +3012,7 @@ export class Shell {
   }
 
   async insertBytes() {
-    const caret = this.#grid.caret;
+    const {caret} = this.#grid;
     const values = await this.#dialogs.form({
       title: 'Insert bytes',
       confirmLabel: 'Insert',
@@ -3027,7 +3027,7 @@ export class Shell {
   }
 
   async deleteSelection() {
-    const selection = this.#grid.selection;
+    const {selection} = this.#grid;
     if (selection === null) {
       return;
     }
@@ -3036,7 +3036,7 @@ export class Shell {
   }
 
   async copySelection() {
-    const selection = this.#grid.selection;
+    const {selection} = this.#grid;
     if (selection === null || !this.#active) {
       return;
     }

@@ -257,9 +257,7 @@ def _fetch_bridge_entropy_map(bridge: HexEditorBridge, block_size: int) -> list[
     except (RuntimeError, ValueError, TimeoutError):
         _logger.exception("bridge_entropy_map_failed")
         return None
-    if not isinstance(raw, list):
-        return None
-    return [float(v) for v in raw]
+    return [float(v) for v in raw] if isinstance(raw, list) else None
 
 
 def _fetch_bridge_byte_distribution(bridge: HexEditorBridge) -> list[int] | None:
@@ -276,9 +274,7 @@ def _fetch_bridge_byte_distribution(bridge: HexEditorBridge) -> list[int] | None
     except (RuntimeError, TimeoutError):
         _logger.exception("bridge_byte_distribution_failed")
         return None
-    if not isinstance(raw, list):
-        return None
-    return [int(v) for v in raw]
+    return [int(v) for v in raw] if isinstance(raw, list) else None
 
 
 def _fetch_bridge_type_distribution(bridge: HexEditorBridge) -> tuple[int, ...] | None:
@@ -321,9 +317,7 @@ def _fetch_bridge_classification(bridge: HexEditorBridge, block_size: int) -> li
     except (RuntimeError, TimeoutError):
         _logger.exception("bridge_content_classification_failed")
         return None
-    if not isinstance(raw, list):
-        return None
-    return [int(v) for v in raw]
+    return [int(v) for v in raw] if isinstance(raw, list) else None
 
 
 def compute_statistics_via_bridge(bridge: HexEditorBridge, entropy_block_size: int) -> _StatisticsResult:

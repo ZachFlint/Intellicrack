@@ -148,7 +148,7 @@ def _scan_flags(token: str, lowered: str) -> DangerousPattern | None:
     """
     if lowered in {"-enc", "-e", "-encodedcommand", "--encodedcommand"}:
         return DangerousPattern(token=token, reason="runs a base64-encoded command you cannot read")
-    if lowered in {"-executionpolicy", "--executionpolicy"} or lowered == "bypass":
+    if lowered in {"-executionpolicy", "--executionpolicy", "bypass"}:
         return DangerousPattern(token=token, reason="disables PowerShell script-execution policy")
     if lowered in {"-nop", "-noprofile", "-w", "-windowstyle"}:
         return DangerousPattern(token=token, reason="suppresses the usual PowerShell startup and window")
@@ -241,9 +241,14 @@ def describe_launch(spec: StdioServerSpec, env: Mapping[str, str]) -> str:
     else:
         lines.extend(["", "Arguments:", "  (none)"])
 
-    lines.extend(["", "Working directory:", f"  {spec.cwd or '(inherited from Intellicrack)'}"])
-
-    lines.append("")
+    lines.extend(
+        [
+            "",
+            "Working directory:",
+            f"  {spec.cwd or '(inherited from Intellicrack)'}",
+            "",
+        ]
+    )
     if env:
         lines.append(f"Environment entries passed to it ({len(env)}), values hidden:")
         lines.extend(f"  {name}" for name in sorted(env))
@@ -382,7 +387,7 @@ class TrustStore:
         data = _read_json_object(self._path)
         entry = data.get(server_id)
         merged: dict[str, Any] = dict(entry) if is_json_object(entry) else {}
-        merged.update(changes)
+        merged |= changes
         data[server_id] = merged
         _write_json_object(self._path, data)
 

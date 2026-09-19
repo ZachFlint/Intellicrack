@@ -447,9 +447,7 @@ def _bp_command_for_type(bp_type: BreakpointType, *, software: str, hardware: st
     """
     if bp_type == "hardware":
         return hardware
-    if bp_type == "memory":
-        return memory
-    return software
+    return memory if bp_type == "memory" else software
 
 
 def _region_containing(regions: list[MemoryRegion], address: int) -> MemoryRegion | None:
@@ -464,10 +462,16 @@ def _region_containing(regions: list[MemoryRegion], address: int) -> MemoryRegio
         MemoryRegion | None: The covering region, or None if no region in
         ``regions`` covers ``address``.
     """
-    for region in regions:
-        if region.base_address <= address < region.base_address + region.size:
-            return region
-    return None
+    return next(
+        (
+            region
+            for region in regions
+            if region.base_address
+            <= address
+            < region.base_address + region.size
+        ),
+        None,
+    )
 
 
 def _is_str_obj_dict(data: object) -> TypeGuard[dict[str, object]]:

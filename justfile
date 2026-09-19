@@ -27,7 +27,6 @@ update:
     @Write-Host '==> pixi upgrade' -ForegroundColor Cyan; pixi upgrade
     @Write-Host '==> cargo (hexcore)' -ForegroundColor Cyan; Push-Location 'src/intellicrack-hexcore'; cargo upgrade --incompatible --pinned -vv; cargo update --recursive -vv; cargo fetch -vv; Pop-Location
     @Write-Host '==> hexbench dependencies' -ForegroundColor Cyan; & src/hexbench/update-deps.ps1
-    @Write-Host '==> cargo (CLI launcher)' -ForegroundColor Cyan; Push-Location 'CLI Coding/launcher'; cargo upgrade --incompatible --pinned -vv; cargo update --recursive -vv; cargo fetch -vv; Pop-Location
     @Write-Host '==> yarn up' -ForegroundColor Cyan; yarn up '*'
     @Write-Host '==> yarn dedupe' -ForegroundColor Cyan; yarn dedupe
     @Write-Host '==> Update complete' -ForegroundColor Green
@@ -490,11 +489,6 @@ run-all-tools *FLAGS:
 [group('system')]
 kill:
     @& scripts/kill-processes.ps1
-
-# Build CLI Launcher (release, max optimization) and deploy to CLI Coding/
-[group('build')]
-build-cli-launcher:
-    @Push-Location 'CLI Coding/launcher'; cargo build --release; if ($LASTEXITCODE -eq 0) { Copy-Item -Force 'target/release/cli-launcher.exe' '../CLI Launcher.exe'; Write-Host 'Deployed to: CLI Coding/CLI Launcher.exe' -ForegroundColor Green } else { Write-Host 'Build failed.' -ForegroundColor Red; exit 1 }; Pop-Location
 
 [doc('Install Rust development tools via cargo install')]
 [group('install')]

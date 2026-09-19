@@ -313,9 +313,7 @@ class OpenAIProvider(LLMProviderBase):
             bool: ``True`` if the model accepts image input.
         """
         stated = preset_capabilities(provider_ids.OPENAI, model_id).supports_vision
-        if stated is not None:
-            return stated
-        return "vision" in model_id
+        return stated if stated is not None else "vision" in model_id
 
     async def list_models(self) -> list[ModelInfo]:
         """Dynamically fetch available models from OpenAI.

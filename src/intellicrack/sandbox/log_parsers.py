@@ -797,8 +797,7 @@ async def parse_collector_lifecycle(
         return None
 
     exit_code: int | None = None
-    match = _LIFECYCLE_EXIT_CODE_RE.search(stop_detail)
-    if match:
+    if match := _LIFECYCLE_EXIT_CODE_RE.search(stop_detail):
         exit_code = int(match.group(1))
     return CollectorOutage(
         collector=collector,

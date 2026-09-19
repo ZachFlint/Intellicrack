@@ -2732,7 +2732,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         if match is None:
             return None
 
-        components = match.group(1).split(".")
+        components = match[1].split(".")
         try:
             first = int(components[0])
         except (ValueError, IndexError):
@@ -2771,7 +2771,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         if match is None:
             return _DEFAULT_MIN_JDK_MAJOR
         try:
-            return int(match.group(1))
+            return int(match[1])
         except ValueError:
             return _DEFAULT_MIN_JDK_MAJOR
 
@@ -2802,8 +2802,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         """
         required_major = cls._required_min_jdk(ghidra_path)
 
-        existing = os.environ.get("JAVA_HOME")
-        if existing:
+        if existing := os.environ.get("JAVA_HOME"):
             existing_path = Path(existing)
             if (existing_path / "bin").is_dir():
                 existing_major = cls._read_jdk_major(existing_path)

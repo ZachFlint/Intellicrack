@@ -177,9 +177,7 @@ class BenchRequestHandler(BaseHTTPRequestHandler):
             return b""
         if length <= 0:
             return b""
-        if length > _MAX_BODY:
-            return None
-        return self.rfile.read(length)
+        return None if length > _MAX_BODY else self.rfile.read(length)
 
     def _read_chunked_body(self) -> bytes | None:
         """Decode a ``Transfer-Encoding: chunked`` request body.

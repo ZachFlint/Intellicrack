@@ -289,7 +289,6 @@ exclude_dirs = [
   ".pixi",
   "node_modules",
   "vendor",
-  "CLI Coding",
   "Screenshots",
 ]
 # B405: xml.etree usage is restricted to write-side construction via
@@ -341,7 +340,6 @@ run.omit = [
   "*/.git/*",
   "*/.pixi/*",
   "*/__pycache__/*",
-  "*/CLI Coding/*",
   "*/docs/*",
   "*/node_modules/*",
   "*/Screenshots/*",
@@ -375,7 +373,6 @@ exclude = [
   ".pixi",
   "node_modules",
   "vendor",
-  "CLI Coding",
   "Screenshots"
 ]
 ignore-names = [
@@ -522,7 +519,6 @@ extend_exclude = [
   "dist",
   "docker",
   "node_modules",
-  "CLI Coding",
   "Screenshots",
   "typings",
   "stubs",
@@ -582,7 +578,6 @@ exclude = [
   "node_modules",
   "notebooks",
   "vendor",
-  "CLI Coding",
   "Screenshots",
   "typings",
   "stubs",
@@ -661,7 +656,6 @@ exclude = [
   "dist",
   "node_modules",
   "vendor",
-  "CLI Coding",
   "Screenshots",
   "typings",
   "stubs",
@@ -702,7 +696,6 @@ exclude = [
   "^\\.vscode/",
   "^node_modules/",
   "^vendor/",
-  "^CLI Coding/",
   "^Screenshots/",
 ]
 
@@ -1111,7 +1104,6 @@ exclude = [
   ".vscode/",
   "__pycache__/",
   "build/",
-  "CLI Coding/",
   "dist/",
   "docs/",
   "notebooks/",
@@ -1356,7 +1348,6 @@ exclude = [
   "docs/",
   "node_modules/",
   "vendor/",
-  "CLI Coding/",
   "Screenshots/",
   "typings/",
   "stubs/",

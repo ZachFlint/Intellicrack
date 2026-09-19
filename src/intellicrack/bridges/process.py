@@ -6664,9 +6664,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
 
         dd_off = get_data_directory_offset(0, is_pe64=True, entry_index=_PE_DATA_DIR_EXCEPTION)
         exc_rva, exc_size = read_data_directory_entry(nt, dd_off)
-        if exc_rva == 0 or exc_size == 0:
-            return None
-        return exc_rva, exc_size
+        return None if exc_rva == 0 or exc_size == 0 else (exc_rva, exc_size)
 
     def _parse_runtime_function_entry(
         self,

@@ -483,13 +483,14 @@ def merge_auth_headers(inferred: Mapping[str, str], custom: Mapping[str, str]) -
     Returns:
         dict[str, str]: The headers to send.
     """
-    custom_auth = {name for name in custom if name.strip().lower() in AUTH_HEADER_NAMES}
-    if custom_auth:
+    if custom_auth := {
+        name for name in custom if name.strip().lower() in AUTH_HEADER_NAMES
+    }:
         _logger.info("inferred_auth_header_suppressed", overridden_by=sorted(custom_auth))
         merged: dict[str, str] = {}
     else:
         merged = dict(inferred)
-    merged.update(custom)
+    merged |= custom
     return merged
 
 
@@ -728,7 +729,7 @@ class DialectAdapter(ABC):
         for key in request.drop_params:
             body.pop(key, None)
         if request.extra_body:
-            body.update(request.extra_body)
+            body |= request.extra_body
         return body
 
 
