@@ -15,11 +15,20 @@ FILTER_REGEX_INCLUDE: (src/)
 # excluded directories do: MegaLinter forwards them to every project-mode
 # linter that has a native exclusion argument (devskim, grype, syft, trivy,
 # trivy-sbom, checkov, secretlint, osv-scanner, kingfisher, cspell, lychee all
-# declare one). MegaLinter's own defaults cover node_modules, .venv and the
-# usual caches but know nothing about this repo's large non-source trees, so
-# devskim spent 19,796s and grype and syft both hit LINTER_TIMEOUT_SECONDS
-# walking them. dustilock, betterleaks and trufflehog have no native exclusion
-# argument and still scan everything.
+# declare one), and jscpd gets them through a generated config that merges
+# them into its ignore list. MegaLinter's own defaults cover node_modules,
+# .venv and the usual caches but know nothing about this repo's large
+# non-source trees, so devskim spent 19,796s and grype and syft both hit
+# LINTER_TIMEOUT_SECONDS walking them. dustilock, betterleaks and trufflehog
+# have no native exclusion argument and still scan everything.
+#
+# tests/ is here for the same reason: it holds no shipped source, every
+# file-based linter already skips it via FILTER_REGEX_INCLUDE above, and it is
+# where most of jscpd's duplication lives. Measured with jscpd 5.3.0 under
+# MegaLinter's own default ignore list: 1,921 of the 2,866 clones found across
+# the repository are inside tests/, against 908 in src/. Test modules repeat
+# fixtures and assertion blocks by design, so reporting them as copy-paste
+# says nothing about the code under test.
 ADDITIONAL_EXCLUDED_DIRECTORIES:
   - .claude
   - .pixi
@@ -27,6 +36,7 @@ ADDITIONAL_EXCLUDED_DIRECTORIES:
   - dist
   - reports
   - target
+  - tests
   - tools
   - vendor
 # The Windows-host -> Linux-container bind mount is slow enough that on a real
@@ -56,8 +66,24 @@ PYTHON_PYLINT_CONFIG_FILE: LINTER_DEFAULT
 PYTHON_MYPY_CONFIG_FILE: LINTER_DEFAULT
 PYTHON_FLAKE8_CONFIG_FILE: LINTER_DEFAULT
 PYTHON_ISORT_CONFIG_FILE: LINTER_DEFAULT
+# LINTER_DEFAULT is not enough for flake8 on its own. Vanilla flake8 reads
+# setup.cfg, tox.ini and .flake8, never pyproject.toml, and this repo keeps
+# its settings in a [tool.flake8] table there (max-line-length 140 plus a
+# large exclude/extend-ignore list). Reading pyproject.toml takes the
+# flake8-pyproject plugin, which is in this project's own requirements but
+# not in MegaLinter's image -- its flake8 venv holds flake8 7.3.0 and nothing
+# else. So the container ran flake8 at stock defaults, above all
+# max-line-length 79 against a codebase written to 140, and reported 18,774
+# findings. Measured with flake8 7.3.0 over the same 268 files: 16,485 of
+# 16,593 findings were E501 alone, and installing flake8-pyproject so the
+# [tool.flake8] table is honoured takes the total to 74. The version below
+# is the one requirements.txt pins, so the container runs what this project
+# runs.
+PYTHON_FLAKE8_PRE_COMMANDS:
+  - command: "pip install flake8-pyproject==1.2.4"
+    venv: flake8
+    continue_if_failed: false
 # PYTHON_BLACK's own default is already pyproject.toml, and this repo has a
-
 # real [tool.black] table, so it needs no override. PYTHON_PYRIGHT's own
 # default is already pyrightconfig.json, and this repo has a real, strict one
 # at the root -- also needs no override, and (once the timeout below stops
@@ -65,12 +91,15 @@ PYTHON_ISORT_CONFIG_FILE: LINTER_DEFAULT
 # It is still upstream pyright, not this project's actual basedpyright, so it
 # won't enforce basedpyright's own additional rules on top of that config --
 # but it is no longer the "different config entirely" gap this comment used
-# to describe. flake8, pylint, isort, and mypy have no equivalent project
-# config to find (pyproject.toml has no [tool.isort]/[tool.pylint] table, and
-# ruff/basedpyright are this project's actual tools of record for that
+# to describe. pylint, isort and mypy genuinely have no project config to
+# find (pyproject.toml has no [tool.isort]/[tool.pylint]/[tool.mypy] table,
+# and ruff/basedpyright are this project's actual tools of record for that
 # ground), so LINTER_DEFAULT for them mainly avoids MegaLinter's bundled
 # opinionated config rather than unlocking a real one -- treat their findings
-# as advisory, not as gates.
+# as advisory, not as gates. pylint's 8,926 is dominated by the same
+# line-length gap: measured over the same 268 files, 4,765 of 8,289 findings
+# are C0301 at pylint's stock 100 columns and another 1,062 are W0201, which
+# every PyQt6 widget that assigns children outside __init__ trips by design.
 # RUST_CLIPPY's default "project" CLI_LINT_MODE assumes the mounted repo root
 # is the crate root, so it fails instantly with "could not find Cargo.toml"
 # against this repo (the crate lives at src/intellicrack-hexcore). Point it at
