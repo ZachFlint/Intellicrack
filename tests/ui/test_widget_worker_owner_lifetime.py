@@ -25,11 +25,13 @@ probe, and the log viewer's historical tail load over a real file.
 
 from __future__ import annotations
 
+import ast
 import inspect
 import json
 import socket
 import sys
 import threading
+from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 import httpx
@@ -49,8 +51,7 @@ from intellicrack.ui.xpu_status import XPUStatusDialog
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
-    from pathlib import Path
+    from collections.abc import Callable, Iterator, Mapping
 
     from pytestqt.qtbot import QtBot
 
@@ -585,3 +586,87 @@ def test_the_real_log_tail_load_is_owned_by_its_reader(qtbot: QtBot, tmp_path: P
         assert loaded, "the historical load never reported an offset to the reader"
     finally:
         reader.stop()
+
+
+_TESTS_ROOT: Final[Path] = Path(__file__).resolve().parents[1]
+
+
+def _worker_positional_limits() -> dict[str, int | None]:
+    """Return how many positional arguments each converted worker still accepts.
+
+    Returns:
+        dict[str, int | None]: Class name mapped to its positional limit, or ``None`` when the constructor takes ``*args``.
+    """
+    limits: dict[str, int | None] = {}
+    positional = {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
+    for _label, worker_cls in _WORKER_CONSTRUCTORS:
+        parameters = list(inspect.signature(worker_cls.__init__).parameters.values())[1:]
+        if any(parameter.kind is inspect.Parameter.VAR_POSITIONAL for parameter in parameters):
+            limits[worker_cls.__name__] = None
+        else:
+            limits[worker_cls.__name__] = sum(1 for parameter in parameters if parameter.kind in positional)
+    return limits
+
+
+def _declared_arity(node: ast.ClassDef, inherited: int | None) -> int | None:
+    """Return the positional limit a subclass imposes, falling back to the one it inherits.
+
+    Args:
+        node: Class definition of a test-local worker subclass.
+        inherited: Positional limit of the base class.
+
+    Returns:
+        int | None: The subclass's own limit when it declares ``__init__``, otherwise ``inherited``; ``None`` means ``*args``.
+    """
+    for statement in node.body:
+        if isinstance(statement, ast.FunctionDef) and statement.name == "__init__":
+            if statement.args.vararg is not None:
+                return None
+            return len(statement.args.posonlyargs) + len(statement.args.args) - 1
+    return inherited
+
+
+def _overlong_worker_constructions(root: Path, limits: Mapping[str, int | None]) -> list[str]:
+    """Find test call sites handing a converted worker more positional arguments than it accepts.
+
+    Args:
+        root: Directory scanned recursively for test modules.
+        limits: Positional limit per worker class name, as :func:`_worker_positional_limits` reports it.
+
+    Returns:
+        list[str]: One ``<path>:<line> <class> ...`` description per offending call, empty when every call fits.
+    """
+    offenders: list[str] = []
+    for path in sorted(root.rglob("test_*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        local: dict[str, int | None] = dict(limits)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                for base in node.bases:
+                    if isinstance(base, ast.Name) and base.id in local:
+                        local[node.name] = _declared_arity(node, local[base.id])
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name) or node.func.id not in local:
+                continue
+            limit = local[node.func.id]
+            if limit is None or len(node.args) <= limit:
+                continue
+            root_parent = _TESTS_ROOT.parent
+            location = path.relative_to(root_parent) if path.is_relative_to(root_parent) else path
+            offenders.append(f"{location}:{node.lineno} {node.func.id} takes {limit} positional arguments, {len(node.args)} given")
+    return offenders
+
+
+def test_no_test_hands_a_converted_worker_a_positional_parent() -> None:
+    """No test may construct a converted worker with more positional arguments than it declares.
+
+    Removing ``parent`` from these constructors left every caller that passed a widget as the trailing positional argument raising
+    ``TypeError`` on construction. Two such call sites reached CI and failed there; two more sat in files the suite aborts before
+    reaching, so nothing reported them. The production side is already gated, and this is the mirror of it for the tests: restore a
+    trailing positional widget at any of those call sites and this turns red, naming the file, the line and the arity.
+    """
+    offenders = _overlong_worker_constructions(_TESTS_ROOT, _worker_positional_limits())
+
+    assert offenders == [], "tests construct workers with more positional arguments than the constructors accept:\n" + "\n".join(
+        offenders,
+    )
