@@ -102,8 +102,13 @@ RUST_CLIPPY_ARGUMENTS: >-
 # GET the Ollama endpoint http://localhost:11434/ out of
 # src/intellicrack/assets/configs/ollama_codellama.json, which is a provider
 # endpoint in a config file and was never a link to check.
+# --root-dir is the document root for root-relative hrefs, not the repo root.
+# src/hexbench/static/index.html is the only linted file with any, and it is
+# served by hexbench with src/hexbench as the web root: /static/app.css is
+# src/hexbench/static/app.css on disk. /tmp/lint resolved it to
+# /tmp/lint/static/app.css, which does not exist.
 SPELL_LYCHEE_ARGUMENTS: >-
-  --root-dir /tmp/lint --exclude-loopback
+  --root-dir /tmp/lint/src/hexbench --exclude-loopback
 # Relocate the report folder to match the rest of the repo's reports/
 # convention, and reset it on every run so stale findings from a previous
 # `just megalint` never mix with the current one.
