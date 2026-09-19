@@ -1,6 +1,8 @@
 # MegaLinter configuration for Intellicrack, invoked via `just megalint`
 # (scripts/run-megalinter.ps1), which handles the Docker engine switch,
-# mega-linter-runner invocation, and container lifecycle around this.
+# mega-linter-runner invocation, and the image/container lifecycle around this
+# -- the image named by MEGALINTER_VERSION below is installed before the run
+# and uninstalled after it, every run.
 # https://megalinter.io/latest/config-file/ | https://megalinter.io/latest/config-variables/
 MEGALINTER_VERSION: v10
 # Scope every linter to src/. Repository-level scanners (BETTERLEAKS, CHECKOV,
@@ -63,8 +65,8 @@ PYTHON_ISORT_CONFIG_FILE: LINTER_DEFAULT
 # silently under-reports relative to `just clippy`. Note this also means
 # clippy compiles intellicrack-hexcore from scratch on every `just megalint`
 # run, since the container (and its cargo registry/target cache) is removed
-# afterwards -- expect this step to be slow; `just clippy` remains the fast,
-# incrementally-cached tool for routine use.
+# afterwards, along with the image itself -- expect this step to be slow;
+# `just clippy` remains the fast, incrementally-cached tool for routine use.
 RUST_CLIPPY_ARGUMENTS: >-
   --manifest-path=src/intellicrack-hexcore/Cargo.toml --all-targets -- -W clippy::all -W clippy::pedantic
 # Relocate the report folder to match the rest of the repo's reports/
