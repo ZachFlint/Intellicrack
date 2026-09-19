@@ -397,6 +397,16 @@ try {
     Write-Step 'MEGALINT' "Running MegaLinter on src/ via mega-linter-runner (npx), container $containerName..."
     $runnerArgv = @('--yes', $RunnerPackage, '--no-prompt', '--remove-container')
     if (-not $skipPull) { $runnerArgv += '--nodockerpull' }
+    # mega-linter-runner forwards every KEY=VALUE in a repo-root .env file into
+    # the container. Running `just megalint` from inside the pixi shell puts a
+    # Windows CONDA_PREFIX/VIRTUAL_ENV there, and pyo3's build script reads both
+    # when deciding which interpreter to query, so RUST_CLIPPY died with
+    # "failed to run the Python interpreter at D:\Intellicrack\.pixi\envs\default/bin/python".
+    # PYO3_PYTHON takes precedence over both, and a bare command name resolves
+    # through the container's PATH rather than pinning an image-specific path.
+    if ($Flags -notmatch 'PYO3_PYTHON') {
+        $runnerArgv += @('--env', 'PYO3_PYTHON=python3')
+    }
     $runnerArgv += @('--path', '.') + $userArgs
     & npx @runnerArgv
     $exitCode = $LASTEXITCODE
