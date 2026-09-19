@@ -431,16 +431,16 @@ class McpToolSource:
         catalog = connection.catalog
         if catalog is None:
             return []
-        entries = enabled_entries(config, catalog)
-        if not entries:
+        if entries := enabled_entries(config, catalog):
+            return [
+                ToolDefinition(
+                    tool_name=config.namespace,
+                    description=f"Tools provided by the third-party MCP server {server_id!r} ({len(entries)} available).",
+                    functions=[map_tool_to_function(entry) for entry in entries],
+                ),
+            ]
+        else:
             return []
-        return [
-            ToolDefinition(
-                tool_name=config.namespace,
-                description=f"Tools provided by the third-party MCP server {server_id!r} ({len(entries)} available).",
-                functions=[map_tool_to_function(entry) for entry in entries],
-            ),
-        ]
 
     def definitions(self) -> list[ToolDefinition]:
         """Build the tool definitions every connected server contributes.
@@ -524,9 +524,7 @@ class McpToolSource:
             return None
         connection = self._manager.connection(server_id)
         catalog = connection.catalog if connection is not None else None
-        if catalog is None:
-            return None
-        return catalog.entry_by_name(tool_name)
+        return None if catalog is None else catalog.entry_by_name(tool_name)
 
     def generation_for(self, canonical_name: str) -> str | None:
         """Read the tool-listing generation a canonical name belongs to.

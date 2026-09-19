@@ -137,7 +137,7 @@ def _validate_shard_index(folder_norm: str, index_path: Path) -> None:
     """
     try:
         document: object = json.loads(index_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, UnicodeDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         _raise_unsafe_checkpoint(folder_norm, index_path.name, str(exc), "could not be parsed as a shard index", cause=exc)
     if not isinstance(document, dict):
         return

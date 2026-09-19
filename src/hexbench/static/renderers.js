@@ -324,7 +324,7 @@ function rawDownloadRow(name, result, ctx) {
  */
 export function renderGeneric(name, result, ctx) {
   const root = element('div', 'hb-stack');
-  const value = result.value;
+  const {value} = result;
 
   if (isTaggedBytes(value)) {
     if (value.truncated) {
@@ -415,7 +415,7 @@ function renderSearch(name, result, ctx) {
       const length = Number(row.dataset.length);
       readWindow(ctx.handle, offset, Math.min(length, PREVIEW_BYTES))
         .then((window) => {
-          const bytes = window.bytes;
+          const {bytes} = window;
           row.querySelector('[data-role="bytes"]').textContent = [...bytes].map((value) => hexOf(value, HALF)).join(' ') + (length > bytes.length ? ' …' : '');
           row.querySelector('[data-role="text"]').textContent = [...bytes].map(asciiFor).join('');
         })
@@ -581,7 +581,7 @@ function scalarCell(raw) {
 }
 
 function renderInspect(name, result, ctx) {
-  const value = result.value;
+  const {value} = result;
   const keys = value === null || typeof value !== 'object' ? [] : Object.keys(value);
   if (keys.length === 0) {
     return emptyState(
@@ -1443,7 +1443,7 @@ function renderVaMappings(name, result, ctx) {
 }
 
 function renderNullableAddress(name, result, ctx) {
-  const value = result.value;
+  const {value} = result;
   if (value === null) {
     return banner('warning', `${name} returned null`, 'No mapping covers that address, which is a different answer from the address zero.');
   }

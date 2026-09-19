@@ -362,8 +362,7 @@ def _build_dataclass_instance(
             a valid instance.
     """
     valid_names = {field.name for field in fields(dataclass_type)}
-    unknown = sorted(set(mapping) - valid_names)
-    if unknown:
+    if unknown := sorted(set(mapping) - valid_names):
         msg = f"{_ERR_UNKNOWN_DATACLASS_FIELD} {parameter_name!r}: {unknown} not in {sorted(valid_names)}"
         raise ToolError(msg)
 

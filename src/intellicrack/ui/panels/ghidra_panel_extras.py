@@ -340,7 +340,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
             self._status_label.setText("Invalid address for set register value")
             return
         end_text = self._register_range_end_input.text().strip()
-        end = start if not end_text else _parse_address(end_text)
+        end = _parse_address(end_text) if end_text else start
         if end is None:
             self._status_label.setText("Invalid end address for set register value")
             return

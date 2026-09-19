@@ -5925,7 +5925,10 @@ class _FridaBridgeSessionChildGatingMixin(_FridaBridgeBase):
             )
             _logger.info("session_child_gating_pending_child_added", pid=child_pid)
             with self._session_gated_children_lock:
-                if not any(existing.pid == child_pid for existing in self._session_gated_children):
+                if all(
+                    existing.pid != child_pid
+                    for existing in self._session_gated_children
+                ):
                     self._session_gated_children.append(info)
             self._dispatch_message({
                 "type": "send",
@@ -6451,7 +6454,9 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             )
             _logger.info("spawn_gating_pending_spawn_added", pid=spawn_pid)
             with self._gated_children_lock:
-                if not any(existing.pid == spawn_pid for existing in self._gated_children):
+                if all(
+                    existing.pid != spawn_pid for existing in self._gated_children
+                ):
                     self._gated_children.append(info)
             self._dispatch_message({
                 "type": "send",

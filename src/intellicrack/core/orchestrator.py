@@ -2032,13 +2032,12 @@ class Orchestrator:
 
         lines.extend(self._render_external_sources())
         lines.extend(["", "### Currently loaded functions"])
-        loaded_lines = [
+        if loaded_lines := [
             self._render_tool_function(func)
             for definition in active_definitions
             for func in definition.functions
             if func.name != _TOOLS_SEARCH_FUNCTION_NAME
-        ]
-        if loaded_lines:
+        ]:
             lines.extend(loaded_lines)
         else:
             lines.append(f"(none yet - call `{_TOOLS_SEARCH_FUNCTION_NAME}` to load functions)")

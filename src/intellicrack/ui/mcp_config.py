@@ -154,9 +154,7 @@ class McpServerListModel(QAbstractListModel):
             McpServerConfig | None: The configuration, or ``None`` when the
             row does not exist.
         """
-        if 0 <= row < len(self._rows):
-            return self._rows[row][0]
-        return None
+        return self._rows[row][0] if 0 <= row < len(self._rows) else None
 
     def status_at(self, row: int) -> McpServerStatus | None:
         """Read the state at one row.
@@ -168,9 +166,7 @@ class McpServerListModel(QAbstractListModel):
             McpServerStatus | None: The state, or ``None`` when the row does
             not exist.
         """
-        if 0 <= row < len(self._rows):
-            return self._rows[row][1]
-        return None
+        return self._rows[row][1] if 0 <= row < len(self._rows) else None
 
     def row_for(self, server_id: str) -> int:
         """Find the row a server occupies.
@@ -194,9 +190,7 @@ class McpServerListModel(QAbstractListModel):
         Returns:
             int: The row count.
         """
-        if parent is not None and parent.isValid():
-            return 0
-        return len(self._rows)
+        return 0 if parent is not None and parent.isValid() else len(self._rows)
 
     @override
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
@@ -1099,8 +1093,7 @@ class McpConfigDialog(QDialog):
             lines.append(f"Connected at {status.connected_at.isoformat(timespec='seconds')}")
         if status.last_error:
             lines.append(f"Last error: {status.last_error}")
-        undeclared = missing_input_ids(self._document, [config])
-        if undeclared:
+        if undeclared := missing_input_ids(self._document, [config]):
             lines.append(f"Undeclared inputs referenced: {', '.join(undeclared)}")
         self._status_label.setText("\n".join(lines))
 
@@ -1475,9 +1468,7 @@ def _as_object_list(value: object) -> list[object]:
         list[object]: The elements, or an empty list when the result was not
         a list at all.
     """
-    if not isinstance(value, list):
-        return []
-    return cast("list[object]", value)
+    return cast("list[object]", value) if isinstance(value, list) else []
 
 
 def _is_status(value: object) -> TypeGuard[McpServerStatus]:

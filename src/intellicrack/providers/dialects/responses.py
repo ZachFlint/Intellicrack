@@ -332,15 +332,15 @@ class ResponsesAdapter(DialectAdapter):
             "model": request.model,
             "input": self.build_input(request.messages, capabilities, name_style=request.tool_name_style),
         }
-        instructions = self.system_instruction(request)
-        if instructions:
+        if instructions := self.system_instruction(request):
             body["instructions"] = instructions
         body[self.token_limit_field(capabilities)] = request.max_tokens
         if capabilities.supports_temperature:
             body["temperature"] = request.temperature
 
-        tools = self.build_tool_schemas(request.tools, capabilities, name_style=request.tool_name_style)
-        if tools:
+        if tools := self.build_tool_schemas(
+            request.tools, capabilities, name_style=request.tool_name_style
+        ):
             body["tools"] = tools
             if request.tool_choice is not None:
                 body["tool_choice"] = self.tool_choice_param(request.tool_choice, name_style=request.tool_name_style)
@@ -914,8 +914,7 @@ def _log_tool_search_event(event: Mapping[str, Any]) -> None:
     """
     raw_item = event.get("item")
     item: dict[str, Any] = raw_item if is_json_object(raw_item) else {}
-    names = canonical_names_in_tool_search_output(item)
-    if names:
+    if names := canonical_names_in_tool_search_output(item):
         _logger.info("responses_tool_search_loaded", tools=names)
 
 

@@ -9,6 +9,347 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **mcp:** Add OAuth, resources and prompts, and Windows confinement (`b4d8258`)
+auth.py signs requests to HTTP servers. Tokens are keyed per server AND per
+issuer, so a token minted for one server can never be presented to another and
+a server that moves authorization servers cannot reuse what it held under the
+old one. Stored client registrations go through the SDK's own
+credentials_match_issuer before being handed back, which is the RFC 9207
+mix-up defence. Identity resolves in the order the specification prefers: a
+stored registration, a Client ID Metadata Document, a pre-registered client
+id, then dynamic registration, logged as the deprecated path it is. The
+browser launch and the five-minute wait for the loopback redirect both run off
+the event loop, because either one on it freezes every server, every tool call
+and the GUI for the duration of a sign-in. The OAuth callback server now
+records the iss parameter so it can be validated.
+resources.py fetches what a server offers without running anything: resources,
+their contents, prompt templates and their rendered messages. All of it is the
+server's own words, so it arrives fenced. The settings dialog browses it and
+can attach a resource to the conversation, which the main window routes into
+the chat input.
+sandbox_launch.py confines a local server on Windows. The child gets an
+explicit environment allowlist rather than an inherited copy, so the
+credentials in Intellicrack's own environment do not travel into somebody
+else's program; its working directory is confined to a location the operator
+nominated; and it runs in a job object with an active-process cap, per-process
+and per-job memory caps, UI restrictions, and kill-on-close teardown so a
+server that spawned children cannot outlive its connection.
+The SDK owns the spawn and does not report the child's identity, so the
+process is found by diffing this process's children around it. When it cannot
+be identified, or the platform has no job objects at all, the launch is
+refused rather than continued unconfined: a configuration that says sandboxed
+and silently is not leaves the operator believing in protection they do not
+have. Servers without sandbox enabled, which is the default, take the SDK
+path unchanged.
+
+- **ui:** Add MCP settings, consent, elicitation and transcript attribution (`7e24760`)
+mcp_consent_dialog.py is the last point at which an operator can refuse to run
+a program on their own machine, so it shows the command with every argument in
+full, wrapped rather than elided, with the flagged fragments highlighted where
+they appear. Environment entries are listed by name only; their values are
+resolved credentials. "Trust this server" is a separate, stronger grant than
+approving the launch and is off by default.
+mcp_config.py is where a server is added, reached, started, and pared down.
+Test connection actually connects and reports the tool count the server really
+published, and the per-tool switches carry costs measured from the schemas the
+server really sent, so enabling a large tool set is a visible decision rather
+than a silent one. Closing the dialog detaches a still-running worker instead
+of destroying it: a QThread deleted mid-run aborts the process, and a
+connection attempt easily outlives the operator's patience with the window.
+mcp_elicitation_dialog.py answers a server that asks for information
+mid-call, building a form from its requested schema. Closing the window is a
+cancel, never an accept, and the dialog says every time that a server must
+never ask for a credential this way.
+mcp_bridge.py carries both questions from the background loop to the GUI
+thread as awaited futures rather than blocking calls: a consent dialog can sit
+open for minutes, and blocking the loop would stall every other server's
+heartbeat behind it. No answer means no.
+mcp_service.py assembles the whole client in one place -- stores, resolver,
+consent gate, manager, tool source, classifier, approval store -- because each
+piece of that wiring fails quietly on its own: an unregistered tool source
+leaves third-party tools invisible, an uninstalled classifier leaves their
+calls unknown, an uninstalled approval store leaves "always" unhonoured.
+The chat transcript names the server behind every third-party call and renders
+multi-part results inline, images included. app.py starts the service without
+letting an MCP failure stop the application, tears it down before the shared
+loop stops, and hands the confirmation dialog the generation and origin of
+each call. The OAuth callback server now records the RFC 9207 iss parameter.
+
+- **core:** Teach the orchestrator about third-party tool sources (`08be51b`)
+Classification. An MCP namespace used to reach ToolName(namespace), fail, and
+classify as "unknown", which the orchestrator already treats as destructive.
+That posture is right and is kept: a namespace an installed source claims is
+now answered by that source, which still says destructive for everything
+except a tool that a trusted server annotated read-only. With no source
+installed nothing claims the namespace, it falls through to the same unknown
+result as before, and a call is still confirmed.
+The source reaches classify_tool_call through a module-level holder rather
+than a new parameter, so the free function keeps the signature its callers and
+tests use, and orchestrator.py never imports intellicrack.mcp.
+Ordering. Advertised definitions now run meta-tool, then bridges, then
+external sources. A provider that caps how many tools it accepts truncates the
+tail, so the tail has to be what Intellicrack can afford to lose. Tool
+discovery survives a cap smaller than the number of tools a server publishes.
+Prompt. Connected servers get their own section listing id, health and tool
+count, and are kept out of the bridge menu so their descriptions are never
+rendered unfenced. The tools themselves are never listed: the model finds them
+through tools.search like any other, which is the whole point of dynamic
+loading. The section tells the model plainly that fenced text is data.
+Context budget. Trimming summed message.content alone, so a tool message --
+which has no content and carries everything in its results -- measured as
+nearly free. A history whose tool results alone overflowed the window was
+never trimmed. _message_tokens now counts tool-call arguments, tool results
+including their multi-part content, and reasoning;
+_tool_definitions_tokens prices the advertised set; and the budget subtracts
+that overhead, raising with an actionable message when the tools leave no room
+for a conversation at all.
+The meta-tool guard also recovers a call that names a discovered external tool
+by its leaf alone, rather than telling the model to search for something it
+already found.
+
+- **mcp:** Present connected servers as ordinary Intellicrack tools (`9422992`)
+tool_source.py registers one executor and one definition provider per server
+namespace, so the orchestrator, the registry and the transcript treat a
+third-party tool the way they treat a bridge.
+Three things about the translation are deliberate. An argument schema passes
+through verbatim on ToolFunction.input_schema, which the schema layer already
+treats as authoritative, so a server's $ref or anyOf reaches the provider
+boundary unflattened instead of being lossily reshaped into ToolParameter.
+Every canonical name is pushed through to_wire_name at registration, because
+reversing a hashed wire name depends on a process-local registry that only
+to_wire_name fills, and a tool appearing solely in replayed history would
+otherwise reverse to the wrong name. A call is read-only only when the
+operator marked the server trusted AND the server annotated the tool as
+read-only: annotations are a server's claims about itself, and a hostile one
+would simply claim everything is harmless.
+Results map to the multi-part ToolResultPart union in server order, bounded
+across the whole result so one call cannot flood the context window; a text
+part is truncated, a binary part is dropped whole, because half a base64
+payload is a corrupt payload rather than a smaller one. Structured content is
+checked against the tool's own declared output schema.
+policy.py prices a tool against the context window so the settings dialog can
+show what enabling it costs, and resolves which tools a server may contribute.
+It counts with tiktoken directly rather than reaching into the orchestrator,
+which would make this package depend on the layer that depends on it.
+
+- **core:** Let external tool sources reach the model, and record their state (`8627b45`)
+
+- **mcp:** Add transports, tool catalogs, consent and connection lifecycle (`45290ac`)
+transport.py builds the two shapes the SDK accepts. A local server becomes
+StdioServerParameters with argv resolved without a shell; a command carrying
+shell metacharacters is refused outright, because running its first word alone
+is not what the operator wrote. A remote server gets a Streamable HTTP stream
+pair over an httpx2 client carrying the resolved headers, composed query and
+any auth handler, since StreamableHTTPTransport itself takes only a URL.
+catalog.py snapshots what a server publishes and digests it into a generation
+identifier, which is what makes a server's tool surface something an operator
+can consent to. Input schemas are stored verbatim so a $ref-bearing schema
+reaches the provider boundary unflattened. Descriptions are truncated, the
+tool count is capped, and an oversized schema drops its own tool rather than
+the whole listing.
+consent.py keeps three decisions apart: launch consent (bound to a digest of
+the exact command, arguments, working directory and environment names, so
+changing an argument asks again), trust (whether a server's own readOnlyHint
+may be believed at all), and per-tool approval under once/session/always keyed
+by generation. describe_launch renders every argument untruncated and
+environment entries by name only.
+connection.py owns a supervisor task per server that enters the client,
+fetches the listing, publishes itself ready and waits. Entering and leaving in
+one task is required: the SDK's transports are anyio task groups whose cancel
+scopes must unwind in the task that made them. A dropped connection is caught
+through both the session's transport-fault tee and a 15s ping, because a local
+server that exits cleanly closes its pipes without raising anything. anyio
+reports child failures as ExceptionGroup, so failures are flattened to the
+leaf that best explains them. stderr is captured through a real OS pipe into a
+bounded ring buffer that survives the process that wrote it.
+validation.py checks structured output against a server's own outputSchema,
+resolving $ref through the repo's existing inliner.
+
+- **mcp:** Add server configuration, input secrets and error types (`b84adde`)
+Introduce the intellicrack.mcp package with the three pieces every later
+layer rests on.
+errors.py gives MCP its own branch of the IntellicrackError tree so callers
+can narrow to config, connection, consent, protocol or auth failures.
+config.py models mcp.json. Visual Studio Code's `servers` shape is native and
+the `mcpServers` root other clients emit is accepted on import and normalized,
+so an existing configuration pastes in unedited. Server ids are constrained to
+^[a-z0-9][a-z0-9-]{0,31}$: the hyphen can never take part in the `.` to `__`
+wire-name substitution, so an MCP namespace can never produce an ambiguous
+provider name. Canonical names split on their first dot only, leaving a tool
+name that contains dots intact. A value that looks like a literal credential,
+by field name or by shape, is refused at parse time with the field named.
+secrets.py exchanges a ${input:id} reference for the value the OS keyring
+holds under mcp:input:<id>. A reference with no stored value raises instead of
+expanding to an empty string, and an unusable keyring raises rather than
+letting a server start unauthenticated.
+
+- **providers:** Native large-toolset support on Messages and Responses (`ed04a5f`)
+Intellicrack advertises about 715 tool functions, which is well past what an
+endpoint will accept at once, so the count cap used to truncate the set before
+it left the process. Both current providers now offer a better answer, and the
+wire layer uses it.
+- Messages: the regex and BM25 tool-search server tools ship alongside the
+definitions, and every tool past the non-deferred head is marked
+defer_loading. Every definition still travels on every request -- deferring
+changes what is in reach at the start of a turn, not what is sent -- so the
+whole set ships and prompt-cache placement is unchanged. A request that
+would defer everything is refused before it leaves the process, because
+Anthropic 400s on it, and a server tool-use block is never answered with a
+tool_result, in the response and in the stream.
+- Responses: functions are grouped into namespace entries built through
+to_wire_pair, a tool_search entry leads the list, and every namespace past
+the first is deferred. A tool_search result reverses through from_wire_pair,
+so a call on a tool that was never in the active set still routes to its
+canonical dotted name.
+- The count cap is capability-derived: with Anthropic deferral the budget is
+the deferral ceiling, with OpenAI namespaces the cap applies only to what is
+callable at turn start, and an endpoint with neither keeps the flat cap it
+had.
+- SentToolReport records what was sent, deferred, truncated and dropped, so a
+caller can tell a tool the model declined to call from one it never saw.
+Input order is wire order throughout: this layer receives a priority-ordered
+list and never reorders it.
+Tool search is gated on the model's capability record and no preset turns it
+on, so no request changes shape until it is enabled for a model.
+
+- **providers:** Make an arbitrary endpoint a first-class provider instance (`83475c7`)
+A provider is now a record, not a class. ProviderInstance carries an
+endpoint's id, dialect, base URL, headers, body parameters, tool-name style
+and per-model overrides, and ConfigurableProvider is the one HTTP provider
+class that reads it -- so a corporate gateway, a LiteLLM proxy, vLLM,
+Together, Groq, Cerebras, DeepSeek or a second OpenAI account needs no code.
+Secrets stay out of the record. It is written to providers.json and can be
+exported, so the key lives in the OS keyring under the instance id with
+<INSTANCE_ID>_API_KEY in .env as an override; env_loader derives those
+variables for any id that has no built-in mapping.
+Key validation stops rejecting keys it does not recognise. Requiring an
+Anthropic key to start with sk-ant- was wrong the moment a provider id could
+name any endpoint: a gateway in front of Anthropic, an Azure deployment and a
+LiteLLM proxy all issue their own. What remains are the two shapes no endpoint
+accepts -- an empty key, and one carrying whitespace or control characters
+that cannot survive an HTTP header.
+Transport policy warns rather than blocks. https:// anywhere is fine; plain
+http:// to loopback or a private range is fine and silent, because the local
+runtime case must have no friction; plain http:// to a public host withholds
+the key until the user acknowledges it once, persisted per instance, because
+a legitimate internal gateway would otherwise be unusable.
+Headers follow VS Code rather than Zed: a user-supplied Authorization, api-key
+or x-api-key suppresses the inferred one, so the endpoint receives exactly one
+credential, and the settings page names every header that will carry the key
+before a save. Only protocol-breaking headers are refused outright.
+The provider dialog gains add, duplicate, delete, import and export. The list
+is built from the preset registry plus saved instances rather than a hardcoded
+tuple; duplicating a built-in is how a second account or a proxied copy is
+made, and both work at once. Import confirms any instance whose host matches
+no known preset, showing the host and the headers that would carry the key.
+Connection tests and model fetches fall back to a dialect-driven probe, so an
+instance with no bespoke branch is still testable.
+Startup builds from presets plus saved instances, and applying settings
+registers a newly added instance without a restart.
+
+- **providers:** Resolve model capabilities instead of guessing them (`e141161`)
+Every guess the wire layer used to make is replaced by a resolved capability
+record: the dialect's defaults, refined by the preset's known facts about the
+model family, refined by whatever the endpoint's own /models payload
+advertised, refined by the user's per-model override, which always wins.
+- providers/model_metadata.py generalizes what the OpenRouter provider used to
+do by hand -- context_length, pricing, modality, supported_parameters -- into
+an ingester that never asserts a field the payload did not state, behind an
+ordered fetcher registry whose last entry matches any OpenAI-compatible
+payload so an unknown endpoint still yields a model list.
+- ModelInfo gains `capabilities`. The scalar fields stay populated and nothing
+that reads them breaks; the record carries what they cannot express.
+- Context-window resolution is reordered: exact model match, then the
+capability record, then a match after stripping a variant suffix so
+my-model:free resolves against my-model, then context_window_override. The
+override moved from first to last deliberately -- as the first entry it
+masked every model's real window the moment it was set, which made it
+useless as an escape hatch for the one model that needed it.
+- Discovery takes a per-instance timeout, so a slow custom endpoint costs only
+its own budget, and the persisted cache moves to schema version 2; a v1 file
+is a cold cache, which costs nothing since it is a TTL cache.
+- providers.json reaches schema version 3, adding only a top-level `instances`
+section. Every v2 key stays put, so a v2 build still reads the file and
+loses only the custom instances it could not have used.
+- The provider dialog stops truncating model lists to 20/50/30 entries, makes
+the model combo editable so a hand-typed id is accepted, and exposes a
+per-model context-window override that startup now loads before the first
+request.
+
+- **core:** Ship the wire contract for externally-sourced tools (`ee229ea`)
+A tool that did not come from an Intellicrack bridge could not previously
+cross the wire at all: its container name had to be a ToolName member, its
+arguments had to be expressible as ToolParameter, its result had to be text,
+and dispatch resolved it through ToolName(...) and rejected anything else.
+- ToolDefinition.tool_name is a plain namespace string. Bridges pass their
+ToolName member's value, so their schemas are unchanged, and the bridge
+registry keying is untouched.
+- core/tools.py resolves a namespace against the bridge registry first and
+otherwise against a new ExternalToolRegistry, which refuses a bridge
+namespace at registration rather than letting an external tool shadow a
+bridge at dispatch. The registry ships empty; a later MCP plan registers
+executors into it.
+- Every adapter registers the union of the active tools and every tool
+referenced in replayed history before its request goes out, so a tool that
+is only in history -- which is exactly what tool search and deferred loading
+produce -- still reverses to its canonical name instead of through the
+primary underscore mapping to a wrong one.
+
+- **providers:** Route every HTTP provider through its dialect adapter (`984fc30`)
+Each HTTP provider now states the wire format it speaks and builds its
+requests through the adapter that owns that format, so a built-in provider and
+a user-defined instance pointed at the same kind of endpoint produce the same
+request for the same inputs.
+- anthropic: request building, message and tool conversion, and the cache
+breakpoint placement all move into MessagesAdapter. Response parsing now
+captures a thinking block's `signature` and a redacted block's `data`
+instead of dropping them, which is what Anthropic requires echoed back on a
+tool-use turn; extended thinking plus multi-turn tool calling was silently
+degraded without it.
+- google: contents, function-call parts (including the Gemini 3.x
+thought_signature echo-back) and function declarations move into
+GeminiAdapter; the SDK-typed config builder consumes them.
+- openai: the model-id heuristics are gone. `_REASONING_MODEL_PREFIXES`,
+`_supports_reasoning_effort`, the o-series `startswith` branches and the
+hardcoded context-window and vision inference are replaced by the model's
+capability record. A model whose record names the Responses dialect posts to
+/responses with max_output_tokens, nested reasoning.effort, no temperature,
+store:false and include:["reasoning.encrypted_content"]; every other model
+keeps the Chat Completions path unchanged.
+- ollama, openrouter, huggingface, grok: declare the Chat Completions dialect.
+- local_transformers: declares `dialect` as None explicitly. It runs the model
+in-process and has no wire format, so the carve-out is stated rather than
+implied.
+New providers/presets.py supplies the preset layer of the capability merge:
+the eight built-ins plus common OpenAI- and Anthropic-compatible endpoints,
+with per-family model capabilities as data a user can override rather than as
+inference in the request path.
+LLMProviderBase gains get_pending_reasoning so captured blocks reach the
+assistant message with their opaque payloads intact, and the orchestrator
+attaches them instead of flattening reasoning to display text.
+
+- **providers:** Replace the provider enum with string instance ids (`bd6a266`)
+Provider identity becomes a plain string validated against
+^[a-z0-9][a-z0-9_-]{0,63}$ instead of a closed eight-member enum, so an
+arbitrary OpenAI- or Anthropic-compatible endpoint can be registered without a
+code change. Built-in ids keep their exact previous string values, so
+providers.json, the sessions SQLite provider column, .env variable names and
+the discovery cache all round-trip byte-identically with no data migration.
+The exhaustiveness guarantee basedpyright used to derive from the enum has not
+been lost, it moved: ApiDialect is a closed enum and adapter_for() dispatches
+over it, ending in _assert_never. Removing a branch is still a type error.
+
+- **core:** Implement dynamic tool loading and provider hardening (`6d92af5`)
+Introduce on-demand tool discovery via a synthetic `tools.search` meta-tool to prevent context exhaustion and comply with provider tool caps, normalize canonical dotted tool names to provider-safe wire formats, and harden credential persistence across environment and settings stores.
+* Add `ToolSearchIndex` and `tools.search` meta-tool in orchestrator to lazily index and load tool definitions per session.
+* Preserve assistant turns carrying tool calls with empty content in `_run_agent_loop` to prevent orphaned tool execution results.
+* Enforce provider tool-count caps uniformly via `_enforce_tool_count_cap` across OpenAI, Grok, and OpenRouter backends.
+* Map canonical dotted tool names (e.g., `frida.spawn`) to wire-safe names (`frida__spawn`) with deterministic fallback hashing to satisfy provider regex constraints.
+* Add `validate_local_checkpoint` to prevent directory traversal and reserved-device loading vulnerabilities in sharded model indexes.
+* Migrate legacy provider endpoint and credential configurations from `providers.json` into state-managed `.env` files.
+* Forward configured request timeouts to Anthropic, OpenAI, Grok, and Google client instances, omitting deprecated sampling parameters for Anthropic.
+* Update security floors in `pyproject.toml` for `httpx2`, `httpcore2`, and `gitpython`, and add MegaLinter pipeline automation.
+
 - Expand bridge capabilities across dynamic and static tools (`0f75903`)
 Expand API surfaces and UI controls across all reverse-engineering
 bridges to support granular execution flows, direct register access, and
@@ -621,19 +962,23 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
 
-- **core:** Implement dynamic tool loading and provider hardening (``)
-Introduce on-demand tool discovery via a synthetic `tools.search` meta-tool to prevent context exhaustion and comply with provider tool caps, normalize canonical dotted tool names to provider-safe wire formats, and harden credential persistence across environment and settings stores.
-* Add `ToolSearchIndex` and `tools.search` meta-tool in orchestrator to lazily index and load tool definitions per session.
-* Preserve assistant turns carrying tool calls with empty content in `_run_agent_loop` to prevent orphaned tool execution results.
-* Enforce provider tool-count caps uniformly via `_enforce_tool_count_cap` across OpenAI, Grok, and OpenRouter backends.
-* Map canonical dotted tool names (e.g., `frida.spawn`) to wire-safe names (`frida__spawn`) with deterministic fallback hashing to satisfy provider regex constraints.
-* Add `validate_local_checkpoint` to prevent directory traversal and reserved-device loading vulnerabilities in sharded model indexes.
-* Migrate legacy provider endpoint and credential configurations from `providers.json` into state-managed `.env` files.
-* Forward configured request timeouts to Anthropic, OpenAI, Grok, and Google client instances, omitting deprecated sampling parameters for Anthropic.
-* Update security floors in `pyproject.toml` for `httpx2`, `httpcore2`, and `gitpython`, and add MegaLinter pipeline automation.
-
 
 ### Changed
+
+- **mcp:** Remove every suppression and the type errors behind them (`c0bad80`)
+The three `# noqa: ANN401` directives were covering for `Any` where a precise
+type existed: the stderr pipe is a TextIO, the auth factory is synchronous and
+returns an httpx2.Auth, and the connection never needed the sync-or-async
+adapter that existed only to serve it. Removing the adapter removes the last
+reason any of them returned Any.
+connect() read three attributes the supervisor task mutates underneath it,
+which a type checker narrows to their last assigned values and then reports
+the checks against them as dead code. They are now read together through one
+call, which is both checkable and more correct: the health, the error text and
+the exception behind it are now guaranteed to describe the same moment.
+The remaining fixes are the same shape: a TypeGuard where a worker result was
+being narrowed by hasattr, ClassVar rather than Final on the ctypes structure
+fields, and two isinstance checks the surrounding types already guaranteed.
 
 - Overhaul auto-save and introduce host-native test pass (`3b96c65`)
 Migrated the SessionManager auto-save loop from an asyncio task to a dedicated daemon thread with a standard threading.Lock to ensure safe, loop-agnostic session closure across different event loops. Additionally, established a dedicated host-native test runner and registry to execute hardware- and OS-dependent tests outside the isolated Docker sandbox.
@@ -1181,8 +1526,52 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
+- Apply linter cleanups and prune legacy launcher (``)
+Standardize idioms across the codebase using walrus operators, dictionary
+comprehensions, and modern collection operations, while removing unused
+CLI launcher build scripts and stale workflow configurations.
+- Refactor Python patterns for readability and performance (walrus, dict union, comprehensions)
+- Simplify JavaScript property extractions using destructuring
+- Remove legacy `CLI Coding/launcher` build references and scripts
+- Clean up obsolete workflows and update Qodana quality inspection profiles
+
 
 ### Documentation
+
+- **notebooks:** Correct replace_bytes undo prose and cover the last 9 hexcore methods (`69d1422`)
+Section 10 claimed `replace_bytes` was "recorded as a single overwrite for
+undo purposes". Since the F-0080 fix it records a whole-document
+`Operation::Replace`, so undo restores the original length as well as the
+original bytes; a clamping overwrite could not. Section 4's list of what the
+undo stack covers did not mention `replace_bytes` at all. Both now describe
+what the engine actually does, and section 10 asserts the grow and shrink
+cases so the prose has a gate behind it.
+The header claimed a walkthrough of "every public method", but nine of
+HexDocument's 94 were exercised nowhere: read_window, generation,
+add_bookmark_object, get_bookmark, get_bookmarks, update_bookmark,
+entropy_map_bytes, byte_distribution_bytes and digram_matrix_bytes. New
+sections 2a, 13a and 17a cover them against real payloads.
+Section 29 makes the completeness claim self-enforcing: it compares an
+explicit inventory against dir(HexDocument) and fails both when the extension
+grows a method no section exercises and when this tutorial names one the
+extension no longer exports.
+Both new gates were mutation-checked against a local debug build: reverting
+replace_bytes to the pre-F-0080 Overwrite recording fails section 10, and
+dropping a name from the section 29 inventory fails section 29.
+
+- Add the cloud implementation brief for arbitrary AI provider support (`5be4580`)
+Self-contained brief for a cloud session to implement the approved provider
+and wire-layer plan on this branch. Lives at the repo root because prompts/ is
+gitignored, so a cloud agent cloning the repo could not otherwise read it.
+Covers the Linux/cloud environment constraints (pixi is win-64 only, the test
+sandbox is a Windows container, the suite cannot execute there), the coding
+ground rules, the current branch state, and verbatim Context, Standards,
+Architecture and per-phase work items with their behavioural contracts.
+Scope is implementation only: the brief forbids writing tests, touching test
+infrastructure, running any gate other than ruff, and claiming any test or
+basedpyright result. The single carve-out is the mechanical ProviderName to
+provider-id rename inside test files, which phase 1.3 cannot be coherent
+without.
 
 - Generate API autosummaries and purge external tools (`4ba3ea6`)
 Update Sphinx configuration and autosummary templates to document
@@ -1261,6 +1650,648 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **megalint:** Stop a Windows pixi path leaking into clippy, aim lychee's root (`da41a32`)
+clippy got as far as compiling this time (227s instead of 0.4s) but died in
+pyo3-ffi's build script:
+failed to run the Python interpreter at
+D:\Intellicrack\.pixi\envs\default/bin/python: No such file or directory
+mega-linter-runner forwards every KEY=VALUE in a repo-root .env file into the
+container, so a Windows CONDA_PREFIX or VIRTUAL_ENV from the pixi shell ends
+up inside Linux, and pyo3's build script reads both when choosing an
+interpreter. Reproduced exactly by exporting either one, and fixed by passing
+PYO3_PYTHON, which takes precedence over both; a bare command name resolves
+through the container's PATH instead of pinning an image-specific path.
+Verified against CONDA_PREFIX and VIRTUAL_ENV separately: exit 0, no warnings.
+lychee's --exclude-loopback worked and its localhost failure is gone. Its
+--root-dir was pointed at the repo root, but it is the document root for
+root-relative hrefs: src/hexbench/static/index.html is the only linted file
+with any, and hexbench serves it with src/hexbench as the web root, so
+/static/app.css is src/hexbench/static/app.css and /tmp/lint resolved it to a
+path that does not exist.
+
+- **megalint:** Repair clippy, scope the project scanners, settle lychee (`a568ce2`)
+clippy never ran. MegaLinter's cli_executable is the bare `cargo-clippy`
+binary, which expects to be spawned by cargo as `cargo clippy` and therefore
+discards its own first argument. It was swallowing --manifest-path and exiting
+101 in under a second with "could not find Cargo.toml in /tmp/lint or any
+parent directory", which the summary reported as one opaque error in 0.4s.
+Reproduced against cargo-clippy 1.94.1: adding the `clippy` placeholder makes
+the same command finish clean in 23s.
+FILTER_REGEX_INCLUDE does not reach project-mode scanners, but excluded
+directories do, for every linter declaring a native exclusion argument.
+MegaLinter's defaults cover node_modules, .venv and the usual caches and know
+nothing about .pixi, tools, vendor, target or reports, so devskim spent 19,796
+seconds and grype and syft both hit LINTER_TIMEOUT_SECONDS walking them. The
+last run took 20,098 seconds in total.
+lychee's two failures were environmental: it cannot resolve the root-relative
+/static/app.css in src/hexbench/static/index.html without --root-dir, and it
+was HTTP-fetching the Ollama endpoint http://localhost:11434/ out of
+ollama_codellama.json. Both flags verified against lychee's own CLI reference.
+
+- **megalint:** Write reports to the host instead of the container (`daf3147`)
+REPORT_OUTPUT_FOLDER was `reports/megalinter`, a relative path, so no report
+ever reached the repo.
+MegaLinter's initialize_output() joins the workspace onto its own default
+value only; a value supplied in .mega-linter.yml is used verbatim. The image
+sets WORKDIR / and entrypoint.sh only chdirs into /tmp/lint on the
+UPGRADE_LINTERS_VERSION path, not on the normal one-shot run, so the relative
+path resolved to /reports/megalinter inside the container and went away with
+it. The log line still read "copied 107 fixed source files in folder
+reports/megalinter/updated_sources", which is why this looked like it worked.
+/tmp/lint is where mega-linter-runner bind-mounts the repo, and the runner
+uses the same absolute form for its own standalone-linter reports.
+
+- **tests:** Repair four worker constructions broken by the parent removal (`1927e87`)
+The first CI run that got far enough to execute them found it. Removing
+`parent` from the converted worker constructors left every caller that passed a
+widget as the trailing positional argument raising TypeError on construction:
+ConnectionTestWorker(provider_id, api_key, api_base=None, *, owner=None)
+_RunningTestWorker("openai", "sk-test", None, provider_widget)
+^ 4 positional, 3 accepted
+Two of these failed in python-test on e81057f:
+TestProviderWorkerRunningGuards::test_refresh_models_does_not_replace_running_worker  FAILED [ 51%]
+TestProviderWorkerRunningGuards::test_test_connection_does_not_replace_running_worker FAILED [ 51%]
+The other two, in tests/ui/tools/test_gui_audit_dialogs_tool_config.py, were
+latent: that file sits past the point where the suite currently aborts, so it
+reported neither a pass nor a failure. All four now pass the widget as
+`owner=`, which is what the production call sites do and what the guards under
+test actually care about.
+The three other call sites the sweep flagged are correct and unchanged:
+`_SlowInitialLoadWorker` declares its own `__init__` and forwards two arguments
+to `InitialLoadWorker`, and `GenericCallableWorker` takes `*args`.
+test_no_test_hands_a_converted_worker_a_positional_parent is the gate that
+would have caught all four before the merge. The production side was already
+gated -- no dispatch site may hand a worker a Qt parent -- and this is its
+mirror for the tests: it resolves each converted worker's positional limit from
+`inspect.signature`, tracks test-local subclasses (using a subclass's own
+`__init__` when it declares one, the base's otherwise), and reports any call
+passing more positional arguments than the constructor accepts. Parsing rather
+than importing is what lets it cover files the suite never reaches.
+
+- **tests:** Close two holes in the import-resolution gate (`e81057f`)
+Sourcery flagged both on #412, and both are real: the gate could pass while
+pytest collection still aborts, which is the one thing it exists to prevent.
+A module that no longer exists was skipped. `_module_file` returns None for a
+renamed, deleted or mistyped module, and the scan treated that as nothing left
+to check, so `from intellicrack.gone import Name` resolved clean while the
+import raises ModuleNotFoundError and stops the suite. It is now reported,
+naming the file, line and module.
+Reporting it required tightening what counts as a package module. The old test
+was `node.module.startswith("intellicrack")`, which also matches
+`intellicrack_hexcore` -- a separate, natively built top-level package whose
+modules are not files in this tree. Under the old leniency that mismatch was
+invisible; with missing modules reported it would have failed every
+`from intellicrack_hexcore import ...`. `_is_package_module` now requires the
+path to be `intellicrack` itself or a dotted path beneath it.
+Locals of a guarded function or class counted as exports. `_module_exports`
+walked `if TYPE_CHECKING` and `try`/`except ImportError` blocks with
+`ast.walk`, which descends into everything, so a name assigned inside a
+function defined under the guard was collected as importable. An import of it
+would have resolved here and failed at runtime. `_module_scope_bindings`
+replaces that walk: it descends through nested statement lists but stops at a
+function or class body, contributing only that node's own name. It now applies
+to every top-level statement rather than just the two guard forms, so a
+`with`-guarded import binds correctly too.
+Each fix has a gate, and each was proved by reverting the fix and watching that
+gate fail: without the first, "expected the missing module to be reported
+exactly once, got []"; without the second, "a function local is being counted
+as a module export". Both write their input under tmp_path, since a broken
+import committed into the scanned tree would abort collection instead of
+failing one test.
+`_module_file` and `_module_exports` are now cached. The scan asks after the
+same 221 modules 3,861 times, so it was parsing each target once per import
+statement: the full-tree scan drops from 49s to 6s, with the same zero
+unresolved imports. `_module_exports` returns a frozenset so a caller cannot
+mutate the cached value.
+Also removes a redundant `isinstance(node.name, ast.Name)` in the `ast.TypeAlias`
+branch, which basedpyright rejects as unnecessary -- `tests` is in
+pyrightconfig's include list and only `tests/ui` is excluded, so this file is
+type-checked in CI and I shipped the finding in the previous commit. The type
+aliases it resolves are still covered by the DeclNode/StmtNode assertion.
+ruff, ruff format, pydoclint, pydocstyle and basedpyright are all clean on the
+file, basedpyright at zero findings.
+
+- **tests:** Repair the log viewer import that aborted pytest collection (`2820bf7`)
+CI on main at 4873995 collected 13,217 tests and ran none of them:
+ERROR collecting tests/ui/test_gui_audit0702_log_viewer_window.py
+E   ImportError: cannot import name 'GenericCallableWorker' from
+'intellicrack.ui.log_viewer.window'
+!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!
+ceb6218 changed that module to import run_callable_async instead of the worker
+class it no longer constructs, and this gate was reading the class back out of
+the module that merely re-exported it by accident. One collection error stops
+the whole run, so no test executed and no coverage was written. The job is
+marked non-blocking, which is why the run still reported success.
+The M2 gate keeps the property it was written for -- the JSONL write runs on a
+background thread, not the GUI thread -- and now gets there through the seam the
+window actually uses: it wraps run_callable_async, letting the real helper start
+the real worker while recording the one it returned, instead of substituting the
+worker class. The class itself is imported from async_bridge, where it is
+defined. Two assertions are added while the worker is in hand: it must not be
+the window's Qt child, and the window must be its recorded owner, which is the
+contract the three preceding commits established.
+tests/packaging/test_import_resolution.py is the gate that would have caught
+this before the merge. It parses every module under src/intellicrack and tests/
+and requires each `from intellicrack... import NAME` to name something the
+target module binds at module level -- a def, class, assignment, annotated
+assignment, `type` alias, or an import of its own, including under
+`if TYPE_CHECKING` and in `try`/`except ImportError` fallbacks -- or a submodule
+of the package. Resolving by parsing rather than importing is what makes it
+cheap: no Qt platform, no native extension, no credentials, so a rename that
+would otherwise only surface as an aborted suite fails one fast test instead. A
+second gate holds the resolver honest by requiring it to see the real binding
+forms the package uses, so it cannot pass by resolving nothing.
+
+- **tests:** Stop the suite hanging at exit and contain Frida self-attach crashes (`541ef44`)
+The non-UI sandbox suite printed its final summary and then stayed alive
+until the container's hard timeout killed it (exit 124), which is also why
+CI's test job never reported. The cause was a leaked non-daemon thread.
+Injecting _read_failure flips NamedPipeClient.is_connected to False, so the
+connected_client fixture's "if client.is_connected" teardown skipped
+close(); the named-pipe reader's default-executor worker was never released
+and looped forever, and the non-daemon _do_shutdown thread that
+loop.shutdown_default_executor() spawns joined it forever, so
+threading._shutdown() could never finish.
+Close the client unconditionally in those teardowns. Also stop the two
+SessionManager fixtures, and the second manager built inside the
+save-and-load test, from leaving their auto-save worker running.
+Add a session-scoped guard that fails loudly when a non-daemon thread
+survives the session, so the next such leak is attributable instead of a
+silent hang, plus a module-scoped guard covering the auto-save worker.
+Idle thread-pool workers are deliberately excluded: they are parked on
+their work queue and are woken and reaped at interpreter exit, so they
+never block shutdown; only a worker still executing a task is a real hang.
+Separately, the real self-attach Frida tests can die with a native access
+violation inside frida-core, which aborts the whole run (exit 255, no
+junit) rather than failing one test. Run every test that self-attaches
+Frida in a child process, so such a crash is reported as a failure of only
+that test and the rest of the suite still completes.
+
+- **ui:** Stop Provider Settings destroying its own running worker threads (`27b02e9`)
+Closing Provider Settings while a model list was still loading crashed the
+application. ModelRefreshWorker and ConnectionTestWorker were parented to the
+settings widget, so deleting the widget made Qt delete a QThread that was still
+blocked inside its request -- against a slow or unreachable endpoint, for up
+to the request's 15-second timeout. Qt answers that with a native access
+violation that takes the whole process down, with no Python traceback.
+This predates the branch; at 6d92af55 the workers were parented the same way
+and nothing stopped them on close. It matters more now, because arbitrary
+endpoints are exactly where slow and unreachable model lists come from. It is
+also what kept killing the test suite: a UI run that ends with exit 255 and
+nothing reported is this crash, and it is almost certainly the "silent process
+death in the Qt panel tests" CI has been showing. tests/ui/provider_config
+already worked around it by joining every worker before pytest-qt closed the
+widget, with a comment saying that destroying a running QThread aborts the
+process; the product was never fixed.
+Both workers are now unparented and derive from RetainedWorker, the existing
+async_bridge base that pins a thread in the worker registry until its OS
+thread finishes. Closing the widget no longer bounds the thread's lifetime,
+and the shutdown and test-teardown drains already wait on every retained
+worker. Results now arrive through bound methods that drop them when
+sip.isdeleted says the widget is gone, the guard the Cutter tab and log viewer
+already use; a closure capturing self could not be disconnected when the
+widget died. _RetainedWorker becomes public as RetainedWorker, with the old
+name kept as an alias.
+test_worker_outlives_widget.py holds a real model-list request open on a
+loopback socket, deletes the widget while the worker is blocked inside it,
+and requires the thread to survive and then finish with its late result
+dropped. Re-parenting the worker to the widget crashes that test's process
+with exit 255, the failure it exists to catch.
+Not covered here: run_bridge_coroutine_async also parents its thread to the
+caller, so Discover, OAuth and Ollama pull in this dialog carry the same
+latent crash. That helper is shared across the whole application, so changing
+it belongs in its own change.
+The branch-touched UI set, which crashed on the previous run, now completes:
+187 of 189 pass. The two that fail are unrelated to this branch: the process
+bridge's search_pattern gained cancel_event and progress_callback without its
+tool definition following, and a confirmation-level test is order-dependent,
+reading NONE after a sibling test sets it; the branch changed only
+annotations in that wiring.
+
+- **providers:** Send o-series the token field it accepts; clear the stale tests (`c0ff41e`)
+Measured against 6d92af55 on the same 71 test files, run deterministically
+and in isolation: 90 failed at the base and 157 at this head, 60 of them
+passing before the branch and failing after it, plus 7 whose parametrized ids
+changed with the rename. An earlier full run put the number at 79, but that
+run was randomly ordered alongside other sandbox runs; repeated in isolation,
+the extra 19 pass. This commit clears the 60 and the 7.
+Two were defects, fixed in the source.
+An o-series model reached through Chat Completions was sent max_tokens, which
+OpenAI rejects for reasoning models. o-series records declare Responses'
+max_output_tokens. ChatCompletionsAdapter.token_limit_field translated that to
+max_tokens, contradicting its own docstring, and the OpenAI provider's
+_supports_max_completion_tokens asked whether the field was literally
+max_completion_tokens, so it answered no for every reasoning model. Default
+routing sends o-series to Responses, which hid it; a per-model dialect
+override, or an Azure deployment without Responses, reaches Chat Completions
+and gets a 400. The adapter now does what its docstring says -- a reasoning
+record gets max_completion_tokens -- and the provider asks the adapter instead
+of keeping its own rule.
+The schema getters answered Gemini with its request-body wrapper. to_google_
+schema unwrapped the single functionDeclarations tool so callers get one entry
+per function; get_schema_for_dialect and get_all_schemas_for_dialect did not,
+so for Gemini they returned one element where the other three dialects return
+one per function, against their own "flattened list" docstring. One helper now
+does the unwrapping for all three.
+The rest are tests pinned to changes the branch made on purpose, adapted with
+their assertions kept or tightened:
+- tool_name is a str. 27 sites compared it to a ToolName member, which never
+equals the string it names; they compare to .value.
+- _build_api_kwargs is an instance method taking Messages and ToolDefinitions.
+Every assertion on the rendered kwargs is kept; the one identity check on
+the caller's input list now checks what was rendered.
+- _parse_response_blocks returns ReasoningItems. The tests now assert kind,
+text and signature, which is stricter: the signature is what replay needs.
+- Keys are no longer rejected for their prefix, since a gateway issues its own
+format. Foreign prefixes now assert acceptance and each test gains a key
+with embedded whitespace that must be refused.
+- Provider identity is open. Config and id tests switch their invalid example
+to one that breaks the id grammar and assert that a well-formed custom id
+survives.
+- Schemas emit the wire name; the tests assert it and that it reverses.
+- estimate_tokens takes a tokenizer name; the F-0004 test resolves it the way
+the orchestrator does and asserts Anthropic still gets cl100k.
+- The F-0019 fake presented as the built-in openai provider, whose preset
+knows a window for every model. It now presents as an instance no preset
+describes, which is the case F-0019 exists for.
+- The two cloud-audit o-series tests reach Chat Completions through a per-model
+dialect override, so they now gate the token-field fix above.
+Re-run on the same 71 files under the same conditions: 92 failures, 90 of
+them the base's own, and the other 2 were a later exact-set assertion in the
+config test that still named only the built-ins; it now names the preserved
+custom instance too. With that, no failure in these files is branch-caused.
+The one Frida count test (102 expected, 134 found) fails identically at the
+base, where the bridge already exposed 134 functions.
+Reverting either source fix turns its gates red: the token-field rule fails
+both o-series Chat Completions tests, and dropping the Gemini unwrapping fails
+both Gemini schema tests.
+src/ basedpyright 0; tests/ unchanged at the 25 pre-existing findings; ruff,
+pydoclint and pydocstyle clean.
+
+- **credentials:** Keep deliberate timeouts from v2 settings across the upgrade (`7cb62f1`)
+A saved 120-second timeout is ambiguous and the schema version resolves it.
+Before settings were versioned, 120 was the dialog's untouched default, so an
+unversioned 120 means "use the provider default". From version 2 on, the
+default was stored as null, so a versioned 120 was chosen on purpose.
+_uses_current_schema tested version >= SETTINGS_SCHEMA_VERSION. That was the
+right question while the current version was 2, because then "current" and
+"versioned" meant the same thing. Phase 4 moved the schema to 3 and the two
+came apart: every v2 file now failed the check, was read as pre-versioning
+legacy, and had its deliberate 120-second timeouts replaced by the provider
+default. Silently, on the first launch of the new build.
+The rule now compares against VERSIONED_SCHEMA_FLOOR, fixed at 2 -- the
+version that introduced null-for-default. It is history rather than the
+current version, so no future schema bump can move it. The docstring on
+SETTINGS_SCHEMA_VERSION also claimed a v2 build would read a v3 file as
+legacy; it reads it as versioned, which is what forward compatibility needs.
+The same UI run surfaced seven more stale reads left by the identity rename,
+all in tests/ui, which pyrightconfig excludes from type checking and so no
+earlier sweep could see: six .value reads on a provider id and one ToolName
+member passed where a str is now required. Two sat inside a fake provider's
+chat and chat_stream, so every reply raised AttributeError inside a Qt slot,
+the assistant bubble never filled, and the test reported a 5-second
+waitUntil timeout rather than the real error.
+Two assertions pinned schema_version == 2 on a freshly saved section. Saving
+writes the current version by design, so they now assert against
+SETTINGS_SCHEMA_VERSION. The v2 input fixture the timeout test migrates stays
+at 2, since that migration is what it gates.
+test_settings_schema_upgrade.py gates the rule directly and through the real
+store's on-disk read. Reverting the floor to SETTINGS_SCHEMA_VERSION turns it
+and the UI persistence test red. The 135-test UI set covering the screens this
+branch touched had 5 failures; every file containing one now passes.
+
+- **providers:** Report an unreachable Grok endpoint as ProviderError (`3548757`)
+connect documents that it raises ProviderError when the connection fails, and
+every caller is built on that: the model-refresh worker, the connection test
+and the orchestrator all catch ProviderError and turn it into a message.
+GrokProvider caught the builtin ConnectionError, TimeoutError and OSError. The
+OpenAI SDK it is built on reports a refused or unresolvable connection as
+openai.APIConnectionError, which derives from openai.APIError and from none of
+those. So the error escaped connect unwrapped, and in the provider-settings
+dialog it escaped the model-refresh QThread too: run() returned without
+emitting refresh_finished, and the model list sat in its loading state with no
+error shown -- for a base URL that does not answer, the case a user most needs
+to be told about.
+OpenAIProvider, on the same SDK, already caught openai.APIError. Grok now
+matches it. AuthenticationError and BadRequestError are both APIError
+subclasses but are caught by earlier clauses, so credential handling is
+unchanged.
+This predates the branch; it surfaced here as a teardown error in the
+provider-settings UI tests, where a Grok widget's worker from an earlier test
+failed after the test ended and pytest-qt attributed the escaped exception to
+whichever test was tearing down at the time.
+test_connect_unreachable_endpoint.py points OpenAI, Grok and OpenRouter at a
+loopback port with nothing listening and requires ProviderError from each, so
+one of them cannot drift from the others again. Reverting the fix fails
+exactly the Grok case.
+
+- **tests:** Finish the provider-identity migration the rename left half-done (`198d397`)
+The cloud session renamed ProviderName to provider ids across 88 test files
+but could not run a type checker, so every site where the rename needed more
+than a symbol swap stayed broken. basedpyright reported 142 findings across
+tests/; 117 of them were this. Three shapes:
+Reading .value off a provider id. 31 sites still treated the id as an enum.
+Where the expression was unconditional it raised AttributeError outright;
+where it sat inside an assertion message it raised only when the assertion
+failed, replacing the real diagnostic with a type error at exactly the moment
+the diagnostic mattered.
+Passing a ToolName member where a str is now required. 47 sites built a
+ToolDefinition from ToolName.GHIDRA rather than ToolName.GHIDRA.value.
+ToolName is a plain enum.Enum, not a str enum, so those fixtures carried an
+enum where production carries a string -- the same defect CI caught at
+x64dbg.py:1166, which was fixed in src and left standing in tests. A double
+that no longer resembles the thing under test gates nothing.
+Comparing against BUILTIN_PROVIDER_IDS, now an ordered tuple rather than a
+set. test_credential_loading asserted covered == all_providers with a set on
+one side and a tuple on the other, which can never be true, and formatted its
+failure message with all_providers - covered, which is a TypeError. That
+assertion could only ever fail, and only ever as a TypeError.
+Two untracked files, test_env_endpoint_persistence.py and
+test_provider_settings_store.py, still imported ProviderName. Being untracked
+they were invisible to the cloud session, and their two collection errors
+aborted the whole run: 10641 items collected, 0 executed. They are tracked
+now.
+No assertion was changed. basedpyright over tests/ goes 142 to 25, and the
+25 that remain are pre-existing, in files this branch never touched except
+for the mechanical rename -- 18 reportPrivateUsage in the tag-chips widget
+tests and 7 unrelated findings across hexpat, sandbox and hex-scan. src/ is
+0 against 0 at the branch base. ruff clean over both trees.
+
+- **providers:** Clear the type errors and two schema regressions on this branch (`79a6ec2`)
+basedpyright reported 128 errors on this branch against 0 at its base
+6d92af55. The cloud session could not run it, so none of this was visible
+there. Three separate defects, all found by running the gates the container
+could not.
+Typing. Every one of the 128 came from narrowing a decoded JSON value with a
+bare isinstance, which proves nothing about key or value types and leaves
+dict[Unknown, Unknown] to propagate. Annotating a local after the check does
+not clear it. core/json_payload.py states the guarantee JSON does carry -- an
+object has string keys -- once, as TypeIs predicates, and the schema walkers
+and dialect parsers narrow through those instead. No suppressions.
+Four of the errors were live bugs rather than unknowns: .value read off a
+provider id that phase 1.3 retyped from ProviderName to str, in the credential
+source log, the active-provider lookup, the env-var refresh and the session
+metadata row. Each would have raised AttributeError on the path that reached
+it.
+Schema reduction. _strictify and _geminify recursed into the value of
+"properties" as though it were a schema node, so every property name was
+filtered against the keyword allowlist and dropped. Both reducers emitted an
+object with no properties at all, meaning an externally-sourced tool reached
+Responses strict mode and Gemini with none of its arguments. Keywords are now
+classified by what their value holds: a name-to-schema map, a list of
+subschemas, a single subschema, or a plain value.
+Defaults. build_schema_property emitted a default only when it was a scalar,
+on the stated grounds that a list default never reached a provider before.
+Measurement says otherwise: at 6d92af55 six sandbox parameters advertised
+"default": [] and the scalar check silently dropped all six. Restored to the
+base behaviour of emitting every declared default.
+Verified by rendering all 715 bridge tool functions for openai, anthropic and
+google at 6d92af55 and at this head: every schema is identical field for
+field, the sole difference being the dotted-to-__ wire name each dialect now
+applies, which OpenAI and Anthropic both require since neither accepts "." in
+a function name. Gates: basedpyright 0, ruff clean, pydoclint and pydocstyle
+clean. Tests for all of this land next.
+
+- **providers:** Give the OpenAI context window a stated fallback (`e81c363`)
+_infer_context_window read the preset override layer, where context_window is
+optional, and returned it from a method declared to return an int. Every
+OpenAI model the presets cover states a window, so nothing hit the gap in
+practice, but a record that stated none would have put None into the
+ModelInfo.context_window of every model the endpoint listed, and from there
+into the orchestrator's budget arithmetic.
+The gap now falls back to OPENAI_CONTEXT_WINDOW, the same 128k baseline the
+presets already name and the docstring already promised.
+
+- Restore the bindings this branch removed (`72f6cac`)
+CI's pytest job reported three collection errors and no failures: the whole
+5118-test suite never ran, because three modules could not be imported. Every
+cause was a binding this branch deleted rather than kept.
+- bridges/schemas.py lost get_schema_for_provider, get_all_schemas_for_provider
+and validate_tool_for_provider when dispatch moved to dialects. They are back
+as real functions over the dialect path: a new dialect_for_provider resolves
+the provider's preset to its wire format and each one delegates. A provider
+the presets do not know resolves to Chat Completions, which is what an
+arbitrary OpenAI-compatible endpoint serves and what the configuration UI
+already probes such an endpoint with.
+- OpenAIProvider lost _infer_context_window and _infer_supports_vision with the
+family heuristics. Both are back reading the resolved capability record, so
+the answer now comes from the preset, from what the endpoint states about its
+own models, or from a per-model override, in that order of precedence. The
+documented OpenAI windows and modalities come out unchanged; no prefix
+matching returns, except the literal "vision" marker as the last resort when
+nothing states a modality at all.
+- AnthropicProvider._build_api_kwargs lost its system_prompt parameter. The
+adapter already accepts an explicit system instruction that outranks any
+system-role message, so the parameter is back and passes straight through.
+Separately, a response arriving with an empty reasoning list dropped its
+thinking text: the orchestrator guarded on "is None" where an empty list means
+the same thing. Both guards now test the list, not its identity.
+Local pytest on tests/providers: 47 failures against 15 on the base commit,
+down from 62 before this commit. Every one that remains is a test asserting
+behaviour an earlier phase deliberately changed.
+
+- Clear the type errors this branch introduced (`0477d61`)
+CI runs basedpyright in the pixi environment this branch could not build, so
+the earlier phases shipped without it. Comparing a strict run on this head
+against one on the base commit, with the same interpreter, attributes exactly
+eight new errors to this diff. Those eight are gone; the per-file counts now
+match the base commit exactly.
+- x64dbg was the one bridge of eight whose ToolDefinition still passed the
+ToolName member where phase 2.2 retyped tool_name to str, so it alone
+carried an enum where the other seven carry a string. It now passes .value
+like the rest.
+- schemas.py kept private forwarders for the two schema builders that moved
+into bridges/json_schema.py. Nothing called them; the public builders are
+what every path uses.
+- The two casts around Anthropic's block.model_dump() were redundant: the
+method is already typed dict[str, Any].
+- The API base-URL field is configured through a local before it is stored,
+so its declared optional type no longer has to be narrowed at each call.
+Keeping the attribute optional keeps the existing guards honest; widening
+it would make every one of them an unnecessary comparison under strict mode.
+All 715 bridge tool functions still produce byte-identical openai, anthropic
+and google schemas.
+
+- **core:** Persist multi-part tool-result content (`5f27665`)
+A tool result carrying parts -- an image, audio, a resource link, an embedded
+resource, structured JSON -- was written to the session file as its text
+fallback alone, so reloading a conversation silently lost everything the tool
+returned beyond text. Each part now round-trips through a tagged record.
+A part kind this build does not recognise loads as text carrying the stored
+record rather than being dropped, so a session written by a newer build still
+opens. The content key is written only when the tool produced parts, so a
+text-only result keeps the record shape it had before multi-part results
+existed, and a row written before this change loads as it did.
+
+- **core:** Persist reasoning blocks and keep one reserved-namespace list (`9c27b97`)
+Two loose ends from the earlier phases.
+- A saved session dropped its reasoning blocks, so reloading a conversation
+and then calling a tool lost the signed thinking that Messages and Responses
+both require on the follow-up turn. Reasoning now round-trips through the
+session file with its opaque fields intact -- signature, item id, encrypted
+content, redacted payload -- and an unrecognised kind degrades to a plain
+thinking block rather than failing the load. ToolResult.is_error is stored
+alongside, so a reloaded failure still reads as a failure.
+- RESERVED_TOOL_NAMESPACES was defined in both bridges/schemas.py and
+core/tools.py. Validation and dispatch now read the same frozenset.
+
+- **credentials:** Translate Win32 credential errors instead of leaking them (`d5faf4a`)
+keyring's Windows backend reaches the Credential Manager through win32ctypes
+and raises pywintypes.error, whose MRO is error -> Exception -> BaseException.
+It is neither an OSError nor a keyring.errors.KeyringError, so all seven
+keyring except tuples in store.py missed it and a CredRead/CredWrite/CredDelete
+failure escaped untyped.
+_check_keyring used the same tuple, so the failure also bypassed the .env
+fallback it is supposed to degrade to. Windows is the priority platform, which
+made this the default path.
+Adds a static typed import of the win32ctypes error with a never-raised
+sentinel fallback, mirroring the existing _KeyringFallbackError idiom, and
+includes it in every keyring except tuple. Dynamic importlib discovery and
+splatting a variadic tuple into except were both tried first and rejected:
+each leaves the bound exception partially Unknown under the locked
+basedpyright config, and no suppression is permitted.
+typings/win32ctypes/ supplies the stub that useLibraryCodeForTypes: false and
+reportMissingTypeStubs: "error" require.
+Also fixes .gitignore: a bare credentials/ rule matched that directory name at
+any depth, so tests/providers/credentials/ was excluded and new tests there
+were silently untracked. Adds !tests/providers/credentials/ beside the existing
+src negation; secret directories stay ignored.
+
+- **ui:** Stop hand-rolled worker threads dying with the widgets that start them (`6f15f0a`)
+The workers that do not go through the async-bridge dispatch helpers each
+belong to one widget, and each took that widget as its Qt parent: the tool
+installer and status check, the sandbox test, the XPU requirements probe, the
+tracked-process refresh, the log-tail load, and the provider model refresh and
+connection test. Qt destroys a parent's children along with it, and destroying
+a QThread whose OS thread is still running aborts the process with a native
+access violation and no Python traceback. A tool download, a Windows Sandbox
+launch and a model list from an unreachable endpoint all run long enough for a
+user to close the window first. 11b6035 and ceb6218 fixed the two dispatch
+helpers and their 20 call sites; these seven classes were what remained.
+All seven now derive from RetainedWorker, which pins the thread in the shared
+worker registry until its OS thread finishes, and none of them offers a Qt
+parent any more: they take owner, which drain_bridge_workers_for matches on and
+guarded_delivery checks before delivering. Removing the parameter rather than
+leaving it unused is deliberate. A call site cannot re-parent a worker it has
+no way to hand a parent to, so the crash cannot come back one constructor
+argument at a time. Nine call sites pass owner=self instead, including the
+toolbar model refresh in app.py that provider_config's own fix on
+feat/arbitrary-providers never touched. RetainedWorker becomes public, since
+five modules now name it, and its two dispatch subclasses name it directly
+rather than through the old private alias, which the source gate needs to walk
+the class graph. guarded_delivery forwards *args, because these workers emit
+two- and three-argument signals and Qt hands every argument to a variadic slot.
+The guard goes only where Qt cannot help. It wraps the closure slots -- the
+sandbox test's finished adapter, the two tool status adapters, the install
+adapter, both provider adapters and the toolbar refresh adapter -- because a
+closure has no receiver QObject for Qt to detect, so a late result is delivered
+into it and raises out of the slot. Bound-method connections are left as they
+are: Qt breaks those itself when the receiver's C++ object is destroyed, and
+wrapping them would also break the teardown paths in xpu_status and the log
+tail reader that disconnect their handlers by identity.
+The log viewer's InitialLoadWorker kept a private copy of the worker registry,
+written because the shared one was private. It now uses the shared registry
+through RetainedWorker, so 45 lines of duplicated pinning go away and the
+application's shutdown drain waits for a historical load like any other worker.
+tests/ui/test_widget_worker_owner_lifetime.py adds eight gates. Two are
+parametrized across all eight worker classes: each records its owner with no Qt
+parent, and none of their constructors offers a parent while all offer an
+owner. One is the crash gate, a widget-owned worker blocked inside a real HTTP
+request over a loopback socket the server holds open, whose owner is deleted
+mid-run: the thread must survive, and its three-argument result must be
+dropped. Its positive control requires a live owner to receive all three
+arguments through the same guard. Three drive real widgets doing real work: a
+tool row's status check over this interpreter's own executable, delivered and
+then dropped for a deleted row, and the XPU requirements probe and the log
+viewer's historical load over a real file.
+The source gate in tests/ui/test_callable_worker_owner_lifetime.py no longer
+takes a hardcoded pair of class names. It discovers every class that reaches
+QThread through its bases and flags both ways of handing over a parent: the
+keyword, and a positional argument landing in a constructor's parent slot,
+resolved through inherited constructors. A worker class added later is covered
+without touching the test.
+
+- **ui:** Stop callable-worker sites destroying the threads they start (`ceb6218`)
+Every GenericCallableWorker dispatch site handed the calling widget to the
+worker as its Qt parent, so closing the widget while the work was still running
+had Qt delete a live QThread: a native access violation that takes the process
+down with no Python traceback, exit 255 with nothing reported. A full-file
+entropy scan, a signature scan, a strings extraction and a long pattern search
+all run long enough for a user to close the tab first, and the sandbox dialog's
+taskkill runs with a ten-second timeout. The shared bridge dispatcher was fixed
+in 11b6035; this is the same fix for its synchronous counterpart.
+run_callable_async joins it in async_bridge: it builds the worker unparented
+with the widget as owner, wraps both callbacks in guarded_delivery, starts it,
+and returns it for the sites that track, interrupt or wait on their worker.
+Callbacks are connected before the thread starts, so a callable that returns
+immediately cannot emit into a worker with no connections yet. Eighteen sites
+across sandbox_config, log_viewer, hex_editor_widget and the hex editor mixins
+now dispatch through it. Two build their own worker because their callbacks
+capture the worker instance for a staleness check -- the strings extractor and
+the process-region lister -- so they pass owner= and wrap their own connections
+with guarded_delivery, which _delivery_slot became when it was made public.
+GenericCallableWorker takes the owner keyword its base already had.
+Worth knowing for anyone reading the guard: PyQt breaks a connection itself
+when the slot is a bound method of a QObject whose C++ side is destroyed, so
+those late results were already dropped. A closure or a functools.partial has
+no receiver QObject to detect, so Qt delivers into it and the call raises out
+of the slot. Sites pass both kinds, so the helpers wrap every callback rather
+than leaving each site to reason about which kind it has. This is why the drop
+gate drives the strings extractor and not the entropy scan.
+tests/ui/test_callable_worker_owner_lifetime.py holds nine gates: four on the
+dispatch helper, driven against a real HTTP request over a loopback socket the
+server holds open (unparented with the owner recorded, a live owner still
+served on the GUI thread, the scoped drain still joining it, and the crash gate
+that deletes the owner while the thread is blocked mid-request); one source
+gate that parses the whole package and fails on any worker construction taking
+a Qt parent; and four on real widgets over a real intellicrack_hexcore
+document, covering the entropy scan's ownership, the strings extractor's
+dropped and delivered results, and the statistics worker's ownership and its
+8.0000 bits/byte result for a uniform byte distribution.
+Two existing gates moved with the behaviour. The M10 statistics gate asserted
+the worker's Qt parent was the panel; it now asserts the panel is the recorded
+owner and is not the Qt parent, so the original always-false isinstance defect
+stays caught. The M5 availability gate patched the worker class the dialog no
+longer constructs, which would have stopped intercepting silently; it now
+drives the real dispatch and asserts the probe ran off the GUI thread and
+populated the cache, dropping its stub worker and stub signal entirely.
+
+- **ui:** Stop the shared bridge dispatcher destroying its callers' workers (`11b6035`)
+run_bridge_coroutine_async parented its BridgeCallWorker to the calling widget,
+so closing a panel or dialog mid-call had Qt delete a QThread that was still
+blocked inside its coroutine. Qt answers that with a native access violation
+that takes the process down with no Python traceback: exit 255 in the UI suite
+with nothing reported. Provider Settings' own ModelRefreshWorker and
+ConnectionTestWorker were fixed this way in 27b02e97; every other caller shares
+the latent crash through this helper, so the fix belongs here instead of at 700
+call sites.
+The worker is now dispatched unparented. BridgeCallWorker already derives from
+the retained-worker base, which pins it in the worker registry until its OS
+thread finishes, and both the application shutdown drain and the tests/ui
+teardown drain already wait on every retained worker, so nothing else bounds
+its lifetime. parent keeps its name and its meaning to callers, but is now the
+delivery context: it is recorded as the worker's owner and re-checked with
+sip.isdeleted at delivery time, so a result arriving after the widget's C++
+object is gone is dropped and logged rather than delivered into freed memory.
+The check has to happen at delivery, not at dispatch, because the widget can
+die at any point while the coroutine runs. run_bridge_coroutine_logged
+delegates here, so its 700-odd call sites are covered too, and a dropped
+delivery drops its success/failure log entry with it.
+drain_bridge_workers_for walked the Qt parent chain to find a widget's workers
+and would no longer find an unparented one. It now matches either route: a
+worker's own parent chain (the GenericCallableWorker sites, which still carry
+Qt parents) or the parent chain of the owner recorded on the worker. The
+matching moved into a new bridge_workers_for, which returns a widget's retained
+workers; identity against the owner is checked before any parent() call, so a
+widget deleted mid-call can still have its workers found and joined.
+tests/ui/test_async_bridge_parent_lifetime.py holds an HTTP request open on a
+loopback socket and deletes the widget while the worker is blocked inside it.
+Five gates: the worker is not a Qt child of its context; a live context still
+gets its result, on the GUI thread; the scoped drain still finds and joins an
+unparented worker; a logged dispatch drops a result for a deleted context; and
+the worker survives that deletion at all. Re-parenting the worker aborts the
+interpreter on the last one, which is the failure it exists to catch.
 
 - **cutter:** ASCII labels for the relative-seek toolbar controls (`67622fb`)
 The two relative-seek buttons were labelled with geometric-triangle glyphs and
@@ -6107,3 +7138,22 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+
+### Performance
+
+- **tests:** Isolate Frida self-attach modules per module, not per test (`8f4618d`)
+Per-test isolation contained the native crash but cost about 32s per test,
+because each child re-imports PyQt6, intellicrack and frida. On one 50-test
+module that turned roughly 54s into 27m10s, which would have added close to
+an hour to the full suite.
+Run each self-attach module once in a child instead, marking every test in
+such a module so none of them also runs in the parent. The child streams
+each result to a file as it happens, so the parent still reports every test
+individually, and whatever the child already flushed survives a child that
+dies part-way through -- only the tests it never reached are failed with the
+crash detail.
+The same module now runs in 43s, with crash containment and per-test
+reporting both intact, so the whole suite gains only a couple of minutes.
+
+

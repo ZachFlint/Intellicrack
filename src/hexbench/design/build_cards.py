@@ -563,7 +563,8 @@ _STRING_ROWS: Final[tuple[tuple[int, int, str, str], ...]] = (
 )
 
 _STRING_CUTOFF: Final = 5
-_UNDER_CUTOFF: Final = sum(1 for row in _STRING_ROWS if row[1] < _STRING_CUTOFF)
+_UNDER_CUTOFF: Final = sum(bool(row[1] < _STRING_CUTOFF)
+                       for row in _STRING_ROWS)
 
 _SEARCH_ROWS: Final[tuple[tuple[int, str, str], ...]] = (
     (0x000001F8, ".text", "2e 74 65 78 74"),
@@ -1126,9 +1127,7 @@ def _byte_class(value: int) -> str:
         return "bc-null"
     if _PRINT_LOW <= value <= _PRINT_HIGH:
         return "bc-print"
-    if value >= _HIGH_LOW:
-        return "bc-high"
-    return "bc-ctrl"
+    return "bc-high" if value >= _HIGH_LOW else "bc-ctrl"
 
 
 def _ascii_glyph(value: int) -> str:
@@ -1140,9 +1139,7 @@ def _ascii_glyph(value: int) -> str:
     Returns:
         str: HTML-escaped single character.
     """
-    if _PRINT_LOW <= value <= _PRINT_HIGH:
-        return escape(chr(value))
-    return "."
+    return escape(chr(value)) if _PRINT_LOW <= value <= _PRINT_HIGH else "."
 
 
 def _entropy(chunk: bytes) -> float:
@@ -1220,14 +1217,13 @@ def _classify(chunk: bytes) -> int:
     if not any(chunk):
         return 0
     measured = _entropy(chunk)
-    printable = sum(1 for value in chunk if _byte_class(value) in {"bc-print", "bc-null"})
+    printable = sum(bool(_byte_class(value) in {"bc-print", "bc-null"})
+                for value in chunk)
     if printable >= len(chunk) * _TEXT_SHARE and measured < _MID_ENTROPY:
         return 1
     if measured > _HIGH_ENTROPY:
         return 3
-    if measured >= _MID_ENTROPY:
-        return 4
-    return 2
+    return 4 if measured >= _MID_ENTROPY else 2
 
 
 def _edge_classes(classes: str, offset: int, start: int, end: int) -> str:
@@ -2437,10 +2433,8 @@ def _card_entropy() -> str:
     )
     return _section(
         "Entropy strip",
-        f"Shannon entropy over {_ENTROPY_WINDOW} byte windows, {len(series)} readings across the 16 KiB analysis buffer, computed "
-        "here rather than asserted. The curve tracks the header, the code section, the string table, a run of alignment padding and "
-        "a packed region; the dashed rule marks the 7.0 bit threshold above which the engine calls a block high entropy.",
-        frame + '<div class="hb-strip-axis"><span>0x00000000</span><span>0x00002000</span><span>0x00003FFF</span></div>',
+        f"Shannon entropy over {_ENTROPY_WINDOW} byte windows, {len(series)} readings across the 16 KiB analysis buffer, computed here rather than asserted. The curve tracks the header, the code section, the string table, a run of alignment padding and a packed region; the dashed rule marks the 7.0 bit threshold above which the engine calls a block high entropy.",
+        f'{frame}<div class="hb-strip-axis"><span>0x00000000</span><span>0x00002000</span><span>0x00003FFF</span></div>',
     )
 
 
@@ -2515,18 +2509,12 @@ def _card_classification() -> str:
     )
     return _section(
         "Content classification",
-        f"<code>content_classification({_CLASS_BLOCK})</code> returns one code per block, and all five codes occur in this "
-        "buffer. Every legend entry carries its numeric code as well as its colour, so the strip stays readable without colour "
-        "discrimination and survives greyscale printing.",
-        frame + '<div class="hb-strip-axis"><span>0x00000000</span><span>block size 256 B</span><span>0x00003FFF</span></div>'
-        f'<div class="hb-legend">{legend}</div>',
+        f"<code>content_classification({_CLASS_BLOCK})</code> returns one code per block, and all five codes occur in this buffer. Every legend entry carries its numeric code as well as its colour, so the strip stays readable without colour discrimination and survives greyscale printing.",
+        f'{frame}<div class="hb-strip-axis"><span>0x00000000</span><span>block size 256 B</span><span>0x00003FFF</span></div><div class="hb-legend">{legend}</div>',
     ) + _section(
         "Selection marker",
-        "The strip is the link back to the editor rather than a separate report: whatever is selected in the document is drawn "
-        f"over it as a translucent overlay, so the {_MARKER_LENGTH} bytes under the caret can be located in the whole buffer at "
-        "a glance. The overlay uses the same selection fill and border as the editor, and never occludes the classes beneath it.",
-        marked + f'<div class="hb-strip-axis"><span>0x00000000</span><span>selection 0x{_MARKER_START:08X} to '
-        f"0x{_MARKER_START + _MARKER_LENGTH - 1:08X}</span><span>0x00003FFF</span></div>",
+        f"The strip is the link back to the editor rather than a separate report: whatever is selected in the document is drawn over it as a translucent overlay, so the {_MARKER_LENGTH} bytes under the caret can be located in the whole buffer at a glance. The overlay uses the same selection fill and border as the editor, and never occludes the classes beneath it.",
+        f'{marked}<div class="hb-strip-axis"><span>0x00000000</span><span>selection 0x{_MARKER_START:08X} to 0x{_MARKER_START + _MARKER_LENGTH - 1:08X}</span><span>0x00003FFF</span></div>',
     )
 
 
@@ -2622,7 +2610,7 @@ def _card_segmented_bar() -> str:
         "Segmented bar",
         "<code>byte_type_distribution()</code> returns the four counts as a tuple. Each segment wide enough to hold one carries "
         "its percentage inside it, and the table below is the accessible equivalent of the same figure.",
-        f'<div class="hb-segbar">{segments}</div>' + _table(headers, rows),
+        f'<div class="hb-segbar">{segments}</div>{_table(headers, rows)}',
     )
 
 
@@ -2703,7 +2691,8 @@ def _card_diff_minimap() -> str:
         "Diff mini-map",
         "One band per region from <code>diff_files</code>. Each of the four <code>diff_type</code> values gets a colour and a "
         "glyph, so the map survives greyscale printing and colour blindness. The caret position is tracked by the vertical rule.",
-        frame + f'<div class="hb-legend">{legend}</div>' + _frame("Summary", summary),
+        f'{frame}<div class="hb-legend">{legend}</div>'
+        + _frame("Summary", summary),
     )
 
 
@@ -3189,8 +3178,9 @@ def _sections(stylesheet: str) -> tuple[_Section, ...]:
     if not numbered or numbered != expected:
         message = f"{_CSS_PATH.name} declares sections {numbered}, which do not run consecutively from {_FIRST_SECTION} as {expected}"
         raise ValueError(message)
-    unnoted = tuple(section for section in numbered if section not in _SECTION_NOTES)
-    if unnoted:
+    if unnoted := tuple(
+        section for section in numbered if section not in _SECTION_NOTES
+    ):
         message = f"no gallery note is written for {_CSS_PATH.name} section(s) {unnoted}"
         raise ValueError(message)
     ends = [start - 1 for _section, _name, start in banners[1:]] + [len(lines)]
@@ -3223,9 +3213,7 @@ def _specimen_count(count: int) -> str:
     """
     if count == 0:
         return "no specimen"
-    if count == 1:
-        return "1 specimen"
-    return f"{count} specimens"
+    return "1 specimen" if count == 1 else f"{count} specimens"
 
 
 def _nav(sections: tuple[_Section, ...], cards: tuple[_Card, ...]) -> str:

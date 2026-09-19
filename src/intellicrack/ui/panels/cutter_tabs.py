@@ -776,37 +776,37 @@ class FlagsTab(QWidget):
         """Create or select the flagspace named in the flagspace combo box."""
         if self._bridge is None:
             return
-        name = self._flagspace_combo.currentText().strip()
-        if not name:
+        if name := self._flagspace_combo.currentText().strip():
+            run_bridge_coroutine_logged(
+                self._bridge.add_flagspace(name),
+                on_success=lambda _: self._on_refresh_flagspaces(),
+                on_error=lambda e: _logger.warning("cutter_add_flagspace_failed", error=str(e)),
+                parent=self,
+                event="cutter_add_flagspace",
+                logger=_logger,
+                level="info",
+                flagspace_name=name,
+            )
+        else:
             return
-        run_bridge_coroutine_logged(
-            self._bridge.add_flagspace(name),
-            on_success=lambda _: self._on_refresh_flagspaces(),
-            on_error=lambda e: _logger.warning("cutter_add_flagspace_failed", error=str(e)),
-            parent=self,
-            event="cutter_add_flagspace",
-            logger=_logger,
-            level="info",
-            flagspace_name=name,
-        )
 
     def _on_remove_flagspace(self) -> None:
         """Remove the flagspace named in the flagspace combo box."""
         if self._bridge is None:
             return
-        name = self._flagspace_combo.currentText().strip()
-        if not name:
+        if name := self._flagspace_combo.currentText().strip():
+            run_bridge_coroutine_logged(
+                self._bridge.remove_flagspace(name),
+                on_success=lambda _: self._on_refresh_flagspaces(),
+                on_error=lambda e: _logger.warning("cutter_remove_flagspace_failed", error=str(e)),
+                parent=self,
+                event="cutter_remove_flagspace",
+                logger=_logger,
+                level="info",
+                flagspace_name=name,
+            )
+        else:
             return
-        run_bridge_coroutine_logged(
-            self._bridge.remove_flagspace(name),
-            on_success=lambda _: self._on_refresh_flagspaces(),
-            on_error=lambda e: _logger.warning("cutter_remove_flagspace_failed", error=str(e)),
-            parent=self,
-            event="cutter_remove_flagspace",
-            logger=_logger,
-            level="info",
-            flagspace_name=name,
-        )
 
     def _on_refresh_flagspaces(self) -> None:
         """Query the bridge for the current flagspace list and populate the combo box."""
@@ -833,8 +833,7 @@ class FlagsTab(QWidget):
         for entry in items:
             if isinstance(entry, dict):
                 entry_dict = cast("dict[str, Any]", entry)
-                name = str(entry_dict.get("name", ""))
-                if name:
+                if name := str(entry_dict.get("name", "")):
                     self._flagspace_combo.addItem(name)
         if current:
             self._flagspace_combo.setEditText(current)

@@ -235,7 +235,7 @@ def build_environment_allowlist(env: Mapping[str, str], inherited: Mapping[str, 
         dict[str, str]: The environment to hand to the child.
     """
     allowed = {name: value for name, value in inherited.items() if name.upper() in ENVIRONMENT_ALLOWLIST}
-    allowed.update(env)
+    allowed |= env
     return allowed
 
 

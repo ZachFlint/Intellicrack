@@ -780,7 +780,7 @@ class Session:
         if origin is not None:
             sent["Origin"] = origin
         if headers is not None:
-            sent.update(headers)
+            sent |= headers
         parsed: dict[str, list[str]] = {name: [value] for name, value in (query or {}).items()}
         return self._application.handle(Request(method=method.upper(), path=path, query=parsed, headers=sent, body=body))
 

@@ -245,8 +245,7 @@ class ChatCompletionsAdapter(DialectAdapter):
 
         reasoning_key = capabilities.reasoning.reasoning_key
         if msg.reasoning and reasoning_key and capabilities.reasoning.include_reasoning_history:
-            replayed = self.render_reasoning(msg.reasoning)
-            if replayed:
+            if replayed := self.render_reasoning(msg.reasoning):
                 assistant_msg[reasoning_key] = replayed[0]["text"]
         return assistant_msg
 

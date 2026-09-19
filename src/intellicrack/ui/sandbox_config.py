@@ -921,9 +921,7 @@ class SandboxConfigDialog(QDialog):
             str: Guest OS value such as ``"linux"`` or ``"windows"``.
         """
         data = self._qemu_guest_os_combo.currentData()
-        if isinstance(data, str):
-            return data
-        return QEMU_DEFAULT_GUEST_OS.value
+        return data if isinstance(data, str) else QEMU_DEFAULT_GUEST_OS.value
 
     def _start_availability_check(self) -> None:
         """Probe Windows Sandbox availability off the GUI thread and update status.
