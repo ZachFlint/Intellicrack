@@ -8,7 +8,7 @@
     {
       "name": "intellicrack",
       "path": ".cspell/project-words.txt",
-      "description": "Terms specific to Intellicrack, its bridged tools, and the binary formats and instruction sets it analyses.",
+      "description": "Intellicrack, its bridged tools, and the formats it reads.",
       "addWords": true
     }
   ],
