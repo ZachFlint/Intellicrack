@@ -138,7 +138,7 @@ class TestProviderWorkerRunningGuards:
         Args:
             provider_widget: ProviderSettingsWidget fixture.
         """
-        running = _RunningTestWorker("openai", "sk-test", None, provider_widget)
+        running = _RunningTestWorker("openai", "sk-test", None, owner=provider_widget)
         setattr(provider_widget, "_test_worker", running)
 
         _invoke(provider_widget, "_test_connection")
@@ -155,7 +155,7 @@ class TestProviderWorkerRunningGuards:
         Args:
             provider_widget: ProviderSettingsWidget fixture.
         """
-        running = _RunningRefreshWorker("openai", "sk-test", None, None, provider_widget)
+        running = _RunningRefreshWorker("openai", "sk-test", None, None, owner=provider_widget)
         setattr(provider_widget, "_refresh_worker", running)
 
         _invoke(provider_widget, "_refresh_models")
