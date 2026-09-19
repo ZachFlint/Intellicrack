@@ -614,9 +614,7 @@ def _coerce_override_value(name: str, raw: object) -> object | None:
             except ValueError:
                 return None
         return None
-    if name == "tokenizer":
-        return _coerce_optional_str(raw)
-    return None
+    return _coerce_optional_str(raw) if name == "tokenizer" else None
 
 
 def merge_capabilities(base: ModelCapabilities, *overrides: CapabilityOverride | None) -> ModelCapabilities:
@@ -637,8 +635,11 @@ def merge_capabilities(base: ModelCapabilities, *overrides: CapabilityOverride |
     for override in overrides:
         if override is None:
             continue
-        stated = {name: getattr(override, name) for name in _OVERRIDE_FIELD_NAMES if getattr(override, name) is not None}
-        if stated:
+        if stated := {
+            name: getattr(override, name)
+            for name in _OVERRIDE_FIELD_NAMES
+            if getattr(override, name) is not None
+        }:
             merged = replace(merged, **stated)
     return merged
 

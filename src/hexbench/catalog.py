@@ -236,9 +236,7 @@ def _annotation_text(node: ast.expr | None) -> str:
     Returns:
         str: Normalised annotation text, or an empty string when unannotated.
     """
-    if node is None:
-        return ""
-    return ast.unparse(node)
+    return "" if node is None else ast.unparse(node)
 
 
 def _classify(annotation: str) -> ValueKind:
@@ -349,9 +347,7 @@ def _receiver_for(name: str, returns: str) -> Receiver:
     static = inspect.getattr_static(intellicrack_hexcore.HexDocument, name)
     if not isinstance(static, staticmethod):
         return Receiver.DOCUMENT
-    if returns == _DOCUMENT_TYPE:
-        return Receiver.FACTORY
-    return Receiver.STATIC
+    return Receiver.FACTORY if returns == _DOCUMENT_TYPE else Receiver.STATIC
 
 
 def _build_operation(name: str, receiver: Receiver, signatures: dict[str, tuple[list[tuple[str, str]], str]]) -> Operation:
@@ -415,8 +411,10 @@ def build_catalog() -> tuple[Operation, ...]:
     document_names, module_names = runtime_surface()
     live_names = document_names | module_names
 
-    stale = {name for name in signatures if not name.startswith("_")} - live_names
-    if stale:
+    if (
+        stale := {name for name in signatures if not name.startswith("_")}
+        - live_names
+    ):
         message = (
             f"type stub declares {sorted(stale)} but the compiled module exposes no such callable; "
             "the Rust crate and its stub have drifted apart"

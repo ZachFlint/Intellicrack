@@ -322,9 +322,7 @@ def _textual_content(part: ToolResultPart) -> str | None:
     """
     if isinstance(part, TextResultPart):
         return part.text
-    if isinstance(part, EmbeddedResourcePart):
-        return part.text
-    return None
+    return part.text if isinstance(part, EmbeddedResourcePart) else None
 
 
 def summarize_parts(parts: list[ToolResultPart]) -> str:

@@ -261,7 +261,7 @@ export class CommandPalette {
   }
 
   #onResultsMouseDown(event) {
-    const target = event.target;
+    const {target} = event;
     if (!(target instanceof HTMLElement)) {
       return;
     }
@@ -383,7 +383,7 @@ export class CommandPalette {
   #orderedGroups() {
     const seen = [];
     for (const match of this.#matches) {
-      const group = match.entry.operation.group;
+      const {group} = match.entry.operation;
       if (!seen.includes(group)) {
         seen.push(group);
       }

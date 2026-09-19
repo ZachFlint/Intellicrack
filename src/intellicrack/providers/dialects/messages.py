@@ -403,8 +403,9 @@ class MessagesAdapter(DialectAdapter):
         tools_obj = body.get("tools")
         if is_json_array(tools_obj) and tools_obj:
             tools_list: list[Any] = tools_obj
-            cached_tools: list[dict[str, Any]] = [dict(tool) for tool in tools_list if is_json_object(tool)]
-            if cached_tools:
+            if cached_tools := [
+                dict(tool) for tool in tools_list if is_json_object(tool)
+            ]:
                 cached_tools[-1] = {**cached_tools[-1], "cache_control": dict(_CACHE_CONTROL)}
                 body["tools"] = cached_tools
 

@@ -968,7 +968,7 @@ export class HexGrid {
   }
 
   #refreshSelectionSet() {
-    const selection = this.selection;
+    const {selection} = this;
     this.#selectionSet.set(selection === null ? [] : [{ start: selection.start, length: selection.length }]);
   }
 
@@ -1063,7 +1063,7 @@ export class HexGrid {
   /* ---------------------------------------------------------------- input */
 
   #cellFromEvent(event) {
-    const target = event.target;
+    const {target} = event;
     if (!(target instanceof HTMLElement)) {
       return null;
     }
@@ -1327,7 +1327,7 @@ export class HexGrid {
   }
 
   #deleteBackward() {
-    const selection = this.selection;
+    const {selection} = this;
     if (selection !== null) {
       this.deleteBytes(selection.start, selection.length);
       return;
@@ -1339,7 +1339,7 @@ export class HexGrid {
   }
 
   #deleteForward() {
-    const selection = this.selection;
+    const {selection} = this;
     if (selection !== null) {
       this.deleteBytes(selection.start, selection.length);
       return;
@@ -1537,7 +1537,7 @@ export class HexGrid {
   #paint(wanted) {
     const total = this.#documentLength;
     const totalRows = this.#totalRows();
-    const selection = this.selection;
+    const {selection} = this;
     const caretRow = Math.floor(this.#caretOffset / this.#bytesPerRow);
     const caretColumn = this.#caretOffset % this.#bytesPerRow;
 
@@ -1713,8 +1713,7 @@ export class HexGrid {
     const controller = new AbortController();
     this.#fetchController = controller;
     this.#fetchKey = key;
-    const generation = this.#document.generation;
-    const handle = this.#document.handle;
+    const {generation, handle} = this.#document;
 
     readWindow(handle, quantized, length, { signal: controller.signal })
       .then((window_) => {

@@ -162,10 +162,10 @@ def representative_failure(exc: BaseException) -> BaseException:
     Returns:
         BaseException: The leaf to report, or ``exc`` when it carries none.
     """
-    leaves = failure_leaves(exc)
-    if not leaves:
+    if leaves := failure_leaves(exc):
+        return next((leaf for leaf in leaves if isinstance(leaf, McpError | MCPError)), leaves[0])
+    else:
         return exc
-    return next((leaf for leaf in leaves if isinstance(leaf, McpError | MCPError)), leaves[0])
 
 
 def fatal_leaf(exc: BaseException) -> BaseException | None:
@@ -373,7 +373,7 @@ class McpConnection:
         self._client: Client | None = None
         self._catalog: McpToolCatalog | None = None
         self._stderr = _StderrCapture()
-        self._health = McpHealth.DISABLED if not config.enabled else McpHealth.DISCONNECTED
+        self._health = McpHealth.DISCONNECTED if config.enabled else McpHealth.DISABLED
         self._last_error: str | None = None
         self._failure: BaseException | None = None
         self._connected_at: datetime | None = None
@@ -944,7 +944,7 @@ class McpConnection:
         self._stderr.close()
         self._connected_at = None
         if self._health is not McpHealth.FAILED:
-            self._health = McpHealth.DISABLED if not self._config.enabled else McpHealth.DISCONNECTED
+            self._health = McpHealth.DISCONNECTED if self._config.enabled else McpHealth.DISABLED
         _logger.info("mcp_server_stopped", server_id=self.server_id)
         self._notify_change()
 
@@ -1279,7 +1279,8 @@ class McpConnectionManager:
         _logger.info(
             "mcp_manager_started",
             configured=len(self._document.servers),
-            connected=sum(1 for connection in self._connections.values() if connection.is_ready),
+            connected=sum(bool(connection.is_ready)
+                      for connection in self._connections.values()),
         )
 
     async def stop(self) -> None:

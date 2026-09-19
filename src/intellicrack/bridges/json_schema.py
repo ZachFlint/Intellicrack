@@ -154,8 +154,7 @@ def _inline_node(node: object, root: dict[str, Any], depth: int) -> object:
         merged: dict[str, Any] = {key: value for key, value in node.items() if key != "$ref"}
         expanded = _inline_node(target, root, depth - 1)
         if is_json_object(expanded):
-            combined = dict(expanded)
-            combined.update(merged)
+            combined = dict(expanded) | merged
             return combined
         return expanded
 
@@ -231,8 +230,7 @@ def _strictify(node: object) -> tuple[object, bool]:
         return node, True
 
     faithful = True
-    rejected = _STRICT_REJECTED_KEYWORDS.intersection(node)
-    if rejected:
+    if rejected := _STRICT_REJECTED_KEYWORDS.intersection(node):
         _logger.debug("json_schema_strict_unsupported_keyword", keywords=sorted(rejected))
         faithful = False
 
@@ -261,12 +259,14 @@ def _strictify(node: object) -> tuple[object, bool]:
     if is_json_object(properties):
         declared_required = node.get("required")
         required_names: set[str] = {str(name) for name in declared_required} if is_json_array(declared_required) else set()
-        rebuilt: dict[str, Any] = {}
-        for name, prop in properties.items():
-            if is_json_object(prop) and name not in required_names:
-                rebuilt[name] = _widen_with_null(prop)
-            else:
-                rebuilt[name] = prop
+        rebuilt: dict[str, Any] = {
+            name: (
+                _widen_with_null(prop)
+                if is_json_object(prop) and name not in required_names
+                else prop
+            )
+            for name, prop in properties.items()
+        }
         reduced["properties"] = rebuilt
         reduced["required"] = list(rebuilt)
         reduced["additionalProperties"] = False

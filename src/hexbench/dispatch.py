@@ -211,9 +211,7 @@ def _reference_of(value: JsonValue) -> dict[str, JsonValue] | None:
         dict[str, JsonValue] | None: The reference object, or ``None`` when the
         value is an ordinary literal.
     """
-    if isinstance(value, dict) and _REFERENCE_TAG in value:
-        return value
-    return None
+    return value if isinstance(value, dict) and _REFERENCE_TAG in value else None
 
 
 def _reference_int(parameter: Parameter, reference: dict[str, JsonValue], default: int) -> int:
@@ -231,9 +229,7 @@ def _reference_int(parameter: Parameter, reference: dict[str, JsonValue], defaul
         int: The decoded field value.
     """
     raw = reference.get(parameter.name)
-    if raw is None:
-        return default
-    return cast("int", decode_argument(parameter, raw))
+    return default if raw is None else cast("int", decode_argument(parameter, raw))
 
 
 def _read_reference(registry: Registry, reference: dict[str, JsonValue], parameter: str) -> str:
@@ -387,10 +383,18 @@ def _factory_label(operation: Operation, arguments: Sequence[object]) -> str:
         str: The leaf name of the first textual argument, falling back to the
         operation name for factories that take no text.
     """
-    for parameter, argument in zip(operation.parameters, arguments, strict=False):
-        if parameter.kind is ValueKind.TEXT and isinstance(argument, str) and argument:
-            return PurePath(argument).name or argument
-    return operation.name
+    return next(
+        (
+            PurePath(argument).name or argument
+            for parameter, argument in zip(
+                operation.parameters, arguments, strict=False
+            )
+            if parameter.kind is ValueKind.TEXT
+            and isinstance(argument, str)
+            and argument
+        ),
+        operation.name,
+    )
 
 
 def _register(registry: Registry, operation: Operation, arguments: Sequence[object], created: object) -> DocumentInfo:

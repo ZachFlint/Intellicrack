@@ -270,9 +270,7 @@ def _first(query: Mapping[str, Sequence[str]], name: str) -> str | None:
         str | None: The first value, or ``None`` when the parameter is absent.
     """
     values = query.get(name)
-    if not values:
-        return None
-    return values[0]
+    return values[0] if values else None
 
 
 def _flag(query: Mapping[str, Sequence[str]], name: str) -> bool:
@@ -289,9 +287,7 @@ def _flag(query: Mapping[str, Sequence[str]], name: str) -> bool:
         bool: Whether the parameter is present and truthy.
     """
     value = _first(query, name)
-    if value is None:
-        return False
-    return value.strip().casefold() in _TRUE_QUERY
+    return False if value is None else value.strip().casefold() in _TRUE_QUERY
 
 
 def _int_query(query: Mapping[str, Sequence[str]], name: str, default: int) -> int:

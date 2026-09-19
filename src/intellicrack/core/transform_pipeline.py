@@ -375,7 +375,7 @@ class RustTransformNode(TransformNode):
             detail = f"param {key!r} is not valid hex: odd-length string {val!r}"
             raise TransformParamError(self._name, detail)
 
-        if not all(c in string.hexdigits for c in val):
+        if any(c not in string.hexdigits for c in val):
             detail = f"param {key!r} is not valid hex: {val!r}"
             raise TransformParamError(self._name, detail)
 

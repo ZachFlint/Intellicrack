@@ -665,9 +665,7 @@ def _as_mapping(value: object) -> dict[str, object] | None:
         dict[str, object] | None: The mapping, or None when the value is not
         one.
     """
-    if isinstance(value, dict):
-        return cast("dict[str, object]", value)
-    return None
+    return cast("dict[str, object]", value) if isinstance(value, dict) else None
 
 
 def _file_size_or_zero(path: Path) -> int:
@@ -694,9 +692,7 @@ def _as_sequence(value: object) -> list[object] | None:
     Returns:
         list[object] | None: The list, or None when the value is not one.
     """
-    if isinstance(value, list):
-        return cast("list[object]", value)
-    return None
+    return cast("list[object]", value) if isinstance(value, list) else None
 
 
 def _read_ppm_token(data: bytes, pos: int) -> tuple[str, int]:
@@ -1476,9 +1472,7 @@ class QemuJsonProtocolClient:
             raise ConnectionError(msg)
 
         decoded: object = json.loads(cls._decode_text(line))
-        if not isinstance(decoded, dict):
-            return {}
-        return cast("dict[str, Any]", decoded)
+        return cast("dict[str, Any]", decoded) if isinstance(decoded, dict) else {}
 
     @staticmethod
     def _decode_text(line: bytes) -> str:
@@ -3276,9 +3270,7 @@ class QemuOutputRecorder:
         """
         if _QEMU_WHPX_NULL_MSI_WARNING_MARKER in text:
             return "benign"
-        if _QEMU_WARNING_LINE_MARKER in text.lower():
-            return "warning"
-        return "routine"
+        return "warning" if _QEMU_WARNING_LINE_MARKER in text.lower() else "routine"
 
     def _retain(self, line: str, channel: str) -> None:
         """Log one output line and keep it in the bounded tail.
@@ -4579,9 +4571,7 @@ class QEMUSandbox(SandboxBase):
         Returns:
             str: Decoded value, or an empty string when the row is shorter.
         """
-        if index >= len(fields):
-            return ""
-        return cls._decode_lsblk_value(fields[index])
+        return "" if index >= len(fields) else cls._decode_lsblk_value(fields[index])
 
     @classmethod
     def _select_guest_block_device(cls, listing: str, fs_type: str, label: str) -> str | None:
@@ -5514,10 +5504,14 @@ class QEMUSandbox(SandboxBase):
             Path | None: The first configured folder not marked read-only, or
             ``None`` when there is no such folder.
         """
-        for configured, read_only in self._configured_shares():
-            if not read_only:
-                return configured
-        return None
+        return next(
+            (
+                configured
+                for configured, read_only in self._configured_shares()
+                if not read_only
+            ),
+            None,
+        )
 
     @staticmethod
     def _anti_evasion_smbios_entries(profile: str) -> list[dict[str, str]]:

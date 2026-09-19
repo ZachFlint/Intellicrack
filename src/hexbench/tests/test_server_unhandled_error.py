@@ -159,10 +159,10 @@ class UnhandledErrorResponseTests(Assertions, unittest.TestCase):
                 sock.sendall(request.encode("ascii"))
                 received = b""
                 while True:
-                    chunk = sock.recv(4096)
-                    if not chunk:
+                    if chunk := sock.recv(4096):
+                        received += chunk
+                    else:
                         break
-                    received += chunk
                 self.require(received.startswith(b"HTTP/1.1 500"), f"expected an HTTP/1.1 500 status line, got {received[:40]!r}")
                 self.require(b"\r\n\r\n" in received, "response never terminated its header block")
 

@@ -118,9 +118,7 @@ def coerce_timeout_seconds(value: object) -> float | None:
     if isinstance(value, bool) or not isinstance(value, int | float):
         return None
     seconds = float(value)
-    if not math.isfinite(seconds) or seconds <= 0:
-        return None
-    return seconds
+    return None if not math.isfinite(seconds) or seconds <= 0 else seconds
 
 
 def _is_versioned_section(section: Mapping[str, object]) -> bool:

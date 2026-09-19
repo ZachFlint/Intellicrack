@@ -1478,8 +1478,7 @@ def _drain_and_stop_bridge_loop(logger: BoundLogger) -> None:
     bridge_module = importlib.import_module("intellicrack.ui.panels.async_bridge")
     drain_fn = getattr(bridge_module, "drain_bridge_workers", None)
     if callable(drain_fn):
-        drained = int(cast("Callable[[], int]", drain_fn)())
-        if drained:
+        if drained := int(cast("Callable[[], int]", drain_fn)()):
             logger.info("bridge_workers_drained", count=drained)
     shutdown_fn = getattr(bridge_module, "shutdown_bridge_loop", None)
     if callable(shutdown_fn):

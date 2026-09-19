@@ -171,8 +171,7 @@ function createEnvironment(bench) {
 
   const formContext = () => {
     const active = bench.activeDocument();
-    const caret = bench.grid.caret;
-    const selection = bench.grid.selection;
+    const {caret, selection} = bench.grid;
     return {
       handle: active?.handle ?? null,
       document: active,
@@ -373,7 +372,7 @@ function inspectorPanel(env) {
       if (body === null) {
         return;
       }
-      const offset = context.caret.offset;
+      const {offset} = context.caret;
       const key = `${context.document?.handle ?? ''}:${context.document?.generation ?? ''}:${offset}`;
       if (key === lastKey) {
         return;

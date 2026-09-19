@@ -106,8 +106,7 @@ def build_wsb_configuration(
     """
     configuration = Element("Configuration")
 
-    folders = list(mapped_folders)
-    if folders:
+    if folders := list(mapped_folders):
         mapped = SubElement(configuration, "MappedFolders")
         for entry in folders:
             folder = SubElement(mapped, "MappedFolder")

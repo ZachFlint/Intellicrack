@@ -1162,7 +1162,7 @@ class SessionManagerDialog(QDialog):
         Args:
             session_id: Session identifier.
         """
-        if not any(s["id"] == session_id for s in self._sessions):
+        if all(s["id"] != session_id for s in self._sessions):
             _logger.warning("session_load_selection_stale", session_id=session_id)
             QMessageBox.warning(self, "Load Failed", f"Session no longer exists: {session_id}")
             return

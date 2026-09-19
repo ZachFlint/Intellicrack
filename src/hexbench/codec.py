@@ -253,8 +253,7 @@ def _decode_bookmark(value: JsonValue, parameter: str) -> Bookmark:
     if not isinstance(value, dict):
         message = f"{parameter}: expected a bookmark object, got {type(value).__name__}"
         raise DecodeError(message)
-    missing = [field for field in _BOOKMARK_FIELDS if field not in value]
-    if missing:
+    if missing := [field for field in _BOOKMARK_FIELDS if field not in value]:
         message = f"{parameter}: bookmark is missing {', '.join(missing)}"
         raise DecodeError(message)
     return Bookmark(
@@ -310,12 +309,16 @@ def decode_arguments(parameters: tuple[Parameter, ...], payload: dict[str, JsonV
     Raises:
         DecodeError: If a parameter is missing, unexpected, or fails conversion.
     """
-    missing = [parameter.name for parameter in parameters if parameter.name not in payload]
-    if missing:
+    if missing := [
+        parameter.name
+        for parameter in parameters
+        if parameter.name not in payload
+    ]:
         message = f"missing required argument(s): {', '.join(missing)}"
         raise DecodeError(message)
-    unexpected = sorted(set(payload) - {parameter.name for parameter in parameters})
-    if unexpected:
+    if unexpected := sorted(
+        set(payload) - {parameter.name for parameter in parameters}
+    ):
         message = f"unexpected argument(s): {', '.join(unexpected)}"
         raise DecodeError(message)
     return [decode_argument(parameter, payload[parameter.name]) for parameter in parameters]

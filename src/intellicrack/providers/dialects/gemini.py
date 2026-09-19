@@ -258,8 +258,7 @@ class GeminiAdapter(DialectAdapter):
         body: dict[str, Any] = {
             "contents": self.build_contents(request.messages, capabilities, name_style=request.tool_name_style),
         }
-        instruction = self.system_instruction(request)
-        if instruction:
+        if instruction := self.system_instruction(request):
             body["systemInstruction"] = {"parts": [{"text": instruction}]}
 
         generation_config: dict[str, Any] = {"maxOutputTokens": request.max_tokens}
@@ -273,8 +272,9 @@ class GeminiAdapter(DialectAdapter):
             }
         body["generationConfig"] = generation_config
 
-        tools = self.build_tool_schemas(request.tools, capabilities, name_style=request.tool_name_style)
-        if tools:
+        if tools := self.build_tool_schemas(
+            request.tools, capabilities, name_style=request.tool_name_style
+        ):
             body["tools"] = tools
             if request.tool_choice is not None:
                 body["toolConfig"] = self.tool_config(request.tool_choice, name_style=request.tool_name_style)
@@ -426,13 +426,13 @@ class GeminiAdapter(DialectAdapter):
             list[dict[str, Any]]: The response part, followed by any image
             parts.
         """
-        structured = structured_parts(result)
-        if structured:
+        if structured := structured_parts(result):
             response: dict[str, Any] = {}
             for part in structured:
-                response.update(part.content)
-            narrative = render_parts_as_text([part for part in result.content or () if part not in structured])
-            if narrative:
+                response |= part.content
+            if narrative := render_parts_as_text(
+                [part for part in result.content or () if part not in structured]
+            ):
                 response[_NARRATIVE_KEY] = narrative
         elif result.content:
             response = {"result": tool_result_text(result)}

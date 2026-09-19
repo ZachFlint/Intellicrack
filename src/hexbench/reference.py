@@ -321,9 +321,8 @@ def _transform_json() -> JsonValue:
     Returns:
         JsonValue: Mapping from transform name to a list of parameter objects.
     """
-    rendered: dict[str, JsonValue] = {}
-    for name, parameters in _TRANSFORM_PARAMETERS.items():
-        rendered[name] = [
+    rendered: dict[str, JsonValue] = {
+        name: [
             {
                 "key": parameter.key,
                 "required": parameter.required,
@@ -334,6 +333,8 @@ def _transform_json() -> JsonValue:
             }
             for parameter in parameters
         ]
+        for name, parameters in _TRANSFORM_PARAMETERS.items()
+    }
     return rendered
 
 

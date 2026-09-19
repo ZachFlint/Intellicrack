@@ -1088,12 +1088,11 @@ class ModelDiscovery:
         Returns:
             dict[str, int]: Dictionary mapping providers to their cached model count.
         """
-        result: dict[str, int] = {}
         cached = self._cache.get_all_cached()
 
-        for provider, models in cached.items():
-            result[provider] = len(models)
-
+        result: dict[str, int] = {
+            provider: len(models) for provider, models in cached.items()
+        }
         return result
 
     async def save_cache(self, path: Path) -> None:

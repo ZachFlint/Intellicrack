@@ -1473,10 +1473,10 @@ class WindowsSandbox(SandboxBase):
                 user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
                 observed.append(
                     TopLevelWindow(
-                        handle=int(hwnd),
+                        handle=hwnd,
                         owner_pid=int(owner.value),
                         visible=bool(user32.IsWindowVisible(hwnd)),
-                    ),
+                    )
                 )
                 return True
 

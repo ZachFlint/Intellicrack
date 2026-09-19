@@ -743,7 +743,15 @@ class FridaPanel(AnalysisPanelBase):
             message: Frida message dictionary.
         """
         msg_type = str(message.get("type", ""))
-        if msg_type == "send":
+        if msg_type == "error":
+            desc = message.get("description", str(message))
+            self._console.appendPlainText(f"[error] {desc}")
+            _logger.error("frida_script_error", description=str(desc))
+        elif msg_type == "log":
+            level = str(message.get("level", "info"))
+            payload = message.get("payload", "")
+            self._console.appendPlainText(f"[log:{level}] {payload}")
+        elif msg_type == "send":
             payload = message.get("payload", "")
             if isinstance(payload, dict) and cast("dict[str, object]", payload).get("type") == "process_output":
                 typed_payload = cast("dict[str, object]", payload)
@@ -762,14 +770,6 @@ class FridaPanel(AnalysisPanelBase):
                         self._set_status("Device lost")
                         with QSignalBlocker(self._device_lost_cb):
                             self._device_lost_cb.setChecked(False)
-        elif msg_type == "log":
-            level = str(message.get("level", "info"))
-            payload = message.get("payload", "")
-            self._console.appendPlainText(f"[log:{level}] {payload}")
-        elif msg_type == "error":
-            desc = message.get("description", str(message))
-            self._console.appendPlainText(f"[error] {desc}")
-            _logger.error("frida_script_error", description=str(desc))
         else:
             self._console.appendPlainText(f"[{msg_type}] {message}")
 

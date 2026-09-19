@@ -24,8 +24,6 @@ htmlcov/
 **/*.pyd
 node_modules/
 vendor/
-CLI Coding/target/
-CLI Coding/**/target/
 src/intellicrack-hexcore/target/
 Screenshots/
 tools/

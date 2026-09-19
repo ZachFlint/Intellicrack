@@ -246,8 +246,11 @@ class ToolSearchIndex:
             source = definition_by_name.get(tool_name)
             if source is None:
                 continue
-            matched_functions = [func for func in source.functions if func.name in matched_names_by_tool[tool_name]]
-            if matched_functions:
+            if matched_functions := [
+                func
+                for func in source.functions
+                if func.name in matched_names_by_tool[tool_name]
+            ]:
                 grouped.append(
                     ToolDefinition(
                         tool_name=source.tool_name,

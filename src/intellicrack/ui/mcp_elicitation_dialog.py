@@ -372,8 +372,7 @@ class McpElicitationDialog(QDialog):
     def _on_accept(self) -> None:
         """Handle the send button."""
         values = self._collect()
-        missing = self._missing_required(values)
-        if missing:
+        if missing := self._missing_required(values):
             _logger.debug("mcp_elicit_missing_required", server_id=self._server_id, fields=missing)
             self.setWindowTitle(f"Fill in: {', '.join(missing)}")
             return
