@@ -256,7 +256,7 @@ class TestWorkerRunningGuards:
         """
         recorder = _CallRecorder()
         monkeypatch.setattr(tool_config_mod, "show_info", recorder)
-        running = _RunningInstallWorker("ghidra", tmp_path / "tools" / "ghidra", widget)
+        running = _RunningInstallWorker("ghidra", tmp_path / "tools" / "ghidra", owner=widget)
         setattr(widget, "_install_worker", running)
 
         _invoke(widget, "_install_tool")
@@ -276,7 +276,7 @@ class TestWorkerRunningGuards:
             widget: ToolSettingsWidget fixture.
             tmp_path: Per-test temporary directory.
         """
-        running = _RunningStatusWorker("ghidra", str(tmp_path / "tools" / "ghidra"), widget)
+        running = _RunningStatusWorker("ghidra", str(tmp_path / "tools" / "ghidra"), owner=widget)
         setattr(widget, "_status_worker", running)
 
         _invoke(widget, "_check_status")
