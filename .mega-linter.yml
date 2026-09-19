@@ -72,7 +72,14 @@ RUST_CLIPPY_ARGUMENTS: >-
 # Relocate the report folder to match the rest of the repo's reports/
 # convention, and reset it on every run so stale findings from a previous
 # `just megalint` never mix with the current one.
-REPORT_OUTPUT_FOLDER: reports/megalinter
+# This MUST be an absolute container path. MegaLinter joins the workspace onto
+# its own default only (MegaLinter.py initialize_output); a value supplied here
+# is used verbatim, and the image's WORKDIR is / with nothing chdir-ing into
+# the workspace on the normal run path, so a relative value like
+# `reports/megalinter` lands in the container's own filesystem and is destroyed
+# with the container. /tmp/lint is where mega-linter-runner bind-mounts the
+# repo, so this resolves to <repo>/reports/megalinter on the host.
+REPORT_OUTPUT_FOLDER: /tmp/lint/reports/megalinter
 CLEAR_REPORT_FOLDER: true
 # Always scan every matching file under the filter above, not just files
 # touched since the last commit -- there is no meaningful git diff for a local
