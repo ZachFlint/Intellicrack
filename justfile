@@ -574,8 +574,11 @@ cmake-lint *FLAGS:
     @& scripts/run-lint-tool.ps1 -ToolName cmake-lint -DisplayName CmakeLint -Command "{{ pixi }} cmake-lint --suppress-decorations -c src/x64dbg-plugin/.cmake-format.yaml -- src/x64dbg-plugin/CMakeLists.txt" -TextMode -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}" -PassthruExe "{{ pixi }} cmake-lint -c src/x64dbg-plugin/.cmake-format.yaml -- src/x64dbg-plugin/CMakeLists.txt"
 
 # Run MegaLinter (Docker) on src/. Switches Docker Desktop to Linux containers,
-# runs mega-linter-runner (auto-removing its container after), saves findings to
-# reports/megalinter, then restores Docker Desktop to its original engine.
+# installs the MegaLinter image, runs mega-linter-runner, saves findings to
+# reports/megalinter, then uninstalls both the container and the image and
+# restores Docker Desktop to its original engine. The image is installed and
+# uninstalled on every single run, so every run re-downloads a few GB -- pass
+# --keep-image to leave it installed while iterating.
 # Refuses to run while a QEMU/Windows Sandbox VM is up -- see scripts/run-megalinter.ps1.
 [doc('Run MegaLinter (Docker) on src/ -- see scripts/run-megalinter.ps1 for the full lifecycle')]
 [group('lint')]
