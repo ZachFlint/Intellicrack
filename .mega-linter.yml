@@ -91,15 +91,19 @@ PYTHON_FLAKE8_PRE_COMMANDS:
 # It is still upstream pyright, not this project's actual basedpyright, so it
 # won't enforce basedpyright's own additional rules on top of that config --
 # but it is no longer the "different config entirely" gap this comment used
-# to describe. pylint, isort and mypy genuinely have no project config to
-# find (pyproject.toml has no [tool.isort]/[tool.pylint]/[tool.mypy] table,
-# and ruff/basedpyright are this project's actual tools of record for that
-# ground), so LINTER_DEFAULT for them mainly avoids MegaLinter's bundled
-# opinionated config rather than unlocking a real one -- treat their findings
-# as advisory, not as gates. pylint's 8,926 is dominated by the same
-# line-length gap: measured over the same 268 files, 4,765 of 8,289 findings
-# are C0301 at pylint's stock 100 columns and another 1,062 are W0201, which
-# every PyQt6 widget that assigns children outside __init__ trips by design.
+# to describe. pylint and mypy each have a real table in pyproject.toml now,
+# which is their own default config location, so LINTER_DEFAULT is all they
+# need. [tool.pylint] exists specifically to stop pylint re-reporting what
+# ruff and basedpyright already own: measured over the same 268 files it
+# takes pylint from 8,289 findings to 216, once the 182 E0001 parse failures
+# present in both totals (an artefact of the interpreter used to measure,
+# not of the image's 3.13) are set aside. Of the 8,289, 4,765 were C0301 at
+# pylint's stock 100 columns and 1,062 were W0201, which every PyQt6 widget
+# that builds its children outside __init__ trips by design. isort is the one with no table to find,
+# so LINTER_DEFAULT there only avoids MegaLinter's bundled opinionated config
+# rather than unlocking a real one -- treat its findings as advisory. ruff
+# and basedpyright remain this project's actual tools of record for that
+# ground.
 # RUST_CLIPPY's default "project" CLI_LINT_MODE assumes the mounted repo root
 # is the crate root, so it fails instantly with "could not find Cargo.toml"
 # against this repo (the crate lives at src/intellicrack-hexcore). Point it at

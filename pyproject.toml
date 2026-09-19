@@ -979,6 +979,99 @@ allow-init-docstring = true
 convention = "google"
 match-dir = "(?!tests|docs|tools|build|dist|node_modules|vendor|\\.).*"
 
+# pylint is not one of this project's gates -- ruff and basedpyright are the
+# tools of record, and `just lint` / `just typecheck` run those. pylint exists
+# here only because MegaLinter enables PYTHON_PYLINT, so this table exists to
+# stop it re-reporting what those two already cover. Without it pylint ran
+# fully stock and produced 8,289 findings over src/, of which 4,765 were
+# C0301 at its default 100 columns and 1,062 were W0201. With it, 216.
+[tool.pylint]
+main.py-version = "3.13"
+main.jobs = 0
+main.ignore-paths = [
+  ".*/\\.pixi/.*",
+  ".*/__pycache__/.*",
+  ".*/build/.*",
+  ".*/dist/.*",
+  ".*/node_modules/.*",
+  ".*/stubs/.*",
+  ".*/target/.*",
+  ".*/tools/.*",
+  ".*/typings/.*",
+  ".*/vendor/.*",
+]
+# Matches [tool.ruff] line-length and [tool.black] line-length. C0301 itself is
+# disabled below, the same way ruff ignores line-too-long and leaves the limit
+# to the formatter, but the value keeps the three tools stating one number.
+format.max-line-length = 140
+"messages control".disable = [
+  # Already reported by a rule family selected in [tool.ruff] lint.select.
+  # The ruff code that owns each one is named beside it.
+  "broad-exception-caught",  # BLE001
+  "chained-comparison",  # PLR1716
+  "consider-using-f-string",  # UP032
+  "consider-using-with",  # SIM115
+  "duplicate-except",  # B014
+  "import-outside-toplevel",  # PLC0415
+  "invalid-name",  # N801 through N818
+  "line-too-long",  # E501
+  "missing-class-docstring",  # D101
+  "missing-function-docstring",  # D103
+  "missing-module-docstring",  # D100
+  "no-else-break",  # RET508
+  "no-else-continue",  # RET507
+  "no-else-raise",  # RET506
+  "no-else-return",  # RET505
+  "pointless-string-statement",  # B018
+  "protected-access",  # SLF001
+  "superfluous-parens",  # UP034
+  "too-many-boolean-expressions",  # PLR0916
+  "too-many-locals",  # PLR0914
+  "too-many-positional-arguments",  # PLR0917
+  "too-many-public-methods",  # PLR0904
+  "ungrouped-imports",  # I001
+  "unidiomatic-typecheck",  # E721
+  "unnecessary-ellipsis",  # PIE790
+  "unspecified-encoding",  # PLW1514
+  "unused-argument",  # ARG001 through ARG005
+  "unused-import",  # F401
+  "useless-import-alias",  # PLC0414
+  "useless-return",  # PLR1711
+  "wrong-import-position",  # E402
+  # Type and name resolution belongs to basedpyright, which runs against
+  # pyrightconfig.json with the project's real dependencies importable.
+  # pylint infers all of this from a partial import graph and is wrong often
+  # enough that its verdict is not usable.
+  "access-member-before-definition",
+  "import-error",
+  "no-member",
+  "no-name-in-module",
+  "not-callable",
+  "undefined-variable",
+  "used-before-assignment",
+  # jscpd runs in the same MegaLinter pass and reports duplication with clone
+  # locations and a percentage; pylint's R0801 is the same finding with less
+  # detail.
+  "duplicate-code",
+  # [tool.ruff] lint.ignore already declines to enforce these complexity
+  # limits. Enabling them here would reverse that decision through a second
+  # tool rather than by changing it.
+  "too-many-arguments",
+  "too-many-branches",
+  "too-many-nested-blocks",
+  "too-many-return-statements",
+  "too-many-statements",
+  # Framework idioms that pylint cannot see through. Every PyQt6 panel builds
+  # its child widgets in a _build_ui() helper called from __init__, which
+  # pylint reads as assignment outside __init__: 1,062 findings, all of them
+  # under src/intellicrack/ui/panels/. QWidget subclasses likewise inherit a
+  # deep Qt chain, and Protocol, dataclass and enum classes legitimately
+  # expose fewer than two public methods.
+  "attribute-defined-outside-init",
+  "too-few-public-methods",
+  "too-many-ancestors",
+]
+
 [tool.pytest]
 ini_options.addopts = ["-ra", "--strict-markers"]
 ini_options.markers = [
