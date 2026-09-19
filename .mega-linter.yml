@@ -11,6 +11,24 @@ MEGALINTER_VERSION: v10
 # CLI_LINT_MODE and ignore this filter by design -- they always walk the whole
 # mounted repository instead, regardless of this setting.
 FILTER_REGEX_INCLUDE: (src/)
+# FILTER_REGEX_INCLUDE does not reach the project-mode scanners above, but
+# excluded directories do: MegaLinter forwards them to every project-mode
+# linter that has a native exclusion argument (devskim, grype, syft, trivy,
+# trivy-sbom, checkov, secretlint, osv-scanner, kingfisher, cspell, lychee all
+# declare one). MegaLinter's own defaults cover node_modules, .venv and the
+# usual caches but know nothing about this repo's large non-source trees, so
+# devskim spent 19,796s and grype and syft both hit LINTER_TIMEOUT_SECONDS
+# walking them. dustilock, betterleaks and trufflehog have no native exclusion
+# argument and still scan everything.
+ADDITIONAL_EXCLUDED_DIRECTORIES:
+  - .claude
+  - .pixi
+  - build
+  - dist
+  - reports
+  - target
+  - tools
+  - vendor
 # The Windows-host -> Linux-container bind mount is slow enough that on a real
 # run against this repo, 14 of ~46 linters blew through the 300s default and
 # were killed mid-scan (pylint, pyright, jscpd, npm-package-json-lint, checkov,
@@ -67,8 +85,25 @@ PYTHON_ISORT_CONFIG_FILE: LINTER_DEFAULT
 # run, since the container (and its cargo registry/target cache) is removed
 # afterwards, along with the image itself -- expect this step to be slow;
 # `just clippy` remains the fast, incrementally-cached tool for routine use.
+# The leading `clippy` is required, not a typo. MegaLinter's cli_executable is
+# the bare `cargo-clippy` binary, which expects to be spawned by cargo as
+# `cargo clippy` and so discards its own first argument. Without the
+# placeholder it swallowed --manifest-path and died in under a second with
+# "could not find Cargo.toml in /tmp/lint or any parent directory", which the
+# summary table reported as a single opaque error. Reproduced and fixed
+# against cargo-clippy 1.94.1.
 RUST_CLIPPY_ARGUMENTS: >-
-  --manifest-path=src/intellicrack-hexcore/Cargo.toml --all-targets -- -W clippy::all -W clippy::pedantic
+  clippy --manifest-path=src/intellicrack-hexcore/Cargo.toml --all-targets -- -W clippy::all -W clippy::pedantic
+# lychee reported two failures that are environmental rather than broken links.
+# --root-dir resolves root-relative hrefs (src/hexbench/static/index.html links
+# /static/app.css, which lychee cannot resolve in a local file without one) and
+# must be absolute, so it points at the container mount for the same reason
+# REPORT_OUTPUT_FOLDER below does. --exclude-loopback stops it trying to HTTP
+# GET the Ollama endpoint http://localhost:11434/ out of
+# src/intellicrack/assets/configs/ollama_codellama.json, which is a provider
+# endpoint in a config file and was never a link to check.
+SPELL_LYCHEE_ARGUMENTS: >-
+  --root-dir /tmp/lint --exclude-loopback
 # Relocate the report folder to match the rest of the repo's reports/
 # convention, and reset it on every run so stale findings from a previous
 # `just megalint` never mix with the current one.
