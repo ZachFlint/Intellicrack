@@ -87,8 +87,7 @@ def _extract_top_level_selectors(css_text: str) -> set[str]:
         if not header:
             continue
         for raw_part in header.split(","):
-            part = raw_part.strip()
-            if part:
+            if part := raw_part.strip():
                 selectors.add(part)
     return selectors
 

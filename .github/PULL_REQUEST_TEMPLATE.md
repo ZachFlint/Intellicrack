@@ -17,14 +17,16 @@ Please delete options that are not relevant.
 
 ## Checklist
 
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
-- [ ] Any dependent changes have been merged and published
+- [ ] `just lint` reports no findings
+- [ ] `just ruff-fmt` leaves the tree unchanged
+- [ ] `just basedpyright` reports zero errors, warnings, and notes
+- [ ] `just pydoclint` and `just pydocstyle` report zero violations
+- [ ] No type or lint suppressions were added (`type: ignore`, `pyright: ignore`, `noqa`)
+- [ ] Every change is covered by a test that fails when the behaviour breaks
+- [ ] Tests exercise real inputs - no mocks, stubs, or placeholder implementations
+- [ ] Tests live under `tests/` in the subdirectory matching the code under test
+- [ ] `just test` passes locally
+- [ ] Documentation was updated wherever behaviour changed
 
 ## Screenshots (if applicable)
 

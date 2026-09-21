@@ -101,7 +101,7 @@ def test_pinned_memory_shrinks_the_budget_and_is_honoured() -> None:
 
     assert pinned.memory == "48g", "an explicit --memory must be forwarded verbatim"
     assert pinned.slots < auto.slots, "a larger per-run reservation must permit fewer concurrent runs"
-    assert pinned.slots * 48 <= 96, "pinned runs must still fit within host memory"
+    assert pinned.slots <= 2, "pinned runs must still fit within host memory"
 
 
 def test_budget_is_capped_regardless_of_host_size() -> None:

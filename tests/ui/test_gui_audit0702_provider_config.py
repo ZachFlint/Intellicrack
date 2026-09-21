@@ -187,11 +187,10 @@ def _drive_to_error(
     del parent, on_success
     loop = asyncio.new_event_loop()
     try:
-        try:
-            loop.run_until_complete(coro)
-        except RuntimeError as exc:
-            if on_error is not None:
-                cast("Callable[[object], None]", on_error)(exc)
+        loop.run_until_complete(coro)
+    except RuntimeError as exc:
+        if on_error is not None:
+            cast("Callable[[object], None]", on_error)(exc)
     finally:
         loop.close()
 
@@ -778,7 +777,7 @@ class TestM14OpenRouterGenerationLookupAsync:
 
             assert len(emitted) == 1
             success, generation_id, message = emitted[0]
-            assert bool(success) is True, "a found generation must report success"
+            assert bool(success), "a found generation must report success"
             assert generation_id == "gen-123"
             assert "cost: 0.0021" in message, f"formatted cost line missing from message: {message!r}"
         finally:
@@ -810,7 +809,7 @@ class TestM14OpenRouterGenerationLookupAsync:
 
             assert len(emitted) == 1
             success, generation_id, message = emitted[0]
-            assert bool(success) is False, "a failed lookup must report failure"
+            assert not bool(success), "a failed lookup must report failure"
             assert generation_id == "gen-404"
             assert "gen-404" in message
         finally:

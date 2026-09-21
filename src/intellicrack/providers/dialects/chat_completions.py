@@ -264,8 +264,8 @@ class ChatCompletionsAdapter(DialectAdapter):
         body: dict[str, Any] = {
             "model": request.model,
             "messages": self.build_messages(request.messages, capabilities, name_style=request.tool_name_style),
+            self.token_limit_field(capabilities): request.max_tokens,
         }
-        body[self.token_limit_field(capabilities)] = request.max_tokens
         if capabilities.supports_temperature:
             body["temperature"] = request.temperature
 

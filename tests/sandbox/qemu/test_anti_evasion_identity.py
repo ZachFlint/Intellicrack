@@ -242,17 +242,23 @@ class _RecordingAgent(GuestAgentClient):
         self.connected = True
         self.sent_commands = []
 
-    async def connect(self, time_limit: float = 60.0, retry_interval: float = 2.0) -> bool:
+    async def connect(
+        self,
+        time_limit: float = 60.0,
+        retry_interval: float = 2.0,
+        backoff_interval: float | None = None,
+    ) -> bool:
         """No-op connect that keeps the agent flagged as connected.
 
         Args:
             time_limit: Ignored.
             retry_interval: Ignored.
+            backoff_interval: Ignored.
 
         Returns:
             bool: Always ``True``.
         """
-        del time_limit, retry_interval
+        del time_limit, retry_interval, backoff_interval
         return True
 
     async def disconnect(self) -> None:

@@ -365,7 +365,7 @@ def _run_docker(
         # surface the timeout as a non-zero result so probes can retry instead
         # of the caller blocking forever on a wedged daemon connection.
         _LOGGER.warning("docker_cli_timeout", argv=args, timeout=timeout)
-        message = f"docker {' '.join(args)} timed out after {timeout:g}s"
+        message = f"docker {' '.join(args)} timed out after {exc.timeout:g}s"
         if check:
             raise SandboxError(message) from exc
         captured = exc.stderr or exc.stdout or ""

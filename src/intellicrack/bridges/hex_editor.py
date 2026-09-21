@@ -4782,10 +4782,12 @@ def _pdf_render_bookmarks(
         label = str(bm.get("label", ""))
         if label and label not in seen:
             seen.add(label)
+            raw_offset = bm.get("offset", 0)
+            offset = raw_offset if isinstance(raw_offset, int) else 0
             pdf.cell(
                 0,
                 5,
-                f"  {label}: 0x{bm.get('offset', 0):X} ({bm.get('length', 0)} bytes)",
+                f"  {label}: 0x{offset:X} ({bm.get('length', 0)} bytes)",
                 new_x="LMARGIN",
                 new_y="NEXT",
             )

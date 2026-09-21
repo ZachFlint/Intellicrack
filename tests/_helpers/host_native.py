@@ -88,6 +88,8 @@ _PIXI_ENVIRONMENTS: Final[str] = "tests/packaging/test_pixi_runtime_environment.
 _BUILD_INSTALLER_LOG: Final[str] = "tests/packaging/test_build_installer_logging.py"
 _PRECOMMIT_RUFF_PIN: Final[str] = "tests/packaging/test_precommit_ruff_pin.py"
 _SECURITY_FLOORS: Final[str] = "tests/packaging/test_security_advisory_floors.py"
+_REPO_URL_CONSISTENCY: Final[str] = "tests/packaging/test_repository_url_consistency.py"
+_THIRD_PARTY_LICENSING: Final[str] = "tests/packaging/test_third_party_licensing.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -250,6 +252,16 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_SECURITY_FLOORS, "test_pyproject_declares_gitpython_dev_security_floor"),
         (_SECURITY_FLOORS, "test_pixi_lock_resolves_patched_versions"),
         (_SECURITY_FLOORS, "test_requirements_txt_pins_patched_versions"),
+        (_REPO_URL_CONSISTENCY, "test_every_github_project_url_points_at_the_canonical_repository"),
+        (_REPO_URL_CONSISTENCY, "test_metadata_url_matches_the_pyproject_homepage"),
+        (_REPO_URL_CONSISTENCY, "test_installer_appurl_points_at_the_canonical_repository"),
+        (_REPO_URL_CONSISTENCY, "test_docs_github_context_names_the_canonical_owner_and_repository"),
+        (_REPO_URL_CONSISTENCY, "test_typed_classifier_is_backed_by_a_py_typed_marker"),
+        (_THIRD_PARTY_LICENSING, "test_every_required_license_text_is_vendored"),
+        (_THIRD_PARTY_LICENSING, "test_x64dbg_license_is_the_modified_text_with_the_plugin_exception"),
+        (_THIRD_PARTY_LICENSING, "test_corresponding_source_link_matches_the_pinned_sdk_commit"),
+        (_THIRD_PARTY_LICENSING, "test_every_vendored_license_is_documented_in_the_index"),
+        (_THIRD_PARTY_LICENSING, "test_installer_both_stages_and_installs_the_license_texts"),
     },
 )
 

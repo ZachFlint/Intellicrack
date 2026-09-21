@@ -136,7 +136,8 @@ def _count_tabs_titled(panel: ToolOutputPanel, title: str) -> int:
     Returns:
         int: Number of matching tabs.
     """
-    return sum(1 for i in range(panel.tab_widget.count()) if panel.tab_widget.tabText(i) == title)
+    return sum(bool(panel.tab_widget.tabText(i) == title)
+           for i in range(panel.tab_widget.count()))
 
 
 @pytest.fixture

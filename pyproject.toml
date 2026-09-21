@@ -29,17 +29,17 @@ classifiers = [
   "Operating System :: Microsoft :: Windows",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
   "Topic :: Security",
   "Topic :: Security :: Cryptography",
   "Topic :: Software Development :: Debuggers",
   "Topic :: Software Development :: Disassemblers",
   "Typing :: Typed",
 ]
-urls."Bug Tracker" = "https://github.com/zacharyflint/intellicrack/issues"
+urls."Bug Tracker" = "https://github.com/ZachFlint/Intellicrack/issues"
 urls.Documentation = "https://intellicrack.readthedocs.io"
-urls.Homepage = "https://github.com/zacharyflint/intellicrack"
-urls."Source Code" = "https://github.com/zacharyflint/intellicrack"
+urls.Homepage = "https://github.com/ZachFlint/Intellicrack"
+urls."Source Code" = "https://github.com/ZachFlint/Intellicrack"
+urls.Changelog = "https://github.com/ZachFlint/Intellicrack/blob/main/CHANGELOG.md"
 scripts.intellicrack = "intellicrack.main:main"
 gui-scripts.intellicrack-gui = "intellicrack.main:main"
 dependencies = [
@@ -53,7 +53,7 @@ optional-dependencies.dev = [
   "basedpyright",
   "black",
   "blinter",
-  "build>=1.6.0,<2",
+  "build>=1.6.1,<2",
   "bumpversion",
   "check-wheel-contents>=0.6.3,<0.7",
   "codespell",
@@ -84,9 +84,9 @@ optional-dependencies.dev = [
   "pydoclint",
   "pydocstyle",
   "pygount",
-  "pyinstaller>=6.22.2,<7",
+  "pyinstaller>=6.22.3,<7",
   "pylint",
-  "pyproject-fmt>=2.29.3,<3",
+  "pyproject-fmt>=2.29.4,<3",
   "pyroma",
   "pyupgrade",
   "radon",
@@ -732,15 +732,15 @@ pypi-dependencies.pefile = ">=2024.8.26, <2025"
 pypi-dependencies.lief = ">=1.0.0, <2"
 pypi-dependencies.capstone = "*"
 pypi-dependencies.keystone-engine = ">=0.9.2, <0.10"
-pypi-dependencies.frida = ">=17.17.0, <18"
+pypi-dependencies.frida = ">=17.18.0, <18"
 pypi-dependencies.frida-tools = ">=14.10.4, <15"
 pypi-dependencies.r2pipe = ">=1.9.8, <2"
 pypi-dependencies.rzpipe = ">=0.6.2, <0.7"
 pypi-dependencies.ghidra-bridge = ">=1.0.0, <2"
-pypi-dependencies.anthropic = ">=1.4.0, <2"
-pypi-dependencies.openai = ">=3.8.0, <4"
+pypi-dependencies.anthropic = ">=1.7.0, <2"
+pypi-dependencies.openai = ">=3.16.2, <4"
 pypi-dependencies.tiktoken = ">=0.14.0, <0.15"
-pypi-dependencies.google-genai = ">=2.22.0, <3"
+pypi-dependencies.google-genai = ">=2.24.0, <3"
 pypi-dependencies.httpx = ">=0.28.1, <0.29"
 pypi-dependencies.structlog = ">=26.1.0, <27"
 pypi-dependencies.pydantic = ">=2.13.5, <3"
@@ -759,8 +759,8 @@ pypi-dependencies.pyasn1 = ">=0.6.4, <0.7"
 # decompression-amplification advisories (CVE-2026-84378 through CVE-2026-84382);
 # httpcore2 >=2.10.0 clears its half of CVE-2026-84381. Both stay within the <3
 # bound every consumer requires.
-pypi-dependencies.httpx2 = ">=2.12.0, <3"
-pypi-dependencies.httpcore2 = ">=2.10.0, <3"
+pypi-dependencies.httpx2 = ">=2.13.0, <3"
+pypi-dependencies.httpcore2 = ">=2.13.0, <3"
 # Declared explicitly so the runtime environment cannot lose them to a re-solve:
 # each is imported by the shipped app (keyring -> credentials/store.py,
 # cryptography -> ui/panels/vnc_widget.py, psutil -> core/process_manager.py,
@@ -768,7 +768,7 @@ pypi-dependencies.httpcore2 = ">=2.10.0, <3"
 # or loaded by the shipped interpreter (pyghidra/jpype1 -> bridges/ghidra.py runs
 # `python -m pyghidra.ghidra_launch` against this very runtime).
 pypi-dependencies.cryptography = ">=50.0.1, <51"
-pypi-dependencies.huggingface-hub = ">=1.30.0, <2"
+pypi-dependencies.huggingface-hub = ">=1.32.0, <2"
 pypi-dependencies.jpype1 = ">=1.7.1, <2"
 pypi-dependencies.keyring = ">=25.7.0, <26"
 pypi-dependencies.psutil = ">=7.2.2, <8"
@@ -785,16 +785,16 @@ pypi-dependencies.aiosqlite = ">=0.22.1, <0.23"
 pypi-dependencies.mcp = ">=2.2.0, <3"
 pypi-dependencies.ollama = ">=0.6.2, <0.7"
 pypi-dependencies.cxxfilt = ">=0.3.0, <0.4"
-pypi-dependencies.dulwich = ">=1.2.14, <2"
+pypi-dependencies.dulwich = ">=1.2.15, <2"
 pypi-dependencies.msgpack = ">=1.2.2, <2"
 pypi-dependencies.python-multipart = ">=0.0.32, <0.0.33"
 pypi-dependencies.starlette = ">=1.6.0, <2"
-pypi-dependencies.tornado = ">=6.5.8, <7"
+pypi-dependencies.tornado = ">=6.5.10, <7"
 pypi-dependencies.pydantic-settings = ">=2.15.0, <3"
 # ML runtime stack.
 pypi-dependencies.torch = "*"
-pypi-dependencies.transformers = ">=5.16.1, <6"
-pypi-dependencies.accelerate = ">=1.14.0, <2"
+pypi-dependencies.transformers = ">=5.17.0, <6"
+pypi-dependencies.accelerate = ">=1.15.0, <2"
 pypi-dependencies.bitsandbytes = ">=0.50.2, <0.51"
 pypi-dependencies.sentencepiece = ">=0.2.2, <0.3"
 pypi-dependencies.safetensors = ">=0.8.0, <0.9"
@@ -807,6 +807,7 @@ tasks.lint = "just lint"
 tasks.format = "just ruff-fmt"
 tasks.typecheck = "just basedpyright"
 tasks.fix-pyqt6-stubs = "python scripts/fix_pyqt6_stubs.py"
+tasks.fix-pyqt6-icu = "pwsh -NoProfile -File scripts/fix-pyqt6-icu.ps1"
 tasks.pyright = "basedpyright"
 workspace.name = "Intellicrack"
 workspace.version = "0.1.0a1"
@@ -819,9 +820,9 @@ workspace.preview = ["pixi-build"]
 # Build toolchain: compiles hexcore and freezes the launchers during staging.
 # Never part of the runtime environment, so none of it ships in the installer.
 [tool.pixi.feature.build.dependencies]
-rust = ">=1.98.0,<1.99"
-rust-src = ">=1.98.0,<2"
-clang-tools = ">=23.1.0,<24"
+rust = ">=1.98.1,<1.99"
+rust-src = ">=1.98.1,<2"
+clang-tools = ">=23.1.1,<24"
 cppcheck = ">=2.21.0,<3"
 cmake = ">=4.4.3,<5"
 cmake-format = ">=0.6.13,<0.7"
@@ -829,18 +830,18 @@ ninja = ">=1.13.2,<2"
 
 [tool.pixi.feature.build.pypi-dependencies]
 maturin = ">=1.15.0, <2"
-build = ">=1.6.0, <2"
+build = ">=1.6.1, <2"
 pyclean = ">=3.7.0, <4"
-pyinstaller = ">=6.22.2, <7"
+pyinstaller = ">=6.22.3, <7"
 
 # Developer CLI tooling (conda).
 [tool.pixi.feature.tooling.dependencies]
 git = ">=2.55.0,<3"
 just = ">=1.58.0,<2"
 shellcheck = ">=0.11.0,<0.12"
-nodejs = ">=26.8.1,<26.9"
+nodejs = ">=26.8.2,<26.9"
 yarn = ">=4.18.0,<5"
-tombi = ">=1.5.2,<2"
+tombi = ">=1.5.5,<2"
 git-cliff = ">=2.13.1,<3"
 yamlfmt = ">=0.21.0,<0.22"
 pixi-pycharm = ">=0.0.12,<0.0.13"
@@ -849,7 +850,7 @@ pixi-pycharm = ">=0.0.12,<0.0.13"
 [tool.pixi.feature.dev.pypi-dependencies]
 intellicrack = { path = ".", editable = true, extras = ["dev", "test", "docs", "profile", "ml"] }
 validate-pyproject = ">=0.26, <0.27"
-validate-pyproject-schema-store = ">=2026.9.4, <2027"
+validate-pyproject-schema-store = ">=2026.9.19, <2027"
 types-requests = ">=2.33.0.20260906, <3"
 types-pyyaml = ">=6.0.12.20260906, <7"
 mypy = ">=2.3.1, <3"
@@ -857,7 +858,7 @@ black = ">=26.5.1, <27"
 pylint = ">=4.0.8, <5"
 autopep8 = ">=2.3.2, <3"
 flake8 = ">=7.3.0, <8"
-ruff = ">=0.16.6, <0.17"
+ruff = ">=0.16.8, <0.17"
 isort = ">=9.0.1, <10"
 pycodestyle = ">=2.14.0, <3"
 bandit = ">=1.9.4, <2"
@@ -866,12 +867,12 @@ bandit = ">=1.9.4, <2"
 # / env-exfiltration advisories. Confined to the dev feature so it never enters
 # the shipped runtime environment.
 gitpython = ">=3.1.62, <4"
-blinter = ">=1.1.26, <2"
+blinter = ">=1.1.29, <2"
 vulture = ">=2.16, <3"
 pyupgrade = ">=3.21.2, <4"
 pydocstyle = ">=6.3.0, <7"
-sourcery = ">=1.45.0, <2"
-wemake-python-styleguide = ">=1.8.0, <2"
+sourcery = ">=1.46.0, <2"
+wemake-python-styleguide = ">=1.8.1, <2"
 pydoclint = ">=0.9.1, <0.10"
 pyroma = ">=5.0.1, <6"
 mypy-extensions = ">=1.1.0, <2"
@@ -880,26 +881,26 @@ skylos = ">=4.32.0, <5"
 uncalled = ">=0.1.8, <0.2"
 deadcode = ">=2.4.1, <3"
 pygount = ">=3.2.0, <4"
-basedpyright = ">=1.40.0, <2"
+basedpyright = ">=1.40.1, <2"
 monkeytype = ">=23.3.0, <24"
-ty = ">=0.0.79, <0.0.80"
+ty = ">=0.0.82, <0.0.83"
 mccabe = ">=0.7.0, <0.8"
 xenon = ">=0.9.3, <0.10"
 yamllint = ">=1.38.0, <2"
 jsonlint = ">=0.1, <0.2"
 radon = ">=6.0.1, <7"
 pre-commit = ">=4.6.2, <5"
-commitizen = ">=4.18.0, <5"
+commitizen = ">=4.18.1, <5"
 bumpversion = ">=0.6.0, <0.7"
-pipdeptree = ">=4.2.3, <5"
+pipdeptree = ">=4.2.5, <5"
 rope = ">=1.14.0, <2"
 astor = ">=0.8.1, <0.9"
 yapf = ">=0.43.0, <0.44"
 pip-audit = ">=2.10.1, <3"
 nodeenv = ">=1.10.0, <2"
 twine = ">=7.0.0, <8"
-hatchling = ">=1.32.0, <2"
-poetry = ">=2.4.3, <3"
+hatchling = ">=1.32.3, <2"
+poetry = ">=2.5.1, <3"
 pre-commit-hooks = ">=6.0.0, <7"
 interrogate = ">=1.7.0, <2"
 deptry = ">=0.25.1, <0.26"
@@ -922,28 +923,28 @@ pytest-benchmark = ">=5.3.0, <6"
 pytest-html = ">=4.2.0, <5"
 pytest-randomly = ">=5.0.0, <6"
 pytest-sugar = ">=1.1.1, <2"
-pytest-env = ">=1.7.0, <2"
+pytest-env = ">=1.7.1, <2"
 pytest-instafail = ">=0.5.0, <0.6"
-hypothesis = ">=6.167.1, <7"
-tox = ">=4.61.2, <5"
+hypothesis = ">=6.168.0, <7"
+tox = ">=4.63.0, <5"
 nox = ">=2026.8.17, <2027"
-coverage = ">=7.16.0, <8"
+coverage = ">=7.16.1, <8"
 freezegun = ">=1.5.5, <2"
 responses = ">=0.26.3, <0.27"
-faker = ">=40.38.0, <41"
+faker = ">=40.39.0, <41"
 
 # Documentation build.
 [tool.pixi.feature.docs.pypi-dependencies]
 sphinx = ">=9.1.0, <10"
 sphinx-rtd-theme = ">=3.1.0, <4"
-sphinx-autodoc-typehints = ">=3.13.5, <4"
+sphinx-autodoc-typehints = ">=3.13.7, <4"
 sphinx-copybutton = ">=0.5.2, <0.6"
 sphinx-tabs = ">=3.5.0, <4"
 sphinxcontrib-mermaid = ">=2.1.1, <3"
 sphinx-autobuild = ">=2025.8.25, <2026"
 pdoc3 = ">=0.11.6, <0.12"
 mkdocs-material = ">=9.7.7, <10"
-pymdown-extensions = ">=11.0.2, <12"
+pymdown-extensions = ">=12.0.1, <13"
 myst-parser = ">=5.1.0, <6"
 
 # Profilers and interactive debuggers.

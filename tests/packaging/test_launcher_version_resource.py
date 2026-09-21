@@ -173,10 +173,11 @@ def parse_rendered_resource(text: str) -> tuple[tuple[int, ...], tuple[int, ...]
     if not isinstance(fixed, ast.Call):
         msg = "the rendered resource carries no FixedFileInfo"
         raise TypeError(msg)
-    versions: dict[str, tuple[int, ...]] = {}
-    for keyword in fixed.keywords:
-        if keyword.arg in {"filevers", "prodvers"}:
-            versions[keyword.arg] = _integer_tuple(keyword.arg, keyword.value)
+    versions: dict[str, tuple[int, ...]] = {
+        keyword.arg: _integer_tuple(keyword.arg, keyword.value)
+        for keyword in fixed.keywords
+        if keyword.arg in {"filevers", "prodvers"}
+    }
     if set(versions) != {"filevers", "prodvers"}:
         msg = f"FixedFileInfo declares {sorted(versions)}, not both filevers and prodvers"
         raise AssertionError(msg)

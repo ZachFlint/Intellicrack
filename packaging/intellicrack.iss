@@ -13,7 +13,7 @@
 
 #define AppName "Intellicrack"
 #define AppPublisher "Zachary Flint"
-#define AppUrl "https://github.com/zacharyflint/intellicrack"
+#define AppUrl "https://github.com/ZachFlint/Intellicrack"
 ; Version is single-sourced: packaging/stage.ps1 regenerates version.generated.iss
 ; from src/intellicrack/_metadata.py, and tests/packaging/test_version_consistency.py
 ; gates that every copy of the version across the repository agrees.
@@ -118,6 +118,9 @@ Source: "{#StageRoot}\app\src\*"; DestDir: "{app}\app\src"; Flags: ignoreversion
 Source: "{#StageRoot}\app\vendor\*"; DestDir: "{app}\app\vendor"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 ; Provenance stamp written by stage.ps1 (commit, dirty flag, version, build time).
 Source: "{#StageRoot}\app\build-info.json"; DestDir: "{app}\app"; Flags: ignoreversion; Components: core
+Source: "{#StageRoot}\app\LICENSE"; DestDir: "{app}\app"; Flags: ignoreversion; Components: core
+Source: "{#StageRoot}\app\THIRD-PARTY-LICENSES.md"; DestDir: "{app}\app"; Flags: ignoreversion; Components: core
+Source: "{#StageRoot}\app\licenses\*"; DestDir: "{app}\app\licenses"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 
 ; External tools (each optional, one component per tool).
 Source: "{#StageRoot}\app\tools\ghidra\*"; DestDir: "{app}\app\tools\ghidra"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: tool_ghidra

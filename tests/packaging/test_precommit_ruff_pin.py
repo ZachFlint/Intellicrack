@@ -162,8 +162,7 @@ def _candidate_ruff_executables() -> list[Path]:
     """
     relative_names = ("Scripts/ruff.exe", "bin/ruff")
     cache_roots: list[Path] = []
-    configured_home = os.environ.get("PRE_COMMIT_HOME")
-    if configured_home:
+    if configured_home := os.environ.get("PRE_COMMIT_HOME"):
         cache_roots.append(Path(configured_home))
     cache_roots.append(Path.home() / ".cache" / "pre-commit")
 

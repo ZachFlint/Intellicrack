@@ -157,8 +157,7 @@ def pytest_collection_modifyitems(
     """
     _ = mark_host_native_items(items)
     if is_sandboxed():
-        dropped = deselect_host_native(config, items)
-        if dropped:
+        if dropped := deselect_host_native(config, items):
             _logger.info("host_native_tests_deselected_in_sandbox", count=dropped)
         return
     if host_native_only():

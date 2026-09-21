@@ -91,5 +91,7 @@ class TestPreprocessorPreservesPragmas:
         assert pragma.base_address == 0x40
         assert pragma.description == "Test"
         # All three originally-pragma lines must be visible in the output.
-        marker_count: int = sum(bool("hexpat-pragma" in line) for line in result.splitlines())
+        marker_count: int = sum(
+            "hexpat-pragma" in line for line in result.splitlines()
+        )
         assert marker_count == 3

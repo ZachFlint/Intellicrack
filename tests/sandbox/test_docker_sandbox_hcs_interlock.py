@@ -226,8 +226,7 @@ def test_a_clear_host_is_not_made_to_wait() -> None:
     The control for the two tests above: an implementation that always slept,
     or always raised, would satisfy them and fail here.
     """
-    running = running_hcs_vm_processes()
-    if running:
+    if running := running_hcs_vm_processes():
         pytest.skip(f"a real Host Compute Service VM is running on this host: {running!r}")
 
     started = time.monotonic()

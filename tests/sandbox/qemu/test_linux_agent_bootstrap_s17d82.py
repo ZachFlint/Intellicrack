@@ -427,7 +427,7 @@ class TestTheLauncherProvesTheAgentItStarted:
         redirect = re.search(r">>\s*'([^']+)'", lines[agent_index])
 
         assert redirect is not None, f"the launcher's agent line carries no quoted redirect target: {lines!r}"
-        log_directory = redirect.group(1).rsplit("/", 1)[0]
+        log_directory = redirect[1].rsplit("/", 1)[0]
         created = [line for line in lines[:agent_index] if line.startswith("mkdir") and log_directory in line]
 
         assert created, (

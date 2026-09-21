@@ -211,10 +211,14 @@ class _FakeItem:
         Returns:
             object | None: The matching marker, or ``None``.
         """
-        for marker in reversed(self._markers):
-            if getattr(marker, "name", None) == name:
-                return marker
-        return None
+        return next(
+            (
+                marker
+                for marker in reversed(self._markers)
+                if getattr(marker, "name", None) == name
+            ),
+            None,
+        )
 
 
 class _FakeHook:

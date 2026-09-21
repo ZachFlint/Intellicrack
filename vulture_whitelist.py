@@ -508,7 +508,7 @@ intellicrack.core.logging.OperationTimer  # unused-class (tested in test_logging
 
 # core/hexpat - frozen dataclass field / dead-allowlist intentional API
 intellicrack.core.hexpat.ast_nodes.value_end  # unused-variable (EnumEntry frozen dataclass field)
-intellicrack.core.hexpat.interpreter.can_compile_to_json  # unused-method (intentional API; in .dead-allowlist)
+intellicrack.core.hexpat.interpreter.can_compile_to_json  # unused-method (intentional API; in dead_allowlist.txt)
 
 # main.py - tested entry-point initialization wrappers
 intellicrack.main.init_model_discovery  # unused-function (tested in tests/test_providers)

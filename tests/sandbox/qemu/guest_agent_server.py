@@ -117,9 +117,7 @@ def decode_object(raw: bytes) -> dict[str, Any]:
         is not a JSON object.
     """
     decoded: object = json.loads(raw.decode())
-    if not isinstance(decoded, dict):
-        return {}
-    return cast("dict[str, Any]", decoded)
+    return cast("dict[str, Any]", decoded) if isinstance(decoded, dict) else {}
 
 
 def guest_file_error(description: str) -> dict[str, Any]:
@@ -711,9 +709,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
             bytearray: Buffer with any pre-flush junk removed.
         """
         marker = buffer.rfind(FLUSH_BYTE)
-        if marker < 0:
-            return buffer
-        return bytearray(buffer[marker + 1 :])
+        return buffer if marker < 0 else bytearray(buffer[marker + 1 :])
 
     @staticmethod
     def _take_lines(buffer: bytearray) -> list[bytes]:

@@ -400,7 +400,7 @@ def _write_socket_owners(root: Path) -> None:
         fd_dir.mkdir(parents=True, exist_ok=True)
         (root / pid / "comm").write_text(name + "\n", encoding="utf-8")
         for inode in inodes:
-            (fd_dir / str(descriptor)).symlink_to("socket:[" + inode + "]")
+            (fd_dir / str(descriptor)).symlink_to(f"socket:[{inode}]")
             descriptor += 1
 
 

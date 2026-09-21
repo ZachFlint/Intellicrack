@@ -139,7 +139,7 @@ def test_m39_truncated_tool_result_exposes_full_text_via_tooltip(qapp: object) -
 
     bubble = MessageBubble(message)
 
-    full_result_text = str(long_result)
+    full_result_text = long_result
     assert len(full_result_text) > _MAX_RESULT_DISPLAY_LEN
 
     result_label = _find_label(bubble, "result_text")

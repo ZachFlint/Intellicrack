@@ -142,7 +142,9 @@ class TestByteModeDispatch:
             assert scan_calls == [_SIXTEEN_BYTE_PATTERN], (
                 f"Byte mode must call bridge.scan_memory with the raw pattern text; got {scan_calls!r}"
             )
-            assert find_calls == [], f"Byte mode must never call bridge.find_pattern; got {find_calls!r}"
+            assert (
+                not find_calls
+            ), f"Byte mode must never call bridge.find_pattern; got {find_calls!r}"
         finally:
             panel.deleteLater()
 
@@ -191,7 +193,9 @@ class TestByteModeDispatch:
             pump_until(qapp, lambda: search_table.rowCount() >= 1)
 
             assert find_calls == [_WILDCARD_PATTERN], f"Hex mode must call bridge.find_pattern; got {find_calls!r}"
-            assert scan_calls == [], f"Hex mode must never call bridge.scan_memory directly; got {scan_calls!r}"
+            assert (
+                not scan_calls
+            ), f"Hex mode must never call bridge.scan_memory directly; got {scan_calls!r}"
         finally:
             panel.deleteLater()
 

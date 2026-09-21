@@ -176,9 +176,9 @@ def test_stage_script_sources_the_runtime_environment() -> None:
     match = re.search(r"\$PixiEnv\s*=\s*Join-Path\s+\$RepoRoot\s+'([^']*)'", text)
     assert match is not None, "stage.ps1 no longer assigns $PixiEnv from $RepoRoot"
 
-    assert match.group(1) == r".pixi\envs\runtime", (
-        f"stage.ps1 stages the installer runtime from '{match.group(1)}', not the slim runtime env"
-    )
+    assert (
+        match[1] == r".pixi\envs\runtime"
+    ), f"stage.ps1 stages the installer runtime from '{match.group(1)}', not the slim runtime env"
 
 
 def test_default_environment_still_composes_every_feature() -> None:

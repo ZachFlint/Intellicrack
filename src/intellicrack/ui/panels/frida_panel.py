@@ -1354,7 +1354,7 @@ class FridaPanel(AnalysisPanelBase):
             _logger.info("frida_replace_function_fast_row_missing", target=target, hook_id=hook_id)
         self._console.appendPlainText(f"[+] Function replaced (fast): {target} at {addr_str}")
         trampoline = getattr(result, "original_trampoline", None)
-        if trampoline is not None:
+        if isinstance(trampoline, int):
             self._console.appendPlainText(f"[+] Original trampoline: 0x{trampoline:X}")
         _logger.info("frida_function_replaced_fast", target=target, hook_id=hook_id)
 
@@ -3245,6 +3245,7 @@ class FridaPanel(AnalysisPanelBase):
         if addr is None:
             self._console.appendPlainText("[-] Invalid address")
             return
+        resolved_addr: int = addr
         hex_str = self._mem_write_data.text().strip()
         if not hex_str:
             return
@@ -3259,14 +3260,14 @@ class FridaPanel(AnalysisPanelBase):
             )
             return
         run_bridge_coroutine_logged(
-            self._bridge.write_memory(addr, data),
-            on_success=lambda _: self._console.appendPlainText(f"[+] Wrote {len(data)} bytes to 0x{addr:X}"),
+            self._bridge.write_memory(resolved_addr, data),
+            on_success=lambda _: self._console.appendPlainText(f"[+] Wrote {len(data)} bytes to 0x{resolved_addr:X}"),
             on_error=lambda e: self._console.appendPlainText(f"[-] Write failed: {e}"),
             parent=self,
             event="frida_write_memory",
             logger=_logger,
             level="info",
-            address=hex(addr),
+            address=hex(resolved_addr),
             size=len(data),
         )
 
@@ -3279,17 +3280,21 @@ class FridaPanel(AnalysisPanelBase):
         if src is None or dst is None:
             self._console.appendPlainText("[-] Invalid source or destination address")
             return
+        resolved_src: int = src
+        resolved_dst: int = dst
         size = self._mem_copy_size.value()
         run_bridge_coroutine_logged(
-            self._bridge.copy_memory(dst, src, size),
-            on_success=lambda _: self._console.appendPlainText(f"[+] Copied {size} bytes: 0x{src:X} -> 0x{dst:X}"),
+            self._bridge.copy_memory(resolved_dst, resolved_src, size),
+            on_success=lambda _: self._console.appendPlainText(
+                f"[+] Copied {size} bytes: 0x{resolved_src:X} -> 0x{resolved_dst:X}",
+            ),
             on_error=lambda e: self._console.appendPlainText(f"[-] Copy failed: {e}"),
             parent=self,
             event="frida_copy_memory",
             logger=_logger,
             level="info",
-            src=hex(src),
-            dst=hex(dst),
+            src=hex(resolved_src),
+            dst=hex(resolved_dst),
             size=size,
         )
 

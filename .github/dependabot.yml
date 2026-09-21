@@ -14,7 +14,7 @@ updates:
       prefix: 'ci'
       include: 'scope'
   - package-ecosystem: 'cargo'
-    directory: '/intellicrack-launcher'
+    directory: '/src/intellicrack-hexcore'
     schedule:
       interval: 'weekly'
       day: 'monday'
@@ -55,6 +55,22 @@ updates:
     labels:
       - 'dependencies'
       - 'javascript'
+    commit-message:
+      prefix: 'deps'
+      include: 'scope'
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-patch']
+  - package-ecosystem: 'docker'
+    directory: '/docker'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'docker'
     commit-message:
       prefix: 'deps'
       include: 'scope'

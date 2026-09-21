@@ -149,10 +149,14 @@ def _argument_value(vector: tuple[str, ...], name: str) -> str:
     Returns:
         str: The following element, or the empty string when absent.
     """
-    for index, argument in enumerate(vector[:-1]):
-        if argument == name:
-            return vector[index + 1]
-    return ""
+    return next(
+        (
+            vector[index + 1]
+            for index, argument in enumerate(vector[:-1])
+            if argument == name
+        ),
+        "",
+    )
 
 
 def _recorded_boots(log: Path) -> list[tuple[str, ...]]:

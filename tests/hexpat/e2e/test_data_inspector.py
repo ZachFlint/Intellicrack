@@ -182,11 +182,11 @@ class TestInspectAtBasic:
             "uint16_le": str(struct.unpack("<H", data[:2])[0]),
             "uint16_be": str(struct.unpack(">H", data[:2])[0]),
             "uint32_le": str(struct.unpack("<I", data[:4])[0]),
-            "uint32_be": str(struct.unpack(">I", data[0:4])[0]),
-            "uint64_le": str(struct.unpack("<Q", data[0:8])[0]),
-            "uint64_be": str(struct.unpack(">Q", data[0:8])[0]),
-            "int16_le": str(struct.unpack("<h", data[0:2])[0]),
-            "int16_be": str(struct.unpack(">h", data[0:2])[0]),
+            "uint32_be": str(struct.unpack(">I", data[:4])[0]),
+            "uint64_le": str(struct.unpack("<Q", data[:8])[0]),
+            "uint64_be": str(struct.unpack(">Q", data[:8])[0]),
+            "int16_le": str(struct.unpack("<h", data[:2])[0]),
+            "int16_be": str(struct.unpack(">h", data[:2])[0]),
             "int32_le": str(struct.unpack("<i", data[0:4])[0]),
             "int32_be": str(struct.unpack(">i", data[0:4])[0]),
             "int64_le": str(struct.unpack("<q", data[0:8])[0]),
@@ -214,7 +214,7 @@ class TestInspectAtBasic:
         assert result["uint8"] == str(struct.unpack("B", data[:1])[0])
         assert result["uint16_le"] == str(struct.unpack("<H", data[:2])[0])
         assert result["uint32_le"] == str(struct.unpack("<I", data[:4])[0])
-        assert result["uint64_le"] == str(struct.unpack("<Q", data[0:8])[0])
+        assert result["uint64_le"] == str(struct.unpack("<Q", data[:8])[0])
 
 
 class TestInspectAtValues:

@@ -310,7 +310,7 @@ Write-Success "wizard images current ($($WizardImageNames.Count) checked against
 # ---------------------------------------------------------------------------
 # Step 1: recreate build/stage clean.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 1/14: recreating build/stage clean...'
+Write-Step 'STAGE' 'Step 1/15: recreating build/stage clean...'
 if (Test-Path -LiteralPath $Stage) {
     if ($PSCmdlet.ShouldProcess($Stage, 'Remove the previously staged tree')) {
         Remove-Item -LiteralPath $Stage -Recurse -Force
@@ -328,7 +328,7 @@ Write-Success 'build/stage recreated'
 # PyPI linters/formatters/test runners - live in the `default` environment used
 # for development and the maturin/pyinstaller build steps, and are absent here,
 # so ~2 GB of build-only payload never reaches the installer.
-Write-Step 'STAGE' 'Step 2/14: staging runtime (trimmed pixi env)...'
+Write-Step 'STAGE' 'Step 2/15: staging runtime (trimmed pixi env)...'
 $PixiEnv = Join-Path $RepoRoot '.pixi\envs\runtime'
 if (-not (Test-Path -LiteralPath (Join-Path $PixiEnv 'python.exe'))) {
     Write-Progress 'Runtime pixi environment missing; provisioning it (pixi install --locked -e runtime)...'
@@ -438,7 +438,7 @@ Write-Success 'runtime staged and trimmed'
 # ---------------------------------------------------------------------------
 # Step 3: portable hexcore rebuild -> runtime site-packages.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 3/14: rebuilding portable hexcore wheel...'
+Write-Step 'STAGE' 'Step 3/15: rebuilding portable hexcore wheel...'
 $HexcoreDir = Join-Path $RepoRoot 'src\intellicrack-hexcore'
 Assert-Source -Path (Join-Path $HexcoreDir 'Cargo.toml') -What 'hexcore crate'
 
@@ -501,7 +501,7 @@ Write-Success 'portable hexcore staged'
 # ---------------------------------------------------------------------------
 # Step 4: app source materialized copy.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 4/14: staging app source...'
+Write-Step 'STAGE' 'Step 4/15: staging app source...'
 $SrcIntellicrack = Join-Path $RepoRoot 'src\intellicrack'
 Assert-Source -Path (Join-Path $SrcIntellicrack '__init__.py') -What 'intellicrack source package'
 $AppSrcDest = Join-Path $Stage 'app\src\intellicrack'
@@ -513,7 +513,7 @@ Write-Success 'app source staged'
 # ---------------------------------------------------------------------------
 # Step 5: ML split - move ML-only distributions out of runtime into ml_overlay.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 5/14: splitting ML-only distributions into ml_overlay...'
+Write-Step 'STAGE' 'Step 5/15: splitting ML-only distributions into ml_overlay...'
 $RuntimePython = Join-Path $RuntimeDir 'python.exe'
 $Pyproject = Join-Path $RepoRoot 'pyproject.toml'
 Assert-Source -Path $Pyproject -What 'pyproject.toml'
@@ -748,7 +748,7 @@ Write-Success "ML split complete ($($MlEntries.Count) entries moved to ml_overla
 # ---------------------------------------------------------------------------
 # Step 6: x64dbg tree + plugin verification.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 6/14: staging x64dbg...'
+Write-Step 'STAGE' 'Step 6/15: staging x64dbg...'
 $X64dbgSrc = Join-Path $RepoRoot 'tools\x64dbg'
 Assert-Source -Path $X64dbgSrc -What 'x64dbg tree'
 $X64dbgDest = Join-Path $Stage 'app\tools\x64dbg'
@@ -762,7 +762,7 @@ Write-Success 'x64dbg staged'
 # ---------------------------------------------------------------------------
 # Step 7: remaining tool subset.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 7/14: staging tool subset...'
+Write-Step 'STAGE' 'Step 7/15: staging tool subset...'
 $ToolSubset = @('radare2', 'cutter', 'NASM')
 foreach ($tool in $ToolSubset) {
     $toolSrc = Join-Path $RepoRoot "tools\$tool"
@@ -788,7 +788,7 @@ Write-Success 'tool subset staged'
 # tree where Jython was never disabled) fails the build instead of silently
 # shipping it.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 8/14: staging Ghidra...'
+Write-Step 'STAGE' 'Step 8/15: staging Ghidra...'
 $GhidraSrc = Join-Path $RepoRoot 'tools\ghidra'
 Assert-Source -Path (Join-Path $GhidraSrc 'support\analyzeHeadless.bat') -What 'Ghidra tree'
 $GhidraDest = Join-Path $Stage 'app\tools\ghidra'
@@ -815,7 +815,7 @@ Write-Success 'Ghidra staged (Jython extension excluded)'
 # ---------------------------------------------------------------------------
 # Step 9: bundled Temurin JDK 21 under the Ghidra tree.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 9/14: staging pinned Temurin JDK 21...'
+Write-Step 'STAGE' 'Step 9/15: staging pinned Temurin JDK 21...'
 if ($SkipJdkDownload) {
     Write-Skip 'Temurin JDK download skipped (-SkipJdkDownload)'
     Write-Warning 'The stage carries no bundled JDK; Ghidra will have no interpreter and the installer must not be built from it'
@@ -869,7 +869,7 @@ if ($SkipJdkDownload) {
 # ---------------------------------------------------------------------------
 # Step 10: QEMU program tree, excluding images/.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 10/14: staging QEMU (excluding images/)...'
+Write-Step 'STAGE' 'Step 10/15: staging QEMU (excluding images/)...'
 $QemuSrc = Join-Path $RepoRoot 'tools\qemu'
 Assert-Source -Path (Join-Path $QemuSrc 'qemu-system-x86_64.exe') -What 'QEMU tree'
 $QemuDest = Join-Path $Stage 'app\tools\qemu'
@@ -884,7 +884,7 @@ Write-Success 'QEMU staged'
 # ---------------------------------------------------------------------------
 # Step 11: optional bundled Debian sandbox guest.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 11/14: staging Debian sandbox guest...'
+Write-Step 'STAGE' 'Step 11/15: staging Debian sandbox guest...'
 if ($SkipGuestImage) {
     Write-Skip 'Debian sandbox guest image skipped (-SkipGuestImage)'
     Write-Warning 'The stage carries no guest image; the installer must not be built from it'
@@ -902,7 +902,7 @@ if ($SkipGuestImage) {
 # ---------------------------------------------------------------------------
 # Step 12: vendor pattern/data trees.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 12/14: staging vendor trees...'
+Write-Step 'STAGE' 'Step 12/15: staging vendor trees...'
 $VendorSubset = @('community-patterns', 'ImHex-Patterns', 'PatternLanguage', 'traceevent')
 foreach ($vendor in $VendorSubset) {
     $vendorSrc = Join-Path $RepoRoot "vendor\$vendor"
@@ -929,7 +929,7 @@ Write-Success 'vendor trees staged'
 # ---------------------------------------------------------------------------
 # Step 13: hexbench standalone GUI.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 13/14: staging hexbench...'
+Write-Step 'STAGE' 'Step 13/15: staging hexbench...'
 $HexbenchSrc = Join-Path $RepoRoot 'src\hexbench'
 Assert-Source -Path $HexbenchSrc -What 'hexbench source'
 $HexbenchDest = Join-Path $Stage 'hexbench'
@@ -953,7 +953,26 @@ Write-Success 'hexbench staged'
 # standalone distribution, which inside the installer would duplicate the
 # runtime, webview and hexcore this stage already carries.
 # ---------------------------------------------------------------------------
-Write-Step 'STAGE' 'Step 14/14: building the launchers...'
+Write-Step 'STAGE' 'Step 14/15: staging license texts...'
+$ProjectLicense = Join-Path $RepoRoot 'LICENSE'
+$LicenseIndex = Join-Path $RepoRoot 'THIRD-PARTY-LICENSES.md'
+$LicensesSrc = Join-Path $RepoRoot 'licenses'
+Assert-Source -Path $ProjectLicense -What 'LICENSE'
+Assert-Source -Path $LicenseIndex -What 'THIRD-PARTY-LICENSES.md'
+Assert-Source -Path $LicensesSrc -What 'licenses tree'
+
+$AppRoot = Join-Path $Stage 'app'
+Copy-Item -LiteralPath $ProjectLicense -Destination (Join-Path $AppRoot 'LICENSE') -Force
+Copy-Item -LiteralPath $LicenseIndex -Destination (Join-Path $AppRoot 'THIRD-PARTY-LICENSES.md') -Force
+Invoke-Robocopy -Source $LicensesSrc -Destination (Join-Path $AppRoot 'licenses')
+
+Assert-Produced -Path (Join-Path $AppRoot 'LICENSE') -What 'staged LICENSE'
+Assert-Produced -Path (Join-Path $AppRoot 'THIRD-PARTY-LICENSES.md') -What 'staged THIRD-PARTY-LICENSES.md'
+Assert-Produced -Path (Join-Path $AppRoot 'licenses\x64dbg\LICENSE') -What 'staged x64dbg license text'
+Write-Success 'license texts staged'
+
+# ---------------------------------------------------------------------------
+Write-Step 'STAGE' 'Step 15/15: building the launchers...'
 $Launchers = @(
     @{ Spec = 'packaging/launcher/launcher.spec'; Exe = 'Intellicrack.exe'; What = 'launcher' }
     @{ Spec = 'packaging/launcher/hexbench_launcher.spec'; Exe = 'Hexbench.exe'; What = 'hexbench launcher' }

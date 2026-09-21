@@ -32,7 +32,7 @@ docs/source/_build/
 *.log
 .env
 .env.*
-!.env.sample
+!.env.example
 target/
 **/target/
 *.vhd

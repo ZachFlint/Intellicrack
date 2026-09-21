@@ -838,10 +838,14 @@ class _FakeModule(_FakeGroup):
             bool: True if ``module`` is nested under ``self`` at any
             depth, False otherwise.
         """
-        for existing in self.children:
-            if isinstance(existing, _FakeModule) and (existing.get_name() == module.get_name() or existing.is_descendant(module)):
-                return True
-        return False
+        return any(
+            isinstance(existing, _FakeModule)
+            and (
+                existing.get_name() == module.get_name()
+                or existing.is_descendant(module)
+            )
+            for existing in self.children
+        )
 
 
 class _FakeListing(_JavaNamingShim):
@@ -3410,9 +3414,7 @@ class TestAnalyzeConfigurableTimeout:
             if "_ic_analysis_done" in expr:
                 poll_calls["count"] += 1
                 return True
-            if "_ic_analysis_error" in expr:
-                return None
-            return None
+            return None if "_ic_analysis_error" in expr else None
 
         fake.set_eval_responder(_eval_responder)
 

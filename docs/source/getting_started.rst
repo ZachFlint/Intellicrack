@@ -21,8 +21,8 @@ Clone the repository and install dependencies:
 
 .. code-block:: bash
 
-   git clone https://github.com/zacharyflint/intellicrack.git
-   cd intellicrack
+   git clone https://github.com/ZachFlint/Intellicrack.git
+   cd Intellicrack
    just install
 
 This will:

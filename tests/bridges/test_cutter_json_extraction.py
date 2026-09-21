@@ -66,7 +66,7 @@ def test_extractor_recovers_array_from_extra_data_prefix() -> None:
     slice the real array container instead.
     """
     payload: list[dict[str, Any]] = [{"vaddr": 4096, "paddr": 1024, "name": ".text"}]
-    raw = "12" + json.dumps(payload)
+    raw = f"12{json.dumps(payload)}"
 
     with pytest.raises(json.JSONDecodeError):
         json.loads(raw)
@@ -89,7 +89,7 @@ def test_extractor_ignores_trailing_junk_after_object() -> None:
 def test_extractor_handles_nested_and_string_braces() -> None:
     """Brace balancing respects braces embedded inside string literals."""
     payload: dict[str, Any] = {"comment": "value with } and { braces", "inner": {"k": "]["}}
-    raw = "xx" + json.dumps(payload)
+    raw = f"xx{json.dumps(payload)}"
 
     parsed = _extract_rizin_json(raw, "CCj")
 

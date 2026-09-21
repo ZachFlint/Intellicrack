@@ -96,11 +96,10 @@ def _drive_and_capture_configuration_error(
     del parent, on_success
     loop = asyncio.new_event_loop()
     try:
-        try:
-            loop.run_until_complete(coro)
-        except OAuthConfigurationError as exc:
-            if on_error is not None:
-                cast("Callable[[object], None]", on_error)(exc)
+        loop.run_until_complete(coro)
+    except OAuthConfigurationError as exc:
+        if on_error is not None:
+            cast("Callable[[object], None]", on_error)(exc)
     finally:
         loop.close()
 

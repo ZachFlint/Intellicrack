@@ -99,12 +99,11 @@ def test_every_leaf_test_dir_is_a_group() -> None:
     groups = _list_groups()
     group_targets = {Path(g.target).resolve() for g in groups}
 
-    expected: set[Path] = set()
-    for path in _TESTS_ROOT.rglob("test_*.py"):
-        if "__pycache__" in path.parts:
-            continue
-        expected.add(path.parent.resolve())
-
+    expected: set[Path] = {
+        path.parent.resolve()
+        for path in _TESTS_ROOT.rglob("test_*.py")
+        if "__pycache__" not in path.parts
+    }
     missing = expected - group_targets
     extra = group_targets - expected
     assert not missing, f"leaf test dirs missing from groups: {sorted(map(str, missing))}"

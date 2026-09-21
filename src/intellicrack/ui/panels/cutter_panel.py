@@ -1652,6 +1652,7 @@ class CutterPanel(AnalysisPanelBase):
         if address is None:
             self._set_status("Invalid address")
             return
+        resolved_address: int = address
 
         hex_data, ok2 = QInputDialog.getText(self, "Patch Data", "Hex bytes (e.g. 90 90 90):")
         if not ok2 or not hex_data:
@@ -1661,18 +1662,18 @@ class CutterPanel(AnalysisPanelBase):
         _logger.info(
             "cutter_patch_bytes_requested",
             binary_path=binary_path,
-            offset=hex(address),
+            offset=hex(resolved_address),
             byte_count=len(hex_data.replace(" ", "")) // 2,
         )
         run_bridge_coroutine_logged(
-            self._bridge.write_bytes(address, hex_data),
-            on_success=lambda _: self._set_status(f"Patched @ 0x{address:X}"),
+            self._bridge.write_bytes(resolved_address, hex_data),
+            on_success=lambda _: self._set_status(f"Patched @ 0x{resolved_address:X}"),
             on_error=lambda e: self._set_status(f"Patch failed: {e}"),
             parent=self,
             event="cutter_write_bytes",
             logger=_logger,
             level="info",
-            address=hex(address),
+            address=hex(resolved_address),
             byte_count=len(hex_data.replace(" ", "")) // 2,
         )
 

@@ -107,9 +107,7 @@ class _AnalysisFake:
         self.eval_calls.append(expression)
         if expression == _ANALYSIS_DONE_EXPR:
             return self._is_done()
-        if expression == _ANALYSIS_ERROR_EXPR:
-            return self.analysis_error
-        return None
+        return self.analysis_error if expression == _ANALYSIS_ERROR_EXPR else None
 
 
 def _connected_bridge(fake: _AnalysisFake) -> GhidraBridge:

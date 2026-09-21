@@ -430,7 +430,9 @@ class TestGuestOutputComesBack:
         (collected / "report.txt").write_bytes(b"whatever the sample wrote\r\n")
 
         assert sandbox.mirror_output() == 0, "the guest wrote into a folder the analyst marked read-only"
-        assert list(configured.iterdir()) == [], f"a read-only folder was written to: {list(configured.iterdir())}"
+        assert not list(
+            configured.iterdir()
+        ), f"a read-only folder was written to: {list(configured.iterdir())}"
 
     def test_a_read_only_folder_is_still_readable_from_the_guest(self, tmp_path: Path) -> None:
         """Read-only means read-only, not absent - the guest still sees it.
@@ -463,7 +465,9 @@ class TestGuestOutputComesBack:
         sandbox = _make_sandbox(tmp_path, configured)
 
         assert sandbox.mirror_output() == 0, "the mirror claimed to copy files that were never collected"
-        assert list(configured.iterdir()) == [], f"the mirror created something in an untouched folder: {list(configured.iterdir())}"
+        assert not list(
+            configured.iterdir()
+        ), f"the mirror created something in an untouched folder: {list(configured.iterdir())}"
 
 
 class TestTheMirrorIsWiredIntoTheStopSequence:

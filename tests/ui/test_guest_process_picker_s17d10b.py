@@ -273,7 +273,9 @@ class TestFiltering:
             dialog._filter_edit.setText("")
 
             still_hidden = [row for row in range(dialog._table.rowCount()) if dialog._table.isRowHidden(row)]
-            assert still_hidden == [], f"clearing the filter must show every row again; still hidden: {still_hidden}"
+            assert (
+                not still_hidden
+            ), f"clearing the filter must show every row again; still hidden: {still_hidden}"
         finally:
             dialog.deleteLater()
 

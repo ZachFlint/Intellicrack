@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/common.ps1"
 
-$totalSteps = 11
+$totalSteps = 12
 $script:currentStep = 0
 
 Write-Banner "Intellicrack Installation"
@@ -48,7 +48,8 @@ $subSteps = @(
     @{ Step = 8;  Name = 'QEMU';    Recipe = 'install-qemu' },
     @{ Step = 9;  Name = 'x64dbg';  Recipe = 'install-x64dbg' },
     @{ Step = 10; Name = 'x64dbg bridge plugin'; Recipe = 'build-x64dbg-plugin' },
-    @{ Step = 11; Name = 'Cutter';  Recipe = 'install-cutter' }
+    @{ Step = 11; Name = 'Cutter';  Recipe = 'install-cutter' },
+    @{ Step = 12; Name = 'Inno Setup (installer compiler)'; Recipe = 'install-inno' }
 )
 
 foreach ($sub in $subSteps) {
