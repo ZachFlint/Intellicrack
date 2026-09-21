@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build and upload artifacts without publishing a GitHub Release'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - uses: prefix-dev/setup-pixi@v0.9.5
+        with:
+          pixi-version: latest
+
+      - name: Verify tag matches project version
+        if: github.event_name == 'push'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = $env:GITHUB_REF_NAME -replace '^v', ''
+          $match = Select-String -Path pyproject.toml -Pattern '^version = "(.+)"' | Select-Object -First 1
+          if (-not $match) { throw 'could not read version from pyproject.toml' }
+          $version = $match.Matches[0].Groups[1].Value
+          if ($tag -ne $version) {
+            throw "tag $env:GITHUB_REF_NAME does not match pyproject.toml version $version"
+          }
+          Write-Host "tag matches project version $version"
+
+      - name: Build hexcore wheel
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pixi run maturin build --release --manifest-path src/intellicrack-hexcore/Cargo.toml --out target/wheels
+          if ($LASTEXITCODE -ne 0) { throw 'maturin build failed' }
+
+      - name: Build x64 bridge plugin
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cmake -S src/x64dbg-plugin -B src/x64dbg-plugin/build_x64 -A x64 -DBUILD_X64=ON
+          if ($LASTEXITCODE -ne 0) { throw 'x64 CMake configure failed' }
+          cmake --build src/x64dbg-plugin/build_x64 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x64 plugin build failed' }
+          cmake --install src/x64dbg-plugin/build_x64 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x64 plugin install failed' }
+
+      - name: Build x32 bridge plugin
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cmake -S src/x64dbg-plugin -B src/x64dbg-plugin/build_x86 -A Win32 -DBUILD_X64=OFF
+          if ($LASTEXITCODE -ne 0) { throw 'x32 CMake configure failed' }
+          cmake --build src/x64dbg-plugin/build_x86 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x32 plugin build failed' }
+          cmake --install src/x64dbg-plugin/build_x86 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x32 plugin install failed' }
+
+      - name: Collect release assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path release-assets | Out-Null
+          $wheels = @(Get-ChildItem target/wheels -Filter *.whl -File -ErrorAction SilentlyContinue)
+          if ($wheels.Count -eq 0) { throw 'no hexcore wheel was produced' }
+          $plugins = @(
+            'tools/x64dbg/release/x64/plugins/intellicrack_bridge_x64.dp64',
+            'tools/x64dbg/release/x32/plugins/intellicrack_bridge_x32.dp32'
+          )
+          foreach ($p in $plugins) {
+            if (-not (Test-Path $p)) { throw "expected plugin artifact missing: $p" }
+            if ((Get-Item $p).Length -eq 0) { throw "plugin artifact is empty: $p" }
+          }
+          $wheels | Copy-Item -Destination release-assets
+          $plugins | Copy-Item -Destination release-assets
+          Get-ChildItem release-assets -File | ForEach-Object { Write-Host "asset: $($_.Name) ($($_.Length) bytes)" }
+
+      - name: Generate release notes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tagged = @(git tag -l 'v[0-9]*').Count -gt 0
+          if ($tagged) {
+            pixi run git-cliff --latest --strip all --output release-notes.md
+          }
+          else {
+            pixi run git-cliff --unreleased --strip all --output release-notes.md
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'git-cliff failed' }
+          if (-not (Test-Path release-notes.md) -or (Get-Item release-notes.md).Length -eq 0) {
+            throw 'git-cliff produced empty release notes'
+          }
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-assets
+          path: release-assets/*
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $assets = @(Get-ChildItem release-assets -File | ForEach-Object { $_.FullName })
+          if ($assets.Count -eq 0) { throw 'no release assets to publish' }
+          $prerelease = if ($env:GITHUB_REF_NAME -match '(a|b|rc|\.dev)\d+$') { '--prerelease' } else { '' }
+          $ghArgs = @('release', 'create', $env:GITHUB_REF_NAME,
+                      '--title', $env:GITHUB_REF_NAME,
+                      '--notes-file', 'release-notes.md')
+          if ($prerelease) { $ghArgs += $prerelease }
+          $ghArgs += $assets
+          & gh @ghArgs
+          if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }

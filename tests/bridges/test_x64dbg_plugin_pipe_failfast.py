@@ -264,7 +264,7 @@ class TestBuildInvocationSdkVariable:
         monkeypatch.setattr(installer_module, "_run_cmake_step", fake_step)
 
         assert installer_module.build_x64dbg_plugin(plugin_dir, x64dbg_path) is False
-        assert step_called is False
+        assert not step_called
 
 
 class _RecordingPipe:

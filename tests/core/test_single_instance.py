@@ -150,7 +150,7 @@ def test_open_named_mutex_probe_returns_zero_for_absent_name() -> None:
     example if the probe always returned a handle); this pins the probe as a real
     discriminator of mutex existence.
     """
-    absent = MUTEX_NAME + "_never_created_probe_marker"
+    absent = f"{MUTEX_NAME}_never_created_probe_marker"
     opened = _open_named_mutex(absent)
     try:
         assert opened == 0, f"OpenMutexW unexpectedly found a mutex named {absent!r}"

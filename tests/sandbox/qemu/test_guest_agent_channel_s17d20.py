@@ -295,7 +295,11 @@ def _launcher_exec_records(
         list[GuestExecRecord]: Records for every non-probe ``guest-exec``.
     """
     probe_path, probe_args = probe
-    return [record for record in server.exec_records if not (record.path == probe_path and list(record.args) == probe_args)]
+    return [
+        record
+        for record in server.exec_records
+        if record.path != probe_path or list(record.args) != probe_args
+    ]
 
 
 class TestGuestAgentTrafficUsesTheAgentChannel:

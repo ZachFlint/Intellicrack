@@ -382,8 +382,7 @@ class _DocumentOpenedHarness(QWidget):
             data: Event-specific payload describing the change.
         """
         if event_type == HexDocumentEvent.DOCUMENT_OPENED:
-            file_path_str = data.get("file_path")
-            if file_path_str:
+            if file_path_str := data.get("file_path"):
                 if self.document is not None:
                     self.document = None
                 self.load_file(file_path_str)

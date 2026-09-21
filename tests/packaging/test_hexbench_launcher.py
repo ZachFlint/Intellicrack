@@ -390,7 +390,7 @@ def test_iss_defines_the_hexbench_exe_name() -> None:
     """The ``.iss`` declares ``HexbenchExeName`` so the target is named once."""
     match = re.search(r'(?im)^[ \t]*#define[ \t]+HexbenchExeName[ \t]+"([^"]+)"', _read_iss())
     assert match is not None, "the .iss must #define HexbenchExeName"
-    assert match.group(1) == "Hexbench.exe"
+    assert match[1] == "Hexbench.exe"
 
 
 def test_stage_builds_and_stages_the_hexbench_launcher() -> None:

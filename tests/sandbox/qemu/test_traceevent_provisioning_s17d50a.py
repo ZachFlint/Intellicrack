@@ -199,11 +199,7 @@ async def _run_and_wait_for_exit(argv: list[str], timeout_s: float) -> tuple[str
     proc = Popen(argv, stdout=PIPE, stderr=PIPE, text=True, encoding="utf-8", errors="replace")
     try:
         deadline = time.monotonic() + timeout_s
-        while True:
-            if proc.poll() is not None:
-                break
-            if time.monotonic() >= deadline:
-                break
+        while not proc.poll() is not None and not time.monotonic() >= deadline:
             await asyncio.sleep(_POLL_S)
     finally:
         stdout, stderr = _terminate(proc)

@@ -216,9 +216,9 @@ class TestTheAnswerMediumCarriesTheSpawnHelpers:
             .replace(_SCRIPT_DIRECTORY_VARIABLE, f"{script.parent}{os.sep}")
             .replace("\\", os.sep),
         )
-        assert not any(_WILDCARD in part for part in pattern.parent.parts), (
-            f"the copy pattern wildcards a directory component, which this expansion cannot reproduce: {pattern}"
-        )
+        assert all(
+            _WILDCARD not in part for part in pattern.parent.parts
+        ), f"the copy pattern wildcards a directory component, which this expansion cannot reproduce: {pattern}"
         copied = {os.path.normcase(os.path.realpath(match)) for match in pattern.parent.glob(pattern.name)}
 
         assert copied, f"the installer's copy pattern {pattern!r} matches nothing in the staged tree, so the guest receives no agent at all"

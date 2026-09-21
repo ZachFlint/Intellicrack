@@ -710,7 +710,9 @@ class TestF0058ClearAllEmitsOnlyDocumentClosed:
 
         removed_ids = sorted(d["rule_id"] for evt, d in events if evt is HexDocumentEvent.HIGHLIGHT_RULE_REMOVED)
         assert removed_ids == ["rule_a", "rule_b", "rule_c"]
-        closed_count = sum(bool(evt is HexDocumentEvent.DOCUMENT_CLOSED) for evt, _ in events)
+        closed_count = sum(
+            evt is HexDocumentEvent.DOCUMENT_CLOSED for evt, _ in events
+        )
         assert closed_count == 1
 
     def test_clear_all_orders_rule_removals_before_document_closed(self) -> None:

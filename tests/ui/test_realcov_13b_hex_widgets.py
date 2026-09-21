@@ -85,7 +85,7 @@ def _count_foreground_colors(widget: QWidget, width: int, height: int) -> int:
     if not samples:
         return 0
     background = max(set(samples), key=samples.count)
-    return sum(bool(value != background) for value in samples)
+    return sum(value != background for value in samples)
 
 
 class TestEntropyGraphWidget:

@@ -248,11 +248,7 @@ async def _run_to_completion(powershell: str, script_path: Path, logs_dir: Path)
     proc = Popen(argv, stdout=PIPE, stderr=PIPE, text=True, encoding="utf-8", errors="replace")
     try:
         deadline = time.monotonic() + _PROCESS_EXIT_WAIT_S
-        while True:
-            if proc.poll() is not None:
-                break
-            if time.monotonic() >= deadline:
-                break
+        while not proc.poll() is not None and not time.monotonic() >= deadline:
             await asyncio.sleep(_POLL_S)
     finally:
         stdout, stderr = _terminate(proc)

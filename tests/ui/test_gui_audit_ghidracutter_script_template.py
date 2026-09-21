@@ -19,7 +19,7 @@ def test_r2_template_has_no_leading_whitespace() -> None:
     """No non-empty line of the rendered r2 template starts with whitespace."""
     rendered = ScriptTypeInfo.get_template("cutter", target="sample.exe")
     offending = [line for line in rendered.splitlines() if line and line[0].isspace()]
-    assert offending == []
+    assert not offending
 
 
 def test_r2_template_emits_expected_commands() -> None:

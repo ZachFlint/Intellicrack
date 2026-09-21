@@ -396,7 +396,6 @@ class TestTheAnswerMediumRunsTheDriverInstaller:
             f"nothing in the guest's first-logon sequence runs {relative}, so the virtio drivers are never installed "
             f"and the medium carries a script no one executes (S17-D42): {commands}"
         )
-        assert not any(_BLIND_SWEEP_SWITCH in command.lower() for command in commands), (
-            f"a first-logon command still sweeps the whole medium with {_BLIND_SWEEP_SWITCH}, which blocks the rest "
-            f"of the sequence behind an untrusted-publisher dialog (S17-D42, S17-D43): {commands}"
-        )
+        assert all(
+            _BLIND_SWEEP_SWITCH not in command.lower() for command in commands
+        ), f"a first-logon command still sweeps the whole medium with {_BLIND_SWEEP_SWITCH}, which blocks the rest of the sequence behind an untrusted-publisher dialog (S17-D42, S17-D43): {commands}"

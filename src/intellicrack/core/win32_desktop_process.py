@@ -300,7 +300,7 @@ def get_thread_desktop_name() -> str:
     api.get_user_object_information(wintypes.HANDLE(hdesk), _UOI_NAME, None, 0, ctypes.byref(needed))
     char_size = ctypes.sizeof(ctypes.c_wchar)
     buffer = ctypes.create_unicode_buffer((needed.value // char_size) + 1 if needed.value else 256)
-    if got := api.get_user_object_information(
+    if api.get_user_object_information(
         wintypes.HANDLE(hdesk),
         _UOI_NAME,
         buffer,
@@ -308,8 +308,7 @@ def get_thread_desktop_name() -> str:
         ctypes.byref(needed),
     ):
         return buffer.value
-    else:
-        raise OSError(*_win32_error("GetUserObjectInformationW"))
+    raise OSError(*_win32_error("GetUserObjectInformationW"))
 
 
 def get_desktop_handle_for_pid(pid: int) -> int | None:

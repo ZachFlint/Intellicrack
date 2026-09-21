@@ -1816,9 +1816,7 @@ def _analysis_done_responder(expression: str) -> object:
         object: ``True`` for the completion flag so the poll exits after one
         iteration, ``None`` for the worker error flag (no failure).
     """
-    if expression == "_ic_analysis_done":
-        return True
-    return None
+    return True if expression == "_ic_analysis_done" else None
 
 
 @pytest.mark.asyncio

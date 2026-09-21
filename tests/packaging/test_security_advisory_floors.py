@@ -126,9 +126,7 @@ def _declared_specifier(dist: str, *table_path: str) -> SpecifierSet:
         if isinstance(spec, str):
             return SpecifierSet(spec)
         version = _as_str_mapping(spec).get("version")
-        if isinstance(version, str):
-            return SpecifierSet(version)
-        return SpecifierSet()
+        return SpecifierSet(version) if isinstance(version, str) else SpecifierSet()
     return SpecifierSet()
 
 

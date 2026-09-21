@@ -87,7 +87,7 @@ def _run_runner(
     """
     full_env = dict(os.environ)
     if env:
-        full_env.update(env)
+        full_env |= env
     return subprocess.run(
         [sys.executable, str(_RUNNER), *args],
         capture_output=True,

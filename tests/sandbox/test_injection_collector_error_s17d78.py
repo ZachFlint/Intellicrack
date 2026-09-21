@@ -268,7 +268,8 @@ def _assert_log_holds_what_was_asked_for(emission: _Emission) -> None:
         emission: The run to check.
     """
     assert len(emission.raw_lines) == 1 + emission.tracer_rows, f"unexpected log contents: {emission.raw_lines}"
-    written_errors = sum(1 for line in emission.raw_lines if f"|{emission.error_marker}|" in line)
+    written_errors = sum(bool(f"|{emission.error_marker}|" in line)
+                     for line in emission.raw_lines)
     assert written_errors == emission.tracer_rows, f"the collector-error rows were not written: {emission.raw_lines}"
 
 

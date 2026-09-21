@@ -4991,9 +4991,19 @@ class X64DbgPanel(AnalysisPanelBase):
         except ValueError:
             _logger.warning("x64dbg_switch_thread_invalid_tid", input_text=tid_item.text())
             return
+
+        def _on_switch_thread_success(_result: object) -> None:
+            """Report the switched-to thread and refresh the debugger state views.
+
+            Args:
+                _result: Unused result from the ``switch_thread`` bridge call.
+            """
+            self._console_output.appendPlainText(f"[+] Switched to thread {tid}")
+            self._refresh_state()
+
         run_bridge_coroutine_logged(
             self._bridge.switch_thread(tid),
-            on_success=lambda _: (self._console_output.appendPlainText(f"[+] Switched to thread {tid}"), self._refresh_state())[0],
+            on_success=_on_switch_thread_success,
             on_error=lambda e: self._on_generic_error("Switch Thread", e),
             parent=self,
             event="x64dbg_switch_thread",

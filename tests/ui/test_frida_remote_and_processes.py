@@ -391,7 +391,9 @@ class TestD23ProcessesRefreshFailureStaysInPanel:
 
             _pump_until(qapp, panel._refresh_procs_btn.isEnabled)
 
-            assert excepthook_calls == [], f"the enumeration failure escaped to sys.excepthook (the app crash hook): {excepthook_calls!r}"
+            assert (
+                not excepthook_calls
+            ), f"the enumeration failure escaped to sys.excepthook (the app crash hook): {excepthook_calls!r}"
             text = panel._console.toPlainText()
             assert "[-] Remote enumerate failed:" in text, text
         finally:

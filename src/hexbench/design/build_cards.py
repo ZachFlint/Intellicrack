@@ -1217,8 +1217,9 @@ def _classify(chunk: bytes) -> int:
     if not any(chunk):
         return 0
     measured = _entropy(chunk)
-    printable = sum(bool(_byte_class(value) in {"bc-print", "bc-null"})
-                for value in chunk)
+    printable = sum(
+        _byte_class(value) in {"bc-print", "bc-null"} for value in chunk
+    )
     if printable >= len(chunk) * _TEXT_SHARE and measured < _MID_ENTROPY:
         return 1
     if measured > _HIGH_ENTROPY:

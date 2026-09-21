@@ -340,7 +340,9 @@ def test_resume_child_calls_device_resume_and_untracks_pid() -> None:
 
     assert device.resumed_pids == [777], f"expected Device.resume to be called with pid 777 exactly once, got {device.resumed_pids}"
     pending = _run_async(bridge.get_pending_children())
-    assert not any(child.pid == 777 for child in pending), f"pid 777 must no longer be pending after resume, got {[c.pid for c in pending]}"
+    assert all(
+        child.pid != 777 for child in pending
+    ), f"pid 777 must no longer be pending after resume, got {[c.pid for c in pending]}"
 
 
 def test_reenable_child_gating_after_disable_does_not_duplicate_handlers() -> None:

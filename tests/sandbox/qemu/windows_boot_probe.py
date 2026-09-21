@@ -365,10 +365,10 @@ def _read_until_prompt(sock: socket.socket) -> bytes:
     """
     buffered = b""
     while _MONITOR_PROMPT not in buffered:
-        chunk = sock.recv(65536)
-        if not chunk:
+        if chunk := sock.recv(65536):
+            buffered += chunk
+        else:
             break
-        buffered += chunk
     return buffered
 
 
@@ -464,7 +464,8 @@ def non_black_coverage(ppm_path: Path) -> float:
     total = len(pixels) // _RGB_CHANNELS
     if total == 0:
         return 0.0
-    lit = sum(1 for value in pixels if value > _BLACK_CHANNEL_CEILING)
+    lit = sum(bool(value > _BLACK_CHANNEL_CEILING)
+          for value in pixels)
     return lit / (total * _RGB_CHANNELS)
 
 
@@ -617,7 +618,6 @@ def resolve_whpx_qemu_path() -> tuple[Path | None, str]:
     accelerator = asyncio.run(sandbox.detect_accelerator())
     if accelerator != AcceleratorType.WHPX:
         return None, f"host accelerator is {accelerator.value}; these gates cover WHPX-specific defects"
-    refusal = docker_engine_refusal_reason()
-    if refusal:
+    if refusal := docker_engine_refusal_reason():
         return None, refusal
     return qemu_path, ""

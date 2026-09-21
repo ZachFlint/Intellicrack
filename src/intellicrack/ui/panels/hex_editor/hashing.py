@@ -432,7 +432,10 @@ class HashingMixin:
 
         stored = info_dict.get("stored")
         calculated = info_dict.get("calculated", info_dict.get("expected"))
-        if not isinstance(stored, int) or not isinstance(calculated, int):
+        if not isinstance(stored, int):
+            self._pe_checksum_status.setText("Verification unavailable")
+            return
+        if not isinstance(calculated, int):
             self._pe_checksum_status.setText("Verification unavailable")
             return
 

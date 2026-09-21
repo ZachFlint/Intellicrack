@@ -42,6 +42,9 @@ exclude:
   - name: PyAbstractClassInspection
   - name: PyNewStyleGenericSyntaxInspection
   - name: PyAsyncCallInspection
+  - name: PyUnnecessaryCastInspection
+  - name: PyMethodOverridingInspection
+  - name: PyStringConversionWithoutDunderMethodInspection
   - name: All
     paths:
       - .pixi

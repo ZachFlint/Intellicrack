@@ -202,9 +202,11 @@ class TestM4BitToggleAsyncDispatch:
                 "bit button was already updated before the bridge worker could have completed; "
                 "the write did not go through the async dispatcher"
             )
-            assert bool(document.get_bit(0, 0)) is False, "document bit was already flipped before the bridge worker could have completed"
+            assert not bool(
+                document.get_bit(0, 0)
+            ), "document bit was already flipped before the bridge worker could have completed"
 
-            qtbot.waitUntil(lambda: bool(document.get_bit(0, 0)) is True, timeout=3000)
+            qtbot.waitUntil(lambda: bool(document.get_bit(0, 0)), timeout=3000)
 
             assert len(bridge.toggle_bit_thread_ids) == 1
             assert bridge.toggle_bit_thread_ids[0] != main_thread_id, "toggle_bit ran on the GUI thread, not a background worker"
@@ -264,9 +266,11 @@ class TestM4BitToggleAsyncDispatch:
             elapsed = time.monotonic() - started
 
             assert elapsed < _NON_BLOCKING_CEILING_S, f"_on_bit_toggled blocked for {elapsed:.3f}s even on the failure path"
-            assert bool(document.get_bit(0, 0)) is False, "document was mutated before the bridge failure could be observed"
+            assert not bool(
+                document.get_bit(0, 0)
+            ), "document was mutated before the bridge failure could be observed"
 
-            qtbot.waitUntil(lambda: bool(document.get_bit(0, 0)) is True, timeout=3000)
+            qtbot.waitUntil(lambda: bool(document.get_bit(0, 0)), timeout=3000)
             assert document.read(0, 1) == b"\x01", "failure fallback did not perform the direct document write"
             qtbot.waitUntil(lambda: widget._bit_buttons[7].isChecked() is True, timeout=3000)
         finally:

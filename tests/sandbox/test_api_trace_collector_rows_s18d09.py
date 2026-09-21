@@ -220,7 +220,8 @@ def _emit_records(shared: Path, *, with_collector_rows: bool) -> _Emission:
     log_path = log_dir / _LOG_NAME
     assert log_path.is_file(), f"the lifted writers produced no {_LOG_NAME}; stderr={result.stderr!r}"
     raw_lines = [line for line in log_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    collector_rows = sum(1 for line in raw_lines if line.split("|")[1] == "tracer")
+    collector_rows = sum(bool(line.split("|")[1] == "tracer")
+                     for line in raw_lines)
     return _Emission(raw_lines=raw_lines, collector_rows=collector_rows)
 
 

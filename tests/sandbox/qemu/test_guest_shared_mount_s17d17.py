@@ -416,8 +416,11 @@ class _LinuxGuestModel:
                 stderr="lsblk: no output columns requested",
             )
         columns = argv[argv.index("--output") + 1].split(",")
-        unknown = [column for column in columns if column not in {"PATH", "FSTYPE", "LABEL", "MOUNTPOINT"}]
-        if unknown:
+        if unknown := [
+            column
+            for column in columns
+            if column not in {"PATH", "FSTYPE", "LABEL", "MOUNTPOINT"}
+        ]:
             return GuestCommandResult(
                 exit_code=_NOT_FOUND_EXIT,
                 stdout="",
@@ -448,9 +451,7 @@ class _LinuxGuestModel:
             return device.path
         if column == "FSTYPE":
             return device.fs_type
-        if column == "LABEL":
-            return device.label
-        return self._live_mountpoint(device)
+        return device.label if column == "LABEL" else self._live_mountpoint(device)
 
     def _live_mountpoint(self, device: _GuestDevice) -> str:
         """Return where a device is mounted right now.
@@ -591,9 +592,7 @@ def _guest_to_host(guest_path: str, share_drive: str | None, share_host_root: Pa
     if not guest_path.upper().startswith(prefix.upper()):
         return None
     relative = guest_path[len(prefix) :].replace("\\", "/").strip("/")
-    if not relative:
-        return None
-    return share_host_root.joinpath(*relative.split("/"))
+    return share_host_root.joinpath(*relative.split("/")) if relative else None
 
 
 def _guest_environment(system_drive: str, system_root: str) -> dict[str, str]:
@@ -1088,8 +1087,9 @@ class _WindowsAgentGuest:
             return GuestCommandResult(exit_code=0, stdout="".join(f"{name}\n" for name in names), stderr="")
 
         prefix = requested.rstrip("\\") + "\\"
-        held = sorted(path for path in self._guest_files if path.startswith(prefix))
-        if held:
+        if held := sorted(
+            path for path in self._guest_files if path.startswith(prefix)
+        ):
             listed = held if recursive else [PureWindowsPath(path).name for path in held]
             return GuestCommandResult(exit_code=0, stdout="".join(f"{entry}\n" for entry in listed), stderr="")
 
@@ -1526,10 +1526,10 @@ def _index_of(command_lines: list[str], needle: str) -> int:
     Returns:
         int: Index of the first match, or -1 when there is none.
     """
-    for index, line in enumerate(command_lines):
-        if needle in line:
-            return index
-    return -1
+    return next(
+        (index for index, line in enumerate(command_lines) if needle in line),
+        -1,
+    )
 
 
 class TestLinuxFatShareIsMountedInTheGuest:
@@ -1956,7 +1956,11 @@ class TestWindowsGuestResolvesTheDriveLetter:
                 f"echo {_SYSTEM_ROOT_REFERENCE}",
                 sandbox.probe_command_line(),
             )
-            unexpected = [line for line in command_lines if not any(token in line for token in allowed)]
+            unexpected = [
+                line
+                for line in command_lines
+                if all(token not in line for token in allowed)
+            ]
             assert not unexpected, f"only drive enumeration and existence probes may run: {unexpected}"
 
 

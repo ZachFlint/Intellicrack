@@ -526,4 +526,4 @@ class TestAssembleAtPreviewOnly:
         encoded = await bridge.assemble_at(_HW_ADDR, "nop")
 
         assert encoded == b"\x90"
-        assert calls == []
+        assert not calls

@@ -39,6 +39,9 @@ extensions = [
 autodoc_mock_imports = [
     "PyQt5",
     "PySide6",
+    "webview",
+    "intellicrack_hexcore",
+    "mcp",
     "frida",
     "pefile",
     "lief",
@@ -99,8 +102,8 @@ html_theme_options = {
 
 html_context = {
     "display_github": True,
-    "github_user": "zacharyflint",
-    "github_repo": "intellicrack",
+    "github_user": "ZachFlint",
+    "github_repo": "Intellicrack",
     "github_version": "main",
     "conf_py_path": "/docs/source/",
 }

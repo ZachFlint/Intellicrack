@@ -47,7 +47,7 @@ _COLLECTIONS_IMPORT = re.compile(r"^import[ \t]+collections(?![.\w])(?P<rest>[^\
 """The ``import collections, ...`` line, excluding ``import collections.abc`` itself."""
 
 _PYQT_SLOT_ANY = re.compile(
-    r"^(?P<head>PYQT_SLOT\s*=\s*typing\.Union\[collections\.abc\.Callable\[\.\.\.,\s*)Any(?P<tail>\])",
+    r"^(?P<head>PYQT_SLOT\s*=\s*typing\.Union\[collections\.abc\.Callable\[\.\.\.,\s*)Any(?P<tail>])",
     re.MULTILINE,
 )
 """The module-level ``PYQT_SLOT`` definition whose return type names an undefined ``Any``.

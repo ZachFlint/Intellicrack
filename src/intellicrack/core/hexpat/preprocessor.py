@@ -31,7 +31,7 @@ _logger = get_logger(__name__)
 
 _PRAGMA_ENDIAN_RE = re.compile(r"#pragma\s+endian\s+(big|little|native)")
 _PRAGMA_MIME_RE = re.compile(r"#pragma\s+MIME\s+(\S+)")
-_PRAGMA_MAGIC_RE = re.compile(r"#pragma\s+magic\s+\[\s*(0x[0-9A-Fa-f]+)\s*,\s*\"([^\"]*)\"\s*\]")
+_PRAGMA_MAGIC_RE = re.compile(r"#pragma\s+magic\s+\[\s*(0x[0-9A-Fa-f]+)\s*,\s*\"([^\"]*)\"\s*]")
 _PRAGMA_BASE_RE = re.compile(r"#pragma\s+base_address\s+(0x[0-9A-Fa-f]+|\d+)")
 _PRAGMA_EVAL_DEPTH_RE = re.compile(r"#pragma\s+eval_depth\s+(\d+)")
 _PRAGMA_ARRAY_LIMIT_RE = re.compile(r"#pragma\s+array_limit\s+(0x[0-9A-Fa-f]+|\d+)")
@@ -144,8 +144,7 @@ class HexPatPreprocessor:
                 endian = "little" if val == "native" else val
                 continue
 
-            m = _PRAGMA_MIME_RE.match(stripped)
-            if m:
+            if m := _PRAGMA_MIME_RE.match(stripped):
                 mime = m.group(1)
                 continue
 
@@ -754,8 +753,7 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
             endian = "little" if val == "native" else val
             continue
 
-        m = _PRAGMA_MIME_RE.match(stripped)
-        if m:
+        if m := _PRAGMA_MIME_RE.match(stripped):
             mime = m.group(1)
             continue
 

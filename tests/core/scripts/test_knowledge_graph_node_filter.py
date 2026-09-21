@@ -71,7 +71,7 @@ def _extract_embedded_nodes(html: str) -> list[dict[str, object]]:
     """
     match = re.search(r"const rawNodes=(\[.*?\]);const rawEdges=", html, re.DOTALL)
     assert match is not None, "rawNodes array not found in generated HTML"
-    decoded = cast("list[dict[str, object]]", json.loads(match.group(1)))
+    decoded = cast("list[dict[str, object]]", json.loads(match[1]))
     assert isinstance(decoded, list)
     return decoded
 

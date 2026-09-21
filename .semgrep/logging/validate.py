@@ -25,10 +25,10 @@ from pathlib import Path
 
 
 HERE = Path(__file__).resolve().parent
-RULE_COMMENT_RE = re.compile(r"^\s*#\s*(ruleid|ok|todoruleid|todook):\s*([A-Za-z0-9\-\._,\s]+?)\s*$")
+RULE_COMMENT_RE = re.compile(r"^\s*#\s*(ruleid|ok|todoruleid|todook):\s*([A-Za-z0-9\-._,\s]+?)\s*$")
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 RULE_HEADER_RE = re.compile(r"^\s*[^\w\s]+\s+(intellicrack-logging-[a-z0-9\-]+)\s*$")
-FINDING_LINE_RE = re.compile(r"^\s+(\d+)\S*\s*[\u2506\u2502\|]\s")
+FINDING_LINE_RE = re.compile(r"^\s+(\d+)\S*\s*[\u2506\u2502|]\s")
 
 
 @dataclass(frozen=True)
@@ -57,8 +57,7 @@ def _parse_expectations(py_path: Path) -> list[Expectation]:
         py_path: Path to a Python test fixture file.
 
     Returns:
-        Sorted list of :class:`Expectation` entries, one per annotation.
-
+        list[Expectation]: Sorted list of :class:`Expectation` entries, one per annotation.
     """
     text = py_path.read_text(encoding="utf-8").splitlines()
     out: list[Expectation] = []
@@ -82,9 +81,8 @@ def _next_code_line(lines: list[str], comment_lineno: int) -> int:
             was found.
 
     Returns:
-        The 1-based line number of the next code line the annotation
+        int: The 1-based line number of the next code line the annotation
         applies to, or the comment line itself if no code follows.
-
     """
     for j in range(comment_lineno, len(lines)):
         stripped = lines[j].strip()
@@ -102,8 +100,8 @@ def _run_semgrep(yml_path: Path, py_path: Path) -> list[tuple[int, str]]:
         py_path: Path to the paired fixture file.
 
     Returns:
-        List of ``(line_number, short_rule_id)`` tuples, one per
-        finding. Empty list if the scan finds nothing.
+        list[tuple[int, str]]: List of ``(line_number, short_rule_id)``
+        tuples, one per finding. Empty list if the scan finds nothing.
 
     Raises:
         RuntimeError: If semgrep exits with an error status AND produces
@@ -154,8 +152,7 @@ def _parse_text_output(stdout: str) -> list[tuple[int, str]]:
         stdout: Raw stdout from ``semgrep scan --text``.
 
     Returns:
-        List of ``(line_number, short_rule_id)`` tuples, one per finding.
-
+        list[tuple[int, str]]: List of ``(line_number, short_rule_id)`` tuples, one per finding.
     """
     results: list[tuple[int, str]] = []
     current_rule: str | None = None
@@ -193,21 +190,6 @@ def _purge_settings_locks() -> None:
                 pass
 
 
-def _short_rule_id(full: str) -> str:
-    """Strip the semgrep config namespace prefix from a finding rule id.
-
-    Args:
-        full: The dotted rule id reported by semgrep
-            (e.g. ``"semgrep.logging.intellicrack-logging-a1-..."``).
-
-    Returns:
-        The final dotted component, which is the rule id declared in
-        the YAML ``id:`` field.
-
-    """
-    return full.rsplit(".", 1)[-1]
-
-
 def _validate_pair(yml_path: Path, py_path: Path) -> tuple[int, list[str]]:
     """Validate one rule file against its paired fixture.
 
@@ -216,9 +198,8 @@ def _validate_pair(yml_path: Path, py_path: Path) -> tuple[int, list[str]]:
         py_path: Path to the paired fixture file.
 
     Returns:
-        Tuple ``(failures, log_lines)`` where ``failures`` is the number
+        tuple[int, list[str]]: Tuple ``(failures, log_lines)`` where ``failures`` is the number
         of mismatches and ``log_lines`` contains human-readable detail.
-
     """
     log: list[str] = []
     expectations = _parse_expectations(py_path)
@@ -267,9 +248,8 @@ def main() -> int:
     """Run validation across every rule/fixture pair in this directory.
 
     Returns:
-        Exit code 0 if all pairs validate, 1 if any pair has failures
+        int: Exit code 0 if all pairs validate, 1 if any pair has failures
         or could not be scanned.
-
     """
     yml_files = sorted(HERE.glob("*.yml"))
     if not yml_files:

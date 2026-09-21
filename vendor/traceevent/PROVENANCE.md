@@ -136,3 +136,10 @@ licence declaration in `Microsoft.Diagnostics.Tracing.TraceEvent.nuspec` rather 
 a bundled licence file, which is why no `LICENSE.TXT` sits beside these binaries. Every
 dependency listed above is likewise published by Microsoft under the MIT licence and is
 redistributable on those terms.
+
+## License
+
+TraceEvent is published by Microsoft under the MIT license. The full MIT notice
+is vendored at `licenses/traceevent/LICENSE` and ships with the installer. The
+`Microsoft.Extensions.*` and `System.*` assemblies taken from the same package
+are likewise MIT, from the .NET runtime.

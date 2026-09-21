@@ -237,7 +237,7 @@ def parameter_declarations(script_text: str) -> dict[str, str]:
     for chunk in _split_top_level(script_text[match.end() : end]):
         name = re.search(r"\$(\w+)", chunk)
         if name is not None:
-            declarations[name.group(1)] = chunk
+            declarations[name[1]] = chunk
     return declarations
 
 
@@ -491,7 +491,7 @@ def test_wizard_preflight_still_parses_the_real_generator() -> None:
         converted = powershell_pattern_to_python(pattern, selected_key)
         match = re.search(converted, generator)
         assert match is not None, f"the preflight pattern {converted!r} no longer matches packaging/wizard/generate_banners.ps1"
-        captured = match.group(1)
+        captured = match[1]
         resolved.append(captured)
         if "SelectedKey" in pattern:
             selected_key = captured

@@ -52,7 +52,7 @@ NAMESPACE_PREFIX: Final[str] = "mcp-"
 INPUT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 """Accepted shape of an ``inputs`` entry identifier."""
 
-INPUT_REFERENCE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\$\{input:([A-Za-z0-9][A-Za-z0-9_.-]{0,63})\}")
+INPUT_REFERENCE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\$\{input:([A-Za-z0-9][A-Za-z0-9_.-]{0,63})}")
 """Matches one ``${input:<id>}`` reference inside a configuration value."""
 
 DEFAULT_REQUEST_TIMEOUT_S: Final[float] = 60.0

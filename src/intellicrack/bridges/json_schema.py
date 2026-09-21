@@ -153,11 +153,7 @@ def _inline_node(node: object, root: dict[str, Any], depth: int) -> object:
             return {}
         merged: dict[str, Any] = {key: value for key, value in node.items() if key != "$ref"}
         expanded = _inline_node(target, root, depth - 1)
-        if is_json_object(expanded):
-            combined = dict(expanded) | merged
-            return combined
-        return expanded
-
+        return dict(expanded) | merged if is_json_object(expanded) else expanded
     return {key: _inline_node(value, root, depth) for key, value in node.items() if key not in _DEF_CONTAINERS}
 
 

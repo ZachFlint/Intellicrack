@@ -88,9 +88,7 @@ def _exclude_names(flag: str, call: str) -> list[str]:
             following ``flag``, or an empty list when the flag is absent.
     """
     match = re.search(re.escape(flag) + r"\s*@\(([^)]*)\)", call)
-    if match is None:
-        return []
-    return re.findall(r"'([^']*)'", match.group(1))
+    return [] if match is None else re.findall(r"'([^']*)'", match[1])
 
 
 def _run_robocopy(source: Path, dest: Path, exclude_dirs: list[str], exclude_files: list[str]) -> None:

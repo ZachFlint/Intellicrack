@@ -366,10 +366,14 @@ def _flag_keyword(name: str) -> object | None:
     Returns:
         object | None: Its literal value, or None when it is not supplied.
     """
-    for keyword in _flag_declaration().keywords:
-        if keyword.arg == name:
-            return ast.literal_eval(keyword.value)
-    return None
+    return next(
+        (
+            ast.literal_eval(keyword.value)
+            for keyword in _flag_declaration().keywords
+            if keyword.arg == name
+        ),
+        None,
+    )
 
 
 def _flag_destination() -> str:

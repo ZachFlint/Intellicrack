@@ -144,9 +144,7 @@ def _analysis_complete(expression: str) -> object:
         object: ``True`` for ``_ic_analysis_done`` so the poll exits after one
         iteration, ``None`` for ``_ic_analysis_error`` (no worker failure).
     """
-    if expression == "_ic_analysis_done":
-        return True
-    return None
+    return True if expression == "_ic_analysis_done" else None
 
 
 class TestAnalyzeScriptFraming:

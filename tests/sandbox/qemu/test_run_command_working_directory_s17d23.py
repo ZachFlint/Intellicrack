@@ -527,9 +527,7 @@ class _LinuxGuestShell:
         Returns:
             str: Absolute in-guest path.
         """
-        if target.startswith("/"):
-            return target
-        return f"{cwd.rstrip('/')}/{target}"
+        return target if target.startswith("/") else f"{cwd.rstrip('/')}/{target}"
 
     def _host_path(self, guest_path: str) -> Path:
         """Translate an absolute in-guest path to the host path backing it.

@@ -82,10 +82,16 @@ def _format_color_at(block: QTextBlock, position: int) -> QColor | None:
     layout = block.layout()
     if layout is None:
         return None
-    for format_range in layout.formats():
-        if format_range.start <= position < format_range.start + format_range.length:
-            return format_range.format.foreground().color()
-    return None
+    return next(
+        (
+            format_range.format.foreground().color()
+            for format_range in layout.formats()
+            if format_range.start
+            <= position
+            < format_range.start + format_range.length
+        ),
+        None,
+    )
 
 
 class TestH22BlockCommentExcludesStringLiterals:

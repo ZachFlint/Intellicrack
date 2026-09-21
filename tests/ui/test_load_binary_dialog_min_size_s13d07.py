@@ -183,7 +183,7 @@ class TestLoadBinaryDialogMinSize:
         with structlog.testing.capture_logs() as logs:
             main_window._on_load_binary()
 
-        assert loaded == []
+        assert not loaded
         events = [entry["event"] for entry in logs]
         assert "load_binary_dialog_opened" in events
         assert "load_binary_dialog_cancelled" in events

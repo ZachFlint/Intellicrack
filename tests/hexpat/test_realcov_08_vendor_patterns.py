@@ -204,7 +204,7 @@ class TestVendorPatternLexing:
         assert tokens[-1].type == TokenType.EOF
         # A real format description declares many structs; the keyword must be
         # recognised, not lexed as a bare identifier.
-        struct_keywords = sum(bool(tok.type == TokenType.STRUCT) for tok in tokens)
+        struct_keywords = sum(tok.type == TokenType.STRUCT for tok in tokens)
         assert struct_keywords >= 3
 
 

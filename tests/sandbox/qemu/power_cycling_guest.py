@@ -83,7 +83,8 @@ def record_boot(log: Path, argv: list[str]) -> int:
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(argv) + "\n")
-    return sum(1 for line in log.read_text(encoding="utf-8").splitlines() if line.strip())
+    return sum(bool(line.strip())
+           for line in log.read_text(encoding="utf-8").splitlines())
 
 
 def _decode_request(payload: bytes) -> dict[str, object] | None:

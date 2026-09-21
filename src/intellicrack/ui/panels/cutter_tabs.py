@@ -1315,16 +1315,17 @@ class ESILConsoleTab(QWidget):
         address = self._read_address_input()
         if address is None:
             return
-        self._output.appendPlainText(f"> aepc 0x{address:X}")
+        resolved_address: int = address
+        self._output.appendPlainText(f"> aepc 0x{resolved_address:X}")
         run_bridge_coroutine_logged(
-            self._bridge.esil_set_pc(address),
-            on_success=lambda _: self._output.appendPlainText(f"[ok] PC set to 0x{address:X}"),
+            self._bridge.esil_set_pc(resolved_address),
+            on_success=lambda _: self._output.appendPlainText(f"[ok] PC set to 0x{resolved_address:X}"),
             on_error=lambda e: self._output.appendPlainText(f"[error] {e}"),
             parent=self,
             event="cutter_esil_set_pc",
             logger=_logger,
             level="info",
-            address=hex(address),
+            address=hex(resolved_address),
         )
 
     def _on_step_until(self) -> None:

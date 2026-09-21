@@ -496,8 +496,9 @@ def _check_combinators(value: object, schema: Mapping[str, Any], path: str, dept
 
     one_of = schema.get("oneOf")
     if is_json_array(one_of) and one_of:
-        matches = sum(bool(not _validate(value, branch, path, depth - 1))
-                  for branch in one_of)
+        matches = sum(
+            not _validate(value, branch, path, depth - 1) for branch in one_of
+        )
         if matches != 1:
             yield SchemaViolation(path=path, message=f"must match exactly one accepted shape, matched {matches}")
 

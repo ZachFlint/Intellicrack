@@ -72,7 +72,7 @@ from intellicrack.providers import ids as provider_ids
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Generator, Sequence
     from types import ModuleType
 
 
@@ -230,7 +230,7 @@ def test_f0003_validate_tool_for_provider_flags_missing_function() -> None:
 
 
 @contextmanager
-def _preserved_sys_modules(names: Sequence[str]) -> Iterator[None]:
+def _preserved_sys_modules(names: Sequence[str]) -> Generator[None]:
     """Snapshot and restore module-import state around a test body.
 
     The lazy-import findings exercise their behaviour by evicting bridge

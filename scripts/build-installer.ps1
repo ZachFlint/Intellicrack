@@ -113,13 +113,41 @@ if (-not (Test-Path -LiteralPath $Iss)) {
     Write-Both 'packaging/intellicrack.iss is missing, so Setup cannot be compiled'
     exit 1
 }
-$isccCommand = Get-Command iscc -ErrorAction SilentlyContinue
-if (-not $isccCommand) {
-    Write-Both 'iscc is not on PATH; install Inno Setup 6.6.0 or newer'
+$pwshPath = (Get-Process -Id $PID).Path
+
+# Resolve the Inno Setup compiler before the multi-hour stage, so a missing
+# toolchain fails (or self-provisions) in seconds rather than after the whole
+# payload is built. The project-local portable install under tools/innosetup
+# wins over a machine-wide iscc on PATH; when neither is present,
+# scripts/install-inno.ps1 fetches the latest Inno Setup into tools/innosetup
+# and the compiler is re-resolved from there.
+$LocalIscc = Join-Path $RepoRoot 'tools\innosetup\ISCC.exe'
+$IsccPath = $null
+if (Test-Path -LiteralPath $LocalIscc) {
+    $IsccPath = $LocalIscc
+} else {
+    $onPath = Get-Command iscc -ErrorAction SilentlyContinue
+    if ($onPath) { $IsccPath = $onPath.Source }
+}
+if (-not $IsccPath) {
+    Write-Both 'Inno Setup not found in tools\innosetup or on PATH; provisioning the latest release with scripts/install-inno.ps1...'
+    $InstallInno = Join-Path $RepoRoot 'scripts\install-inno.ps1'
+    if (-not (Test-Path -LiteralPath $InstallInno)) {
+        Write-Both 'scripts/install-inno.ps1 is missing, so Inno Setup cannot be provisioned; install Inno Setup'
+        exit 1
+    }
+    $code = Invoke-LoggedStep -What 'Provision Inno Setup' -FilePath $pwshPath -ArgumentList @('-NoLogo', '-NonInteractive', '-File', $InstallInno)
+    if ($code -ne 0) {
+        Write-Both "install-inno.ps1 failed (exit $code); see $LogPath"
+        exit $code
+    }
+    if (Test-Path -LiteralPath $LocalIscc) { $IsccPath = $LocalIscc }
+}
+if (-not $IsccPath) {
+    Write-Both 'Inno Setup compiler still not found after provisioning (expected tools\innosetup\ISCC.exe)'
     exit 1
 }
-
-$pwshPath = (Get-Process -Id $PID).Path
+Write-Both "compiler: $IsccPath"
 $stageArgv = @('-NoLogo', '-NonInteractive', '-File', $StageScript) + (Split-CommandArgument -Value $StageArgs)
 $code = Invoke-LoggedStep -What 'Stage payload' -FilePath $pwshPath -ArgumentList $stageArgv
 if ($code -ne 0) {
@@ -128,7 +156,7 @@ if ($code -ne 0) {
 }
 
 $isccArgv = @($Iss) + (Split-CommandArgument -Value $IsccArgs)
-$code = Invoke-LoggedStep -What 'Compile Setup with Inno Setup' -FilePath $isccCommand.Source -ArgumentList $isccArgv
+$code = Invoke-LoggedStep -What 'Compile Setup with Inno Setup' -FilePath $IsccPath -ArgumentList $isccArgv
 if ($code -ne 0) {
     Write-Both "iscc failed (exit $code); see $LogPath"
     exit $code

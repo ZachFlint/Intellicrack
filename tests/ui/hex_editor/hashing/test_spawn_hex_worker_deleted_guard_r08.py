@@ -138,6 +138,6 @@ class TestSpawnHexWorkerDeletedGuard:
             qapp.processEvents()
 
             assert ran == ["computed"], "the fresh worker must actually execute the supplied callable"
-            assert errors == [], f"the spawn path must not surface an error: {errors}"
+            assert not errors, f"the spawn path must not surface an error: {errors}"
         finally:
             panel._cleanup()

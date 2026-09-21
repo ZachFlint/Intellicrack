@@ -254,7 +254,7 @@ class TestBookmarkObjectApi:
             target,
             hexcore.Bookmark(99, 7, "replaced", "#444444"),
         )
-        assert replaced is True
+        assert replaced
 
         bookmarks = sample_doc_from_bytes.get_bookmarks()
         assert [b.label for b in bookmarks] == ["keep_before", "replaced", "keep_after"]
@@ -277,7 +277,7 @@ class TestBookmarkObjectApi:
             5,
             hexcore.Bookmark(1, 1, "ghost", "#666666"),
         )
-        assert replaced is False
+        assert not replaced
         assert [b.label for b in sample_doc_from_bytes.get_bookmarks()] == ["untouched"]
 
     def test_mutated_bookmark_requires_update_to_persist(

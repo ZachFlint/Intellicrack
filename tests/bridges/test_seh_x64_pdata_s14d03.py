@@ -89,10 +89,16 @@ def _find_owning_module(modules: list[ModuleInfo], address: int) -> ModuleInfo |
         base_address + size)`` range contains ``address``, or ``None``
         if no module covers it.
     """
-    for module in modules:
-        if module.base_address <= address < module.base_address + module.size:
-            return module
-    return None
+    return next(
+        (
+            module
+            for module in modules
+            if module.base_address
+            <= address
+            < module.base_address + module.size
+        ),
+        None,
+    )
 
 
 async def test_seh_chain_x64_target_returns_nonempty_pdata_handlers(

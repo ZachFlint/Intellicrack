@@ -303,9 +303,7 @@ def _as_outcome(reported: str) -> _Outcome:
     """
     if reported == "failed":
         return "failed"
-    if reported == "skipped":
-        return "skipped"
-    return "passed"
+    return "skipped" if reported == "skipped" else "passed"
 
 
 def run_module_isolated(module_file: str, rootpath: str) -> ModuleResult:

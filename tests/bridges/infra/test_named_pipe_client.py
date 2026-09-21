@@ -1340,7 +1340,7 @@ async def test_fail_pending_drains_abandoned_future_exception() -> None:
         # clears self._pending (the same dict object as `pending`), so the
         # local `future` reference is the only remaining strong reference.
         await asyncio.sleep(0)
-        assert pending == {}
+        assert not pending
 
         del future
         gc.collect()

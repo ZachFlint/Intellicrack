@@ -55,6 +55,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+coverage.json
 coverage_report.txt
 *.cover
 *.py,cover
@@ -230,6 +231,18 @@ claude*.ps1
 Claude*.ps1
 *claude*.ps1
 
+# Assistant instruction files and per-tool configs (local tooling, not project files)
+CLAUDE.md
+AGENTS.md
+.claude/
+.agents/
+.opencode/
+.grok/
+.fleet/
+.qodo/
+.skylos/
+.github/CLAUDE_TYPE_FIXER_QUICKSTART.md
+
 # Other AI tools
 gemini*.ps1
 Gemini*.ps1
@@ -315,6 +328,9 @@ ruff.toml
 # Complexipy
 .complexipy_cache/
 
+# Qodana
+.qodana/
+
 # Pylint
 .pylint.d/
 .pylintrc
@@ -340,6 +356,21 @@ tools/radare2_temp/
 # QEMU installation
 tools/qemu/
 tools/qemu-w64-setup-*.exe
+# Inno Setup installation (installer compiler)
+tools/innosetup/
+tools/innosetup-*.exe
+
+# Third-party tools are installed by scripts/install-*.ps1, not committed.
+# The one exception is the x64dbg plugin SDK: src/x64dbg-plugin compiles and
+# links against it, so it is a build dependency and stays tracked.
+tools/x64dbg/*
+!tools/x64dbg/pluginsdk/
+!tools/x64dbg/commithash.txt
+tools/x64dbg*.zip
+tools/cutter/
+tools/cutter*.zip
+tools/pmd/
+tools/pmd-bin-*/
 *.dll
 *.exe
 !tools/AdobeInjector/AdobeInjector.exe
@@ -359,7 +390,6 @@ vcruntime*.dll
 # Node.js / Yarn
 node_modules/
 package-lock.json
-yarn.lock
 .yarn/
 
 # UV package manager
@@ -434,14 +464,15 @@ docker-compose.override.yml
 # Exclude PowerShell scripts in root
 /*.ps1
 
-# Exclude batch files except essential ones
+# Exclude batch and command files in root
 /*.bat
-!REMOVE_NUL.cmd
+/*.cmd
 
 # Lock files
 *.lock
 !requirements.lock
 !pixi.lock
+!yarn.lock
 !**/Cargo.lock
 
 # Linting and testing reports
@@ -544,3 +575,6 @@ prompts/
 /data/
 
 prompts.md
+
+# Sphinx autosummary stubs are regenerated on every build (autosummary_generate = True)
+docs/source/api/_autosummary/

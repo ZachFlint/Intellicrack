@@ -845,10 +845,10 @@ class _RawUnlockedR2Pipe:
         assert stdout is not None
         banner = b""
         while b"\x00" not in banner:
-            chunk = stdout.read(1024)
-            if not chunk:
+            if chunk := stdout.read(1024):
+                banner += chunk
+            else:
                 break
-            banner += chunk
 
     def cmd(self, command: str) -> str:
         """Send one command and return its response, with no locking of any kind.

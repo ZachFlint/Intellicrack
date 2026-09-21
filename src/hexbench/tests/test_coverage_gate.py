@@ -92,13 +92,13 @@ _QUALIFIER: Final = "."
 _OPERATION_SHAPE: Final = re.compile(r"^[a-z][a-z0-9_]*$")
 """Shape every engine operation name has, and no shell command identifier has."""
 
-_CALL_SITE: Final = re.compile(r"\b(?:callOp|callOpRaw|openOperation|fetchRaw|run)\(\s*(?P<quote>['\"])(?P<name>[^'\"\\\\]*)(?P=quote)")
+_CALL_SITE: Final = re.compile(r"\b(?:callOp|callOpRaw|openOperation|fetchRaw|run)\(\s*(?P<quote>['\"])(?P<name>[^'\"\\]*)(?P=quote)")
 """A frontend call passing an operation name as a literal first argument."""
 
-_LITERAL: Final = re.compile(r"(?P<quote>['\"])(?P<name>[^'\"\\\\]*)(?P=quote)")
+_LITERAL: Final = re.compile(r"(?P<quote>['\"])(?P<name>[^'\"\\]*)(?P=quote)")
 """Any string literal inside a manifest body."""
 
-_PAIR_KEY: Final = re.compile(r"\[\s*(?P<quote>['\"])(?P<name>[^'\"\\\\]*)(?P=quote)")
+_PAIR_KEY: Final = re.compile(r"\[\s*(?P<quote>['\"])(?P<name>[^'\"\\]*)(?P=quote)")
 """The first literal of a bracketed pair, which is the key of a map entry."""
 
 _DECLARATION: Final = "(?:export )?const {symbol}\\s*=\\s*"

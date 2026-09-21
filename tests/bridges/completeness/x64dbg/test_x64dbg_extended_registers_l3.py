@@ -17,6 +17,7 @@ side rather than silently truncated, since ``SetThreadContext`` would
 otherwise receive a value the CPU never actually held.
 """
 
+
 from __future__ import annotations
 
 import sys
@@ -41,7 +42,7 @@ pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="x64dbg is a Win
 _XMM0_HEX = bytes(range(16)).hex()
 _XMM3_INITIAL_HEX = "aabbccddeeff0011" + "2233445566778899"
 _XMM3_HALF_WIDTH_HEX = "1122334455667788"
-_XMM3_NEW_HEX = _XMM3_HALF_WIDTH_HEX + "99aabbccddeeff00"
+_XMM3_NEW_HEX = f"{_XMM3_HALF_WIDTH_HEX}99aabbccddeeff00"
 _X87CONTROL_VALUE = 0x027F
 
 _RESIDUAL_REFRESH_RPCS = frozenset(
@@ -307,7 +308,7 @@ class TestExtendedRegisterTableWiring:
             pump_until(qapp, lambda: val_item.text() == _XMM3_INITIAL_HEX, timeout_s=2.0)
 
             assert val_item.text() == _XMM3_INITIAL_HEX
-            assert not any(command == "reg_set_extended" for command, _params in fake.sent)
-            assert sent == []
+            assert all(command != "reg_set_extended" for command, _params in fake.sent)
+            assert not sent
         finally:
             panel.deleteLater()

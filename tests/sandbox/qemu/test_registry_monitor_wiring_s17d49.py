@@ -325,11 +325,7 @@ class TestARealRegistryWriteReachesTheReportedChangeList:
             _create_probe_subkey()
 
             deadline = time.monotonic() + _DETECTION_TIMEOUT_S
-            while True:
-                if _log_names_the_probe_key(log_path):
-                    break
-                if time.monotonic() >= deadline:
-                    break
+            while not _log_names_the_probe_key(log_path) and not time.monotonic() >= deadline:
                 await asyncio.sleep(_DETECTION_POLL_S)
         finally:
             stdout, stderr = _terminate(proc)

@@ -226,7 +226,8 @@ class TestRegionCountReflectsFilteredRows:
 
         _region_filter(memory_tab).setText("ntdll")
 
-        visible_rows = sum(1 for row in range(table.rowCount()) if not table.isRowHidden(row))
+        visible_rows = sum(bool(not table.isRowHidden(row))
+                       for row in range(table.rowCount()))
         assert visible_rows == 1, "sanity check: filter must hide 3 of 4 rows"
         assert label.text() == "1 regions", (
             f"Expected count label to show the FILTERED count '1 regions' after filtering to ntdll.dll; "

@@ -135,9 +135,7 @@ async def _wait_until_channel_lost(client: GuestAgentClient, budget: float) -> f
         float: Seconds spent waiting, whether or not the close was observed.
     """
     started = time.monotonic()
-    while time.monotonic() - started < budget:
-        if not client.is_connected:
-            break
+    while time.monotonic() - started < budget and not not client.is_connected:
         await asyncio.sleep(_CLOSE_POLL_INTERVAL_S)
     return time.monotonic() - started
 

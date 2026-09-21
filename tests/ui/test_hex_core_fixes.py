@@ -349,7 +349,7 @@ class TestBookmarkPersistsAcrossReload:
             panel.document.add_bookmark(offset, 2, label, "#00FF00")
             panel._persist_bookmarks_sidecar()
 
-            sidecar = path.with_name(path.name + ".icbm.json")
+            sidecar = path.with_name(f"{path.name}.icbm.json")
             assert sidecar.is_file(), "adding a bookmark must write the .icbm.json sidecar"
         finally:
             panel._cleanup()

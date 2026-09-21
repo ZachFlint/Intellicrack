@@ -252,8 +252,7 @@ def test_no_hardcoded_consolas_qfont_remains_in_target_files() -> None:
     offenders: dict[str, int] = {}
     for relative_path in _TARGET_RELATIVE_PATHS:
         source = (_REPO_ROOT / relative_path).read_text(encoding="utf-8")
-        count = source.count("Consolas")
-        if count:
+        if count := source.count("Consolas"):
             offenders[relative_path] = count
 
     assert not offenders, f"hardcoded 'Consolas' literal reintroduced in: {offenders!r}"

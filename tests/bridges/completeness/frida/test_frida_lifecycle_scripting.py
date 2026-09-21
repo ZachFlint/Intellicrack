@@ -653,7 +653,7 @@ class TestRemoveRemoteDeviceA4:
         _run_async(
             registry.execute_tool_call("frida", "frida.remove_remote_device", {"host": _REMOVE_REMOTE_HOST}),
         )
-        assert not any(d.id == expected_id for d in manager.enumerate_devices())
+        assert all(d.id != expected_id for d in manager.enumerate_devices())
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
@@ -751,7 +751,11 @@ class _SignalRecordingDevice:
             callback: Callback to unregister; must match the object
                 originally passed to :meth:`on`.
         """
-        self.registered = [(s, cb) for s, cb in self.registered if not (s == signal and cb is callback)]
+        self.registered = [
+            (s, cb)
+            for s, cb in self.registered
+            if s != signal or cb is not callback
+        ]
 
     def fire(self, signal: str) -> None:
         """Synchronously invoke every callback registered for ``signal``.
@@ -823,7 +827,7 @@ class TestDeviceLostNotificationsA6:
         )
 
         _run_async(bridge.disable_device_lost_notifications())
-        assert not any(s == "lost" for s, _ in fake_device.registered)
+        assert all(s != "lost" for s, _ in fake_device.registered)
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
@@ -1116,12 +1120,12 @@ class TestSessionChildGatingC1:
             deadline = time.monotonic() + _ATTACH_WAIT_S
             while time.monotonic() < deadline:
                 pending = _run_async(bridge.get_pending_session_children())
-                if not any(getattr(c, "pid", None) == child.pid for c in pending):
+                if all(getattr(c, "pid", None) != child.pid for c in pending):
                     break
                 time.sleep(0.1)
-            assert not any(getattr(c, "pid", None) == child.pid for c in pending), (
-                "resume_session_child must clear the child from the pending list"
-            )
+            assert all(
+                getattr(c, "pid", None) != child.pid for c in pending
+            ), "resume_session_child must clear the child from the pending list"
         finally:
             with contextlib.suppress(ToolError):
                 _run_async(bridge.disable_session_child_gating())
