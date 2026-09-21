@@ -1007,7 +1007,7 @@ class OllamaProvider(LLMProviderBase):
             if len(parts) >= min_parts and parts[0] == "num_ctx":
                 ctx_window = int(parts[1])
         template: str = show_data.get("template", "")
-        if re.search(r"\{\{-?\s*\.Tools\s*-?\}\}", template):
+        if re.search(r"\{\{-?\s*\.Tools\s*-?}}", template):
             has_tools = True
         return ctx_window, has_tools
 

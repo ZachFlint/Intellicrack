@@ -107,14 +107,13 @@ def _sync_run_bridge_coroutine_logged(
     del parent, kwargs
     loop = asyncio.new_event_loop()
     try:
-        try:
-            result = loop.run_until_complete(coro)
-        except ToolError as exc:
-            if on_error is not None:
-                on_error(exc)
-        else:
-            if on_success is not None:
-                on_success(result)
+        result = loop.run_until_complete(coro)
+    except ToolError as exc:
+        if on_error is not None:
+            on_error(exc)
+    else:
+        if on_success is not None:
+            on_success(result)
     finally:
         loop.close()
 

@@ -251,7 +251,7 @@ def _write_iso(
 
     if el_torito_id is not None:
         catalog = bytearray(_SECTOR)
-        catalog[0:32] = _catalog_validation_entry(el_torito_id)
+        catalog[:32] = _catalog_validation_entry(el_torito_id)
         cursor = 32
         if bios_boot_lba is not None:
             catalog[cursor : cursor + 32] = _catalog_boot_entry(bios_boot_lba)
@@ -942,7 +942,7 @@ class TestAnswerFileGeneration:
         ]
 
         assert any("advfirewall" in command for command in disabled)
-        assert not any("advfirewall" in command for command in kept)
+        assert all("advfirewall" not in command for command in kept)
 
     def test_lab_config_commands_are_registry_writes(self) -> None:
         """Each bypass is a real ``reg add`` of a DWORD one."""
@@ -1006,7 +1006,7 @@ class TestLaunchContract:
         for argv in (launch, install):
             assert "-bios" not in argv
             assert "-pflash" not in argv
-            assert not any("pflash" in value for value in _values_for(argv, "-drive"))
+            assert all("pflash" not in value for value in _values_for(argv, "-drive"))
 
     def test_system_disk_is_virtio_in_both_commands(self, tmp_path: Path) -> None:
         """The install writes to the same controller the sandbox boots from.

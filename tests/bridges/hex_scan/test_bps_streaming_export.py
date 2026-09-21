@@ -390,7 +390,7 @@ class TestBpsStreamingPyfallback:
 
     @staticmethod
     def _assert_small_source_roundtrip(
-        bridge: object,
+        bridge: HexEditorBridge,
         source_path: Path,
         source: bytes,
         target: bytes,

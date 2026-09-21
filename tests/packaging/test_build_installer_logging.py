@@ -86,7 +86,7 @@ def _ansi_pattern() -> str:
     text = _BUILD_SCRIPT.read_text(encoding="utf-8")
     match = re.search(r"^\$AnsiPattern\s*=.*$", text, re.MULTILINE)
     assert match is not None, "build-installer.ps1 no longer defines $AnsiPattern"
-    return match.group(0)
+    return match[0]
 
 
 def _run_pwsh(script: str, tmp_path: Path) -> subprocess.CompletedProcess[str]:

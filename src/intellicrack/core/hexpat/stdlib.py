@@ -53,7 +53,7 @@ _ACCUMULATE_MODULO: int = 2
 _ACCUMULATE_MIN: int = 3
 _ACCUMULATE_MAX: int = 4
 
-_FORMAT_FIELD_RE: re.Pattern[str] = re.compile(r"\{([^{}]*)\}")
+_FORMAT_FIELD_RE: re.Pattern[str] = re.compile(r"\{([^{}]*)}")
 
 
 def _create_rng() -> _random.Random:

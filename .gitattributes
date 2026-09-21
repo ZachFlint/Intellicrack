@@ -55,6 +55,9 @@ tools/**   linguist-vendored
 vendor/**  linguist-vendored
 docs/**    linguist-documentation
 Cargo.lock linguist-generated merge=binary
+CHANGELOG.md linguist-generated
+.secrets.baseline linguist-generated
+src/hexbench/design/**/*.html linguist-generated
 
 # ----------------------------------------------------------------------------
 # Diff drivers: language-aware hunk headers (@@ def / @@ fn ...)

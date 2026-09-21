@@ -385,7 +385,7 @@ class TestBpsUpsImportUsesNativeAwareBridgeMethod:
         original = tmp_path / "bps_dict_original.bin"
         original.write_bytes(b"C" * 64)
         modified_bytes = bytearray(b"C" * 64)
-        modified_bytes[0:4] = b"NEW!"
+        modified_bytes[:4] = b"NEW!"
         modified = tmp_path / "bps_dict_modified.bin"
         modified.write_bytes(bytes(modified_bytes))
 

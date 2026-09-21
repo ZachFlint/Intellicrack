@@ -67,9 +67,7 @@ def _paeth(a: int, b: int, c: int) -> int:
     pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
     if pa <= pb and pa <= pc:
         return a
-    if pb <= pc:
-        return b
-    return c
+    return b if pb <= pc else c
 
 
 def _read_ihdr_and_idat(data: bytes) -> tuple[int, int, int, int, bytes]:

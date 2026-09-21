@@ -1080,8 +1080,8 @@ class HexEditorPanel(
         context: dict[str, Any] = {
             "file_path": str(self.file_path) if self.file_path else None,
             "size": self.document.length(),
+            "modified": self.document.is_modified(),
         }
-        context["modified"] = self.document.is_modified()
 
         cursor_offset = 0
         if self._hex_widget is not None:

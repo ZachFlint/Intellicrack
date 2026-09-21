@@ -948,6 +948,7 @@ class X64DbgAdvancedTab(QWidget):
         address = self._bpcfg_address()
         if address is None:
             return
+        addr: int = address
         condition = self._bpcfg_cond_input.text().strip() or None
         log_text = self._bpcfg_log_input.text().strip() or None
         command = self._bpcfg_cmd_input.text().strip() or None
@@ -955,19 +956,19 @@ class X64DbgAdvancedTab(QWidget):
         self._bpcfg_apply_btn.setEnabled(False)
         run_bridge_coroutine_logged(
             self._bridge.configure_breakpoint(
-                address,
+                addr,
                 condition=condition,
                 log_text=log_text,
                 command=command,
                 fast_resume=fast_resume,
             ),
-            on_success=lambda _: self._on_bpcfg_success(f"Breakpoint at 0x{address:X} configured", self._bpcfg_apply_btn),
+            on_success=lambda _: self._on_bpcfg_success(f"Breakpoint at 0x{addr:X} configured", self._bpcfg_apply_btn),
             on_error=lambda e: self._on_bpcfg_error("configure_breakpoint", e, self._bpcfg_apply_btn),
             parent=self,
             event="x64dbg_configure_breakpoint",
             logger=_logger,
             level="info",
-            address=hex(address),
+            address=hex(addr),
         )
 
     def _on_set_logging_breakpoint(self) -> None:
@@ -977,20 +978,21 @@ class X64DbgAdvancedTab(QWidget):
         address = self._bpcfg_address()
         if address is None:
             return
+        addr: int = address
         log_text = self._bpcfg_log_input.text().strip()
         if not log_text:
             QMessageBox.warning(self, self.tr("Logging Breakpoint"), self.tr("Log text is required."))
             return
         self._bpcfg_logging_btn.setEnabled(False)
         run_bridge_coroutine_logged(
-            self._bridge.set_logging_breakpoint(address, log_text, non_stopping=True),
-            on_success=lambda _: self._on_bpcfg_success(f"Logging breakpoint set at 0x{address:X}", self._bpcfg_logging_btn),
+            self._bridge.set_logging_breakpoint(addr, log_text, non_stopping=True),
+            on_success=lambda _: self._on_bpcfg_success(f"Logging breakpoint set at 0x{addr:X}", self._bpcfg_logging_btn),
             on_error=lambda e: self._on_bpcfg_error("set_logging_breakpoint", e, self._bpcfg_logging_btn),
             parent=self,
             event="x64dbg_set_logging_breakpoint",
             logger=_logger,
             level="info",
-            address=hex(address),
+            address=hex(addr),
         )
 
     def _on_set_breakpoint_log_condition(self) -> None:
@@ -1000,20 +1002,21 @@ class X64DbgAdvancedTab(QWidget):
         address = self._bpcfg_address()
         if address is None:
             return
+        addr: int = address
         condition = self._bpcfg_logcond_input.text().strip()
         if not condition:
             QMessageBox.warning(self, self.tr("Breakpoint Log Condition"), self.tr("Log condition is required."))
             return
         self._bpcfg_logcond_btn.setEnabled(False)
         run_bridge_coroutine_logged(
-            self._bridge.set_breakpoint_log_condition(address, condition),
-            on_success=lambda _: self._on_bpcfg_success(f"Log condition set at 0x{address:X}", self._bpcfg_logcond_btn),
+            self._bridge.set_breakpoint_log_condition(addr, condition),
+            on_success=lambda _: self._on_bpcfg_success(f"Log condition set at 0x{addr:X}", self._bpcfg_logcond_btn),
             on_error=lambda e: self._on_bpcfg_error("set_breakpoint_log_condition", e, self._bpcfg_logcond_btn),
             parent=self,
             event="x64dbg_set_breakpoint_log_condition",
             logger=_logger,
             level="info",
-            address=hex(address),
+            address=hex(addr),
         )
 
     def _on_set_breakpoint_command_condition(self) -> None:
@@ -1023,20 +1026,21 @@ class X64DbgAdvancedTab(QWidget):
         address = self._bpcfg_address()
         if address is None:
             return
+        addr: int = address
         condition = self._bpcfg_cmdcond_input.text().strip()
         if not condition:
             QMessageBox.warning(self, self.tr("Breakpoint Command Condition"), self.tr("Command condition is required."))
             return
         self._bpcfg_cmdcond_btn.setEnabled(False)
         run_bridge_coroutine_logged(
-            self._bridge.set_breakpoint_command_condition(address, condition),
-            on_success=lambda _: self._on_bpcfg_success(f"Command condition set at 0x{address:X}", self._bpcfg_cmdcond_btn),
+            self._bridge.set_breakpoint_command_condition(addr, condition),
+            on_success=lambda _: self._on_bpcfg_success(f"Command condition set at 0x{addr:X}", self._bpcfg_cmdcond_btn),
             on_error=lambda e: self._on_bpcfg_error("set_breakpoint_command_condition", e, self._bpcfg_cmdcond_btn),
             parent=self,
             event="x64dbg_set_breakpoint_command_condition",
             logger=_logger,
             level="info",
-            address=hex(address),
+            address=hex(addr),
         )
 
     def _on_set_breakpoint_singleshot(self) -> None:
@@ -1046,17 +1050,18 @@ class X64DbgAdvancedTab(QWidget):
         address = self._bpcfg_address()
         if address is None:
             return
+        addr: int = address
         enabled = self._bpcfg_singleshot_check.isChecked()
         self._bpcfg_singleshot_btn.setEnabled(False)
         run_bridge_coroutine_logged(
-            self._bridge.set_breakpoint_singleshot(address, enabled=enabled),
-            on_success=lambda _: self._on_bpcfg_success(f"Singleshot set to {enabled} at 0x{address:X}", self._bpcfg_singleshot_btn),
+            self._bridge.set_breakpoint_singleshot(addr, enabled=enabled),
+            on_success=lambda _: self._on_bpcfg_success(f"Singleshot set to {enabled} at 0x{addr:X}", self._bpcfg_singleshot_btn),
             on_error=lambda e: self._on_bpcfg_error("set_breakpoint_singleshot", e, self._bpcfg_singleshot_btn),
             parent=self,
             event="x64dbg_set_breakpoint_singleshot",
             logger=_logger,
             level="info",
-            address=hex(address),
+            address=hex(addr),
             enabled=enabled,
         )
 
@@ -1067,17 +1072,18 @@ class X64DbgAdvancedTab(QWidget):
         address = self._bpcfg_address()
         if address is None:
             return
+        addr: int = address
         enabled = self._bpcfg_silent_check.isChecked()
         self._bpcfg_silent_btn.setEnabled(False)
         run_bridge_coroutine_logged(
-            self._bridge.set_breakpoint_silent(address, enabled=enabled),
-            on_success=lambda _: self._on_bpcfg_success(f"Silent set to {enabled} at 0x{address:X}", self._bpcfg_silent_btn),
+            self._bridge.set_breakpoint_silent(addr, enabled=enabled),
+            on_success=lambda _: self._on_bpcfg_success(f"Silent set to {enabled} at 0x{addr:X}", self._bpcfg_silent_btn),
             on_error=lambda e: self._on_bpcfg_error("set_breakpoint_silent", e, self._bpcfg_silent_btn),
             parent=self,
             event="x64dbg_set_breakpoint_silent",
             logger=_logger,
             level="info",
-            address=hex(address),
+            address=hex(addr),
             enabled=enabled,
         )
 
@@ -1088,16 +1094,17 @@ class X64DbgAdvancedTab(QWidget):
         address = self._bpcfg_address()
         if address is None:
             return
+        addr: int = address
         self._bpcfg_reset_hits_btn.setEnabled(False)
         run_bridge_coroutine_logged(
-            self._bridge.reset_breakpoint_hit_count(address),
-            on_success=lambda _: self._on_bpcfg_success(f"Hit count reset at 0x{address:X}", self._bpcfg_reset_hits_btn),
+            self._bridge.reset_breakpoint_hit_count(addr),
+            on_success=lambda _: self._on_bpcfg_success(f"Hit count reset at 0x{addr:X}", self._bpcfg_reset_hits_btn),
             on_error=lambda e: self._on_bpcfg_error("reset_breakpoint_hit_count", e, self._bpcfg_reset_hits_btn),
             parent=self,
             event="x64dbg_reset_breakpoint_hit_count",
             logger=_logger,
             level="info",
-            address=hex(address),
+            address=hex(addr),
         )
 
     def _on_set_dll_breakpoint(self) -> None:
@@ -1187,17 +1194,18 @@ class X64DbgAdvancedTab(QWidget):
         address = self._bpcfg_address()
         if address is None:
             return
+        addr: int = address
         name = self._bpcfg_name_input.text().strip()
         self._bpcfg_name_btn.setEnabled(False)
         run_bridge_coroutine_logged(
-            self._bridge.set_breakpoint_name(address, name),
-            on_success=lambda _: self._on_bpcfg_success(f"Name set at 0x{address:X}", self._bpcfg_name_btn),
+            self._bridge.set_breakpoint_name(addr, name),
+            on_success=lambda _: self._on_bpcfg_success(f"Name set at 0x{addr:X}", self._bpcfg_name_btn),
             on_error=lambda e: self._on_bpcfg_error("set_breakpoint_name", e, self._bpcfg_name_btn),
             parent=self,
             event="x64dbg_set_breakpoint_name",
             logger=_logger,
             level="info",
-            address=hex(address),
+            address=hex(addr),
             name=name,
         )
 

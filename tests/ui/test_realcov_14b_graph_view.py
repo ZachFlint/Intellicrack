@@ -207,7 +207,8 @@ class TestGraphViewRealDisassembly:
         scene.load_graph(real_blocks)
 
         edge_count = sum(
-            bool(int(block.get("jump", -1)) in scene.block_items or int(block.get("fail", -1)) in scene.block_items)
+            int(block.get("jump", -1)) in scene.block_items
+            or int(block.get("fail", -1)) in scene.block_items
             for block in real_blocks
         )
         if edge_count == 0:

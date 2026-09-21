@@ -195,9 +195,7 @@ async def _wait_for_channel_close(client: GuestAgentClient, budget: float) -> fl
         float: Seconds spent waiting.
     """
     started = time.monotonic()
-    while time.monotonic() - started < budget:
-        if not client.is_connected:
-            break
+    while time.monotonic() - started < budget and not not client.is_connected:
         await asyncio.sleep(_CLOSE_POLL_INTERVAL_S)
     return time.monotonic() - started
 

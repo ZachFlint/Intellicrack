@@ -518,10 +518,7 @@ def _find_tab_index(tabs: QTabWidget, label: str) -> int:
     Returns:
         int: Matching tab index, or -1 if no tab has that title.
     """
-    for i in range(tabs.count()):
-        if tabs.tabText(i) == label:
-            return i
-    return -1
+    return next((i for i in range(tabs.count()) if tabs.tabText(i) == label), -1)
 
 
 def _assert_no_overlap(widgets: list[QWidget], reference: QWidget) -> None:

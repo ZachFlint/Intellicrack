@@ -25,7 +25,7 @@ AI Providers
 
 The providers module provides integration with multiple AI providers:
 
-* OpenAI (GPT-4, GPT-3.5)
+* OpenAI
 * Anthropic (Claude)
 * Google (Gemini)
 * Grok (xAI)

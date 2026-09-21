@@ -21,7 +21,7 @@ install: && build-hexbench
 install-yarn:
     yarn install
 
-[doc('Update everything: pixi env, cargo crates (hexcore + CLI launcher), yarn deps')]
+[doc('Update everything: pixi env, cargo crate (hexcore), yarn deps')]
 [group('update')]
 update:
     @Write-Host '==> pixi upgrade' -ForegroundColor Cyan; pixi upgrade
@@ -136,6 +136,11 @@ install-x64dbg:
 install-cutter:
     @& scripts/install-cutter.ps1
 
+[doc('Download the latest Inno Setup and portable-install it into tools/innosetup (installer compiler)')]
+[group('install')]
+install-inno:
+    @& scripts/install-inno.ps1
+
 # Clean all build artifacts (Python, test caches)
 [group('cleanup')]
 clean:
@@ -147,14 +152,14 @@ clean:
 
 # Examples: just test | just test module --module bridges | just test custom --extra-args "-x tests/test_core"
 [group('test')]
-test *ARGS='unit':
+test *ARGS='unit': fix-pyqt6-icu
     @{{ pixi }} python -m scripts.sandbox.docker_sandbox {{ ARGS }}
     @{{ pixi }} python -m scripts.host_native_tests
 
 # Run only the host-native pass (Intel XPU, local Ollama, debug symbols, raw disk, loopback) natively on the host.
 # Usage: just test-host [extra pytest args...]
 [group('test')]
-test-host *ARGS:
+test-host *ARGS: fix-pyqt6-icu
     @{{ pixi }} python -m scripts.host_native_tests {{ ARGS }}
 
 # Measure test coverage. Default runs both; scope with --python (sandbox suite, 95% gate) or --rust (cargo llvm-cov).
@@ -192,6 +197,11 @@ lint *FLAGS:
 [group('lint')]
 lint-fix *FLAGS:
     @& scripts/lint-fix.ps1 -Pixi "{{ pixi }}" -Src "{{ src }}" -Flags "{{ FLAGS }}"
+
+# Inspect code with Qodana locally, writing reports to reports/qodana
+[group('lint')]
+qodana *FLAGS:
+    @& scripts/run-qodana.ps1 -Flags "{{ FLAGS }}"
 
 # Find dead code, secrets, and risky flows with skylos
 [group('lint')]
@@ -251,6 +261,11 @@ fix-pyqt6-stubs:
 [group('setup')]
 fix-pixi-ssl:
     @& scripts/fix-pixi-ssl.ps1
+
+# Fix PyQt6 QtCore DLL load failure (Qt 6.10+ needs an OS ICU forwarder this Windows build resolves incorrectly)
+[group('setup')]
+fix-pyqt6-icu:
+    @& scripts/fix-pyqt6-icu.ps1
 
 # Run type checking with basedpyright and output sorted findings
 [group('lint')]
@@ -467,7 +482,7 @@ git-commit-hooks message:
 
 # Examples: just docs | just docs clean | just docs apidoc | just docs rebuild | just docs build -v
 [group('docs')]
-docs ACTION='build' *FLAGS:
+docs ACTION='build' *FLAGS: fix-pyqt6-icu
     @& scripts/docs.ps1 -Action "{{ ACTION }}" -Pixi "{{ pixi }}" -Src "{{ src }}" -Flags "{{ FLAGS }}"
 
 [doc('Generate interactive knowledge graph visualization of codebase')]

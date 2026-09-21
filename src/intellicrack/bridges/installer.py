@@ -190,9 +190,40 @@ class ToolVersion:
         Returns:
             bool: True if this version is greater or equal.
         """
-        self_tuple = (self.major, self.minor, self.patch)
-        other_tuple = (other.major, other.minor, other.patch)
-        return self_tuple >= other_tuple
+        return (self.major, self.minor, self.patch) >= (other.major, other.minor, other.patch)
+
+    def __le__(self, other: ToolVersion) -> bool:
+        """Compare versions ordered by the (major, minor, patch) triple.
+
+        Args:
+            other: Version to compare against.
+
+        Returns:
+            bool: True if this version is less than or equal.
+        """
+        return (self.major, self.minor, self.patch) <= (other.major, other.minor, other.patch)
+
+    def __gt__(self, other: ToolVersion) -> bool:
+        """Compare versions ordered by the (major, minor, patch) triple.
+
+        Args:
+            other: Version to compare against.
+
+        Returns:
+            bool: True if this version is strictly greater.
+        """
+        return (self.major, self.minor, self.patch) > (other.major, other.minor, other.patch)
+
+    def __lt__(self, other: ToolVersion) -> bool:
+        """Compare versions ordered by the (major, minor, patch) triple.
+
+        Args:
+            other: Version to compare against.
+
+        Returns:
+            bool: True if this version is strictly less.
+        """
+        return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
 
 
 @dataclass

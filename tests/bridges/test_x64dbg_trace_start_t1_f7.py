@@ -250,7 +250,7 @@ class TestTraceStartLogAndConditionGenuinelyApply:
 
         commands = _exec_commands(fake)
         assert commands[0] == f'TraceSetLog "{_TRACE_LOG_TEXT}", "{_TRACE_CONDITION}"'
-        assert not any("TraceSetCondition" in c for c in commands)
+        assert all("TraceSetCondition" not in c for c in commands)
         assert result["log_text"] == _TRACE_LOG_TEXT
         assert result["log_condition"] == _TRACE_CONDITION
 

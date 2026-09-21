@@ -152,7 +152,7 @@ def _rule_body(selector: str) -> str | None:
         str | None: The declarations between the braces, or ``None`` when no
         such rule exists.
     """
-    found = re.search(rf"^{re.escape(selector)}\s*\{{([^}}]*)\}}", _APP_CSS, re.MULTILINE)
+    found = re.search(rf"^{re.escape(selector)}\s*\{{([^}}]*)}}", _APP_CSS, re.MULTILINE)
     return None if found is None else found.group(1)
 
 

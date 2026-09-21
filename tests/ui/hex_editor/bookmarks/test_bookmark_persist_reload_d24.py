@@ -113,11 +113,9 @@ class TestBookmarkPersistsAcrossFileReload:
 
             bookmarks = panel_b.document.get_bookmarks()
             matches = [bm for bm in bookmarks if bm.offset == _BOOKMARK_OFFSET and bm.label == _BOOKMARK_LABEL]
-            assert len(matches) >= 1, (
-                f"reopening {target} must restore the persisted bookmark "
-                f"(offset=0x{_BOOKMARK_OFFSET:X}, label={_BOOKMARK_LABEL!r}); got "
-                f"{[(bm.offset, bm.label) for bm in bookmarks]}"
-            )
+            assert (
+                matches
+            ), f"reopening {target} must restore the persisted bookmark (offset=0x{_BOOKMARK_OFFSET:X}, label={_BOOKMARK_LABEL!r}); got {[(bm.offset, bm.label) for bm in bookmarks]}"
         finally:
             panel_b._cleanup()
 

@@ -23,13 +23,6 @@ body = """
 ### {{ group | upper_first }}
 {% for commit in commits %}
 - {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message | split(pat="\n") | first | upper_first }}{% if commit.breaking %} [**BREAKING**]{% endif %} (`{{ commit.id | truncate(length=7, end="") }}`)
-{%- if commit.body %}
-{%- for line in commit.body | split(pat="\n") %}
-{%- if line | trim | length > 0 %}
-  {{ line | trim }}
-{%- endif %}
-{%- endfor %}
-{%- endif %}
 {% endfor %}
 {% endfor %}
 """
@@ -42,7 +35,7 @@ conventional_commits = true
 filter_unconventional = true
 split_commits = false
 commit_preprocessors = [
-  { pattern = '\((\w+\s)?#([0-9]+)\)', replace = "" },
+  { pattern = '\s*\((\w+\s)?#([0-9]+)\)', replace = "" },
 ]
 commit_parsers = [
   { message = "^feat", group = "Added" },

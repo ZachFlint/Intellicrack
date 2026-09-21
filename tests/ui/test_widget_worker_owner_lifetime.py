@@ -604,7 +604,8 @@ def _worker_positional_limits() -> dict[str, int | None]:
         if any(parameter.kind is inspect.Parameter.VAR_POSITIONAL for parameter in parameters):
             limits[worker_cls.__name__] = None
         else:
-            limits[worker_cls.__name__] = sum(1 for parameter in parameters if parameter.kind in positional)
+            limits[worker_cls.__name__] = sum(bool(parameter.kind in positional)
+                                          for parameter in parameters)
     return limits
 
 
@@ -618,12 +619,21 @@ def _declared_arity(node: ast.ClassDef, inherited: int | None) -> int | None:
     Returns:
         int | None: The subclass's own limit when it declares ``__init__``, otherwise ``inherited``; ``None`` means ``*args``.
     """
-    for statement in node.body:
-        if isinstance(statement, ast.FunctionDef) and statement.name == "__init__":
-            if statement.args.vararg is not None:
-                return None
-            return len(statement.args.posonlyargs) + len(statement.args.args) - 1
-    return inherited
+    return next(
+        (
+            (
+                None
+                if statement.args.vararg is not None
+                else len(statement.args.posonlyargs)
+                + len(statement.args.args)
+                - 1
+            )
+            for statement in node.body
+            if isinstance(statement, ast.FunctionDef)
+            and statement.name == "__init__"
+        ),
+        inherited,
+    )
 
 
 def _overlong_worker_constructions(root: Path, limits: Mapping[str, int | None]) -> list[str]:

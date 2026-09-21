@@ -291,7 +291,9 @@ def test_qemu_only_control_stays_gated_when_its_failure_lands_after_a_destroy(
     assert dismisser.titles == ["Screenshot Failed"], f"the real failure handler did not run: {dismisser.titles!r}"
     assert instance_id in _console(panel), "the console must carry the real backend error"
     still_enabled = [name for name in _QEMU_ONLY_CONTROLS if getattr(panel, name).isEnabled()]
-    assert still_enabled == [], f"controls stayed live after the sandbox was destroyed: {still_enabled}"
+    assert (
+        not still_enabled
+    ), f"controls stayed live after the sandbox was destroyed: {still_enabled}"
     assert panel.create_btn.isEnabled(), "Create must be offered again once the sandbox is gone"
 
 
@@ -316,7 +318,9 @@ def test_shared_control_stays_disabled_when_its_failure_lands_after_a_destroy(
 
     assert dismisser.titles == ["Memory Dump Failed"], f"the real failure handler did not run: {dismisser.titles!r}"
     still_enabled = [name for name in _SHARED_CONTROLS if getattr(panel, name).isEnabled()]
-    assert still_enabled == [], f"controls stayed live after the sandbox was destroyed: {still_enabled}"
+    assert (
+        not still_enabled
+    ), f"controls stayed live after the sandbox was destroyed: {still_enabled}"
 
 
 def test_a_failure_on_a_live_sandbox_still_restores_its_control(
@@ -367,4 +371,6 @@ def test_windows_backend_keeps_the_qemu_controls_gated_after_a_shared_failure(
     assert dismisser.titles == ["Memory Dump Failed"], f"the real failure handler did not run: {dismisser.titles!r}"
     assert panel.memdump_btn.isEnabled(), "the shared control must come back on a live Windows sandbox"
     still_enabled = [name for name in _QEMU_ONLY_CONTROLS if getattr(panel, name).isEnabled()]
-    assert still_enabled == [], f"QEMU-only controls became live on a Windows instance: {still_enabled}"
+    assert (
+        not still_enabled
+    ), f"QEMU-only controls became live on a Windows instance: {still_enabled}"

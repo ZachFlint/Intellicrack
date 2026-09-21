@@ -19,7 +19,8 @@ The tests cover:
 from __future__ import annotations
 
 import importlib
-from typing import TYPE_CHECKING, Any
+from dataclasses import replace
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -47,25 +48,14 @@ def _empty_report(**kwargs: object) -> ExecutionReport:
         ExecutionReport: A minimal report with all list fields empty except
             those supplied via kwargs.
     """
-    defaults: dict[str, Any] = {
-        "result": "success",
-        "exit_code": 0,
-        "stdout": "",
-        "stderr": "",
-        "duration_seconds": 1.0,
-        "network_activity": [],
-        "file_changes": [],
-        "registry_changes": [],
-        "process_activity": [],
-        "api_calls": [],
-        "service_changes": [],
-        "kernel_objects": [],
-        "dll_loads": [],
-        "injection_events": [],
-        "resource_samples": [],
-        "clipboard_events": [],
-    } | kwargs
-    return ExecutionReport(**defaults)
+    base = ExecutionReport(
+        result="success",
+        exit_code=0,
+        stdout="",
+        stderr="",
+        duration_seconds=1.0,
+    )
+    return replace(base, **kwargs)
 
 
 class TestFileExtensionsRejected:

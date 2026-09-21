@@ -133,7 +133,7 @@ def test_rendered_names_satisfy_the_provider_name_rule(bridge_definitions: list[
 
     assert rendered
     offenders = [name for name in rendered if not is_valid_wire_name(name) or len(name) > _OPENAI_NAME_LIMIT]
-    assert offenders == []
+    assert not offenders
 
 
 def test_every_wire_name_round_trips_to_its_canonical_name(bridge_functions: list[ToolFunction]) -> None:
@@ -154,7 +154,7 @@ def test_every_wire_name_round_trips_to_its_canonical_name(bridge_functions: lis
         if recovered_pair != function.name:
             failures.append((function.name, f"{namespace}/{member}", recovered_pair))
 
-    assert failures == []
+    assert not failures
 
 
 def test_declared_list_defaults_survive_rendering(bridge_functions: list[ToolFunction]) -> None:

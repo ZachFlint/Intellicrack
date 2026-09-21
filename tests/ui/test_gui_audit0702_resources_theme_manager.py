@@ -166,9 +166,7 @@ def test_m37_missing_light_theme_file_routes_to_feature_complete_fallback(
             str | None: ``None`` for ``light_theme.qss``, otherwise the real
             file contents.
         """
-        if filename == "light_theme.qss":
-            return None
-        return real_read(filename)
+        return None if filename == "light_theme.qss" else real_read(filename)
 
     monkeypatch.setattr(
         ThemeManager,

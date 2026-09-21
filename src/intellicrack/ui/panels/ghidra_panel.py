@@ -3589,19 +3589,20 @@ class GhidraPanel(AnalysisPanelBase):
         if addr is None:
             self._set_status("Invalid address for apply structure")
             return
+        resolved_addr: int = addr
         struct_name = self._apply_struct_name_input.text().strip()
         if not struct_name:
             self._set_status("Structure name required")
             return
         run_bridge_coroutine_logged(
-            bridge.apply_structure_at(addr, struct_name),
-            on_success=lambda _: self._set_status(f"Structure '{struct_name}' applied at 0x{addr:X}"),
+            bridge.apply_structure_at(resolved_addr, struct_name),
+            on_success=lambda _: self._set_status(f"Structure '{struct_name}' applied at 0x{resolved_addr:X}"),
             on_error=lambda e: self._set_status(f"Apply structure failed: {e}"),
             parent=self,
             event="ghidra_apply_structure_at",
             logger=_logger,
             level="info",
-            address=hex(addr),
+            address=hex(resolved_addr),
             structure_name=struct_name,
         )
 
@@ -3708,6 +3709,7 @@ class GhidraPanel(AnalysisPanelBase):
         if addr is None:
             self._set_status("Invalid address for write bytes")
             return
+        resolved_addr: int = addr
         hex_data = self._write_hex_input.text().strip()
         if not hex_data:
             self._set_status("Hex data required")
@@ -3717,24 +3719,24 @@ class GhidraPanel(AnalysisPanelBase):
             bytes.fromhex(clean_hex)
         except ValueError:
             self._set_status("Invalid hex data")
-            _logger.warning("ghidra_write_bytes_invalid_hex", input_text=hex_data, address=hex(addr))
+            _logger.warning("ghidra_write_bytes_invalid_hex", input_text=hex_data, address=hex(resolved_addr))
             return
         binary_path = str(bridge.state.target_path) if bridge.state.target_path is not None else "unset"
         _logger.info(
             "ghidra_write_bytes_requested",
             binary_path=binary_path,
-            address=hex(addr),
+            address=hex(resolved_addr),
             byte_count=len(clean_hex) // 2,
         )
         run_bridge_coroutine_logged(
-            bridge.write_bytes(addr, hex_data),
-            on_success=lambda _: self._set_status(f"Wrote {len(clean_hex) // 2} byte(s) at 0x{addr:X}"),
+            bridge.write_bytes(resolved_addr, hex_data),
+            on_success=lambda _: self._set_status(f"Wrote {len(clean_hex) // 2} byte(s) at 0x{resolved_addr:X}"),
             on_error=lambda e: self._set_status(f"Write bytes failed: {e}"),
             parent=self,
             event="ghidra_write_bytes",
             logger=_logger,
             level="info",
-            address=hex(addr),
+            address=hex(resolved_addr),
             byte_count=len(clean_hex) // 2,
         )
 

@@ -64,10 +64,17 @@ def _module_file(dotted: str) -> Path | None:
         Path | None: The module or package file, or ``None`` when the path names nothing in this source tree.
     """
     relative = Path(*dotted.split("."))
-    for candidate in (_SRC_ROOT / relative.with_suffix(".py"), _SRC_ROOT / relative / "__init__.py"):
-        if candidate.is_file():
-            return candidate
-    return None
+    return next(
+        (
+            candidate
+            for candidate in (
+                _SRC_ROOT / relative.with_suffix(".py"),
+                _SRC_ROOT / relative / "__init__.py",
+            )
+            if candidate.is_file()
+        ),
+        None,
+    )
 
 
 def _describe(path: Path) -> str:

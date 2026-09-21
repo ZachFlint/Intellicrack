@@ -81,11 +81,14 @@ function Install-GitHubRelease {
     }
 
     Write-Step $Tag "Fetching latest release from GitHub..."
+    $ghHeaders = @{}
+    $ghToken = if ($env:GITHUB_TOKEN) { $env:GITHUB_TOKEN } elseif ($env:GH_TOKEN) { $env:GH_TOKEN } else { $null }
+    if ($ghToken) { $ghHeaders['Authorization'] = "Bearer $ghToken" }
     $maxRetries = 3
     $release = $null
     for ($i = 1; $i -le $maxRetries; $i++) {
         try {
-            $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -TimeoutSec 30
+            $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -TimeoutSec 30 -Headers $ghHeaders
             break
         } catch {
             if ($i -eq $maxRetries) { Write-Fail "GitHub API request failed after $maxRetries attempts: $_"; exit 1 }
