@@ -131,7 +131,7 @@ jsonschema-specifications==2025.9.1
 keyring==25.7.0
 keystone-engine==0.9.2
 libcst==1.8.6
-librt==0.13.0
+librt==0.15.0
 license-expression==30.4.4
 lief==1.0.0
 line-profiler==5.0.2
