@@ -9,7 +9,7 @@ ansicon==1.89.0
 anthropic==1.7.0
 anyio==4.15.1
 argcomplete==3.6.3
-ast-serialize==0.6.0
+ast-serialize==0.11.2
 astor==0.8.1
 astroid==4.0.4
 asttokens==3.0.1
