@@ -70,8 +70,8 @@ _HTTPCORE2: Final[str] = str(canonicalize_name("httpcore2"))
 _FLOORS: Final[dict[str, tuple[Version, Version]]] = {
     _GITPYTHON: (Version("3.1.59"), Version("3.1.58")),
     _PYASN1: (Version("0.6.4"), Version("0.6.3")),
-    _HTTPX2: (Version("2.12.0"), Version("2.9.1")),
-    _HTTPCORE2: (Version("2.10.0"), Version("2.9.1")),
+    _HTTPX2: (Version("2.13.0"), Version("2.9.1")),
+    _HTTPCORE2: (Version("2.13.0"), Version("2.9.1")),
 }
 
 _REQUIREMENT_LINE: Final[re.Pattern[str]] = re.compile(r"^\s*([A-Za-z0-9._-]+)\s*==\s*([^\s;#]+)")
