@@ -233,7 +233,6 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_BUILD_INSTALLER_LOG, "test_build_log_strips_ansi_but_keeps_console_colour"),
         (_BUILD_INSTALLER_LOG, "test_build_log_accumulates_every_line_in_order"),
         (_BUILD_INSTALLER_LOG, "test_empty_recipe_arguments_do_not_become_empty_command_arguments"),
-        (_BUILD_INSTALLER_LOG, "test_build_installer_recipe_delegates_to_the_logging_script"),
         (_BUILD_INSTALLER_LOG, "test_build_script_logs_to_the_repository_logs_directory"),
         (_BUILD_INSTALLER_LOG, "test_build_script_streams_stderr_into_the_log"),
         (_BUILD_INSTALLER_LOG, "test_build_script_runs_no_tests"),

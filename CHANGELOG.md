@@ -1048,3 +1048,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 - **tests:** Isolate Frida self-attach modules per module, not per test (`8f4618d`)
 
 
+### Security
+
+- Declare core runtime dependencies and bump HTTP security floors (``)
+
+
