@@ -35,7 +35,7 @@ sha2 = "0.11.0"
 sha3 = "0.12"
 similar = { version = "3.2", default-features = false }
 siphasher = "1.0"
-thiserror = "2.0.20"
+thiserror = "2.0.21"
 xxhash-rust = { version = "0.8", features = ["xxh3", "xxh32", "xxh64"] }
 
 [target."cfg(windows)".dependencies]

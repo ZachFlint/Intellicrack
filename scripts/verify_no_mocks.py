@@ -27,7 +27,7 @@ MOCK_PATTERNS = [
     r"MagicMock\s*\(",
     r"PropertyMock\s*\(",
     r"AsyncMock\s*\(",
-    r"(?<!\w)patch\s*\(",
+    r"(?<!\w)patch\s*\((?!es\))",
     r"@patch\b",
     # Mock configuration
     r"return_value\s*=",
@@ -156,10 +156,12 @@ def classify_severity(_pattern: str, line: str, _file_path: str) -> str:
     critical_patterns = ["from unittest.mock import", "from mock import", "import unittest.mock", "import mock"]
 
     high_patterns = ["Mock(", "MagicMock(", "patch(", "@patch", ".assert_called"]
+    # "patch(es)" is user-facing plural text, not a call to mock.patch.
+    scrubbed = line.replace("patch(es)", "patches")
 
     if any(p in line for p in critical_patterns):
         return "CRITICAL"
-    if any(p in line for p in high_patterns):
+    if any(p in scrubbed for p in high_patterns):
         return "HIGH"
     if "test123" in line or "placeholder" in line:
         return "MEDIUM"

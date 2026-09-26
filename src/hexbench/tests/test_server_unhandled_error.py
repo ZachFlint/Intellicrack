@@ -15,10 +15,10 @@ log ring and never touches the client's socket. The caller saw the TCP
 connection reset with zero bytes of response, with no way to tell a bug from a
 network failure.
 
-This is exercised over a real loopback socket, with ``Application.handle``
-patched to raise -- a legitimate use of ``unittest.mock`` against a public
-method of a public class, not a reach into anything private -- so the
-connection-level outcome is what a real client would actually observe.
+This is exercised over a real loopback socket, serving a real
+:class:`~hexbench.api.Application` subclass whose public ``handle`` raises --
+no reach into anything private -- so the connection-level outcome is what a
+real client would actually observe.
 """
 
 from __future__ import annotations
@@ -29,14 +29,17 @@ import socket
 import threading
 import unittest
 from contextlib import ExitStack
-from typing import Final
-from unittest import mock
+from typing import TYPE_CHECKING, Final, override
 
 from hexbench.api import Application
 from hexbench.jobs import JobQueue
 from hexbench.registry import Registry
 from hexbench.server import BenchHTTPServer, build_server
 from hexbench.tests._support import PACKAGE_ROOT, SESSION_TOKEN, Assertions
+
+
+if TYPE_CHECKING:
+    from hexbench.api import Request, Response
 
 
 _HOST: Final = "127.0.0.1"
@@ -53,18 +56,35 @@ _STATUS_KEY: Final = "status"
 _FAILURE_MESSAGE: Final = "boom: a bug reached before any Response was built"
 
 
+class _FailingApplication(Application):
+    """A real application whose routing blows up before any response is built."""
+
+    @override
+    def handle(self, request: Request) -> Response:
+        """Fail the way a routing bug would, instead of answering.
+
+        Args:
+            request: The parsed request, never answered.
+
+        Raises:
+            RuntimeError: Always, carrying :data:`_FAILURE_MESSAGE`.
+        """
+        del request
+        raise RuntimeError(_FAILURE_MESSAGE)
+
+
 class _LiveServer:
-    """A hexbench application bound to a real loopback socket, serving on a thread."""
+    """A failing hexbench application bound to a real loopback socket, serving on a thread."""
 
     def __init__(self) -> None:
-        """Bind an application to a free port and start serving it."""
+        """Bind a failing application to a free port and start serving it."""
         self._registry = Registry()
         self._jobs = JobQueue(_WORKERS)
 
         def _stop() -> None:
             self._server.shutdown()
 
-        self._application = Application(self._registry, self._jobs, static_root=_STATIC_ROOT, token=SESSION_TOKEN, shutdown=_stop)
+        self._application = _FailingApplication(self._registry, self._jobs, static_root=_STATIC_ROOT, token=SESSION_TOKEN, shutdown=_stop)
         self._server: BenchHTTPServer = build_server(self._application, _HOST, 0)
         self._application.bind(self._server.bound_address[1])
         self._thread = threading.Thread(
@@ -132,39 +152,39 @@ class UnhandledErrorResponseTests(Assertions, unittest.TestCase):
         """A real socket client must read a diagnosable 500 response, not a bare connection reset."""
         with ExitStack() as stack:
             live = _live_server(stack)
-            with mock.patch.object(Application, "handle", side_effect=RuntimeError(_FAILURE_MESSAGE)):
-                connection = http.client.HTTPConnection(_HOST, live.port, timeout=_SOCKET_TIMEOUT)
-                stack.callback(connection.close)
-                connection.request("GET", "/api/documents", headers={"Host": live.host_header, _AUTH_HEADER: SESSION_TOKEN})
-                response = connection.getresponse()
-                self.equal(response.status, _INTERNAL_ERROR, "status reported for a routing exception")
-                payload = json.loads(response.read())
-                self.require(isinstance(payload, dict), "error response body is not a JSON object")
-                error = payload.get(_ERROR_KEY)
-                self.require(isinstance(error, dict), "error response carries no error object")
-                self.equal(error.get(_STATUS_KEY), _INTERNAL_ERROR, "status field inside the error object")
-                self.require(
-                    any(_FAILURE_MESSAGE in line for line in live.log),
-                    "the server's own diagnostic log carries no trace of the exception that escaped handle()",
-                )
+            connection = http.client.HTTPConnection(_HOST, live.port, timeout=_SOCKET_TIMEOUT)
+            stack.callback(connection.close)
+            connection.request("GET", "/api/documents", headers={"Host": live.host_header, _AUTH_HEADER: SESSION_TOKEN})
+            response = connection.getresponse()
+            self.equal(response.status, _INTERNAL_ERROR, "status reported for a routing exception")
+            payload = json.loads(response.read())
+            self.require(isinstance(payload, dict), "error response body is not a JSON object")
+            error = payload.get(_ERROR_KEY)
+            self.require(isinstance(error, dict), "error response carries no error object")
+            self.equal(error.get(_STATUS_KEY), _INTERNAL_ERROR, "status field inside the error object")
+            self.require(
+                any(_FAILURE_MESSAGE in line for line in live.log),
+                "the server's own diagnostic log carries no trace of the exception that escaped handle()",
+            )
 
     def test_the_underlying_socket_still_delivers_bytes_rather_than_resetting(self) -> None:
         """The raw socket must carry a real HTTP response, not close with nothing sent."""
         with ExitStack() as stack:
             live = _live_server(stack)
-            with mock.patch.object(Application, "handle", side_effect=RuntimeError(_FAILURE_MESSAGE)):
-                sock = socket.create_connection((_HOST, live.port), timeout=_SOCKET_TIMEOUT)
-                stack.callback(sock.close)
-                request = f"GET /api/documents HTTP/1.1\r\nHost: {live.host_header}\r\n{_AUTH_HEADER}: {SESSION_TOKEN}\r\nConnection: close\r\n\r\n"
-                sock.sendall(request.encode("ascii"))
-                received = b""
-                while True:
-                    if chunk := sock.recv(4096):
-                        received += chunk
-                    else:
-                        break
-                self.require(received.startswith(b"HTTP/1.1 500"), f"expected an HTTP/1.1 500 status line, got {received[:40]!r}")
-                self.require(b"\r\n\r\n" in received, "response never terminated its header block")
+            sock = socket.create_connection((_HOST, live.port), timeout=_SOCKET_TIMEOUT)
+            stack.callback(sock.close)
+            request = (
+                f"GET /api/documents HTTP/1.1\r\nHost: {live.host_header}\r\n{_AUTH_HEADER}: {SESSION_TOKEN}\r\nConnection: close\r\n\r\n"
+            )
+            sock.sendall(request.encode("ascii"))
+            received = b""
+            while True:
+                if chunk := sock.recv(4096):
+                    received += chunk
+                else:
+                    break
+            self.require(received.startswith(b"HTTP/1.1 500"), f"expected an HTTP/1.1 500 status line, got {received[:40]!r}")
+            self.require(b"\r\n\r\n" in received, "response never terminated its header block")
 
 
 if __name__ == "__main__":

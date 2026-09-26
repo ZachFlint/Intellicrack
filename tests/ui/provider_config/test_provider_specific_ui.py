@@ -16,11 +16,11 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING, cast
-from unittest.mock import patch
 
 import pytest
 from PyQt6.QtCore import QUrl
-from PyQt6.QtWidgets import QApplication, QGroupBox, QPushButton
+from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtWidgets import QApplication, QGroupBox, QMessageBox, QPushButton, QWidget
 
 from intellicrack.ui import provider_config
 from intellicrack.ui.provider_config import ProviderSettingsWidget
@@ -34,6 +34,62 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 _RESOURCE_LINKS_ATTR = "_PROVIDER_RESOURCE_LINKS"
+
+
+class _BrowserLaunchRecorder:
+    """Stand in for the OS browser launcher, recording every URL it is asked to open."""
+
+    def __init__(self, *, succeeds: bool) -> None:
+        """Create a recorder that reports a fixed launch outcome.
+
+        Args:
+            succeeds: Value returned for every launch, as ``QDesktopServices.openUrl`` would.
+        """
+        self.succeeds = succeeds
+        self.urls: list[QUrl] = []
+
+    def open_url(self, url: QUrl) -> bool:
+        """Record one launch request instead of spawning a browser.
+
+        Args:
+            url: The URL the handler asked the OS to open.
+
+        Returns:
+            bool: The configured launch outcome.
+        """
+        self.urls.append(url)
+        return self.succeeds
+
+
+class _WarningRecorder:
+    """Stand in for ``show_warning``, recording each dialog instead of showing it."""
+
+    def __init__(self) -> None:
+        """Create a recorder with no warnings recorded yet."""
+        self.calls: list[tuple[QWidget | None, str, str]] = []
+
+    def show_warning(
+        self,
+        parent: QWidget | None,
+        title: str,
+        message: str,
+        *,
+        exc: BaseException | None = None,
+    ) -> QMessageBox.StandardButton:
+        """Record one warning dialog request.
+
+        Args:
+            parent: Widget that would own the dialog.
+            title: Dialog title.
+            message: Dialog body.
+            exc: Optional exception attached to the warning.
+
+        Returns:
+            QMessageBox.StandardButton: ``Ok``, as a dismissed warning would return.
+        """
+        del exc
+        self.calls.append((parent, title, message))
+        return QMessageBox.StandardButton.Ok
 
 
 def _resource_links() -> dict[str, tuple[tuple[str, str, str], ...]]:
@@ -161,6 +217,7 @@ def test_resource_button_click_routes_exact_url_once_to_browser(
     qapp: QApplication,
     tmp_path: Path,
     provider_id: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Each Resources button is wired 1:1 to its own URL via the system browser hook.
 
@@ -172,13 +229,14 @@ def test_resource_button_click_routes_exact_url_once_to_browser(
     ``partial(self._open_resource_url, QUrl(url), label)`` binding carried the
     correct per-button URL rather than, say, every button sharing the first link.
     ``QDesktopServices.openUrl`` is the OS browser launcher, not the unit under
-    test, so patching it keeps the test from spawning a real browser while still
-    exercising the full button -> handler -> openUrl path.
+    test, so replacing it with a recorder keeps the test from spawning a real
+    browser while still exercising the full button -> handler -> openUrl path.
 
     Args:
         qapp: Module-scoped Qt application.
         tmp_path: Per-test temporary directory.
         provider_id: Provider id under test.
+        monkeypatch: Pytest fixture used to swap in the browser launch recorder.
     """
     del qapp
     widget = _make_widget(tmp_path, provider_id)
@@ -190,17 +248,15 @@ def test_resource_button_click_routes_exact_url_once_to_browser(
         f"Provider '{provider_id}' button labels must match the resource table exactly"
     )
 
-    with patch(
-        "intellicrack.ui.provider_config.QDesktopServices.openUrl",
-        return_value=True,
-    ) as mock_open:
-        for label, btn in buttons.items():
-            btn.click()
-            assert mock_open.call_count == 1, f"button '{label}' must trigger exactly one openUrl, got {mock_open.call_count}"
-            (called_url,), _ = mock_open.call_args
-            assert isinstance(called_url, QUrl)
-            assert called_url.toString() == expected_links[label]
-            mock_open.reset_mock()
+    launcher = _BrowserLaunchRecorder(succeeds=True)
+    monkeypatch.setattr(QDesktopServices, "openUrl", launcher.open_url)
+    for label, btn in buttons.items():
+        btn.click()
+        assert len(launcher.urls) == 1, f"button '{label}' must trigger exactly one openUrl, got {len(launcher.urls)}"
+        called_url = launcher.urls[0]
+        assert isinstance(called_url, QUrl)
+        assert called_url.toString() == expected_links[label]
+        launcher.urls.clear()
 
 
 @pytest.mark.parametrize("provider_id", _PREVIOUSLY_WIRED_PROVIDERS)
@@ -248,6 +304,7 @@ def test_openrouter_gets_both_cost_and_resources_groups(
 def test_open_resource_url_surfaces_exact_failure_dialog(
     qapp: QApplication,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A failed browser launch surfaces a warning naming the exact label and URL.
 
@@ -263,6 +320,7 @@ def test_open_resource_url_surfaces_exact_failure_dialog(
     Args:
         qapp: Module-scoped Qt application.
         tmp_path: Per-test temporary directory.
+        monkeypatch: Pytest fixture used to swap in the launch and warning recorders.
     """
     del qapp
     widget = _make_widget(tmp_path, "anthropic")
@@ -274,17 +332,14 @@ def test_open_resource_url_surfaces_exact_failure_dialog(
     expected_url = {link_label: url for link_label, url, _ in _resource_links()["anthropic"]}[label]
     expected_message = f"Could not open {label} ({expected_url})."
 
-    with (
-        patch(
-            "intellicrack.ui.provider_config.QDesktopServices.openUrl",
-            return_value=False,
-        ),
-        patch("intellicrack.ui.provider_config.show_warning") as mock_warn,
-    ):
-        btn.click()
+    launcher = _BrowserLaunchRecorder(succeeds=False)
+    warnings = _WarningRecorder()
+    monkeypatch.setattr(QDesktopServices, "openUrl", launcher.open_url)
+    monkeypatch.setattr(provider_config, "show_warning", warnings.show_warning)
+    btn.click()
 
-    assert mock_warn.call_count == 1, "exactly one warning must be shown when the browser launch fails"
-    warn_args, _ = mock_warn.call_args
+    assert len(warnings.calls) == 1, "exactly one warning must be shown when the browser launch fails"
+    warn_args = warnings.calls[0]
     assert warn_args[0] is widget, "warning must be parented to the settings widget"
     assert warn_args[1] == "Open Link Failed"
     assert warn_args[2] == expected_message
