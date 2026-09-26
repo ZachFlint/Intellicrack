@@ -18,7 +18,7 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Final, TypedDict, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, NoReturn, TypedDict, TypeVar, cast
 
 import openai
 
@@ -72,6 +72,16 @@ _secure_rng = random.SystemRandom()
 
 REDACTION_MARKER: Final[str] = "[REDACTED]"
 MAX_ERROR_BODY_CHARS: Final[int] = 500
+_MIN_LITERAL_REDACTION_CHARS: Final[int] = 8
+
+TRANSLATED_OPENAI_ERRORS: Final[tuple[type[Exception], ...]] = (
+    openai.APIError,
+    ConnectionError,
+    TimeoutError,
+    OSError,
+    ValueError,
+)
+"""Exceptions :meth:`LLMProviderBase._raise_translated_openai_error` converts to typed errors."""
 
 _SECRET_SUBSTITUTIONS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
     (
@@ -1408,7 +1418,7 @@ class LLMProviderBase(ABC):
                 ``extract_503_message`` is supplied.
             RateLimitError: When ``status_code`` is 429.
         """
-        described = detail if detail is not None else str(exc)
+        described = detail if detail is not None else redact_secrets(str(exc))
         if status_code in _AUTH_STATUS_CODES:
             raise AuthenticationError(messages.auth_invalid % described) from exc
         if status_code == HTTP_RATE_LIMITED:
@@ -1434,7 +1444,8 @@ class LLMProviderBase(ABC):
         using the provider's structured logger and re-raised as the
         Intellicrack-typed equivalents
         (:class:`AuthenticationError`, :class:`RateLimitError`,
-        :class:`ProviderError`).
+        :class:`ProviderError`). The translation itself, including redaction
+        of the SDK's error text, is :meth:`_raise_translated_openai_error`.
 
         Args:
             log_prefix: Stem for the structured-log event (e.g.
@@ -1449,32 +1460,81 @@ class LLMProviderBase(ABC):
 
         Yields:
             None: Execution proceeds inside the protected block.
-
-        Raises:
-            AuthenticationError: When the SDK reports authentication
-                failure.
-            ProviderError: When the SDK reports a non-rate-limit API
-                error or a transport-level failure.
-            RateLimitError: When the SDK reports rate limiting.
         """
-        extra: dict[str, object] = dict(log_extra) if log_extra else {}
         try:
             yield
-        except openai.AuthenticationError as exc:
-            self._logger.warning("provider_call_auth_failed", log_prefix=log_prefix, error=str(exc), **extra)
-            raise AuthenticationError(messages.auth_invalid % exc) from exc
-        except openai.RateLimitError as exc:
-            if is_permanent_quota_error(str(exc)):
-                self._logger.warning("provider_call_quota_exhausted", log_prefix=log_prefix, error=str(exc), **extra)
-                raise ProviderError(messages.api_error % exc) from exc
-            self._logger.warning("provider_call_rate_limited", log_prefix=log_prefix, error=str(exc), **extra)
-            raise RateLimitError(messages.rate_limited % exc) from exc
-        except openai.APIError as exc:
-            self._logger.warning("provider_call_api_error", log_prefix=log_prefix, error=str(exc), **extra)
-            raise ProviderError(messages.api_error % exc) from exc
-        except (ConnectionError, TimeoutError, OSError, ValueError) as exc:
-            self._logger.warning("provider_call_failed", log_prefix=log_prefix, error=str(exc), **extra)
-            raise ProviderError(messages.request_failed % exc) from exc
+        except TRANSLATED_OPENAI_ERRORS as exc:
+            self._raise_translated_openai_error(exc, log_prefix=log_prefix, messages=messages, log_extra=log_extra)
+
+    def _redact_error_text(self, error: object, *, api_key: str | None = None) -> str:
+        """Render provider error text with every credential blanked out.
+
+        The recognised credential shapes are replaced first, then the literal
+        API key, which catches a custom endpoint's key that carries no
+        recognisable prefix.
+
+        Args:
+            error: An exception or text supplied by a provider or its SDK.
+            api_key: The key to blank out literally. Defaults to the key this
+                instance connected with; ``connect`` passes the key it is
+                still trying, before any credentials are stored.
+
+        Returns:
+            str: The error's text, safe to log and to show to the user.
+        """
+        redacted = redact_secrets(str(error))
+        if api_key is None and self._credentials is not None:
+            api_key = self._credentials.api_key
+        if api_key and len(api_key) >= _MIN_LITERAL_REDACTION_CHARS:
+            redacted = redacted.replace(api_key, REDACTION_MARKER)
+        return redacted
+
+    def _raise_translated_openai_error(
+        self,
+        exc: BaseException,
+        *,
+        log_prefix: str,
+        messages: OpenAIErrorMessages,
+        log_extra: dict[str, object] | None = None,
+    ) -> NoReturn:
+        """Raise the Intellicrack typed error for one ``openai`` SDK failure.
+
+        The SDK's error text is redacted before it is logged or placed in the
+        typed error's message, because providers echo request headers and
+        bodies back in their error responses.
+
+        Args:
+            exc: The SDK or transport exception that was caught. The typed
+                error is chained from it.
+            log_prefix: Stem recorded on the structured-log event.
+            messages: Provider-specific format-string templates used to build
+                the typed exception message.
+            log_extra: Optional structured-log keyword fields to attach to
+                the emitted warning.
+
+        Raises:
+            AuthenticationError: When the SDK reports an authentication
+                failure.
+            RateLimitError: When the SDK reports a transient rate limit.
+            ProviderError: When the SDK reports a permanent quota error or
+                any other API error, or the transport fails.
+        """
+        extra: dict[str, object] = dict(log_extra) if log_extra else {}
+        detail = self._redact_error_text(exc)
+        if isinstance(exc, openai.AuthenticationError):
+            self._logger.warning("provider_call_auth_failed", log_prefix=log_prefix, error=detail, **extra)
+            raise AuthenticationError(messages.auth_invalid % detail) from exc
+        if isinstance(exc, openai.RateLimitError):
+            if is_permanent_quota_error(detail):
+                self._logger.warning("provider_call_quota_exhausted", log_prefix=log_prefix, error=detail, **extra)
+                raise ProviderError(messages.api_error % detail) from exc
+            self._logger.warning("provider_call_rate_limited", log_prefix=log_prefix, error=detail, **extra)
+            raise RateLimitError(messages.rate_limited % detail) from exc
+        if isinstance(exc, openai.APIError):
+            self._logger.warning("provider_call_api_error", log_prefix=log_prefix, error=detail, **extra)
+            raise ProviderError(messages.api_error % detail) from exc
+        self._logger.warning("provider_call_failed", log_prefix=log_prefix, error=detail, **extra)
+        raise ProviderError(messages.request_failed % detail) from exc
 
     @staticmethod
     def _safe_parse_stream_json(
