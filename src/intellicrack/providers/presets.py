@@ -442,7 +442,7 @@ BUILTIN_PRESETS: Final[dict[str, ProviderPreset]] = {
         provider_id=provider_ids.HUGGINGFACE,
         display_name="HuggingFace",
         dialect=ApiDialect.CHAT_COMPLETIONS,
-        default_api_base="https://api-inference.huggingface.co",
+        default_api_base="https://router.huggingface.co",
         api_key_env_var="HUGGINGFACE_API_TOKEN",
         base_capabilities=CapabilityOverride(supports_tools=True, tokenizer=TIKTOKEN_CL100K),
     ),
