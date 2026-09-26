@@ -184,6 +184,7 @@ def _run_commit_msg(message_file: Path) -> int:
     Returns:
         int: ``0`` to accept the commit, ``1`` to refuse it.
     """
+    message_file = message_file.resolve()
     cwd = Path.cwd()
     for variable in ("GIT_AUTHOR_IDENT", "GIT_COMMITTER_IDENT"):
         ident = _git(["var", variable], cwd).strip()

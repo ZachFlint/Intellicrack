@@ -361,6 +361,7 @@ def _write_json_object(path: Path, data: Mapping[str, Any]) -> None:
         path: File to write.
         data: The object to store.
     """
+    path = path.resolve()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_name(f"{path.name}.tmp")

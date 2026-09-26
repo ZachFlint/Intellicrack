@@ -3682,7 +3682,7 @@ def generate_report(
     dashboard_data = _build_dashboard_data(reports)
     json_data = json.dumps(dashboard_data)
     html_content = _build_html_template(json_data, dashboard_data["generated"], title)
-    output = Path(output_path)
+    output = Path(output_path).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(html_content, encoding="utf-8")
 

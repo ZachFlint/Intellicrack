@@ -227,6 +227,12 @@ jobs:
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: SonarQube Scan
+        if: always()
+        continue-on-error: true
+        uses: SonarSource/sonarqube-scan-action@v8.2.2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   x64dbg-plugin-build:
     runs-on: windows-latest
     needs: [setup]
