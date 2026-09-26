@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, cast, override
 import anthropic
 from anthropic.types import (
     Message as AnthropicMessage,
+    ModelInfo as AnthropicModelInfo,
     RedactedThinkingBlock,
     TextBlock,
     ThinkingBlock,
@@ -43,10 +44,11 @@ from intellicrack.providers.base import (
     LLMProviderBase,
     UsageInfo,
 )
-from intellicrack.providers.capabilities import ApiDialect
+from intellicrack.providers.capabilities import ApiDialect, merge_capabilities
 from intellicrack.providers.dialects.base import DialectRequest
 from intellicrack.providers.dialects.messages import MessagesAdapter, parse_thinking_block
-from intellicrack.providers.tool_names import from_wire_name
+from intellicrack.providers.model_metadata import ingest_model_entry
+from intellicrack.providers.presets import ANTHROPIC_CONTEXT_WINDOW, preset_capabilities
 
 
 if TYPE_CHECKING:
@@ -63,6 +65,8 @@ _MSG_RATE_LIMITED = "Rate limited"
 _MSG_STREAM_FAILED = "Stream failed"
 _MSG_NO_MODELS_AVAILABLE = "No models available from Anthropic API"
 _MSG_FETCH_MODELS_FAILED = "Failed to fetch models from Anthropic API"
+
+_MSG_WITH_DETAIL = "%s: %s"
 
 _HTTP_SERVER_ERROR_MIN = 500
 
@@ -124,11 +128,13 @@ class AnthropicProvider(LLMProviderBase):
             )
             await self._client.models.list(limit=1)
         except anthropic.AuthenticationError as e:
-            self._logger.warning("anthropic_auth_failed", error=str(e))
-            raise AuthenticationError(_MSG_INVALID_API_KEY) from e
+            detail = self._redact_error_text(e, api_key=credentials.api_key)
+            self._logger.warning("anthropic_auth_failed", error=detail)
+            raise AuthenticationError(_MSG_WITH_DETAIL % (_MSG_INVALID_API_KEY, detail)) from e
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError) as e:
-            self._logger.warning("anthropic_connect_failed", error=str(e))
-            raise ProviderError(_MSG_CONNECTION_FAILED) from e
+            detail = self._redact_error_text(e, api_key=credentials.api_key)
+            self._logger.warning("anthropic_connect_failed", error=detail)
+            raise ProviderError(_MSG_WITH_DETAIL % (_MSG_CONNECTION_FAILED, detail)) from e
         else:
             self._credentials = credentials
             self.connected = True
@@ -166,11 +172,12 @@ class AnthropicProvider(LLMProviderBase):
         try:
             models = await self._fetch_all_models()
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError) as e:
+            detail = self._redact_error_text(e)
             self._logger.warning(
                 "anthropic_list_models_api_failed",
-                error=str(e),
+                error=detail,
             )
-            raise ProviderError(_MSG_FETCH_MODELS_FAILED) from e
+            raise ProviderError(_MSG_WITH_DETAIL % (_MSG_FETCH_MODELS_FAILED, detail)) from e
         else:
             self._logger.info("anthropic_models_listed", count=len(models))
             return models
@@ -205,7 +212,7 @@ class AnthropicProvider(LLMProviderBase):
                 page = await client.models.list(after_id=after_id)
             else:
                 page = await client.models.list()
-            models.extend(self._build_model_info(m.id, getattr(m, "display_name", m.id)) for m in page.data)
+            models.extend(self._model_info_from_listing(entry) for entry in page.data)
             page_count += 1
             if not page.has_more:
                 break
@@ -219,13 +226,41 @@ class AnthropicProvider(LLMProviderBase):
         )
         return models
 
+    def _model_info_from_listing(self, entry: AnthropicModelInfo) -> ModelInfo:
+        """Build a model's record from its ``/v1/models`` entry.
+
+        The entry states the model's context window (``max_input_tokens``),
+        output ceiling (``max_tokens``) and capabilities, including which
+        thinking types and effort levels it accepts. Those are ingested as the
+        model's endpoint-metadata capability layer, so requests to it resolve
+        against what the API advertised rather than a fixed default.
+
+        Args:
+            entry: One model from the SDK's models listing.
+
+        Returns:
+            ModelInfo: The model's record, carrying its resolved capabilities.
+        """
+        info = self._build_model_info(entry.id, entry.display_name)
+        ingested = ingest_model_entry(entry.to_dict())
+        if ingested is None:
+            return info
+        capabilities = merge_capabilities(self.capabilities_for(entry.id), ingested.capabilities)
+        self.ingest_model_capabilities(entry.id, capabilities)
+        info.context_window = capabilities.context_window or info.context_window
+        info.supports_tools = capabilities.supports_tools
+        info.supports_vision = capabilities.supports_vision
+        info.supports_streaming = capabilities.supports_streaming
+        info.capabilities = capabilities
+        return info
+
     @staticmethod
     def _build_model_info(model_id: str, display_name_raw: object) -> ModelInfo:
-        """Construct a ModelInfo from API model data.
+        """Construct a ModelInfo for a Claude model from its preset alone.
 
-        All Anthropic chat models support tools, vision, and streaming with
-        a 200k token context window.  No hardcoded model-name checks are
-        used; capabilities default to permissive values.
+        The context window is the Anthropic preset's value for the model's
+        family; :meth:`_model_info_from_listing` replaces it with the value
+        the models endpoint states when one is available.
 
         Args:
             model_id: The model identifier string.
@@ -235,11 +270,12 @@ class AnthropicProvider(LLMProviderBase):
             ModelInfo: Populated ModelInfo instance.
         """
         display_name: str = str(display_name_raw) if display_name_raw else model_id
+        preset = preset_capabilities(provider_ids.ANTHROPIC, model_id)
         return ModelInfo(
             id=model_id,
             name=display_name,
             provider=provider_ids.ANTHROPIC,
-            context_window=200000,
+            context_window=preset.context_window or ANTHROPIC_CONTEXT_WINDOW,
             supports_tools=True,
             supports_vision=True,
             supports_streaming=True,
@@ -438,21 +474,24 @@ class AnthropicProvider(LLMProviderBase):
         try:
             return cast("AnthropicMessage", await self._client.messages.create(**api_kwargs))
         except anthropic.RateLimitError as e:
-            self._logger.warning("anthropic_rate_limited", error=str(e))
-            raise RateLimitError(_MSG_RATE_LIMITED) from e
+            detail = self._redact_error_text(e)
+            self._logger.warning("anthropic_rate_limited", error=detail)
+            raise RateLimitError(_MSG_WITH_DETAIL % (_MSG_RATE_LIMITED, detail)) from e
         except anthropic.APIStatusError as e:
             status_code = int(getattr(e, "status_code", 0) or 0)
             if status_code >= _HTTP_SERVER_ERROR_MIN:
+                detail = self._redact_error_text(e)
                 self._logger.warning(
                     "anthropic_server_error_retryable",
                     status_code=status_code,
-                    error=str(e),
+                    error=detail,
                 )
-                raise RateLimitError(_MSG_REQUEST_FAILED) from e
-            log_passthrough(
-                self._logger,
-                "anthropic_api_status_error_passthrough",
-                e,
+                raise RateLimitError(_MSG_WITH_DETAIL % (_MSG_REQUEST_FAILED, detail)) from e
+            self._logger.warning(
+                "passthrough_exception",
+                op_event="anthropic_api_status_error_passthrough",
+                error=self._redact_error_text(e),
+                error_type=type(e).__name__,
                 status_code=status_code,
             )
             raise
@@ -531,8 +570,9 @@ class AnthropicProvider(LLMProviderBase):
             )
             raise
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError, ValueError) as e:
-            self._logger.warning("anthropic_request_failed", error=str(e))
-            raise ProviderError(_MSG_REQUEST_FAILED) from e
+            detail = self._redact_error_text(e)
+            self._logger.warning("anthropic_request_failed", error=detail)
+            raise ProviderError(_MSG_WITH_DETAIL % (_MSG_REQUEST_FAILED, detail)) from e
 
     async def _await_anthropic_chat(
         self,
@@ -638,31 +678,34 @@ class AnthropicProvider(LLMProviderBase):
             async for text in self._iter_anthropic_stream(api_kwargs):
                 yield text
         except anthropic.RateLimitError as e:
-            self._logger.warning("anthropic_stream_rate_limited", error=str(e))
-            raise RateLimitError(_MSG_RATE_LIMITED) from e
+            detail = self._redact_error_text(e)
+            self._logger.warning("anthropic_stream_rate_limited", error=detail)
+            raise RateLimitError(_MSG_WITH_DETAIL % (_MSG_RATE_LIMITED, detail)) from e
         except anthropic.APIStatusError as e:
             status_code = int(getattr(e, "status_code", 0) or 0)
+            detail = self._redact_error_text(e)
             if status_code >= _HTTP_SERVER_ERROR_MIN:
                 self._logger.warning(
                     "anthropic_stream_server_error",
                     status_code=status_code,
-                    error=str(e),
+                    error=detail,
                 )
-                raise RateLimitError(_MSG_STREAM_FAILED) from e
+                raise RateLimitError(_MSG_WITH_DETAIL % (_MSG_STREAM_FAILED, detail)) from e
             self._logger.warning(
                 "anthropic_stream_status_error",
                 status_code=status_code,
-                error=str(e),
+                error=detail,
                 cancel_requested=self._cancel_requested,
             )
-            raise ProviderError(_MSG_STREAM_FAILED) from e
+            raise ProviderError(_MSG_WITH_DETAIL % (_MSG_STREAM_FAILED, detail)) from e
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError, ValueError) as e:
+            detail = self._redact_error_text(e)
             self._logger.warning(
                 "anthropic_stream_failed",
-                error=str(e),
+                error=detail,
                 cancel_requested=self._cancel_requested,
             )
-            raise ProviderError(_MSG_STREAM_FAILED) from e
+            raise ProviderError(_MSG_WITH_DETAIL % (_MSG_STREAM_FAILED, detail)) from e
 
     async def _iter_anthropic_stream(self, api_kwargs: dict[str, Any]) -> AsyncIterator[str]:
         """Open the Anthropic stream, yield text deltas, and capture final state.
@@ -714,14 +757,11 @@ class AnthropicProvider(LLMProviderBase):
         reasoning: list[ReasoningItem] = []
         for block in final_message.content:
             if block.type == "tool_use":
-                args: dict[str, object] = dict(block.input)
-                canonical_name = from_wire_name(block.name)
                 tool_calls.append(
-                    ToolCall(
-                        id=block.id,
-                        tool_name=canonical_name.split(".")[0] if "." in canonical_name else canonical_name,
-                        function_name=canonical_name,
-                        arguments=args,
+                    self._parse_tool_call_common(
+                        call_id=block.id,
+                        function_name=block.name,
+                        raw_arguments=dict(block.input),
                     ),
                 )
             elif block.type in {"thinking", "redacted_thinking"}:
