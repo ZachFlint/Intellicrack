@@ -76,10 +76,9 @@ class McpTransportKind(enum.Enum):
     Attributes:
         STDIO: A local child process speaking JSON-RPC over stdin/stdout.
         HTTP: A remote endpoint speaking Streamable HTTP.
-        SSE: A remote endpoint declared with the legacy ``sse`` type. It is
-            carried through configuration unchanged and connected over the
-            same Streamable HTTP client, whose ``auto`` negotiation settles
-            the protocol version with the server.
+        SSE: A remote endpoint declared with the legacy ``sse`` type,
+            spoken to over the SDK's HTTP+SSE client in its ``legacy``
+            client mode.
     """
 
     STDIO = "stdio"
@@ -304,13 +303,21 @@ class McpInputSpec:
 class McpSandboxSpec:
     """Confinement applied to a local server process on Windows.
 
+    What each field actually enforces is set out in
+    :mod:`intellicrack.mcp.sandbox_launch`.
+
     Attributes:
-        enabled: Whether the child is launched inside a job object with a
-            restricted token.
-        allow_write: Absolute directories the child may write to. Everything
-            else is read-only to it.
-        allowed_domains: Hostnames the child is expected to reach, recorded
-            so the operator sees the claimed network surface before consent.
+        enabled: Whether the child is created suspended inside a job object,
+            with a restricted Low integrity token and an allowlisted
+            environment, before it runs.
+        allow_write: Absolute directories the child may write to. They are
+            given a Low mandatory label; everything the operator owns
+            outside them stays unwritable to the child, apart from locations
+            Windows itself labels Low such as ``AppData/LocalLow``. Reads are
+            not restricted.
+        allowed_domains: Hostnames the operator expects the child to reach.
+            Recorded and logged only: it is not enforced, and a sandboxed
+            server can still connect to any host.
     """
 
     enabled: bool = False
