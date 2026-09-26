@@ -196,7 +196,7 @@ def test_undecidable_pattern_property_is_not_reported_as_unexpected() -> None:
 
     assert validate_against_schema({"aaaa": "text", "n_count": 3}, schema) == []
     assert [str(item) for item in validate_against_schema({"n_count": "three"}, schema)] == [
-        "$.n_count: expected an integer, found a string"
+        "$.n_count: expected an integer, found a string",
     ]
 
 
