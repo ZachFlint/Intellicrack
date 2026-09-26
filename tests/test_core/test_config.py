@@ -184,7 +184,7 @@ def test_config_default() -> None:
 
     assert config.providers[provider_ids.OLLAMA].api_base == "http://localhost:11434"
     assert config.providers[provider_ids.OPENROUTER].api_base == "https://openrouter.ai/api/v1"
-    assert config.providers[provider_ids.HUGGINGFACE].api_base == "https://api-inference.huggingface.co"
+    assert config.providers[provider_ids.HUGGINGFACE].api_base == "https://router.huggingface.co"
     assert config.providers[provider_ids.GROK].api_base == "https://api.x.ai/v1"
     assert config.providers[provider_ids.LOCAL_TRANSFORMERS].default_model == "microsoft/Phi-3-mini-4k-instruct"
     assert config.providers[provider_ids.LOCAL_TRANSFORMERS].timeout_seconds == 600
