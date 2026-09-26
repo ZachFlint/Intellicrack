@@ -307,9 +307,9 @@ def test_keyring_error_handled(
 
     store = _get_store(store_module_fresh)
     provider = provider_ids.OLLAMA
-    placeholder_value = f"placeholder-{uuid.uuid4().hex}"
+    sentinel_value = f"placeholder-{uuid.uuid4().hex}"
     creds = ProviderCredentials(
-        api_key=placeholder_value,
+        api_key=sentinel_value,
         api_base=None,
         organization_id=None,
         project_id=None,

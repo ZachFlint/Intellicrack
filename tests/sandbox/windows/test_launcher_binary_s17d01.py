@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import asyncio
 from typing import TYPE_CHECKING, cast
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -116,6 +115,28 @@ def _no_dialog(_pid: int) -> str | None:
     return None
 
 
+class _RecordedProcess:
+    """Minimal stand-in for a launched sandbox-launcher process.
+
+    Implements only the surface :meth:`WindowsSandbox._check_startup_health`
+    touches (``poll``, ``returncode``, ``pid``), avoiding any mocking
+    framework while still behaving like the real ``Popen`` object.
+    """
+
+    def __init__(self, *, poll_result: int | None, pid: int) -> None:
+        self.returncode = poll_result
+        self.pid = pid
+        self._poll_result = poll_result
+
+    def poll(self) -> int | None:
+        """Return the canned exit code, mirroring ``Popen.poll``.
+
+        Returns:
+            int | None: The configured poll result.
+        """
+        return self._poll_result
+
+
 def _fake_process(*, poll_result: int | None, pid: int = 4321) -> Popen[bytes]:
     """Create a stand-in launcher process with a chosen exit status.
 
@@ -126,11 +147,7 @@ def _fake_process(*, poll_result: int | None, pid: int = 4321) -> Popen[bytes]:
     Returns:
         Popen[bytes]: Object shaped like the launcher process.
     """
-    proc = MagicMock()
-    proc.poll.return_value = poll_result
-    proc.returncode = poll_result
-    proc.pid = pid
-    return cast("Popen[bytes]", proc)
+    return cast("Popen[bytes]", _RecordedProcess(poll_result=poll_result, pid=pid))
 
 
 def _health_sandbox(poll_result: int | None, *, session_pid: int | None = None) -> _HealthSandbox:

@@ -19,10 +19,10 @@ exact argv the production method constructs.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import sys
 from typing import TYPE_CHECKING, Any, cast
-from unittest.mock import patch
 
 import pytest
 
@@ -68,7 +68,7 @@ class TestRunHeadlessBatch:
     """L1/L2 gates for ``GhidraBridge.run_headless_batch``."""
 
     @staticmethod
-    def test_command_includes_import_targets_and_prescripts(tmp_path: Path) -> None:
+    def test_command_includes_import_targets_and_prescripts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """The built analyzeHeadless command line must include every target and script.
 
         Falsifiable: dropping the ``*targets`` unpack, or the per-script
@@ -103,22 +103,21 @@ class TestRunHeadlessBatch:
                 creationflags=creationflags,
             )
 
+        monkeypatch.setattr("intellicrack.bridges.ghidra.Popen", _spy_popen)
+
         async def _run() -> None:
-            try:
-                with patch("intellicrack.bridges.ghidra.Popen", _spy_popen):
-                    await asyncio.wait_for(
-                        bridge.run_headless_batch(
-                            tmp_path / "proj",
-                            [str(tmp_path / "a.exe"), str(tmp_path / "b.exe")],
-                            pre_scripts=[{"name": "Setup.java", "args": ["1"]}],
-                            post_scripts=[{"name": "Report.py"}],
-                            recursive=True,
-                            analysis_timeout_seconds=120,
-                        ),
-                        timeout=8,
-                    )
-            except (ToolError, TimeoutError):
-                pass
+            with contextlib.suppress(ToolError, TimeoutError):
+                await asyncio.wait_for(
+                    bridge.run_headless_batch(
+                        tmp_path / "proj",
+                        [str(tmp_path / "a.exe"), str(tmp_path / "b.exe")],
+                        pre_scripts=[{"name": "Setup.java", "args": ["1"]}],
+                        post_scripts=[{"name": "Report.py"}],
+                        recursive=True,
+                        analysis_timeout_seconds=120,
+                    ),
+                    timeout=8,
+                )
 
         asyncio.run(_run())
 
@@ -135,7 +134,7 @@ class TestRunHeadlessBatch:
         assert "120" in cmd
 
     @staticmethod
-    def test_nonzero_exit_raises_tool_error(tmp_path: Path) -> None:
+    def test_nonzero_exit_raises_tool_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """A real subprocess that exits non-zero must surface as ToolError, not a silent success.
 
         Falsifiable: if the ``return_code != 0`` check were removed (or
@@ -167,12 +166,13 @@ class TestRunHeadlessBatch:
                 creationflags=creationflags,
             )
 
+        monkeypatch.setattr("intellicrack.bridges.ghidra.Popen", _spy_popen)
+
         async def _run() -> None:
-            with patch("intellicrack.bridges.ghidra.Popen", _spy_popen):
-                await asyncio.wait_for(
-                    bridge.run_headless_batch(tmp_path / "proj", [str(tmp_path / "a.exe")]),
-                    timeout=8,
-                )
+            await asyncio.wait_for(
+                bridge.run_headless_batch(tmp_path / "proj", [str(tmp_path / "a.exe")]),
+                timeout=8,
+            )
 
         with pytest.raises(ToolError):
             asyncio.run(_run())

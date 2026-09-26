@@ -4,29 +4,31 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge-completeness wiring gates (L3) for newly-wired PROCESS panel controls.
 
-Each test drives the *real* handler on a live ``MemoryTab``/``SystemTab`` after
-replacing ``run_bridge_coroutine_logged`` in the tab module under test with a
-capture shim (never the bridge). The gate asserts two independent facts:
+Each test drives the *real* handler on a live ``MemoryTab``/``SystemTab`` wired
+to a real ``ProcessBridge``, after replacing ``run_bridge_coroutine_logged`` in
+the tab module under test with a recording shim (never the bridge). The shim
+introspects the real coroutine it receives -- code object, bound ``self`` and
+bound arguments -- then closes it before any bridge body runs. The gate asserts:
 
-* the coroutine handed to ``run_bridge_coroutine_logged`` is the exact object
-  returned by the corresponding ``ProcessBridge`` method mock, proving the
+* the coroutine handed to ``run_bridge_coroutine_logged`` was created by the
+  corresponding ``ProcessBridge`` method on the wired bridge, proving the
   button is wired to that method and no other, and
-* the method mock was called once with the exact arguments parsed from the UI
-  widgets, proving the handler's argument marshalling.
+* that method was bound to the exact arguments parsed from the UI widgets,
+  proving the handler's argument marshalling.
 
 Negative-path tests assert that guarded handlers skip dispatch entirely (and
 surface a warning) when required input is missing or malformed.
 
-The ``ProcessBridge`` is a ``MagicMock`` only because the code under test is the
-*handler*, not the bridge -- the bridge's WinAPI behaviour has its own dedicated
-L1 gates. Removing or rewiring any handler's bridge call turns its gate red.
+The bridge bodies (real WinAPI behaviour) have their own dedicated L1 gates.
+Removing or rewiring any handler's bridge call turns its gate red.
 """
 
 from __future__ import annotations
 
+import inspect
 import os
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
-from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtWidgets import (
@@ -40,6 +42,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
 )
 
+from intellicrack.bridges.process import ProcessBridge
 from intellicrack.ui.panels.process_panel import (
     memory_tab as _memory_tab_mod,
     system_tab as _system_tab_mod,
@@ -49,7 +52,8 @@ from intellicrack.ui.panels.process_panel.system_tab import SystemTab
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Coroutine, Iterator
+    from types import CodeType
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -134,25 +138,85 @@ def _invoke(widget: object, method_name: str) -> None:
     handler()
 
 
-def _intercept_dispatch(monkeypatch: pytest.MonkeyPatch, module: object) -> list[tuple[object, ...]]:
-    """Replace ``run_bridge_coroutine_logged`` in ``module`` with a capture shim.
+@dataclass(frozen=True, slots=True)
+class _DispatchedBridgeCall:
+    """One ``run_bridge_coroutine_logged`` invocation captured before dispatch.
+
+    The real bridge coroutine is introspected (its code object, bound ``self``
+    and bound arguments) and then closed, so no bridge body ever runs and no
+    "coroutine was never awaited" warning is emitted.
+
+    Attributes:
+        coroutine: The exact coroutine object handed to the dispatcher.
+        code: Code object the coroutine executes; identifies the bridge method.
+        bound_self: The ``self`` the bridge method was bound to.
+        arguments: The bridge method's bound arguments, excluding ``self``.
+        dispatch_kwargs: Keyword arguments passed to the dispatcher itself
+            (``on_success``, ``on_error``, ``event``, ...).
+    """
+
+    coroutine: Coroutine[object, object, object]
+    code: CodeType
+    bound_self: object
+    arguments: dict[str, object]
+    dispatch_kwargs: dict[str, object]
+
+
+def _intercept_dispatch(monkeypatch: pytest.MonkeyPatch, module: object) -> list[_DispatchedBridgeCall]:
+    """Replace ``run_bridge_coroutine_logged`` in ``module`` with a recording shim.
 
     Args:
         monkeypatch: pytest monkeypatch fixture.
-        module: The tab module whose dispatcher symbol is replaced.
+        module: The module whose dispatcher symbol is replaced.
 
     Returns:
-        list[tuple[object, ...]]: Live list receiving the positional arguments of
-            each dispatch call; ``entry[0]`` is the coroutine handed to the dispatcher.
+        list[_DispatchedBridgeCall]: Live list receiving one entry per dispatch.
     """
-    captured: list[tuple[object, ...]] = []
+    captured: list[_DispatchedBridgeCall] = []
 
-    def _capture(*args: object, **kwargs: object) -> None:
-        del kwargs
-        captured.append(args)
+    def _record(coro: object, *args: object, **kwargs: object) -> None:
+        del args
+        assert inspect.iscoroutine(coro), f"dispatcher must receive a real bridge coroutine; got {coro!r}"
+        frame_locals = dict(inspect.getcoroutinelocals(coro))
+        bound_self = frame_locals.pop("self", None)
+        captured.append(
+            _DispatchedBridgeCall(
+                coroutine=coro,
+                code=coro.cr_code,
+                bound_self=bound_self,
+                arguments=frame_locals,
+                dispatch_kwargs=dict(kwargs),
+            ),
+        )
+        coro.close()
 
-    monkeypatch.setattr(module, "run_bridge_coroutine_logged", _capture)
+    monkeypatch.setattr(module, "run_bridge_coroutine_logged", _record)
     return captured
+
+
+def _assert_bridge_call(
+    call: _DispatchedBridgeCall,
+    bridge: object,
+    method_name: str,
+    expected_arguments: dict[str, object],
+) -> None:
+    """Assert a dispatched coroutine came from ``bridge.<method_name>`` with the expected arguments.
+
+    Args:
+        call: The captured dispatch.
+        bridge: The real bridge instance wired into the widget under test.
+        method_name: Name of the bridge coroutine method that must have produced the coroutine.
+        expected_arguments: Every bound argument of that method (defaults included), excluding ``self``.
+    """
+    method: object = getattr(type(bridge), method_name)
+    assert inspect.isfunction(method), f"{type(bridge).__name__}.{method_name} must be a plain coroutine function"
+    assert call.code is method.__code__, (
+        f"dispatched coroutine must come from {type(bridge).__name__}.{method_name}; got {call.code.co_qualname}"
+    )
+    assert call.bound_self is bridge, "dispatched coroutine must be bound to the bridge wired into the widget"
+    assert call.arguments == expected_arguments, (
+        f"{method_name} bound arguments mismatch: expected {expected_arguments!r}, got {call.arguments!r}"
+    )
 
 
 def _capture_warnings(monkeypatch: pytest.MonkeyPatch) -> list[tuple[object, ...]]:
@@ -244,19 +308,16 @@ class TestMemoryTabWorkingSetWiringL3:
             memory_tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(memory_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(memory_tab, "_bridge", bridge)
         memory_tab.set_attached_pid(7788)
 
         dispatch_args = _intercept_dispatch(monkeypatch, _memory_tab_mod)
 
         _invoke(memory_tab, "_on_working_set")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called when attached"
-        assert dispatch_args[0][0] is mock_bridge.get_process_memory_mb.return_value, (
-            f"first positional arg must be the coroutine from bridge.get_process_memory_mb; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.get_process_memory_mb.assert_called_once_with(7788)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called when attached"
+        _assert_bridge_call(dispatch_args[0], bridge, "get_process_memory_mb", {"pid": 7788})
 
     def test_on_working_set_no_dispatch_when_unattached(
         self,
@@ -269,7 +330,7 @@ class TestMemoryTabWorkingSetWiringL3:
             memory_tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(memory_tab, "_bridge", MagicMock())
+        _set_private(memory_tab, "_bridge", ProcessBridge())
         memory_tab.set_attached_pid(None)
 
         dispatch_args = _intercept_dispatch(monkeypatch, _memory_tab_mod)
@@ -298,8 +359,8 @@ class TestSystemTabDeviceOpenWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         device_path = cast("QLineEdit", _get_private(system_tab, "_device_path"))
         device_path.setText(r"\\.\MyDriver")
 
@@ -307,11 +368,8 @@ class TestSystemTabDeviceOpenWiringL3:
 
         _invoke(system_tab, "_on_device_open")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with a non-empty device path"
-        assert dispatch_args[0][0] is mock_bridge.device_open.return_value, (
-            f"first positional arg must be the coroutine from bridge.device_open; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.device_open.assert_called_once_with(r"\\.\MyDriver")
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with a non-empty device path"
+        _assert_bridge_call(dispatch_args[0], bridge, "device_open", {"device_path": r"\\.\MyDriver"})
 
     def test_on_device_open_requires_non_empty_path(
         self,
@@ -324,7 +382,7 @@ class TestSystemTabDeviceOpenWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(system_tab, "_bridge", MagicMock())
+        _set_private(system_tab, "_bridge", ProcessBridge())
         device_path = cast("QLineEdit", _get_private(system_tab, "_device_path"))
         device_path.setText("")
 
@@ -355,8 +413,8 @@ class TestSystemTabDeviceIoctlWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         _select_device_row(system_tab, r"\\.\MyDriver", 0x1234)
 
         cast("QLineEdit", _get_private(system_tab, "_ioctl_code")).setText("0x0022E004")
@@ -367,11 +425,13 @@ class TestSystemTabDeviceIoctlWiringL3:
 
         _invoke(system_tab, "_on_device_ioctl")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with a selected device and valid code"
-        assert dispatch_args[0][0] is mock_bridge.device_ioctl.return_value, (
-            f"first positional arg must be the coroutine from bridge.device_ioctl; got {dispatch_args[0][0]!r}"
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with a selected device and valid code"
+        _assert_bridge_call(
+            dispatch_args[0],
+            bridge,
+            "device_ioctl",
+            {"handle": 0x1234, "ioctl_code": 0x0022E004, "input_data": "deadbeef", "output_size": 8192},
         )
-        mock_bridge.device_ioctl.assert_called_once_with(0x1234, 0x0022E004, "deadbeef", 8192)
 
     def test_on_device_ioctl_omits_input_when_field_blank(
         self,
@@ -387,8 +447,8 @@ class TestSystemTabDeviceIoctlWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         _select_device_row(system_tab, r"\\.\MyDriver", 0x1234)
 
         cast("QLineEdit", _get_private(system_tab, "_ioctl_code")).setText("0x1000")
@@ -399,8 +459,13 @@ class TestSystemTabDeviceIoctlWiringL3:
 
         _invoke(system_tab, "_on_device_ioctl")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must still dispatch with a blank input field"
-        mock_bridge.device_ioctl.assert_called_once_with(0x1234, 0x1000, None, 256)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must still dispatch with a blank input field"
+        _assert_bridge_call(
+            dispatch_args[0],
+            bridge,
+            "device_ioctl",
+            {"handle": 0x1234, "ioctl_code": 0x1000, "input_data": None, "output_size": 256},
+        )
 
     def test_on_device_ioctl_no_dispatch_without_selected_device(
         self,
@@ -413,7 +478,7 @@ class TestSystemTabDeviceIoctlWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(system_tab, "_bridge", MagicMock())
+        _set_private(system_tab, "_bridge", ProcessBridge())
         cast("QLineEdit", _get_private(system_tab, "_ioctl_code")).setText("0x1000")
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
@@ -435,7 +500,7 @@ class TestSystemTabDeviceIoctlWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(system_tab, "_bridge", MagicMock())
+        _set_private(system_tab, "_bridge", ProcessBridge())
         _select_device_row(system_tab, r"\\.\MyDriver", 0x1234)
         cast("QLineEdit", _get_private(system_tab, "_ioctl_code")).setText("not-a-code")
 
@@ -465,19 +530,16 @@ class TestSystemTabDeviceCloseWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         _select_device_row(system_tab, r"\\.\MyDriver", 0xABCD)
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_device_close")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with a selected device"
-        assert dispatch_args[0][0] is mock_bridge.device_close.return_value, (
-            f"first positional arg must be the coroutine from bridge.device_close; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.device_close.assert_called_once_with(0xABCD)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with a selected device"
+        _assert_bridge_call(dispatch_args[0], bridge, "device_close", {"handle": 0xABCD})
 
     def test_on_device_close_no_dispatch_without_selection(
         self,
@@ -490,7 +552,7 @@ class TestSystemTabDeviceCloseWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(system_tab, "_bridge", MagicMock())
+        _set_private(system_tab, "_bridge", ProcessBridge())
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
         warning_calls = _capture_warnings(monkeypatch)
@@ -518,8 +580,8 @@ class TestSystemTabCreateSectionWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         cast("QSpinBox", _get_private(system_tab, "_section_size")).setValue(16384)
         cast("QLineEdit", _get_private(system_tab, "_section_name")).setText("MySection")
 
@@ -527,11 +589,8 @@ class TestSystemTabCreateSectionWiringL3:
 
         _invoke(system_tab, "_on_create_section")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called for a create-section request"
-        assert dispatch_args[0][0] is mock_bridge.create_section.return_value, (
-            f"first positional arg must be the coroutine from bridge.create_section; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.create_section.assert_called_once_with(16384, "MySection")
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called for a create-section request"
+        _assert_bridge_call(dispatch_args[0], bridge, "create_section", {"size": 16384, "section_name": "MySection"})
 
     def test_on_create_section_passes_none_name_when_blank(
         self,
@@ -547,8 +606,8 @@ class TestSystemTabCreateSectionWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         cast("QSpinBox", _get_private(system_tab, "_section_size")).setValue(4096)
         cast("QLineEdit", _get_private(system_tab, "_section_name")).setText("")
 
@@ -556,8 +615,8 @@ class TestSystemTabCreateSectionWiringL3:
 
         _invoke(system_tab, "_on_create_section")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called for an anonymous create-section request"
-        mock_bridge.create_section.assert_called_once_with(4096, None)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called for an anonymous create-section request"
+        _assert_bridge_call(dispatch_args[0], bridge, "create_section", {"size": 4096, "section_name": None})
 
 
 class TestSystemTabMapSectionWiringL3:
@@ -577,8 +636,8 @@ class TestSystemTabMapSectionWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         _select_section_row(system_tab, 0x4444, "MySection")
         cast("QSpinBox", _get_private(system_tab, "_map_size")).setValue(32768)
 
@@ -586,11 +645,8 @@ class TestSystemTabMapSectionWiringL3:
 
         _invoke(system_tab, "_on_map_section")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with a selected section"
-        assert dispatch_args[0][0] is mock_bridge.map_section.return_value, (
-            f"first positional arg must be the coroutine from bridge.map_section; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.map_section.assert_called_once_with(0x4444, 32768)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with a selected section"
+        _assert_bridge_call(dispatch_args[0], bridge, "map_section", {"handle": 0x4444, "size": 32768})
 
     def test_on_map_section_no_dispatch_without_selection(
         self,
@@ -603,7 +659,7 @@ class TestSystemTabMapSectionWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(system_tab, "_bridge", MagicMock())
+        _set_private(system_tab, "_bridge", ProcessBridge())
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
         warning_calls = _capture_warnings(monkeypatch)
@@ -631,19 +687,16 @@ class TestSystemTabUnmapSectionWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         _select_view_row(system_tab, 0x7F000000, 0x4444)
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_unmap_section")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with a selected view"
-        assert dispatch_args[0][0] is mock_bridge.unmap_section.return_value, (
-            f"first positional arg must be the coroutine from bridge.unmap_section; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.unmap_section.assert_called_once_with(0x7F000000)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with a selected view"
+        _assert_bridge_call(dispatch_args[0], bridge, "unmap_section", {"base_address": 0x7F000000})
 
     def test_on_unmap_section_no_dispatch_without_selection(
         self,
@@ -656,7 +709,7 @@ class TestSystemTabUnmapSectionWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(system_tab, "_bridge", MagicMock())
+        _set_private(system_tab, "_bridge", ProcessBridge())
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
         warning_calls = _capture_warnings(monkeypatch)
@@ -684,19 +737,16 @@ class TestSystemTabEnumerateHandlesWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         cast("QLineEdit", _get_private(system_tab, "_handles_pid")).setText("4321")
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_enumerate_handles")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called for a valid PID filter"
-        assert dispatch_args[0][0] is mock_bridge.enumerate_handles.return_value, (
-            f"first positional arg must be the coroutine from bridge.enumerate_handles; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.enumerate_handles.assert_called_once_with(4321)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called for a valid PID filter"
+        _assert_bridge_call(dispatch_args[0], bridge, "enumerate_handles", {"pid": 4321})
 
     def test_on_enumerate_handles_passes_none_for_blank_filter(
         self,
@@ -711,16 +761,16 @@ class TestSystemTabEnumerateHandlesWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         cast("QLineEdit", _get_private(system_tab, "_handles_pid")).setText("")
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_enumerate_handles")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called for a blank PID filter"
-        mock_bridge.enumerate_handles.assert_called_once_with(None)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called for a blank PID filter"
+        _assert_bridge_call(dispatch_args[0], bridge, "enumerate_handles", {"pid": None})
 
     def test_on_enumerate_handles_rejects_invalid_pid_without_dispatch(
         self,
@@ -733,7 +783,7 @@ class TestSystemTabEnumerateHandlesWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(system_tab, "_bridge", MagicMock())
+        _set_private(system_tab, "_bridge", ProcessBridge())
         cast("QLineEdit", _get_private(system_tab, "_handles_pid")).setText("bogus")
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
@@ -762,20 +812,17 @@ class TestSystemTabEnumHandlesWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         cast("QLineEdit", _get_private(system_tab, "_handles_pid")).setText("909")
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_enum_handles")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called for a valid PID filter"
-        assert dispatch_args[0][0] is mock_bridge.enum_handles.return_value, (
-            f"first positional arg must be the coroutine from bridge.enum_handles; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.enum_handles.assert_called_once_with(909)
-        mock_bridge.enumerate_handles.assert_not_called()
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called for a valid PID filter"
+        _assert_bridge_call(dispatch_args[0], bridge, "enum_handles", {"pid": 909})
+        assert "enumerate_handles" not in [call.code.co_name for call in dispatch_args]
 
 
 class TestSystemTabEnumerateServicesWiringL3:
@@ -794,19 +841,16 @@ class TestSystemTabEnumerateServicesWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         cast("QCheckBox", _get_private(system_tab, "_svc_active_only")).setChecked(True)
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_enumerate_all_services")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called"
-        assert dispatch_args[0][0] is mock_bridge.enumerate_services.return_value, (
-            f"first positional arg must be the coroutine from bridge.enumerate_services; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.enumerate_services.assert_called_once_with(active=True)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called"
+        _assert_bridge_call(dispatch_args[0], bridge, "enumerate_services", {"active": True})
 
     def test_on_enumerate_all_services_active_only_false(
         self,
@@ -821,16 +865,16 @@ class TestSystemTabEnumerateServicesWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         cast("QCheckBox", _get_private(system_tab, "_svc_active_only")).setChecked(False)
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_enumerate_all_services")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called"
-        mock_bridge.enumerate_services.assert_called_once_with(active=False)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called"
+        _assert_bridge_call(dispatch_args[0], bridge, "enumerate_services", {"active": False})
 
 
 class TestSystemTabMitigationPolicyWiringL3:
@@ -850,19 +894,16 @@ class TestSystemTabMitigationPolicyWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         system_tab.set_attached_pid(2468)
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_mitigation_summary")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called"
-        assert dispatch_args[0][0] is mock_bridge.get_mitigation_policy.return_value, (
-            f"first positional arg must be the coroutine from bridge.get_mitigation_policy; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.get_mitigation_policy.assert_called_once_with(2468)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called"
+        _assert_bridge_call(dispatch_args[0], bridge, "get_mitigation_policy", {"pid": 2468})
 
     def test_on_extension_policy_dispatches_with_attached_pid(
         self,
@@ -878,20 +919,17 @@ class TestSystemTabMitigationPolicyWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         system_tab.set_attached_pid(1357)
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_extension_policy")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called"
-        assert dispatch_args[0][0] is mock_bridge.get_extension_policy.return_value, (
-            f"first positional arg must be the coroutine from bridge.get_extension_policy; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.get_extension_policy.assert_called_once_with(1357)
-        mock_bridge.get_mitigation_policy.assert_not_called()
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called"
+        _assert_bridge_call(dispatch_args[0], bridge, "get_extension_policy", {"pid": 1357})
+        assert "get_mitigation_policy" not in [call.code.co_name for call in dispatch_args]
 
 
 class TestSystemTabReadRegistryTypedWiringL3:
@@ -911,8 +949,8 @@ class TestSystemTabReadRegistryTypedWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         cast("QComboBox", _get_private(system_tab, "_reg_hive")).setCurrentText("HKCU")
         cast("QLineEdit", _get_private(system_tab, "_reg_typed_key")).setText(r"SOFTWARE\Microsoft\Windows NT\CurrentVersion")
         cast("QLineEdit", _get_private(system_tab, "_reg_typed_value")).setText("ProductName")
@@ -921,11 +959,13 @@ class TestSystemTabReadRegistryTypedWiringL3:
 
         _invoke(system_tab, "_on_read_registry_typed")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with hive/key/value present"
-        assert dispatch_args[0][0] is mock_bridge.read_registry.return_value, (
-            f"first positional arg must be the coroutine from bridge.read_registry; got {dispatch_args[0][0]!r}"
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with hive/key/value present"
+        _assert_bridge_call(
+            dispatch_args[0],
+            bridge,
+            "read_registry",
+            {"hive": "HKCU", "key_path": r"SOFTWARE\Microsoft\Windows NT\CurrentVersion", "value_name": "ProductName"},
         )
-        mock_bridge.read_registry.assert_called_once_with("HKCU", r"SOFTWARE\Microsoft\Windows NT\CurrentVersion", "ProductName")
 
     def test_on_read_registry_typed_requires_key_and_value(
         self,
@@ -938,7 +978,7 @@ class TestSystemTabReadRegistryTypedWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(system_tab, "_bridge", MagicMock())
+        _set_private(system_tab, "_bridge", ProcessBridge())
         cast("QComboBox", _get_private(system_tab, "_reg_hive")).setCurrentText("HKLM")
         cast("QLineEdit", _get_private(system_tab, "_reg_typed_key")).setText(r"SOFTWARE\Microsoft")
         cast("QLineEdit", _get_private(system_tab, "_reg_typed_value")).setText("")
@@ -969,15 +1009,12 @@ class TestSystemTabEnumerateSystemProcessesWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
 
         dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_enumerate_system_processes")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called"
-        assert dispatch_args[0][0] is mock_bridge.enumerate_system_processes.return_value, (
-            f"first positional arg must be the coroutine from bridge.enumerate_system_processes; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.enumerate_system_processes.assert_called_once_with()
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called"
+        _assert_bridge_call(dispatch_args[0], bridge, "enumerate_system_processes", {})

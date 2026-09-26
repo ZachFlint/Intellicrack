@@ -20,20 +20,95 @@ specific and was refused, and that refusal has to be visible.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
-from typing import Final
-from unittest import mock
+from typing import TYPE_CHECKING, Final
 
 from hexbench import shell
 from hexbench.tests._support import Assertions
 
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+
 _TEST_URL: Final = "http://127.0.0.1:1/token"
+
+
+@contextlib.contextmanager
+def _replaced_attribute(owner: object, name: str, replacement: object) -> Generator[None]:
+    """Swap one attribute of ``owner`` for the duration of a ``with`` block.
+
+    Args:
+        owner: Module or class whose attribute is swapped.
+        name: Attribute to swap.
+        replacement: Value the attribute holds inside the block.
+
+    Yields:
+        None: Control, with the replacement installed; the original is restored on exit.
+    """
+    original = getattr(owner, name)
+    setattr(owner, name, replacement)
+    try:
+        yield
+    finally:
+        setattr(owner, name, original)
+
+
+@contextlib.contextmanager
+def _environment_variable(name: str, value: str) -> Generator[None]:
+    """Set one environment variable for the duration of a ``with`` block.
+
+    Args:
+        name: Variable to set.
+        value: Value it holds inside the block.
+
+    Yields:
+        None: Control, with the variable set; its previous state is restored on exit.
+    """
+    previous = os.environ.get(name)
+    os.environ[name] = value
+    try:
+        yield
+    finally:
+        if previous is None:
+            del os.environ[name]
+        else:
+            os.environ[name] = previous
+
+
+def _launch_refused(url: str, *, browser: Path, width: int = 0, height: int = 0) -> bool:
+    """Stand in for a browser launch that the operating system refuses.
+
+    Args:
+        url: Address the window would have opened.
+        browser: Executable that would have been launched.
+        width: Requested window width.
+        height: Requested window height.
+
+    Returns:
+        bool: Always ``False``, as a failed launch reports.
+    """
+    del url, browser, width, height
+    return False
+
+
+def _no_browser_installed(override: Path | None = None) -> Path | None:
+    """Report that no browser can be found on this machine.
+
+    Args:
+        override: Ignored explicit browser path.
+
+    Returns:
+        Path | None: Always ``None``.
+    """
+    del override
+    return None
 
 
 class InstallRootsIncludePerUserProgramsTests(Assertions, unittest.TestCase):
@@ -41,7 +116,7 @@ class InstallRootsIncludePerUserProgramsTests(Assertions, unittest.TestCase):
 
     def test_local_appdata_programs_is_one_of_the_roots(self) -> None:
         """The per-user ``Programs`` directory must be a candidate root when ``LOCALAPPDATA`` is set."""
-        with mock.patch.dict(os.environ, {"LOCALAPPDATA": "C:\\Users\\example\\AppData\\Local"}):
+        with _environment_variable("LOCALAPPDATA", "C:\\Users\\example\\AppData\\Local"):
             roots = shell.install_roots()
         self.contains(Path("C:\\Users\\example\\AppData\\Local\\Programs"), roots, "the per-user Programs directory")
 
@@ -56,7 +131,7 @@ class FindBrowserResolvesOperaLauncherTests(Assertions, unittest.TestCase):
             opera_dir.mkdir()
             launcher = opera_dir / "launcher.exe"
             launcher.write_bytes(b"MZ")
-            with mock.patch.object(shell, "install_roots", return_value=(Path(tmp),)):
+            with _replaced_attribute(shell, "install_roots", lambda: (Path(tmp),)):
                 found = shell.find_browser()
         self.equal(found, launcher, "the browser find_browser located")
 
@@ -73,7 +148,7 @@ class FindBrowserResolvesOperaLauncherTests(Assertions, unittest.TestCase):
             opera_dir.mkdir()
             legacy = opera_dir / "opera.exe"
             legacy.write_bytes(b"MZ")
-            with mock.patch.object(shell, "install_roots", return_value=(Path(tmp),)):
+            with _replaced_attribute(shell, "install_roots", lambda: (Path(tmp),)):
                 found = shell.find_browser()
         self.equal(found, legacy, "the browser find_browser located")
 
@@ -97,7 +172,7 @@ class OpenShellOverrideDiagnosticTests(Assertions, unittest.TestCase):
             executable = Path(tmp) / "browser.exe"
             executable.write_bytes(b"MZ")
             out, err = StringIO(), StringIO()
-            with mock.patch.object(shell, "launch_window", return_value=False), redirect_stdout(out), redirect_stderr(err):
+            with _replaced_attribute(shell, "launch_window", _launch_refused), redirect_stdout(out), redirect_stderr(err):
                 opened = shell.open_shell(_TEST_URL, override=executable)
         self.falsy(opened, "open_shell's return for an override that fails to launch")
         self.contains(str(executable), err.getvalue(), "stderr naming the override whose launch failed")
@@ -105,7 +180,7 @@ class OpenShellOverrideDiagnosticTests(Assertions, unittest.TestCase):
     def test_ordinary_auto_detection_failure_carries_no_override_diagnostic(self) -> None:
         """Without an explicit override, the failure path must stay silent on stderr."""
         out, err = StringIO(), StringIO()
-        with mock.patch.object(shell, "find_browser", return_value=None), redirect_stdout(out), redirect_stderr(err):
+        with _replaced_attribute(shell, "find_browser", _no_browser_installed), redirect_stdout(out), redirect_stderr(err):
             opened = shell.open_shell(_TEST_URL)
         self.falsy(opened, "open_shell's return with no browser available at all")
         self.equal(err.getvalue(), "", "stderr must stay empty when no --browser override was given")

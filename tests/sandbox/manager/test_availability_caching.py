@@ -13,7 +13,6 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
 from intellicrack.sandbox.base import SandboxConfig
 from intellicrack.sandbox.manager import (
@@ -204,13 +203,15 @@ class TestIsAvailableCachesSuccess:
         ancient = datetime.now(UTC) - timedelta(days=365)
         _inject_cache(manager, "windows", AvailabilityCacheEntry(available=True, probed_at=ancient))
 
-        def counting_probe(sandbox_type: SandboxType) -> bool:
+        async def counting_probe(sandbox_type: SandboxType) -> bool:
+            await asyncio.sleep(0)
             probe_calls.append(sandbox_type)
             return True
 
+        setattr(manager, "_probe_type", counting_probe)
+
         async def run_test() -> list[SandboxType]:
-            with patch.object(manager, "_probe_type", side_effect=counting_probe):
-                return await manager.get_available_types()
+            return await manager.get_available_types()
 
         result = _run(run_test())
 
@@ -225,15 +226,17 @@ class TestIsAvailableCachesSuccess:
         manager = _make_manager()
         probe_calls: list[SandboxType] = []
 
-        def counting_probe(sandbox_type: SandboxType) -> bool:
+        async def counting_probe(sandbox_type: SandboxType) -> bool:
+            await asyncio.sleep(0)
             probe_calls.append(sandbox_type)
             return True
 
+        setattr(manager, "_probe_type", counting_probe)
+
         async def run_test() -> None:
-            with patch.object(manager, "_probe_type", side_effect=counting_probe):
-                await manager.get_available_types()
-                await manager.get_available_types()
-                await manager.get_available_types()
+            await manager.get_available_types()
+            await manager.get_available_types()
+            await manager.get_available_types()
 
         _run(run_test())
 
@@ -334,15 +337,17 @@ class TestIsAvailableReProbesFailureAfterTtl:
         manager = _make_manager()
         probe_calls: list[SandboxType] = []
 
-        def counting_probe(sandbox_type: SandboxType) -> bool:
+        async def counting_probe(sandbox_type: SandboxType) -> bool:
+            await asyncio.sleep(0)
             probe_calls.append(sandbox_type)
             return False
 
+        setattr(manager, "_probe_type", counting_probe)
+
         async def run_test() -> None:
-            with patch.object(manager, "_probe_type", side_effect=counting_probe):
-                await manager.get_available_types()
-                await manager.get_available_types()
-                await manager.get_available_types()
+            await manager.get_available_types()
+            await manager.get_available_types()
+            await manager.get_available_types()
 
         _run(run_test())
 
@@ -366,13 +371,15 @@ class TestIsAvailableReProbesFailureAfterTtl:
             AvailabilityCacheEntry(available=False, probed_at=expired_past),
         )
 
-        def counting_probe(sandbox_type: SandboxType) -> bool:
+        async def counting_probe(sandbox_type: SandboxType) -> bool:
+            await asyncio.sleep(0)
             probe_calls.append(sandbox_type)
             return False
 
+        setattr(manager, "_probe_type", counting_probe)
+
         async def run_test() -> list[SandboxType]:
-            with patch.object(manager, "_probe_type", side_effect=counting_probe):
-                return await manager.get_available_types()
+            return await manager.get_available_types()
 
         _run(run_test())
 
@@ -415,18 +422,20 @@ class TestInvalidateCacheForcesReProbe:
         manager = _make_manager()
         probe_calls: list[SandboxType] = []
 
-        def counting_probe(sandbox_type: SandboxType) -> bool:
+        async def counting_probe(sandbox_type: SandboxType) -> bool:
+            await asyncio.sleep(0)
             probe_calls.append(sandbox_type)
             return True
 
+        setattr(manager, "_probe_type", counting_probe)
+
         async def run_test() -> None:
-            with patch.object(manager, "_probe_type", side_effect=counting_probe):
-                await manager.get_available_types()
-                assert probe_calls.count("windows") == 1
+            await manager.get_available_types()
+            assert probe_calls.count("windows") == 1
 
-                manager.invalidate_availability_cache()
+            manager.invalidate_availability_cache()
 
-                await manager.get_available_types()
+            await manager.get_available_types()
 
         _run(run_test())
 
@@ -442,19 +451,21 @@ class TestInvalidateCacheForcesReProbe:
         manager = _make_manager()
         probe_calls: list[SandboxType] = []
 
-        def counting_probe(sandbox_type: SandboxType) -> bool:
+        async def counting_probe(sandbox_type: SandboxType) -> bool:
+            await asyncio.sleep(0)
             probe_calls.append(sandbox_type)
             return True
 
+        setattr(manager, "_probe_type", counting_probe)
+
         async def run_test() -> None:
-            with patch.object(manager, "_probe_type", side_effect=counting_probe):
-                await manager.get_available_types()
-                assert probe_calls.count("windows") == 1
-                assert probe_calls.count("qemu") == 1
+            await manager.get_available_types()
+            assert probe_calls.count("windows") == 1
+            assert probe_calls.count("qemu") == 1
 
-                manager.invalidate_availability_cache("windows")
+            manager.invalidate_availability_cache("windows")
 
-                await manager.get_available_types()
+            await manager.get_available_types()
 
         _run(run_test())
 

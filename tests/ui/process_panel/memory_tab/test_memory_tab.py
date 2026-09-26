@@ -11,9 +11,9 @@ fix and pass after it.
 
 from __future__ import annotations
 
+import asyncio
 import os
-from typing import TYPE_CHECKING, cast
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import pytest
 from PyQt6.QtWidgets import (
@@ -27,15 +27,164 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
 )
 
+from intellicrack.bridges.process import ProcessBridge
 from intellicrack.ui.panels import async_bridge as _async_bridge_mod
 from intellicrack.ui.panels.process_panel import memory_tab as _memory_tab_mod
 from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    import threading
+    from collections.abc import Callable, Coroutine, Iterator
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+
+_T = TypeVar("_T")
+
+
+async def _unreached_result[T](value: T) -> T:
+    """Return ``value``; the coroutine wrapping it is captured, never awaited.
+
+    Args:
+        value: Placeholder result the coroutine would resolve to.
+
+    Returns:
+        T: ``value`` unchanged.
+    """
+    await asyncio.sleep(0)
+    return value
+
+
+class _CallRecordingProcessBridge(ProcessBridge):
+    """Real ``ProcessBridge`` whose memory entry points only record their calls.
+
+    Each overridden method records the exact positional and keyword arguments
+    it received and returns a fresh, never-started coroutine, so a test can
+    assert the object handed to the dispatcher is precisely that method's
+    return value. :meth:`close_pending` closes every coroutine handed out so no
+    "never awaited" warning leaks from the capture.
+    """
+
+    def __init__(self) -> None:
+        """Initialize an unattached bridge with empty call/coroutine logs."""
+        super().__init__()
+        self.calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
+        self.returned: dict[str, list[Coroutine[Any, Any, Any]]] = {}
+
+    def _record(
+        self,
+        name: str,
+        args: tuple[object, ...],
+        kwargs: dict[str, object],
+        coro: Coroutine[Any, Any, _T],
+    ) -> Coroutine[Any, Any, _T]:
+        """Log a call and remember the coroutine it returns.
+
+        Args:
+            name: Bridge method name that was called.
+            args: Positional arguments the method received.
+            kwargs: Keyword arguments the method received.
+            coro: The coroutine being returned to the caller.
+
+        Returns:
+            Coroutine[Any, Any, _T]: ``coro`` unchanged.
+        """
+        self.calls.append((name, args, kwargs))
+        self.returned.setdefault(name, []).append(coro)
+        return coro
+
+    def calls_to(self, name: str) -> list[tuple[tuple[object, ...], dict[str, object]]]:
+        """Return the ``(args, kwargs)`` of every recorded call to ``name``.
+
+        Args:
+            name: Bridge method name to filter on.
+
+        Returns:
+            list[tuple[tuple[object, ...], dict[str, object]]]: Recorded calls.
+        """
+        return [(args, kwargs) for called, args, kwargs in self.calls if called == name]
+
+    def close_pending(self) -> None:
+        """Close every captured coroutine so none is reported as never awaited."""
+        for coros in self.returned.values():
+            for coro in coros:
+                coro.close()
+
+    def read_memory(self, address: int, size: int) -> Coroutine[Any, Any, str]:
+        """Record the call and return an unstarted coroutine.
+
+        Args:
+            address: Address the handler requested.
+            size: Byte count the handler requested.
+
+        Returns:
+            Coroutine[Any, Any, str]: Captured, never-awaited coroutine.
+        """
+        return self._record("read_memory", (address, size), {}, _unreached_result(""))
+
+    def write_memory(self, address: int, data: bytes) -> Coroutine[Any, Any, int]:
+        """Record the call and return an unstarted coroutine.
+
+        Args:
+            address: Address the handler requested.
+            data: Bytes the handler asked to write.
+
+        Returns:
+            Coroutine[Any, Any, int]: Captured, never-awaited coroutine.
+        """
+        return self._record("write_memory", (address, data), {}, _unreached_result(0))
+
+    def search_pattern(
+        self,
+        pattern: str,
+        start_address: int | None = None,
+        end_address: int | None = None,
+        cancel_event: threading.Event | None = None,
+        progress_callback: Callable[[int, int], None] | None = None,
+    ) -> Coroutine[Any, Any, list[int]]:
+        """Record the call, keeping which keywords were passed explicitly.
+
+        Args:
+            pattern: Byte pattern the handler searched for.
+            start_address: Start of the search range the handler passed.
+            end_address: End of the search range the handler passed.
+            cancel_event: Cancellation event the handler passed.
+            progress_callback: Progress callback the handler passed.
+
+        Returns:
+            Coroutine[Any, Any, list[int]]: Captured, never-awaited coroutine.
+        """
+        kwargs: dict[str, object] = {
+            "start_address": start_address,
+            "end_address": end_address,
+            "cancel_event": cancel_event,
+            "progress_callback": progress_callback,
+        }
+        return self._record("search_pattern", (pattern,), kwargs, _unreached_result(list[int]()))
+
+    def free(self, address: int) -> Coroutine[Any, Any, bool]:
+        """Record the call and return an unstarted coroutine.
+
+        Args:
+            address: Address the handler asked to free.
+
+        Returns:
+            Coroutine[Any, Any, bool]: Captured, never-awaited coroutine.
+        """
+        return self._record("free", (address,), {}, _unreached_result(value=True))
+
+
+@pytest.fixture
+def recording_bridge() -> Iterator[_CallRecordingProcessBridge]:
+    """Provide a call-recording ProcessBridge and close its captured coroutines afterwards.
+
+    Yields:
+        _CallRecordingProcessBridge: The recording bridge.
+    """
+    bridge = _CallRecordingProcessBridge()
+    yield bridge
+    bridge.close_pending()
 
 
 @pytest.fixture(scope="session")
@@ -425,7 +574,12 @@ class TestActionsDisabledHandlerNoDispatch:
     warning is shown and dispatch is skipped.
     """
 
-    def test_on_read_no_dispatch_when_unattached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_on_read_no_dispatch_when_unattached(
+        self,
+        tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """_on_read shows the 'Not Attached' warning and skips dispatch when _attached_pid is None.
 
         Patching the actual dispatch function the production code calls
@@ -437,9 +591,10 @@ class TestActionsDisabledHandlerNoDispatch:
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_bridge", recording_bridge)
         _set_private(tab, "_attached_pid", None)
 
         warning_calls: list[tuple[object, ...]] = []
@@ -468,7 +623,12 @@ class TestActionsDisabledHandlerNoDispatch:
         assert title == "Not Attached", f"Expected warning title 'Not Attached', got {title!r}"
         assert "Not attached to any process" in message, f"Expected 'Not attached to any process' in message, got {message!r}"
 
-    def test_on_read_dispatches_when_attached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_on_read_dispatches_when_attached(
+        self,
+        tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """_on_read dispatches the coroutine from bridge.read_memory with matching address kwarg.
 
         Asserts that (1) ``run_bridge_coroutine_logged`` is called with the
@@ -480,10 +640,10 @@ class TestActionsDisabledHandlerNoDispatch:
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(tab, "_bridge", mock_bridge)
+        _set_private(tab, "_bridge", recording_bridge)
         tab.set_attached_pid(1234)
 
         dispatch_args: list[tuple[object, ...]] = []
@@ -499,14 +659,19 @@ class TestActionsDisabledHandlerNoDispatch:
         _invoke(tab, "_on_read")
 
         assert dispatch_args, "run_bridge_coroutine_logged must be called when _attached_pid is set"
-        assert dispatch_args[0][0] is mock_bridge.read_memory.return_value, (
+        assert dispatch_args[0][0] is recording_bridge.returned["read_memory"][0], (
             f"First positional argument must be the coroutine returned by bridge.read_memory; got {dispatch_args[0][0]!r}"
         )
         assert dispatch_kwargs[0].get("address") == hex(0x1000), (
             f"address kwarg must equal {hex(0x1000)!r}; got {dispatch_kwargs[0].get('address')!r}"
         )
 
-    def test_on_write_no_dispatch_when_unattached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_on_write_no_dispatch_when_unattached(
+        self,
+        tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """_on_write shows the 'Not Attached' warning and skips dispatch when _attached_pid is None.
 
         Patching the production dispatch function proves the guard on
@@ -516,9 +681,10 @@ class TestActionsDisabledHandlerNoDispatch:
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_bridge", recording_bridge)
         _set_private(tab, "_attached_pid", None)
 
         warning_calls: list[tuple[object, ...]] = []
@@ -548,7 +714,12 @@ class TestActionsDisabledHandlerNoDispatch:
         assert title == "Not Attached", f"Expected warning title 'Not Attached', got {title!r}"
         assert "Not attached to any process" in message, f"Expected 'Not attached to any process' in message, got {message!r}"
 
-    def test_on_write_dispatches_when_attached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_on_write_dispatches_when_attached(
+        self,
+        tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """_on_write dispatches the coroutine from bridge.write_memory with matching address kwarg.
 
         Asserts that (1) ``run_bridge_coroutine_logged`` is called with the
@@ -560,10 +731,10 @@ class TestActionsDisabledHandlerNoDispatch:
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(tab, "_bridge", mock_bridge)
+        _set_private(tab, "_bridge", recording_bridge)
         tab.set_attached_pid(1234)
 
         dispatch_args: list[tuple[object, ...]] = []
@@ -581,14 +752,19 @@ class TestActionsDisabledHandlerNoDispatch:
         _invoke(tab, "_on_write")
 
         assert dispatch_args, "run_bridge_coroutine_logged must be called when _attached_pid is set"
-        assert dispatch_args[0][0] is mock_bridge.write_memory.return_value, (
+        assert dispatch_args[0][0] is recording_bridge.returned["write_memory"][0], (
             f"First positional argument must be the coroutine returned by bridge.write_memory; got {dispatch_args[0][0]!r}"
         )
         assert dispatch_kwargs[0].get("address") == hex(0x1000), (
             f"address kwarg must equal {hex(0x1000)!r}; got {dispatch_kwargs[0].get('address')!r}"
         )
 
-    def test_on_search_no_dispatch_when_unattached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_on_search_no_dispatch_when_unattached(
+        self,
+        tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """_on_search shows the 'Not Attached' warning and skips dispatch when _attached_pid is None.
 
         The test patches the actual ``run_bridge_coroutine_logged`` function
@@ -597,9 +773,10 @@ class TestActionsDisabledHandlerNoDispatch:
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_bridge", recording_bridge)
         _set_private(tab, "_attached_pid", None)
 
         warning_calls: list[tuple[object, ...]] = []
@@ -628,7 +805,12 @@ class TestActionsDisabledHandlerNoDispatch:
         assert title == "Not Attached", f"Expected warning title 'Not Attached', got {title!r}"
         assert "Not attached to any process" in message, f"Expected 'Not attached to any process' in message, got {message!r}"
 
-    def test_on_search_dispatches_when_attached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_on_search_dispatches_when_attached(
+        self,
+        tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """_on_search dispatches the coroutine from bridge.search_pattern with matching pattern_length kwarg.
 
         Asserts that (1) ``run_bridge_coroutine_logged`` is called with the
@@ -640,10 +822,10 @@ class TestActionsDisabledHandlerNoDispatch:
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(tab, "_bridge", mock_bridge)
+        _set_private(tab, "_bridge", recording_bridge)
         tab.set_attached_pid(1234)
 
         dispatch_args: list[tuple[object, ...]] = []
@@ -660,7 +842,7 @@ class TestActionsDisabledHandlerNoDispatch:
         _invoke(tab, "_on_search")
 
         assert dispatch_args, "run_bridge_coroutine_logged must be called when _attached_pid is set"
-        assert dispatch_args[0][0] is mock_bridge.search_pattern.return_value, (
+        assert dispatch_args[0][0] is recording_bridge.returned["search_pattern"][0], (
             f"First positional argument must be the coroutine returned by bridge.search_pattern; got {dispatch_args[0][0]!r}"
         )
         assert dispatch_kwargs[0].get("pattern_length") == len(pattern), (
@@ -671,16 +853,22 @@ class TestActionsDisabledHandlerNoDispatch:
 class TestSearchStatusResetsOnFailure:
     """F-0006: _on_search 'Searching...' status resets on failure via _on_error."""
 
-    def test_search_status_resets_on_failure(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_search_status_resets_on_failure(
+        self,
+        tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """When the bridge search fails, _search_status is set to an error string.
 
         The status must not remain 'Searching...' after the error callback fires.
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_bridge", recording_bridge)
         tab.set_attached_pid(1234)
 
         captured_on_error: list[object] = []
@@ -714,14 +902,20 @@ class TestSearchStatusResetsOnFailure:
 class TestFreeRemovesAllocationRow:
     """F-0007: _on_free removes the matching Allocated row instead of adding a Freed row."""
 
-    def test_free_removes_allocation_row(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_free_removes_allocation_row(
+        self,
+        tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """After a successful free, the matching Allocated row is removed from _alloc_log.
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_bridge", recording_bridge)
         tab.set_attached_pid(1234)
 
         table = _table(tab, "_alloc_log")
@@ -765,14 +959,20 @@ class TestFreeRemovesAllocationRow:
             action_item = table.item(row, 3)
             assert action_item is None or action_item.text() != "Freed", "Found a 'Freed' row in _alloc_log — F-0007 not fixed"
 
-    def test_free_does_not_add_freed_row(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_free_does_not_add_freed_row(
+        self,
+        tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """_on_free success callback never adds a new row to _alloc_log.
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_bridge", recording_bridge)
         tab.set_attached_pid(1234)
 
         table = _table(tab, "_alloc_log")
@@ -813,15 +1013,17 @@ class TestInvalidAddressSurfacesError:
     def test_invalid_protect_address_shows_messagebox(
         self,
         tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """_on_protect shows a QMessageBox.critical for an unparseable address.
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_bridge", recording_bridge)
         tab.set_attached_pid(1234)
 
         critical_calls: list[tuple[object, ...]] = []
@@ -840,15 +1042,17 @@ class TestInvalidAddressSurfacesError:
     def test_invalid_free_address_shows_messagebox(
         self,
         tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """_on_free shows a QMessageBox.critical for an unparseable address.
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_bridge", recording_bridge)
         tab.set_attached_pid(1234)
 
         critical_calls: list[tuple[object, ...]] = []
@@ -867,15 +1071,17 @@ class TestInvalidAddressSurfacesError:
     def test_invalid_protect_address_message_contains_input(
         self,
         tab: MemoryTab,
+        recording_bridge: _CallRecordingProcessBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """The error message for an invalid protect address contains the bad input text.
 
         Args:
             tab: MemoryTab fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_bridge", recording_bridge)
         tab.set_attached_pid(1234)
 
         messages: list[str] = []
