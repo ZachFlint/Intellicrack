@@ -199,6 +199,9 @@ jobs:
             Write-Host "built $p ($((Get-Item $p).Length) bytes)"
           }
         timeout-minutes: 20
+      - name: Fix PyQt6 ICU DLL resolution
+        shell: pwsh
+        run: ./scripts/fix-pyqt6-icu.ps1
       - name: Test with pytest
         run: |
           pixi run pytest tests/ -v --cov=src/intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
