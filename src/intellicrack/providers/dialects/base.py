@@ -135,12 +135,15 @@ class ToolCallFragment:
         call_id: The provider's id for the call, present on the first fragment.
         name: The wire function name, present on the first fragment.
         arguments: A partial JSON argument fragment to append.
+        thought_signature: The base64 signature a provider bound to the call,
+            which must be echoed back when the call is replayed.
     """
 
     token: str
     call_id: str | None = None
     name: str | None = None
     arguments: str | None = None
+    thought_signature: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -483,9 +486,7 @@ def merge_auth_headers(inferred: Mapping[str, str], custom: Mapping[str, str]) -
     Returns:
         dict[str, str]: The headers to send.
     """
-    if custom_auth := {
-        name for name in custom if name.strip().lower() in AUTH_HEADER_NAMES
-    }:
+    if custom_auth := {name for name in custom if name.strip().lower() in AUTH_HEADER_NAMES}:
         _logger.info("inferred_auth_header_suppressed", overridden_by=sorted(custom_auth))
         merged: dict[str, str] = {}
     else:

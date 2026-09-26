@@ -128,7 +128,8 @@ class TestThoughtSignatureRoundTrip:
         function-call turn back to Gemini for the tool-result continuation
         (turn 2, built here via ``convert_messages_to_provider_format``).
         The rebuilt ``function_call`` part must carry the *same*
-        ``thought_signature`` bytes Gemini originally attached, or Gemini
+        ``thought_signature`` Gemini originally attached (as its base64 JSON
+        form, which google-genai validates back into the same bytes), or Gemini
         rejects the continuation with ``400 INVALID_ARGUMENT: Function call
         is missing a thought_signature``.
 
@@ -157,7 +158,8 @@ class TestThoughtSignatureRoundTrip:
         fc_part = parts[0]
 
         assert "thought_signature" in fc_part
-        assert fc_part["thought_signature"] == _RAW_SIGNATURE
+        assert fc_part["thought_signature"] == base64.b64encode(_RAW_SIGNATURE).decode("ascii")
+        assert Part.model_validate(fc_part).thought_signature == _RAW_SIGNATURE
 
         fc_dict = cast("dict[str, object]", fc_part["function_call"])
         assert fc_dict["name"] == to_wire_name("hex_editor.open_file")
