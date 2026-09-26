@@ -11,7 +11,6 @@ Keychain, or Linux Secret Service via the keyring library).
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
 import secrets
 import threading
@@ -19,7 +18,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, Final, cast
+from typing import TYPE_CHECKING, ClassVar, Final, TypeGuard, cast
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import IntellicrackError, ProviderCredentials
@@ -117,12 +116,13 @@ class ChunkManifest:
     Attributes:
         generation: Random tag shared by every chunk written together, so a rewrite never mixes chunks from two writes.
         count: Number of chunks the value was split into.
-        digest: SHA-256 of the whole value, checked after reassembly.
+        length: Number of characters in the whole value, checked after reassembly. Nothing derived from the secret's content is
+            stored, so the manifest reveals no more than its size.
     """
 
     generation: str
     count: int
-    digest: str
+    length: int
 
     def serialize(self) -> str:
         """Render the manifest as the JSON stored under the credential's own key.
@@ -134,7 +134,7 @@ class ChunkManifest:
             _CHUNK_MANIFEST_MARKER: _CHUNK_MANIFEST_VERSION,
             "generation": self.generation,
             "count": self.count,
-            "sha256": self.digest,
+            "length": self.length,
         })
 
     @staticmethod
@@ -160,10 +160,10 @@ class ChunkManifest:
             return None
         generation = fields.get("generation")
         count = fields.get("count")
-        digest = fields.get("sha256")
-        if not isinstance(generation, str) or not isinstance(count, int) or isinstance(count, bool) or not isinstance(digest, str):
+        length = fields.get("length")
+        if not isinstance(generation, str) or not _is_count(count) or not _is_count(length):
             return None
-        return ChunkManifest(generation=generation, count=count, digest=digest)
+        return ChunkManifest(generation=generation, count=count, length=length)
 
     def chunk_key(self, key: str, index: int) -> str:
         """Name the keyring entry one chunk is held under.
@@ -224,16 +224,16 @@ def split_credential_blob(value: str, max_bytes: int = CRED_MAX_CREDENTIAL_BLOB_
     return pieces
 
 
-def _value_digest(value: str) -> str:
-    """Hash a value for the reassembly check.
+def _is_count(value: object) -> TypeGuard[int]:
+    """Report whether a manifest field holds a non-negative integer.
 
     Args:
-        value: The whole credential value.
+        value: The decoded field.
 
     Returns:
-        str: Hex SHA-256 of its UTF-8 encoding.
+        TypeGuard[int]: ``True`` for an ``int`` that is not a ``bool`` and not negative.
     """
-    return hashlib.sha256(value.encode("utf-8", "surrogatepass")).hexdigest()
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
 class CredentialSource(Enum):
@@ -475,7 +475,7 @@ class CredentialStore:
             str | None: The whole value, or ``None`` when nothing is stored under ``key``.
 
         Raises:
-            KeyringReadError: If a chunk the manifest names is missing or the reassembled value does not match the recorded digest.
+            KeyringReadError: If a chunk the manifest names is missing or the reassembled value is not the recorded length.
         """
         primary: object = keyring.get_password(self.SERVICE_NAME, key)
         if primary is None:
@@ -492,8 +492,8 @@ class CredentialStore:
                 raise KeyringReadError(message)
             pieces.append(str(piece))
         value = "".join(pieces)
-        if _value_digest(value) != manifest.digest:
-            message = f"credential {key!r} was reassembled from {manifest.count} parts but does not match its recorded digest"
+        if len(value) != manifest.length:
+            message = f"credential {key!r} was reassembled from {manifest.count} parts but is not its recorded length"
             raise KeyringReadError(message)
         return value
 
@@ -523,7 +523,7 @@ class CredentialStore:
             keyring.set_password(self.SERVICE_NAME, key, value)
         else:
             pieces = split_credential_blob(value)
-            manifest = ChunkManifest(generation=secrets.token_hex(_CHUNK_GENERATION_BYTES), count=len(pieces), digest=_value_digest(value))
+            manifest = ChunkManifest(generation=secrets.token_hex(_CHUNK_GENERATION_BYTES), count=len(pieces), length=len(value))
             for index, piece in enumerate(pieces):
                 keyring.set_password(self.SERVICE_NAME, manifest.chunk_key(key, index), piece)
             keyring.set_password(self.SERVICE_NAME, key, manifest.serialize())

@@ -16,9 +16,11 @@ from __future__ import annotations
 import asyncio
 import base64
 import configparser
+import hashlib
+import json
 import sys
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final, cast
 
 import keyring
 import pytest
@@ -51,9 +53,15 @@ if TYPE_CHECKING:
 
     from keyring.backend import KeyringBackend
 
+    from tests._helpers.private_keyring import SecretBackend
+
 
 _LARGE_SECRET_CHARS = 9000
 """Well past one blob: about 18 KB once encoded as UTF-16."""
+
+
+_MANIFEST_MARKER_FIELD: Final[str] = "intellicrack_chunked_credential"
+"""Field that marks a stored entry as a chunk manifest."""
 
 
 def _isolated_store(backend: KeyringBackend, monkeypatch: pytest.MonkeyPatch) -> Iterator[CredentialStore]:
@@ -152,7 +160,7 @@ class TestSplitting:
 
     def test_manifest_round_trips(self) -> None:
         """A manifest parses back to itself and an ordinary value is not mistaken for one."""
-        manifest = ChunkManifest(generation="0a1b2c3d", count=3, digest="ff" * 32)
+        manifest = ChunkManifest(generation="0a1b2c3d", count=3, length=3000)
         assert ChunkManifest.parse(manifest.serialize()) == manifest
         assert ChunkManifest.parse('{"api_key": "x"}') is None
 
@@ -260,6 +268,47 @@ class TestReadFailuresAreReported:
         sized_backend.delete_password(sized_store.SERVICE_NAME, manifest.chunk_key(key, 1))
         with pytest.raises(KeyringReadError, match="part 1 is missing"):
             asyncio.run(sized_store.get_secret("torn"))
+
+    def test_shortened_chunk_raises(self, sized_store: CredentialStore, sized_backend: CredentialManagerSizedKeyring) -> None:
+        """A chunk rewritten shorter fails the reassembly check instead of reading as a valid secret.
+
+        Args:
+            sized_store: Store over the Credential-Manager-sized keyring.
+            sized_backend: The backend, edited directly.
+        """
+        key = _key(sized_store, "short")
+        asyncio.run(sized_store.set("short", ProviderCredentials(api_key="S" * _LARGE_SECRET_CHARS)))
+        manifest = ChunkManifest.parse(sized_backend.get_password(sized_store.SERVICE_NAME, key) or "")
+        assert manifest is not None
+        chunk_key = manifest.chunk_key(key, 1)
+        original = sized_backend.get_password(sized_store.SERVICE_NAME, chunk_key)
+        assert original is not None
+        cast("SecretBackend", sized_backend).set_password(sized_store.SERVICE_NAME, chunk_key, original[:-7])
+        with pytest.raises(KeyringReadError, match="not its recorded length"):
+            asyncio.run(sized_store.get_secret("short"))
+
+    def test_manifest_holds_nothing_derived_from_the_secret(
+        self,
+        sized_store: CredentialStore,
+        sized_backend: CredentialManagerSizedKeyring,
+    ) -> None:
+        """The manifest stores only its generation, part count and length -- no hash of the secret.
+
+        An unsalted digest of the secret beside its chunks would be a fast
+        offline guess-checker for anyone who can read the manifest.
+
+        Args:
+            sized_store: Store over the Credential-Manager-sized keyring.
+            sized_backend: The backend, edited directly.
+        """
+        secret = "sk-" + "Q" * _LARGE_SECRET_CHARS
+        asyncio.run(sized_store.set("plain", ProviderCredentials(api_key=secret)))
+        stored = sized_backend.get_password(sized_store.SERVICE_NAME, _key(sized_store, "plain"))
+        assert stored is not None
+        fields = cast("dict[str, object]", json.loads(stored))
+        assert set(fields) == {_MANIFEST_MARKER_FIELD, "generation", "count", "length"}
+        for algorithm in ("md5", "sha1", "sha256", "sha512", "blake2b"):
+            assert hashlib.new(algorithm, secret.encode()).hexdigest() not in stored
 
     def test_undecodable_entry_raises_mcp_auth_error(
         self,
