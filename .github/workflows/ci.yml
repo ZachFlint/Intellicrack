@@ -7,16 +7,18 @@ on:
     branches: [main]
 permissions:
   contents: read
-  checks: write
-  pull-requests: write
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   setup:
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.9.5
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -26,21 +28,26 @@ jobs:
       - name: Generate requirements.txt for Dependabot
         shell: pwsh
         run: |
-          pixi list --frozen --json | ConvertFrom-Json | Where-Object { $_.kind -eq 'pypi' } | Sort-Object name | ForEach-Object {
-            if ($_.version) {
-              "$($_.name)==$($_.version)"
-            } else {
-              $_.name
-            }
-          } | Out-File -FilePath requirements.txt -Encoding utf8
+          $ErrorActionPreference = 'Stop'
+          Remove-Item requirements.txt -ErrorAction SilentlyContinue
+          pixi run python scripts/generate_requirements.py
+          if ($LASTEXITCODE -ne 0) { throw 'generate_requirements.py failed' }
+          git diff --exit-code -- requirements.txt
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host '::error::requirements.txt is out of sync with pixi.lock/pyproject.toml. Run scripts/generate_requirements.py (or let the pre-commit hook do it) and commit the result -- do not edit requirements.txt by hand.'
+            exit 1
+          }
         timeout-minutes: 5
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       python: ${{ steps.filter.outputs.python }}
       x64dbg: ${{ steps.filter.outputs.x64dbg }}
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
       - uses: dorny/paths-filter@v4.0.3
         id: filter
         with:
@@ -62,11 +69,12 @@ jobs:
     needs: [setup]
     if: success() || failure()
     continue-on-error: true
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.9.5
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -75,17 +83,18 @@ jobs:
       - name: Lint with ruff
         run: |
           pixi run ruff check src/ tests/ --output-format=github
-          pixi run ruff format src/ tests/
+          pixi run ruff format --check --diff src/ tests/
   python-security:
     runs-on: windows-latest
     needs: [setup]
     if: success() || failure()
     continue-on-error: true
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.9.5
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -115,7 +124,7 @@ jobs:
               print("No bandit report found")
       - name: Upload bandit report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: bandit-report
           path: bandit-report.json
@@ -124,11 +133,12 @@ jobs:
     needs: [setup]
     if: success() || failure()
     continue-on-error: true
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.9.5
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -158,11 +168,12 @@ jobs:
     runs-on: windows-latest
     needs: [setup]
     if: success() || failure()
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.9.5
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -176,11 +187,12 @@ jobs:
     needs: [setup, changes]
     if: (success() || failure()) && (needs.changes.outputs.python == 'true' || github.event_name == 'workflow_dispatch')
     continue-on-error: true
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.9.5
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -232,7 +244,7 @@ jobs:
           PYTHONUTF8: 1
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: test-results
           path: |
@@ -241,7 +253,7 @@ jobs:
             coverage.xml
       - name: Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7.1.1
         with:
           files: ./coverage.xml
           flags: unittests
@@ -261,8 +273,9 @@ jobs:
     runs-on: windows-latest
     needs: [setup, changes]
     if: (success() || failure()) && (needs.changes.outputs.x64dbg == 'true' || github.event_name == 'workflow_dispatch')
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
@@ -301,7 +314,7 @@ jobs:
           }
       - name: Upload plugin artifacts
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: x64dbg-bridge-plugins
           path: |

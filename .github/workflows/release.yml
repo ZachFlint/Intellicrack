@@ -24,16 +24,16 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
-      - uses: prefix-dev/setup-pixi@v0.9.5
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           pixi-version: latest
 
       - name: Verify tag matches project version
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'false')
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -111,19 +111,22 @@ jobs:
           }
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: release-assets
           path: release-assets/*
           if-no-files-found: error
 
       - name: Publish GitHub release
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'false')
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
+          if ($env:GITHUB_REF_TYPE -ne 'tag') {
+            throw "manual publish requires running this workflow from an existing version tag ref (got ref type '$env:GITHUB_REF_TYPE', ref '$env:GITHUB_REF_NAME'). Re-run 'Run workflow' with a tag selected under 'Use workflow from', or use dry_run=true to just build artifacts."
+          }
           $assets = @(Get-ChildItem release-assets -File | ForEach-Object { $_.FullName })
           if ($assets.Count -eq 0) { throw 'no release assets to publish' }
           $prerelease = if ($env:GITHUB_REF_NAME -match '(a|b|rc|\.dev)\d+$') { '--prerelease' } else { '' }

@@ -6,6 +6,9 @@ on:
     branches:
       - main
       - 'releases/*'
+concurrency:
+  group: qodana-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   qodana:
     runs-on: windows-latest
@@ -16,11 +19,11 @@ jobs:
       pull-requests: write
       checks: write
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.9.5
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
