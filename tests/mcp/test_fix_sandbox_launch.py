@@ -227,10 +227,10 @@ class TestStatedLimitations:
 
     def test_allowed_domains_are_reported_as_not_enforced(self) -> None:
         """Listing domains does not claim network confinement."""
-        limitations = sandbox_limitations(_sandbox(Path("C:\\work"), domains=("api.example.com",)))
-        network = limitations[0]
-        assert "not enforced" in network
-        assert "api.example.com" in network
+        limitations = sandbox_limitations(_sandbox(Path("C:\\work"), domains=("models.internal", "registry.internal")))
+        assert limitations[0] == (
+            "Network access is not restricted: allowedDomains (models.internal, registry.internal) is recorded only and is not enforced."
+        )
 
     def test_disabled_sandbox_claims_nothing(self) -> None:
         """A disabled sandbox has no limitations to state because it claims nothing."""
