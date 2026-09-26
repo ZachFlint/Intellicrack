@@ -100,7 +100,9 @@ _LISTING: Final[dict[str, Any]] = {
             capabilities=_capabilities(adaptive=True, enabled=False, effort_levels=("low", "medium", "high", "xhigh", "max")),
         ),
         _model_entry(
-            "claude-haiku-4-5", max_input_tokens=200_000, capabilities=_capabilities(adaptive=False, enabled=True, effort_levels=())
+            "claude-haiku-4-5",
+            max_input_tokens=200_000,
+            capabilities=_capabilities(adaptive=False, enabled=True, effort_levels=()),
         ),
         _model_entry(
             "claude-sonnet-4-5",
@@ -187,7 +189,10 @@ async def _anthropic(server: ScriptedHTTPServer) -> AnthropicProvider:
 
 
 async def _sent_thinking(
-    provider: AnthropicProvider | ConfigurableProvider, server: ScriptedHTTPServer, model: str, budget: int
+    provider: AnthropicProvider | ConfigurableProvider,
+    server: ScriptedHTTPServer,
+    model: str,
+    budget: int,
 ) -> dict[str, Any]:
     """Stream one thinking turn and return the body the endpoint received.
 
@@ -226,7 +231,10 @@ async def _sent_thinking(
     ],
 )
 async def test_current_models_receive_adaptive_thinking_with_effort(
-    server: ScriptedHTTPServer, model: str, budget: int, effort: str
+    server: ScriptedHTTPServer,
+    model: str,
+    budget: int,
+    effort: str,
 ) -> None:
     """Opus 4.6+, Sonnet 4.6+/5 and Fable get adaptive thinking and an effort level, never a budget."""
     provider = await _anthropic(server)
