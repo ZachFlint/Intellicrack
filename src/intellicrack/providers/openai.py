@@ -89,6 +89,9 @@ _OPENAI_CHAT_ERRORS = OpenAIErrorMessages(
 _FIXED_REASONING_TEMPERATURE: float = 1.0
 """The only temperature a model that rejects sampling control will accept."""
 
+_NON_CHAT_MODEL_MARKERS: frozenset[str] = frozenset({"realtime", "audio", "transcribe", "tts", "diarize"})
+"""Model-id segments naming a speech or realtime model, which Chat Completions and Responses turns cannot drive."""
+
 _RESPONSES_PATH: str = "/responses"
 """Path of the Responses endpoint, relative to the client's base URL."""
 
@@ -381,8 +384,12 @@ class OpenAIProvider(LLMProviderBase):
             "code-cushman-",
             "sora-",
             "gpt-image-",
+            "computer-use-",
         )
-        return not model_id.startswith(non_chat_prefixes)
+        lowered = model_id.lower()
+        if lowered.startswith(non_chat_prefixes):
+            return False
+        return not any(marker in lowered.split("-") for marker in _NON_CHAT_MODEL_MARKERS)
 
     @staticmethod
     def _infer_context_window(model_id: str) -> int:
