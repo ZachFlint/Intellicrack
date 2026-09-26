@@ -24,9 +24,10 @@ any out-of-range match. No mocking is involved in that scan: the bridge, the
 scratch memory, and the Qt async dispatch are all real.
 
 ``TestInvalidAddressRangeRejected`` and
-``TestEmptyBoundsDispatchUnboundedSearch`` cover the fast, mock-backed
-wiring paths: invalid start/end text must block dispatch with an inline
-error, ``start >= end`` must be rejected, and empty fields must still reach
+``TestEmptyBoundsDispatchUnboundedSearch`` cover the fast wiring paths
+against a call-recording ``ProcessBridge`` subclass: invalid start/end text
+must block dispatch with an inline error, ``start >= end`` must be
+rejected, and empty fields must still reach
 the bridge as ``start_address=None, end_address=None`` (today's unbounded
 behavior, preserved).
 """
@@ -38,8 +39,7 @@ import ctypes
 import os
 import sys
 import time
-from typing import TYPE_CHECKING, Final
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING, Any, Final, TypeVar
 
 import pytest
 
@@ -49,11 +49,125 @@ from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine, Generator
+    import threading
+    from collections.abc import Callable, Coroutine, Generator, Iterator
 
     from PyQt6.QtWidgets import QApplication
 
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
+
+
+_T = TypeVar("_T")
+
+
+async def _unreached_result[T](value: T) -> T:
+    """Return ``value``; the coroutine wrapping it is captured, never awaited.
+
+    Args:
+        value: Placeholder result the coroutine would resolve to.
+
+    Returns:
+        T: ``value`` unchanged.
+    """
+    await asyncio.sleep(0)
+    return value
+
+
+class _CallRecordingProcessBridge(ProcessBridge):
+    """Real ``ProcessBridge`` whose memory entry points only record their calls.
+
+    Each overridden method records the exact positional and keyword arguments
+    it received and returns a fresh, never-started coroutine, so a test can
+    assert the object handed to the dispatcher is precisely that method's
+    return value. :meth:`close_pending` closes every coroutine handed out so no
+    "never awaited" warning leaks from the capture.
+    """
+
+    def __init__(self) -> None:
+        """Initialize an unattached bridge with empty call/coroutine logs."""
+        super().__init__()
+        self.calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
+        self.returned: dict[str, list[Coroutine[Any, Any, Any]]] = {}
+
+    def _record(
+        self,
+        name: str,
+        args: tuple[object, ...],
+        kwargs: dict[str, object],
+        coro: Coroutine[Any, Any, _T],
+    ) -> Coroutine[Any, Any, _T]:
+        """Log a call and remember the coroutine it returns.
+
+        Args:
+            name: Bridge method name that was called.
+            args: Positional arguments the method received.
+            kwargs: Keyword arguments the method received.
+            coro: The coroutine being returned to the caller.
+
+        Returns:
+            Coroutine[Any, Any, _T]: ``coro`` unchanged.
+        """
+        self.calls.append((name, args, kwargs))
+        self.returned.setdefault(name, []).append(coro)
+        return coro
+
+    def calls_to(self, name: str) -> list[tuple[tuple[object, ...], dict[str, object]]]:
+        """Return the ``(args, kwargs)`` of every recorded call to ``name``.
+
+        Args:
+            name: Bridge method name to filter on.
+
+        Returns:
+            list[tuple[tuple[object, ...], dict[str, object]]]: Recorded calls.
+        """
+        return [(args, kwargs) for called, args, kwargs in self.calls if called == name]
+
+    def close_pending(self) -> None:
+        """Close every captured coroutine so none is reported as never awaited."""
+        for coros in self.returned.values():
+            for coro in coros:
+                coro.close()
+
+    def search_pattern(
+        self,
+        pattern: str,
+        start_address: int | None = None,
+        end_address: int | None = None,
+        cancel_event: threading.Event | None = None,
+        progress_callback: Callable[[int, int], None] | None = None,
+    ) -> Coroutine[Any, Any, list[int]]:
+        """Record the call, keeping which keywords were passed explicitly.
+
+        Args:
+            pattern: Byte pattern the handler searched for.
+            start_address: Start of the search range the handler passed.
+            end_address: End of the search range the handler passed.
+            cancel_event: Cancellation event the handler passed.
+            progress_callback: Progress callback the handler passed.
+
+        Returns:
+            Coroutine[Any, Any, list[int]]: Captured, never-awaited coroutine.
+        """
+        kwargs: dict[str, object] = {
+            "start_address": start_address,
+            "end_address": end_address,
+            "cancel_event": cancel_event,
+            "progress_callback": progress_callback,
+        }
+        return self._record("search_pattern", (pattern,), kwargs, _unreached_result(list[int]()))
+
+
+@pytest.fixture
+def recording_bridge() -> Iterator[_CallRecordingProcessBridge]:
+    """Provide a call-recording ProcessBridge and close its captured coroutines afterwards.
+
+    Yields:
+        _CallRecordingProcessBridge: The recording bridge.
+    """
+    bridge = _CallRecordingProcessBridge()
+    yield bridge
+    bridge.close_pending()
+
 
 _REGION_SIZE: Final[int] = 0x100000
 _NEAR_OFFSET: Final[int] = 0x10000
@@ -283,17 +397,19 @@ class TestInvalidAddressRangeRejected:
     def test_invalid_start_address_blocks_dispatch_and_shows_inline_error(
         self,
         qapp: QApplication,
+        recording_bridge: _CallRecordingProcessBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """An unparseable Start field must not dispatch and must show an inline error.
 
         Args:
             qapp: Session QApplication fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
         assert qapp is not None
         t = MemoryTab()
-        t.set_bridge(MagicMock())
+        t.set_bridge(recording_bridge)
         t.set_attached_pid(1234)
         monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
 
@@ -309,17 +425,19 @@ class TestInvalidAddressRangeRejected:
     def test_invalid_end_address_blocks_dispatch_and_shows_inline_error(
         self,
         qapp: QApplication,
+        recording_bridge: _CallRecordingProcessBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """An unparseable End field must not dispatch and must show an inline error.
 
         Args:
             qapp: Session QApplication fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
         assert qapp is not None
         t = MemoryTab()
-        t.set_bridge(MagicMock())
+        t.set_bridge(recording_bridge)
         t.set_attached_pid(1234)
         monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
 
@@ -336,17 +454,19 @@ class TestInvalidAddressRangeRejected:
     def test_start_greater_than_end_blocks_dispatch_with_clear_message(
         self,
         qapp: QApplication,
+        recording_bridge: _CallRecordingProcessBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """``start > end`` (both valid hex) must not dispatch and must explain the rejection.
 
         Args:
             qapp: Session QApplication fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
         assert qapp is not None
         t = MemoryTab()
-        t.set_bridge(MagicMock())
+        t.set_bridge(recording_bridge)
         t.set_attached_pid(1234)
         monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
 
@@ -364,17 +484,19 @@ class TestInvalidAddressRangeRejected:
     def test_start_equal_to_end_blocks_dispatch(
         self,
         qapp: QApplication,
+        recording_bridge: _CallRecordingProcessBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """``start == end`` (both valid hex) must not dispatch a zero-width range.
 
         Args:
             qapp: Session QApplication fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
         assert qapp is not None
         t = MemoryTab()
-        t.set_bridge(MagicMock())
+        t.set_bridge(recording_bridge)
         t.set_attached_pid(1234)
         monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
 
@@ -389,19 +511,24 @@ class TestInvalidAddressRangeRejected:
 class TestEmptyBoundsDispatchUnboundedSearch:
     """Leaving both address fields empty must preserve today's unbounded behavior."""
 
-    def test_empty_bounds_reach_bridge_as_none(self, qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_empty_bounds_reach_bridge_as_none(
+        self,
+        qapp: QApplication,
+        recording_bridge: _CallRecordingProcessBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """With Start/End left empty, ``search_pattern`` must be called with both bounds ``None``.
 
         Args:
             qapp: Session QApplication fixture.
+            recording_bridge: Call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
         assert qapp is not None
         monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", lambda *_a, **_k: None)
 
         t = MemoryTab()
-        mock_bridge = MagicMock()
-        t.set_bridge(mock_bridge)
+        t.set_bridge(recording_bridge)
         t.set_attached_pid(1234)
 
         t._search_pattern.setText("90 90")
@@ -409,8 +536,9 @@ class TestEmptyBoundsDispatchUnboundedSearch:
         t._search_end_addr.setText("")
         t._on_search()
 
-        mock_bridge.search_pattern.assert_called_once()
-        call_kwargs = mock_bridge.search_pattern.call_args.kwargs
+        search_calls = recording_bridge.calls_to("search_pattern")
+        assert len(search_calls) == 1, f"search_pattern must be called exactly once; got {len(search_calls)} call(s)"
+        _call_args, call_kwargs = search_calls[0]
         assert "start_address" in call_kwargs, "start_address must be passed through explicitly, even when empty"
         assert "end_address" in call_kwargs, "end_address must be passed through explicitly, even when empty"
         assert call_kwargs["start_address"] is None

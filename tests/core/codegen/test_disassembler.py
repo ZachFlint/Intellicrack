@@ -21,11 +21,11 @@ from __future__ import annotations
 
 import struct
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
 import pytest
 import structlog.testing
 
+from intellicrack.core import disassembler as disassembler_module
 from intellicrack.core.disassembler import (
     HexDisassembler,
     UnsupportedArchitectureError,
@@ -34,6 +34,7 @@ from intellicrack.core.disassembler import (
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 
@@ -73,12 +74,38 @@ def _make_elf64_header(*, e_machine: int, is_64bit: bool) -> bytes:
     return bytes(header)
 
 
+def _detector_reporting(detection: tuple[str, str, bool]) -> Callable[[bytes], tuple[str, str, bool]]:
+    """Build a format detector that reports one fixed detection for any buffer.
+
+    Args:
+        detection: The ``(format, arch, is_64bit)`` triple to report.
+
+    Returns:
+        Callable[[bytes], tuple[str, str, bool]]: A replacement for
+        :func:`detect_format_and_arch` with the same signature.
+    """
+
+    def _detect(data: bytes) -> tuple[str, str, bool]:
+        """Report the fixed detection regardless of the buffer contents.
+
+        Args:
+            data: The buffer being classified; ignored.
+
+        Returns:
+            tuple[str, str, bool]: The fixed detection.
+        """
+        del data
+        return detection
+
+    return _detect
+
+
 # ---------------------------------------------------------------------------
 # F-0002: auto_detect_arch must raise on unsupported architectures
 # ---------------------------------------------------------------------------
 
 
-def test_f0002_auto_detect_arch_unknown_raises_unsupported() -> None:
+def test_f0002_auto_detect_arch_unknown_raises_unsupported(monkeypatch: pytest.MonkeyPatch) -> None:
     """An unrecognised arch from the format detector must surface as an error.
 
     The fix replaces the previous ``dict.get(arch, ("x86_64", ...))``
@@ -87,12 +114,9 @@ def test_f0002_auto_detect_arch_unknown_raises_unsupported() -> None:
     offending architecture string on the ``arch`` attribute so callers
     can route it to diagnostic surfaces.
     """
-    fake_detection: tuple[str, str, bool] = ("ELF", "totally-not-a-real-arch", True)
+    unsupported_detection: tuple[str, str, bool] = ("ELF", "totally-not-a-real-arch", True)
+    monkeypatch.setattr(disassembler_module, "detect_format_and_arch", _detector_reporting(unsupported_detection))
     with (
-        patch(
-            "intellicrack.core.disassembler.detect_format_and_arch",
-            return_value=fake_detection,
-        ),
         pytest.raises(UnsupportedArchitectureError) as exc_info,
     ):
         HexDisassembler.auto_detect_arch(b"\x7fELF\x00\x00\x00\x00\x00\x00\x00\x00")
@@ -100,14 +124,11 @@ def test_f0002_auto_detect_arch_unknown_raises_unsupported() -> None:
     assert "totally-not-a-real-arch" in str(exc_info.value)
 
 
-def test_f0002_auto_detect_arch_unknown_logs_warning() -> None:
+def test_f0002_auto_detect_arch_unknown_logs_warning(monkeypatch: pytest.MonkeyPatch) -> None:
     """The unsupported-arch path must emit a structured warning event."""
-    fake_detection: tuple[str, str, bool] = ("PE", "exotic-isa", False)
+    unsupported_detection: tuple[str, str, bool] = ("PE", "exotic-isa", False)
+    monkeypatch.setattr(disassembler_module, "detect_format_and_arch", _detector_reporting(unsupported_detection))
     with (
-        patch(
-            "intellicrack.core.disassembler.detect_format_and_arch",
-            return_value=fake_detection,
-        ),
         structlog.testing.capture_logs() as captured,
         pytest.raises(UnsupportedArchitectureError),
     ):
@@ -186,7 +207,7 @@ def test_f0002_auto_detect_arch_x86_elf_resolves_to_32bit_capstone_mode() -> Non
     assert rendered == _EXPECTED_32BIT_DECODE, f"expected 32-bit decoding for {arch}/{mode}, got {rendered}"
 
 
-def test_f0002_auto_detect_arch_no_silent_x86_64_fallback() -> None:
+def test_f0002_auto_detect_arch_no_silent_x86_64_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     """The fallback must NOT produce ``("x86", "64")`` for unknown archs.
 
     Regression guard: the pre-fix code unconditionally returned
@@ -195,12 +216,9 @@ def test_f0002_auto_detect_arch_no_silent_x86_64_fallback() -> None:
     new strict behaviour: an exception is raised before any fallback
     pair is produced.
     """
-    fake_detection: tuple[str, str, bool] = ("ELF", "garbage-arch-name", True)
+    unsupported_detection: tuple[str, str, bool] = ("ELF", "garbage-arch-name", True)
+    monkeypatch.setattr(disassembler_module, "detect_format_and_arch", _detector_reporting(unsupported_detection))
     with (
-        patch(
-            "intellicrack.core.disassembler.detect_format_and_arch",
-            return_value=fake_detection,
-        ),
         pytest.raises(UnsupportedArchitectureError),
     ):
         HexDisassembler.auto_detect_arch(b"\x7fELF" + b"\x00" * 16)

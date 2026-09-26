@@ -28,8 +28,7 @@ instance in the registry and passes it to ``ModelRefreshWorker``, which
 prefers ``provider.list_models()`` (the authenticated client) over the raw
 HTTP fallback. These tests drive the real, unmodified
 ``MainWindow._on_refresh_models`` bound method (against a plain duck-typed
-holder -- the method never touches Qt widget internals directly, only
-attribute reads/writes, so no live ``QApplication`` is needed) and assert
+holder whose toolbar combos are real ``QComboBox`` widgets) and assert
 on the real ``ModelRefreshWorker`` construction argument it produces; the
 actual ``ModelRefreshWorker`` class is replaced by a lightweight recorder
 so the test observes exactly what the call site passes without spawning a
@@ -43,10 +42,9 @@ real observed model ids from each catalog.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, cast
-from unittest.mock import Mock
 
 import pytest
-from PyQt6.QtWidgets import QComboBox
+from PyQt6.QtWidgets import QApplication, QComboBox
 
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.grok import GrokProvider
@@ -225,26 +223,24 @@ class _ConfigDouble:
 
 
 def _combo_double(*, current_data: object = None, current_text: str = "") -> QComboBox:
-    """Build a spec-constrained mock standing in for the toolbar's ``QComboBox``.
+    """Build a real ``QComboBox`` whose current item carries the given text and data.
 
     ``_on_refresh_models`` only calls ``currentData`` / ``currentText`` /
-    ``clear`` / ``setEnabled`` on its combo attributes (it never wraps them
-    in a ``QSignalBlocker``), so a ``Mock(spec=QComboBox)`` -- which never
-    constructs a live Qt widget or requires a ``QApplication`` -- is
-    sufficient and matches ``QComboBox``'s camelCase method names without
-    hand-rolling them.
+    ``clear`` / ``setEnabled`` on its combo attributes, so a real, unparented
+    combo holding a single selected item exercises exactly the production
+    widget surface.
 
     Args:
         current_data: Value ``currentData()`` should return.
         current_text: Value ``currentText()`` should return.
 
     Returns:
-        QComboBox: A ``Mock`` typed as ``QComboBox`` for attribute access.
+        QComboBox: A live combo with one selected item.
     """
-    combo = Mock(spec=QComboBox)
-    combo.currentData.return_value = current_data
-    combo.currentText.return_value = current_text
-    return cast("QComboBox", combo)
+    combo = QComboBox()
+    combo.addItem(current_text, current_data)
+    combo.setCurrentIndex(0)
+    return combo
 
 
 def _build_refresh_holder(
@@ -312,12 +308,14 @@ class TestRefreshModelsReusesConnectedProvider:
         getattr(MainWindow, "_on_refresh_models")(holder)
         return _RecordingModelRefreshWorker
 
-    def test_connected_huggingface_instance_is_reused(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_connected_huggingface_instance_is_reused(self, qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
         """A connected HuggingFace provider instance is passed to the refresh worker.
 
         Args:
+            qapp: Qt application backing the real toolbar combos.
             monkeypatch: Pytest fixture used to substitute ``ModelRefreshWorker``.
         """
+        del qapp
         connected = _ProviderDouble(is_connected=True)
         worker_cls = self._run(monkeypatch, provider_name=provider_ids.HUGGINGFACE, registry_provider=connected)
 
@@ -328,12 +326,14 @@ class TestRefreshModelsReusesConnectedProvider:
         )
         assert worker_cls.last_provider_id == "huggingface"
 
-    def test_connected_ollama_instance_is_reused(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_connected_ollama_instance_is_reused(self, qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
         """A connected Ollama provider instance is passed to the refresh worker.
 
         Args:
+            qapp: Qt application backing the real toolbar combos.
             monkeypatch: Pytest fixture used to substitute ``ModelRefreshWorker``.
         """
+        del qapp
         connected = _ProviderDouble(is_connected=True)
         worker_cls = self._run(monkeypatch, provider_name=provider_ids.OLLAMA, registry_provider=connected)
 
@@ -344,12 +344,14 @@ class TestRefreshModelsReusesConnectedProvider:
         )
         assert worker_cls.last_provider_id == "ollama"
 
-    def test_disconnected_registry_entry_falls_back_to_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_disconnected_registry_entry_falls_back_to_none(self, qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
         """A registered-but-disconnected provider does not get passed through.
 
         Args:
+            qapp: Qt application backing the real toolbar combos.
             monkeypatch: Pytest fixture used to substitute ``ModelRefreshWorker``.
         """
+        del qapp
         disconnected = _ProviderDouble(is_connected=False)
         worker_cls = self._run(monkeypatch, provider_name=provider_ids.HUGGINGFACE, registry_provider=disconnected)
 
@@ -357,12 +359,14 @@ class TestRefreshModelsReusesConnectedProvider:
             f"a disconnected registry entry must not be reused; got provider={worker_cls.last_provider_arg!r}"
         )
 
-    def test_unregistered_provider_falls_back_to_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_unregistered_provider_falls_back_to_none(self, qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
         """A provider absent from the registry does not get passed through.
 
         Args:
+            qapp: Qt application backing the real toolbar combos.
             monkeypatch: Pytest fixture used to substitute ``ModelRefreshWorker``.
         """
+        del qapp
         worker_cls = self._run(monkeypatch, provider_name=provider_ids.OPENAI, registry_provider=None)
 
         assert worker_cls.last_provider_arg is None, (

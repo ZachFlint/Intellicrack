@@ -18,11 +18,36 @@ disturbing -- the real compiled extension's actual API.
 
 from __future__ import annotations
 
+import contextlib
 import unittest
-from unittest import mock
+from typing import TYPE_CHECKING
 
 from hexbench import catalog
 from hexbench.tests._support import Assertions
+
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+
+@contextlib.contextmanager
+def _replaced_attribute(owner: object, name: str, replacement: object) -> Generator[None]:
+    """Swap one attribute of ``owner`` for the duration of a ``with`` block.
+
+    Args:
+        owner: Module or class whose attribute is swapped.
+        name: Attribute to swap.
+        replacement: Value the attribute holds inside the block.
+
+    Yields:
+        None: Control, with the replacement installed; the original is restored on exit.
+    """
+    original = getattr(owner, name)
+    setattr(owner, name, replacement)
+    try:
+        yield
+    finally:
+        setattr(owner, name, original)
 
 
 class SymmetricDriftDetectionTests(Assertions, unittest.TestCase):
@@ -37,15 +62,32 @@ class SymmetricDriftDetectionTests(Assertions, unittest.TestCase):
         one genuine operation -- it falls straight through to a clean, normal
         return, which is exactly what the old code did with a stale stub entry.
         """
-        fake_signatures: dict[str, tuple[list[tuple[str, str]], str]] = {
+        synthetic_signatures: dict[str, tuple[list[tuple[str, str]], str]] = {
             "length": ([], "int"),
             "removed_from_the_crate": ([], "None"),
         }
+
+        def _synthetic_stub_signatures() -> dict[str, tuple[list[tuple[str, str]], str]]:
+            """Describe a stub that still declares an operation the crate no longer has.
+
+            Returns:
+                dict[str, tuple[list[tuple[str, str]], str]]: The synthetic stub signatures.
+            """
+            return synthetic_signatures
+
+        def _synthetic_runtime_surface() -> tuple[frozenset[str], frozenset[str]]:
+            """Describe a compiled module that only exposes ``length``.
+
+            Returns:
+                tuple[frozenset[str], frozenset[str]]: The synthetic live method and property names.
+            """
+            return frozenset({"length"}), frozenset()
+
         catalog.build_catalog.cache_clear()
         try:
             with (
-                mock.patch("hexbench.catalog._stub_signatures", return_value=fake_signatures),
-                mock.patch("hexbench.catalog.runtime_surface", return_value=(frozenset({"length"}), frozenset())),
+                _replaced_attribute(catalog, "_stub_signatures", _synthetic_stub_signatures),
+                _replaced_attribute(catalog, "runtime_surface", _synthetic_runtime_surface),
             ):
                 self.raises(
                     catalog.CatalogError,

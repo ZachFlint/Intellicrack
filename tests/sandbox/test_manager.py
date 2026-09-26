@@ -19,10 +19,10 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
-from unittest.mock import patch
 
 import pytest
 
+from intellicrack.sandbox import manager as manager_module
 from intellicrack.sandbox.base import (
     ExecutionReport,
     SandboxBase,
@@ -56,6 +56,20 @@ def _in_memory_sandbox_factory(*args: object, **kwargs: object) -> InMemorySandb
     """
     del args, kwargs
     return InMemorySandbox()
+
+
+def _route_backends_to_memory(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make the real manager build InMemorySandbox for every backend type.
+
+    Replaces the manager module's ``WindowsSandbox`` and ``QEMUSandbox`` names,
+    the external OS transports, with :func:`_in_memory_sandbox_factory` for the
+    rest of the test.
+
+    Args:
+        monkeypatch: Pytest fixture that restores the real backends afterwards.
+    """
+    monkeypatch.setattr(manager_module, "WindowsSandbox", _in_memory_sandbox_factory)
+    monkeypatch.setattr(manager_module, "QEMUSandbox", _in_memory_sandbox_factory)
 
 
 class _TestableManager:
@@ -415,7 +429,7 @@ class TestManagerProperties:
         mgr = _TestableManager()
         assert mgr.active_count == 0
 
-    def test_instances_returns_copy(self) -> None:
+    def test_instances_returns_copy(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Mutating the returned list does not affect the real SandboxManager's registry.
 
         Gates SandboxManager.instances from intellicrack.sandbox.manager.  The real
@@ -434,13 +448,13 @@ class TestManagerProperties:
         ``return list(self._instances.values())[:] = list(...)`` or simply return the
         dict values directly -- clear() on the returned object empties the live view so
         len(second_list) becomes 0, failing the assertion.
+
+        Args:
+            monkeypatch: Pytest fixture routing the manager's backends to InMemorySandbox.
         """
-        with (
-            patch("intellicrack.sandbox.manager.WindowsSandbox", _in_memory_sandbox_factory),
-            patch("intellicrack.sandbox.manager.QEMUSandbox", _in_memory_sandbox_factory),
-        ):
-            mgr = SandboxManager(max_instances=5)
-            asyncio.run(mgr.create(sandbox_type="windows", auto_start=False))
+        _route_backends_to_memory(monkeypatch)
+        mgr = SandboxManager(max_instances=5)
+        asyncio.run(mgr.create(sandbox_type="windows", auto_start=False))
 
         first_list = mgr.instances
         assert len(first_list) == 1
@@ -455,7 +469,7 @@ class TestManagerCreate:
     """Verify manager create behavior."""
 
     @pytest.mark.asyncio
-    async def test_create_returns_instance(self) -> None:
+    async def test_create_returns_instance(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """create() on the real SandboxManager returns a UUID-format ID registered in the manager.
 
         Gates SandboxManager.create() from intellicrack.sandbox.manager.  WindowsSandbox
@@ -474,13 +488,13 @@ class TestManagerCreate:
         Falsifiable mutation 2: in SandboxManager.create(), remove
         ``self._instances[instance.id] = instance`` -- ``await mgr.get(inst.id)`` returns
         None so ``found is inst`` fails.
+
+        Args:
+            monkeypatch: Pytest fixture routing the manager's backends to InMemorySandbox.
         """
-        with (
-            patch("intellicrack.sandbox.manager.WindowsSandbox", _in_memory_sandbox_factory),
-            patch("intellicrack.sandbox.manager.QEMUSandbox", _in_memory_sandbox_factory),
-        ):
-            mgr = SandboxManager(max_instances=5)
-            inst = await mgr.create(sandbox_type="windows", auto_start=False)
+        _route_backends_to_memory(monkeypatch)
+        mgr = SandboxManager(max_instances=5)
+        inst = await mgr.create(sandbox_type="windows", auto_start=False)
 
         assert isinstance(inst, SandboxInstance)
         assert isinstance(inst.id, str)
@@ -604,7 +618,7 @@ class TestManagerStatus:
     """Verify manager status reporting."""
 
     @pytest.mark.asyncio
-    async def test_status_has_expected_keys(self) -> None:
+    async def test_status_has_expected_keys(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """get_status() on the real SandboxManager returns field values matching the manager's state.
 
         Gates SandboxManager.get_status() from intellicrack.sandbox.manager.  WindowsSandbox
@@ -625,14 +639,14 @@ class TestManagerStatus:
         -- ``entry["type"]`` raises KeyError, failing the assertion.
         Falsifiable mutation 3: replace ``self.active_count`` with the constant ``0`` --
         ``status["active_count"] == 1`` fails because one running instance exists.
+
+        Args:
+            monkeypatch: Pytest fixture routing the manager's backends to InMemorySandbox.
         """
-        with (
-            patch("intellicrack.sandbox.manager.WindowsSandbox", _in_memory_sandbox_factory),
-            patch("intellicrack.sandbox.manager.QEMUSandbox", _in_memory_sandbox_factory),
-        ):
-            mgr = SandboxManager(max_instances=5)
-            inst = await mgr.create(sandbox_type="windows", auto_start=True)
-            status = await mgr.get_status()
+        _route_backends_to_memory(monkeypatch)
+        mgr = SandboxManager(max_instances=5)
+        inst = await mgr.create(sandbox_type="windows", auto_start=True)
+        status = await mgr.get_status()
 
         assert status["max_instances"] == 5
         assert status["active_count"] == 1

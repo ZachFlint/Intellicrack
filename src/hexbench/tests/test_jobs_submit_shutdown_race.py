@@ -13,7 +13,7 @@ and the ``pending`` record it already inserted is orphaned -- never settled,
 never visible as failed, permanently stuck in the run log.
 
 This is reproduced deterministically, without reaching into the queue's
-private state, by patching ``ThreadPoolExecutor.submit`` itself (a public
+private state, by replacing ``ThreadPoolExecutor.submit`` itself (a public
 method of a public standard-library class) to behave exactly as it does once
 ``Executor.shutdown()`` has run: raise ``RuntimeError('cannot schedule new
 futures after shutdown')``. That is precisely the failure mode a real
@@ -22,16 +22,18 @@ futures after shutdown')``. That is precisely the failure mode a real
 
 from __future__ import annotations
 
+import contextlib
 import unittest
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Final
-from unittest import mock
+from typing import TYPE_CHECKING, Final, NoReturn
 
 from hexbench.jobs import JobError, JobQueue
 from hexbench.tests._support import Assertions
 
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from hexbench.dispatch import InvocationResult
 
 
@@ -45,11 +47,41 @@ def _never_runs() -> InvocationResult:
         InvocationResult: Never returns; always raises.
 
     Raises:
-        AssertionError: Unconditionally, since the mocked executor must refuse
+        AssertionError: Unconditionally, since the shut-down executor must refuse
             to schedule this callable in the first place.
     """
     message = "this job's callable ran, but the pool should have refused to schedule it"
     raise AssertionError(message)
+
+
+def _refuse_after_shutdown(executor: ThreadPoolExecutor, *args: object, **kwargs: object) -> NoReturn:
+    """Behave as ``ThreadPoolExecutor.submit`` does once ``shutdown()`` has run.
+
+    Args:
+        executor: The executor asked to schedule work.
+        *args: The callable and its positional arguments, never scheduled.
+        **kwargs: The callable's keyword arguments, never scheduled.
+
+    Raises:
+        RuntimeError: Always, with the standard library's own shutdown message.
+    """
+    del executor, args, kwargs
+    raise RuntimeError(_SHUTDOWN_MESSAGE)
+
+
+@contextlib.contextmanager
+def _executor_already_shut_down() -> Generator[None]:
+    """Make every ``ThreadPoolExecutor.submit`` refuse work as a shut-down pool does.
+
+    Yields:
+        None: Control, with the refusing ``submit`` installed; the real one is restored on exit.
+    """
+    original = ThreadPoolExecutor.submit
+    ThreadPoolExecutor.submit = _refuse_after_shutdown
+    try:
+        yield
+    finally:
+        ThreadPoolExecutor.submit = original
 
 
 class SubmitShutdownRaceTests(Assertions, unittest.TestCase):
@@ -59,7 +91,7 @@ class SubmitShutdownRaceTests(Assertions, unittest.TestCase):
         """The queue's own ``JobError`` must reach the caller, not the executor's raw ``RuntimeError``."""
         queue = JobQueue(workers=1)
         try:
-            with mock.patch.object(ThreadPoolExecutor, "submit", side_effect=RuntimeError(_SHUTDOWN_MESSAGE)):
+            with _executor_already_shut_down():
                 self.raises(
                     JobError,
                     "submit() while the executor is mid-shutdown",
@@ -73,7 +105,7 @@ class SubmitShutdownRaceTests(Assertions, unittest.TestCase):
         queue = JobQueue(workers=1)
         try:
             before = queue.recent(limit=10_000)
-            with mock.patch.object(ThreadPoolExecutor, "submit", side_effect=RuntimeError(_SHUTDOWN_MESSAGE)):
+            with _executor_already_shut_down():
                 self.raises(
                     JobError,
                     "submit() while the executor is mid-shutdown",
