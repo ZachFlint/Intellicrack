@@ -292,6 +292,9 @@ class TestReadFailuresAreReported:
         with pytest.raises(McpAuthError, match="cannot read MCP input 'gh' from the keyring"):
             asyncio.run(resolver.resolve("${input:gh}"))
 
+        asyncio.run(resolver.set_input("gh", "ghp-replacement"))
+        assert asyncio.run(resolver.resolve("${input:gh}")) == "ghp-replacement"
+
     def test_corrupt_payload_raises_for_oauth_state(
         self,
         sized_store: CredentialStore,
