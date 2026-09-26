@@ -67,7 +67,7 @@ MAX_OVERLAPPING_UNBOUNDED_RUN: Final[int] = 2
 _SAMPLE_ALPHABET: Final[str] = "".join(chr(code) for code in (*range(32, 127), 0x09, 0x0A, 0x0D, 0xA0, 0xE9, 0x436, 0x4E2D, 0x1F600))
 """Characters used to decide whether two single-character atoms can match the same text."""
 
-_BRACE_QUANTIFIER: Final[re.Pattern[str]] = re.compile(r"\{(\d*)(?:(,)(\d*))?\}")
+_BRACE_QUANTIFIER: Final[re.Pattern[str]] = re.compile(r"\{(\d*)(?:(,)(\d*))?}")
 
 _ZERO_WIDTH_ESCAPES: Final[frozenset[str]] = frozenset("bBAZzG")
 
