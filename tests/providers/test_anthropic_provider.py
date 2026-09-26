@@ -1033,14 +1033,14 @@ class TestAnthropicModelListing:
 
     @pytest.mark.asyncio
     @staticmethod
-    async def test_list_models_all_have_200k_context_window(
+    async def test_list_models_report_the_advertised_context_window(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Every returned model reports the 200k context window.
+        """Every returned model reports a context window of at least 200k.
 
-        The bridge hardcodes 200k for all Anthropic models (see
-        ``_build_model_info``). If any model is returned with a different
-        value it indicates the hardcoded constant was changed silently.
+        The window comes from the models endpoint's ``max_input_tokens``,
+        falling back to the preset for the model's family; every Claude model
+        currently served has at least a 200k window.
 
         Args:
             anthropic_provider: Connected Anthropic provider fixture.
@@ -1048,8 +1048,8 @@ class TestAnthropicModelListing:
         models: list[ModelInfo] = await anthropic_provider.list_models()
 
         assert models
-        wrong_window: list[tuple[str, int]] = [(m.id, m.context_window) for m in models if m.context_window != _CONTEXT_WINDOW_200K]
-        assert not wrong_window, f"All models must report {_CONTEXT_WINDOW_200K} context_window, but these do not: {wrong_window}"
+        wrong_window: list[tuple[str, int]] = [(m.id, m.context_window) for m in models if m.context_window < _CONTEXT_WINDOW_200K]
+        assert not wrong_window, f"All models must report at least {_CONTEXT_WINDOW_200K} context_window, but these do not: {wrong_window}"
 
     @pytest.mark.asyncio
     @staticmethod

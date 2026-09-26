@@ -40,6 +40,7 @@ from intellicrack.providers.capabilities import (
     TokenLimitField,
     ToolSearchStyle,
     ToolSearchSupport,
+    effort_for_thinking_budget,
 )
 from intellicrack.providers.dialects.base import (
     DialectAdapter,
@@ -339,7 +340,14 @@ class MessagesAdapter(DialectAdapter):
 
         thinking = request.thinking
         if thinking is not None and thinking.enabled:
-            body["thinking"] = {"type": "enabled", "budget_tokens": thinking.budget_tokens}
+            reasoning = capabilities.reasoning
+            if reasoning.effort_format is ReasoningEffortFormat.ADAPTIVE_EFFORT:
+                body["thinking"] = {"type": "adaptive", "display": "summarized"}
+                effort = effort_for_thinking_budget(thinking.budget_tokens, reasoning.effort_levels)
+                if effort is not None:
+                    body["output_config"] = {"effort": effort}
+            else:
+                body["thinking"] = {"type": "enabled", "budget_tokens": thinking.budget_tokens}
             body["max_tokens"] = max(body["max_tokens"], thinking.budget_tokens + THINKING_MIN_HEADROOM_TOKENS)
 
         if request.enable_cache and capabilities.supports_prompt_cache:
@@ -403,9 +411,7 @@ class MessagesAdapter(DialectAdapter):
         tools_obj = body.get("tools")
         if is_json_array(tools_obj) and tools_obj:
             tools_list: list[Any] = tools_obj
-            if cached_tools := [
-                dict(tool) for tool in tools_list if is_json_object(tool)
-            ]:
+            if cached_tools := [dict(tool) for tool in tools_list if is_json_object(tool)]:
                 cached_tools[-1] = {**cached_tools[-1], "cache_control": dict(_CACHE_CONTROL)}
                 body["tools"] = cached_tools
 
