@@ -1215,25 +1215,9 @@ class GoogleProvider(LLMProviderBase):
         Returns:
             list[types.Tool]: List of Gemini Tool objects for function calling.
         """
-        function_declarations: list[types.FunctionDeclaration] = []
-        for declaration in self._gemini_declarations(tools):
-            parameters = declaration.get("parameters")
-            params: dict[str, Any] = parameters if is_json_object(parameters) else {}
-            raw_properties = params.get("properties")
-            properties: dict[str, Any] = raw_properties if is_json_object(raw_properties) else {}
-            raw_required = params.get("required")
-            required: list[str] = [str(name) for name in raw_required] if is_json_array(raw_required) else []
-            function_declarations.append(
-                types.FunctionDeclaration(
-                    name=str(declaration.get("name", "")),
-                    description=str(declaration.get("description", "")),
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={key: types.Schema(**cast("dict[str, Any]", dict(value))) for key, value in properties.items()},
-                        required=required,
-                    ),
-                ),
-            )
+        function_declarations: list[types.FunctionDeclaration] = [
+            types.FunctionDeclaration.model_validate(declaration) for declaration in self._gemini_declarations(tools)
+        ]
         return [types.Tool(function_declarations=function_declarations)]
 
     @override
