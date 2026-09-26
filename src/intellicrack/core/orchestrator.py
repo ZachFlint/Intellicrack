@@ -23,7 +23,6 @@ from uuid import uuid4
 
 import lief
 import structlog.contextvars
-import tiktoken
 
 from intellicrack.bridges.schemas import (
     build_schema_parameters,
@@ -31,12 +30,15 @@ from intellicrack.bridges.schemas import (
 )
 from intellicrack.core.analysis_aggregator import AnalysisAggregator
 from intellicrack.core.logging import get_logger, log_analysis_operation
+from intellicrack.core.result_parts import bound_result_parts, estimate_image_tokens
+from intellicrack.core.token_encoding import OFF_GUI_THREAD_WAIT_S, estimate_tokens_without_encoder, get_token_encoder
 from intellicrack.core.tool_search import ToolSearchIndex
 from intellicrack.core.types import (
     BinaryInfo,
     CacheConfig,
     ConfirmationLevel,
     ExportInfo,
+    ImageResultPart,
     ImportInfo,
     Message,
     ModelInfo,
@@ -49,8 +51,10 @@ from intellicrack.core.types import (
     ToolError,
     ToolFunction,
     ToolName,
+    ToolOutput,
     ToolParameter,
     ToolResult,
+    ToolResultPart,
 )
 from intellicrack.providers.capabilities import (
     DEFAULT_TOKENIZER,
@@ -58,6 +62,7 @@ from intellicrack.providers.capabilities import (
     TIKTOKEN_O200K,
     ApiDialect,
 )
+from intellicrack.providers.dialects.base import describe_tool_result_part, render_parts_as_text
 from intellicrack.providers.ids import normalize_provider_id
 
 
@@ -65,6 +70,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
     from pathlib import Path
     from typing import Any
+
+    import tiktoken
 
     from intellicrack.core.script_gen import ScriptManager
     from intellicrack.core.session import Session, SessionManager
@@ -158,38 +165,25 @@ def _strip_model_variant_suffix(model_id: str) -> str:
     return stem
 
 
-_token_encoder_cache: dict[str, tiktoken.Encoding] = {}
-
-
-def _get_token_encoder(tokenizer: str | None) -> tiktoken.Encoding:
+def _get_token_encoder(tokenizer: str | None) -> tiktoken.Encoding | None:
     """Resolve the tiktoken encoder a model's capability record names.
 
-    Encodings are cached per-name to avoid re-loading the BPE tables on every
-    call. A name tiktoken does not know falls back to the default encoding
-    rather than raising, so an endpoint advertising an unfamiliar tokenizer
-    costs accuracy rather than availability.
+    Encoders come from the shared :mod:`intellicrack.core.token_encoding`
+    loader, which downloads with bounded timeouts on a background thread and
+    remembers a failed download instead of retrying it on every call. A name
+    tiktoken does not know falls back to the default encoding, so an endpoint
+    advertising an unfamiliar tokenizer costs accuracy rather than
+    availability.
 
     Args:
         tokenizer: ``tiktoken`` encoding name from the model's capability
             record, or ``None`` to use the default encoding.
 
     Returns:
-        tiktoken.Encoding: Encoder instance suitable for token counting.
+        tiktoken.Encoding | None: Encoder instance suitable for token
+        counting, or ``None`` while it is unavailable.
     """
-    encoding_name = tokenizer or _DEFAULT_TOKEN_ENCODING
-    encoder = _token_encoder_cache.get(encoding_name)
-    if encoder is not None:
-        return encoder
-    try:
-        encoder = tiktoken.get_encoding(encoding_name)
-    except (KeyError, ValueError):
-        _logger.warning("token_encoding_unknown", tokenizer=encoding_name, fallback=_DEFAULT_TOKEN_ENCODING)
-        encoding_name = _DEFAULT_TOKEN_ENCODING
-        encoder = _token_encoder_cache.get(encoding_name)
-        if encoder is None:
-            encoder = tiktoken.get_encoding(encoding_name)
-    _token_encoder_cache[encoding_name] = encoder
-    return encoder
+    return get_token_encoder(tokenizer or _DEFAULT_TOKEN_ENCODING, timeout=OFF_GUI_THREAD_WAIT_S)
 
 
 def _serialize_for_tokens(value: object) -> str:
@@ -227,6 +221,8 @@ def _count_tokens(text: str, tokenizer: str | None) -> int:
     if not text:
         return 0
     encoder = _get_token_encoder(tokenizer)
+    if encoder is None:
+        return estimate_tokens_without_encoder(text)
     return len(encoder.encode(text, disallowed_special=()))
 
 
@@ -1633,7 +1629,10 @@ class Orchestrator:
         returned unchanged (no copy needed, since they carry nothing to
         bound). For a ``tool`` message, a shallow copy is returned whose
         ``tool_results`` list holds copies of each :class:`ToolResult` with
-        ``result`` passed through :meth:`_bound_tool_result`. The original
+        ``result`` passed through :meth:`_bound_tool_result` and any
+        multi-part ``content`` passed through
+        :func:`~intellicrack.core.result_parts.bound_result_parts`, which holds
+        every textual part to the same character budget. The original
         message and its ``ToolResult`` objects are never mutated, so the
         session's persisted history and any previously-returned callback
         references keep the full, untruncated result.
@@ -1647,7 +1646,12 @@ class Orchestrator:
         """
         if message.role != "tool" or not message.tool_results:
             return message
-        bounded_results = [replace(tr, result=Orchestrator._bound_tool_result(tr.result)) for tr in message.tool_results]
+        bounded_results = [
+            replace(tr, result=Orchestrator._bound_tool_result(tr.result), content=bound_result_parts(tr.content, _MAX_TOOL_RESULT_CHARS))
+            if tr.content
+            else replace(tr, result=Orchestrator._bound_tool_result(tr.result))
+            for tr in message.tool_results
+        ]
         return replace(message, tool_results=bounded_results)
 
     def build_system_prompt(self) -> str:
@@ -2095,7 +2099,7 @@ class Orchestrator:
         Returns:
             str: One-line summary in the form ``- name(params) -> return: description``.
         """
-        params = ", ".join(f"{p.name}: {p.type}" for p in func.parameters)
+        params = func.parameter_summary
         description = (func.description or "").strip()
         suffix = f" - {description}" if description else ""
         return f"- `{func.name}({params}) -> {func.returns}`{suffix}"
@@ -2282,7 +2286,9 @@ class Orchestrator:
 
         Returns:
             int: Tokens for the content, the serialized tool-call arguments,
-            and the tool results including their multi-part content.
+            and the tool results. A result with multi-part content is priced
+            part by part, and its ``result`` text, which merely restates those
+            parts, is not counted a second time.
         """
         total = Orchestrator._estimate_tokens(message.content, tokenizer)
         for call in message.tool_calls or ():
@@ -2290,12 +2296,34 @@ class Orchestrator:
             total += Orchestrator._estimate_tokens(_serialize_for_tokens(call.arguments), tokenizer)
         for result in message.tool_results or ():
             total += Orchestrator._estimate_tokens(result.error or "", tokenizer)
-            total += Orchestrator._estimate_tokens(_serialize_for_tokens(result.result), tokenizer)
-            for part in result.content or ():
-                total += Orchestrator._estimate_tokens(_serialize_for_tokens(part), tokenizer)
+            if result.content:
+                total += sum(Orchestrator._result_part_tokens(part, tokenizer) for part in result.content)
+            else:
+                total += Orchestrator._estimate_tokens(_serialize_for_tokens(result.result), tokenizer)
         for item in message.reasoning or ():
             total += Orchestrator._estimate_tokens(item.text, tokenizer)
         return total
+
+    @staticmethod
+    def _result_part_tokens(part: ToolResultPart, tokenizer: str | None = None) -> int:
+        """Count what one tool-result part occupies in the context window.
+
+        An image is priced by its pixel dimensions, the way vision models
+        bill it; counting its base64 text would overstate a screenshot by
+        tens of thousands of tokens. Every other part is priced as the text a
+        dialect sends for it.
+
+        Args:
+            part: The part to price.
+            tokenizer: ``tiktoken`` encoding name from the model's capability
+                record, or ``None`` for the default encoding.
+
+        Returns:
+            int: Estimated tokens.
+        """
+        if isinstance(part, ImageResultPart):
+            return estimate_image_tokens(part)
+        return Orchestrator._estimate_tokens(describe_tool_result_part(part), tokenizer)
 
     @staticmethod
     def _tool_definitions_tokens(definitions: list[ToolDefinition], tokenizer: str | None = None) -> int:
@@ -2396,17 +2424,60 @@ class Orchestrator:
             )
             if oldest_idx < 0:
                 break
-            removed = messages.pop(oldest_idx)
-            removed_tokens = Orchestrator._message_tokens(removed, tokenizer)
-            total -= removed_tokens
-            _logger.debug(
-                "message_trimmed_for_context",
-                role=removed.role,
-                tokens_freed=removed_tokens,
-                remaining_tokens=total,
-                budget=budget,
-            )
+            total -= Orchestrator._pop_for_trim(messages, oldest_idx, tokenizer, total=total, budget=budget)
+            total -= Orchestrator._drop_orphaned_tool_results(messages, oldest_idx, tokenizer, total=total, budget=budget)
         return messages
+
+    @staticmethod
+    def _pop_for_trim(messages: list[Message], index: int, tokenizer: str | None, *, total: int, budget: int) -> int:
+        """Remove one message during trimming and report what it freed.
+
+        Args:
+            messages: The history being trimmed. Mutated in place.
+            index: Position of the message to remove.
+            tokenizer: ``tiktoken`` encoding name used for counting.
+            total: Tokens the history occupied before the removal.
+            budget: The token budget being trimmed to.
+
+        Returns:
+            int: Tokens the removed message occupied.
+        """
+        removed = messages.pop(index)
+        removed_tokens = Orchestrator._message_tokens(removed, tokenizer)
+        _logger.debug(
+            "message_trimmed_for_context",
+            role=removed.role,
+            tokens_freed=removed_tokens,
+            remaining_tokens=total - removed_tokens,
+            budget=budget,
+        )
+        return removed_tokens
+
+    @staticmethod
+    def _drop_orphaned_tool_results(messages: list[Message], index: int, tokenizer: str | None, *, total: int, budget: int) -> int:
+        """Remove the tool results left without the call that asked for them.
+
+        Trimming works oldest-first, so the assistant message carrying a set
+        of tool calls always goes before the ``tool`` messages answering it.
+        Stopping between the two would leave results whose call no longer
+        exists, which every provider rejects. Whatever ``tool`` messages now
+        lead the trimmed history are removed with their call.
+
+        Args:
+            messages: The history being trimmed. Mutated in place.
+            index: Position the last removal happened at, which is now the
+                oldest remaining non-system message.
+            tokenizer: ``tiktoken`` encoding name used for counting.
+            total: Tokens the history occupies before these removals.
+            budget: The token budget being trimmed to.
+
+        Returns:
+            int: Tokens the removed results occupied.
+        """
+        freed = 0
+        while index < len(messages) and messages[index].role == "tool":
+            freed += Orchestrator._pop_for_trim(messages, index, tokenizer, total=total - freed, budget=budget)
+        return freed
 
     def _trim_messages_for_provider(
         self,
@@ -2864,26 +2935,37 @@ class Orchestrator:
         An external tool's canonical name carries its namespace, and a model
         that answers with the leaf alone -- ``read_file`` where the loaded
         name is ``mcp-files.read_file`` -- is asking for a tool it did
-        discover. Rejoining the namespace recovers it instead of telling the
-        model to search for something it already found.
+        discover. The leaf is matched against every loaded external tool,
+        and a single match rewrites the call to that canonical name so it
+        dispatches to the right namespace instead of telling the model to
+        search for something it already found. A leaf two loaded tools share
+        is ambiguous and left alone.
 
         Args:
-            call: The tool call to resolve.
+            call: The tool call to resolve. Rewritten in place on a match.
 
         Returns:
             str | None: The loaded canonical name, or ``None`` when the call
-            does not name a loaded external tool.
+            does not name exactly one loaded external tool.
         """
         session = self._current_session
-        if session is None or "." in call.function_name or not call.tool_name:
+        if session is None or "." in call.function_name or not call.function_name:
             return None
-        if not self._is_external_namespace(call.tool_name.lower()):
+        leaf = call.function_name
+        namespace_hint = call.tool_name.lower() if call.tool_name and call.tool_name != leaf else None
+        matches = [
+            name
+            for name in session.loaded_tools
+            if name.partition(".")[2] == leaf
+            and self._is_external_namespace(name.partition(".")[0].lower())
+            and (namespace_hint is None or name.partition(".")[0].lower() == namespace_hint)
+        ]
+        if len(matches) != 1:
             return None
-        candidate = f"{call.tool_name}.{call.function_name}"
-        if candidate in session.loaded_tools:
-            call.function_name = candidate
-            return candidate
-        return None
+        canonical = matches[0]
+        call.tool_name = canonical.partition(".")[0]
+        call.function_name = canonical
+        return canonical
 
     async def _execute_tool_calls(
         self,
@@ -2964,6 +3046,10 @@ class Orchestrator:
         )
 
         elapsed_ms = (time.time() - start_time) * 1000
+
+        if isinstance(result, ToolOutput):
+            return self._tool_output_result(call=call, output=result, elapsed_ms=elapsed_ms)
+
         self._stats.successful_tool_calls += 1
 
         _logger.info(
@@ -2986,6 +3072,61 @@ class Orchestrator:
             result=result,
             error=None,
             duration_ms=elapsed_ms,
+        )
+
+    def _tool_output_result(self, *, call: ToolCall, output: ToolOutput, elapsed_ms: float) -> ToolResult:
+        """Build the ``ToolResult`` for a tool that answered in parts.
+
+        The parts become :attr:`ToolResult.content`, which every dialect
+        renders through its native text, image and structured paths, and the
+        tool's own error flag becomes :attr:`ToolResult.is_error`. ``result``
+        carries the deterministic text rendering of the same parts, so a
+        consumer that only reads ``result`` -- the chat log, a script record,
+        a persisted session -- still gets plain, serializable text.
+
+        Args:
+            call: The tool call that produced ``output``.
+            output: The tool's multi-part output.
+            elapsed_ms: Time the call took.
+
+        Returns:
+            ToolResult: The result, successful as a delivery even when the
+            tool itself reported an error.
+        """
+        parts: list[ToolResultPart] = list(output.parts)
+        if output.is_error:
+            self._stats.failed_tool_calls += 1
+            _logger.warning(
+                "tool_call_reported_error",
+                tool=call.tool_name,
+                function=call.function_name,
+                duration_ms=round(elapsed_ms, 2),
+                part_count=len(parts),
+            )
+        else:
+            self._stats.successful_tool_calls += 1
+            _logger.info(
+                "tool_call_success",
+                tool=call.tool_name,
+                function=call.function_name,
+                duration_ms=round(elapsed_ms, 2),
+                part_count=len(parts),
+            )
+        text = render_parts_as_text(parts)
+        if self._script_manager is not None:
+            self._script_manager.record_execution(
+                script_name=call.function_name,
+                tool_name=call.tool_name,
+                result=text,
+            )
+        return ToolResult(
+            call_id=call.id,
+            success=True,
+            result=text,
+            error=None,
+            duration_ms=elapsed_ms,
+            content=parts,
+            is_error=output.is_error,
         )
 
     async def _execute_single_tool_call(self, call: ToolCall) -> ToolResult:

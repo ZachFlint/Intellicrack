@@ -16,12 +16,16 @@ dies abnormally, rather than asserting on a simulated result.
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import defusedxml.ElementTree as DefusedET
 import pytest
 
 from tests._helpers.frida_isolation import run_module_isolated, run_target_isolated
+from tests.test_core.frida_isolation_skip_probe import CALL_SKIP_REASON, SETUP_SKIP_REASON
 
 
 if TYPE_CHECKING:
@@ -104,3 +108,59 @@ def test_run_module_isolated_recovers_per_test_outcomes(pytestconfig: pytest.Con
     assert result.outcomes, "the child must report per-test outcomes back to the parent"
     assert "test_find_leaked_ignores_idle_thread_pool_worker" in result.outcomes
     assert all(outcome == "passed" for outcome in result.outcomes.values()), f"unexpected outcomes: {result.outcomes}"
+
+
+def test_skipped_isolated_tests_are_reported_with_their_reasons(pytestconfig: pytest.Config, tmp_path: Path) -> None:
+    """A self-attach module whose tests skip is reported as skipped, with the child's reasons.
+
+    Runs a real pytest session over a probe module that uses the
+    ``self_attached_bridge`` fixture, so its tests are served from an isolated
+    child. One test skips in its fixture, one in its body, one passes. The
+    session must finish cleanly with each skip reason in the terminal summary
+    and in the JUnit report.
+
+    Falsifiable: when the parent rebuilt a skipped report without the
+    ``(path, lineno, reason)`` tuple pytest requires, the terminal reporter
+    raised an INTERNALERROR and the session ended without its JUnit report.
+
+    Args:
+        pytestconfig: Session config, used for the rootdir the session runs from.
+        tmp_path: Per-test temporary directory for the JUnit report.
+    """
+    rootpath = pytestconfig.rootpath
+    probe = (Path(__file__).resolve().parent / "frida_isolation_skip_probe.py").relative_to(rootpath).as_posix()
+    junit = tmp_path / "junit.xml"
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        probe,
+        "-p",
+        "no:randomly",
+        "-p",
+        "no:cacheprovider",
+        "-o",
+        "addopts=",
+        "-v",
+        "-rA",
+        "--no-header",
+        f"--junitxml={junit}",
+    ]
+    completed = subprocess.run(command, cwd=rootpath, capture_output=True, text=True, check=False, timeout=_GATE_TIMEOUT_SECONDS)
+    output = f"{completed.stdout}\n{completed.stderr}"
+
+    assert "INTERNALERROR" not in output, output
+    assert completed.returncode == 0, output
+    assert "1 passed, 2 skipped" in output, output
+    assert f"{probe}:29: {SETUP_SKIP_REASON}" in output, output
+    assert f"{probe}:40: {CALL_SKIP_REASON}" in output, output
+
+    report = DefusedET.fromstring(junit.read_text(encoding="utf-8"))
+    cases = {case.get("name"): case for case in report.iter("testcase")}
+    setup_skip = cases["test_skips_in_setup"].find("skipped")
+    call_skip = cases["test_skips_in_call"].find("skipped")
+    assert setup_skip is not None
+    assert call_skip is not None
+    assert setup_skip.get("message") == SETUP_SKIP_REASON
+    assert call_skip.get("message") == CALL_SKIP_REASON
+    assert cases["test_passes"].find("skipped") is None

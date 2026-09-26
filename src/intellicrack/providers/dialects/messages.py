@@ -19,6 +19,7 @@ current Claude models reject them at the API layer.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any, ClassVar, Final, override
 
 from intellicrack.bridges.json_schema import function_parameters
@@ -40,6 +41,7 @@ from intellicrack.providers.capabilities import (
     TokenLimitField,
     ToolSearchStyle,
     ToolSearchSupport,
+    effort_for_thinking_budget,
 )
 from intellicrack.providers.dialects.base import (
     DialectAdapter,
@@ -76,6 +78,15 @@ TOOL_SEARCH_BM25_TYPE: Final[str] = "tool_search_tool_bm25_20251119"
 SERVER_TOOL_USE_ID_PREFIX: Final[str] = "srvtoolu_"
 """Prefix of a server-executed tool-use id, which must never receive a ``tool_result``."""
 
+SERVER_TOOL_USE_TYPE: Final[str] = "server_tool_use"
+"""Content block recording a call to a server-executed tool, such as tool search."""
+
+SERVER_TOOL_RESULT_SUFFIX: Final[str] = "_tool_result"
+"""Suffix of every server-executed tool's result block (``tool_search_tool_result``, ``web_search_tool_result``, ...)."""
+
+PAUSE_TURN_STOP_REASON: Final[str] = "pause_turn"
+"""Stop reason Anthropic returns when a server-executed tool loop yields mid-turn."""
+
 MAX_DEFERRED_TOOLS: Final[int] = 10000
 """Anthropic's documented ceiling on deferred tool definitions."""
 
@@ -97,8 +108,10 @@ class MessagesAdapter(DialectAdapter):
     dialect: ClassVar[ApiDialect] = ApiDialect.MESSAGES
 
     def __init__(self) -> None:
-        """Initialize the adapter's per-stream thinking-block state."""
+        """Initialize the adapter's per-stream block and usage state."""
         self._open_blocks: dict[str, dict[str, Any]] = {}
+        self._server_tool_input: dict[str, str] = {}
+        self._start_usage: dict[str, Any] = {}
 
     @override
     def default_capabilities(self) -> ModelCapabilities:
@@ -339,7 +352,14 @@ class MessagesAdapter(DialectAdapter):
 
         thinking = request.thinking
         if thinking is not None and thinking.enabled:
-            body["thinking"] = {"type": "enabled", "budget_tokens": thinking.budget_tokens}
+            reasoning = capabilities.reasoning
+            if reasoning.effort_format is ReasoningEffortFormat.ADAPTIVE_EFFORT:
+                body["thinking"] = {"type": "adaptive", "display": "summarized"}
+                effort = effort_for_thinking_budget(thinking.budget_tokens, reasoning.effort_levels)
+                if effort is not None:
+                    body["output_config"] = {"effort": effort}
+            else:
+                body["thinking"] = {"type": "enabled", "budget_tokens": thinking.budget_tokens}
             body["max_tokens"] = max(body["max_tokens"], thinking.budget_tokens + THINKING_MIN_HEADROOM_TOKENS)
 
         if request.enable_cache and capabilities.supports_prompt_cache:
@@ -403,9 +423,7 @@ class MessagesAdapter(DialectAdapter):
         tools_obj = body.get("tools")
         if is_json_array(tools_obj) and tools_obj:
             tools_list: list[Any] = tools_obj
-            if cached_tools := [
-                dict(tool) for tool in tools_list if is_json_object(tool)
-            ]:
+            if cached_tools := [dict(tool) for tool in tools_list if is_json_object(tool)]:
                 cached_tools[-1] = {**cached_tools[-1], "cache_control": dict(_CACHE_CONTROL)}
                 body["tools"] = cached_tools
 
@@ -443,15 +461,27 @@ class MessagesAdapter(DialectAdapter):
                 blocks[-1] = {**block, "cache_control": dict(_CACHE_CONTROL)}
 
     @override
-    def parse_response(self, payload: Mapping[str, Any]) -> DialectResponse:
+    def parse_response(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> DialectResponse:
         """Parse an Anthropic Messages response body.
+
+        Server-executed tool blocks -- ``server_tool_use`` and its
+        ``*_tool_result`` -- are kept, in position among the thinking blocks,
+        as provider items: Anthropic requires them back unchanged on the next
+        request.
 
         Args:
             payload: The decoded response body.
+            capabilities: Unused; the Messages shape does not vary by model.
 
         Returns:
             DialectResponse: The normalized response.
         """
+        del capabilities
         raw_content = payload.get("content")
         blocks: list[Any] = raw_content if is_json_array(raw_content) else []
         text_parts: list[str] = []
@@ -473,8 +503,9 @@ class MessagesAdapter(DialectAdapter):
                 call = _parse_tool_use(block)
                 if call is not None:
                     tool_calls.append(call)
-            elif block_type == "server_tool_use":
-                _logger.debug("messages_server_tool_use_observed", block_id=block.get("id"))
+            elif is_server_tool_block_type(block_type):
+                _logger.debug("messages_server_tool_block_observed", block_type=block_type, block_id=block.get("id"))
+                reasoning.append(server_tool_item(block))
 
         stop_reason = payload.get("stop_reason")
         return DialectResponse(
@@ -486,21 +517,34 @@ class MessagesAdapter(DialectAdapter):
         )
 
     @override
-    def parse_stream_event(self, event: Mapping[str, Any]) -> list[StreamDelta]:
+    def parse_stream_event(
+        self,
+        event: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> list[StreamDelta]:
         """Translate one Anthropic stream event into normalized deltas.
 
         A thinking block's signature arrives on ``content_block_stop`` rather
-        than on the deltas, so the completed reasoning item is emitted there.
+        than on the deltas, so the completed reasoning item is emitted there;
+        a server tool block completes there too. Input and cache-token usage
+        arrives only on ``message_start`` and output usage on
+        ``message_delta``, whose counts are cumulative and overwrite only the
+        fields they carry, so the two are merged.
 
         Args:
             event: One decoded event.
+            capabilities: Unused; the Messages shape does not vary by model.
 
         Returns:
             list[StreamDelta]: Zero or more deltas, in wire order.
         """
+        del capabilities
         event_type = event.get("type")
         if not isinstance(event_type, str):
             return []
+        if event_type == "message_start":
+            return self._message_start_deltas(event)
         if event_type == "content_block_start":
             return self._block_start_deltas(event)
         if event_type == "content_block_delta":
@@ -508,13 +552,58 @@ class MessagesAdapter(DialectAdapter):
         if event_type == "content_block_stop":
             return self._block_stop_deltas(event)
         if event_type == "message_delta":
-            return _message_delta_deltas(event)
+            return self._message_delta_deltas(event)
         if event_type == "error":
-            raw_error = event.get("error")
-            detail: dict[str, Any] = raw_error if is_json_object(raw_error) else {}
-            _logger.warning("messages_stream_error", error=detail.get("message"))
-            return [StreamDelta(finish="error")]
+            error = _stream_error_text(event.get("error"))
+            _logger.warning("messages_stream_error", error=error)
+            return [StreamDelta(finish="error", error=error)]
         return []
+
+    def _message_start_deltas(self, event: Mapping[str, Any]) -> list[StreamDelta]:
+        """Handle ``message_start``, recording the input-side usage it carries.
+
+        Args:
+            event: The decoded event.
+
+        Returns:
+            list[StreamDelta]: A usage delta when the message states usage.
+        """
+        self.reset_stream_state()
+        raw_message = event.get("message")
+        message: dict[str, Any] = raw_message if is_json_object(raw_message) else {}
+        raw_usage = message.get("usage")
+        if not is_json_object(raw_usage):
+            return []
+        start_usage: dict[str, Any] = raw_usage
+        self._start_usage = dict(start_usage)
+        usage = parse_usage(self._start_usage)
+        return [StreamDelta(usage=usage)] if usage is not None else []
+
+    def _message_delta_deltas(self, event: Mapping[str, Any]) -> list[StreamDelta]:
+        """Translate ``message_delta`` into merged usage and finish deltas.
+
+        Args:
+            event: The decoded event.
+
+        Returns:
+            list[StreamDelta]: Zero or more deltas.
+        """
+        deltas: list[StreamDelta] = []
+        raw_usage = event.get("usage")
+        if is_json_object(raw_usage):
+            delta_usage: dict[str, Any] = raw_usage
+            merged = dict(self._start_usage)
+            merged.update({key: value for key, value in delta_usage.items() if value is not None})
+            self._start_usage = merged
+            usage = parse_usage(merged)
+            if usage is not None:
+                deltas.append(StreamDelta(usage=usage))
+        raw_delta = event.get("delta")
+        delta: dict[str, Any] = raw_delta if is_json_object(raw_delta) else {}
+        stop_reason = delta.get("stop_reason")
+        if isinstance(stop_reason, str):
+            deltas.append(StreamDelta(finish=stop_reason))
+        return deltas
 
     def _block_start_deltas(self, event: Mapping[str, Any]) -> list[StreamDelta]:
         """Handle ``content_block_start``, opening a tool call or a thinking block.
@@ -528,14 +617,17 @@ class MessagesAdapter(DialectAdapter):
         index = event.get("index")
         raw_block = event.get("content_block")
         block: dict[str, Any] = raw_block if is_json_object(raw_block) else {}
-        if block.get("type") == "server_tool_use":
-            self._open_blocks.pop(str(index), None)
-            block_id = block.get("id")
-            _logger.debug("messages_server_tool_use_streamed", block_id=block_id)
+        block_type = block.get("type")
+        self._open_blocks.pop(str(index), None)
+        self._server_tool_input.pop(str(index), None)
+        if is_server_tool_block_type(block_type):
+            _logger.debug("messages_server_tool_block_streamed", block_type=block_type, block_id=block.get("id"))
+            self._open_blocks[str(index)] = dict(block)
+            if block_type == SERVER_TOOL_USE_TYPE:
+                self._server_tool_input[str(index)] = ""
             return []
-        if block.get("type") != "tool_use":
-            self._open_blocks.pop(str(index), None)
-            if block.get("type") in {"thinking", "redacted_thinking"}:
+        if block_type != "tool_use":
+            if block_type in {"thinking", "redacted_thinking"}:
                 self._open_blocks[str(index)] = dict(block)
             return []
         name = block.get("name")
@@ -570,6 +662,9 @@ class MessagesAdapter(DialectAdapter):
             partial = delta.get("partial_json")
             if not isinstance(partial, str) or not partial:
                 return []
+            if str(index) in self._server_tool_input:
+                self._server_tool_input[str(index)] += partial
+                return []
             return [StreamDelta(tool_call_fragment=ToolCallFragment(token=str(index), arguments=partial))]
         if delta_type == "thinking_delta":
             thinking = delta.get("thinking")
@@ -587,27 +682,41 @@ class MessagesAdapter(DialectAdapter):
         return []
 
     def _block_stop_deltas(self, event: Mapping[str, Any]) -> list[StreamDelta]:
-        """Handle ``content_block_stop``, closing a thinking block with its signature.
+        """Handle ``content_block_stop``, closing a thinking or server tool block.
 
         Args:
             event: The decoded event.
 
         Returns:
-            list[StreamDelta]: A reasoning-item delta when a thinking block
-            closed, otherwise an empty list.
+            list[StreamDelta]: A reasoning-item delta when a thinking block or
+            a server tool block closed, otherwise an empty list.
         """
         index = str(event.get("index"))
         block = self._open_blocks.pop(index, None)
+        streamed_input = self._server_tool_input.pop(index, None)
         if block is None:
             return []
-        return [StreamDelta(reasoning_item=parse_thinking_block(block))]
+        if not is_server_tool_block_type(block.get("type")):
+            return [StreamDelta(reasoning_item=parse_thinking_block(block))]
+        if streamed_input:
+            try:
+                decoded: object = json.loads(streamed_input)
+            except json.JSONDecodeError:
+                _logger.warning("messages_server_tool_input_undecodable", block_id=block.get("id"))
+                decoded = None
+            if is_json_object(decoded):
+                block["input"] = decoded
+        return [StreamDelta(reasoning_item=server_tool_item(block))]
 
     def reset_stream_state(self) -> None:
-        """Discard any partially accumulated thinking blocks.
+        """Discard any partially accumulated blocks and usage.
 
-        Called when a stream ends or is cancelled so a subsequent stream on the same adapter cannot inherit a half-built block.
+        Called when a stream starts, ends or is cancelled so a subsequent stream on the same adapter cannot inherit a half-built block or
+        another response's input-token count.
         """
         self._open_blocks.clear()
+        self._server_tool_input.clear()
+        self._start_usage = {}
 
     @override
     def render_tool_result(
@@ -663,7 +772,9 @@ class MessagesAdapter(DialectAdapter):
 
         A thinking block with no signature is dropped rather than sent
         unsigned: Anthropic rejects the request outright, and dropping the
-        block only loses reasoning context that is already unusable.
+        block only loses reasoning context that is already unusable. Server
+        tool blocks are echoed exactly as they arrived, which is what lets a
+        deferred tool the search loaded stay callable.
 
         Args:
             reasoning: Reasoning blocks captured from an earlier turn.
@@ -673,7 +784,10 @@ class MessagesAdapter(DialectAdapter):
         """
         blocks: list[dict[str, Any]] = []
         for item in reasoning:
-            if item.kind is ReasoningKind.REDACTED_THINKING and item.redacted_data is not None:
+            if item.kind is ReasoningKind.PROVIDER_ITEM:
+                if item.payload is not None and is_server_tool_block_type(item.payload.get("type")):
+                    blocks.append(dict(item.payload))
+            elif item.kind is ReasoningKind.REDACTED_THINKING and item.redacted_data is not None:
                 blocks.append({"type": "redacted_thinking", "data": item.redacted_data})
             elif item.kind is ReasoningKind.THINKING and item.signature:
                 blocks.append({"type": "thinking", "thinking": item.text, "signature": item.signature})
@@ -724,6 +838,72 @@ class MessagesAdapter(DialectAdapter):
         """
         del capabilities
         return TokenLimitField.MAX_TOKENS.value
+
+    @staticmethod
+    @override
+    def continues_turn(finish_reason: str | None) -> bool:
+        """Report whether the response stopped with ``pause_turn``.
+
+        Anthropic pauses a turn when a server-executed tool loop -- tool
+        search, web search -- yields before the model has finished. The
+        partial assistant turn must be sent straight back, unchanged, for the
+        model to resume it.
+
+        Args:
+            finish_reason: The response's stop reason, if any.
+
+        Returns:
+            bool: ``True`` for ``pause_turn``.
+        """
+        return finish_reason == PAUSE_TURN_STOP_REASON
+
+
+def is_server_tool_block_type(block_type: object) -> bool:
+    """Report whether a content block type belongs to a server-executed tool.
+
+    Args:
+        block_type: The block's ``type`` value.
+
+    Returns:
+        bool: ``True`` for ``server_tool_use`` and every server tool result
+        block (``tool_search_tool_result``, ``web_search_tool_result``, ...).
+        The client ``tool_result`` block is not one.
+    """
+    if not isinstance(block_type, str):
+        return False
+    return block_type == SERVER_TOOL_USE_TYPE or (block_type.endswith(SERVER_TOOL_RESULT_SUFFIX) and block_type != "tool_result")
+
+
+def server_tool_item(block: Mapping[str, Any]) -> ReasoningItem:
+    """Capture a server-executed tool block for verbatim replay.
+
+    Args:
+        block: The ``server_tool_use`` or server tool result block.
+
+    Returns:
+        ReasoningItem: A provider item holding the complete block.
+    """
+    block_id = block.get("id")
+    return ReasoningItem(
+        kind=ReasoningKind.PROVIDER_ITEM,
+        item_id=block_id if isinstance(block_id, str) else None,
+        payload=dict(block),
+    )
+
+
+def _stream_error_text(raw: object) -> str:
+    """Render an Anthropic stream ``error`` object as ``"<type>: <message>"``.
+
+    Args:
+        raw: The event's ``error`` value.
+
+    Returns:
+        str: The error type and message, whichever are present, or a generic
+        description when the event states neither.
+    """
+    detail: dict[str, Any] = raw if is_json_object(raw) else {}
+    parts = [str(detail[key]) for key in ("type", "message") if isinstance(detail.get(key), str) and detail[key]]
+    return ": ".join(parts) if parts else "The endpoint reported an error without a message"
 
 
 def is_server_tool_use_id(call_id: str) -> bool:
@@ -787,27 +967,6 @@ def _parse_tool_use(block: Mapping[str, Any]) -> ToolCall | None:
     raw_input = block.get("input")
     arguments: str | dict[str, object] = dict(raw_input) if is_json_object(raw_input) else "{}"
     return parse_tool_call(call_id=call_id, function_name=name, raw_arguments=arguments)
-
-
-def _message_delta_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
-    """Translate ``message_delta`` into usage and finish deltas.
-
-    Args:
-        event: The decoded event.
-
-    Returns:
-        list[StreamDelta]: Zero or more deltas.
-    """
-    deltas: list[StreamDelta] = []
-    usage = parse_usage(event.get("usage"))
-    if usage is not None:
-        deltas.append(StreamDelta(usage=usage))
-    raw_delta = event.get("delta")
-    delta: dict[str, Any] = raw_delta if is_json_object(raw_delta) else {}
-    stop_reason = delta.get("stop_reason")
-    if isinstance(stop_reason, str):
-        deltas.append(StreamDelta(finish=stop_reason))
-    return deltas
 
 
 def parse_usage(raw: object) -> UsageInfo | None:

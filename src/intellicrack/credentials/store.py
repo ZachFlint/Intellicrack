@@ -12,17 +12,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import secrets
 import threading
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, Final
+from typing import TYPE_CHECKING, ClassVar, Final, TypeGuard, cast
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import IntellicrackError, ProviderCredentials
-from intellicrack.credentials.env_loader import CredentialLoader, get_credential_loader, validate_key_format
-from intellicrack.providers import ids as provider_ids
+from intellicrack.credentials.env_loader import CredentialLoader, get_credential_loader, known_provider_ids, validate_key_format
 
 
 if TYPE_CHECKING:
@@ -84,6 +84,156 @@ class KeyringUnavailableError(CredentialStoreError):
 
 class CredentialNotFoundError(CredentialStoreError):
     """Requested credential was not found."""
+
+
+class KeyringReadError(CredentialStoreError):
+    """The keyring holds an entry for the credential but it could not be read.
+
+    Raised instead of reporting the credential as absent, so a caller never tells the operator to re-enter a secret that is in fact stored.
+    """
+
+
+CRED_MAX_CREDENTIAL_BLOB_BYTES: Final[int] = 5 * 512
+"""Largest credential blob Windows Credential Manager accepts (``CRED_MAX_CREDENTIAL_BLOB_SIZE``).
+
+The keyring Windows backend writes every secret as UTF-16, so the limit is measured on the UTF-16 encoding, which puts it at about 1280
+characters.
+"""
+
+_CHUNK_MANIFEST_MARKER: Final[str] = "intellicrack_chunked_credential"
+_CHUNK_MANIFEST_VERSION: Final[int] = 1
+_CHUNK_KEY_INFIX: Final[str] = "__chunk_"
+_CHUNK_GENERATION_BYTES: Final[int] = 4
+_UTF16_UNIT_BYTES: Final[int] = 2
+_UTF16_PAIR_BYTES: Final[int] = 4
+_BMP_MAX_CODE_POINT: Final[int] = 0xFFFF
+
+
+@dataclass(frozen=True, slots=True)
+class ChunkManifest:
+    """Pointer record stored in place of a credential too large for one keyring entry.
+
+    Attributes:
+        generation: Random tag shared by every chunk written together, so a rewrite never mixes chunks from two writes.
+        count: Number of chunks the value was split into.
+        length: Number of characters in the whole value, checked after reassembly. Nothing derived from the secret's content is
+            stored, so the manifest reveals no more than its size.
+    """
+
+    generation: str
+    count: int
+    length: int
+
+    def serialize(self) -> str:
+        """Render the manifest as the JSON stored under the credential's own key.
+
+        Returns:
+            str: The manifest JSON.
+        """
+        return json.dumps({
+            _CHUNK_MANIFEST_MARKER: _CHUNK_MANIFEST_VERSION,
+            "generation": self.generation,
+            "count": self.count,
+            "length": self.length,
+        })
+
+    @staticmethod
+    def parse(stored: str) -> ChunkManifest | None:
+        """Recognise a stored entry as a chunk manifest.
+
+        Args:
+            stored: The value read from the credential's own key.
+
+        Returns:
+            ChunkManifest | None: The manifest, or ``None`` when the entry is an ordinary single-entry value.
+        """
+        if _CHUNK_MANIFEST_MARKER not in stored:
+            return None
+        try:
+            decoded: object = json.loads(stored)
+        except json.JSONDecodeError:
+            return None
+        if not isinstance(decoded, dict):
+            return None
+        fields = cast("dict[str, object]", decoded)
+        if fields.get(_CHUNK_MANIFEST_MARKER) != _CHUNK_MANIFEST_VERSION:
+            return None
+        generation = fields.get("generation")
+        count = fields.get("count")
+        length = fields.get("length")
+        if not isinstance(generation, str) or not _is_count(count) or not _is_count(length):
+            return None
+        return ChunkManifest(generation=generation, count=count, length=length)
+
+    def chunk_key(self, key: str, index: int) -> str:
+        """Name the keyring entry one chunk is held under.
+
+        Args:
+            key: The credential's own keyring key.
+            index: Zero-based chunk position.
+
+        Returns:
+            str: The chunk's keyring key.
+        """
+        return f"{key}{_CHUNK_KEY_INFIX}{self.generation}_{index}"
+
+
+def credential_blob_size(value: str) -> int:
+    """Measure a value the way Windows Credential Manager does.
+
+    Args:
+        value: The secret as the keyring backend receives it.
+
+    Returns:
+        int: Its size in bytes once encoded as UTF-16.
+    """
+    return sum(_UTF16_PAIR_BYTES if ord(char) > _BMP_MAX_CODE_POINT else _UTF16_UNIT_BYTES for char in value)
+
+
+def split_credential_blob(value: str, max_bytes: int = CRED_MAX_CREDENTIAL_BLOB_BYTES) -> list[str]:
+    """Split a value into pieces that each fit one keyring entry.
+
+    Pieces are cut on code-point boundaries, so a surrogate pair is never divided between two entries.
+
+    Args:
+        value: The value to split.
+        max_bytes: Largest UTF-16 size one piece may have.
+
+    Returns:
+        list[str]: The pieces, in order. Joining them reproduces ``value``.
+
+    Raises:
+        ValueError: If ``max_bytes`` cannot hold even one character.
+    """
+    if max_bytes < _UTF16_PAIR_BYTES:
+        message = f"a chunk of {max_bytes} bytes cannot hold a UTF-16 character"
+        raise ValueError(message)
+    pieces: list[str] = []
+    current: list[str] = []
+    used = 0
+    for char in value:
+        size = _UTF16_PAIR_BYTES if ord(char) > _BMP_MAX_CODE_POINT else _UTF16_UNIT_BYTES
+        if used + size > max_bytes:
+            pieces.append("".join(current))
+            current = []
+            used = 0
+        current.append(char)
+        used += size
+    if current or not pieces:
+        pieces.append("".join(current))
+    return pieces
+
+
+def _is_count(value: object) -> TypeGuard[int]:
+    """Report whether a manifest field holds a non-negative integer.
+
+    Args:
+        value: The decoded field.
+
+    Returns:
+        TypeGuard[int]: ``True`` for an ``int`` that is not a ``bool`` and not negative.
+    """
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
 class CredentialSource(Enum):
@@ -312,6 +462,109 @@ class CredentialStore:
                 source=CredentialSource.KEYRING,
             )
 
+    def _read_blob(self, keyring: ModuleType, key: str) -> str | None:
+        """Read one stored value, reassembling it when it was written in chunks.
+
+        Runs on a worker thread; every call it makes blocks on the backend.
+
+        Args:
+            keyring: The keyring module to read through.
+            key: The value's own keyring key.
+
+        Returns:
+            str | None: The whole value, or ``None`` when nothing is stored under ``key``.
+
+        Raises:
+            KeyringReadError: If a chunk the manifest names is missing or the reassembled value is not the recorded length.
+        """
+        primary: object = keyring.get_password(self.SERVICE_NAME, key)
+        if primary is None:
+            return None
+        stored = str(primary)
+        manifest = ChunkManifest.parse(stored)
+        if manifest is None:
+            return stored
+        pieces: list[str] = []
+        for index in range(manifest.count):
+            piece: object = keyring.get_password(self.SERVICE_NAME, manifest.chunk_key(key, index))
+            if piece is None:
+                message = f"credential {key!r} is stored in {manifest.count} parts but part {index} is missing from the keyring"
+                raise KeyringReadError(message)
+            pieces.append(str(piece))
+        value = "".join(pieces)
+        if len(value) != manifest.length:
+            message = f"credential {key!r} was reassembled from {manifest.count} parts but is not its recorded length"
+            raise KeyringReadError(message)
+        return value
+
+    def _write_blob(self, keyring: ModuleType, key: str, value: str) -> None:
+        """Store one value, splitting it across entries when it exceeds the Credential Manager blob limit.
+
+        A value that fits is written directly under ``key``, exactly as before chunking existed. A larger one is written as chunks under a
+        fresh generation tag first, and only then is the manifest written under ``key``, so the entry always points at a complete set. The
+        chunks of whatever was stored previously are removed afterwards. An existing entry that cannot be read does not block the write,
+        because overwriting it is how the operator repairs it; only its old chunks, which cannot be located, are left behind.
+
+        Runs on a worker thread; every call it makes blocks on the backend.
+
+        Args:
+            keyring: The keyring module to write through.
+            key: The value's own keyring key.
+            value: The value to store.
+        """
+        previous: ChunkManifest | None = None
+        try:
+            previous_primary: object = keyring.get_password(self.SERVICE_NAME, key)
+        except (OSError, ValueError, _KeyringError, _Win32CredentialError):
+            _logger.warning("credential_previous_entry_unreadable", key_id=key, exc_info=True)
+        else:
+            previous = ChunkManifest.parse(str(previous_primary)) if previous_primary is not None else None
+        if credential_blob_size(value) <= CRED_MAX_CREDENTIAL_BLOB_BYTES and ChunkManifest.parse(value) is None:
+            keyring.set_password(self.SERVICE_NAME, key, value)
+        else:
+            pieces = split_credential_blob(value)
+            manifest = ChunkManifest(generation=secrets.token_hex(_CHUNK_GENERATION_BYTES), count=len(pieces), length=len(value))
+            for index, piece in enumerate(pieces):
+                keyring.set_password(self.SERVICE_NAME, manifest.chunk_key(key, index), piece)
+            keyring.set_password(self.SERVICE_NAME, key, manifest.serialize())
+            _logger.debug("credential_stored_in_chunks", key_id=key, chunk_count=manifest.count)
+        if previous is not None:
+            self._delete_chunks(keyring, key, previous)
+
+    def _delete_chunks(self, keyring: ModuleType, key: str, manifest: ChunkManifest) -> None:
+        """Remove the chunk entries one manifest names.
+
+        A chunk that is already gone is not an error: the goal is that none remain.
+
+        Args:
+            keyring: The keyring module to delete through.
+            key: The value's own keyring key.
+            manifest: The manifest whose chunks are removed.
+        """
+        for index in range(manifest.count):
+            chunk_key = manifest.chunk_key(key, index)
+            if keyring.get_password(self.SERVICE_NAME, chunk_key) is not None:
+                keyring.delete_password(self.SERVICE_NAME, chunk_key)
+
+    def _delete_blob(self, keyring: ModuleType, key: str) -> bool:
+        """Remove one stored value together with any chunks it was split into.
+
+        Args:
+            keyring: The keyring module to delete through.
+            key: The value's own keyring key.
+
+        Returns:
+            bool: ``True`` when a value was stored and has been removed, ``False`` when nothing was stored.
+        """
+        primary: object = keyring.get_password(self.SERVICE_NAME, key)
+        if primary is None:
+            return False
+        manifest = ChunkManifest.parse(str(primary))
+        keyring.delete_password(self.SERVICE_NAME, key)
+        if manifest is not None:
+            self._delete_chunks(keyring, key, manifest)
+        return True
+
     async def _get_from_keyring(self, provider: str) -> ProviderCredentials | None:
         """Get credentials directly from keyring.
 
@@ -319,7 +572,10 @@ class CredentialStore:
             provider: Provider to get credentials for.
 
         Returns:
-            ProviderCredentials | None: ProviderCredentials or None if not found.
+            ProviderCredentials | None: ProviderCredentials, or ``None`` when the keyring is unavailable or holds nothing for the provider.
+
+        Raises:
+            KeyringReadError: If the keyring holds an entry for the provider but it cannot be read or decoded.
         """
         if self._keyring is None:
             return None
@@ -333,15 +589,18 @@ class CredentialStore:
             Returns:
                 str | None: Credential payload string, or ``None`` if absent.
             """
-            result = keyring.get_password(self.SERVICE_NAME, key)
-            return str(result) if result is not None else None
+            return self._read_blob(keyring, key)
 
         try:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_credentials(data) if data else None
+        except KeyringReadError:
+            _logger.warning("keyring_get_failed", provider=provider, exc_info=True)
+            raise
         except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError, CredentialStoreError) as e:
             _logger.warning("keyring_get_failed", provider=provider, error=str(e), exc_info=True)
-            return None
+            msg = f"Failed to read credentials from the keyring: {e}"
+            raise KeyringReadError(msg) from e
 
     async def _set_to_keyring(
         self,
@@ -386,8 +645,8 @@ class CredentialStore:
 
         def _store() -> None:
             """Persist credential and metadata payloads under the provider keys."""
-            keyring.set_password(self.SERVICE_NAME, key, data)
-            keyring.set_password(self.SERVICE_NAME, metadata_key, metadata_data)
+            self._write_blob(keyring, key, data)
+            self._write_blob(keyring, metadata_key, metadata_data)
 
         try:
             await asyncio.to_thread(_store)
@@ -418,13 +677,12 @@ class CredentialStore:
             Returns:
                 str | None: Metadata payload string, or ``None`` if absent.
             """
-            result = keyring.get_password(self.SERVICE_NAME, key)
-            return str(result) if result is not None else None
+            return self._read_blob(keyring, key)
 
         try:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_metadata(data, provider) if data else None
-        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError):
+        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError, KeyringReadError):
             _logger.debug("metadata_get_failed", provider=provider, exc_info=True)
             return None
 
@@ -436,6 +694,11 @@ class CredentialStore:
         ``self._lock`` (such as :meth:`list_providers`) to avoid re-entrant
         lock acquisition which would deadlock ``asyncio.Lock``.
 
+        A keyring entry that exists but cannot be read is logged and the
+        env-file credential is used instead, which is the documented
+        fallback for provider keys. Callers that must not fall back use
+        :meth:`get_secret`.
+
         Args:
             provider: The provider to get credentials for.
 
@@ -443,7 +706,11 @@ class CredentialStore:
             ProviderCredentials | None: ProviderCredentials if found, None otherwise.
         """
         if self.keyring_available:
-            creds = await self._get_from_keyring(provider)
+            try:
+                creds = await self._get_from_keyring(provider)
+            except KeyringReadError as exc:
+                _logger.warning("credential_keyring_unreadable_using_env", provider=provider, error=str(exc))
+                creds = None
             if creds is not None and creds.api_key:
                 return creds
 
@@ -471,6 +738,32 @@ class CredentialStore:
             credential_found=result is not None and bool(result.api_key),
         )
         return result
+
+    async def get_secret(self, key: str) -> ProviderCredentials | None:
+        """Read one value from the keyring alone, reporting every failure.
+
+        Unlike :meth:`get`, nothing falls back to the env file and nothing
+        is swallowed: ``None`` means the keyring was read and holds no entry
+        under ``key``, and every other outcome raises. This is what a caller
+        needs when "not stored" leads the operator to re-enter a secret.
+        An entry that exists but cannot be read propagates
+        :class:`KeyringReadError` from the read.
+
+        Args:
+            key: The credential key.
+
+        Returns:
+            ProviderCredentials | None: The stored credentials, or ``None``
+            when the keyring holds nothing under ``key``.
+
+        Raises:
+            KeyringUnavailableError: If no usable keyring backend exists.
+        """
+        if not self.keyring_available:
+            msg = "Keyring is not available, so the stored value cannot be read"
+            raise KeyringUnavailableError(msg)
+        async with self._lock:
+            return await self._get_from_keyring(key)
 
     async def get_or_raise(self, provider: str) -> ProviderCredentials:
         """Get credentials for a provider, raising if not found.
@@ -556,12 +849,13 @@ class CredentialStore:
                 when credential deletion itself failed.
             """
             try:
-                keyring.delete_password(self.SERVICE_NAME, key)
+                if not self._delete_blob(keyring, key):
+                    return False
             except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError):
                 _logger.exception("keyring_delete_credential_failed", provider=provider)
                 return False
             try:
-                keyring.delete_password(self.SERVICE_NAME, metadata_key)
+                _ = self._delete_blob(keyring, metadata_key)
             except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError):
                 _logger.exception("keyring_delete_metadata_failed", provider=provider)
             return True
@@ -582,7 +876,7 @@ class CredentialStore:
         results: list[StoredCredential] = []
 
         async with self._lock:
-            for provider in provider_ids.BUILTIN_PROVIDER_IDS:
+            for provider in known_provider_ids():
                 creds = await self._get_unlocked(provider)
                 if creds is not None and creds.api_key:
                     metadata = await self._get_metadata(provider)
@@ -623,7 +917,7 @@ class CredentialStore:
         """
         _logger.debug(
             "credential_migration_started",
-            provider_count=len(providers) if providers is not None else len(provider_ids.BUILTIN_PROVIDER_IDS),
+            provider_count=len(providers) if providers is not None else len(known_provider_ids()),
             overwrite=overwrite,
         )
         if not self.keyring_available:
@@ -631,7 +925,7 @@ class CredentialStore:
             msg = "Keyring is not available for migration"
             raise KeyringUnavailableError(msg)
 
-        target_providers = providers or list(provider_ids.BUILTIN_PROVIDER_IDS)
+        target_providers = providers or list(known_provider_ids())
         results: dict[str, bool] = {}
 
         async with self._lock:
@@ -642,7 +936,12 @@ class CredentialStore:
                     continue
 
                 if not overwrite:
-                    existing = await self._get_from_keyring(provider)
+                    try:
+                        existing = await self._get_from_keyring(provider)
+                    except KeyringReadError as exc:
+                        _logger.warning("credential_migration_failed", provider=provider, error=str(exc))
+                        results[provider] = False
+                        continue
                     if existing is not None and existing.api_key:
                         _logger.info("credential_migration_skipped", provider=provider, reason="exists")
                         results[provider] = True
@@ -698,7 +997,11 @@ class CredentialStore:
         """
         _logger.debug("credentials_get_source_started", provider=provider)
         if self.keyring_available:
-            keyring_creds = await self._get_from_keyring(provider)
+            try:
+                keyring_creds = await self._get_from_keyring(provider)
+            except KeyringReadError as exc:
+                _logger.warning("credentials_get_source_keyring_unreadable", provider=provider, error=str(exc))
+                keyring_creds = None
             if keyring_creds is not None and keyring_creds.api_key:
                 metadata = await self._get_metadata(provider)
                 source = metadata.source if metadata is not None else CredentialSource.KEYRING

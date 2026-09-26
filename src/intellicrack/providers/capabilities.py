@@ -97,7 +97,12 @@ class ReasoningEffortFormat(enum.Enum):
             string.
         NESTED_EFFORT: Responses ``reasoning: {"effort": ...}``.
         THINKING_BUDGET: Anthropic ``thinking: {"type": "enabled",
-            "budget_tokens": ...}``.
+            "budget_tokens": ...}``, which Claude models before the 4.6
+            generation take.
+        ADAPTIVE_EFFORT: Anthropic ``thinking: {"type": "adaptive"}`` with the
+            depth set by ``output_config.effort``. Claude Opus 4.6 and Sonnet
+            4.6 accept it in place of the deprecated budget; Opus 4.7 and
+            later, Sonnet 5 and Fable reject a budget outright.
         GENERATION_BUDGET: Gemini ``generationConfig.thinkingConfig.thinkingBudget``.
     """
 
@@ -105,6 +110,7 @@ class ReasoningEffortFormat(enum.Enum):
     TOP_LEVEL_EFFORT = "reasoning_effort"
     NESTED_EFFORT = "reasoning.effort"
     THINKING_BUDGET = "thinking.budget_tokens"
+    ADAPTIVE_EFFORT = "output_config.effort"
     GENERATION_BUDGET = "thinkingConfig.thinkingBudget"
 
 
@@ -131,6 +137,46 @@ DEFAULT_EFFORT_LEVELS: Final[tuple[str, ...]] = ("low", "medium", "high")
 
 EXTENDED_EFFORT_LEVELS: Final[tuple[str, ...]] = ("none", "minimal", "low", "medium", "high", "max")
 """The full effort ladder, as exposed by Zed and current OpenAI reasoning models."""
+
+ANTHROPIC_EFFORT_LEVELS: Final[tuple[str, ...]] = ("low", "medium", "high", "xhigh", "max")
+"""``output_config.effort`` values of Claude Opus 4.7 and later, Sonnet 5 and Fable."""
+
+ANTHROPIC_46_EFFORT_LEVELS: Final[tuple[str, ...]] = ("low", "medium", "high", "max")
+"""``output_config.effort`` values of Claude Opus 4.6 and Sonnet 4.6, which predate ``xhigh``."""
+
+_BUDGET_EFFORT_LADDER: Final[tuple[tuple[int, str], ...]] = (
+    (4000, "low"),
+    (16000, "medium"),
+    (32000, "high"),
+    (64000, "xhigh"),
+)
+"""Upper thinking-budget bound of each effort level; a larger budget maps to ``max``."""
+
+_TOP_EFFORT_LEVEL: Final[str] = "max"
+
+
+def effort_for_thinking_budget(budget_tokens: int, levels: tuple[str, ...]) -> str | None:
+    """Map a thinking-token budget onto the effort levels a model accepts.
+
+    The budget picks a level on the ``low`` .. ``max`` ladder; when the model
+    does not offer that level, the highest level it offers below it is used,
+    and failing that its lowest level.
+
+    Args:
+        budget_tokens: The caller's thinking budget in tokens.
+        levels: The effort values the model accepts, in ascending order.
+
+    Returns:
+        str | None: The effort to send, or ``None`` when the model accepts no
+        effort level at all.
+    """
+    offered = [level for level in levels if level not in {"none", "minimal"}]
+    if not offered:
+        return None
+    ladder = [level for _, level in _BUDGET_EFFORT_LADDER] + [_TOP_EFFORT_LEVEL]
+    target = next((level for bound, level in _BUDGET_EFFORT_LADDER if budget_tokens <= bound), _TOP_EFFORT_LEVEL)
+    candidates = ladder[: ladder.index(target) + 1]
+    return next((level for level in reversed(candidates) if level in offered), offered[0])
 
 
 @dataclass(frozen=True, slots=True)
@@ -635,11 +681,7 @@ def merge_capabilities(base: ModelCapabilities, *overrides: CapabilityOverride |
     for override in overrides:
         if override is None:
             continue
-        if stated := {
-            name: getattr(override, name)
-            for name in _OVERRIDE_FIELD_NAMES
-            if getattr(override, name) is not None
-        }:
+        if stated := {name: getattr(override, name) for name in _OVERRIDE_FIELD_NAMES if getattr(override, name) is not None}:
             merged = replace(merged, **stated)
     return merged
 

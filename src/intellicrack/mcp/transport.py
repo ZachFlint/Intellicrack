@@ -5,8 +5,8 @@
 """Transport construction for Model Context Protocol connections.
 
 Two shapes reach the SDK from here. A local server becomes a :class:`~mcp.client.stdio.StdioServerParameters` whose argv is resolved without
-a shell, and a remote server becomes a Streamable HTTP stream pair built on an ``httpx2`` client that carries the configured headers, the
-composed query string, and any OAuth handler.
+a shell, and a remote server becomes a stream pair built on an ``httpx2`` client that carries the configured headers, the composed query
+string, and any OAuth handler: a Streamable HTTP pair for an ``http`` server, and the SDK's legacy SSE pair for an ``sse`` one.
 
 The stdio path is the security-sensitive one. ``StdioServerParameters`` launches ``command`` with ``args`` directly, never through a shell,
 so a metacharacter in the command is not interpreted -- but a command containing one is still a sign the operator pasted a shell pipeline
@@ -23,10 +23,12 @@ from typing import TYPE_CHECKING, Any, Final, Protocol, runtime_checkable
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx2
+from mcp.client.sse import sse_client
 from mcp.client.stdio import StdioServerParameters
 from mcp.client.streamable_http import streamable_http_client
 
 from intellicrack.core.logging import get_logger
+from intellicrack.mcp.config import McpTransportKind
 from intellicrack.mcp.errors import McpConfigError
 
 
@@ -90,9 +92,27 @@ def open_web_url(url: str) -> bool:
         when it was refused or no browser could be launched.
     """
     if not is_web_url(url):
-        _logger.warning("mcp_url_open_refused", scheme=urlsplit(url).scheme[:32] if "//" in url else "")
+        _logger.warning("mcp_url_open_refused", scheme=_url_scheme(url))
         return False
     return webbrowser.open(url)
+
+
+def _url_scheme(url: str) -> str:
+    """Extract a URL's scheme for logging, tolerating a URL that cannot be parsed.
+
+    Args:
+        url: The URL a server asked to have opened.
+
+    Returns:
+        str: The scheme, cut to 32 characters, or an empty string when the
+        URL names none or is too malformed to split.
+    """
+    if "//" not in url:
+        return ""
+    try:
+        return urlsplit(url).scheme[:32]
+    except ValueError:
+        return ""
 
 
 @runtime_checkable
@@ -284,13 +304,25 @@ async def open_http_transport(
     headers: Mapping[str, str],
     auth: httpx2.Auth | None,
     timeout_s: float,
+    kind: McpTransportKind = McpTransportKind.HTTP,
 ) -> AsyncGenerator[tuple[Any, Any]]:
-    """Open a Streamable HTTP transport for a remote server.
+    """Open the HTTP transport a remote server is declared with.
 
-    The SDK's ``StreamableHTTPTransport`` takes only a URL: headers and
-    authorization ride on the ``httpx2`` client handed to
+    An ``http`` server gets the Streamable HTTP transport. The SDK's
+    ``StreamableHTTPTransport`` takes only a URL: headers and authorization
+    ride on the ``httpx2`` client handed to
     :func:`mcp.client.streamable_http.streamable_http_client`, which is what
-    this builds. Redirects are followed by the SDK only within the endpoint's
+    this builds.
+
+    An ``sse`` server gets the SDK's legacy HTTP+SSE transport,
+    :func:`mcp.client.sse.sse_client`: a long-lived ``GET`` event stream
+    that announces the endpoint messages are ``POST``-ed to. That is a
+    different wire protocol from Streamable HTTP, so a server declared
+    ``sse`` cannot be reached through the Streamable HTTP client at all. The
+    caller must drive the session in the SDK's ``legacy`` client mode, since
+    an SSE server predates ``server/discover``.
+
+    Either way redirects are followed by the SDK only within the endpoint's
     own origin.
 
     Args:
@@ -300,20 +332,45 @@ async def open_http_transport(
             unauthenticated endpoint. ``OAuthClientProvider`` is one.
         timeout_s: Connect and write timeout in seconds. The read timeout is
             left long because a server may hold a response stream open.
+        kind: The declared transport, :attr:`McpTransportKind.HTTP` or
+            :attr:`McpTransportKind.SSE`.
 
     A header still carrying an unresolved reference propagates
     :class:`McpConfigError` from :func:`_reject_unresolved`.
 
     Yields:
         tuple[Any, Any]: The read stream and the write stream.
+
+    Raises:
+        McpConfigError: If ``kind`` is not an HTTP transport.
     """
     for name, value in headers.items():
         _reject_unresolved(value, f"headers.{name}")
 
     endpoint = compose_endpoint_url(spec.url, spec.query)
     timeout = httpx2.Timeout(timeout_s, read=_stream_read_timeout(timeout_s))
+    _logger.debug(
+        "mcp_http_transport_opening",
+        endpoint=_redact_endpoint(endpoint),
+        transport=kind.value,
+        authenticated=auth is not None,
+    )
+    if kind is McpTransportKind.SSE:
+        async with sse_client(
+            endpoint,
+            headers=dict(headers),
+            timeout=timeout_s,
+            sse_read_timeout=_stream_read_timeout(timeout_s),
+            httpx_client_factory=_build_sse_http_client,
+            auth=auth,
+        ) as streams:
+            read_stream, write_stream = streams[0], streams[1]
+            yield read_stream, write_stream
+        return
+    if kind is not McpTransportKind.HTTP:
+        message = f"transport {kind.value!r} is not an HTTP transport"
+        raise McpConfigError(message)
     client = _build_http_client(headers=headers, timeout=timeout, auth=auth)
-    _logger.debug("mcp_http_transport_opening", endpoint=_redact_endpoint(endpoint), authenticated=auth is not None)
     async with client, streamable_http_client(endpoint, http_client=client) as streams:
         read_stream, write_stream = streams[0], streams[1]
         yield read_stream, write_stream
@@ -341,6 +398,30 @@ def _build_http_client(
         httpx2.AsyncClient: The client to hand to the transport.
     """
     return httpx2.AsyncClient(timeout=timeout, headers=dict(headers), auth=auth)
+
+
+def _build_sse_http_client(
+    headers: dict[str, str] | None = None,
+    timeout: httpx2.Timeout | None = None,
+    auth: httpx2.Auth | None = None,
+) -> httpx2.AsyncClient:
+    """Build the ``httpx2`` client the legacy SSE transport rides on.
+
+    The SDK's :func:`~mcp.client.sse.sse_client` builds its client itself
+    through a factory of this shape, so the settings are the same ones
+    :func:`_build_http_client` applies to a Streamable HTTP server.
+
+    Args:
+        headers: Fully resolved request headers, or ``None``.
+        timeout: Connect, write and read timeouts, or ``None`` for the
+            Streamable HTTP defaults of this module.
+        auth: An authentication handler, or ``None``.
+
+    Returns:
+        httpx2.AsyncClient: The client to hand to the transport.
+    """
+    effective = timeout if timeout is not None else httpx2.Timeout(_STREAM_READ_TIMEOUT_FLOOR_S)
+    return _build_http_client(headers=headers or {}, timeout=effective, auth=auth)
 
 
 _STREAM_READ_TIMEOUT_FLOOR_S: Final[float] = 300.0
