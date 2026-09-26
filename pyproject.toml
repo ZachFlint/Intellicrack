@@ -65,6 +65,7 @@ dependencies = [
   "PyQt6>=6.11.0,<7",
   "pyyaml",
   "r2pipe>=1.9.8,<2",
+  "regex>=2024.11.6",
   "rzpipe>=0.6.2,<0.7",
   "setuptools",
   "structlog>=26.1.0,<27",
@@ -766,6 +767,7 @@ pypi-dependencies.ghidra-bridge = ">=1.0.0, <2"
 pypi-dependencies.anthropic = ">=1.7.0, <2"
 pypi-dependencies.openai = ">=3.16.2, <4"
 pypi-dependencies.tiktoken = ">=0.14.0, <0.15"
+pypi-dependencies.regex = ">=2024.11.6"
 pypi-dependencies.google-genai = ">=2.24.0, <3"
 pypi-dependencies.httpx = ">=0.28.1, <0.29"
 pypi-dependencies.structlog = ">=26.1.0, <27"
