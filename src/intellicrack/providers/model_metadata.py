@@ -244,6 +244,10 @@ def ingest_model_entry(entry: dict[str, Any]) -> IngestedModel | None:
     if tools is not None:
         stated["supports_tools"] = tools
 
+    temperature = _states_temperature(entry)
+    if temperature is not None:
+        stated["supports_temperature"] = temperature
+
     reasoning = _states_reasoning(entry)
     if reasoning is not None:
         stated["reasoning"] = _reasoning_mapping(reasoning)
@@ -331,6 +335,26 @@ def _states_vision(entry: dict[str, Any]) -> bool | None:
         if value is not None:
             return value
     return None
+
+
+def _states_temperature(entry: dict[str, Any]) -> bool | None:
+    """Read whether an entry states that the model accepts a temperature.
+
+    OpenRouter lists every request parameter a model honours in
+    ``supported_parameters``; a model whose list omits ``temperature``
+    rejects or ignores sampling control.
+
+    Args:
+        entry: One model entry.
+
+    Returns:
+        bool | None: The stated value, or ``None`` when the entry is silent.
+    """
+    supported = entry.get("supported_parameters")
+    if not is_json_array(supported):
+        return None
+    names: list[Any] = supported
+    return any(str(name) == "temperature" for name in names)
 
 
 def _capability_flag(entry: dict[str, Any], key: str) -> bool | None:
