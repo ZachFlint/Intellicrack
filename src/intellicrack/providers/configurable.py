@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import email.utils
+import functools
 import json
 import math
 import re
@@ -47,12 +48,12 @@ from intellicrack.providers.base import (
 )
 from intellicrack.providers.capabilities import ApiDialect, merge_capabilities
 from intellicrack.providers.dialects import adapter_for
-from intellicrack.providers.dialects.base import DialectRequest
+from intellicrack.providers.dialects.base import DialectRequest, UsageInfo
 from intellicrack.providers.model_metadata import ingest_models
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator, AsyncIterator
 
     from intellicrack.core.types import (
         ReasoningItem,
@@ -111,6 +112,10 @@ _ERR_STREAM_FAILED: Final[str] = "Stream from %s failed: %s"
 _ERR_PAYLOAD_NOT_OBJECT: Final[str] = "Response from %s was not a JSON object"
 _ERR_BODY_NOT_JSON: Final[str] = "Request body for %s cannot be encoded as JSON: %s"
 _ERR_QUOTA_EXHAUSTED: Final[str] = "Provider instance %s quota or spending cap exhausted: %s"
+_ERR_STREAM_REPORTED: Final[str] = "Stream from %s reported an error: %s"
+
+MAX_PAUSED_TURN_CONTINUATIONS: Final[int] = 8
+"""How many times one call resends a paused turn (Anthropic ``pause_turn``) before returning what it has."""
 
 _ERR_KEY_WITHHELD: Final[str] = (
     "This instance sends plain HTTP to a public host. Acknowledge the insecure transport in Provider Settings "
@@ -523,7 +528,7 @@ class ConfigurableProvider(LLMProviderBase):
         self._pending_reasoning.clear()
 
         client = await self._require_client()
-        body, _ = self._build_body(
+        body, capabilities = self._build_body(
             messages=messages,
             model=model,
             tools=tools,
@@ -544,22 +549,41 @@ class ConfigurableProvider(LLMProviderBase):
 
         path = self._adapter.endpoint_path(model=model, stream=False)
         start_time = time.perf_counter()
-        payload = await self._retry_with_backoff(
-            lambda: self._post_json(client, path, body),
-            max_delay=_MAX_RETRY_WAIT_SECONDS,
-        )
+        content = ""
+        reasoning: list[ReasoningItem] = []
+        tool_calls: list[ToolCall] = []
+        for continuation in range(MAX_PAUSED_TURN_CONTINUATIONS + 1):
+            payload = await self._retry_with_backoff(
+                functools.partial(self._post_json, client, path, body),
+                max_delay=_MAX_RETRY_WAIT_SECONDS,
+            )
+            parsed = self._adapter.parse_response(payload, capabilities=capabilities)
+            content += parsed.content
+            reasoning.extend(parsed.reasoning)
+            tool_calls.extend(parsed.tool_calls)
+            self._pending_usage = _sum_usage(self._pending_usage, parsed.usage)
+            if not self._adapter.continues_turn(parsed.finish_reason) or continuation == MAX_PAUSED_TURN_CONTINUATIONS:
+                break
+            body, capabilities = self._build_body(
+                messages=_paused_turn_history(messages, content, reasoning),
+                model=model,
+                tools=tools,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tool_choice=tool_choice,
+                thinking=thinking,
+                enable_cache=enable_cache,
+                stream=False,
+            )
         duration_ms = (time.perf_counter() - start_time) * 1000
 
-        parsed = self._adapter.parse_response(payload)
-        self._pending_usage = parsed.usage
-        self._pending_reasoning = list(parsed.reasoning)
-        self._pending_thinking.extend(item.text for item in parsed.reasoning if item.text)
-        tool_calls = list(parsed.tool_calls)
+        self._pending_reasoning = list(reasoning)
+        self._pending_thinking.extend(item.text for item in reasoning if item.text)
         message = Message(
             role="assistant",
-            content=parsed.content,
+            content=content,
             tool_calls=tool_calls or None,
-            reasoning=list(parsed.reasoning) or None,
+            reasoning=list(reasoning) or None,
             timestamp=datetime.now(tz=UTC),
         )
         log_provider_response(
@@ -650,11 +674,18 @@ class ConfigurableProvider(LLMProviderBase):
         Yields:
             str: Text chunks as they arrive.
 
+        Raises:
+            ProviderError: If the endpoint reports a failure inside the
+                stream -- an ``error`` event, a failed response, an error
+                chunk -- after it opened successfully.
+
         Note:
             A transport or HTTP failure surfaces as the typed error
             :meth:`_open_stream_response` raises, and a provider that is not
             connected raises ``ProviderError`` from :meth:`_require_client`.
-            A rate-limited stream is retried before any text is yielded.
+            A rate-limited stream is retried before any text is yielded, and
+            a paused turn is resent and its continuation streamed on as part
+            of the same response.
         """
         self._reject_empty_messages(messages)
         self._cancel_requested = False
@@ -662,7 +693,7 @@ class ConfigurableProvider(LLMProviderBase):
         self._pending_reasoning.clear()
 
         client = await self._require_client()
-        body, _ = self._build_body(
+        body, capabilities = self._build_body(
             messages=messages,
             model=model,
             tools=tools,
@@ -685,23 +716,53 @@ class ConfigurableProvider(LLMProviderBase):
         stream_adapter = adapter_for(self.instance.dialect)
         buffer = ToolCallBufferManager()
         reasoning: list[ReasoningItem] = []
-        stack, response = await self._retry_with_backoff(
-            lambda: self._open_stream_response(client, path, body),
-            max_delay=_MAX_RETRY_WAIT_SECONDS,
-        )
-        async for event in self._stream_events(stack, response):
-            if self._cancel_requested:
+        streamed_text = ""
+        completed_usage: UsageInfo | None = None
+        for continuation in range(MAX_PAUSED_TURN_CONTINUATIONS + 1):
+            finish: str | None = None
+            round_usage: UsageInfo | None = None
+            stack, response = await self._retry_with_backoff(
+                functools.partial(self._open_stream_response, client, path, body),
+                max_delay=_MAX_RETRY_WAIT_SECONDS,
+            )
+            events = self._stream_events(stack, response)
+            try:
+                async for event in events:
+                    if self._cancel_requested:
+                        break
+                    for delta in stream_adapter.parse_stream_event(event, capabilities=capabilities):
+                        if delta.error is not None:
+                            self._logger.warning("configurable_stream_reported_error", error=delta.error)
+                            raise ProviderError(_ERR_STREAM_REPORTED % (self.name, delta.error), provider_name=self.name)
+                        buffer.absorb(delta)
+                        if delta.usage is not None:
+                            round_usage = delta.usage
+                            self._pending_usage = _sum_usage(completed_usage, round_usage)
+                        if delta.finish is not None:
+                            finish = delta.finish
+                        if delta.reasoning_item is not None:
+                            reasoning.append(delta.reasoning_item)
+                        if delta.reasoning:
+                            self._pending_thinking.append(delta.reasoning)
+                        if delta.text:
+                            streamed_text += delta.text
+                            yield delta.text
+            finally:
+                await events.aclose()
+            completed_usage = _sum_usage(completed_usage, round_usage)
+            if self._cancel_requested or not self._adapter.continues_turn(finish) or continuation == MAX_PAUSED_TURN_CONTINUATIONS:
                 break
-            for delta in stream_adapter.parse_stream_event(event):
-                buffer.absorb(delta)
-                if delta.usage is not None:
-                    self._pending_usage = delta.usage
-                if delta.reasoning_item is not None:
-                    reasoning.append(delta.reasoning_item)
-                if delta.reasoning:
-                    self._pending_thinking.append(delta.reasoning)
-                if delta.text:
-                    yield delta.text
+            body, capabilities = self._build_body(
+                messages=_paused_turn_history(messages, streamed_text, reasoning),
+                model=model,
+                tools=tools,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tool_choice=tool_choice,
+                thinking=thinking,
+                enable_cache=enable_cache,
+                stream=True,
+            )
 
         self._pending_tool_calls = buffer.finalize()
         self._pending_reasoning = reasoning
@@ -757,7 +818,7 @@ class ConfigurableProvider(LLMProviderBase):
         self,
         stack: contextlib.AsyncExitStack,
         response: httpx.Response,
-    ) -> AsyncIterator[dict[str, Any]]:
+    ) -> AsyncGenerator[dict[str, Any]]:
         """Yield an open stream's decoded events, closing it when done.
 
         Args:
@@ -986,6 +1047,47 @@ def _google_retry_delay(body: str) -> float | None:
             if match is not None:
                 return float(match.group(1))
     return None
+
+
+def _paused_turn_history(messages: list[Message], content: str, reasoning: list[ReasoningItem]) -> list[Message]:
+    """Build the history that resumes a paused turn.
+
+    The partial assistant turn -- its text and every reasoning and server
+    tool block so far -- goes back as the final message, which is how the
+    endpoint is told to continue it rather than start a new one.
+
+    Args:
+        messages: The conversation the paused request was built from.
+        content: The assistant text produced so far this turn.
+        reasoning: The reasoning and provider items produced so far this turn.
+
+    Returns:
+        list[Message]: ``messages`` followed by the partial assistant turn.
+    """
+    partial = Message(role="assistant", content=content, reasoning=list(reasoning) or None)
+    return [*messages, partial]
+
+
+def _sum_usage(total: UsageInfo | None, addition: UsageInfo | None) -> UsageInfo | None:
+    """Add one request's token usage to a running total.
+
+    Args:
+        total: The usage accumulated so far, or ``None``.
+        addition: The usage of the latest request, or ``None``.
+
+    Returns:
+        UsageInfo | None: The field-wise sum, or whichever operand exists.
+    """
+    if total is None or addition is None:
+        return addition if total is None else total
+    return UsageInfo(
+        prompt_tokens=total.prompt_tokens + addition.prompt_tokens,
+        completion_tokens=total.completion_tokens + addition.completion_tokens,
+        total_tokens=total.total_tokens + addition.total_tokens,
+        cache_read_tokens=total.cache_read_tokens + addition.cache_read_tokens,
+        cache_creation_tokens=total.cache_creation_tokens + addition.cache_creation_tokens,
+        reasoning_tokens=total.reasoning_tokens + addition.reasoning_tokens,
+    )
 
 
 def _safe_body(response: httpx.Response) -> str:

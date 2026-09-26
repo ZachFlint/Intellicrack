@@ -183,6 +183,13 @@ class ChatCompletionsAdapter(DialectAdapter):
     ) -> list[dict[str, Any]]:
         """Convert Intellicrack messages to the OpenAI message array.
 
+        Chat Completions requires every ``tool`` message answering one
+        assistant turn to follow that turn contiguously; a ``user`` message
+        between two of them is rejected. The image parts a tool result can
+        only carry in a ``user`` message are therefore held back until the
+        whole run of tool messages is emitted, then sent as one ``user``
+        message.
+
         Args:
             messages: Conversation history.
             capabilities: The resolved capability record for the target model,
@@ -194,7 +201,15 @@ class ChatCompletionsAdapter(DialectAdapter):
             list[dict[str, Any]]: Messages ready to send.
         """
         converted: list[dict[str, Any]] = []
+        deferred: list[dict[str, Any]] = []
         for msg in messages:
+            if msg.role == "tool":
+                for result in msg.tool_results or ():
+                    for item in self.render_tool_result(result, capabilities):
+                        (converted if item.get("role") == "tool" else deferred).append(item)
+                continue
+            converted.extend(_merge_deferred_user_content(deferred))
+            deferred.clear()
             if msg.role in {"system", "user"}:
                 converted.append({
                     "role": msg.role,
@@ -202,9 +217,7 @@ class ChatCompletionsAdapter(DialectAdapter):
                 })
             elif msg.role == "assistant":
                 converted.append(self._build_assistant_message(msg, capabilities, name_style=name_style))
-            elif msg.role == "tool" and msg.tool_results:
-                for result in msg.tool_results:
-                    converted.extend(self.render_tool_result(result, capabilities))
+        converted.extend(_merge_deferred_user_content(deferred))
         return converted
 
     def _build_assistant_message(
@@ -244,9 +257,13 @@ class ChatCompletionsAdapter(DialectAdapter):
             assistant_msg["tool_calls"] = tc_list
 
         reasoning_key = capabilities.reasoning.reasoning_key
-        if msg.reasoning and reasoning_key and capabilities.reasoning.include_reasoning_history:
-            if replayed := self.render_reasoning(msg.reasoning):
-                assistant_msg[reasoning_key] = replayed[0]["text"]
+        if (
+            msg.reasoning
+            and reasoning_key
+            and capabilities.reasoning.include_reasoning_history
+            and (replayed := self.render_reasoning(msg.reasoning))
+        ):
+            assistant_msg[reasoning_key] = replayed[0]["text"]
         return assistant_msg
 
     @override
@@ -350,15 +367,25 @@ class ChatCompletionsAdapter(DialectAdapter):
         }
 
     @override
-    def parse_response(self, payload: Mapping[str, Any]) -> DialectResponse:
+    def parse_response(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> DialectResponse:
         """Parse a Chat Completions response body.
 
         Args:
             payload: The decoded response body.
+            capabilities: The resolved capability record for the target model,
+                whose ``reasoning.reasoning_key`` names the message field the
+                endpoint carries reasoning text under. ``None`` applies the
+                dialect default, ``reasoning_content``.
 
         Returns:
             DialectResponse: The normalized response.
         """
+        reasoning_key = _reasoning_key(capabilities)
         raw_choices = payload.get("choices")
         choices: list[Any] = raw_choices if is_json_array(raw_choices) else []
         if not choices:
@@ -370,7 +397,7 @@ class ChatCompletionsAdapter(DialectAdapter):
 
         content = message.get("content")
         tool_calls = tuple(self._parse_tool_calls(message.get("tool_calls")))
-        reasoning = tuple(_parse_reasoning_content(message))
+        reasoning = tuple(_parse_reasoning_content(message, reasoning_key))
         finish = choice.get("finish_reason")
         return DialectResponse(
             content=content if isinstance(content, str) else "",
@@ -424,15 +451,33 @@ class ChatCompletionsAdapter(DialectAdapter):
         return parsed
 
     @override
-    def parse_stream_event(self, event: Mapping[str, Any]) -> list[StreamDelta]:
+    def parse_stream_event(
+        self,
+        event: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> list[StreamDelta]:
         """Translate one Chat Completions SSE chunk into normalized deltas.
+
+        OpenAI-compatible gateways -- OpenRouter, LiteLLM, vLLM -- report a
+        failure that happens after the stream opened as a chunk carrying an
+        ``error`` object instead of ``choices``; that chunk becomes an error
+        delta rather than being read as an empty chunk.
 
         Args:
             event: One decoded chunk.
+            capabilities: The resolved capability record for the target model,
+                whose ``reasoning.reasoning_key`` names the delta field the
+                endpoint streams reasoning text under. ``None`` applies the
+                dialect default, ``reasoning_content``.
 
         Returns:
             list[StreamDelta]: Zero or more deltas, in wire order.
         """
+        if (error := _stream_error_text(event.get("error"))) is not None:
+            _logger.warning("chat_completions_stream_error", error=error)
+            return [StreamDelta(finish="error", error=error)]
+        reasoning_key = _reasoning_key(capabilities)
         deltas: list[StreamDelta] = []
         usage = parse_usage(event.get("usage"))
         raw_choices = event.get("choices")
@@ -446,7 +491,7 @@ class ChatCompletionsAdapter(DialectAdapter):
             content = delta.get("content")
             if isinstance(content, str) and content:
                 deltas.append(StreamDelta(text=content))
-            reasoning_text = delta.get(_DEFAULT_REASONING_KEY)
+            reasoning_text = delta.get(reasoning_key) if reasoning_key else None
             if isinstance(reasoning_text, str) and reasoning_text:
                 deltas.append(StreamDelta(reasoning=reasoning_text))
             deltas.extend(_parse_tool_call_deltas(delta.get("tool_calls")))
@@ -468,9 +513,12 @@ class ChatCompletionsAdapter(DialectAdapter):
         """Render a tool result as a ``tool`` message, plus images if usable.
 
         Chat Completions carries text only in a tool message. An image part
-        therefore rides in a following ``user`` message as an ``image_url``
-        data URI when the model reports vision, and degrades to the shared
-        deterministic text description when it does not.
+        therefore rides in a ``user`` message as an ``image_url`` data URI,
+        labelled with the call it answers, when the model reports vision, and
+        degrades to the shared deterministic text description when it does
+        not. :meth:`build_messages` places that ``user`` message after the
+        whole run of tool messages, which the endpoint requires to be
+        contiguous.
 
         Args:
             result: The tool result to render.
@@ -494,16 +542,15 @@ class ChatCompletionsAdapter(DialectAdapter):
         ]
         images = image_parts(result)
         if images and capabilities.supports_vision:
-            rendered.append({
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{part.mime_type};base64,{part.data}"},
-                    }
-                    for part in images
-                ],
-            })
+            content: list[dict[str, Any]] = [{"type": "text", "text": f"Images returned by tool call {result.call_id}:"}]
+            content.extend(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{part.mime_type};base64,{part.data}"},
+                }
+                for part in images
+            )
+            rendered.append({"role": "user", "content": content})
         return rendered
 
     @override
@@ -644,16 +691,81 @@ def _as_int(raw: object) -> int:
     return int(raw) if isinstance(raw, (int, float)) else 0
 
 
-def _parse_reasoning_content(message: Mapping[str, Any]) -> list[ReasoningItem]:
+def _reasoning_key(capabilities: ModelCapabilities | None) -> str | None:
+    """Resolve the field a model's reasoning text arrives under.
+
+    Args:
+        capabilities: The resolved capability record, or ``None``.
+
+    Returns:
+        str | None: The record's ``reasoning_key`` -- ``None`` when the record
+        states the endpoint emits no reasoning text -- or the dialect default
+        when there is no record.
+    """
+    return _DEFAULT_REASONING_KEY if capabilities is None else capabilities.reasoning.reasoning_key
+
+
+def _stream_error_text(raw: object) -> str | None:
+    """Describe the ``error`` object of a failed Chat Completions chunk.
+
+    Args:
+        raw: The chunk's ``error`` value.
+
+    Returns:
+        str | None: ``"<code>: <message>"`` (or whichever of the two is
+        present), a JSON rendering when the object states neither, or
+        ``None`` when the chunk carries no error.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        return raw
+    if not is_json_object(raw):
+        return json.dumps(raw)
+    error: dict[str, Any] = raw
+    message = error.get("message")
+    code = error.get("code") if error.get("code") is not None else error.get("type")
+    parts = [str(part) for part in (code, message) if part is not None and str(part)]
+    return ": ".join(parts) if parts else json.dumps(error, sort_keys=True)
+
+
+def _merge_deferred_user_content(deferred: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Fold the user messages held back behind a run of tool messages into one.
+
+    Args:
+        deferred: The held-back ``user`` messages, in the order their tool
+            results arrived.
+
+    Returns:
+        list[dict[str, Any]]: A single ``user`` message carrying every
+        held-back content part in order, or an empty list when nothing was
+        held back.
+    """
+    content: list[Any] = []
+    for message in deferred:
+        parts = message.get("content")
+        if is_json_array(parts):
+            entries: list[Any] = parts
+            content.extend(entries)
+        elif parts:
+            content.append({"type": "text", "text": str(parts)})
+    return [{"role": "user", "content": content}] if content else []
+
+
+def _parse_reasoning_content(message: Mapping[str, Any], reasoning_key: str | None) -> list[ReasoningItem]:
     """Capture an OpenAI-compatible gateway's reasoning text from a message.
 
     Args:
         message: The assistant message from the response.
+        reasoning_key: The field the endpoint carries reasoning text under, or
+            ``None`` when it emits none.
 
     Returns:
         list[ReasoningItem]: A single reasoning item, or an empty list.
     """
-    raw = message.get(_DEFAULT_REASONING_KEY)
+    if not reasoning_key:
+        return []
+    raw = message.get(reasoning_key)
     if isinstance(raw, str) and raw:
         return [ReasoningItem(kind=ReasoningKind.REASONING_CONTENT, text=raw)]
     return []
