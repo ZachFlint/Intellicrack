@@ -164,7 +164,7 @@ _URL_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://\
 """A value written as an absolute URL."""
 
 _PATH_PATTERN: Final[re.Pattern[str]] = re.compile(
-    r"^(?:[A-Za-z]:[\\/]|\\\\|/|~[\\/]|\.{1,2}[\\/]|\$\{[A-Za-z]+\}[\\/]|%[A-Za-z_]+%[\\/])",
+    r"^(?:[A-Za-z]:[\\/]|\\\\|/|~[\\/]|\.{1,2}[\\/]|\$\{[A-Za-z]+}[\\/]|%[A-Za-z_]+%[\\/])",
 )
 """A value written as a filesystem path: drive, UNC, POSIX, home, relative or variable-rooted."""
 
