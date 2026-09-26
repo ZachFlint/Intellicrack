@@ -294,6 +294,85 @@ OPENAI_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
     ),
 )
 
+GROK_DEFAULT_CONTEXT_WINDOW: Final[int] = 131072
+"""Context window assumed for a Grok model no family entry covers."""
+
+
+def _grok_family(
+    *,
+    context_window: int,
+    effort_levels: tuple[str, ...] = (),
+    token_limit_field: TokenLimitField = TokenLimitField.MAX_COMPLETION_TOKENS,
+    supports_vision: bool = True,
+) -> CapabilityOverride:
+    """Describe one Grok model family.
+
+    Args:
+        context_window: The family's context window in tokens.
+        effort_levels: The ``reasoning_effort`` values the family accepts,
+            empty for a family that reasons automatically and rejects the
+            parameter, or does not reason.
+        token_limit_field: Which request field carries the output limit.
+        supports_vision: Whether the family accepts image input.
+
+    Returns:
+        CapabilityOverride: The family's capability record.
+    """
+    reasoning = (
+        ReasoningSupport(supported=True, effort_levels=effort_levels, effort_format=ReasoningEffortFormat.TOP_LEVEL_EFFORT)
+        if effort_levels
+        else None
+    )
+    return CapabilityOverride(
+        context_window=context_window,
+        token_limit_field=token_limit_field,
+        supports_vision=supports_vision,
+        reasoning=reasoning,
+    )
+
+
+_GROK_XHIGH_EFFORT: Final[tuple[str, ...]] = ("low", "medium", "high", "xhigh")
+
+GROK_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
+    ModelPreset(
+        prefixes=("grok-4.20-multi-agent", "grok-4-multi-agent"),
+        capabilities=_grok_family(context_window=1000000, effort_levels=_GROK_XHIGH_EFFORT),
+    ),
+    ModelPreset(prefixes=("grok-4.5",), capabilities=_grok_family(context_window=500000, effort_levels=("low", "medium", "high"))),
+    ModelPreset(prefixes=("grok-4.6", "grok-4.7"), capabilities=_grok_family(context_window=500000, effort_levels=_GROK_XHIGH_EFFORT)),
+    ModelPreset(prefixes=("grok-4.20", "grok-4.3"), capabilities=_grok_family(context_window=1000000)),
+    ModelPreset(prefixes=("grok-build",), capabilities=_grok_family(context_window=256000, supports_vision=False)),
+    ModelPreset(prefixes=("grok-4",), capabilities=_grok_family(context_window=256000)),
+    ModelPreset(
+        prefixes=("grok-3-mini",),
+        capabilities=_grok_family(
+            context_window=131072,
+            effort_levels=("low", "high"),
+            token_limit_field=TokenLimitField.MAX_TOKENS,
+            supports_vision=False,
+        ),
+    ),
+    ModelPreset(
+        prefixes=("grok-2-vision",),
+        capabilities=_grok_family(context_window=32768, token_limit_field=TokenLimitField.MAX_TOKENS),
+    ),
+    ModelPreset(
+        prefixes=("grok-3", "grok-2"),
+        capabilities=_grok_family(context_window=131072, token_limit_field=TokenLimitField.MAX_TOKENS, supports_vision=False),
+    ),
+    ModelPreset(
+        prefixes=("grok-1",),
+        capabilities=_grok_family(context_window=8192, token_limit_field=TokenLimitField.MAX_TOKENS, supports_vision=False),
+    ),
+)
+"""Grok families, most specific first.
+
+``reasoning_effort`` is accepted by grok-4.5 (up to ``high``), grok-4.6 and
+grok-4.7 (up to ``xhigh``), the multi-agent variants and grok-3-mini; the
+other grok-4 generations reason automatically and reject it. Grok-4 and later
+take ``max_completion_tokens``.
+"""
+
 BUILTIN_PRESETS: Final[dict[str, ProviderPreset]] = {
     provider_ids.ANTHROPIC: ProviderPreset(
         provider_id=provider_ids.ANTHROPIC,
@@ -374,6 +453,7 @@ BUILTIN_PRESETS: Final[dict[str, ProviderPreset]] = {
         default_api_base="https://api.x.ai/v1",
         api_key_env_var="XAI_API_KEY",
         base_capabilities=CapabilityOverride(supports_tools=True, tokenizer=TIKTOKEN_CL100K),
+        model_presets=GROK_MODEL_PRESETS,
     ),
     provider_ids.LOCAL_TRANSFORMERS: ProviderPreset(
         provider_id=provider_ids.LOCAL_TRANSFORMERS,

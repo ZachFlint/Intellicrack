@@ -44,11 +44,12 @@ _IS_CHAT_MODEL_ATTR = "_is_chat_model"
 _INFER_VISION_ATTR = "_infer_supports_vision"
 _RESOLVE_EFFORT_ATTR = "_reasoning_effort_for"
 
-_supports_reasoning_effort: Any = getattr(GrokProvider, _SUPPORTS_REASONING_ATTR)
-_supports_max_completion_tokens: Any = getattr(GrokProvider, _SUPPORTS_MAX_COMPLETION_ATTR)
-_infer_context_window: Any = getattr(GrokProvider, _INFER_CONTEXT_ATTR)
+_CLASSIFIER_PROVIDER = GrokProvider()
+_supports_reasoning_effort: Any = getattr(_CLASSIFIER_PROVIDER, _SUPPORTS_REASONING_ATTR)
+_supports_max_completion_tokens: Any = getattr(_CLASSIFIER_PROVIDER, _SUPPORTS_MAX_COMPLETION_ATTR)
+_infer_context_window: Any = getattr(_CLASSIFIER_PROVIDER, _INFER_CONTEXT_ATTR)
 _is_chat_model: Any = getattr(GrokProvider, _IS_CHAT_MODEL_ATTR)
-_infer_supports_vision: Any = getattr(GrokProvider, _INFER_VISION_ATTR)
+_infer_supports_vision: Any = getattr(_CLASSIFIER_PROVIDER, _INFER_VISION_ATTR)
 
 
 def _resolve_effort(
@@ -128,10 +129,15 @@ class TestGrokModelClassification:
     """Classifier helpers route real Grok model identifiers correctly."""
 
     @staticmethod
-    def test_supports_reasoning_effort_only_multi_agent() -> None:
-        """Only multi-agent variants accept reasoning_effort."""
+    def test_supports_reasoning_effort_follows_documented_families() -> None:
+        """The families xAI documents as taking reasoning_effort accept it; the rest do not."""
         assert _supports_reasoning_effort("grok-4-multi-agent") is True
+        assert _supports_reasoning_effort("grok-4.20-multi-agent-0309") is True
+        assert _supports_reasoning_effort("grok-4.7") is True
+        assert _supports_reasoning_effort("grok-4.5") is True
+        assert _supports_reasoning_effort("grok-3-mini") is True
         assert _supports_reasoning_effort("grok-4") is False
+        assert _supports_reasoning_effort("grok-4.20-0309-reasoning") is False
         assert _supports_reasoning_effort("grok-3") is False
 
     @staticmethod
@@ -158,11 +164,11 @@ class TestGrokModelClassification:
         assert _is_chat_model("moderation-latest") is False
 
     @staticmethod
-    def test_infer_supports_vision_by_name() -> None:
-        """Vision support is inferred from vision/image markers in the id."""
+    def test_infer_supports_vision_from_capabilities() -> None:
+        """Vision support comes from the Grok family's capability record."""
         assert _infer_supports_vision("grok-2-vision-1212") is True
-        assert _infer_supports_vision("grok-image-gen") is True
-        assert _infer_supports_vision("grok-4") is False
+        assert _infer_supports_vision("grok-4") is True
+        assert _infer_supports_vision("grok-3") is False
 
 
 @pytest.mark.integration
