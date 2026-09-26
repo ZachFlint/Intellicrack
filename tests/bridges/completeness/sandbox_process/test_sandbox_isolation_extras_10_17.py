@@ -28,7 +28,6 @@ from __future__ import annotations
 import inspect
 import os
 from typing import TYPE_CHECKING, cast
-from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QCheckBox, QLineEdit
@@ -203,6 +202,33 @@ class _ConfigRecordingManager(StubManager):
         return await super().restart(instance_id, config, qemu_config)
 
 
+class _RecordingSandboxBridge:
+    """Stand-in for ``SandboxBridge`` that records ``create()`` calls without doing real sandbox work.
+
+    ``create`` is a plain (non-async) method so the call itself -- not some
+    later await -- records the exact keyword arguments ``_on_create`` passed,
+    matching what this test observes: ``run_bridge_coroutine_logged`` is
+    stubbed out and never actually drives the returned awaitable.
+    """
+
+    def __init__(self) -> None:
+        """Initialize with an empty call log."""
+        self.create_calls: list[dict[str, object]] = []
+
+    def create(self, **kwargs: object) -> object:
+        """Record the keyword arguments and return a distinct per-call result object.
+
+        Args:
+            **kwargs: Keyword arguments forwarded by ``SandboxPanel._on_create``.
+
+        Returns:
+            object: A fresh sentinel object standing in for the awaitable the
+            real bridge would return.
+        """
+        self.create_calls.append(kwargs)
+        return object()
+
+
 class TestSandboxIsolationExtrasCreateRestartL1:
     """L1: create()/restart() thread all 7 isolation-extras fields into a real SandboxConfig.
 
@@ -375,8 +401,8 @@ class TestSandboxIsolationExtrasPanelL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(sandbox_panel, "_bridge", mock_bridge)
+        bridge = _RecordingSandboxBridge()
+        _set_private(sandbox_panel, "_bridge", bridge)
 
         def _noop_dispatch(*args: object, **kwargs: object) -> None:
             del args, kwargs
@@ -394,8 +420,8 @@ class TestSandboxIsolationExtrasPanelL3:
 
         _invoke(sandbox_panel, "_on_create")
 
-        mock_bridge.create.assert_called_once()
-        kwargs = mock_bridge.create.call_args.kwargs
+        assert len(bridge.create_calls) == 1
+        kwargs = bridge.create_calls[0]
         assert kwargs["block_telemetry"] is False
         assert kwargs["clipboard_enabled"] is True
         assert kwargs["audio_enabled"] is True

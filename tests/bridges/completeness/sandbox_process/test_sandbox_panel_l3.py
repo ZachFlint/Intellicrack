@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING, cast
-from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QCheckBox, QSpinBox
@@ -103,6 +102,61 @@ def _invoke(widget: object, method_name: str) -> None:
     handler()
 
 
+def _intercept_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+    module: object,
+) -> list[tuple[object, ...]]:
+    """Patch ``run_bridge_coroutine_logged`` on ``module`` to capture calls instead of dispatching them.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture used to install the patch.
+        module: Module (``sandbox_panel``) whose ``run_bridge_coroutine_logged``
+            binding is intercepted.
+
+    Returns:
+        list[tuple[object, ...]]: List that accumulates the positional arguments
+        of each intercepted call, in call order.
+    """
+    calls: list[tuple[object, ...]] = []
+
+    def _capture(*args: object, **kwargs: object) -> None:
+        del kwargs
+        calls.append(args)
+
+    monkeypatch.setattr(module, "run_bridge_coroutine_logged", _capture)
+    return calls
+
+
+class _RecordingSandboxBridge:
+    """Stand-in for ``SandboxBridge`` that records ``create()`` calls without doing real sandbox work.
+
+    ``create`` is a plain (non-async) method so the call itself -- not some
+    later await -- records the exact keyword arguments ``_on_create`` passed,
+    matching what the test observes: ``run_bridge_coroutine_logged`` is
+    intercepted and never actually drives the returned awaitable.
+    """
+
+    def __init__(self) -> None:
+        """Initialize with an empty call log."""
+        self.create_calls: list[dict[str, object]] = []
+        self.last_create_result: object | None = None
+
+    def create(self, **kwargs: object) -> object:
+        """Record the keyword arguments and return a distinct per-call result object.
+
+        Args:
+            **kwargs: Keyword arguments forwarded by ``SandboxPanel._on_create``.
+
+        Returns:
+            object: A fresh sentinel object identifying this specific call, so
+            tests can confirm it is exactly what gets handed to the dispatcher.
+        """
+        self.create_calls.append(kwargs)
+        result = object()
+        self.last_create_result = result
+        return result
+
+
 def _call_config(panel: SandboxPanel) -> dict[str, object]:
     """Build the create-config mapping using the panel's own production builder.
 
@@ -177,8 +231,8 @@ class TestSandboxCreateConfigWiringL3:
             panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(panel, "_bridge", mock_bridge)
+        bridge = _RecordingSandboxBridge()
+        _set_private(panel, "_bridge", bridge)
 
         timeout_spin = cast("QSpinBox", _get_private(panel, "_timeout_spin"))
         timeout_spin.setValue(9999)
@@ -187,22 +241,16 @@ class TestSandboxCreateConfigWiringL3:
         network_check = cast("QCheckBox", _get_private(panel, "_network_enabled_check"))
         network_check.setChecked(True)
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(panel, "_on_create")
 
         assert dispatch_args, "run_bridge_coroutine_logged must be called by _on_create"
-        assert dispatch_args[0][0] is mock_bridge.create.return_value, (
-            f"first positional arg must be the coroutine from bridge.create; got {dispatch_args[0][0]!r}"
+        assert dispatch_args[0][0] is bridge.last_create_result, (
+            f"first positional arg must be the result from bridge.create; got {dispatch_args[0][0]!r}"
         )
-        mock_bridge.create.assert_called_once()
-        kwargs = cast("dict[str, object]", mock_bridge.create.call_args.kwargs)
+        assert len(bridge.create_calls) == 1
+        kwargs = bridge.create_calls[0]
         assert kwargs["timeout_seconds"] == 9999
         assert kwargs["network_enabled"] is True
         assert kwargs["memory_limit_mb"] == 65536
@@ -222,22 +270,16 @@ class TestSandboxCreateConfigWiringL3:
             panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(panel, "_bridge", mock_bridge)
+        bridge = _RecordingSandboxBridge()
+        _set_private(panel, "_bridge", bridge)
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(panel, "_on_create")
 
         assert dispatch_args
-        mock_bridge.create.assert_called_once()
-        kwargs = cast("dict[str, object]", mock_bridge.create.call_args.kwargs)
+        assert len(bridge.create_calls) == 1
+        kwargs = bridge.create_calls[0]
         assert kwargs["timeout_seconds"] == 300
         assert kwargs["network_enabled"] is False
         assert kwargs["memory_limit_mb"] == 2048
@@ -259,12 +301,7 @@ class TestSandboxCreateConfigWiringL3:
         """
         _set_private(panel, "_bridge", None)
 
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(panel, "_on_create")
 
