@@ -656,28 +656,25 @@ class SessionStore:
         *,
         conn: sqlite3.Connection,
         session: Session,
-        session_data: dict[str, Any],
+        session_data: str,
     ) -> None:
         """Execute the session-save SQL transaction.
 
         Runs ``BEGIN IMMEDIATE``, upserts the session row, rewrites the tag
-        table, and commits. Failures trigger an explicit ``ROLLBACK`` (whose
-        own failure is logged but not re-raised) before propagating the
-        original SQLite/OS error so the caller can close the connection.
+        table, and commits. Any failure before the commit -- whatever its
+        type -- triggers an explicit ``ROLLBACK`` (whose own failure is
+        logged but not re-raised) before the original error propagates, so an
+        aborted save never leaves the database write-locked.
 
         Args:
             conn: An open SQLite connection in autocommit mode
                 (``isolation_level=None``).
             session: Session whose state is being persisted.
-            session_data: Pre-serialised JSON payload stored in the
+            session_data: The already-encoded JSON payload stored in the
                 ``sessions.data`` column.
-
-        Raises:
-            sqlite3.Error: Propagated when the database engine rejects any
-                statement in the transaction.
-            OSError: Propagated when SQLite reports an underlying I/O failure.
         """
         conn.execute("BEGIN IMMEDIATE")
+        committed = False
         try:
             conn.execute(
                 """INSERT OR REPLACE INTO sessions (id, name, created_at, updated_at, provider, model, active_binary_index, notes, data)
@@ -692,7 +689,7 @@ class SessionStore:
                     session.model,
                     session.active_binary_index,
                     session.notes,
-                    json.dumps(session_data),
+                    session_data,
                 ),
             )
 
@@ -707,14 +704,23 @@ class SessionStore:
                     (session.id, tag),
                 )
             conn.execute("COMMIT")
+            committed = True
             _logger.debug("db_connection_committed", db_path=str(self.db_path))
-        except (sqlite3.Error, OSError):
-            try:
-                conn.execute("ROLLBACK")
-            except sqlite3.Error:
-                _logger.exception("rollback_noop_failed", db_path=str(self.db_path))
-            _logger.exception("db_connection_rollback", db_path=str(self.db_path))
-            raise
+        finally:
+            if not committed:
+                self._rollback(conn)
+
+    def _rollback(self, conn: sqlite3.Connection) -> None:
+        """Roll back an open save transaction after a failure.
+
+        Args:
+            conn: The connection whose transaction failed.
+        """
+        try:
+            conn.execute("ROLLBACK")
+        except sqlite3.Error:
+            _logger.exception("rollback_noop_failed", db_path=str(self.db_path))
+        _logger.warning("db_connection_rollback", db_path=str(self.db_path))
 
     def save(self, session: Session) -> None:
         """Save a session to the database.
@@ -722,7 +728,9 @@ class SessionStore:
         Persists the full session state inside a single SQLite transaction
         initiated with ``BEGIN IMMEDIATE`` so that the tag rewrite and the
         session upsert cannot be interleaved with a concurrent save (for
-        example, from the auto-save loop). Propagates ``sqlite3.Error`` from
+        example, from the auto-save loop). The payload is encoded before the
+        transaction opens, so a value JSON cannot express fails the save
+        without ever taking the write lock. Propagates ``sqlite3.Error`` from
         the database engine and ``OSError`` from the underlying SQLite file
         layer after the connection is closed.
 
@@ -739,11 +747,12 @@ class SessionStore:
             "loaded_tools": list(session.loaded_tools),
             "mcp_servers": {key: self._serialize_mcp_server(value) for key, value in session.mcp_servers.items()},
         }
+        encoded = json.dumps(session_data)
 
         conn = sqlite3.connect(str(self.db_path), isolation_level=None)
         _logger.debug("db_connection_opened", db_path=str(self.db_path))
         try:
-            self._save_session_transaction(conn=conn, session=session, session_data=session_data)
+            self._save_session_transaction(conn=conn, session=session, session_data=encoded)
         finally:
             conn.close()
             _logger.info("db_connection_closed", db_path=str(self.db_path))

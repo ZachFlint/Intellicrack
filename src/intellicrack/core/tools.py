@@ -32,16 +32,17 @@ from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.bridges.schemas import RESERVED_TOOL_NAMESPACES
 from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.logging import get_logger, log_tool_call
-from intellicrack.core.types import ToolDefinition, ToolError, ToolName
+from intellicrack.core.types import ToolDefinition, ToolError, ToolName, ToolOutput
 
 
 ExternalToolExecutor = Callable[[str, dict[str, Any]], Awaitable[object]]
 """Signature an external namespace's executor must satisfy.
 
 It receives the canonical dotted function name and the parsed arguments, and
-returns whatever the tool produced -- a plain value for a simple tool, or a
-list of :class:`~intellicrack.core.types.ToolResultPart` entries for one whose
-output is more than text.
+returns whatever the tool produced -- a plain JSON-compatible value for a
+simple tool, or a :class:`~intellicrack.core.types.ToolOutput` for one whose
+output is more than text or that can report its own failure. A call that
+cannot produce any result raises :class:`~intellicrack.core.types.ToolError`.
 """
 
 ExternalDefinitionProvider = Callable[[], list[ToolDefinition]]
@@ -531,17 +532,18 @@ class ToolRegistry:
             arguments: Parsed function arguments.
 
         Returns:
-            object: Whatever the executor produced.
+            object: Whatever the executor produced. A
+            :class:`~intellicrack.core.types.ToolOutput` the tool flagged as an
+            error is returned, not raised, and is logged as a failed call.
 
         Raises:
             ToolError: If the executor raised.
         """
         start = time.monotonic()
-        success = True
+        success = False
         try:
-            return await executor(function_name, arguments)
+            output = await executor(function_name, arguments)
         except (OSError, RuntimeError, ValueError, TypeError, ToolError, KeyError, AttributeError) as exc:
-            success = False
             _logger.warning(
                 "external_tool_call_failed",
                 namespace=namespace,
@@ -550,6 +552,9 @@ class ToolRegistry:
             )
             message = f"{_ERR_EXTERNAL_FAILED}: {exc}"
             raise ToolError(message, tool_name=namespace) from exc
+        else:
+            success = not (isinstance(output, ToolOutput) and output.is_error)
+            return output
         finally:
             log_tool_call(
                 tool_name=namespace,
