@@ -55,6 +55,9 @@ _Phase = Literal["setup", "call", "teardown"]
 _Outcome = Literal["passed", "failed", "skipped"]
 """The outcomes pytest accepts on a :class:`TestReport`."""
 
+_SkipLocation = tuple[str, int, str]
+"""The ``(path, lineno, reason)`` pytest requires as a skipped report's ``longrepr``."""
+
 MARKER_NAME = "frida_selfattach"
 _MARKER_DESCRIPTION = (
     "run this test in an isolated child pytest process so a native Frida self-attach crash "
@@ -79,12 +82,15 @@ class ModuleResult:
     Attributes:
         outcomes: Node key (the part of a node id after ``::``) mapped to the
             outcome the child reported for it.
+        skips: Node key mapped to the location and reason of the child's skip,
+            for every test whose outcome is ``"skipped"``.
         detail: The child's tail output, present when the child exited non-zero.
         complete: ``True`` when the child exited cleanly; ``False`` when it
             crashed or timed out, so unreported tests must be failed.
     """
 
     outcomes: Mapping[str, _Outcome]
+    skips: Mapping[str, _SkipLocation]
     detail: str | None
     complete: bool
 
@@ -153,6 +159,8 @@ def pytest_runtest_logreport(report: TestReport) -> None:
 
     Appends (and flushes) each phase as it happens so that a child which dies
     part-way through still leaves usable results for the tests it completed.
+    A skipped phase also records its location and reason, which the parent
+    needs to rebuild the skipped report.
 
     Args:
         report: The phase report pytest just produced.
@@ -162,8 +170,36 @@ def pytest_runtest_logreport(report: TestReport) -> None:
     result_path = os.environ.get(_RESULT_FILE_ENV)
     if not result_path:
         return
+    fields = [report.nodeid, report.when, report.outcome]
+    if report.skipped and isinstance(report.longrepr, tuple):
+        path, lineno, reason = report.longrepr
+        fields.extend((_escape_field(path), str(lineno), _escape_field(reason)))
     with Path(result_path).open("a", encoding="utf-8") as handle:
-        _ = handle.write(f"{report.nodeid}\t{report.when}\t{report.outcome}\n")
+        _ = handle.write("\t".join(fields) + "\n")
+
+
+def _escape_field(value: str) -> str:
+    """Escape ``value`` so it holds no tab or line break.
+
+    Args:
+        value: Free text such as a skip reason.
+
+    Returns:
+        str: ASCII text that :func:`_unescape_field` turns back into ``value``.
+    """
+    return value.encode("unicode_escape").decode("ascii")
+
+
+def _unescape_field(value: str) -> str:
+    """Reverse :func:`_escape_field`.
+
+    Args:
+        value: Text produced by :func:`_escape_field`.
+
+    Returns:
+        str: The original text.
+    """
+    return value.encode("ascii").decode("unicode_escape")
 
 
 @pytest.hookimpl(tryfirst=True)
@@ -261,35 +297,42 @@ def run_target_isolated(
     )
 
 
-def _read_child_results(result_path: str) -> dict[str, _Outcome]:
+def _read_child_results(result_path: str) -> tuple[dict[str, _Outcome], dict[str, _SkipLocation]]:
     """Aggregate the per-phase lines a child wrote into one outcome per test.
 
     A test counts as failed when any phase failed, skipped when it was skipped
     and never failed, and passed otherwise.
 
     Args:
-        result_path: File the child appended ``nodeid<TAB>phase<TAB>outcome`` to.
+        result_path: File the child appended ``nodeid<TAB>phase<TAB>outcome``
+            lines to, a skipped phase followed by ``<TAB>path<TAB>lineno<TAB>reason``.
 
     Returns:
-        dict[str, _Outcome]: Node key mapped to its aggregated outcome.
+        tuple[dict[str, _Outcome], dict[str, _SkipLocation]]: Node key mapped to
+            its aggregated outcome, and node key mapped to the location and
+            reason of its skip.
     """
     outcomes: dict[str, _Outcome] = {}
+    skips: dict[str, _SkipLocation] = {}
     raw = Path(result_path)
     if not raw.is_file():
-        return outcomes
+        return outcomes, skips
+    outcome_parts = 3
+    skip_parts = 6
     for line in raw.read_text(encoding="utf-8").splitlines():
         parts = line.split("\t")
-        expected_parts = 3
-        if len(parts) != expected_parts:
+        if len(parts) not in {outcome_parts, skip_parts}:
             continue
         key = _node_key(parts[0])
         reported = parts[2]
+        if len(parts) == skip_parts and reported == "skipped" and parts[4].isdigit():
+            _ = skips.setdefault(key, (_unescape_field(parts[3]), int(parts[4]), _unescape_field(parts[5])))
         current = outcomes.get(key)
         if reported == "failed" or current is None:
             outcomes[key] = "failed" if reported == "failed" else _as_outcome(reported)
         elif current != "failed" and reported == "skipped":
             outcomes[key] = "skipped"
-    return outcomes
+    return outcomes, skips
 
 
 def _as_outcome(reported: str) -> _Outcome:
@@ -321,20 +364,28 @@ def run_module_isolated(module_file: str, rootpath: str) -> ModuleResult:
     os.close(handle)
     try:
         outcome, detail = run_target_isolated(module_file, rootpath, result_path=result_path)
-        outcomes = _read_child_results(result_path)
+        outcomes, skips = _read_child_results(result_path)
     finally:
         Path(result_path).unlink(missing_ok=True)
-    return ModuleResult(outcomes=outcomes, detail=detail, complete=outcome == "passed")
+    return ModuleResult(outcomes=outcomes, skips=skips, detail=detail, complete=outcome == "passed")
 
 
-def _synthetic_report(item: pytest.Item, when: _Phase, outcome: _Outcome, longrepr: str | None, start: float, stop: float) -> TestReport:
+def _synthetic_report(
+    item: pytest.Item,
+    when: _Phase,
+    outcome: _Outcome,
+    longrepr: str | _SkipLocation | None,
+    start: float,
+    stop: float,
+) -> TestReport:
     """Build a :class:`TestReport` describing one phase of an isolated run.
 
     Args:
         item: The isolated test item.
         when: The run phase (``"setup"``, ``"call"`` or ``"teardown"``).
         outcome: The outcome to record for the phase.
-        longrepr: Failure text for a failed phase, else ``None``.
+        longrepr: Failure text for a failed phase, the skip's location and
+            reason for a skipped one, else ``None``.
         start: Phase start time (``time.time()``).
         stop: Phase stop time (``time.time()``).
 
@@ -367,10 +418,15 @@ def _emit_reports(item: pytest.Item, result: ModuleResult) -> None:
         item: The self-attach Frida test being served from cached results.
         result: The cached result of its module's child run.
     """
-    outcome = result.outcomes.get(_node_key(item.nodeid))
+    key = _node_key(item.nodeid)
+    outcome = result.outcomes.get(key)
+    longrepr: str | _SkipLocation | None
     if outcome is None:
         outcome = "failed"
         longrepr = result.detail or f"the isolated child running {item.location[0]} never reported a result for this test"
+    elif outcome == "skipped":
+        path, lineno, _ = item.location
+        longrepr = result.skips.get(key, (path, (lineno or 0) + 1, "Skipped: the isolated child reported no reason"))
     else:
         longrepr = result.detail if outcome == "failed" else None
 
