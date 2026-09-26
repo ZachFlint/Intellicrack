@@ -48,6 +48,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.mcp.catalog import McpToolCatalog, fetch_catalog
 from intellicrack.mcp.config import McpConfigStore, McpServerConfig, McpTransportKind
 from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
+from intellicrack.mcp.operator_wait import OperatorWaitClock
 from intellicrack.mcp.sandbox_launch import SandboxedJob, build_sandboxed_startup, sandbox_supported
 from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, open_http_transport
 
@@ -164,8 +165,7 @@ def representative_failure(exc: BaseException) -> BaseException:
     """
     if leaves := failure_leaves(exc):
         return next((leaf for leaf in leaves if isinstance(leaf, McpError | MCPError)), leaves[0])
-    else:
-        return exc
+    return exc
 
 
 def fatal_leaf(exc: BaseException) -> BaseException | None:
@@ -366,7 +366,8 @@ class McpConnection:
         self._config = config
         self._resolver = resolver
         self._client_info = client_info if client_info is not None else build_client_info()
-        self._elicitation_callback = elicitation_callback
+        self._operator_wait = OperatorWaitClock()
+        self._elicitation_callback = self._operator_wait.pause_during(elicitation_callback) if elicitation_callback is not None else None
         self._consent = consent
         self._auth_factory = auth_factory
 
@@ -1013,7 +1014,7 @@ class McpConnection:
             raise McpConnectionError(message)
         budget = timeout_s if timeout_s is not None else self._config.request_timeout_s
         try:
-            async with asyncio.timeout(budget):
+            async with self._operator_wait.deadline(budget):
                 return await client.call_tool(tool_name, arguments)
         except TimeoutError as exc:
             message = f"server '{self.server_id}': call to {tool_name!r} exceeded {budget:.0f}s"
@@ -1268,20 +1269,30 @@ class McpConnectionManager:
 
         A server that fails to start does not stop the others: its failure
         is recorded on its own status and the remaining servers continue.
+        Servers are started concurrently, so one waiting on the operator -- a
+        launch-consent prompt or an OAuth sign-in in the browser -- does not
+        hold back every server configured after it.
         """
         self._document = self._store.load()
         self._started = True
-        for config in self._document.servers:
-            if not config.enabled:
-                continue
-            with suppress(McpError):
-                _ = await self.start_server(config.server_id)
+        async with asyncio.TaskGroup() as group:
+            for config in self._document.servers:
+                if config.enabled:
+                    _ = group.create_task(self._start_quietly(config.server_id), name=f"mcp-start-{config.server_id}")
         _logger.info(
             "mcp_manager_started",
             configured=len(self._document.servers),
-            connected=sum(bool(connection.is_ready)
-                      for connection in self._connections.values()),
+            connected=sum(bool(connection.is_ready) for connection in self._connections.values()),
         )
+
+    async def _start_quietly(self, server_id: str) -> None:
+        """Start one server, leaving its failure on its own status.
+
+        Args:
+            server_id: The server to start.
+        """
+        with suppress(McpError):
+            _ = await self.start_server(server_id)
 
     async def stop(self) -> None:
         """Bring every server down, in reverse start order.
