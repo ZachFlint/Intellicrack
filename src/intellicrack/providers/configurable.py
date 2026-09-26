@@ -19,9 +19,13 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import email.utils
+import json
+import math
+import re
 import time
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Final, override
+from typing import TYPE_CHECKING, Any, Final, NoReturn, override
 
 import httpx
 
@@ -33,11 +37,13 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
+    RateLimitError,
 )
 from intellicrack.providers.base import (
     HttpErrorMessages,
     LLMProviderBase,
     ToolCallBufferManager,
+    is_permanent_quota_error,
 )
 from intellicrack.providers.capabilities import ApiDialect, merge_capabilities
 from intellicrack.providers.dialects import adapter_for
@@ -65,8 +71,11 @@ _logger = get_logger(__name__)
 DEFAULT_TIMEOUT_SECONDS: Final[float] = 120.0
 """Request timeout applied when the instance states none."""
 
-SSE_DATA_PREFIX: Final[str] = "data:"
-"""Prefix of an SSE payload line."""
+SSE_DATA_FIELD: Final[str] = "data"
+"""Name of the SSE field carrying an event's payload."""
+
+_SSE_FIELDS: Final[frozenset[str]] = frozenset({SSE_DATA_FIELD, "event", "id", "retry"})
+"""Every field name the SSE format defines."""
 
 SSE_DONE_SENTINEL: Final[str] = "[DONE]"
 """Payload an OpenAI-compatible stream sends to mark the end."""
@@ -79,6 +88,20 @@ _MODEL_LIST_PATHS: Final[dict[ApiDialect, str]] = {
 }
 """Where each dialect lists its models, relative to the instance's base URL."""
 
+_MODEL_PAGE_SIZE: Final[int] = 1000
+"""Largest page both paginated model listings accept (Anthropic ``limit``, Gemini ``pageSize``)."""
+
+_MAX_RETRY_WAIT_SECONDS: Final[float] = 60.0
+"""Longest wait honoured between rate-limit retries; a longer server-requested wait fails fast instead."""
+
+_HTTP_TOO_MANY_REQUESTS: Final[int] = 429
+
+_RETRY_INFO_TYPE_SUFFIX: Final[str] = "google.rpc.RetryInfo"
+"""``@type`` suffix of the Google error detail carrying a ``retryDelay``."""
+
+_DURATION_PATTERN: Final[re.Pattern[str]] = re.compile(r"^\s*(\d+(?:\.\d+)?)s\s*$")
+"""A protobuf ``Duration`` in its JSON form, for example ``"37s"`` or ``"1.5s"``."""
+
 _ERR_NOT_CONNECTED: Final[str] = "Not connected"
 _ERR_NO_BASE_URL: Final[str] = "This provider instance has no base URL configured"
 _ERR_MISSING_KEY: Final[str] = "An API key is required for provider instance %s"
@@ -86,6 +109,8 @@ _ERR_LIST_MODELS_FAILED: Final[str] = "Failed to list models for %s: %s"
 _ERR_REQUEST_FAILED: Final[str] = "Request to %s failed: %s"
 _ERR_STREAM_FAILED: Final[str] = "Stream from %s failed: %s"
 _ERR_PAYLOAD_NOT_OBJECT: Final[str] = "Response from %s was not a JSON object"
+_ERR_BODY_NOT_JSON: Final[str] = "Request body for %s cannot be encoded as JSON: %s"
+_ERR_QUOTA_EXHAUSTED: Final[str] = "Provider instance %s quota or spending cap exhausted: %s"
 
 _ERR_KEY_WITHHELD: Final[str] = (
     "This instance sends plain HTTP to a public host. Acknowledge the insecure transport in Provider Settings "
@@ -252,31 +277,20 @@ class ConfigurableProvider(LLMProviderBase):
     async def list_models(self) -> list[ModelInfo]:
         """List the endpoint's models, ingesting whatever metadata it states.
 
+        Anthropic and Gemini page their listings, so every page is fetched
+        and the entries are ingested together.
+
         Returns:
             list[ModelInfo]: The endpoint's models, sorted by id.
 
-        Raises:
-            ProviderError: If not connected or the request fails.
+        Note:
+            A transport or HTTP failure surfaces as the typed error
+            :meth:`_get_model_page` raises, and a provider that is not
+            connected raises ``ProviderError`` from :meth:`_require_client`.
         """
         client = await self._require_client()
-        path = _MODEL_LIST_PATHS[self.instance.dialect]
-        try:
-            response = await client.get(path)
-            response.raise_for_status()
-            payload: object = response.json()
-        except httpx.HTTPStatusError as exc:
-            self._raise_typed_for_status(
-                exc.response.status_code,
-                exc,
-                messages=_HTTP_ERRORS,
-                detail=self._http_error_detail(exc, _safe_body(exc.response)),
-            )
-            raise ProviderError(_ERR_LIST_MODELS_FAILED % (self.name, exc)) from exc
-        except (httpx.HTTPError, ValueError) as exc:
-            self._logger.warning("configurable_list_models_failed", error=str(exc))
-            raise ProviderError(_ERR_LIST_MODELS_FAILED % (self.name, exc)) from exc
-
-        if not is_json_object(payload):
+        payload = await self._fetch_model_listing(client)
+        if payload is None:
             self._logger.warning("configurable_model_payload_not_an_object")
             return []
 
@@ -295,6 +309,126 @@ class ConfigurableProvider(LLMProviderBase):
         models.sort(key=lambda model: model.id)
         self._logger.info("configurable_models_listed", count=len(models))
         return models
+
+    async def _fetch_model_listing(self, client: httpx.AsyncClient) -> dict[str, Any] | None:
+        """Fetch every page of the model listing and merge them into one payload.
+
+        Anthropic pages with ``limit``/``after_id`` and reports ``has_more``
+        and ``last_id``; Gemini pages with ``pageSize``/``pageToken`` and
+        reports ``nextPageToken``. The other dialects answer in one response.
+
+        Args:
+            client: The HTTP client to send through.
+
+        Returns:
+            dict[str, Any] | None: The first page with its entry list
+            replaced by the entries of every page, or ``None`` when the first
+            page is not a JSON object.
+        """
+        dialect = self.instance.dialect
+        path = _MODEL_LIST_PATHS[dialect]
+        if dialect is ApiDialect.MESSAGES:
+            entries_key, size_param, cursor_param = "data", "limit", "after_id"
+        elif dialect is ApiDialect.GEMINI:
+            entries_key, size_param, cursor_param = "models", "pageSize", "pageToken"
+        else:
+            return await self._get_model_page(client, path, {})
+
+        params: dict[str, str | int] = {size_param: _MODEL_PAGE_SIZE}
+        first: dict[str, Any] | None = None
+        entries: list[Any] = []
+        seen_cursors: set[str] = set()
+        while True:
+            page = await self._get_model_page(client, path, params)
+            if page is None:
+                break
+            if first is None:
+                first = page
+            raw_entries = page.get(entries_key)
+            if is_json_array(raw_entries):
+                page_entries: list[Any] = raw_entries
+                entries.extend(page_entries)
+            cursor = _next_model_page_cursor(page, dialect)
+            if cursor is None or cursor in seen_cursors:
+                break
+            seen_cursors.add(cursor)
+            params[cursor_param] = cursor
+        if first is None:
+            return None
+        return {**first, entries_key: entries}
+
+    async def _get_model_page(
+        self,
+        client: httpx.AsyncClient,
+        path: str,
+        params: dict[str, str | int],
+    ) -> dict[str, Any] | None:
+        """GET one page of the model listing.
+
+        Args:
+            client: The HTTP client to send through.
+            path: Listing path relative to the instance's base URL.
+            params: Query parameters for this page.
+
+        Returns:
+            dict[str, Any] | None: The decoded page, or ``None`` when it is
+            not a JSON object.
+
+        Raises:
+            ProviderError: If the request fails or the body is not JSON.
+        """
+        try:
+            response = await client.get(path, params=params)
+            response.raise_for_status()
+            payload: object = response.json()
+        except httpx.HTTPStatusError as exc:
+            self._raise_for_http_status(exc, _ERR_LIST_MODELS_FAILED)
+        except (httpx.HTTPError, ValueError) as exc:
+            self._logger.warning("configurable_list_models_failed", error=str(exc))
+            raise ProviderError(_ERR_LIST_MODELS_FAILED % (self.name, exc), provider_name=self.name) from exc
+        return payload if is_json_object(payload) else None
+
+    def _raise_for_http_status(self, exc: httpx.HTTPStatusError, template: str) -> NoReturn:
+        """Raise the typed error for a failed HTTP response, keeping its detail.
+
+        Every status carries the response body's redacted detail. A ``429``
+        becomes a :class:`RateLimitError` carrying the server's requested
+        wait -- ``Retry-After`` in seconds or as an HTTP-date, or Google's
+        ``RetryInfo.retryDelay`` -- unless the server gave no wait and the
+        body reports a permanent quota or billing exhaustion, which no retry
+        can fix and so becomes a plain :class:`ProviderError`.
+
+        Args:
+            exc: The HTTP status error, whose response body has been read.
+            template: Message template taking the instance name and detail,
+                used for statuses without a dedicated typed error.
+
+        Raises:
+            ProviderError: For a permanent quota exhaustion or any status
+                without a dedicated typed error.
+            RateLimitError: For a transient ``429``.
+        """
+        response = exc.response
+        status = response.status_code
+        body = _safe_body(response)
+        detail = self._http_error_detail(exc, body)
+        if status == _HTTP_TOO_MANY_REQUESTS:
+            retry_after = _retry_after_seconds(response.headers.get("retry-after"), body)
+            if retry_after is None and is_permanent_quota_error(detail):
+                self._logger.warning("configurable_quota_exhausted", status=status)
+                raise ProviderError(
+                    _ERR_QUOTA_EXHAUSTED % (self.name, detail),
+                    provider_name=self.name,
+                    status_code=status,
+                ) from exc
+            raise RateLimitError(
+                _HTTP_ERRORS.rate_limited % detail,
+                retry_after=retry_after,
+                provider_name=self.name,
+                status_code=status,
+            ) from exc
+        self._raise_typed_for_status(status, exc, messages=_HTTP_ERRORS, detail=detail)
+        raise ProviderError(template % (self.name, detail), provider_name=self.name, status_code=status) from exc
 
     def _build_body(
         self,
@@ -410,7 +544,10 @@ class ConfigurableProvider(LLMProviderBase):
 
         path = self._adapter.endpoint_path(model=model, stream=False)
         start_time = time.perf_counter()
-        payload = await self._retry_with_backoff(lambda: self._post_json(client, path, body))
+        payload = await self._retry_with_backoff(
+            lambda: self._post_json(client, path, body),
+            max_delay=_MAX_RETRY_WAIT_SECONDS,
+        )
         duration_ms = (time.perf_counter() - start_time) * 1000
 
         parsed = self._adapter.parse_response(payload)
@@ -445,26 +582,45 @@ class ConfigurableProvider(LLMProviderBase):
             dict[str, Any]: The decoded response body.
 
         Raises:
-            ProviderError: If the request fails or the body is not an object.
+            ProviderError: If the body cannot be encoded, the request fails
+                or the response is not an object.
         """
+        content = self._encode_body(body)
         try:
-            response = await client.post(path, json=body)
+            response = await client.post(path, content=content)
             response.raise_for_status()
             decoded: object = response.json()
         except httpx.HTTPStatusError as exc:
-            self._raise_typed_for_status(
-                exc.response.status_code,
-                exc,
-                messages=_HTTP_ERRORS,
-                detail=self._http_error_detail(exc, _safe_body(exc.response)),
-            )
-            raise ProviderError(_ERR_REQUEST_FAILED % (self.name, exc)) from exc
+            self._raise_for_http_status(exc, _ERR_REQUEST_FAILED)
         except (httpx.HTTPError, ValueError) as exc:
             self._logger.warning("configurable_request_failed", error=str(exc))
-            raise ProviderError(_ERR_REQUEST_FAILED % (self.name, exc)) from exc
+            raise ProviderError(_ERR_REQUEST_FAILED % (self.name, exc), provider_name=self.name) from exc
         if not is_json_object(decoded):
-            raise ProviderError(_ERR_PAYLOAD_NOT_OBJECT % self.name)
+            raise ProviderError(_ERR_PAYLOAD_NOT_OBJECT % self.name, provider_name=self.name)
         return decoded
+
+    def _encode_body(self, body: dict[str, Any]) -> bytes:
+        """Encode a request body as UTF-8 JSON, the way ``httpx`` would.
+
+        Encoding here rather than through ``httpx``'s ``json=`` turns a body
+        holding a value JSON cannot represent -- ``bytes``, a set, ``NaN`` --
+        into this provider's error type instead of a bare ``TypeError`` from
+        inside the transport.
+
+        Args:
+            body: The JSON body to send.
+
+        Returns:
+            bytes: The encoded body.
+
+        Raises:
+            ProviderError: If the body holds a value JSON cannot represent.
+        """
+        try:
+            return json.dumps(body, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        except (TypeError, ValueError) as exc:
+            self._logger.exception("configurable_request_body_not_json")
+            raise ProviderError(_ERR_BODY_NOT_JSON % (self.name, exc), provider_name=self.name) from exc
 
     @override
     async def chat_stream(
@@ -496,8 +652,9 @@ class ConfigurableProvider(LLMProviderBase):
 
         Note:
             A transport or HTTP failure surfaces as the typed error
-            :meth:`_open_stream` raises, and a provider that is not connected
-            raises ``ProviderError`` from :meth:`_require_client`.
+            :meth:`_open_stream_response` raises, and a provider that is not
+            connected raises ``ProviderError`` from :meth:`_require_client`.
+            A rate-limited stream is retried before any text is yielded.
         """
         self._reject_empty_messages(messages)
         self._cancel_requested = False
@@ -525,12 +682,17 @@ class ConfigurableProvider(LLMProviderBase):
         )
 
         path = self._adapter.endpoint_path(model=model, stream=True)
+        stream_adapter = adapter_for(self.instance.dialect)
         buffer = ToolCallBufferManager()
         reasoning: list[ReasoningItem] = []
-        async for event in self._open_stream(client, path, body):
+        stack, response = await self._retry_with_backoff(
+            lambda: self._open_stream_response(client, path, body),
+            max_delay=_MAX_RETRY_WAIT_SECONDS,
+        )
+        async for event in self._stream_events(stack, response):
             if self._cancel_requested:
                 break
-            for delta in self._adapter.parse_stream_event(event):
+            for delta in stream_adapter.parse_stream_event(event):
                 buffer.absorb(delta)
                 if delta.usage is not None:
                     self._pending_usage = delta.usage
@@ -544,49 +706,70 @@ class ConfigurableProvider(LLMProviderBase):
         self._pending_tool_calls = buffer.finalize()
         self._pending_reasoning = reasoning
 
-    async def _open_stream(
+    async def _open_stream_response(
         self,
         client: httpx.AsyncClient,
         path: str,
         body: dict[str, Any],
-    ) -> AsyncIterator[dict[str, Any]]:
-        """Open the streaming request and yield its decoded events.
+    ) -> tuple[contextlib.AsyncExitStack, httpx.Response]:
+        """Open the streaming request and check its status before any event is read.
 
         The streaming context is held on an :class:`~contextlib.AsyncExitStack`
-        rather than a ``with`` block, so the generator's own cleanup closes the
+        rather than a ``with`` block, so :meth:`_stream_events` can close the
         response even when the consumer stops iterating early -- which is what
-        a mid-stream cancel does.
+        a mid-stream cancel does. A failed response's body is read while the
+        stream is still open, so the error carries the endpoint's own
+        explanation. Nothing has been yielded when this raises, which is what
+        makes a rate-limited stream safe to retry.
 
         Args:
             client: The HTTP client to send through.
             path: Request path relative to the instance's base URL.
             body: The JSON body to send.
 
+        Returns:
+            tuple[contextlib.AsyncExitStack, httpx.Response]: The stack owning
+            the open response, and the response itself.
+
+        Raises:
+            ProviderError: If the body cannot be encoded or the stream cannot
+                be opened.
+        """
+        content = self._encode_body(body)
+        stack = contextlib.AsyncExitStack()
+        try:
+            response = await stack.enter_async_context(client.stream("POST", path, content=content))
+        except httpx.HTTPError as exc:
+            await stack.aclose()
+            self._logger.warning("configurable_stream_open_failed", error=str(exc))
+            raise ProviderError(_ERR_STREAM_FAILED % (self.name, exc), provider_name=self.name) from exc
+        if response.is_success:
+            return stack, response
+        await _read_error_body(response)
+        await stack.aclose()
+        try:
+            _ = response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            self._raise_for_http_status(exc, _ERR_STREAM_FAILED)
+        return stack, response
+
+    async def _stream_events(
+        self,
+        stack: contextlib.AsyncExitStack,
+        response: httpx.Response,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Yield an open stream's decoded events, closing it when done.
+
+        Args:
+            stack: The stack owning the open response.
+            response: The open streaming response.
+
         Yields:
             dict[str, Any]: One decoded event per payload.
 
         Raises:
-            ProviderError: If the stream cannot be opened or fails mid-flight.
+            ProviderError: If the stream fails mid-flight.
         """
-        stack = contextlib.AsyncExitStack()
-        try:
-            response = await stack.enter_async_context(client.stream("POST", path, json=body))
-            response.raise_for_status()
-        except httpx.HTTPStatusError as exc:
-            await stack.aclose()
-            await _read_error_body(exc.response)
-            self._raise_typed_for_status(
-                exc.response.status_code,
-                exc,
-                messages=_HTTP_ERRORS,
-                detail=self._http_error_detail(exc, _safe_body(exc.response)),
-            )
-            raise ProviderError(_ERR_STREAM_FAILED % (self.name, exc)) from exc
-        except (httpx.HTTPError, ValueError) as exc:
-            await stack.aclose()
-            self._logger.warning("configurable_stream_open_failed", error=str(exc))
-            raise ProviderError(_ERR_STREAM_FAILED % (self.name, exc)) from exc
-
         try:
             async for event in self._iter_events(response):
                 yield event
@@ -596,16 +779,20 @@ class ConfigurableProvider(LLMProviderBase):
                 error=str(exc),
                 cancel_requested=self._cancel_requested,
             )
-            raise ProviderError(_ERR_STREAM_FAILED % (self.name, exc)) from exc
+            raise ProviderError(_ERR_STREAM_FAILED % (self.name, exc), provider_name=self.name) from exc
         finally:
             await stack.aclose()
 
     async def _iter_events(self, response: httpx.Response) -> AsyncIterator[dict[str, Any]]:
         """Decode a streaming response into events.
 
-        Server-sent events carry one JSON payload per ``data:`` line; Gemini
-        streams newline-delimited JSON instead. Both reduce to the same thing
-        here, so the adapter never sees a transport framing difference.
+        Server-sent events are assembled per the SSE rules: every ``data:``
+        line of an event is joined with a newline and the event is dispatched
+        at the blank line that ends it, so a payload split across several
+        ``data:`` lines still decodes. ``event:``, ``id:``, ``retry:`` and
+        comment lines carry nothing the adapters read. A line that is not an
+        SSE field at all is taken as one newline-delimited JSON payload, the
+        framing some gateways stream in.
 
         Args:
             response: The open streaming response.
@@ -613,18 +800,45 @@ class ConfigurableProvider(LLMProviderBase):
         Yields:
             dict[str, Any]: One decoded event per payload.
         """
+        data_lines: list[str] = []
         async for raw_line in response.aiter_lines():
-            line = raw_line.strip()
+            line = raw_line.rstrip("\r\n")
             if not line:
+                if data_lines:
+                    decoded = self._decode_event_payload("\n".join(data_lines))
+                    data_lines.clear()
+                    if decoded is not None:
+                        yield decoded
                 continue
-            payload_text = line[len(SSE_DATA_PREFIX) :].strip() if line.startswith(SSE_DATA_PREFIX) else line
-            if not payload_text or payload_text == SSE_DONE_SENTINEL:
+            if line.startswith(":"):
                 continue
-            if payload_text.startswith(("event:", "id:", "retry:", ":")):
+            field, separator, value = line.partition(":")
+            if separator and field in _SSE_FIELDS:
+                if field == SSE_DATA_FIELD:
+                    data_lines.append(value.removeprefix(" "))
                 continue
-            decoded = self._safe_parse_stream_json(payload_text.lstrip("[,").rstrip(",]"), logger=self._logger)
+            decoded = self._decode_event_payload(line)
             if decoded is not None:
                 yield decoded
+        if data_lines:
+            decoded = self._decode_event_payload("\n".join(data_lines))
+            if decoded is not None:
+                yield decoded
+
+    def _decode_event_payload(self, payload_text: str) -> dict[str, Any] | None:
+        """Decode one event payload, skipping the end-of-stream sentinel.
+
+        Args:
+            payload_text: The event's joined data.
+
+        Returns:
+            dict[str, Any] | None: The decoded payload, or ``None`` for the
+            sentinel, an empty payload or one that does not decode.
+        """
+        stripped = payload_text.strip()
+        if not stripped or stripped == SSE_DONE_SENTINEL:
+            return None
+        return self._safe_parse_stream_json(stripped, logger=self._logger)
 
     @override
     async def cancel_request(self) -> None:
@@ -688,6 +902,90 @@ class ConfigurableProvider(LLMProviderBase):
                 entries: list[Any] = raw
                 return [entry for entry in entries if is_json_object(entry)]
         return []
+
+
+def _next_model_page_cursor(page: dict[str, Any], dialect: ApiDialect) -> str | None:
+    """Read the cursor for the next page of a paginated model listing.
+
+    Args:
+        page: One decoded listing page.
+        dialect: The dialect whose paging fields to read.
+
+    Returns:
+        str | None: Anthropic's ``last_id`` while ``has_more`` is true, or
+        Gemini's ``nextPageToken``; ``None`` on the last page.
+    """
+    if dialect is ApiDialect.MESSAGES:
+        last_id = page.get("last_id")
+        return last_id if page.get("has_more") is True and isinstance(last_id, str) and last_id else None
+    token = page.get("nextPageToken")
+    return token if isinstance(token, str) and token else None
+
+
+def _retry_after_seconds(header: str | None, body: str) -> float | None:
+    """Read how long a rate-limited response asks the client to wait.
+
+    ``Retry-After`` is either a number of seconds or an HTTP-date. Gemini
+    states the wait in its error body instead, as a ``google.rpc.RetryInfo``
+    detail whose ``retryDelay`` is a protobuf duration such as ``"37s"``.
+
+    Args:
+        header: The ``Retry-After`` header value, if any.
+        body: The response body text.
+
+    Returns:
+        float | None: The wait in seconds, never negative, or ``None`` when
+        the response states none.
+    """
+    if header is not None and (value := header.strip()):
+        try:
+            seconds = float(value)
+        except ValueError:
+            seconds = None
+        if seconds is not None:
+            return max(seconds, 0.0) if math.isfinite(seconds) else None
+        try:
+            when = email.utils.parsedate_to_datetime(value)
+        except (TypeError, ValueError):
+            when = None
+        if when is not None:
+            moment = when if when.tzinfo is not None else when.replace(tzinfo=UTC)
+            return max((moment - datetime.now(tz=UTC)).total_seconds(), 0.0)
+    return _google_retry_delay(body)
+
+
+def _google_retry_delay(body: str) -> float | None:
+    """Read the ``RetryInfo.retryDelay`` of a Google API error body.
+
+    Args:
+        body: The response body text.
+
+    Returns:
+        float | None: The delay in seconds, or ``None`` when the body states
+        none.
+    """
+    try:
+        decoded: object = json.loads(body)
+    except ValueError:
+        return None
+    if not is_json_object(decoded):
+        return None
+    error = decoded.get("error")
+    if not is_json_object(error):
+        return None
+    details = error.get("details")
+    if not is_json_array(details):
+        return None
+    for detail in details:
+        if not is_json_object(detail):
+            continue
+        type_url = detail.get("@type")
+        delay = detail.get("retryDelay")
+        if isinstance(type_url, str) and type_url.endswith(_RETRY_INFO_TYPE_SUFFIX) and isinstance(delay, str):
+            match = _DURATION_PATTERN.match(delay)
+            if match is not None:
+                return float(match.group(1))
+    return None
 
 
 def _safe_body(response: httpx.Response) -> str:
