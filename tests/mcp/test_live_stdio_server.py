@@ -339,8 +339,7 @@ class TestProcessTreeTeardown:
 
         async def body() -> None:
             result = await connection.call_tool("spawn", {})
-            parts, _ = map_result(result)
-            text = next(getattr(part, "text", "") for part in parts if getattr(part, "text", ""))
+            text = next(str(getattr(block, "text", "")) for block in result.content if getattr(block, "text", ""))
             pid = int(text.strip())
             assert psutil.pid_exists(pid), "the grandchild never started, so teardown proves nothing"
             spawned["pid"] = pid
