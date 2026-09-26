@@ -21,7 +21,7 @@ import json
 import uuid
 from typing import TYPE_CHECKING, Any, ClassVar, Final, override
 
-from intellicrack.bridges.json_schema import function_parameters
+from intellicrack.bridges.json_schema import gemini_function_parameters
 from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
@@ -125,7 +125,10 @@ class GeminiAdapter(DialectAdapter):
         entry per function, so the return value is a single-element list. A
         function carrying a raw JSON Schema is reduced to Gemini's supported
         subset first, since Gemini rejects ``$ref``, composition keywords and
-        lowercase type names outright.
+        lowercase type names outright. A function with no arguments declares
+        no ``parameters``, and one with open-ended objects is declared through
+        ``parametersJsonSchema``, because Gemini rejects an ``OBJECT`` with no
+        properties.
 
         Args:
             tools: Tool definitions in final priority order.
@@ -141,14 +144,12 @@ class GeminiAdapter(DialectAdapter):
             return []
         declarations: list[dict[str, Any]] = []
         for tool in tools:
-            declarations.extend(
-                {
-                    "name": wire_function_name(func.name, name_style),
-                    "description": func.description,
-                    "parameters": function_parameters(func, uppercase_types=True),
-                }
-                for func in tool.functions
-            )
+            for func in tool.functions:
+                declaration: dict[str, Any] = {"name": wire_function_name(func.name, name_style), "description": func.description}
+                arguments = gemini_function_parameters(func)
+                if arguments is not None:
+                    declaration[arguments[0]] = arguments[1]
+                declarations.append(declaration)
         return [{"functionDeclarations": declarations}] if declarations else []
 
     def build_contents(

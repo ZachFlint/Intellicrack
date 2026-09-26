@@ -21,7 +21,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 
 if TYPE_CHECKING:
@@ -29,6 +29,10 @@ if TYPE_CHECKING:
 
     from mcp.client.session import ClientRequestContext, ElicitationFnT
     from mcp_types import ElicitRequestParams, ElicitResult, ErrorData
+
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 
 @dataclass(eq=False, slots=True)
@@ -114,7 +118,7 @@ class OperatorWaitClock:
                         entry.timeout.reschedule(now + entry.remaining_s)
                     entry.remaining_s = None
 
-    def pause_while[**P, R](self, handler: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+    def pause_while(self, handler: Callable[_P, Awaitable[_R]]) -> Callable[_P, Awaitable[_R]]:
         """Wrap any operator-facing coroutine so its wait is not charged to a deadline.
 
         Args:
@@ -122,11 +126,11 @@ class OperatorWaitClock:
                 as an OAuth redirect or callback handler.
 
         Returns:
-            Callable[P, Awaitable[R]]: A function that suspends this clock's
+            Callable[_P, Awaitable[_R]]: A function that suspends this clock's
             deadlines while the wrapped one runs.
         """
 
-        async def _paused(*args: P.args, **kwargs: P.kwargs) -> R:
+        async def _paused(*args: _P.args, **kwargs: _P.kwargs) -> _R:
             """Run the handler with every deadline on this clock suspended.
 
             Args:
@@ -134,7 +138,7 @@ class OperatorWaitClock:
                 **kwargs: Keyword arguments for the handler.
 
             Returns:
-                R: What the handler returned.
+                _R: What the handler returned.
             """
             async with self.operator_turn():
                 return await handler(*args, **kwargs)
