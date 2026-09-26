@@ -247,7 +247,7 @@ def describe_launch(spec: StdioServerSpec, env: Mapping[str, str]) -> str:
             "Working directory:",
             f"  {spec.cwd or '(inherited from Intellicrack)'}",
             "",
-        ]
+        ],
     )
     if env:
         lines.append(f"Environment entries passed to it ({len(env)}), values hidden:")
@@ -295,6 +295,36 @@ def launch_digest(spec: StdioServerSpec, env: Mapping[str, str]) -> str:
         "envFile": spec.env_file,
     })
     return hashlib.blake2b(material.encode("utf-8"), digest_size=_LAUNCH_DIGEST_BYTES).hexdigest()
+
+
+def server_identity(config: McpServerConfig) -> str:
+    """Digest what makes a configured server the server the operator judged.
+
+    Trust, refusals and approved launches are filed under a server id, but an
+    id is only a name: removing a server and adding a different one under the
+    same id must not hand the newcomer the old one's standing. The identity
+    covers the transport and where it leads -- the launch command, its
+    arguments, working directory and environment file for a local server, the
+    endpoint and its query for a remote one -- so a record made about one
+    program or endpoint is never applied to another.
+
+    Args:
+        config: The configured server.
+
+    Returns:
+        str: A hexadecimal digest, stable across processes.
+    """
+    material: dict[str, object] = {"kind": config.kind.value}
+    if config.stdio is not None:
+        material |= {
+            "command": config.stdio.command,
+            "args": list(config.stdio.args),
+            "cwd": config.stdio.cwd,
+            "envFile": config.stdio.env_file,
+        }
+    if config.http is not None:
+        material |= {"url": config.http.url, "query": dict(config.http.query)}
+    return hashlib.blake2b(canonical_json(material).encode("utf-8"), digest_size=_LAUNCH_DIGEST_BYTES).hexdigest()
 
 
 def _read_json_object(path: Path) -> JsonObject:
@@ -410,15 +440,63 @@ class TrustStore:
             _logger.warning("mcp_trust_state_unknown", server_id=server_id, state=raw)
             return TrustState.UNTRUSTED
 
-    def set_state(self, server_id: str, state: TrustState) -> None:
+    def set_state(self, server_id: str, state: TrustState, *, identity: str | None = None) -> None:
         """Record a server's trust state.
 
         Args:
             server_id: The server to update.
             state: The state to record.
+            identity: The :func:`server_identity` of the server the operator
+                judged, binding the record to it. ``None`` leaves the bound
+                identity unchanged.
         """
-        self._update(server_id, {"state": state.value})
+        changes: dict[str, str] = {"state": state.value}
+        if identity is not None:
+            changes["identity"] = identity
+        self._update(server_id, changes)
         _logger.info("mcp_trust_state_set", server_id=server_id, state=state.value)
+
+    def identity(self, server_id: str) -> str | None:
+        """Read the identity a server's record is bound to.
+
+        Args:
+            server_id: The server to read.
+
+        Returns:
+            str | None: The :func:`server_identity` recorded with the
+            operator's last decision, or ``None`` for a record that predates
+            identity binding or does not exist.
+        """
+        raw = self._entry(server_id).get("identity")
+        return raw if isinstance(raw, str) else None
+
+    def belongs_to(self, config: McpServerConfig) -> bool:
+        """Report whether a server's record was made about this configuration.
+
+        Args:
+            config: The server as currently configured.
+
+        Returns:
+            bool: ``False`` only when the record is bound to a different
+            identity, meaning the id now names another program or endpoint.
+        """
+        recorded = self.identity(config.server_id)
+        return recorded is None or recorded == server_identity(config)
+
+    def state_for(self, config: McpServerConfig) -> TrustState:
+        """Read a server's trust state, honouring it only for the server it was given to.
+
+        Args:
+            config: The server as currently configured.
+
+        Returns:
+            TrustState: The recorded state when the record belongs to this
+            configuration, and :attr:`TrustState.UNTRUSTED` when it was made
+            about a different program or endpoint under the same id.
+        """
+        if not self.belongs_to(config):
+            return TrustState.UNTRUSTED
+        return self.state(config.server_id)
 
     def generation(self, server_id: str) -> str | None:
         """Read the tool-listing generation last seen for a server.
@@ -454,14 +532,19 @@ class TrustStore:
         raw = self._entry(server_id).get("launchDigest")
         return raw if isinstance(raw, str) else None
 
-    def set_launch_digest(self, server_id: str, digest: str) -> None:
+    def set_launch_digest(self, server_id: str, digest: str, *, identity: str | None = None) -> None:
         """Record the launch an operator has just approved.
 
         Args:
             server_id: The server to update.
             digest: The launch digest to record.
+            identity: The :func:`server_identity` of the server approved,
+                or ``None`` to leave the bound identity unchanged.
         """
-        self._update(server_id, {"launchDigest": digest})
+        changes: dict[str, str] = {"launchDigest": digest}
+        if identity is not None:
+            changes["identity"] = identity
+        self._update(server_id, changes)
 
     def reset(self, server_id: str) -> None:
         """Forget everything recorded for one server.
@@ -473,6 +556,44 @@ class TrustStore:
         if data.pop(server_id, None) is not None:
             _write_json_object(self._path, data)
             _logger.info("mcp_trust_reset", server_id=server_id)
+
+
+@dataclass(frozen=True, slots=True)
+class ApprovalRecord:
+    """One remembered answer to a tool confirmation.
+
+    Attributes:
+        namespace: The tool namespace, e.g. ``mcp-files``.
+        function_name: The canonical dotted function name.
+        generation: The tool-listing generation the answer was given about.
+            Empty for an answer recorded without one, which no longer
+            applies to anything.
+        approved: ``True`` for an approval, ``False`` for a refusal.
+        scope: How long the answer lasts.
+    """
+
+    namespace: str
+    function_name: str
+    generation: str
+    approved: bool
+    scope: ApprovalScope
+
+
+def _split_approval_key(key: str) -> tuple[str, str, str] | None:
+    """Split a stored approval key back into its three parts.
+
+    Args:
+        key: A key built by :meth:`ApprovalStore._key`.
+
+    Returns:
+        tuple[str, str, str] | None: The namespace, function name and
+        generation, or ``None`` for a key that is not one of ours.
+    """
+    namespace, separator, remainder = key.partition("|")
+    function_name, second, generation = remainder.rpartition("|")
+    if not separator or not second or not namespace or not function_name:
+        return None
+    return namespace, function_name, generation
 
 
 class ApprovalStore:
@@ -530,6 +651,8 @@ class ApprovalStore:
         key = self._key(namespace, function_name, generation)
         if key in self._session:
             return self._session[key]
+        if not generation:
+            return None
         stored = _read_json_object(self._path).get(key)
         return stored if isinstance(stored, bool) else None
 
@@ -550,6 +673,11 @@ class ApprovalStore:
             generation: The server's current tool-listing generation.
             approved: The operator's answer.
             scope: How long the answer applies.
+
+        Raises:
+            ValueError: If an ``always`` answer is given without a
+                generation. Such an answer could never be invalidated, so it
+                would outlive any change to what the tool does.
         """
         if scope is ApprovalScope.ONCE:
             return
@@ -557,6 +685,9 @@ class ApprovalStore:
         if scope is ApprovalScope.SESSION:
             self._session[key] = approved
             return
+        if not generation:
+            message = f"an 'always' answer for {namespace}.{function_name} needs a tool-listing generation"
+            raise ValueError(message)
         data = _read_json_object(self._path)
         data[key] = approved
         _write_json_object(self._path, data)
@@ -591,16 +722,104 @@ class ApprovalStore:
         """Drop every ``session`` answer, leaving persisted ones in place."""
         self._session.clear()
 
+    def entries(self) -> list[ApprovalRecord]:
+        """List every remembered answer, session-scoped and persisted.
 
-LaunchPrompt = Callable[["McpServerConfig", str, list["DangerousPattern"]], "bool | Awaitable[bool]"]
+        Returns:
+            list[ApprovalRecord]: The answers, session ones first, each group
+            sorted by key.
+        """
+        records: list[ApprovalRecord] = []
+        for scope, source in (
+            (ApprovalScope.SESSION, dict(self._session)),
+            (ApprovalScope.ALWAYS, _read_json_object(self._path)),
+        ):
+            for key in sorted(source):
+                value = source[key]
+                parts = _split_approval_key(key)
+                if parts is None or not isinstance(value, bool):
+                    continue
+                namespace, function_name, generation = parts
+                records.append(ApprovalRecord(namespace, function_name, generation, approved=value, scope=scope))
+        return records
+
+    def revoke(self, namespace: str, function_name: str, generation: str) -> bool:
+        """Forget one remembered answer, in every scope it was kept in.
+
+        Args:
+            namespace: The tool namespace.
+            function_name: The canonical dotted function name.
+            generation: The generation the answer was recorded under.
+
+        Returns:
+            bool: ``True`` when anything was removed.
+        """
+        key = self._key(namespace, function_name, generation)
+        removed = self._session.pop(key, None) is not None
+        data = _read_json_object(self._path)
+        if data.pop(key, None) is not None:
+            _write_json_object(self._path, data)
+            removed = True
+        if removed:
+            _logger.info("mcp_approval_revoked", namespace=namespace, function_name=function_name)
+        return removed
+
+    def revoke_all(self) -> int:
+        """Forget every remembered answer.
+
+        Returns:
+            int: How many answers were removed.
+        """
+        data = _read_json_object(self._path)
+        count = len(self._session) + len(data)
+        self._session.clear()
+        if data:
+            _write_json_object(self._path, {})
+        _logger.info("mcp_approvals_revoked_all", removed=count)
+        return count
+
+
+@dataclass(frozen=True, slots=True)
+class ConsentAnswer:
+    """The operator's full answer to a launch-consent prompt.
+
+    Attributes:
+        approved: Whether this launch may go ahead.
+        trusted: Whether the operator also vouched for the server's claims
+            about its own tools. Meaningful only with ``approved``.
+        blocked: Whether the operator asked never to be asked about this
+            server again, refusing it until the refusal is reset in MCP
+            Settings. A plain refusal leaves the next start free to ask.
+    """
+
+    approved: bool
+    trusted: bool = False
+    blocked: bool = False
+
+
+LaunchPrompt = Callable[["McpServerConfig", str, list["DangerousPattern"]], "bool | ConsentAnswer | Awaitable[bool | ConsentAnswer]"]
 """Presents a proposed launch and returns the operator's answer.
 
 Receives the server configuration, the rendered description from :func:`describe_launch`, and the findings from
-:func:`scan_command_for_dangerous_patterns`.
+:func:`scan_command_for_dangerous_patterns`. A plain ``bool`` approves or refuses this launch alone; a :class:`ConsentAnswer` also carries
+the trust and never-ask-again choices.
 
 The answer may be awaitable. A prompt that shows a window has to hand the question to the GUI thread and wait for it, and awaiting that wait
 keeps the loop free to serve every other server in the meantime -- rather than blocking all of them behind one modal dialog.
 """
+
+
+def _as_answer(*, answer: bool | ConsentAnswer) -> ConsentAnswer:
+    """Normalise a prompt's answer into a :class:`ConsentAnswer`.
+
+    Args:
+        answer: What the prompt returned.
+
+    Returns:
+        ConsentAnswer: The answer, a bare ``bool`` meaning approval or refusal
+        of this launch alone.
+    """
+    return answer if isinstance(answer, ConsentAnswer) else ConsentAnswer(approved=bool(answer))
 
 
 class McpConsentGate:
@@ -631,6 +850,7 @@ class McpConsentGate:
         self._trust = trust
         self._prompt = prompt
         self._on_generation_change = on_generation_change
+        self._config_lookup: Callable[[str], McpServerConfig | None] | None = None
 
     @property
     def trust(self) -> TrustStore:
@@ -640,6 +860,30 @@ class McpConsentGate:
             TrustStore: The backing store.
         """
         return self._trust
+
+    def set_prompt(self, prompt: LaunchPrompt) -> None:
+        """Replace the callable that asks the operator.
+
+        Args:
+            prompt: The new prompt. :func:`deny_all_launches` is the one to
+                install once nobody is left to ask, such as while the
+                application shuts down.
+        """
+        self._prompt = prompt
+
+    def set_config_lookup(self, lookup: Callable[[str], McpServerConfig | None] | None) -> None:
+        """Install how the gate finds a server's current configuration.
+
+        Trust is recorded against a server's identity as well as its id. With
+        a lookup installed, :meth:`is_trusted` honours a record only while the
+        id still names the program or endpoint it was given to.
+
+        Args:
+            lookup: Returns the configuration for a server id, or ``None``
+                when no such server is configured. ``None`` removes the
+                lookup, leaving trust keyed by id alone.
+        """
+        self._config_lookup = lookup
 
     async def ensure_launch_consent(self, config: McpServerConfig, env: Mapping[str, str]) -> None:
         """Obtain consent to launch a local server, or refuse.
@@ -656,9 +900,15 @@ class McpConsentGate:
             message = f"server '{config.server_id}' has no launch command to consent to"
             raise McpConsentDeniedError(message)
 
-        state = self._trust.state(config.server_id)
-        if state is TrustState.DENIED:
-            message = f"server '{config.server_id}' is marked as denied; reset it in MCP Settings to start it again"
+        if not self._trust.belongs_to(config):
+            _logger.warning("mcp_trust_record_for_other_server", server_id=config.server_id)
+            self._trust.reset(config.server_id)
+
+        if self._trust.state(config.server_id) is TrustState.DENIED:
+            message = (
+                f"server '{config.server_id}' is marked as never to be started; "
+                "reset it on the Trust and approvals tab of MCP Settings to be asked again"
+            )
             raise McpConsentDeniedError(message)
 
         digest = launch_digest(config.stdio, env)
@@ -678,13 +928,56 @@ class McpConsentGate:
         answer = self._prompt(config, description, findings)
         if inspect.isawaitable(answer):
             answer = await answer
-        if not answer:
-            self._trust.set_state(config.server_id, TrustState.DENIED)
+        if not self.record_answer(config, env, _as_answer(answer=answer)):
             message = f"launching MCP server '{config.server_id}' was not approved"
             raise McpConsentDeniedError(message)
 
-        self._trust.set_launch_digest(config.server_id, digest)
-        _logger.info("mcp_launch_consent_granted", server_id=config.server_id)
+    def record_answer(self, config: McpServerConfig, env: Mapping[str, str], answer: ConsentAnswer) -> bool:
+        """Apply the operator's answer about one proposed launch.
+
+        An approval records the exact launch, so the same launch is not asked
+        about again. Trust follows the answer: ticking the trust box grants
+        it, and approving a launch that differs from the one approved before
+        without ticking it withdraws trust given about the old launch. A
+        plain refusal records nothing, so the next start asks again; only an
+        explicit never-ask-again marks the server denied.
+
+        Args:
+            config: The server the answer is about.
+            env: The resolved environment the answer was given about.
+            answer: The operator's answer.
+
+        Returns:
+            bool: ``True`` when the launch was approved.
+
+        Raises:
+            McpConsentDeniedError: If the server has no launch description.
+        """
+        if config.stdio is None:
+            message = f"server '{config.server_id}' has no launch command to consent to"
+            raise McpConsentDeniedError(message)
+        server_id = config.server_id
+        identity = server_identity(config)
+        if answer.blocked:
+            self._trust.set_state(server_id, TrustState.DENIED, identity=identity)
+            _logger.warning("mcp_launch_blocked", server_id=server_id)
+            return False
+        if not answer.approved:
+            _logger.warning("mcp_launch_consent_refused", server_id=server_id)
+            return False
+
+        digest = launch_digest(config.stdio, env)
+        previous = self._trust.launch_digest(server_id)
+        if answer.trusted:
+            self._trust.set_state(server_id, TrustState.TRUSTED, identity=identity)
+        elif previous is not None and previous != digest and self._trust.state(server_id) is TrustState.TRUSTED:
+            self._trust.set_state(server_id, TrustState.UNTRUSTED, identity=identity)
+            _logger.warning("mcp_trust_withdrawn_for_changed_launch", server_id=server_id)
+        elif self._trust.state(server_id) is TrustState.DENIED:
+            self._trust.set_state(server_id, TrustState.UNTRUSTED, identity=identity)
+        self._trust.set_launch_digest(server_id, digest, identity=identity)
+        _logger.info("mcp_launch_consent_granted", server_id=server_id, trusted=answer.trusted)
+        return True
 
     def note_generation(self, server_id: str, generation: str) -> bool:
         """Record a server's current tool listing and report whether it moved.
@@ -721,7 +1014,10 @@ class McpConsentGate:
         Returns:
             bool: ``True`` only when the operator marked it trusted.
         """
-        return self._trust.state(server_id) is TrustState.TRUSTED
+        lookup = self._config_lookup
+        config = lookup(server_id) if lookup is not None else None
+        state = self._trust.state_for(config) if config is not None else self._trust.state(server_id)
+        return state is TrustState.TRUSTED
 
 
 def deny_all_launches(config: McpServerConfig, description: str, findings: list[DangerousPattern]) -> bool:
