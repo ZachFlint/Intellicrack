@@ -1,3 +1,5 @@
+default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
 repos:
   # Rust Quality Assurance (intellicrack-hexcore crate)
   - repo: https://github.com/doublify/pre-commit-rust
@@ -39,6 +41,11 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
+      - id: no-claude-attribution
+        name: Strip Claude attribution from the commit message
+        entry: bash -c '.pixi/envs/default/python.exe scripts/check_claude_attribution.py commit-msg "$1"' --
+        language: system
+        stages: [commit-msg]
       - id: rust-fmt
         name: Rust code formatting (cargo fmt)
         entry: cargo fmt --manifest-path src/intellicrack-hexcore/Cargo.toml -- --check

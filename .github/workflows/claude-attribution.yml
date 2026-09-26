@@ -1,0 +1,39 @@
+name: Claude Attribution
+on:
+  push:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  no-claude-attribution:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Scan pull request commits
+        if: github.event_name == 'pull_request'
+        run: python scripts/check_claude_attribution.py range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+      - name: Scan pull request body
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
+          python scripts/check_claude_attribution.py text "$RUNNER_TEMP/pr-body.md"
+      - name: Scan pushed commits
+        if: github.event_name == 'push' && github.event.deleted == false
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            python scripts/check_claude_attribution.py range "$AFTER" --not "origin/$DEFAULT_BRANCH"
+          else
+            python scripts/check_claude_attribution.py range "$BEFORE..$AFTER"
+          fi
