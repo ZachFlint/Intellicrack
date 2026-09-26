@@ -8,8 +8,9 @@ Advertising a tool is not free: its name, description and argument schema all oc
 with three hundred tools would consume the budget before the first message. This module prices a tool so the settings dialog can show what
 enabling it costs, and resolves which tools a server is actually allowed to contribute.
 
-Token counting uses ``tiktoken`` directly rather than reaching into the orchestrator, which would make this package depend on the layer that
-depends on it. A caller that already has the active model's own counter can inject it.
+Token counting goes through :mod:`intellicrack.core.token_encoding`, which loads the encoding on a background thread with a bounded
+download, so pricing a server's tools from the settings dialog never waits on the network. A caller that already has the active model's
+own counter can inject it.
 """
 
 from __future__ import annotations
@@ -19,9 +20,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
-import tiktoken
-
-from intellicrack.core.logging import get_logger
+from intellicrack.core import token_encoding
 
 
 if TYPE_CHECKING:
@@ -30,44 +29,29 @@ if TYPE_CHECKING:
     from intellicrack.mcp.config import McpServerConfig
 
 
-_logger = get_logger(__name__)
-
-
-DEFAULT_ENCODING_NAME: Final[str] = "o200k_base"
-"""Encoding used when the caller supplies no model-specific counter.
-
-It overcounts against most real tokenizers rather than undercounting, so a cost estimate errs toward warning the operator off rather than
-toward a prompt that silently overflows.
-"""
+DEFAULT_ENCODING_NAME: Final[str] = token_encoding.DEFAULT_ENCODING_NAME
+"""Encoding used when the caller supplies no model-specific counter."""
 
 TokenCounter = Callable[[str], int]
 """Counts the tokens in a string."""
 
-_encoder_cache: dict[str, tiktoken.Encoding] = {}
-
 
 def _default_counter(text: str) -> int:
-    """Count tokens with the default encoding.
+    """Count tokens with the default encoding, never waiting for it to load.
+
+    The settings dialog prices tools on the GUI thread, so this never
+    blocks: until the shared loader has the encoding, the count is the
+    overestimate :func:`~intellicrack.core.token_encoding.estimate_tokens_without_encoder`
+    gives, which errs toward warning the operator off rather than toward a
+    prompt that silently overflows.
 
     Args:
         text: The text to count.
 
     Returns:
-        int: The token count, or a four-characters-per-token estimate when
-        the encoding cannot be loaded, which happens offline on a machine
-        that has never downloaded it.
+        int: The token count, exact once the encoding is loaded.
     """
-    if not text:
-        return 0
-    encoder = _encoder_cache.get(DEFAULT_ENCODING_NAME)
-    if encoder is None:
-        try:
-            encoder = tiktoken.get_encoding(DEFAULT_ENCODING_NAME)
-        except (KeyError, ValueError, OSError) as exc:
-            _logger.debug("mcp_token_encoding_unavailable", error=str(exc))
-            return max(1, len(text) // 4)
-        _encoder_cache[DEFAULT_ENCODING_NAME] = encoder
-    return len(encoder.encode(text, disallowed_special=()))
+    return token_encoding.count_tokens(text, DEFAULT_ENCODING_NAME, timeout=0.0)
 
 
 @dataclass(frozen=True, slots=True)

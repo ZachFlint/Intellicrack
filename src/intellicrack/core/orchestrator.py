@@ -23,7 +23,6 @@ from uuid import uuid4
 
 import lief
 import structlog.contextvars
-import tiktoken
 
 from intellicrack.bridges.schemas import (
     build_schema_parameters,
@@ -31,6 +30,7 @@ from intellicrack.bridges.schemas import (
 )
 from intellicrack.core.analysis_aggregator import AnalysisAggregator
 from intellicrack.core.logging import get_logger, log_analysis_operation
+from intellicrack.core.token_encoding import OFF_GUI_THREAD_WAIT_S, estimate_tokens_without_encoder, get_token_encoder
 from intellicrack.core.tool_search import ToolSearchIndex
 from intellicrack.core.types import (
     BinaryInfo,
@@ -65,6 +65,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
     from pathlib import Path
     from typing import Any
+
+    import tiktoken
 
     from intellicrack.core.script_gen import ScriptManager
     from intellicrack.core.session import Session, SessionManager
@@ -158,38 +160,25 @@ def _strip_model_variant_suffix(model_id: str) -> str:
     return stem
 
 
-_token_encoder_cache: dict[str, tiktoken.Encoding] = {}
-
-
-def _get_token_encoder(tokenizer: str | None) -> tiktoken.Encoding:
+def _get_token_encoder(tokenizer: str | None) -> tiktoken.Encoding | None:
     """Resolve the tiktoken encoder a model's capability record names.
 
-    Encodings are cached per-name to avoid re-loading the BPE tables on every
-    call. A name tiktoken does not know falls back to the default encoding
-    rather than raising, so an endpoint advertising an unfamiliar tokenizer
-    costs accuracy rather than availability.
+    Encoders come from the shared :mod:`intellicrack.core.token_encoding`
+    loader, which downloads with bounded timeouts on a background thread and
+    remembers a failed download instead of retrying it on every call. A name
+    tiktoken does not know falls back to the default encoding, so an endpoint
+    advertising an unfamiliar tokenizer costs accuracy rather than
+    availability.
 
     Args:
         tokenizer: ``tiktoken`` encoding name from the model's capability
             record, or ``None`` to use the default encoding.
 
     Returns:
-        tiktoken.Encoding: Encoder instance suitable for token counting.
+        tiktoken.Encoding | None: Encoder instance suitable for token
+        counting, or ``None`` while it is unavailable.
     """
-    encoding_name = tokenizer or _DEFAULT_TOKEN_ENCODING
-    encoder = _token_encoder_cache.get(encoding_name)
-    if encoder is not None:
-        return encoder
-    try:
-        encoder = tiktoken.get_encoding(encoding_name)
-    except (KeyError, ValueError):
-        _logger.warning("token_encoding_unknown", tokenizer=encoding_name, fallback=_DEFAULT_TOKEN_ENCODING)
-        encoding_name = _DEFAULT_TOKEN_ENCODING
-        encoder = _token_encoder_cache.get(encoding_name)
-        if encoder is None:
-            encoder = tiktoken.get_encoding(encoding_name)
-    _token_encoder_cache[encoding_name] = encoder
-    return encoder
+    return get_token_encoder(tokenizer or _DEFAULT_TOKEN_ENCODING, timeout=OFF_GUI_THREAD_WAIT_S)
 
 
 def _serialize_for_tokens(value: object) -> str:
@@ -227,6 +216,8 @@ def _count_tokens(text: str, tokenizer: str | None) -> int:
     if not text:
         return 0
     encoder = _get_token_encoder(tokenizer)
+    if encoder is None:
+        return estimate_tokens_without_encoder(text)
     return len(encoder.encode(text, disallowed_special=()))
 
 
