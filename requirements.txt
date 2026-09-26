@@ -32,7 +32,7 @@ bumpversion==0.6.0
 ca9==0.5.0
 cachecontrol==0.14.4
 cachetools==7.1.4
-certifi==2026.6.17
+certifi==2026.7.22
 cffi==2.0.0
 cfgv==3.5.0
 chardet==5.2.0
