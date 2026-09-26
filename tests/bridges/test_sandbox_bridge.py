@@ -16,7 +16,6 @@ import textwrap
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -29,14 +28,19 @@ from intellicrack.core.types import SandboxError, ToolError
 from intellicrack.sandbox import ExecutionReport
 from tests.sandbox.conftest import (
     InMemoryQEMUSandbox,
+    InMemorySandbox,
+    QMPResponse,
+    StubAgent,
     StubInstance,
     StubManager,
+    StubQMP,
 )
 
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Sequence
 
+    from intellicrack.sandbox.base import SandboxConfig
     from intellicrack.sandbox.manager import SandboxManager
 
 
@@ -60,6 +64,463 @@ def _make_execution_report() -> ExecutionReport:
     )
 
 
+class _QMPResponse(QMPResponse):
+    """``tests.sandbox.conftest.QMPResponse`` augmented with an ``error`` field.
+
+    The conftest response only models the always-succeeds ``StubQMP`` path
+    and has no ``error`` field; this subclass adds it so scripted-failure
+    tests can populate it, matching the shape of the real
+    ``intellicrack.sandbox.qemu.QMPResponse``.
+    """
+
+    def __init__(
+        self,
+        *,
+        success: bool = True,
+        data: dict[str, Any] | None = None,
+        error: str | None = None,
+    ) -> None:
+        """Initialise the augmented QMP response.
+
+        Args:
+            success: Whether the command succeeded.
+            data: Response payload (defaults to empty dict).
+            error: Error message when ``success`` is ``False``.
+        """
+        super().__init__(success=success, data=data)
+        self.error = error
+
+
+class _ScriptedQMP:
+    """QMP client stub whose ``cont()`` outcome is scripted per test.
+
+    Duck-type compatible with :class:`tests.sandbox.conftest.StubQMP` (so a
+    test can install it in place of ``InMemoryQEMUSandbox.qmp`` via
+    ``cast("StubQMP", ...)``) but lets a test force ``cont()`` to raise a
+    specific exception or return a specific :class:`_QMPResponse`, so the
+    bridge's QMP-failure handling can be exercised against a real (non-mock)
+    object.
+    """
+
+    def __init__(
+        self,
+        *,
+        cont_error: Exception | None = None,
+        cont_response: _QMPResponse | None = None,
+    ) -> None:
+        """Initialise the scripted QMP client.
+
+        Args:
+            cont_error: Exception to raise from ``cont()``, if any.
+            cont_response: Response ``cont()`` returns when no error is scripted.
+        """
+        self._cont_error = cont_error
+        self._cont_response = cont_response
+
+    async def cont(self) -> _QMPResponse:
+        """Resume VM execution per the scripted outcome.
+
+        Returns:
+            _QMPResponse: The scripted response, or a default success response.
+
+        Raises:
+            Exception: The scripted ``cont_error``, if set.
+        """
+        if self._cont_error is not None:
+            raise self._cont_error
+        if self._cont_response is not None:
+            return self._cont_response
+        return _QMPResponse(success=True, data={"status": "running"})
+
+    async def stop(self) -> _QMPResponse:
+        """Pause VM execution.
+
+        Returns:
+            _QMPResponse: Success response.
+        """
+        return _QMPResponse(success=True, data={"status": "paused"})
+
+
+class _ScriptedAgent:
+    """Guest agent stub returning a fixed list of pending messages.
+
+    Duck-type compatible with :class:`tests.sandbox.conftest.StubAgent` (so a
+    test can install it in place of ``InMemoryQEMUSandbox.agent`` via
+    ``cast("StubAgent", ...)``) for tests that need to control exactly which
+    message objects (or errors) ``get_pending_messages()`` produces.
+    """
+
+    def __init__(
+        self,
+        messages: list[object] | None = None,
+        *,
+        error: Exception | None = None,
+    ) -> None:
+        """Initialise the scripted agent.
+
+        Args:
+            messages: Messages to return from ``get_pending_messages()``.
+            error: Exception to raise instead of returning ``messages``.
+        """
+        self._messages = messages if messages is not None else []
+        self._error = error
+
+    async def get_pending_messages(self) -> list[object]:
+        """Return the scripted pending messages.
+
+        Returns:
+            list[object]: The scripted messages.
+
+        Raises:
+            Exception: The scripted ``error``, if set.
+        """
+        if self._error is not None:
+            raise self._error
+        return self._messages
+
+
+class _ScriptedSandbox(InMemorySandbox):
+    """Real ``InMemorySandbox`` whose boundary methods can be scripted to fail.
+
+    Every method that is not explicitly scripted keeps the genuine
+    ``InMemorySandbox`` behaviour, so a single scripted failure exercises
+    the bridge's error-wrapping path while every other call runs for real.
+    Also records ``yara_scan`` call arguments and allows overriding
+    ``vnc_port``, replacing the ``MagicMock``/``AsyncMock`` doubles the
+    equivalent tests previously relied on.
+    """
+
+    def __init__(
+        self,
+        config: SandboxConfig | None = None,
+        *,
+        fail_method: str | None = None,
+        fail_error: Exception | None = None,
+        vnc_port: int | None = 5900,
+        yara_matches: list[dict[str, Any]] | None = None,
+    ) -> None:
+        """Initialise the scripted sandbox.
+
+        Args:
+            config: Optional sandbox configuration.
+            fail_method: Name of the one method to make raise ``fail_error``.
+            fail_error: Exception raised by ``fail_method`` when invoked.
+            vnc_port: Fixed value returned by the ``vnc_port`` property.
+            yara_matches: Fixed matches returned by ``yara_scan`` instead of
+                the real ``InMemorySandbox`` sample match.
+        """
+        super().__init__(config)
+        self._fail_method = fail_method
+        self._fail_error = fail_error
+        self._vnc_port_value = vnc_port
+        self._yara_matches = yara_matches
+        self.yara_scan_calls: list[tuple[str | None, str]] = []
+
+    def _maybe_raise(self, name: str) -> None:
+        """Raise the scripted error when ``name`` is the scripted failing method.
+
+        Args:
+            name: Name of the method currently being invoked.
+        """
+        if self._fail_method == name and self._fail_error is not None:
+            raise self._fail_error
+
+    @property
+    def vnc_port(self) -> int | None:
+        """VNC port.
+
+        Returns:
+            int | None: The scripted VNC port value.
+        """
+        return self._vnc_port_value
+
+    def seed_snapshot(self, snapshot_id: str) -> None:
+        """Pre-populate a snapshot so a later ``restore``/``delete`` call finds it.
+
+        Args:
+            snapshot_id: The full snapshot key (e.g. ``"snap-1"``) to seed.
+        """
+        self._snapshots[snapshot_id] = {}
+
+    async def copy_to_sandbox(self, source: Path, dest: str) -> None:
+        """Copy a file into the sandbox, or raise the scripted error.
+
+        Args:
+            source: Local source path.
+            dest: Destination path in sandbox.
+        """
+        self._maybe_raise("copy_to_sandbox")
+        await super().copy_to_sandbox(source, dest)
+
+    async def copy_from_sandbox(self, source: str, dest: Path) -> None:
+        """Copy a file from the sandbox, or raise the scripted error.
+
+        Args:
+            source: Source path in sandbox.
+            dest: Local destination path.
+        """
+        self._maybe_raise("copy_from_sandbox")
+        await super().copy_from_sandbox(source, dest)
+
+    async def take_snapshot(self, name: str) -> str:
+        """Take a snapshot, or raise the scripted error.
+
+        Args:
+            name: Snapshot name.
+
+        Returns:
+            str: Snapshot identifier.
+        """
+        self._maybe_raise("take_snapshot")
+        return await super().take_snapshot(name)
+
+    async def restore_snapshot(self, snapshot_id: str) -> None:
+        """Restore a snapshot, or raise the scripted error.
+
+        Args:
+            snapshot_id: Snapshot identifier.
+        """
+        self._maybe_raise("restore_snapshot")
+        await super().restore_snapshot(snapshot_id)
+
+    async def list_snapshots(self) -> list[str]:
+        """List snapshots, or raise the scripted error.
+
+        Returns:
+            list[str]: List of snapshot identifiers.
+        """
+        self._maybe_raise("list_snapshots")
+        return await super().list_snapshots()
+
+    async def delete_snapshot(self, name: str) -> None:
+        """Delete a snapshot, or raise the scripted error.
+
+        Args:
+            name: Snapshot name to delete.
+        """
+        self._maybe_raise("delete_snapshot")
+        await super().delete_snapshot(name)
+
+    async def start_pcap_capture(self) -> str:
+        """Start packet capture, or raise the scripted error.
+
+        Returns:
+            str: Capture identifier.
+        """
+        self._maybe_raise("start_pcap_capture")
+        return await super().start_pcap_capture()
+
+    async def stop_pcap_capture(
+        self,
+        capture_id: str,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Stop packet capture, or raise the scripted error.
+
+        Args:
+            capture_id: Capture identifier.
+            output_path: Optional output path.
+
+        Returns:
+            Path: Path to the PCAP file.
+        """
+        self._maybe_raise("stop_pcap_capture")
+        return await super().stop_pcap_capture(capture_id, output_path)
+
+    async def capture_screenshot(self, output_path: Path | None = None) -> Path:
+        """Capture a screenshot, or raise the scripted error.
+
+        Args:
+            output_path: Optional output path.
+
+        Returns:
+            Path: Path to the screenshot file.
+        """
+        self._maybe_raise("capture_screenshot")
+        return await super().capture_screenshot(output_path)
+
+    async def apply_anti_evasion(self, profile: str = "default") -> dict[str, Any]:
+        """Apply anti-evasion techniques, or raise the scripted error.
+
+        Args:
+            profile: Anti-evasion profile name.
+
+        Returns:
+            dict[str, Any]: Dictionary of applied techniques.
+        """
+        self._maybe_raise("apply_anti_evasion")
+        return await super().apply_anti_evasion(profile)
+
+    async def dump_memory(
+        self,
+        output_path: Path | None = None,
+        target_pid: int | None = None,
+    ) -> Path:
+        """Dump guest memory, or raise the scripted error.
+
+        Args:
+            output_path: Optional output path.
+            target_pid: Optional guest-side target PID.
+
+        Returns:
+            Path: Path to the memory dump file.
+        """
+        self._maybe_raise("dump_memory")
+        return await super().dump_memory(output_path, target_pid)
+
+    async def extract_dropped_files(self, output_path: Path | None = None) -> Path:
+        """Extract dropped files, or raise the scripted error.
+
+        Args:
+            output_path: Optional output path.
+
+        Returns:
+            Path: Path to the ZIP archive.
+        """
+        self._maybe_raise("extract_dropped_files")
+        return await super().extract_dropped_files(output_path)
+
+    async def yara_scan(
+        self,
+        rules_path: str | None = None,
+        scan_target: str = "files",
+    ) -> list[dict[str, Any]]:
+        """Run YARA rules, recording the call and honouring scripted overrides.
+
+        Args:
+            rules_path: Path to YARA rules file.
+            scan_target: What to scan ('files' or 'memory').
+
+        Returns:
+            list[dict[str, Any]]: List of YARA match results.
+        """
+        self._maybe_raise("yara_scan")
+        self.yara_scan_calls.append((rules_path, scan_target))
+        if self._yara_matches is not None:
+            return self._yara_matches
+        return await super().yara_scan(rules_path, scan_target)
+
+
+class _FailingManager(StubManager):
+    """``StubManager`` whose ``create``/``run_binary`` calls can be scripted to fail.
+
+    Every other manager operation delegates to the real ``StubManager``
+    implementation, so only the boundary call under test is disturbed.
+    """
+
+    def __init__(
+        self,
+        instances: dict[str, StubInstance] | None = None,
+        *,
+        create_error: Exception | None = None,
+        run_binary_error: Exception | None = None,
+    ) -> None:
+        """Initialise the failing manager.
+
+        Args:
+            instances: Optional pre-populated instance dict.
+            create_error: Exception ``create()`` raises instead of succeeding.
+            run_binary_error: Exception ``run_binary()`` raises instead of succeeding.
+        """
+        super().__init__(instances)
+        self._create_error = create_error
+        self._run_binary_error = run_binary_error
+
+    async def create(
+        self,
+        sandbox_type: str = "windows",
+        config: SandboxConfig | None = None,
+        binary_path: Path | None = None,
+        qemu_config: object = None,
+        *,
+        auto_start: bool = True,
+    ) -> StubInstance:
+        """Create an instance, or raise the scripted ``create_error``.
+
+        Args:
+            sandbox_type: Type of sandbox.
+            config: Optional configuration.
+            binary_path: Optional binary path.
+            qemu_config: Optional QEMU config.
+            auto_start: Whether to auto-start.
+
+        Returns:
+            StubInstance: Created instance.
+        """
+        if self._create_error is not None:
+            raise self._create_error
+        return await super().create(
+            sandbox_type=sandbox_type,
+            config=config,
+            binary_path=binary_path,
+            qemu_config=qemu_config,
+            auto_start=auto_start,
+        )
+
+    async def run_binary(
+        self,
+        binary_path: Path,
+        args: list[str] | None = None,
+        sandbox_type: str = "windows",
+        config: SandboxConfig | None = None,
+        time_limit: int | None = None,
+        qemu_config: object = None,
+        instance_id: str | None = None,
+        companions: Sequence[Path] | None = None,
+        *,
+        monitor: bool = True,
+        reuse_instance: bool = False,
+    ) -> tuple[StubInstance, ExecutionReport]:
+        """Run a binary, or raise the scripted ``run_binary_error``.
+
+        Args:
+            binary_path: Path to the binary.
+            args: Optional command line arguments.
+            sandbox_type: Type of sandbox.
+            config: Optional configuration.
+            time_limit: Optional timeout.
+            qemu_config: Optional QEMU config.
+            instance_id: Instance the caller directed the run at.
+            companions: Files to place beside the binary.
+            monitor: Whether to monitor.
+            reuse_instance: Whether to reuse an existing instance.
+
+        Returns:
+            tuple[StubInstance, ExecutionReport]: Instance and report.
+        """
+        if self._run_binary_error is not None:
+            raise self._run_binary_error
+        return await super().run_binary(
+            binary_path,
+            args=args,
+            sandbox_type=sandbox_type,
+            config=config,
+            time_limit=time_limit,
+            qemu_config=qemu_config,
+            instance_id=instance_id,
+            companions=companions,
+            monitor=monitor,
+            reuse_instance=reuse_instance,
+        )
+
+
+class _CountingAnalysisModule:
+    """Stand-in analysis module exposing only ``extract_iocs``, returning ``[]``."""
+
+    @staticmethod
+    def extract_iocs(report: object) -> list[dict[str, Any]]:
+        """Return no IOCs regardless of the report contents.
+
+        Args:
+            report: The execution report (ignored).
+
+        Returns:
+            list[dict[str, Any]]: Always an empty list.
+        """
+        del report
+        return []
+
+
 class TestF0001ContBroadException:
     """F-0001: cont() catches broad Exception and wraps as ToolError."""
 
@@ -74,20 +535,14 @@ class TestF0001ContBroadException:
         """
         bridge = SandboxBridge()
 
-        mock_qmp = MagicMock()
-        mock_qmp.cont = AsyncMock(side_effect=RuntimeError("unexpected QMP failure"))
-
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        type(mock_instance.sandbox).qmp = property(lambda _self: mock_qmp)
+        sandbox = InMemoryQEMUSandbox()
+        sandbox.qmp = cast("StubQMP", _ScriptedQMP(cont_error=RuntimeError("unexpected QMP failure")))
+        instance = StubInstance(sandbox, "qemu", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.cont("some-id")
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.cont("some-id")
             err = str(exc_info.value)
             assert "Failed to resume VM execution" in err, f"missing prefix: {err!r}"
             assert "unexpected QMP failure" in err, f"missing original cause: {err!r}"
@@ -103,20 +558,14 @@ class TestF0001ContBroadException:
         """
         bridge = SandboxBridge()
 
-        mock_qmp = MagicMock()
-        mock_qmp.cont = AsyncMock(side_effect=ValueError("bad value"))
-
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        type(mock_instance.sandbox).qmp = property(lambda _self: mock_qmp)
+        sandbox = InMemoryQEMUSandbox()
+        sandbox.qmp = cast("StubQMP", _ScriptedQMP(cont_error=ValueError("bad value")))
+        instance = StubInstance(sandbox, "qemu", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.cont("some-id")
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.cont("some-id")
             err = str(exc_info.value)
             assert "Failed to resume VM execution" in err, f"missing prefix: {err!r}"
             assert "bad value" in err, f"missing ValueError detail: {err!r}"
@@ -133,23 +582,15 @@ class TestF0001ContBroadException:
         """
         bridge = SandboxBridge()
 
-        failed_response = MagicMock()
-        failed_response.success = False
-        failed_response.error = "VM not running"
-        mock_qmp = MagicMock()
-        mock_qmp.cont = AsyncMock(return_value=failed_response)
-
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        type(mock_instance.sandbox).qmp = property(lambda _self: mock_qmp)
+        failed_response = _QMPResponse(success=False, error="VM not running")
+        sandbox = InMemoryQEMUSandbox()
+        sandbox.qmp = cast("StubQMP", _ScriptedQMP(cont_response=failed_response))
+        instance = StubInstance(sandbox, "qemu", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.cont("some-id")
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.cont("some-id")
             err = str(exc_info.value)
             assert "Failed to resume VM execution" in err, f"missing prefix: {err!r}"
             assert "VM not running" in err, f"missing QMP error detail: {err!r}"
@@ -160,23 +601,13 @@ class TestF0001ContBroadException:
         """cont() only logs vm_resumed when QMP returns success."""
         bridge = SandboxBridge()
 
-        success_response = MagicMock()
-        success_response.success = True
-        success_response.data = {"status": "running"}
-        mock_qmp = MagicMock()
-        mock_qmp.cont = AsyncMock(return_value=success_response)
-
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        mock_instance.touch = MagicMock()
-        type(mock_instance.sandbox).qmp = property(lambda _self: mock_qmp)
+        sandbox = InMemoryQEMUSandbox()
+        sandbox.qmp = cast("StubQMP", _ScriptedQMP(cont_response=_QMPResponse(success=True, data={"status": "running"})))
+        instance = StubInstance(sandbox, "qemu", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.cont("some-id")
+            return await bridge.cont("some-id")
 
         result = asyncio.run(run())
         assert result["success"] is True
@@ -210,16 +641,13 @@ class TestF0002NarrowExceptionHandling:
             duration_seconds=1.0,
             network_activity=[cast("Any", {"wrong_key": "value"})],
         )
-        mock_instance = MagicMock()
-        mock_instance.last_report = report
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        instance.last_report = report
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.extract_iocs("some-id")
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.extract_iocs("some-id")
             err = str(exc_info.value)
             assert "Failed to extract IOCs" in err, f"missing prefix: {err!r}"
 
@@ -245,16 +673,13 @@ class TestF0002NarrowExceptionHandling:
             duration_seconds=1.0,
             file_changes=[cast("Any", {"missing": "keys"})],
         )
-        mock_instance = MagicMock()
-        mock_instance.last_report = report
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        instance.last_report = report
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.timeline("some-id")
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.timeline("some-id")
             err = str(exc_info.value)
             assert "Failed to generate timeline" in err, f"missing prefix: {err!r}"
 
@@ -280,16 +705,13 @@ class TestF0002NarrowExceptionHandling:
             duration_seconds=1.0,
             network_activity=[cast("Any", {"wrong_key": "value"})],
         )
-        mock_instance = MagicMock()
-        mock_instance.last_report = report
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        instance.last_report = report
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.detect_c2("some-id")
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.detect_c2("some-id")
             err = str(exc_info.value)
             assert "Failed to detect C2 patterns" in err, f"missing prefix: {err!r}"
 
@@ -329,21 +751,15 @@ class TestF0002NarrowExceptionHandling:
             duration_seconds=1.0,
         )
 
-        inst_a = MagicMock()
+        inst_a = StubInstance(InMemorySandbox(), "windows", instance_id="id-a")
         inst_a.last_report = bad_report
-        inst_b = MagicMock()
+        inst_b = StubInstance(InMemorySandbox(), "windows", instance_id="id-b")
         inst_b.last_report = good_report
-
-        def get_side_effect(instance_id: str) -> MagicMock:
-            return inst_a if instance_id == "id-a" else inst_b
+        bridge.attach_manager(cast("SandboxManager", StubManager({"id-a": inst_a, "id-b": inst_b})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(side_effect=get_side_effect)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.diff("id-a", "id-b")
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.diff("id-a", "id-b")
             err = str(exc_info.value)
             assert "Failed to diff reports" in err, f"missing prefix: {err!r}"
             assert "'str' object has no attribute 'get'" in err, f"missing real AttributeError cause: {err!r}"
@@ -375,16 +791,13 @@ class TestF0002NarrowExceptionHandling:
             duration_seconds=1.0,
             process_activity=[cast("Any", {"pid": 1, "command_line": "x"})],
         )
-        mock_instance = MagicMock()
-        mock_instance.last_report = report
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        instance.last_report = report
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.detect_behaviors("some-id")
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.detect_behaviors("some-id")
             err = str(exc_info.value)
             assert "Failed to detect behaviors" in err, f"missing prefix: {err!r}"
             assert "name" in err, f"missing missing-key name in error: {err!r}"
@@ -408,18 +821,14 @@ class TestF0003DetectBehaviorsYAML:
         """
         bridge = SandboxBridge()
 
-        mock_report = MagicMock()
-        mock_instance = MagicMock()
-        mock_instance.last_report = mock_report
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        instance.last_report = _make_execution_report()
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
         missing = str(tmp_path / "no_such_file.yaml")
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.detect_behaviors("some-id", custom_rules_path=missing)
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.detect_behaviors("some-id", custom_rules_path=missing)
             err = str(exc_info.value)
             assert "Custom rules file not found" in err, f"missing prefix: {err!r}"
             assert missing in err, f"missing file path in error: {err!r}"
@@ -439,17 +848,13 @@ class TestF0003DetectBehaviorsYAML:
         rules_file = tmp_path / "bad.yaml"
         rules_file.write_text("key: [unclosed\n", encoding="utf-8")
 
-        mock_report = MagicMock()
-        mock_instance = MagicMock()
-        mock_instance.last_report = mock_report
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        instance.last_report = _make_execution_report()
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
             err = str(exc_info.value)
             assert "Custom rules file is not valid YAML" in err, f"missing YAML marker: {err!r}"
 
@@ -469,17 +874,13 @@ class TestF0003DetectBehaviorsYAML:
         rules_file = tmp_path / "dict_rules.yaml"
         rules_file.write_text("key: value\n", encoding="utf-8")
 
-        mock_report = MagicMock()
-        mock_instance = MagicMock()
-        mock_instance.last_report = mock_report
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        instance.last_report = _make_execution_report()
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
             err = str(exc_info.value)
             assert "expected a list" in err, f"missing list requirement: {err!r}"
             assert "dict" in err, f"missing actual type name: {err!r}"
@@ -548,15 +949,12 @@ class TestF0003DetectBehaviorsYAML:
             ],
         )
 
-        mock_instance = MagicMock()
-        mock_instance.last_report = report
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        instance.last_report = report
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
+            return await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
 
         result = asyncio.run(run())
 
@@ -627,15 +1025,12 @@ class TestF0003DetectBehaviorsYAML:
             ],
         )
 
-        mock_instance = MagicMock()
-        mock_instance.last_report = report
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        instance.last_report = report
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
+            return await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
 
         result = asyncio.run(run())
 
@@ -702,15 +1097,12 @@ class TestF0003DetectBehaviorsYAML:
             ],
         )
 
-        mock_instance = MagicMock()
-        mock_instance.last_report = report
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        instance.last_report = report
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
+            return await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
 
         result = asyncio.run(run())
 
@@ -825,18 +1217,15 @@ class TestF0004YaraScanModeValidation:
         bridge = SandboxBridge()
         engine_matches = self._scan_target_passthrough_matches()
 
-        mock_instance = MagicMock()
-        mock_instance.sandbox.yara_scan = AsyncMock(return_value=engine_matches)
+        sandbox = _ScriptedSandbox(yara_matches=engine_matches)
+        instance = StubInstance(sandbox, "windows", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.yara_scan("some-id", scan_target="files")
+            return await bridge.yara_scan("some-id", scan_target="files")
 
         result = asyncio.run(run())
-        mock_instance.sandbox.yara_scan.assert_awaited_once_with(None, "files")
+        assert sandbox.yara_scan_calls == [(None, "files")], f"unexpected forwarded call args: {sandbox.yara_scan_calls!r}"
         self._assert_matches_preserved(result)
 
     def test_accepts_memory_target(self) -> None:
@@ -849,18 +1238,15 @@ class TestF0004YaraScanModeValidation:
         bridge = SandboxBridge()
         engine_matches = self._scan_target_passthrough_matches()
 
-        mock_instance = MagicMock()
-        mock_instance.sandbox.yara_scan = AsyncMock(return_value=engine_matches)
+        sandbox = _ScriptedSandbox(yara_matches=engine_matches)
+        instance = StubInstance(sandbox, "windows", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.yara_scan("some-id", scan_target="memory")
+            return await bridge.yara_scan("some-id", scan_target="memory")
 
         result = asyncio.run(run())
-        mock_instance.sandbox.yara_scan.assert_awaited_once_with(None, "memory")
+        assert sandbox.yara_scan_calls == [(None, "memory")], f"unexpected forwarded call args: {sandbox.yara_scan_calls!r}"
         self._assert_matches_preserved(result)
 
 
@@ -886,17 +1272,12 @@ class TestF0005PublicQMPAgentAccessors:
         assert sandbox.agent is None
 
         bridge = SandboxBridge()
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        mock_instance.sandbox = sandbox
+        instance = StubInstance(sandbox, "qemu", instance_id="qemu-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"qemu-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.cont("qemu-id")
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.cont("qemu-id")
             err = str(exc_info.value)
             assert "Failed to resume VM execution" in err, f"missing prefix: {err!r}"
             assert "not connected" in err or "QMP" in err, f"missing QMP detail: {err!r}"
@@ -910,10 +1291,10 @@ class TestF0005PublicQMPAgentAccessors:
         qmp_client_cls = qemu.QMPClient
 
         sandbox = qemu_sandbox_cls.__new__(qemu_sandbox_cls)
-        mock_client = MagicMock(spec=qmp_client_cls)
-        monkeypatch.setattr(sandbox, "_qmp", mock_client, raising=False)
+        real_client = qmp_client_cls.__new__(qmp_client_cls)
+        monkeypatch.setattr(sandbox, "_qmp", real_client, raising=False)
 
-        assert sandbox.qmp is mock_client
+        assert sandbox.qmp is real_client
 
     def test_qemu_sandbox_has_public_agent_property(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """QEMUSandbox exposes agent as a public property returning the GuestAgentClient."""
@@ -922,10 +1303,10 @@ class TestF0005PublicQMPAgentAccessors:
         guest_agent_cls = qemu.GuestAgentClient
 
         sandbox = qemu_sandbox_cls.__new__(qemu_sandbox_cls)
-        mock_agent = MagicMock(spec=guest_agent_cls)
-        monkeypatch.setattr(sandbox, "_agent", mock_agent, raising=False)
+        real_agent = guest_agent_cls.__new__(guest_agent_cls)
+        monkeypatch.setattr(sandbox, "_agent", real_agent, raising=False)
 
-        assert sandbox.agent is mock_agent
+        assert sandbox.agent is real_agent
 
     def test_get_pending_messages_uses_agent_not_private(self) -> None:
         """get_pending_messages() reads agent via public property and returns correct schema.
@@ -937,19 +1318,13 @@ class TestF0005PublicQMPAgentAccessors:
         pytest.importorskip("intellicrack.sandbox.qemu")
 
         bridge = SandboxBridge()
-        mock_agent = AsyncMock()
-        mock_agent.get_pending_messages = AsyncMock(return_value=[])
-
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        type(mock_instance.sandbox).agent = property(lambda _self: mock_agent)
+        sandbox = InMemoryQEMUSandbox()
+        sandbox.agent = cast("StubAgent", _ScriptedAgent(messages=[]))
+        instance = StubInstance(sandbox, "qemu", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.get_pending_messages("some-id")
+            return await bridge.get_pending_messages("some-id")
 
         result = asyncio.run(run())
         assert result["count"] == 0
@@ -959,7 +1334,7 @@ class TestF0005PublicQMPAgentAccessors:
 class TestF0006NoHotPathInfoLogs:
     """F-0006: No *_started info logs in hot paths (is_available, status, list)."""
 
-    def test_is_available_no_info_log(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_is_available_no_info_log(self) -> None:
         """is_available() does not emit an info-level 'started' log and returns a bool.
 
         The return value must be a boolean (not just truthy) so callers can rely
@@ -967,9 +1342,7 @@ class TestF0006NoHotPathInfoLogs:
         bridge does not spam structured logs on every availability poll.
         """
         bridge = SandboxBridge()
-        mock_manager = MagicMock()
-        mock_manager.get_available_types = AsyncMock(return_value=["windows"])
-        monkeypatch.setattr(bridge, "_manager", mock_manager)
+        bridge.attach_manager(cast("SandboxManager", StubManager({})))
 
         records: list[logging.LogRecord] = []
 
@@ -992,7 +1365,7 @@ class TestF0006NoHotPathInfoLogs:
         started_records = [r for r in records if "started" in r.getMessage().lower()]
         assert not started_records, f"Unexpected 'started' info logs: {[r.getMessage() for r in started_records]}"
 
-    def test_status_no_info_log(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_status_no_info_log(self) -> None:
         """status() does not emit an info-level 'started' log and returns a dict with instances key.
 
         The returned dict must contain "instances" (the key the manager exposes)
@@ -1000,9 +1373,7 @@ class TestF0006NoHotPathInfoLogs:
         the "started" event category.
         """
         bridge = SandboxBridge()
-        mock_manager = MagicMock()
-        mock_manager.get_status = AsyncMock(return_value={"instances": [], "available_types": ["windows"]})
-        monkeypatch.setattr(bridge, "_manager", mock_manager)
+        bridge.attach_manager(cast("SandboxManager", StubManager({})))
 
         records: list[logging.LogRecord] = []
 
@@ -1025,7 +1396,7 @@ class TestF0006NoHotPathInfoLogs:
         started_records = [r for r in records if "started" in r.getMessage().lower()]
         assert not started_records, f"Unexpected 'started' info logs: {[r.getMessage() for r in started_records]}"
 
-    def test_list_no_info_log(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_list_no_info_log(self) -> None:
         """list() does not emit an info-level 'started' log and returns a list.
 
         When the manager has no instances, the list must be empty (``[]``), not None
@@ -1033,9 +1404,7 @@ class TestF0006NoHotPathInfoLogs:
         the ``id`` and ``type`` keys.
         """
         bridge = SandboxBridge()
-        mock_manager = MagicMock()
-        mock_manager.instances = []
-        monkeypatch.setattr(bridge, "_manager", mock_manager)
+        bridge.attach_manager(cast("SandboxManager", StubManager({})))
 
         records: list[logging.LogRecord] = []
 
@@ -1071,16 +1440,12 @@ class TestF0007GetVNCPort:
         """
         bridge = SandboxBridge()
 
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "windows"
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.get_vnc_port("some-id")
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.get_vnc_port("some-id")
             err = str(exc_info.value)
             assert "requires QEMU sandbox" in err, f"missing QEMU gate message: {err!r}"
 
@@ -1095,17 +1460,12 @@ class TestF0007GetVNCPort:
         """
         bridge = SandboxBridge()
 
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        type(mock_instance.sandbox).vnc_port = property(lambda _self: None)
+        instance = StubInstance(_ScriptedSandbox(vnc_port=None), "qemu", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.get_vnc_port("some-id")
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.get_vnc_port("some-id")
             err = str(exc_info.value)
             assert "VNC" in err, f"missing VNC in error: {err!r}"
             assert "not" in err.lower() or "unavailable" in err.lower() or "allocated" in err.lower(), (
@@ -1122,16 +1482,11 @@ class TestF0007GetVNCPort:
         """
         bridge = SandboxBridge()
 
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        type(mock_instance.sandbox).vnc_port = property(lambda _self: 5900)
+        instance = StubInstance(InMemorySandbox(), "qemu", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> int:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.get_vnc_port("some-id")
+            return await bridge.get_vnc_port("some-id")
 
         result = asyncio.run(run())
         assert result == 5900
@@ -1144,15 +1499,12 @@ class TestF0007GetVNCPort:
         The exact ID must appear so the caller can identify which instance is absent.
         """
         bridge = SandboxBridge()
+        bridge.attach_manager(cast("SandboxManager", StubManager({})))
         missing_id = "missing-id-abc123"
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=None)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError) as exc_info:
-                    await bridge.get_vnc_port(missing_id)
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.get_vnc_port(missing_id)
             err = str(exc_info.value)
             assert "Sandbox instance not found" in err, f"missing prefix: {err!r}"
             assert missing_id in err, f"missing instance ID in error: {err!r}"
@@ -1192,17 +1544,13 @@ class TestF0008QEMUGatedMethods:
         """
         bridge = SandboxBridge()
 
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "windows"
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                fn = getattr(bridge, method)
-                with pytest.raises(ToolError) as exc_info:
-                    await fn("some-id", **kwargs)
+            fn = getattr(bridge, method)
+            with pytest.raises(ToolError) as exc_info:
+                await fn("some-id", **kwargs)
             err = str(exc_info.value)
             assert "requires QEMU sandbox" in err, f"{method}() raised ToolError but message lacks 'requires QEMU sandbox': {err!r}"
 
@@ -1212,7 +1560,7 @@ class TestF0008QEMUGatedMethods:
 class TestF0009EnsureManagerDestroyed:
     """F-0009: ensure_manager raises ToolError when manager was shut down."""
 
-    def test_raises_after_shutdown(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_raises_after_shutdown(self) -> None:
         """ensure_manager raises ToolError with "manager was shut down" after shutdown().
 
         After ``shutdown()`` is called, ``bridge.manager`` must be None,
@@ -1224,9 +1572,7 @@ class TestF0009EnsureManagerDestroyed:
         bridge = SandboxBridge()
 
         async def run() -> None:
-            mock_manager = MagicMock()
-            mock_manager.destroy_all = AsyncMock()
-            monkeypatch.setattr(bridge, "_manager", mock_manager)
+            bridge.attach_manager(cast("SandboxManager", StubManager({})))
             await bridge.shutdown()
             assert bridge.manager is None
             assert bridge.manager_destroyed is True
@@ -1237,17 +1583,17 @@ class TestF0009EnsureManagerDestroyed:
 
         asyncio.run(run())
 
-    def test_succeeds_before_shutdown(self) -> None:
+    def test_succeeds_before_shutdown(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """ensure_manager creates a new manager when never initialized."""
         bridge = SandboxBridge()
 
-        with patch("intellicrack.bridges.sandbox_bridge.SandboxManager") as mock_cls:
-            mock_cls.return_value = MagicMock()
-            mgr = bridge.ensure_manager()
-            assert mgr is not None
-            assert bridge.manager is mgr
+        bridge_module = importlib.import_module("intellicrack.bridges.sandbox_bridge")
+        monkeypatch.setattr(bridge_module, "SandboxManager", StubManager)
+        mgr = bridge.ensure_manager()
+        assert mgr is not None
+        assert bridge.manager is mgr
 
-    def test_returns_existing_manager_on_repeated_calls(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_returns_existing_manager_on_repeated_calls(self) -> None:
         """ensure_manager returns the same object across multiple calls without creating a new one.
 
         Calling ``ensure_manager()`` twice must return identical objects (same
@@ -1255,15 +1601,15 @@ class TestF0009EnsureManagerDestroyed:
         bridge does not construct a fresh ``SandboxManager`` on every invocation.
         """
         bridge = SandboxBridge()
-        mock_mgr = MagicMock()
-        monkeypatch.setattr(bridge, "_manager", mock_mgr)
+        stub_mgr = StubManager({})
+        bridge.attach_manager(cast("SandboxManager", stub_mgr))
 
         result_a = bridge.ensure_manager()
         result_b = bridge.ensure_manager()
-        assert result_a is mock_mgr
-        assert result_b is mock_mgr
+        assert result_a is cast("SandboxManager", stub_mgr)
+        assert result_b is cast("SandboxManager", stub_mgr)
         assert result_a is result_b, "ensure_manager must return the same object on repeated calls"
-        assert bridge.manager is mock_mgr
+        assert bridge.manager is cast("SandboxManager", stub_mgr)
 
 
 class TestF0010BridgeStateUpdates:
@@ -1272,35 +1618,19 @@ class TestF0010BridgeStateUpdates:
     def test_create_updates_state_on_success(self) -> None:
         """create() sets BridgeState.last_error to None on success."""
         bridge = SandboxBridge()
-        now = datetime.now(UTC)
+        bridge.attach_manager(cast("SandboxManager", StubManager({})))
 
-        mock_instance = MagicMock()
-        mock_instance.id = "test-id"
-        mock_instance.sandbox_type = "windows"
-        mock_instance.state.status = "running"
-        mock_instance.created_at = now
-
-        async def run() -> dict[str, Any]:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.create = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.create(sandbox_type="windows")
-
-        asyncio.run(run())
+        asyncio.run(bridge.create(sandbox_type="windows"))
         assert bridge.state.last_error is None
 
     def test_create_sets_last_error_on_failure(self) -> None:
         """create() sets BridgeState.last_error when SandboxError occurs."""
         bridge = SandboxBridge()
+        bridge.attach_manager(cast("SandboxManager", _FailingManager(create_error=SandboxError("creation failed"))))
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.create = AsyncMock(side_effect=SandboxError("creation failed"))
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError):
-                    await bridge.create(sandbox_type="windows")
+            with pytest.raises(ToolError):
+                await bridge.create(sandbox_type="windows")
 
         asyncio.run(run())
         assert bridge.state.last_error is not None
@@ -1309,38 +1639,25 @@ class TestF0010BridgeStateUpdates:
     def test_run_binary_updates_binary_loaded(self, tmp_path: Path) -> None:
         """run_binary() sets BridgeState.binary_loaded to True on success."""
         bridge = SandboxBridge()
+        bridge.attach_manager(cast("SandboxManager", StubManager({})))
 
         binary = tmp_path / "test.exe"
         binary.write_bytes(b"MZ" + b"\x00" * 62)
 
-        mock_instance = MagicMock()
-        mock_instance.id = "test-id"
-        report = _make_execution_report()
-
-        async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.run_binary = AsyncMock(return_value=(mock_instance, report))
-                mock_mgr.return_value = manager
-                await bridge.run_binary(str(binary))
-
-        asyncio.run(run())
+        asyncio.run(bridge.run_binary(str(binary)))
         assert bridge.state.binary_loaded is True
 
     def test_run_binary_sets_last_error_on_failure(self, tmp_path: Path) -> None:
         """run_binary() sets BridgeState.last_error on SandboxError."""
         bridge = SandboxBridge()
+        bridge.attach_manager(cast("SandboxManager", _FailingManager(run_binary_error=SandboxError("exec failed"))))
 
         binary = tmp_path / "fail.exe"
         binary.write_bytes(b"MZ" + b"\x00" * 62)
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.run_binary = AsyncMock(side_effect=SandboxError("exec failed"))
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError):
-                    await bridge.run_binary(str(binary))
+            with pytest.raises(ToolError):
+                await bridge.run_binary(str(binary))
 
         asyncio.run(run())
         assert bridge.state.last_error is not None
@@ -1358,34 +1675,10 @@ class TestF0010LastErrorLifecycleSymmetric:
     """
 
     @staticmethod
-    def _make_mock_instance(sandbox_type: str = "qemu", *, with_report: bool = False) -> MagicMock:
-        """Build a stand-in :class:`SandboxInstance` for bridge calls.
-
-        Args:
-            sandbox_type: Value to expose on the ``sandbox_type`` attribute.
-            with_report: Whether to attach a non-``None`` ``last_report``
-                so analysis methods proceed past the report-presence
-                guard clause.
-
-        Returns:
-            MagicMock: Mock instance with all sandbox attributes pre-wired
-            as ``AsyncMock`` coroutines so any awaited call resolves.
-        """
-        instance = MagicMock()
-        instance.sandbox_type = sandbox_type
-        instance.touch = MagicMock()
-        if with_report:
-            instance.last_report = MagicMock()
-            instance.last_report.network_activity = []
-        else:
-            instance.last_report = None
-        return instance
-
-    @staticmethod
     def _run_failure_then_success(
         bridge: SandboxBridge,
-        failure_setup: Callable[[AsyncMock], None],
-        success_setup: Callable[[AsyncMock], None],
+        fail_instance: StubInstance,
+        ok_instance: StubInstance,
         failure_call: Callable[[SandboxBridge], Awaitable[object]],
         success_call: Callable[[SandboxBridge], Awaitable[object]],
         failure_substring: str,
@@ -1394,10 +1687,10 @@ class TestF0010LastErrorLifecycleSymmetric:
 
         Args:
             bridge: The bridge under test.
-            failure_setup: Callable taking the patched manager and configuring
-                it for the failure path.
-            success_setup: Callable taking the patched manager and configuring
-                it for the success path.
+            fail_instance: Instance (identified by its own ``id``) attached
+                to the manager for the failing call.
+            ok_instance: Instance (identified by its own ``id``) attached to
+                the manager for the succeeding call.
             failure_call: Async callable that invokes the failing bridge method.
             success_call: Async callable that invokes the succeeding bridge method.
             failure_substring: Substring expected inside ``state.last_error``
@@ -1405,21 +1698,15 @@ class TestF0010LastErrorLifecycleSymmetric:
         """
 
         async def fail_then_recover() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                failure_setup(manager)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError):
-                    await failure_call(bridge)
+            bridge.attach_manager(cast("SandboxManager", StubManager({fail_instance.id: fail_instance})))
+            with pytest.raises(ToolError):
+                await failure_call(bridge)
 
             assert bridge.state.last_error is not None
             assert failure_substring in bridge.state.last_error, bridge.state.last_error
 
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                success_setup(manager)
-                mock_mgr.return_value = manager
-                await success_call(bridge)
+            bridge.attach_manager(cast("SandboxManager", StubManager({ok_instance.id: ok_instance})))
+            await success_call(bridge)
 
             assert bridge.state.last_error is None, f"last_error not cleared after successful call (was: {bridge.state.last_error!r})"
 
@@ -1432,20 +1719,17 @@ class TestF0010LastErrorLifecycleSymmetric:
         source = tmp_path / "file.bin"
         source.write_bytes(b"data")
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.copy_to_sandbox = AsyncMock(side_effect=SandboxError("copy failed"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.copy_to_sandbox = AsyncMock(return_value=None)
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="copy_to_sandbox", fail_error=SandboxError("copy failed")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_instance = StubInstance(_ScriptedSandbox(), "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.copy_to("inst", str(source), "/dest"),
             lambda b: b.copy_to("inst", str(source), "/dest"),
             "copy failed",
@@ -1456,20 +1740,17 @@ class TestF0010LastErrorLifecycleSymmetric:
         bridge = SandboxBridge()
         dest = tmp_path / "out.bin"
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.copy_from_sandbox = AsyncMock(side_effect=SandboxError("read failed"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.copy_from_sandbox = AsyncMock(return_value=None)
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="copy_from_sandbox", fail_error=SandboxError("read failed")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_instance = StubInstance(_ScriptedSandbox(), "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.copy_from("inst", "/src", str(dest)),
             lambda b: b.copy_from("inst", "/src", str(dest)),
             "read failed",
@@ -1479,20 +1760,17 @@ class TestF0010LastErrorLifecycleSymmetric:
         """Snapshot_create clears last_error after success following a failure."""
         bridge = SandboxBridge()
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.take_snapshot = AsyncMock(side_effect=SandboxError("snap fail"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.take_snapshot = AsyncMock(return_value="snap-1")
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="take_snapshot", fail_error=SandboxError("snap fail")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_instance = StubInstance(_ScriptedSandbox(), "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.snapshot_create("inst", "snap"),
             lambda b: b.snapshot_create("inst", "snap"),
             "snap fail",
@@ -1502,20 +1780,19 @@ class TestF0010LastErrorLifecycleSymmetric:
         """Snapshot_restore clears last_error after success following a failure."""
         bridge = SandboxBridge()
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.restore_snapshot = AsyncMock(side_effect=SandboxError("restore fail"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.restore_snapshot = AsyncMock(return_value=None)
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="restore_snapshot", fail_error=SandboxError("restore fail")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_sandbox = _ScriptedSandbox()
+        ok_sandbox.seed_snapshot("snap-1")
+        ok_instance = StubInstance(ok_sandbox, "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.snapshot_restore("inst", "snap-1"),
             lambda b: b.snapshot_restore("inst", "snap-1"),
             "restore fail",
@@ -1525,20 +1802,17 @@ class TestF0010LastErrorLifecycleSymmetric:
         """Snapshot_list clears last_error after success following a failure."""
         bridge = SandboxBridge()
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.list_snapshots = AsyncMock(side_effect=SandboxError("list fail"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.list_snapshots = AsyncMock(return_value=[])
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="list_snapshots", fail_error=SandboxError("list fail")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_instance = StubInstance(_ScriptedSandbox(), "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.snapshot_list("inst"),
             lambda b: b.snapshot_list("inst"),
             "list fail",
@@ -1548,20 +1822,19 @@ class TestF0010LastErrorLifecycleSymmetric:
         """Snapshot_delete clears last_error after success following a failure."""
         bridge = SandboxBridge()
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.delete_snapshot = AsyncMock(side_effect=SandboxError("del fail"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.delete_snapshot = AsyncMock(return_value=None)
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="delete_snapshot", fail_error=SandboxError("del fail")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_sandbox = _ScriptedSandbox()
+        ok_sandbox.seed_snapshot("snap-snap")
+        ok_instance = StubInstance(ok_sandbox, "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.snapshot_delete("inst", "snap"),
             lambda b: b.snapshot_delete("inst", "snap"),
             "del fail",
@@ -1571,68 +1844,57 @@ class TestF0010LastErrorLifecycleSymmetric:
         """Pcap_start clears last_error after success following a failure."""
         bridge = SandboxBridge()
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.start_pcap_capture = AsyncMock(side_effect=SandboxError("pcap fail"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.start_pcap_capture = AsyncMock(return_value="cap-1")
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="start_pcap_capture", fail_error=SandboxError("pcap fail")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_instance = StubInstance(_ScriptedSandbox(), "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.pcap_start("inst"),
             lambda b: b.pcap_start("inst"),
             "pcap fail",
         )
 
-    def test_pcap_stop_clears_last_error_on_success(self, tmp_path: Path) -> None:
+    def test_pcap_stop_clears_last_error_on_success(self) -> None:
         """Pcap_stop clears last_error after success following a failure."""
         bridge = SandboxBridge()
-        out = tmp_path / "cap.pcap"
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.stop_pcap_capture = AsyncMock(side_effect=SandboxError("stop fail"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.stop_pcap_capture = AsyncMock(return_value=out)
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="stop_pcap_capture", fail_error=SandboxError("stop fail")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_instance = StubInstance(_ScriptedSandbox(), "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.pcap_stop("inst", "cap-1"),
             lambda b: b.pcap_stop("inst", "cap-1"),
             "stop fail",
         )
 
-    def test_screenshot_clears_last_error_on_success(self, tmp_path: Path) -> None:
+    def test_screenshot_clears_last_error_on_success(self) -> None:
         """Screenshot clears last_error after success following a failure."""
         bridge = SandboxBridge()
-        out = tmp_path / "shot.png"
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.capture_screenshot = AsyncMock(side_effect=SandboxError("shot fail"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.capture_screenshot = AsyncMock(return_value=out)
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="capture_screenshot", fail_error=SandboxError("shot fail")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_instance = StubInstance(_ScriptedSandbox(), "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.screenshot("inst"),
             lambda b: b.screenshot("inst"),
             "shot fail",
@@ -1642,68 +1904,57 @@ class TestF0010LastErrorLifecycleSymmetric:
         """Anti_evasion clears last_error after success following a failure."""
         bridge = SandboxBridge()
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.apply_anti_evasion = AsyncMock(side_effect=SandboxError("evasion fail"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.apply_anti_evasion = AsyncMock(return_value={"applied": True})
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="apply_anti_evasion", fail_error=SandboxError("evasion fail")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_instance = StubInstance(_ScriptedSandbox(), "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.anti_evasion("inst"),
             lambda b: b.anti_evasion("inst"),
             "evasion fail",
         )
 
-    def test_memory_dump_clears_last_error_on_success(self, tmp_path: Path) -> None:
+    def test_memory_dump_clears_last_error_on_success(self) -> None:
         """Memory_dump clears last_error after success following a failure."""
         bridge = SandboxBridge()
-        out = tmp_path / "mem.dmp"
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.dump_memory = AsyncMock(side_effect=SandboxError("dump fail"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.dump_memory = AsyncMock(return_value=out)
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="dump_memory", fail_error=SandboxError("dump fail")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_instance = StubInstance(_ScriptedSandbox(), "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.memory_dump("inst"),
             lambda b: b.memory_dump("inst"),
             "dump fail",
         )
 
-    def test_extract_dropped_files_clears_last_error_on_success(self, tmp_path: Path) -> None:
+    def test_extract_dropped_files_clears_last_error_on_success(self) -> None:
         """Extract_dropped_files clears last_error after success following a failure."""
         bridge = SandboxBridge()
-        zip_out = tmp_path / "dropped.zip"
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.extract_dropped_files = AsyncMock(side_effect=SandboxError("zip fail"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.extract_dropped_files = AsyncMock(return_value=zip_out)
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="extract_dropped_files", fail_error=SandboxError("zip fail")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_instance = StubInstance(_ScriptedSandbox(), "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.extract_dropped_files("inst"),
             lambda b: b.extract_dropped_files("inst"),
             "zip fail",
@@ -1713,186 +1964,209 @@ class TestF0010LastErrorLifecycleSymmetric:
         """Yara_scan clears last_error after success following a failure."""
         bridge = SandboxBridge()
 
-        def fail(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.yara_scan = AsyncMock(side_effect=SandboxError("yara fail"))
-            manager.get = AsyncMock(return_value=instance)
-
-        def ok(manager: AsyncMock) -> None:
-            instance = self._make_mock_instance()
-            instance.sandbox.yara_scan = AsyncMock(return_value=[])
-            manager.get = AsyncMock(return_value=instance)
+        fail_instance = StubInstance(
+            _ScriptedSandbox(fail_method="yara_scan", fail_error=SandboxError("yara fail")),
+            "qemu",
+            instance_id="inst",
+        )
+        ok_instance = StubInstance(_ScriptedSandbox(), "qemu", instance_id="inst")
 
         self._run_failure_then_success(
             bridge,
-            fail,
-            ok,
+            fail_instance,
+            ok_instance,
             lambda b: b.yara_scan("inst"),
             lambda b: b.yara_scan("inst"),
             "yara fail",
         )
 
     def test_extract_iocs_clears_last_error_on_success(self) -> None:
-        """Extract_iocs clears last_error after success following a failure."""
+        """Extract_iocs clears last_error after success following a failure.
+
+        The failure is a genuine ``KeyError`` raised by the real
+        ``analysis.extract_iocs`` when ``network_activity`` lacks
+        ``remote_address`` (as in :class:`TestF0002NarrowExceptionHandling`),
+        not a mocked analysis function.
+        """
         bridge = SandboxBridge()
 
+        bad_report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+            network_activity=[cast("Any", {"wrong_key": "value"})],
+        )
+
         async def fail_then_recover() -> None:
-            analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
-            with (
-                patch.object(bridge, "ensure_manager") as mock_mgr,
-                patch.object(analysis_mod, "extract_iocs", side_effect=ValueError("ioc fail")),
-            ):
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="ioc fail"):
-                    await bridge.extract_iocs("inst")
+            bad_instance = StubInstance(InMemorySandbox(), "windows", instance_id="inst")
+            bad_instance.last_report = bad_report
+            bridge.attach_manager(cast("SandboxManager", StubManager({"inst": bad_instance})))
+            with pytest.raises(ToolError, match="remote_address"):
+                await bridge.extract_iocs("inst")
 
             assert bridge.state.last_error is not None
-            assert "ioc fail" in bridge.state.last_error
+            assert "remote_address" in bridge.state.last_error
 
-            with (
-                patch.object(bridge, "ensure_manager") as mock_mgr,
-                patch.object(analysis_mod, "extract_iocs", return_value=[]),
-            ):
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
-                mock_mgr.return_value = manager
-                await bridge.extract_iocs("inst")
+            ok_instance = StubInstance(InMemorySandbox(), "windows", instance_id="inst")
+            ok_instance.last_report = _make_execution_report()
+            bridge.attach_manager(cast("SandboxManager", StubManager({"inst": ok_instance})))
+            await bridge.extract_iocs("inst")
 
             assert bridge.state.last_error is None, bridge.state.last_error
 
         asyncio.run(fail_then_recover())
 
     def test_timeline_clears_last_error_on_success(self) -> None:
-        """Timeline clears last_error after success following a failure."""
+        """Timeline clears last_error after success following a failure.
+
+        The failure is a genuine ``KeyError`` raised by the real
+        ``analysis.generate_timeline`` when ``file_changes`` lacks
+        ``operation``, matching :class:`TestF0002NarrowExceptionHandling`.
+        """
         bridge = SandboxBridge()
 
+        bad_report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+            file_changes=[cast("Any", {"missing": "keys"})],
+        )
+
         async def fail_then_recover() -> None:
-            analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
-            with (
-                patch.object(bridge, "ensure_manager") as mock_mgr,
-                patch.object(analysis_mod, "generate_timeline", side_effect=ValueError("tl fail")),
-            ):
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="tl fail"):
-                    await bridge.timeline("inst")
+            bad_instance = StubInstance(InMemorySandbox(), "windows", instance_id="inst")
+            bad_instance.last_report = bad_report
+            bridge.attach_manager(cast("SandboxManager", StubManager({"inst": bad_instance})))
+            with pytest.raises(ToolError, match="operation"):
+                await bridge.timeline("inst")
 
             assert bridge.state.last_error is not None
-            assert "tl fail" in bridge.state.last_error
+            assert "operation" in bridge.state.last_error
 
-            with (
-                patch.object(bridge, "ensure_manager") as mock_mgr,
-                patch.object(analysis_mod, "generate_timeline", return_value=[]),
-            ):
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
-                mock_mgr.return_value = manager
-                await bridge.timeline("inst")
+            ok_instance = StubInstance(InMemorySandbox(), "windows", instance_id="inst")
+            ok_instance.last_report = _make_execution_report()
+            bridge.attach_manager(cast("SandboxManager", StubManager({"inst": ok_instance})))
+            await bridge.timeline("inst")
 
             assert bridge.state.last_error is None
 
         asyncio.run(fail_then_recover())
 
     def test_detect_behaviors_clears_last_error_on_success(self) -> None:
-        """Detect_behaviors clears last_error after success following a failure."""
+        """Detect_behaviors clears last_error after success following a failure.
+
+        The failure is a genuine ``KeyError`` raised by the real
+        ``analysis.match_behaviors`` when ``process_activity`` lacks
+        ``name``, matching :class:`TestF0002NarrowExceptionHandling`.
+        """
         bridge = SandboxBridge()
 
+        bad_report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+            process_activity=[cast("Any", {"pid": 1, "command_line": "x"})],
+        )
+
         async def fail_then_recover() -> None:
-            analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
-            with (
-                patch.object(bridge, "ensure_manager") as mock_mgr,
-                patch.object(analysis_mod, "match_behaviors", side_effect=ValueError("beh fail")),
-            ):
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="beh fail"):
-                    await bridge.detect_behaviors("inst")
+            bad_instance = StubInstance(InMemorySandbox(), "windows", instance_id="inst")
+            bad_instance.last_report = bad_report
+            bridge.attach_manager(cast("SandboxManager", StubManager({"inst": bad_instance})))
+            with pytest.raises(ToolError, match="name"):
+                await bridge.detect_behaviors("inst")
 
             assert bridge.state.last_error is not None
-            assert "beh fail" in bridge.state.last_error
+            assert "name" in bridge.state.last_error
 
-            with (
-                patch.object(bridge, "ensure_manager") as mock_mgr,
-                patch.object(analysis_mod, "match_behaviors", return_value=[]),
-            ):
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
-                mock_mgr.return_value = manager
-                await bridge.detect_behaviors("inst")
+            ok_instance = StubInstance(InMemorySandbox(), "windows", instance_id="inst")
+            ok_instance.last_report = _make_execution_report()
+            bridge.attach_manager(cast("SandboxManager", StubManager({"inst": ok_instance})))
+            await bridge.detect_behaviors("inst")
 
             assert bridge.state.last_error is None
 
         asyncio.run(fail_then_recover())
 
     def test_detect_c2_clears_last_error_on_success(self) -> None:
-        """Detect_c2 clears last_error after success following a failure."""
+        """Detect_c2 clears last_error after success following a failure.
+
+        The failure is a genuine ``KeyError`` raised by the real
+        ``analysis.detect_c2_patterns`` when ``network_activity`` lacks
+        ``remote_address``, matching :class:`TestF0002NarrowExceptionHandling`.
+        """
         bridge = SandboxBridge()
 
+        bad_report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+            network_activity=[cast("Any", {"wrong_key": "value"})],
+        )
+
         async def fail_then_recover() -> None:
-            analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
-            with (
-                patch.object(bridge, "ensure_manager") as mock_mgr,
-                patch.object(analysis_mod, "detect_c2_patterns", side_effect=ValueError("c2 fail")),
-            ):
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="c2 fail"):
-                    await bridge.detect_c2("inst")
+            bad_instance = StubInstance(InMemorySandbox(), "windows", instance_id="inst")
+            bad_instance.last_report = bad_report
+            bridge.attach_manager(cast("SandboxManager", StubManager({"inst": bad_instance})))
+            with pytest.raises(ToolError, match="remote_address"):
+                await bridge.detect_c2("inst")
 
             assert bridge.state.last_error is not None
-            assert "c2 fail" in bridge.state.last_error
+            assert "remote_address" in bridge.state.last_error
 
-            with (
-                patch.object(bridge, "ensure_manager") as mock_mgr,
-                patch.object(analysis_mod, "detect_c2_patterns", return_value=[]),
-            ):
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
-                mock_mgr.return_value = manager
-                await bridge.detect_c2("inst")
+            ok_instance = StubInstance(InMemorySandbox(), "windows", instance_id="inst")
+            ok_instance.last_report = _make_execution_report()
+            bridge.attach_manager(cast("SandboxManager", StubManager({"inst": ok_instance})))
+            await bridge.detect_c2("inst")
 
             assert bridge.state.last_error is None
 
         asyncio.run(fail_then_recover())
 
     def test_diff_clears_last_error_on_success(self) -> None:
-        """Diff clears last_error after success following a failure."""
+        """Diff clears last_error after success following a failure.
+
+        The failure is a genuine ``AttributeError`` raised by the real
+        ``analysis.diff_reports`` when ``process_activity`` holds a bare
+        ``str`` instead of a dict, matching
+        :class:`TestF0002NarrowExceptionHandling`.
+        """
         bridge = SandboxBridge()
 
+        bad_report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+            process_activity=[cast("Any", "not-a-dict")],
+        )
+        good_report = _make_execution_report()
+
         async def fail_then_recover() -> None:
-            analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
-            inst_a = self._make_mock_instance(with_report=True)
-            inst_b = self._make_mock_instance(with_report=True)
-
-            def get_side_effect(instance_id: str) -> MagicMock:
-                return inst_a if instance_id == "a" else inst_b
-
-            with (
-                patch.object(bridge, "ensure_manager") as mock_mgr,
-                patch.object(analysis_mod, "diff_reports", side_effect=ValueError("diff fail")),
-            ):
-                manager = AsyncMock()
-                manager.get = AsyncMock(side_effect=get_side_effect)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="diff fail"):
-                    await bridge.diff("a", "b")
+            bad_a = StubInstance(InMemorySandbox(), "windows", instance_id="a")
+            bad_a.last_report = bad_report
+            bad_b = StubInstance(InMemorySandbox(), "windows", instance_id="b")
+            bad_b.last_report = good_report
+            bridge.attach_manager(cast("SandboxManager", StubManager({"a": bad_a, "b": bad_b})))
+            with pytest.raises(ToolError, match="'str' object has no attribute 'get'"):
+                await bridge.diff("a", "b")
 
             assert bridge.state.last_error is not None
-            assert "diff fail" in bridge.state.last_error
+            assert "'str' object has no attribute 'get'" in bridge.state.last_error
 
-            with (
-                patch.object(bridge, "ensure_manager") as mock_mgr,
-                patch.object(analysis_mod, "diff_reports", return_value={}),
-            ):
-                manager = AsyncMock()
-                manager.get = AsyncMock(side_effect=get_side_effect)
-                mock_mgr.return_value = manager
-                await bridge.diff("a", "b")
+            ok_a = StubInstance(InMemorySandbox(), "windows", instance_id="a")
+            ok_a.last_report = good_report
+            ok_b = StubInstance(InMemorySandbox(), "windows", instance_id="b")
+            ok_b.last_report = good_report
+            bridge.attach_manager(cast("SandboxManager", StubManager({"a": ok_a, "b": ok_b})))
+            await bridge.diff("a", "b")
 
             assert bridge.state.last_error is None
 
@@ -1904,29 +2178,16 @@ class TestF0010LastErrorLifecycleSymmetric:
         binary = tmp_path / "tracked.exe"
         binary.write_bytes(b"MZ" + b"\x00" * 62)
 
-        mock_instance = MagicMock()
-        mock_instance.id = "rb-id"
-        report = _make_execution_report()
-
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.run_binary = AsyncMock(return_value=(mock_instance, report))
-                mock_mgr.return_value = manager
-                await bridge.run_binary(str(binary))
+            bridge.attach_manager(cast("SandboxManager", StubManager({})))
+            await bridge.run_binary(str(binary))
 
             assert bridge.state.binary_loaded is True
             assert bridge.state.target_path is not None
 
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                inst = MagicMock()
-                inst.sandbox_type = "qemu"
-                inst.touch = MagicMock()
-                inst.sandbox.take_snapshot = AsyncMock(return_value="snap-id")
-                manager.get = AsyncMock(return_value=inst)
-                mock_mgr.return_value = manager
-                await bridge.snapshot_create("inst", "snap")
+            snapshot_instance = StubInstance(InMemoryQEMUSandbox(), "qemu", instance_id="inst")
+            bridge.attach_manager(cast("SandboxManager", StubManager({"inst": snapshot_instance})))
+            await bridge.snapshot_create("inst", "snap")
 
             assert bridge.state.binary_loaded is True
             assert bridge.state.target_path is not None
@@ -2003,35 +2264,26 @@ class TestF0011ToolDefDefaults:
 class TestF0012AnalysisModuleCache:
     """F-0012: _get_analysis_module() is cached via lru_cache."""
 
-    def test_analysis_module_called_once_for_multiple_bridge_calls(self) -> None:
+    def test_analysis_module_called_once_for_multiple_bridge_calls(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """_get_analysis_module is called at most once for multiple analysis calls."""
         bridge = SandboxBridge()
 
-        mock_report = MagicMock()
-        mock_instance = MagicMock()
-        mock_instance.last_report = mock_report
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="some-id")
+        instance.last_report = _make_execution_report()
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         call_count = 0
+        analysis_stub = _CountingAnalysisModule()
 
-        real_module = MagicMock()
-        real_module.extract_iocs = MagicMock(return_value=[])
-
-        def counting_import() -> object:
+        def counting_import() -> _CountingAnalysisModule:
             nonlocal call_count
             call_count += 1
-            return real_module
+            return analysis_stub
 
-        with patch("intellicrack.bridges.sandbox_bridge._get_analysis_module") as mock_cached:
-            mock_cached.side_effect = counting_import
+        bridge_module = importlib.import_module("intellicrack.bridges.sandbox_bridge")
+        monkeypatch.setattr(bridge_module, "_get_analysis_module", counting_import)
 
-            async def run() -> None:
-                with patch.object(bridge, "ensure_manager") as mock_mgr:
-                    manager = AsyncMock()
-                    manager.get = AsyncMock(return_value=mock_instance)
-                    mock_mgr.return_value = manager
-                    await bridge.extract_iocs("some-id")
-
-            asyncio.run(run())
+        asyncio.run(bridge.extract_iocs("some-id"))
 
         assert call_count == 1
 
@@ -2062,15 +2314,10 @@ class TestF0013ContQMPFailureHandling:
         """vm_resumed is not logged when QMP returns failure."""
         bridge = SandboxBridge()
 
-        failed_response = MagicMock()
-        failed_response.success = False
-        failed_response.error = "VM error"
-        mock_qmp = MagicMock()
-        mock_qmp.cont = AsyncMock(return_value=failed_response)
-
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        type(mock_instance.sandbox).qmp = property(lambda _self: mock_qmp)
+        sandbox = InMemoryQEMUSandbox()
+        sandbox.qmp = cast("StubQMP", _ScriptedQMP(cont_response=_QMPResponse(success=False, error="VM error")))
+        instance = StubInstance(sandbox, "qemu", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         records: list[logging.LogRecord] = []
 
@@ -2084,12 +2331,8 @@ class TestF0013ContQMPFailureHandling:
         bridge_logger.addHandler(handler)
 
         async def run() -> None:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                with pytest.raises(ToolError):
-                    await bridge.cont("some-id")
+            with pytest.raises(ToolError):
+                await bridge.cont("some-id")
 
         try:
             asyncio.run(run())
@@ -2115,19 +2358,13 @@ class TestF0014GetPendingMessagesAttributeSafety:
 
         bad_message = object()
 
-        mock_agent = AsyncMock()
-        mock_agent.get_pending_messages = AsyncMock(return_value=[bad_message])
-
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        type(mock_instance.sandbox).agent = property(lambda _self: mock_agent)
+        sandbox = InMemoryQEMUSandbox()
+        sandbox.agent = cast("StubAgent", _ScriptedAgent(messages=[bad_message]))
+        instance = StubInstance(sandbox, "qemu", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.get_pending_messages("some-id")
+            return await bridge.get_pending_messages("some-id")
 
         result = asyncio.run(run())
         assert result["count"] == 1
@@ -2145,23 +2382,17 @@ class TestF0014GetPendingMessagesAttributeSafety:
         """
         bridge = SandboxBridge()
 
-        class MockMessage:
+        class _ExecResultMessage:
             message_type: ClassVar[str] = "exec_result"
             data: ClassVar[dict[str, object]] = {}
 
-        mock_agent = AsyncMock()
-        mock_agent.get_pending_messages = AsyncMock(return_value=[MockMessage()])
-
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        type(mock_instance.sandbox).agent = property(lambda _self: mock_agent)
+        sandbox = InMemoryQEMUSandbox()
+        sandbox.agent = cast("StubAgent", _ScriptedAgent(messages=[_ExecResultMessage()]))
+        instance = StubInstance(sandbox, "qemu", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.get_pending_messages("some-id")
+            return await bridge.get_pending_messages("some-id")
 
         result = asyncio.run(run())
         assert result["count"] == 1
@@ -2185,19 +2416,13 @@ class TestF0014GetPendingMessagesAttributeSafety:
             message_type: ClassVar[str] = "file_read"
             data: ClassVar[dict[str, object]] = {"path": "/sandbox/output/x"}
 
-        mock_agent = AsyncMock()
-        mock_agent.get_pending_messages = AsyncMock(return_value=[TypedMsg(), object()])
-
-        mock_instance = MagicMock()
-        mock_instance.sandbox_type = "qemu"
-        type(mock_instance.sandbox).agent = property(lambda _self: mock_agent)
+        sandbox = InMemoryQEMUSandbox()
+        sandbox.agent = cast("StubAgent", _ScriptedAgent(messages=[TypedMsg(), object()]))
+        instance = StubInstance(sandbox, "qemu", instance_id="some-id")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"some-id": instance})))
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "ensure_manager") as mock_mgr:
-                manager = AsyncMock()
-                manager.get = AsyncMock(return_value=mock_instance)
-                mock_mgr.return_value = manager
-                return await bridge.get_pending_messages("some-id")
+            return await bridge.get_pending_messages("some-id")
 
         result = asyncio.run(run())
         assert result["count"] == 2
@@ -2333,22 +2558,12 @@ class TestF0016UTCTimestamps:
         assert isinstance(result[0], str)
         assert result[1] == "foo"
 
-    def test_list_method_emits_utc_timestamps(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_list_method_emits_utc_timestamps(self) -> None:
         """list() emits UTC ISO-8601 timestamps for created_at and last_used."""
         bridge = SandboxBridge()
-        now = datetime.now(UTC)
 
-        mock_instance = MagicMock()
-        mock_instance.id = "inst-1"
-        mock_instance.sandbox_type = "windows"
-        mock_instance.state.status = "running"
-        mock_instance.created_at = now
-        mock_instance.last_used = now
-        mock_instance.binary_path = None
-
-        mock_manager = MagicMock()
-        mock_manager.instances = [mock_instance]
-        monkeypatch.setattr(bridge, "_manager", mock_manager)
+        instance = StubInstance(InMemorySandbox(), "windows", instance_id="inst-1")
+        bridge.attach_manager(cast("SandboxManager", StubManager({"inst-1": instance})))
 
         result = asyncio.run(bridge.list())
         assert len(result) == 1
