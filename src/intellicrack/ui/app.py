@@ -73,6 +73,7 @@ from intellicrack.credentials.provider_settings import (
     resolve_session_credentials,
     saved_model_overrides,
 )
+from intellicrack.mcp.errors import McpError
 from intellicrack.providers.configurable import ConfigurableProvider
 from intellicrack.providers.discovery import ModelDiscovery, format_discovery_status
 from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
@@ -1479,6 +1480,16 @@ class MainWindow(QMainWindow):
             parent=None,
         )
 
+    def _sync_mcp_session_state(self) -> None:
+        """Record every MCP server's state onto a session that has just become active.
+
+        A new or restored session otherwise carries no MCP record, or the
+        stale one saved with it, until some server happens to change state.
+        """
+        service = self._mcp_service
+        if service is not None:
+            service.sync_session_state()
+
     def _on_configure_mcp_from(self, parent: QWidget) -> None:
         """Open the MCP settings dialog over another dialog.
 
@@ -1663,21 +1674,30 @@ class MainWindow(QMainWindow):
                 :meth:`_request_tool_confirmation`.
         """
         call, future, loop = cast("tuple[ToolCall, asyncio.Future[bool], asyncio.AbstractEventLoop]", payload)
-        confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
-        service = self._mcp_service
-        generation = service.generation_for(call) if service is not None else None
-        origin = service.source_label_for(call) if service is not None else None
-        dialog = confirmation_module.ToolConfirmationDialog(call, self, generation=generation, source_label=origin)
-        dialog.exec()
-        approved: bool = bool(dialog.approved)
-        self._orchestrator.resolve_confirmation(approved=approved)
+        approved = False
+        try:
+            confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
+            service = self._mcp_service
+            generation: str | None = None
+            origin: str | None = None
+            if service is not None:
+                try:
+                    generation = service.generation_for(call)
+                    origin = service.source_label_for(call)
+                except McpError as exc:
+                    _logger.warning("mcp_confirmation_source_unresolved", tool=call.tool_name, error=str(exc))
+            dialog = confirmation_module.ToolConfirmationDialog(call, self, generation=generation, source_label=origin)
+            dialog.exec()
+            approved = bool(dialog.approved)
+        finally:
+            self._orchestrator.resolve_confirmation(approved=approved)
 
-        def _resolve() -> None:
-            """Deliver the dialog approval result onto the waiting asyncio future."""
-            if not future.done():
-                future.set_result(approved)
+            def _resolve() -> None:
+                """Deliver the dialog approval result onto the waiting asyncio future."""
+                if not future.done():
+                    future.set_result(approved)
 
-        loop.call_soon_threadsafe(_resolve)
+            loop.call_soon_threadsafe(_resolve)
 
     def _on_user_message(self, text: str) -> None:
         """Handle user message submission.
@@ -1990,6 +2010,7 @@ class MainWindow(QMainWindow):
         del result
         self._chat_panel.set_input_enabled(enabled=True)
         self._stream_append = None
+        self._sync_mcp_session_state()
         self.status_update.emit("Ready")
 
     def _on_async_error(self, error: object) -> None:
@@ -2266,6 +2287,7 @@ class MainWindow(QMainWindow):
         self.tool_panel.clear_all()
         self._chat_panel.restore_messages(result.messages)
         self._chat_panel.set_input_enabled(enabled=True)
+        self._sync_mcp_session_state()
 
         active_binary = result.active_binary
         if active_binary is not None:

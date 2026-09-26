@@ -13,6 +13,10 @@ a third-party server can change what a tool does between one turn and the
 next, so an answer given about the old definition must not silently carry over
 to the new one. Bridge tools ship with the application and carry no
 generation, so their answers are keyed on the pair alone exactly as before.
+
+Only an answer that carries a generation may be kept ``always``. A persisted
+answer without one could never be invalidated, so for a bridge tool the
+longest an answer lasts is the rest of the session.
 """
 
 from __future__ import annotations
@@ -167,9 +171,58 @@ class ToolConfirmationDialog(QDialog):
         if cached is not None:
             return cached
         store = _store_holder.instance
-        if store is None:
+        if store is None or key is None:
             return None
-        return store.decision(call.tool_name, call.function_name, key or _NO_GENERATION)
+        return store.decision(call.tool_name, call.function_name, key)
+
+    @classmethod
+    def can_remember_always(cls, generation: str | None) -> bool:
+        """Report whether an answer about a tool may be kept across restarts.
+
+        Args:
+            generation: Digest of the source's current tool definitions, or
+                ``None`` for a bridge tool.
+
+        Returns:
+            bool: ``True`` only when a persistent store is installed and the
+            tool has a generation that a change would invalidate.
+        """
+        return _store_holder.instance is not None and cls._generation_key(generation) is not None
+
+    @classmethod
+    def session_decisions(cls) -> list[tuple[str, str, str | None, bool]]:
+        """List every answer remembered for the rest of this session.
+
+        Returns:
+            list[tuple[str, str, str | None, bool]]: ``(tool_name,
+            function_name, generation, approved)`` for each answer, sorted.
+        """
+        return sorted(
+            ((tool, function, generation, approved) for (tool, function, generation), approved in cls._remembered_decisions.items()),
+            key=lambda entry: (entry[0], entry[1], entry[2] or ""),
+        )
+
+    @classmethod
+    def forget_decision(cls, tool_name: str, function_name: str, generation: str | None) -> bool:
+        """Forget one remembered answer, for this session and for good.
+
+        Args:
+            tool_name: The tool namespace the answer was about.
+            function_name: The function the answer was about.
+            generation: The generation it was recorded under, or ``None``
+                for a bridge tool.
+
+        Returns:
+            bool: ``True`` when anything was forgotten.
+        """
+        key = cls._generation_key(generation)
+        removed = cls._remembered_decisions.pop((tool_name, function_name, key), None) is not None
+        store = _store_holder.instance
+        if store is not None and store.revoke(tool_name, function_name, key or _NO_GENERATION):
+            removed = True
+        if removed:
+            _logger.info("tool_decision_forgotten", tool=tool_name, function=function_name)
+        return removed
 
     @classmethod
     def clear_remembered_decisions(cls) -> None:
@@ -225,16 +278,15 @@ class ToolConfirmationDialog(QDialog):
         if scope is not ApprovalScope.ALWAYS:
             return
         store = _store_holder.instance
-        if store is None:
-            _logger.warning("tool_decision_not_persisted", tool=call.tool_name, function=call.function_name)
+        if store is None or key is None:
+            _logger.warning(
+                "tool_decision_not_persisted",
+                tool=call.tool_name,
+                function=call.function_name,
+                reason="no approval store" if store is None else "tool has no generation to invalidate it",
+            )
             return
-        store.remember(
-            call.tool_name,
-            call.function_name,
-            key or _NO_GENERATION,
-            approved=approved,
-            scope=ApprovalScope.ALWAYS,
-        )
+        store.remember(call.tool_name, call.function_name, key, approved=approved, scope=ApprovalScope.ALWAYS)
 
     @property
     def approved(self) -> bool:
@@ -287,10 +339,14 @@ class ToolConfirmationDialog(QDialog):
 
         self._always_button = QRadioButton("Always, including after Intellicrack restarts")
         self._always_button.setObjectName("confirm_scope_always")
-        self._always_button.setEnabled(_store_holder.instance is not None)
+        self._always_button.setEnabled(self.can_remember_always(self._generation))
         if self._generation is not None:
             self._always_button.setToolTip(
                 "Forgotten automatically if this server changes what its tools do.",
+            )
+        else:
+            self._always_button.setToolTip(
+                "Offered only for tools from an MCP server, whose answers are forgotten when the server changes its tools.",
             )
         self._scope_buttons.addButton(self._always_button)
         layout.addWidget(self._always_button)
@@ -415,9 +471,10 @@ class ToolConfirmationDialog(QDialog):
 
         Args:
             scope: The scope to select. ``ALWAYS`` is ignored when no
-                persistent store is installed, since nothing could honour it.
+                persistent store is installed, or for a bridge tool whose
+                answer nothing could ever invalidate.
         """
-        if scope is ApprovalScope.ALWAYS and _store_holder.instance is not None:
+        if scope is ApprovalScope.ALWAYS and self.can_remember_always(self._generation):
             self._always_button.setChecked(True)
         elif scope is ApprovalScope.SESSION:
             self._session_button.setChecked(True)
