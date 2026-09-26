@@ -9,119 +9,119 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
-- **mcp:** Add OAuth, resources and prompts, and Windows confinement (`b4d8258`)
+- **mcp:** Add OAuth, resources and prompts, and Windows confinement (`6b2ac5c`)
 
-- **ui:** Add MCP settings, consent, elicitation and transcript attribution (`7e24760`)
+- **ui:** Add MCP settings, consent, elicitation and transcript attribution (`ab88a70`)
 
-- **core:** Teach the orchestrator about third-party tool sources (`08be51b`)
+- **core:** Teach the orchestrator about third-party tool sources (`723d2b1`)
 
-- **mcp:** Present connected servers as ordinary Intellicrack tools (`9422992`)
+- **mcp:** Present connected servers as ordinary Intellicrack tools (`3062101`)
 
-- **core:** Let external tool sources reach the model, and record their state (`8627b45`)
+- **core:** Let external tool sources reach the model, and record their state (`f043bfb`)
 
-- **mcp:** Add transports, tool catalogs, consent and connection lifecycle (`45290ac`)
+- **mcp:** Add transports, tool catalogs, consent and connection lifecycle (`5350da3`)
 
-- **mcp:** Add server configuration, input secrets and error types (`b84adde`)
+- **mcp:** Add server configuration, input secrets and error types (`6aaed51`)
 
-- **providers:** Native large-toolset support on Messages and Responses (`ed04a5f`)
+- **providers:** Native large-toolset support on Messages and Responses (`15a5e59`)
 
-- **providers:** Make an arbitrary endpoint a first-class provider instance (`83475c7`)
+- **providers:** Make an arbitrary endpoint a first-class provider instance (`9b60116`)
 
-- **providers:** Resolve model capabilities instead of guessing them (`e141161`)
+- **providers:** Resolve model capabilities instead of guessing them (`d164cfd`)
 
-- **core:** Ship the wire contract for externally-sourced tools (`ee229ea`)
+- **core:** Ship the wire contract for externally-sourced tools (`8a4bc40`)
 
-- **providers:** Route every HTTP provider through its dialect adapter (`984fc30`)
+- **providers:** Route every HTTP provider through its dialect adapter (`ccd27f6`)
 
-- **providers:** Replace the provider enum with string instance ids (`bd6a266`)
+- **providers:** Replace the provider enum with string instance ids (`3f5469d`)
 
-- **core:** Implement dynamic tool loading and provider hardening (`6d92af5`)
+- **core:** Implement dynamic tool loading and provider hardening (`365afdf`)
 
-- Expand bridge capabilities across dynamic and static tools (`0f75903`)
+- Expand bridge capabilities across dynamic and static tools (`d5e75a8`)
 
-- **cutter:** 04-36+04-37+04-48+04-49 Cutter: manually add code/call/data cross-references (axc/axC/axd); Cutter: remove a cross-reference, optionally scoped to one source address (ax-); Cutter: relative seek stepping by a signed byte delta (sd); Cutter: seek-history navigation -- list, undo, redo (sh/shu/shr) (`2275cc4`)
+- **cutter:** 04-36+04-37+04-48+04-49 Cutter: manually add code/call/data cross-references (axc/axC/axd); Cutter: remove a cross-reference, optionally scoped to one source address (ax-); Cutter: relative seek stepping by a signed byte delta (sd); Cutter: seek-history navigation -- list, undo, redo (sh/shu/shr) (`bbba440`)
 
-- **frida:** 08-B2+08-D3+08-E5+08-E6+08-E10 Stalker call-summary tracing; Frida NativePointer typed read/write accessors as one coherent surface; Frida Module.enumerateRanges with a protection filter; Frida Module.enumerateSections and Module.enumerateDependencies; Frida single-export lookup via Module.findExportByName/getExportByName (`0e93305`)
+- **frida:** 08-B2+08-D3+08-E5+08-E6+08-E10 Stalker call-summary tracing; Frida NativePointer typed read/write accessors as one coherent surface; Frida Module.enumerateRanges with a protection filter; Frida Module.enumerateSections and Module.enumerateDependencies; Frida single-export lookup via Module.findExportByName/getExportByName (`eebc1c8`)
 
-- **x64dbg:** 02-A4+02-H7 x64dbg debug registers (DR0-DR7) and extended FPU/SIMD register read-write; x64dbg script engine single-step (DbgScriptStep) (`c7ff531`)
+- **x64dbg:** 02-A4+02-H7 x64dbg debug registers (DR0-DR7) and extended FPU/SIMD register read-write; x64dbg script engine single-step (DbgScriptStep) (`850e3bd`)
 
-- **cutter:** 04-27+04-31+04-32+04-33 Cutter ESIL watchpoints on register/memory access (rizin 'de'); Cutter flag removal (rizin 'f-') via flags-table context menu; Cutter flag rename (rizin 'fr') via flags-table context menu; Cutter flagspace management (rizin 'fs'/'fslj'/'fs-') (`1b50f18`)
+- **cutter:** 04-27+04-31+04-32+04-33 Cutter ESIL watchpoints on register/memory access (rizin 'de'); Cutter flag removal (rizin 'f-') via flags-table context menu; Cutter flag rename (rizin 'fr') via flags-table context menu; Cutter flagspace management (rizin 'fs'/'fslj'/'fs-') (`4d25196`)
 
-- **bridges:** 08-B2-prep add StalkerCallSummary for Stalker.follow onCallSummary mode (unblocks 08-B2) (`c8248be`)
+- **bridges:** 08-B2-prep add StalkerCallSummary for Stalker.follow onCallSummary mode (unblocks 08-B2) (`08f02de`)
 
-- **bridges:** 08-E6-prep add ModuleSectionInfo and ModuleDependencyInfo for Module.enumerateSections/enumerateDependencies (unblocks 08-E6) (`f00c122`)
+- **bridges:** 08-E6-prep add ModuleSectionInfo and ModuleDependencyInfo for Module.enumerateSections/enumerateDependencies (unblocks 08-E6) (`6b1df57`)
 
-- **frida:** 08-A6+08-B3+08-B5+08-C5+08-C9 Interceptor.replaceFast low-overhead function replacement; Stalker.follow custom per-basic-block transform (StalkerTransformer); Independently callable Stalker.flush without stopping the trace; Read back live memory protection via Memory.queryProtection; Native in-process memory copy via Memory.copy (`b390fd2`)
+- **frida:** 08-A6+08-B3+08-B5+08-C5+08-C9 Interceptor.replaceFast low-overhead function replacement; Stalker.follow custom per-basic-block transform (StalkerTransformer); Independently callable Stalker.flush without stopping the trace; Read back live memory protection via Memory.queryProtection; Native in-process memory copy via Memory.copy (`85a018b`)
 
-- **ghidra:** 06-PT5+06-PT6+06-HS4+06-HS5 Ghidra create additional named program tree; Ghidra program-tree delete/rename and fragment-range assignment; Ghidra one-shot headless batch analysis with pre/post scripts; Ghidra configurable per-call analysis completion timeout (`1e394be`)
+- **ghidra:** 06-PT5+06-PT6+06-HS4+06-HS5 Ghidra create additional named program tree; Ghidra program-tree delete/rename and fragment-range assignment; Ghidra one-shot headless batch analysis with pre/post scripts; Ghidra configurable per-call analysis completion timeout (`43f7e51`)
 
-- **cutter:** 04-25+04-26 Initialize ESIL VM state distinct from memory init (Cutter/Rizin aei); Step ESIL emulation until a target address or expression (Cutter/Rizin aesu/aesue) (`8b4ce78`)
+- **cutter:** 04-25+04-26 Initialize ESIL VM state distinct from memory init (Cutter/Rizin aei); Step ESIL emulation until a target address or expression (Cutter/Rizin aesu/aesue) (`855b7af`)
 
-- **cutter:** 04-18+04-19 Discover attachable OS processes before attaching (Cutter/Rizin dpl/dplj); Send a signal to the attached debuggee process (Cutter/Rizin dk) (`8a76bc4`)
+- **cutter:** 04-18+04-19 Discover attachable OS processes before attaching (Cutter/Rizin dpl/dplj); Send a signal to the attached debuggee process (Cutter/Rizin dk) (`a2462f5`)
 
-- **x64dbg:** 02-G6 x64dbg delete_label (labeldel) bridge method and Labels tab Delete control (`97851ea`)
+- **x64dbg:** 02-G6 x64dbg delete_label (labeldel) bridge method and Labels tab Delete control (`1a949d0`)
 
-- **x64dbg:** 02-G5 x64dbg delete_comment (commentdel) bridge method and Comments tab Delete control (`0e7db2b`)
+- **x64dbg:** 02-G5 x64dbg delete_comment (commentdel) bridge method and Comments tab Delete control (`f9ebf88`)
 
-- **x64dbg:** 02-D7 x64dbg create_thread/kill_thread (createthread/killthread) bridge methods and Threads tab Create/Kill controls (`c8982d6`)
+- **x64dbg:** 02-D7 x64dbg create_thread/kill_thread (createthread/killthread) bridge methods and Threads tab Create/Kill controls (`febd0ab`)
 
-- **x64dbg:** 02-C10 x64dbg load_library (loadlib) bridge method and Load DLL GUI control (`fd7ba08`)
+- **x64dbg:** 02-C10 x64dbg load_library (loadlib) bridge method and Load DLL GUI control (`732428c`)
 
-- **bridges:** 08-A6-prep add HookInfo.original_trampoline so Interceptor.replaceFast can report its trampoline (unblocks 08-A6) (`0d89205`)
+- **bridges:** 08-A6-prep add HookInfo.original_trampoline so Interceptor.replaceFast can report its trampoline (unblocks 08-A6) (`ef69b81`)
 
-- **frida:** 07-D7+07-D8+07-D9+07-E2 Frida snapshot a warmed-up script VM and load a script from that snapshot; Frida attach a debugger/inspector to a running script; Frida forcibly terminate a hung script whose runtime never yields; Frida discover a running script's RPC exports (frida.list_rpc_exports) (`b6b6b5f`)
+- **frida:** 07-D7+07-D8+07-D9+07-E2 Frida snapshot a warmed-up script VM and load a script from that snapshot; Frida attach a debugger/inspector to a running script; Frida forcibly terminate a hung script whose runtime never yields; Frida discover a running script's RPC exports (frida.list_rpc_exports) (`49cfc7d`)
 
-- **ghidra:** 06-DT11+06-MM6+06-MM7+06-MM9 Ghidra bulk data-type interchange: C header import and .gdt archive export/import; Ghidra move a memory block to a different start address; Ghidra rename a memory block and edit its comment; Ghidra non-default memory block creation (uninitialized, byte-mapped, bit-mapped) (`3b71862`)
+- **ghidra:** 06-DT11+06-MM6+06-MM7+06-MM9 Ghidra bulk data-type interchange: C header import and .gdt archive export/import; Ghidra move a memory block to a different start address; Ghidra rename a memory block and edit its comment; Ghidra non-default memory block creation (uninitialized, byte-mapped, bit-mapped) (`f9e77e4`)
 
-- **x64dbg:** 01-H4 x64dbg coverage-boundary conditional tracing and trace-log-file redirection (`48598e5`)
+- **x64dbg:** 01-H4 x64dbg coverage-boundary conditional tracing and trace-log-file redirection (`66e935c`)
 
-- **x64dbg:** 01-H1+01-H2+01-H3+02-B5 x64dbg run to user code and to a caller-party boundary (RunToUserCode/RunToParty); x64dbg mode-restricted and exception-passthrough stepping (step into user/system code, extended step); x64dbg undo the last stepped instruction (InstrUndo); x64dbg memory page protection rights via setpagerights (`e9378a9`)
+- **x64dbg:** 01-H1+01-H2+01-H3+02-B5 x64dbg run to user code and to a caller-party boundary (RunToUserCode/RunToParty); x64dbg mode-restricted and exception-passthrough stepping (step into user/system code, extended step); x64dbg undo the last stepped instruction (InstrUndo); x64dbg memory page protection rights via setpagerights (`115f312`)
 
-- **cutter:** 03-13+03-27+03-28+04-5+04-17 add the jsdec (pdd) alternate decompiler backend; apply FLIRT signatures to the loaded binary (Fs/Fa); create/export a FLIRT signature file from analyzed functions (Fc); conditional debugger continue (until syscall, call, or address); read the call stack / backtrace of the attached thread (`59f76ac`)
+- **cutter:** 03-13+03-27+03-28+04-5+04-17 add the jsdec (pdd) alternate decompiler backend; apply FLIRT signatures to the loaded binary (Fs/Fa); create/export a FLIRT signature file from analyzed functions (Fc); conditional debugger continue (until syscall, call, or address); read the call stack / backtrace of the attached thread (`49179df`)
 
-- **frida:** 07-B3+07-B8+07-C1+07-D6 capture spawned-process stdio via pipe mode; kill an arbitrary process (frida.kill); add session-scoped child-process gating; precompile Frida scripts to bytecode and load from precompiled bytes (`2a5e81d`)
+- **frida:** 07-B3+07-B8+07-C1+07-D6 capture spawned-process stdio via pipe mode; kill an arbitrary process (frida.kill); add session-scoped child-process gating; precompile Frida scripts to bytecode and load from precompiled bytes (`55a136c`)
 
-- **x64dbg:** 01-E5 remove, enable, and disable exception breakpoints (remove_exception_config, enable_exception_config, disable_exception_config) (`4cf971a`)
+- **x64dbg:** 01-E5 remove, enable, and disable exception breakpoints (remove_exception_config, enable_exception_config, disable_exception_config) (`35510d2`)
 
-- **x64dbg:** 01-D9+01-D10+01-E2+01-E3 reset a breakpoint's hit counter (reset_breakpoint_hit_count); set or clear a breakpoint's display name (set_breakpoint_name); remove a DLL breakpoint (remove_dll_breakpoint); enable and disable DLL breakpoints (enable_dll_breakpoint, disable_dll_breakpoint) (`f4924ba`)
+- **x64dbg:** 01-D9+01-D10+01-E2+01-E3 reset a breakpoint's hit counter (reset_breakpoint_hit_count); set or clear a breakpoint's display name (set_breakpoint_name); remove a DLL breakpoint (remove_dll_breakpoint); enable and disable DLL breakpoints (enable_dll_breakpoint, disable_dll_breakpoint) (`fb57a54`)
 
-- **ghidra:** 06-DT7 browse the full Data Type Manager category tree (not only structures) (`4e2f517`)
+- **ghidra:** 06-DT7 browse the full Data Type Manager category tree (not only structures) (`7b1b124`)
 
-- **ghidra:** 05-6+05-7+06-CB4 add function tag management (create/assign/list FunctionTags); promote an existing symbol to primary in the Symbol Table; clear an existing comment at an address (remove_comment) (`bde1a1e`)
+- **ghidra:** 05-6+05-7+06-CB4 add function tag management (create/assign/list FunctionTags); promote an existing symbol to primary in the Symbol Table; clear an existing comment at an address (remove_comment) (`fe42548`)
 
-- **sandbox:** 10-17 sandbox per-instance isolation extras (`10fbedc`)
+- **sandbox:** 10-17 sandbox per-instance isolation extras (`f31213a`)
 
-- **frida:** 07-A4+07-A5+07-A6+07-A9+07-B2 Frida remove/forget remote device; Frida device-change notifications; Frida device-lost notifications; Frida get frontmost application; Frida spawn with env/cwd overrides (`0c0db13`)
+- **frida:** 07-A4+07-A5+07-A6+07-A9+07-B2 Frida remove/forget remote device; Frida device-change notifications; Frida device-lost notifications; Frida get frontmost application; Frida spawn with env/cwd overrides (`ae432b9`)
 
-- **ghidra:** 05-1+05-2+05-3+05-4+05-5 Ghidra raw per-instruction P-code; Ghidra disassemble undefined bytes / clear code; Ghidra set context register over range; Ghidra rename parameter / local variable; Ghidra function flags no-return/var-args/inline (`83d239e`)
+- **ghidra:** 05-1+05-2+05-3+05-4+05-5 Ghidra raw per-instruction P-code; Ghidra disassemble undefined bytes / clear code; Ghidra set context register over range; Ghidra rename parameter / local variable; Ghidra function flags no-return/var-args/inline (`5039f09`)
 
-- **cutter:** 03-5+03-6+03-7+03-8+03-11 Cutter basic-block analysis pass (aab); Cutter function-call analysis pass (aac); Cutter reference analysis pass (aar); Cutter function autoname pass (aan); Cutter disassemble fixed byte range (pD) (`852c07a`)
+- **cutter:** 03-5+03-6+03-7+03-8+03-11 Cutter basic-block analysis pass (aab); Cutter function-call analysis pass (aac); Cutter reference analysis pass (aar); Cutter function autoname pass (aan); Cutter disassemble fixed byte range (pD) (`df50650`)
 
-- **x64dbg:** 01-D3+01-D5+01-D7 x64dbg breakpoint log condition; x64dbg breakpoint command condition; x64dbg breakpoint singleshot/silent flags (`6e70b06`)
+- **x64dbg:** 01-D3+01-D5+01-D7 x64dbg breakpoint log condition; x64dbg breakpoint command condition; x64dbg breakpoint singleshot/silent flags (`5ce2a26`)
 
-- **x64dbg:** 01-C4+01-C8 x64dbg memory-range breakpoint (SetMemoryRangeBPX); x64dbg default breakpoint opcode type (SetBPXOptions) (`5180632`)
+- **x64dbg:** 01-C4+01-C8 x64dbg memory-range breakpoint (SetMemoryRangeBPX); x64dbg default breakpoint opcode type (SetBPXOptions) (`d7df2fd`)
 
-- **ui:** Add dark2/light2 theme assets required by the S19 four-theme gates (`90183f9`)
+- **ui:** Add dark2/light2 theme assets required by the S19 four-theme gates (`0dfb09d`)
 
-- **installer:** Log a per-step completion line with exit code and duration (`811f6ae`)
+- **installer:** Log a per-step completion line with exit code and duration (`a806856`)
 
-- **installer:** Log the full build pipeline and close a registry drift (`136785e`)
+- **installer:** Log the full build pipeline and close a registry drift (`2700a64`)
 
-- **packaging,sandbox:** Relocate user state and add guest process picker (`dca310a`)
+- **packaging,sandbox:** Relocate user state and add guest process picker (`15eb843`)
 
-- **hexbench,core:** Enhance UI accessibility, packaging, and runtime bridges (`a78239d`)
+- **hexbench,core:** Enhance UI accessibility, packaging, and runtime bridges (`e3e7c76`)
 
-- **x64dbg:** Arm x64dbg's trace record so hit counts can be non-zero (`8810140`)
+- **x64dbg:** Arm x64dbg's trace record so hit counts can be non-zero (`930d8ec`)
 
-- **hexbench:** Paint the design system's chart fill in the entropy map (`3b5a36a`)
+- **hexbench:** Paint the design system's chart fill in the entropy map (`51fed41`)
 
-- **hexbench:** Add hexbench web ui and harden hexcore concurrency (`2ac5a1a`)
+- **hexbench:** Add hexbench web ui and harden hexcore concurrency (`046038b`)
 
-- **sandbox:** Let a run bring the files its target cannot run without (`45f9ab4`)
+- **sandbox:** Let a run bring the files its target cannot run without (`02c068a`)
 
-- **sandbox:** Provision a Windows QEMU guest from discovered install media (`4c2fbe7`)
+- **sandbox:** Provision a Windows QEMU guest from discovered install media (`acb040b`)
 
-- Implement layout restoration toggle and model persistence (`921c7a4`)
+- Implement layout restoration toggle and model persistence (`ce4d66f`)
 
 - Complete tool bridge capabilities and integrate UI controls (`6bb308b`)
 
@@ -182,15 +182,15 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Changed
 
-- Apply linter cleanups and prune legacy launcher (`022499c`)
+- Apply linter cleanups and prune legacy launcher (`05ac999`)
 
-- **mcp:** Remove every suppression and the type errors behind them (`c0bad80`)
+- **mcp:** Remove every suppression and the type errors behind them (`0d1f614`)
 
-- Overhaul auto-save and introduce host-native test pass (`3b96c65`)
+- Overhaul auto-save and introduce host-native test pass (`cb820c7`)
 
-- Harden process isolation and tool integration (`4f5a4c7`)
+- Harden process isolation and tool integration (`fcb3c03`)
 
-- **x64dbg-plugin:** Relocate first-party bridge plugin from tools/ to src/ (`81576dc`)
+- **x64dbg-plugin:** Relocate first-party bridge plugin from tools/ to src/ (`9e0b8b0`)
 
 - Remediate GUI responsiveness and layout issues from audit (`b1bfa87`)
 
@@ -275,11 +275,11 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Documentation
 
-- **notebooks:** Correct replace_bytes undo prose and cover the last 9 hexcore methods (`69d1422`)
+- **notebooks:** Correct replace_bytes undo prose and cover the last 9 hexcore methods (`9a6a9b0`)
 
-- Add the cloud implementation brief for arbitrary AI provider support (`5be4580`)
+- Add the cloud implementation brief for arbitrary AI provider support (`ade12a8`)
 
-- Generate API autosummaries and purge external tools (`4ba3ea6`)
+- Generate API autosummaries and purge external tools (`955aef4`)
 
 - **readme:** Reframe scope around reverse engineering and binary analysis (`d7ef0dd`)
 
@@ -316,291 +316,291 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Fixed
 
-- **megalint:** Stop a Windows pixi path leaking into clippy, aim lychee's root (`da41a32`)
+- **megalint:** Stop a Windows pixi path leaking into clippy, aim lychee's root (`914b0f7`)
 
-- **megalint:** Repair clippy, scope the project scanners, settle lychee (`a568ce2`)
+- **megalint:** Repair clippy, scope the project scanners, settle lychee (`de0346b`)
 
-- **megalint:** Write reports to the host instead of the container (`daf3147`)
+- **megalint:** Write reports to the host instead of the container (`113d7aa`)
 
-- **tests:** Repair four worker constructions broken by the parent removal (`1927e87`)
+- **tests:** Repair four worker constructions broken by the parent removal (`363d089`)
 
-- **tests:** Close two holes in the import-resolution gate (`e81057f`)
+- **tests:** Close two holes in the import-resolution gate (`4ed4f01`)
 
-- **tests:** Repair the log viewer import that aborted pytest collection (`2820bf7`)
+- **tests:** Repair the log viewer import that aborted pytest collection (`b07a54c`)
 
-- **tests:** Stop the suite hanging at exit and contain Frida self-attach crashes (`541ef44`)
+- **tests:** Stop the suite hanging at exit and contain Frida self-attach crashes (`6d96283`)
 
-- **ui:** Stop Provider Settings destroying its own running worker threads (`27b02e9`)
+- **ui:** Stop Provider Settings destroying its own running worker threads (`d429d29`)
 
-- **providers:** Send o-series the token field it accepts; clear the stale tests (`c0ff41e`)
+- **providers:** Send o-series the token field it accepts; clear the stale tests (`001a149`)
 
-- **credentials:** Keep deliberate timeouts from v2 settings across the upgrade (`7cb62f1`)
+- **credentials:** Keep deliberate timeouts from v2 settings across the upgrade (`ebef8c3`)
 
-- **providers:** Report an unreachable Grok endpoint as ProviderError (`3548757`)
+- **providers:** Report an unreachable Grok endpoint as ProviderError (`ab8b89b`)
 
-- **tests:** Finish the provider-identity migration the rename left half-done (`198d397`)
+- **tests:** Finish the provider-identity migration the rename left half-done (`acb8e05`)
 
-- **providers:** Clear the type errors and two schema regressions on this branch (`79a6ec2`)
+- **providers:** Clear the type errors and two schema regressions on this branch (`844a70a`)
 
-- **providers:** Give the OpenAI context window a stated fallback (`e81c363`)
+- **providers:** Give the OpenAI context window a stated fallback (`b1eda32`)
 
-- Restore the bindings this branch removed (`72f6cac`)
+- Restore the bindings this branch removed (`6137860`)
 
-- Clear the type errors this branch introduced (`0477d61`)
+- Clear the type errors this branch introduced (`d2900cf`)
 
-- **core:** Persist multi-part tool-result content (`5f27665`)
+- **core:** Persist multi-part tool-result content (`d16e172`)
 
-- **core:** Persist reasoning blocks and keep one reserved-namespace list (`9c27b97`)
+- **core:** Persist reasoning blocks and keep one reserved-namespace list (`2a46f1a`)
 
-- **credentials:** Translate Win32 credential errors instead of leaking them (`d5faf4a`)
+- **credentials:** Translate Win32 credential errors instead of leaking them (`d32bcf7`)
 
-- **ui:** Stop hand-rolled worker threads dying with the widgets that start them (`6f15f0a`)
+- **ui:** Stop hand-rolled worker threads dying with the widgets that start them (`6a94094`)
 
-- **ui:** Stop callable-worker sites destroying the threads they start (`ceb6218`)
+- **ui:** Stop callable-worker sites destroying the threads they start (`dc3bb05`)
 
-- **ui:** Stop the shared bridge dispatcher destroying its callers' workers (`11b6035`)
+- **ui:** Stop the shared bridge dispatcher destroying its callers' workers (`0c30f69`)
 
-- **cutter:** ASCII labels for the relative-seek toolbar controls (`67622fb`)
+- **cutter:** ASCII labels for the relative-seek toolbar controls (`32809b1`)
 
-- Harden bridge commands, UI overflow layout, and hexcore operations (`c855696`)
+- Harden bridge commands, UI overflow layout, and hexcore operations (`295c2c6`)
 
-- Harden IPC pipe security and prevent arithmetic overflow panics (`c6b8146`)
+- Harden IPC pipe security and prevent arithmetic overflow panics (`dd86ed4`)
 
-- Resolve UI layout, bridge timeout, and session liveness issues (`72b0da4`)
+- Resolve UI layout, bridge timeout, and session liveness issues (`cd19268`)
 
-- **packaging:** Restore full runtime declaration in [project.dependencies] (`8d5a94a`)
+- **packaging:** Restore full runtime declaration in [project.dependencies] (`55b8ded`)
 
-- **ui:** Guard hex strings worker probe against deleted C++ object (`b41886d`)
+- **ui:** Guard hex strings worker probe against deleted C++ object (`f72a4cb`)
 
-- **bridges:** Clear code units before write_bytes patches into disassembled code (`fa2bd18`)
+- **bridges:** Clear code units before write_bytes patches into disassembled code (`490b4f6`)
 
-- **ui,bridges:** Close out S19 RE-LIVE R01/R04-R07 and D-finding back-fills (`091e5e6`)
+- **ui,bridges:** Close out S19 RE-LIVE R01/R04-R07 and D-finding back-fills (`d060cc4`)
 
-- **ui:** Commit R02/R03 input-field clipping fixes and extend gate to four themes (`2c372ee`)
+- **ui:** Commit R02/R03 input-field clipping fixes and extend gate to four themes (`c524a44`)
 
-- **tests:** Isolate host-native pytest basetemp and force ansi rendering (`40317b0`)
+- **tests:** Isolate host-native pytest basetemp and force ansi rendering (`44438ae`)
 
-- **sandbox:** Quiesce the Docker engine before the host-native WHPX gates (`34ca26d`)
+- **sandbox:** Quiesce the Docker engine before the host-native WHPX gates (`eeefe99`)
 
-- **packaging:** Harden installer scripts and enforce runtime deps (`4eea4e7`)
+- **packaging:** Harden installer scripts and enforce runtime deps (`05b5a74`)
 
-- **ui, bridges, sandbox:** Stabilize UI states, error handling, and test runners (`6eb3723`)
+- **ui, bridges, sandbox:** Stabilize UI states, error handling, and test runners (`354ea76`)
 
-- **sandbox:** Close a sandbox by its real window, and outlast the teardown (`0977e74`)
+- **sandbox:** Close a sandbox by its real window, and outlast the teardown (`b5ea682`)
 
-- **ui:** Re-enable sandbox controls to their backend-correct state after an op (`02339ad`)
+- **ui:** Re-enable sandbox controls to their backend-correct state after an op (`6afc4dc`)
 
-- **ui:** Surface silent-but-successful and error script results in the Scripts panel (`5ed869c`)
+- **ui:** Surface silent-but-successful and error script results in the Scripts panel (`f17c33f`)
 
-- **sandbox:** Make the Windows guest provisioner able to actually install one (`b665cb0`)
+- **sandbox:** Make the Windows guest provisioner able to actually install one (`e8e0164`)
 
-- **sandbox:** Let the Host Compute Service finish before killing the worker (`44a5cd6`)
+- **sandbox:** Let the Host Compute Service finish before killing the worker (`176ecbf`)
 
-- **sandbox:** Wait for the collectors to report before reading the tabs (`51ff67b`)
+- **sandbox:** Wait for the collectors to report before reading the tabs (`4f706a2`)
 
-- **sandbox:** Let a stopping QEMU sandbox still reach its guest (`80a41ef`)
+- **sandbox:** Let a stopping QEMU sandbox still reach its guest (`5911280`)
 
-- **sandbox:** Stage the configured folder on the guest's own volume, and fetch its output before it dies (`618b6be`)
+- **sandbox:** Stage the configured folder on the guest's own volume, and fetch its output before it dies (`65bb3f2`)
 
-- **sandbox:** Honour the shared folder, the telemetry toggle and the monitors the launcher could not start (`c899c1e`)
+- **sandbox:** Honour the shared folder, the telemetry toggle and the monitors the launcher could not start (`78c76e8`)
 
-- **sandbox:** Honour the networking toggle, and stop reporting every Windows run as failed (`9f463d9`)
+- **sandbox:** Honour the networking toggle, and stop reporting every Windows run as failed (`d164ab3`)
 
-- **sandbox:** Read every lifecycle-reporting collector for outages, not half of them (`02d32bd`)
+- **sandbox:** Read every lifecycle-reporting collector for outages, not half of them (`6dca9fd`)
 
-- **sandbox:** Load TraceEvent in the DLL monitor and stop losing its records (`1e161dd`)
+- **sandbox:** Load TraceEvent in the DLL monitor and stop losing its records (`6c457e2`)
 
-- **sandbox:** Fetch the guest collectors' diagnostic logs, not only their data (`9516d42`)
+- **sandbox:** Fetch the guest collectors' diagnostic logs, not only their data (`959db14`)
 
-- **sandbox:** Let the Windows ETW collectors consume events, and keep the tracer out of its own tab (`0eabf5f`)
+- **sandbox:** Let the Windows ETW collectors consume events, and keep the tracer out of its own tab (`5ff6ca3`)
 
-- **qemu:** Serve the guest agent's command channel off its telemetry loop (`fb42363`)
+- **qemu:** Serve the guest agent's command channel off its telemetry loop (`37bebbe`)
 
-- **qemu:** End the VM a failed start leaves running before removing its tree (`10b1c42`)
+- **qemu:** End the VM a failed start leaves running before removing its tree (`0109021`)
 
-- **tests:** Register the S18-D05 async fixture and re-aim two vacuous gates (`602ae14`)
+- **tests:** Register the S18-D05 async fixture and re-aim two vacuous gates (`cf18fa4`)
 
-- **hexbench,sandbox:** Handle QEMU GA exec timeouts and improve UI accessibility (`6e3d791`)
+- **hexbench,sandbox:** Handle QEMU GA exec timeouts and improve UI accessibility (`bb82ae7`)
 
-- **qemu:** Outwait the Windows guest agent's serve cadence (S18-D04) (`83aac72`)
+- **qemu:** Outwait the Windows guest agent's serve cadence (S18-D04) (`cf18c04`)
 
-- **x64dbg:** Quote annotation writes and poll the async patch verify (`877bacb`)
+- **x64dbg:** Quote annotation writes and poll the async patch verify (`f19acb2`)
 
-- **hex-editor:** Align binary diff panel with engine schema (`db0b6bf`)
+- **hex-editor:** Align binary diff panel with engine schema (`b61dc50`)
 
-- **ui:** Share one ScriptManager between the Scripts panel and orchestrator (`50f8b45`)
+- **ui:** Share one ScriptManager between the Scripts panel and orchestrator (`a74890e`)
 
-- **ui:** Stop logging a routine provider failure as a worker crash (`e7fd98d`)
+- **ui:** Stop logging a routine provider failure as a worker crash (`5f7045c`)
 
-- **providers:** Surface why a provider rejected a call, with the key redacted (`c8f6cb6`)
+- **providers:** Surface why a provider rejected a call, with the key redacted (`62f062d`)
 
-- **ui:** Let the confirmation-level setting actually reach the orchestrator (`44fb453`)
+- **ui:** Let the confirmation-level setting actually reach the orchestrator (`56b958f`)
 
-- **session:** Keep a bridge analysis complete across a save and load (`6bf23d1`)
+- **session:** Keep a bridge analysis complete across a save and load (`850a31e`)
 
-- **sandbox:** Pick the harness network from what the engine actually defines (`ee20fce`)
+- **sandbox:** Pick the harness network from what the engine actually defines (`bfa2047`)
 
-- **ui:** Stop the Analysis panel 32-bit address signal breaking its own construction (`361c541`)
+- **ui:** Stop the Analysis panel 32-bit address signal breaking its own construction (`f3b7edc`)
 
-- **ui:** Repopulate the chat panel when a saved session is loaded (`40a23c0`)
+- **ui:** Repopulate the chat panel when a saved session is loaded (`f1f9550`)
 
-- **sandbox:** Stop the container harness starting a VM's neighbour on shared HCS (`472533c`)
+- **sandbox:** Stop the container harness starting a VM's neighbour on shared HCS (`bccdf96`)
 
-- **sandbox:** Stop a routine guest-agent poll from logging a traceback (`a45b974`)
+- **sandbox:** Stop a routine guest-agent poll from logging a traceback (`96404c4`)
 
-- **sandbox:** Let a Linux guest actually reach a listening monitor agent (`cc0b790`)
+- **sandbox:** Let a Linux guest actually reach a listening monitor agent (`7ec9424`)
 
-- **sandbox:** Make the provisioned guest answer to the name it was given (`cbb3dd9`)
+- **sandbox:** Make the provisioned guest answer to the name it was given (`2d3956b`)
 
-- **sandbox:** Reap the sandbox session the Test Sandbox run started (`32679b3`)
+- **sandbox:** Reap the sandbox session the Test Sandbox run started (`24fb089`)
 
-- **sandbox:** Make the injection monitor's failure diagnostic name its statement (`a991b7d`)
+- **sandbox:** Make the injection monitor's failure diagnostic name its statement (`c376838`)
 
-- **sandbox:** Take a disk-only snapshot when the accelerator blocks machine state (`4ef8545`)
+- **sandbox:** Take a disk-only snapshot when the accelerator blocks machine state (`d1c640b`)
 
-- **sandbox:** Stop reporting anti-evasion success when the guest work failed (`584dcd6`)
+- **sandbox:** Stop reporting anti-evasion success when the guest work failed (`167ba2e`)
 
-- **sandbox:** Stop reporting the deletion of a snapshot that never existed (`9269c76`)
+- **sandbox:** Stop reporting the deletion of a snapshot that never existed (`6426aa5`)
 
-- **sandbox:** Stop a dead injection monitor from accusing the sample (`e447e45`)
+- **sandbox:** Stop a dead injection monitor from accusing the sample (`4ac24b3`)
 
-- **sandbox:** Start the machine again when a snapshot job stops it and fails (`5aacc7a`)
+- **sandbox:** Start the machine again when a snapshot job stops it and fails (`98fff81`)
 
-- **sandbox:** Make the guest agent and its two ETW collectors work at all (`c12171e`)
+- **sandbox:** Make the guest agent and its two ETW collectors work at all (`7cd46da`)
 
-- **sandbox:** Stop asking vvfat to write, since it aborts the whole machine (`f2455cb`)
+- **sandbox:** Stop asking vvfat to write, since it aborts the whole machine (`50ef4f7`)
 
-- **sandbox:** Notice when the QEMU hosting a run has died (`0e9ec55`)
+- **sandbox:** Notice when the QEMU hosting a run has died (`664e8a8`)
 
-- **sandbox:** Let a session survive losing the guest channel, without rerunning work (`1e6d4bc`)
+- **sandbox:** Let a session survive losing the guest channel, without rerunning work (`6686a91`)
 
-- **sandbox:** Point WinPE at the driver folders the medium actually has (`657350a`)
+- **sandbox:** Point WinPE at the driver folders the medium actually has (`e558c8b`)
 
-- **sandbox:** Stop overwriting the good registry collector with the broken one (`c08f614`)
+- **sandbox:** Stop overwriting the good registry collector with the broken one (`a2cb917`)
 
-- **sandbox:** Let the guest's ETW recorders actually load the library they need (`41b5f9e`)
+- **sandbox:** Let the guest's ETW recorders actually load the library they need (`d3470d8`)
 
-- **sandbox:** Stop a dead recorder from looking like a quiet one (`f388121`)
+- **sandbox:** Stop a dead recorder from looking like a quiet one (`951f29e`)
 
-- **sandbox:** Give a QEMU guest run its registry, clipboard and nested staging back (`7ac26ef`)
+- **sandbox:** Give a QEMU guest run its registry, clipboard and nested staging back (`28b27f6`)
 
-- **sandbox:** Stop a byte-order mark corrupting the first record of every monitor log (`4fc8934`)
+- **sandbox:** Stop a byte-order mark corrupting the first record of every monitor log (`c059850`)
 
-- **sandbox:** Make a ready guest agent one that has actually run a command (`ecaebb3`)
+- **sandbox:** Make a ready guest agent one that has actually run a command (`9e2e251`)
 
-- **sandbox:** Stop reporting "nothing found" for scans and dumps that never ran (`aa53ac4`)
+- **sandbox:** Stop reporting "nothing found" for scans and dumps that never ran (`b594dc8`)
 
-- **sandbox:** Let a caller say which sandbox a binary should run in (`6b4f658`)
+- **sandbox:** Let a caller say which sandbox a binary should run in (`508d82f`)
 
-- **sandbox:** Make a snapshot say what QEMU actually did with it (`4713223`)
+- **sandbox:** Make a snapshot say what QEMU actually did with it (`46d617f`)
 
-- **sandbox:** Stop every sandbox writing to the one configured disk image (`30478c8`)
+- **sandbox:** Stop every sandbox writing to the one configured disk image (`ac92583`)
 
-- **sandbox:** Stop spending the one guest-agent connection QEMU will give us (`97ace8b`)
+- **sandbox:** Stop spending the one guest-agent connection QEMU will give us (`44c70a9`)
 
-- **sandbox:** Let the host pick QEMU's ports instead of hoping three are free (`a25cd30`)
+- **sandbox:** Let the host pick QEMU's ports instead of hoping three are free (`38f7a37`)
 
-- **sandbox:** Ask the guest to power off before ending its QEMU (`99dba1d`)
+- **sandbox:** Ask the guest to power off before ending its QEMU (`e197dff`)
 
-- **sandbox:** Give the guest agent the helper GLib needs to spawn anything (`71d42eb`)
+- **sandbox:** Give the guest agent the helper GLib needs to spawn anything (`e04ba23`)
 
-- **sandbox:** Trust a driver catalog's whole chain, not just its signer (`6ce0f25`)
+- **sandbox:** Trust a driver catalog's whole chain, not just its signer (`97ab0d1`)
 
-- **sandbox:** Give the guest a pointer that can be aimed (`656bb67`)
+- **sandbox:** Give the guest a pointer that can be aimed (`5214a44`)
 
-- **sandbox:** Install the virtio drivers this guest needs, without a prompt (`219f2f9`)
+- **sandbox:** Install the virtio drivers this guest needs, without a prompt (`05c6e11`)
 
-- **sandbox:** Give OOBE its own locale so the install finishes unattended (`bba65cb`)
+- **sandbox:** Give OOBE its own locale so the install finishes unattended (`f9e2ec9`)
 
-- **sandbox:** Give a Windows guest the CPU and the interrupt chip it needs (`8a3c1f9`)
+- **sandbox:** Give a Windows guest the CPU and the interrupt chip it needs (`e8eea9b`)
 
-- **sandbox:** Let the Windows guest agent listen where the forward delivers (`41941a7`)
+- **sandbox:** Let the Windows guest agent listen where the forward delivers (`b74025b`)
 
-- **sandbox:** Make the monitor launcher wait for the monitors it started (`3de3e5c`)
+- **sandbox:** Make the monitor launcher wait for the monitors it started (`6d916d0`)
 
-- **sandbox:** Let a Linux guest fill the Network Activity and Resources tabs (`43302ee`)
+- **sandbox:** Let a Linux guest fill the Network Activity and Resources tabs (`99ac0f5`)
 
-- **sandbox:** Give every harness run its own identity so runs stop killing each other (`f1beac6`)
+- **sandbox:** Give every harness run its own identity so runs stop killing each other (`9405eaa`)
 
-- **sandbox:** Stage a run's binary into the guest, not into a snapshot (`0cd22c6`)
+- **sandbox:** Stage a run's binary into the guest, not into a snapshot (`77fa8e8`)
 
-- **sandbox:** Let a run reach the sandbox that is already running (`57a9a71`)
+- **sandbox:** Let a run reach the sandbox that is already running (`b26de07`)
 
-- **sandbox:** Prove the guest agent channel is live and report what ran on it (`6d994f9`)
+- **sandbox:** Prove the guest agent channel is live and report what ran on it (`2ecf1ab`)
 
-- **ui:** Make the VM Display ask for a frame it can actually be given (`e12075f`)
+- **ui:** Make the VM Display ask for a frame it can actually be given (`a2f6f05`)
 
-- **sandbox:** Negotiate the guest-agent sync against what the agent really implements (`798bac3`)
+- **sandbox:** Negotiate the guest-agent sync against what the agent really implements (`ae7eef8`)
 
-- **sandbox:** Put qemu-guest-agent on its own channel and make the guest reach the share (`8cfa4d0`)
+- **sandbox:** Put qemu-guest-agent on its own channel and make the guest reach the share (`43914ab`)
 
-- **sandbox:** Make the QEMU backend launch on Windows (`06aecc8`)
+- **sandbox:** Make the QEMU backend launch on Windows (`c662360`)
 
-- **sandbox,ui:** Surface sandbox failures, gate controls by backend, own restart (`2e0c146`)
+- **sandbox,ui:** Surface sandbox failures, gate controls by backend, own restart (`f2f2585`)
 
-- **sandbox:** Derive QEMU tools path from the project root, log the real VNC port (`2a788b4`)
+- **sandbox:** Derive QEMU tools path from the project root, log the real VNC port (`46d51fd`)
 
-- **sandbox,ui:** Converge the two divergent .wsb generators (`e19ef7a`)
+- **sandbox,ui:** Converge the two divergent .wsb generators (`941f0ea`)
 
-- **sandbox,ui:** Make the QEMU backend reachable from the GUI (`ec6713d`)
+- **sandbox,ui:** Make the QEMU backend reachable from the GUI (`901278c`)
 
-- **sandbox:** Test Sandbox must verify a session, not process liveness (`6585609`)
+- **sandbox:** Test Sandbox must verify a session, not process liveness (`63e51f8`)
 
-- **sandbox:** Launch WindowsSandbox.exe, not the connection client (`e996961`)
+- **sandbox:** Launch WindowsSandbox.exe, not the connection client (`8d3e1d0`)
 
-- **bridges,ui:** Enumerate real x64 exception handlers for SEH tab (`5fe1cf4`)
+- **bridges,ui:** Enumerate real x64 exception handlers for SEH tab (`9993cc3`)
 
-- **bridges,core:** 64-bit VirtualAllocEx pointers, break bridges/core import cycle (`4a9bf44`)
+- **bridges,core:** 64-bit VirtualAllocEx pointers, break bridges/core import cycle (`eb43a13`)
 
-- **ui:** Embed x64dbg window via desktop-scoped HWND lookup (`cd2b27d`)
+- **ui:** Embed x64dbg window via desktop-scoped HWND lookup (`42598fd`)
 
-- **ui:** Analysis no-backend notice, region popup decode, sandbox cleanup (`175b200`)
+- **ui:** Analysis no-backend notice, region popup decode, sandbox cleanup (`6132b2f`)
 
-- **ui:** Editable, persisted user notes on Analysis panel (`b36be5e`)
+- **ui:** Editable, persisted user notes on Analysis panel (`7e969f8`)
 
-- **ui:** Process-panel filtered counts + usable Pipes tab (`5fd9fcb`)
+- **ui:** Process-panel filtered counts + usable Pipes tab (`58a2435`)
 
-- **ui:** Restore chat + binary on Load Session, guard stale ids (`267d118`)
+- **ui:** Restore chat + binary on Load Session, guard stale ids (`4b7b0c5`)
 
-- **providers:** Surface OAuth client_id error, revoke API-key creds (`52bd8a5`)
+- **providers:** Surface OAuth client_id error, revoke API-key creds (`a83cd2f`)
 
-- **ui:** Non-blocking attach confirmation in process panel (`df9943e`)
+- **ui:** Non-blocking attach confirmation in process panel (`40327ff`)
 
-- **ui:** Xref/function-select signals carry 64-bit addresses (`e7c1e35`)
+- **ui:** Xref/function-select signals carry 64-bit addresses (`7eb60b6`)
 
-- **ui:** Load Binary dialog uses sized non-native QFileDialog (`4305d95`)
+- **ui:** Load Binary dialog uses sized non-native QFileDialog (`c1bf9e0`)
 
-- **ui:** X64dbg panel reset views on stop + scrollable docked content (`696729c`)
+- **ui:** X64dbg panel reset views on stop + scrollable docked content (`5d696be`)
 
-- **providers:** HuggingFace served-model filter, Ollama loop-safe clients (`6657ec8`)
+- **providers:** HuggingFace served-model filter, Ollama loop-safe clients (`4026545`)
 
-- **bridges,ui:** X64dbg watchpoints list via bp_list (`62bc57f`)
+- **bridges,ui:** X64dbg watchpoints list via bp_list (`3f732e8`)
 
-- **ui,bridges:** Frida hooks table, integer call returns, Advanced layout (`d66521a`)
+- **ui,bridges:** Frida hooks table, integer call returns, Advanced layout (`7598a96`)
 
-- **bridges,ui:** Process section unmap + pattern-search cancel/progress (`e7e7bbf`)
+- **bridges,ui:** Process section unmap + pattern-search cancel/progress (`f277c47`)
 
-- **bridges:** X64dbg Load registers attach state; headless Qt + modules (`c42d601`)
+- **bridges:** X64dbg Load registers attach state; headless Qt + modules (`3ab868d`)
 
-- **bridges,ui:** Process PID filter + raw-query sizing, Frida hooks (`8d56bad`)
+- **bridges,ui:** Process PID filter + raw-query sizing, Frida hooks (`314b48b`)
 
-- **core,ui,bridges:** Track attached PID, Frida console.log + backpressure (`341b973`)
+- **core,ui,bridges:** Track attached PID, Frida console.log + backpressure (`7eb5498`)
 
-- **bridges:** Cutter ROP gadgets, project round-trip, bytes search (`71ea329`)
+- **bridges:** Cutter ROP gadgets, project round-trip, bytes search (`1b4bea5`)
 
-- **core,bridges:** Streaming-on-tools, async Frida scan, robust unload (`ad4eadf`)
+- **core,bridges:** Streaming-on-tools, async Frida scan, robust unload (`71d9812`)
 
-- **bridges,ui:** Cutter decompile/CFG, Ghidra read APIs, chat markdown (`3c4ae75`)
+- **bridges,ui:** Cutter decompile/CFG, Ghidra read APIs, chat markdown (`8ef9d3d`)
 
-- **bridges,ui:** S13-S16 Phase 2 — Ghidra write-transactions, session rebind, Scripts New/Execute (`ea78b4d`)
+- **bridges,ui:** S13-S16 Phase 2 — Ghidra write-transactions, session rebind, Scripts New/Execute (`37bfadb`)
 
-- **providers:** S16 Phase 1 — safe .env template, tool-count caps, Gemini thought_signature (`95d4af0`)
+- **providers:** S16 Phase 1 — safe .env template, tool-count caps, Gemini thought_signature (`1b54c0d`)
 
-- **tests:** Isolate local Ollama models and align device bridge permissions (`4c7d061`)
+- **tests:** Isolate local Ollama models and align device bridge permissions (`bcd71cc`)
 
-- Resolve named pipe concurrency, bridge lifecycle, and UI bugs (`38fe13b`)
+- Resolve named pipe concurrency, bridge lifecycle, and UI bugs (`8939681`)
 
-- **deps:** Declare pygments as conda dependency to unblock requirements.txt (`5f74b87`)
+- **deps:** Declare pygments as conda dependency to unblock requirements.txt (`4489fbb`)
 
 - **ui:** Remediate 2026-07-01 GUI audit findings (`a75756c`)
 
@@ -1045,11 +1045,11 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Performance
 
-- **tests:** Isolate Frida self-attach modules per module, not per test (`8f4618d`)
+- **tests:** Isolate Frida self-attach modules per module, not per test (`6004956`)
 
 
 ### Security
 
-- Declare core runtime dependencies and bump HTTP security floors (``)
+- Declare core runtime dependencies and bump HTTP security floors (`693a69c`)
 
 
