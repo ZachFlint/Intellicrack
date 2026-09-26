@@ -51,16 +51,16 @@ from intellicrack.core.logging import get_logger
 from intellicrack.mcp.catalog import McpToolCatalog, fetch_catalog
 from intellicrack.mcp.config import McpConfigStore, McpServerConfig, McpTransportKind
 from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
+from intellicrack.mcp.operator_wait import OperatorWaitClock
 from intellicrack.mcp.sandbox_launch import build_sandboxed_startup, confined_stdio_client, sandbox_supported
 from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, open_http_transport
 
 
 if TYPE_CHECKING:
     import contextvars
-    from collections.abc import AsyncGenerator, Awaitable
+    from collections.abc import AsyncGenerator
 
     import httpx2
-    from mcp.client.auth import AuthorizationCodeResult
     from mcp.client.session import ElicitationFnT
     from mcp.shared.message import SessionMessage
     from mcp_types import CallToolResult
@@ -368,99 +368,6 @@ def is_connection_loss(failure: BaseException) -> bool:
     return isinstance(failure, OSError)
 
 
-class _OperatorClock:
-    """Measures how much of a connection attempt was spent waiting on the operator.
-
-    A connection attempt raises dialogs of its own -- the launch consent
-    prompt, the OAuth sign-in -- and the time they stay open belongs to the
-    operator, not to the server. Waits nest, and the clock counts wall time
-    during which at least one is open.
-    """
-
-    def __init__(self) -> None:
-        """Initialize a clock with nothing recorded."""
-        self._depth = 0
-        self._since = 0.0
-        self._total = 0.0
-        self.changed = asyncio.Event()
-
-    @property
-    def waiting(self) -> bool:
-        """Whether an operator prompt is open right now.
-
-        Returns:
-            bool: ``True`` while at least one wait is in progress.
-        """
-        return self._depth > 0
-
-    def seconds(self, now: float) -> float:
-        """Total operator time up to a moment.
-
-        Args:
-            now: The event loop's current time.
-
-        Returns:
-            float: Seconds spent with at least one prompt open.
-        """
-        return self._total + (now - self._since if self._depth else 0.0)
-
-    @asynccontextmanager
-    async def wait(self) -> AsyncGenerator[None]:
-        """Mark the enclosed block as time spent waiting on the operator.
-
-        Yields:
-            None: Control, while the block runs.
-        """
-        loop = asyncio.get_running_loop()
-        if self._depth == 0:
-            self._since = loop.time()
-        self._depth += 1
-        self.changed.set()
-        try:
-            yield
-        finally:
-            self._depth -= 1
-            if self._depth == 0:
-                self._total += loop.time() - self._since
-            self.changed.set()
-
-    def track_redirect(self, handler: Callable[[str], Awaitable[None]]) -> Callable[[str], Awaitable[None]]:
-        """Wrap an OAuth redirect handler so its run counts as operator time.
-
-        Args:
-            handler: The handler that sends the operator to the sign-in page.
-
-        Returns:
-            Callable[[str], Awaitable[None]]: The wrapped handler.
-        """
-
-        async def tracked(url: str) -> None:
-            async with self.wait():
-                await handler(url)
-
-        return tracked
-
-    def track_callback(
-        self,
-        handler: Callable[[], Awaitable[AuthorizationCodeResult]],
-    ) -> Callable[[], Awaitable[AuthorizationCodeResult]]:
-        """Wrap an OAuth callback handler so its wait counts as operator time.
-
-        Args:
-            handler: The handler that waits for the sign-in to come back.
-
-        Returns:
-            Callable[[], Awaitable[AuthorizationCodeResult]]: The wrapped
-            handler.
-        """
-
-        async def tracked() -> AuthorizationCodeResult:
-            async with self.wait():
-                return await handler()
-
-        return tracked
-
-
 class _MessageReceiveStream(Protocol):
     """The receive side of a transport's stream pair, as the session reads it."""
 
@@ -629,7 +536,8 @@ class McpConnection:
         self._config = config
         self._resolver = resolver
         self._client_info = client_info if client_info is not None else build_client_info()
-        self._elicitation_callback = elicitation_callback
+        self._operator_wait = OperatorWaitClock()
+        self._elicitation_callback = self._operator_wait.pause_during(elicitation_callback) if elicitation_callback is not None else None
         self._consent = consent
         self._auth_factory = auth_factory
 
@@ -648,7 +556,6 @@ class McpConnection:
         self._dropped = asyncio.Event()
         self._wake = asyncio.Event()
         self._on_change: Callable[[str], None] | None = None
-        self._operator = _OperatorClock()
         self._attempt = 0
         self._ready_since: float | None = None
         self._follow_changes = False
@@ -853,7 +760,7 @@ class McpConnection:
                 f"but no consent prompt is available in this process."
             )
             raise McpConnectionError(message)
-        async with self._operator.wait():
+        async with self._operator_wait.operator_turn():
             await self._consent.ensure_launch_consent(self._config, env)
 
         sandbox = self._config.sandbox
@@ -963,9 +870,9 @@ class McpConnection:
         """
         context = auth.context
         if context.redirect_handler is not None:
-            context.redirect_handler = self._operator.track_redirect(context.redirect_handler)
+            context.redirect_handler = self._operator_wait.pause_while(context.redirect_handler)
         if context.callback_handler is not None:
-            context.callback_handler = self._operator.track_callback(context.callback_handler)
+            context.callback_handler = self._operator_wait.pause_while(context.callback_handler)
 
     async def _serve_once(self) -> None:
         """Hold one connection open until a stop is requested.
@@ -1212,33 +1119,19 @@ class McpConnection:
         """Wait for the first attempt to settle, excluding operator time.
 
         The budget is :data:`CONNECT_TIMEOUT_S` of time not spent waiting on
-        the operator. While a prompt is open the budget does not run down at
-        all, however long the operator takes.
+        the operator: the deadline is suspended for as long as a consent
+        prompt or an interactive sign-in is open, however long the operator
+        takes.
 
         Returns:
             bool: ``True`` when the attempt settled, ``False`` when the
             budget ran out first.
         """
-        loop = asyncio.get_running_loop()
-        started = loop.time()
-        settled = asyncio.ensure_future(self._settled.wait())
         try:
-            while not settled.done():
-                clock = self._operator
-                clock.changed.clear()
-                timeout: float | None = None
-                if not clock.waiting:
-                    now = loop.time()
-                    timeout = CONNECT_TIMEOUT_S - (now - started - clock.seconds(now))
-                    if timeout <= 0:
-                        return False
-                changed = asyncio.ensure_future(clock.changed.wait())
-                try:
-                    _ = await asyncio.wait({settled, changed}, timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
-                finally:
-                    _ = changed.cancel()
-        finally:
-            _ = settled.cancel()
+            async with self._operator_wait.deadline(CONNECT_TIMEOUT_S):
+                _ = await self._settled.wait()
+        except TimeoutError:
+            return False
         return True
 
     async def connect(self) -> None:
@@ -1267,7 +1160,6 @@ class McpConnection:
         self._dropped = asyncio.Event()
         self._wake = asyncio.Event()
         self._change_notice = asyncio.Event()
-        self._operator = _OperatorClock()
         self._last_error = None
         self._failure = None
         self._health = McpHealth.CONNECTING
@@ -1418,7 +1310,7 @@ class McpConnection:
             raise McpConnectionError(message)
         budget = timeout_s if timeout_s is not None else self._config.request_timeout_s
         try:
-            async with asyncio.timeout(budget):
+            async with self._operator_wait.deadline(budget):
                 return await client.call_tool(tool_name, arguments)
         except TimeoutError as exc:
             message = f"server '{self.server_id}': call to {tool_name!r} exceeded {budget:.0f}s"
@@ -1748,19 +1640,30 @@ class McpConnectionManager:
 
         A server that fails to start does not stop the others: its failure
         is recorded on its own status and the remaining servers continue.
+        Servers are started concurrently, so one waiting on the operator -- a
+        launch-consent prompt or an OAuth sign-in in the browser -- does not
+        hold back every server configured after it.
         """
         self._document = self._store.load()
         self._started = True
-        for config in self._document.servers:
-            if not config.enabled:
-                continue
-            with suppress(McpError):
-                _ = await self.start_server(config.server_id)
+        async with asyncio.TaskGroup() as group:
+            for config in self._document.servers:
+                if config.enabled:
+                    _ = group.create_task(self._start_quietly(config.server_id), name=f"mcp-start-{config.server_id}")
         _logger.info(
             "mcp_manager_started",
             configured=len(self._document.servers),
             connected=sum(bool(connection.is_ready) for connection in self._connections.values()),
         )
+
+    async def _start_quietly(self, server_id: str) -> None:
+        """Start one server, leaving its failure on its own status.
+
+        Args:
+            server_id: The server to start.
+        """
+        with suppress(McpError):
+            _ = await self.start_server(server_id)
 
     async def stop(self) -> None:
         """Bring every server down, in reverse start order.

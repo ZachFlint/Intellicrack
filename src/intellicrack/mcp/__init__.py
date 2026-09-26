@@ -18,14 +18,9 @@ reach this package through the callables it accepts.
 
 from __future__ import annotations
 
-from intellicrack.mcp.auth import (
-    KeyringTokenStorage,
-    build_oauth_provider,
-    has_stored_credentials,
-    issuer_for,
-    resolve_client_identity,
-    sign_out,
-)
+import importlib
+from typing import TYPE_CHECKING
+
 from intellicrack.mcp.catalog import (
     McpToolCatalog,
     McpToolEntry,
@@ -48,21 +43,19 @@ from intellicrack.mcp.config import (
     is_mcp_namespace,
     to_canonical_name,
 )
-from intellicrack.mcp.connection import (
-    McpConnection,
-    McpConnectionManager,
-    McpHealth,
-    McpServerStatus,
-)
 from intellicrack.mcp.consent import (
+    ApprovalRecord,
     ApprovalScope,
     ApprovalStore,
+    ConsentAnswer,
     DangerousPattern,
     McpConsentGate,
     TrustState,
     TrustStore,
+    deny_all_launches,
     describe_launch,
     scan_command_for_dangerous_patterns,
+    server_identity,
 )
 from intellicrack.mcp.errors import (
     McpAuthError,
@@ -73,23 +66,6 @@ from intellicrack.mcp.errors import (
     McpProtocolError,
 )
 from intellicrack.mcp.policy import ToolCost, enabled_entries, estimate_tool_cost
-from intellicrack.mcp.resources import (
-    PromptSummary,
-    ResourceSummary,
-    get_prompt,
-    list_prompts,
-    list_resources,
-    read_resource,
-)
-from intellicrack.mcp.sandbox_launch import (
-    ENVIRONMENT_ALLOWLIST,
-    JobLimits,
-    SandboxedJob,
-    SandboxedLaunch,
-    apply_job_limits,
-    build_sandboxed_startup,
-    sandbox_supported,
-)
 from intellicrack.mcp.secrets import MCP_SECRET_NAMESPACE, McpSecretResolver
 from intellicrack.mcp.tool_source import (
     UNTRUSTED_BLOCK_END,
@@ -104,6 +80,91 @@ from intellicrack.mcp.tool_source import (
 from intellicrack.mcp.validation import SchemaViolation, validate_against_schema
 
 
+if TYPE_CHECKING:
+    from intellicrack.mcp.auth import (
+        KeyringTokenStorage,
+        build_oauth_provider,
+        has_stored_credentials,
+        issuer_for,
+        resolve_client_identity,
+        sign_out,
+    )
+    from intellicrack.mcp.connection import (
+        McpConnection,
+        McpConnectionManager,
+        McpHealth,
+        McpServerStatus,
+    )
+    from intellicrack.mcp.resources import (
+        PromptSummary,
+        ResourceSummary,
+        get_prompt,
+        list_prompts,
+        list_resources,
+        read_resource,
+    )
+    from intellicrack.mcp.sandbox_launch import (
+        ENVIRONMENT_ALLOWLIST,
+        JobLimits,
+        SandboxedJob,
+        SandboxedLaunch,
+        apply_job_limits,
+        build_sandboxed_startup,
+        sandbox_supported,
+    )
+
+
+def __getattr__(name: str) -> object:
+    """Resolve an SDK-backed export the first time it is used.
+
+    Everything else in this package is plain Python, so configuration, consent, naming and validation stay importable when the ``mcp``
+    SDK is missing. Loading the modules that talk to servers only when one of their names is asked for is what lets a missing SDK disable
+    MCP instead of breaking every module that merely checks whether a tool name belongs to it. The resolved object is cached on the package
+    globals so later look-ups bypass this hook.
+
+    Args:
+        name: The attribute being looked up.
+
+    Returns:
+        object: The exported object.
+
+    Raises:
+        AttributeError: If ``name`` is not an export of this package.
+    """
+    sdk_exports: dict[str, str] = {
+        "KeyringTokenStorage": "intellicrack.mcp.auth",
+        "build_oauth_provider": "intellicrack.mcp.auth",
+        "has_stored_credentials": "intellicrack.mcp.auth",
+        "issuer_for": "intellicrack.mcp.auth",
+        "resolve_client_identity": "intellicrack.mcp.auth",
+        "sign_out": "intellicrack.mcp.auth",
+        "McpConnection": "intellicrack.mcp.connection",
+        "McpConnectionManager": "intellicrack.mcp.connection",
+        "McpHealth": "intellicrack.mcp.connection",
+        "McpServerStatus": "intellicrack.mcp.connection",
+        "PromptSummary": "intellicrack.mcp.resources",
+        "ResourceSummary": "intellicrack.mcp.resources",
+        "get_prompt": "intellicrack.mcp.resources",
+        "list_prompts": "intellicrack.mcp.resources",
+        "list_resources": "intellicrack.mcp.resources",
+        "read_resource": "intellicrack.mcp.resources",
+        "ENVIRONMENT_ALLOWLIST": "intellicrack.mcp.sandbox_launch",
+        "JobLimits": "intellicrack.mcp.sandbox_launch",
+        "SandboxedJob": "intellicrack.mcp.sandbox_launch",
+        "SandboxedLaunch": "intellicrack.mcp.sandbox_launch",
+        "apply_job_limits": "intellicrack.mcp.sandbox_launch",
+        "build_sandboxed_startup": "intellicrack.mcp.sandbox_launch",
+        "sandbox_supported": "intellicrack.mcp.sandbox_launch",
+    }
+    module_name = sdk_exports.get(name)
+    if module_name is None:
+        message = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(message)
+    value: object = getattr(importlib.import_module(module_name), name)
+    globals()[name] = value
+    return value
+
+
 __all__ = [
     "ENVIRONMENT_ALLOWLIST",
     "MCP_CONFIG_FILENAME",
@@ -112,8 +173,10 @@ __all__ = [
     "SERVER_ID_PATTERN",
     "UNTRUSTED_BLOCK_END",
     "UNTRUSTED_BLOCK_START",
+    "ApprovalRecord",
     "ApprovalScope",
     "ApprovalStore",
+    "ConsentAnswer",
     "DangerousPattern",
     "HttpServerSpec",
     "JobLimits",
@@ -152,6 +215,7 @@ __all__ = [
     "build_oauth_provider",
     "build_sandboxed_startup",
     "compute_generation",
+    "deny_all_launches",
     "describe_launch",
     "enabled_entries",
     "estimate_tool_cost",
@@ -170,6 +234,7 @@ __all__ = [
     "sandbox_supported",
     "sanitize_untrusted_text",
     "scan_command_for_dangerous_patterns",
+    "server_identity",
     "sign_out",
     "source_label",
     "to_canonical_name",
