@@ -15,6 +15,7 @@ import base64
 import math
 import os
 import time
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final, cast, override
 
@@ -47,9 +48,10 @@ from intellicrack.providers.base import (
     UsageInfo,
     is_permanent_quota_error,
 )
-from intellicrack.providers.capabilities import ApiDialect
+from intellicrack.providers.capabilities import ApiDialect, CapabilityOverride, ReasoningSupport, merge_capabilities
 from intellicrack.providers.dialects.base import ToolNameStyle
 from intellicrack.providers.dialects.gemini import GeminiAdapter
+from intellicrack.providers.presets import GEMINI_CONTEXT_WINDOW
 from intellicrack.providers.tool_names import from_wire_name, to_wire_name
 
 
@@ -73,6 +75,8 @@ _MSG_QUOTA_EXHAUSTED = (
     "Google Gemini quota or spending cap exhausted; requests cannot succeed until the "
     "cap is raised at https://ai.studio/spend or a different key or provider is selected"
 )
+
+_GENERATE_CONTENT_ACTION: Final[str] = "generateContent"
 
 _AUTH_STATUS_CODES: Final = frozenset({401, 403})
 _RATE_LIMIT_STATUS_CODES: Final = frozenset({429})
@@ -146,7 +150,7 @@ class GoogleProvider(LLMProviderBase):
             self.client = None
             self._logger.warning(
                 "google_connect_failed",
-                error=str(e),
+                error=self._redact_error_text(e, api_key=credentials.api_key),
                 code=e.code,
             )
             if e.code in _AUTH_STATUS_CODES:
@@ -166,7 +170,7 @@ class GoogleProvider(LLMProviderBase):
             self.client = None
             self._logger.warning(
                 "google_connect_failed",
-                error=str(e),
+                error=self._redact_error_text(e, api_key=credentials.api_key),
             )
             raise ProviderError(_MSG_CONNECTION_FAILED) from e
         finally:
@@ -179,18 +183,21 @@ class GoogleProvider(LLMProviderBase):
 
         The SDK expresses request timeouts in whole milliseconds, so a saved
         timeout in seconds is rounded up; without one the SDK default applies.
+        A configured ``api_base`` replaces the SDK's default endpoint, so the
+        provider can be pointed at a proxy or a regional gateway.
 
         Args:
-            credentials: Provider credentials containing the API key and an
-                optional request timeout in seconds.
+            credentials: Provider credentials containing the API key, an
+                optional base URL and an optional request timeout in seconds.
 
         Returns:
             genai.Client: The configured Gemini client.
         """
-        if credentials.timeout is None:
+        api_base = (credentials.api_base or "").strip() or None
+        timeout_ms = math.ceil(credentials.timeout * 1000) if credentials.timeout is not None else None
+        if api_base is None and timeout_ms is None:
             return genai.Client(api_key=credentials.api_key)
-        timeout_ms = math.ceil(credentials.timeout * 1000)
-        return genai.Client(api_key=credentials.api_key, http_options=types.HttpOptions(timeout=timeout_ms))
+        return genai.Client(api_key=credentials.api_key, http_options=types.HttpOptions(base_url=api_base, timeout=timeout_ms))
 
     async def _connect_impl(self, credentials: ProviderCredentials) -> None:
         """Initialise the Google client and probe the models endpoint.
@@ -248,7 +255,7 @@ class GoogleProvider(LLMProviderBase):
         except APIError as e:
             self._logger.warning(
                 "google_list_models_api_failed",
-                error=str(e),
+                error=self._redact_error_text(e),
                 code=e.code,
             )
             if e.code in _AUTH_STATUS_CODES:
@@ -259,7 +266,7 @@ class GoogleProvider(LLMProviderBase):
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             self._logger.warning(
                 "google_list_models_api_failed",
-                error=str(e),
+                error=self._redact_error_text(e),
             )
             raise ProviderError(_MSG_FETCH_MODELS_FAILED) from e
         else:
@@ -284,45 +291,66 @@ class GoogleProvider(LLMProviderBase):
 
         models: list[ModelInfo] = []
         for model_data in models_response:
-            model_name = getattr(model_data, "name", "")
-            name_lower = model_name.lower()
-            if "gemini" not in name_lower or "embedding" in name_lower:
-                continue
-
-            display_name = getattr(model_data, "display_name", model_name)
-            input_limit: int = getattr(model_data, "input_token_limit", 1048576)
-
-            model_id = model_name
-            model_id = model_id.removeprefix("models/")
-
-            gen_methods: list[str] = getattr(
-                model_data,
-                "supported_generation_methods",
-                [],
-            )
-            supports_tools = "generateContent" in gen_methods
-            supports_streaming = "streamGenerateContent" in gen_methods
-            supports_vision = supports_tools
-
-            models.append(
-                ModelInfo(
-                    id=model_id,
-                    name=display_name or model_id,
-                    provider=provider_ids.GOOGLE,
-                    context_window=input_limit,
-                    supports_tools=supports_tools,
-                    supports_vision=supports_vision,
-                    supports_streaming=supports_streaming,
-                    input_cost_per_1m_tokens=None,
-                    output_cost_per_1m_tokens=None,
-                ),
-            )
+            info = self._model_info_from_listing(model_data)
+            if info is not None:
+                models.append(info)
         sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
         self._logger.info(
             "google_models_listed",
             count=len(sorted_models),
         )
         return sorted_models
+
+    def _model_info_from_listing(self, model_data: types.Model) -> ModelInfo | None:
+        """Build a chat model's record from its ``models.list`` entry.
+
+        google-genai 2.x reports what a model can be called with in
+        ``supported_actions`` (the API's ``supportedGenerationMethods``). A
+        model that states actions but not ``generateContent`` is not a chat
+        model and is skipped; streaming is served for every model that
+        generates content. The token limits and ``thinking`` flag the entry
+        states are ingested as the model's endpoint-metadata capability
+        layer; a limit the entry omits leaves the preset's value standing.
+
+        Args:
+            model_data: One model from the SDK's listing.
+
+        Returns:
+            ModelInfo | None: The model's record, or ``None`` when the entry
+            is not a Gemini chat model.
+        """
+        model_name = model_data.name or ""
+        name_lower = model_name.lower()
+        if "gemini" not in name_lower or "embedding" in name_lower:
+            return None
+        actions = model_data.supported_actions
+        if actions is not None and _GENERATE_CONTENT_ACTION not in actions:
+            return None
+        model_id = model_name.removeprefix("models/")
+        stated: dict[str, Any] = {}
+        if model_data.input_token_limit:
+            stated["context_window"] = model_data.input_token_limit
+            stated["max_input_tokens"] = model_data.input_token_limit
+        if model_data.output_token_limit:
+            stated["max_output_tokens"] = model_data.output_token_limit
+        if actions is not None:
+            stated["supports_streaming"] = True
+        capabilities = merge_capabilities(self.capabilities_for(model_id), CapabilityOverride.from_mapping(stated))
+        if model_data.thinking is False and capabilities.reasoning.supported:
+            capabilities = replace(capabilities, reasoning=ReasoningSupport(supported=False))
+        self.ingest_model_capabilities(model_id, capabilities)
+        return ModelInfo(
+            id=model_id,
+            name=model_data.display_name or model_id,
+            provider=provider_ids.GOOGLE,
+            context_window=capabilities.context_window or GEMINI_CONTEXT_WINDOW,
+            supports_tools=capabilities.supports_tools,
+            supports_vision=capabilities.supports_vision,
+            supports_streaming=capabilities.supports_streaming,
+            input_cost_per_1m_tokens=capabilities.input_cost_per_1m_tokens,
+            output_cost_per_1m_tokens=capabilities.output_cost_per_1m_tokens,
+            capabilities=capabilities,
+        )
 
     async def chat(
         self,
@@ -375,8 +403,8 @@ class GoogleProvider(LLMProviderBase):
             self._logger.debug("google_cache_implicit", model=model)
 
         system_instruction = self._extract_system_messages(messages)
-        gemini_contents = self.convert_messages_to_provider_format(messages)
-        gemini_tools = self._build_tool_declarations(tools) if tools else None
+        gemini_contents = self._gemini_contents(messages, model)
+        gemini_tools = (self._build_tool_declarations(tools, model) or None) if tools else None
 
         log_provider_request(
             provider="google",
@@ -412,7 +440,7 @@ class GoogleProvider(LLMProviderBase):
             self._logger.warning(
                 "google_chat_failed",
                 model=model,
-                error=str(e),
+                error=self._redact_error_text(e),
                 code=e.code,
             )
             if e.code in _AUTH_STATUS_CODES:
@@ -424,7 +452,7 @@ class GoogleProvider(LLMProviderBase):
             self._logger.warning(
                 "google_chat_failed",
                 model=model,
-                error=str(e),
+                error=self._redact_error_text(e),
             )
             raise ProviderError(_MSG_REQUEST_FAILED) from e
         else:
@@ -587,8 +615,8 @@ class GoogleProvider(LLMProviderBase):
         )
 
         system_instruction = self._extract_system_messages(messages)
-        gemini_contents = self.convert_messages_to_provider_format(messages)
-        gemini_tools = self._build_tool_declarations(tools) if tools else None
+        gemini_contents = self._gemini_contents(messages, model)
+        gemini_tools = (self._build_tool_declarations(tools, model) or None) if tools else None
         chunk_count = 0
 
         chunk_counter = [0]
@@ -621,7 +649,7 @@ class GoogleProvider(LLMProviderBase):
             self._logger.warning(
                 "google_chat_stream_failed",
                 model=model,
-                error=str(e),
+                error=self._redact_error_text(e),
                 code=e.code,
                 chunks_received=chunk_count,
                 cancel_requested=self._cancel_requested,
@@ -637,7 +665,7 @@ class GoogleProvider(LLMProviderBase):
             self._logger.warning(
                 "google_chat_stream_failed",
                 model=model,
-                error=str(e),
+                error=self._redact_error_text(e),
                 chunks_received=chunk_count,
                 cancel_requested=self._cancel_requested,
             )
@@ -873,7 +901,7 @@ class GoogleProvider(LLMProviderBase):
                     "google_chat_quota_exhausted",
                     model=model,
                     code=code,
-                    error=str(exc),
+                    error=self._redact_error_text(exc),
                 )
                 raise ProviderError(_MSG_QUOTA_EXHAUSTED) from exc
             if code in _RATE_LIMIT_STATUS_CODES or code >= _HTTP_SERVER_ERROR_MIN:
@@ -881,13 +909,14 @@ class GoogleProvider(LLMProviderBase):
                     "google_chat_retryable",
                     model=model,
                     code=code,
-                    error=str(exc),
+                    error=self._redact_error_text(exc),
                 )
                 raise RateLimitError(_MSG_RATE_LIMITED) from exc
-            log_passthrough(
-                self._logger,
-                "google_generate_content_passthrough",
-                exc,
+            self._logger.warning(
+                "passthrough_exception",
+                op_event="google_generate_content_passthrough",
+                error=self._redact_error_text(exc),
+                error_type=type(exc).__name__,
                 provider="google",
                 model=model,
                 code=code,
@@ -1193,14 +1222,32 @@ class GoogleProvider(LLMProviderBase):
         Returns:
             list[dict[str, object]]: List of content dictionaries in Gemini's expected format.
         """
+        return self._gemini_contents(messages, "")
+
+    def _gemini_contents(self, messages: list[Message], model: str) -> list[dict[str, object]]:
+        """Convert internal messages to Gemini contents for one model.
+
+        The conversion reads the model's resolved capability record -- whether
+        it accepts image parts, for one -- so a per-model override or the
+        metadata the models endpoint stated for it applies to the request.
+
+        Args:
+            messages: List of Message objects to convert.
+            model: The model the contents are sent to. The empty string
+                resolves the provider's default record.
+
+        Returns:
+            list[dict[str, object]]: Content dictionaries in Gemini's format.
+        """
         return cast(
             "list[dict[str, object]]",
-            self._adapter.build_contents(messages, self.capabilities_for("")),
+            self._adapter.build_contents(messages, self.capabilities_for(model)),
         )
 
     def _build_tool_declarations(
         self,
         tools: list[ToolDefinition],
+        model: str = "",
     ) -> list[types.Tool]:
         """Build Gemini tool declarations from ToolDefinitions.
 
@@ -1211,12 +1258,16 @@ class GoogleProvider(LLMProviderBase):
 
         Args:
             tools: List of ToolDefinition objects to convert.
+            model: The model the declarations are sent to, whose capability
+                record decides whether tools are sent and how many fit. The
+                empty string resolves the provider's default record.
 
         Returns:
             list[types.Tool]: List of Gemini Tool objects for function calling.
+            Empty when the model's record says it takes no tools.
         """
         function_declarations: list[types.FunctionDeclaration] = []
-        for declaration in self._gemini_declarations(tools):
+        for declaration in self._gemini_declarations(tools, model):
             parameters = declaration.get("parameters")
             params: dict[str, Any] = parameters if is_json_object(parameters) else {}
             raw_properties = params.get("properties")
@@ -1234,7 +1285,7 @@ class GoogleProvider(LLMProviderBase):
                     ),
                 ),
             )
-        return [types.Tool(function_declarations=function_declarations)]
+        return [types.Tool(function_declarations=function_declarations)] if function_declarations else []
 
     @override
     def _convert_tools_to_provider_format(
@@ -1251,11 +1302,13 @@ class GoogleProvider(LLMProviderBase):
         """
         return cast("list[dict[str, object]]", self._gemini_declarations(tools))
 
-    def _gemini_declarations(self, tools: list[ToolDefinition]) -> list[dict[str, Any]]:
+    def _gemini_declarations(self, tools: list[ToolDefinition], model: str = "") -> list[dict[str, Any]]:
         """Build the flat function-declaration list for a tool set.
 
         Args:
             tools: Tool definitions in final priority order.
+            model: The model the declarations are sent to. The empty string
+                resolves the provider's default record.
 
         Returns:
             list[dict[str, Any]]: One declaration per tool function, in input
@@ -1263,7 +1316,7 @@ class GoogleProvider(LLMProviderBase):
             they are unwrapped here because both the SDK builder and the
             legacy dict conversion want the flat list.
         """
-        capabilities = self.capabilities_for("")
+        capabilities = self.capabilities_for(model)
         declarations: list[dict[str, Any]] = []
         for entry in self._adapter.build_tool_schemas(self._enforce_tool_count_cap(tools, capabilities), capabilities):
             raw = entry.get("functionDeclarations")

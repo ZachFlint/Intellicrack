@@ -25,7 +25,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final, override
 from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ModelInfo
-from intellicrack.providers.capabilities import CapabilityOverride
+from intellicrack.providers.capabilities import (
+    ANTHROPIC_EFFORT_LEVELS,
+    CapabilityOverride,
+    ReasoningEffortFormat,
+    ReasoningSupport,
+)
 
 
 if TYPE_CHECKING:
@@ -225,7 +230,7 @@ def ingest_model_entry(entry: dict[str, Any]) -> IngestedModel | None:
     model_id = entry.get("id") or entry.get("name") or entry.get("model")
     if not isinstance(model_id, str) or not model_id:
         return None
-    display = entry.get("name")
+    display = entry.get("display_name") or entry.get("name")
     display_name = display if isinstance(display, str) and display else model_id
 
     stated: dict[str, Any] = _stated_limits(entry)
@@ -238,6 +243,18 @@ def ingest_model_entry(entry: dict[str, Any]) -> IngestedModel | None:
     tools = _states_tools(entry)
     if tools is not None:
         stated["supports_tools"] = tools
+
+    temperature = _states_temperature(entry)
+    if temperature is not None:
+        stated["supports_temperature"] = temperature
+
+    reasoning = _states_reasoning(entry)
+    if reasoning is not None:
+        stated["reasoning"] = _reasoning_mapping(reasoning)
+
+    structured = _capability_flag(entry, "structured_outputs")
+    if structured is not None:
+        stated["supports_structured_outputs"] = structured
 
     return IngestedModel(
         model_id=model_id,
@@ -313,14 +330,129 @@ def _states_vision(entry: dict[str, Any]) -> bool | None:
         if is_json_array(input_modalities):
             modalities: list[Any] = input_modalities
             return any(str(item).lower() == "image" for item in modalities)
-    capabilities = entry.get("capabilities")
-    if is_json_object(capabilities):
-        caps: dict[str, Any] = capabilities
-        for key in ("vision", "images", "image_input"):
-            value = caps.get(key)
-            if isinstance(value, bool):
-                return value
+    for key in ("vision", "images", "image_input"):
+        value = _capability_flag(entry, key)
+        if value is not None:
+            return value
     return None
+
+
+def _states_temperature(entry: dict[str, Any]) -> bool | None:
+    """Read whether an entry states that the model accepts a temperature.
+
+    OpenRouter lists every request parameter a model honours in
+    ``supported_parameters``; a model whose list omits ``temperature``
+    rejects or ignores sampling control.
+
+    Args:
+        entry: One model entry.
+
+    Returns:
+        bool | None: The stated value, or ``None`` when the entry is silent.
+    """
+    supported = entry.get("supported_parameters")
+    if not is_json_array(supported):
+        return None
+    names: list[Any] = supported
+    return any(str(name) == "temperature" for name in names)
+
+
+def _capability_flag(entry: dict[str, Any], key: str) -> bool | None:
+    """Read one flag from an entry's ``capabilities`` object.
+
+    Args:
+        entry: One model entry.
+        key: The capability name.
+
+    Returns:
+        bool | None: The stated value, or ``None`` when the entry is silent.
+    """
+    capabilities = entry.get("capabilities")
+    if not is_json_object(capabilities):
+        return None
+    caps: dict[str, Any] = capabilities
+    return _stated_support(caps.get(key))
+
+
+def _stated_support(value: object) -> bool | None:
+    """Read a capability stated as a boolean or as a ``supported`` object.
+
+    Endpoints state a capability either as a bare boolean or, as Anthropic's
+    ``/v1/models`` does, as an object carrying a boolean ``supported``.
+
+    Args:
+        value: The capability's stated value.
+
+    Returns:
+        bool | None: The stated support, or ``None`` when nothing usable is
+        stated.
+    """
+    if isinstance(value, bool):
+        return value
+    if is_json_object(value):
+        support: dict[str, Any] = value
+        supported = support.get("supported")
+        if isinstance(supported, bool):
+            return supported
+    return None
+
+
+def _states_reasoning(entry: dict[str, Any]) -> ReasoningSupport | None:
+    """Read the thinking surface an Anthropic-shaped entry states.
+
+    Anthropic's ``/v1/models`` reports ``capabilities.thinking`` with the
+    thinking ``types`` a model accepts and ``capabilities.effort`` with the
+    effort levels it accepts. A model that accepts ``adaptive`` thinking is
+    driven through it and ``output_config.effort``, because the budget form is
+    deprecated where both are accepted and rejected on the models that only
+    accept ``adaptive``.
+
+    Args:
+        entry: One model entry.
+
+    Returns:
+        ReasoningSupport | None: The stated reasoning surface, or ``None``
+        when the entry says nothing about thinking.
+    """
+    capabilities = entry.get("capabilities")
+    if not is_json_object(capabilities):
+        return None
+    caps: dict[str, Any] = capabilities
+    raw_thinking = caps.get("thinking")
+    if not is_json_object(raw_thinking):
+        return None
+    thinking: dict[str, Any] = raw_thinking
+    supported = _stated_support(thinking)
+    if supported is False:
+        return ReasoningSupport(supported=False)
+    raw_types = thinking.get("types")
+    types: dict[str, Any] = raw_types if is_json_object(raw_types) else {}
+    if _stated_support(types.get("adaptive")):
+        raw_effort = caps.get("effort")
+        effort: dict[str, Any] = raw_effort if is_json_object(raw_effort) else {}
+        levels = tuple(level for level in ANTHROPIC_EFFORT_LEVELS if _stated_support(effort.get(level)))
+        return ReasoningSupport(
+            supported=True,
+            effort_levels=levels,
+            effort_format=ReasoningEffortFormat.ADAPTIVE_EFFORT,
+            interleaved=True,
+        )
+    if _stated_support(types.get("enabled")) or supported:
+        return ReasoningSupport(supported=True, effort_format=ReasoningEffortFormat.THINKING_BUDGET, interleaved=True)
+    return None
+
+
+def _reasoning_mapping(reasoning: ReasoningSupport) -> dict[str, Any]:
+    """Express a reasoning record in the override mapping form.
+
+    Args:
+        reasoning: The reasoning record.
+
+    Returns:
+        dict[str, Any]: The mapping :meth:`CapabilityOverride.from_mapping`
+        reads back into the same record.
+    """
+    return CapabilityOverride(reasoning=reasoning).to_mapping()["reasoning"]
 
 
 def _states_tools(entry: dict[str, Any]) -> bool | None:
