@@ -10,8 +10,11 @@ This module handles loading and validating API credentials from .env files for v
 from __future__ import annotations
 
 import functools
+import getpass
 import os
 import re
+import stat
+import sys
 import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -19,6 +22,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import ClassVar, Final
 
+from intellicrack.core import subprocess_compat
 from intellicrack.core.config import get_env_file, get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials
@@ -1043,6 +1047,12 @@ class CredentialLoader:
     def _write_env_file_lines(self, lines: list[str]) -> None:
         """Write lines, each carrying its own line ending, to the ``.env`` file.
 
+        Restricts the file's permissions to the owning user after writing,
+        since the file holds provider API keys and other credentials in
+        clear text. Permission restriction is best-effort: a failure to
+        tighten permissions is logged but never prevents the credential
+        write itself from succeeding.
+
         Args:
             lines: The complete file content split into lines.
 
@@ -1056,6 +1066,47 @@ class CredentialLoader:
         except OSError:
             _logger.exception("env_file_write_failed", path=str(self.env_path))
             raise
+        self._restrict_env_file_permissions()
+
+    def _restrict_env_file_permissions(self) -> None:
+        """Restrict the ``.env`` file to owner-only access.
+
+        On POSIX platforms this clears group/other permission bits so only
+        the owning user can read or write the file. On Windows, it strips
+        inherited ACEs and grants full control only to the current user via
+        ``icacls``, which ships with every supported Windows release.
+        """
+        if sys.platform == "win32":
+            username = os.environ.get("USERNAME") or getpass.getuser()
+            try:
+                result = subprocess_compat.run(
+                    [
+                        "icacls",
+                        str(self.env_path),
+                        "/inheritance:r",
+                        "/grant:r",
+                        f"{username}:(R,W)",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    creationflags=subprocess_compat.CREATE_NO_WINDOW,
+                    check=False,
+                )
+            except (OSError, subprocess_compat.SubprocessError):
+                _logger.warning("env_file_permission_restrict_failed", path=str(self.env_path))
+                return
+            if result.returncode != 0:
+                _logger.warning(
+                    "env_file_permission_restrict_failed",
+                    path=str(self.env_path),
+                    stderr=result.stderr.strip(),
+                )
+            return
+        try:
+            self.env_path.chmod(stat.S_IRUSR | stat.S_IWUSR)
+        except OSError:
+            _logger.warning("env_file_permission_restrict_failed", path=str(self.env_path))
 
 
 def get_api_key_env_var_mapping() -> dict[str, str]:
