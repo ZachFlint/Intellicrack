@@ -43,18 +43,20 @@ from intellicrack.core.types import (
     StructuredResultPart,
     TextResultPart,
     ToolDefinition,
+    ToolError,
     ToolFunction,
+    ToolOutput,
     ToolResultPart,
 )
 from intellicrack.mcp.config import NAMESPACE_PREFIX, from_canonical_name, is_mcp_namespace, to_canonical_name
-from intellicrack.mcp.errors import McpConnectionError, McpError, McpProtocolError
+from intellicrack.mcp.errors import McpConfigError, McpConnectionError, McpError, McpProtocolError
 from intellicrack.mcp.policy import ToolCost, enabled_entries, estimate_tool_cost
 from intellicrack.mcp.validation import validate_against_schema
 from intellicrack.providers.tool_names import to_wire_name
 
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
 
     from mcp_types import CallToolResult
 
@@ -89,6 +91,19 @@ _SEARCH_FUNCTION_HINT: Final[str] = "tools.search(query)"
 """How the prompt names the discovery meta-tool when pointing at MCP tools."""
 
 
+def strip_control_characters(text: str) -> str:
+    """Drop every control and format character except newline and tab.
+
+    Args:
+        text: Text an external server supplied.
+
+    Returns:
+        str: The text with terminal escapes, bidirectional overrides and
+        other invisible control code points removed.
+    """
+    return "".join(character for character in text if character in {"\n", "\t"} or unicodedata.category(character)[0] != "C")
+
+
 def sanitize_untrusted_text(text: str, *, limit: int = DEFAULT_UNTRUSTED_LIMIT) -> str:
     """Bound and fence a piece of text an external server supplied.
 
@@ -104,7 +119,7 @@ def sanitize_untrusted_text(text: str, *, limit: int = DEFAULT_UNTRUSTED_LIMIT) 
     Returns:
         str: The fenced, bounded text.
     """
-    cleaned = "".join(character for character in text if character in {"\n", "\t"} or unicodedata.category(character)[0] != "C")
+    cleaned = strip_control_characters(text)
     cleaned = cleaned.replace(UNTRUSTED_BLOCK_START, "[fence]").replace(UNTRUSTED_BLOCK_END, "[fence]")
     if len(cleaned) > limit:
         cleaned = f"{cleaned[:limit]}{_TRUNCATION_NOTE.format(omitted=len(cleaned) - limit)}"
@@ -136,6 +151,11 @@ def map_tool_to_function(entry: McpToolEntry) -> ToolFunction:
     authoritative, so ``parameters`` is deliberately left empty rather than
     being a lossy second description of the same thing.
 
+    The server's own description is fenced here, once, so every place the
+    description travels -- the system prompt, ``tools.search`` results and
+    each provider's tool definitions -- carries it as marked, bounded,
+    control-free data rather than as instruction.
+
     Args:
         entry: The server's tool.
 
@@ -144,7 +164,12 @@ def map_tool_to_function(entry: McpToolEntry) -> ToolFunction:
     """
     server_id, _ = from_canonical_name(entry.canonical_name)
     prefix = _SOURCE_PREFIX.format(server_id=server_id)
-    description = entry.description.strip() or f"Tool {entry.name!r} provided by MCP server {server_id!r}."
+    raw_description = entry.description.strip()
+    description = (
+        sanitize_untrusted_text(raw_description)
+        if raw_description
+        else f"Tool {strip_control_characters(entry.name)!r} provided by MCP server {server_id!r}."
+    )
     returns = "structured output matching the server's declared schema" if entry.output_schema else "the server's tool result"
     return ToolFunction(
         name=entry.canonical_name,
@@ -173,6 +198,31 @@ def _text_from_resource(resource: object) -> tuple[str, str | None, str | None, 
     return uri, text if isinstance(text, str) else None, blob if isinstance(blob, str) else None, mime_type
 
 
+def _optional_clean(value: object) -> str | None:
+    """Strip control characters from an optional server-supplied label.
+
+    Args:
+        value: A name, media type or similar short field, or ``None``.
+
+    Returns:
+        str | None: The cleaned text, or ``None`` when the field was absent.
+    """
+    return None if value is None else strip_control_characters(str(value))
+
+
+def _optional_fenced(value: object) -> str | None:
+    """Fence an optional piece of server-supplied prose.
+
+    Args:
+        value: A description or similar free text, or ``None``.
+
+    Returns:
+        str | None: The fenced text, or ``None`` when the field was absent or
+        empty.
+    """
+    return sanitize_untrusted_text(str(value)) if value else None
+
+
 def _map_content_block(block: object) -> ToolResultPart | None:
     """Convert one protocol content block into a result part.
 
@@ -185,21 +235,32 @@ def _map_content_block(block: object) -> ToolResultPart | None:
     """
     kind = getattr(block, "type", None)
     if kind == "text":
-        return TextResultPart(text=str(getattr(block, "text", "")))
+        return TextResultPart(text=sanitize_untrusted_text(str(getattr(block, "text", "")), limit=MAX_TEXT_PART_CHARS))
     if kind == "image":
-        return ImageResultPart(data=str(getattr(block, "data", "")), mime_type=str(getattr(block, "mime_type", "")))
+        return ImageResultPart(
+            data=str(getattr(block, "data", "")),
+            mime_type=strip_control_characters(str(getattr(block, "mime_type", ""))),
+        )
     if kind == "audio":
-        return AudioResultPart(data=str(getattr(block, "data", "")), mime_type=str(getattr(block, "mime_type", "")))
+        return AudioResultPart(
+            data=str(getattr(block, "data", "")),
+            mime_type=strip_control_characters(str(getattr(block, "mime_type", ""))),
+        )
     if kind == "resource_link":
         return ResourceLinkPart(
-            uri=str(getattr(block, "uri", "")),
-            name=getattr(block, "name", None),
-            mime_type=getattr(block, "mime_type", None),
-            description=getattr(block, "description", None),
+            uri=strip_control_characters(str(getattr(block, "uri", ""))),
+            name=_optional_clean(getattr(block, "name", None)),
+            mime_type=_optional_clean(getattr(block, "mime_type", None)),
+            description=_optional_fenced(getattr(block, "description", None)),
         )
     if kind == "resource":
         uri, text, data, mime_type = _text_from_resource(getattr(block, "resource", None))
-        return EmbeddedResourcePart(uri=uri, text=text, data=data, mime_type=mime_type)
+        return EmbeddedResourcePart(
+            uri=strip_control_characters(uri),
+            text=None if text is None else sanitize_untrusted_text(text, limit=MAX_TEXT_PART_CHARS),
+            data=data,
+            mime_type=_optional_clean(mime_type),
+        )
     _logger.warning("mcp_result_block_unsupported", block_type=str(kind))
     return None
 
@@ -224,28 +285,15 @@ def _part_size(part: ToolResultPart) -> int:
     return len(part.uri.encode("utf-8", errors="ignore"))
 
 
-def _bound_part(part: ToolResultPart) -> ToolResultPart:
-    """Trim one oversized text part down to its own limit.
-
-    Args:
-        part: The part to bound.
-
-    Returns:
-        ToolResultPart: The part, truncated when it is text past the limit
-        and unchanged otherwise. Binary parts are not truncated, because half
-        a base64 payload is not a smaller payload, it is a corrupt one.
-    """
-    if isinstance(part, TextResultPart) and len(part.text) > MAX_TEXT_PART_CHARS:
-        omitted = len(part.text) - MAX_TEXT_PART_CHARS
-        return TextResultPart(text=f"{part.text[:MAX_TEXT_PART_CHARS]}{_TRUNCATION_NOTE.format(omitted=omitted)}")
-    return part
-
-
 def map_result(result: CallToolResult) -> tuple[list[ToolResultPart], bool]:
     """Convert a protocol tool result into Intellicrack's multi-part result.
 
     Parts keep the order the server sent them, and structured content becomes
-    a final structured part. The whole result is bounded: once
+    a final structured part. Every piece of server prose is stripped of
+    control characters and fenced as untrusted data; a text part longer than
+    :data:`MAX_TEXT_PART_CHARS` is truncated inside its fence. Binary parts
+    are never truncated, because half a base64 payload is not a smaller
+    payload, it is a corrupt one. The whole result is bounded: once
     :data:`MAX_RESULT_BYTES` is reached the remaining parts are replaced by a
     note saying how many were dropped, so a server cannot flood the context
     window with one call.
@@ -265,13 +313,12 @@ def map_result(result: CallToolResult) -> tuple[list[ToolResultPart], bool]:
         mapped = _map_content_block(block)
         if mapped is None:
             continue
-        bounded = _bound_part(mapped)
-        size = _part_size(bounded)
+        size = _part_size(mapped)
         if size > budget:
             dropped += 1
             continue
         budget -= size
-        parts.append(bounded)
+        parts.append(mapped)
 
     structured: object = result.structured_content
     if is_json_object(structured):
@@ -290,6 +337,19 @@ def map_result(result: CallToolResult) -> tuple[list[ToolResultPart], bool]:
         )
 
     return parts, bool(result.is_error)
+
+
+def estimate_entry_costs(entries: Iterable[McpToolEntry]) -> list[ToolCost]:
+    """Price a set of catalog entries as the model would see them.
+
+    Args:
+        entries: The tools to price.
+
+    Returns:
+        list[ToolCost]: One cost per entry, in order, measured on the exact
+        definition :func:`map_tool_to_function` advertises.
+    """
+    return [estimate_tool_cost(map_tool_to_function(entry)) for entry in entries]
 
 
 def validate_structured_content(entry: McpToolEntry, content: Mapping[str, Any]) -> None:
@@ -375,18 +435,19 @@ class McpToolSource:
                 """
                 return self._definitions_for(server_id)
 
-            async def _execute(function_name: str, arguments: dict[str, Any], server_id: str = server_id) -> object:
+            async def _execute(function_name: str, arguments: dict[str, Any], server_id: str = server_id) -> ToolOutput:
                 """Dispatch one call to this server.
 
                 Args:
                     function_name: Canonical dotted function name.
                     arguments: Parsed call arguments.
-                    server_id: The server to call, bound at registration.
+                    server_id: The server this namespace routes to, bound at
+                        registration.
 
                 Returns:
-                    object: The mapped result parts.
+                    ToolOutput: The mapped result parts and error flag.
                 """
-                return await self._execute_on(server_id, function_name, arguments)
+                return await self.execute(function_name, arguments, routed_server_id=server_id)
 
             self._registry.external_tools.register(namespace, _execute, definitions=_definitions)
             self._registered.append(namespace)
@@ -439,20 +500,7 @@ class McpToolSource:
                     functions=[map_tool_to_function(entry) for entry in entries],
                 ),
             ]
-        else:
-            return []
-
-    def definitions(self) -> list[ToolDefinition]:
-        """Build the tool definitions every connected server contributes.
-
-        Returns:
-            list[ToolDefinition]: One definition per contributing server, in
-            configuration order.
-        """
-        collected: list[ToolDefinition] = []
-        for config in self._manager.document.servers:
-            collected.extend(self._definitions_for(config.server_id))
-        return collected
+        return []
 
     def owns_namespace(self, namespace: str) -> bool:
         """Report whether a tool namespace belongs to a configured server.
@@ -520,7 +568,7 @@ class McpToolSource:
             return None
         try:
             server_id, tool_name = from_canonical_name(canonical_name)
-        except McpProtocolError:
+        except McpConfigError:
             return None
         connection = self._manager.connection(server_id)
         catalog = connection.catalog if connection is not None else None
@@ -541,7 +589,7 @@ class McpToolSource:
         """
         try:
             server_id, _ = from_canonical_name(canonical_name)
-        except McpProtocolError:
+        except McpConfigError:
             return None
         connection = self._manager.connection(server_id)
         catalog = connection.catalog if connection is not None else None
@@ -564,7 +612,7 @@ class McpToolSource:
         """
         try:
             server_id, _ = from_canonical_name(canonical_name)
-        except McpProtocolError:
+        except McpConfigError:
             return False
         if not self._manager.consent.is_trusted(server_id):
             return False
@@ -586,10 +634,18 @@ class McpToolSource:
         catalog = connection.catalog if connection is not None else None
         if catalog is None:
             return []
-        return [estimate_tool_cost(map_tool_to_function(entry)) for entry in catalog.entries]
+        return estimate_entry_costs(catalog.entries)
 
-    async def _execute_on(self, server_id: str, function_name: str, arguments: dict[str, Any]) -> object:
+    async def _execute_on(self, server_id: str, function_name: str, arguments: dict[str, Any]) -> ToolOutput:
         """Run one tool call against one server.
+
+        Everything that stops the call from producing a result -- a server
+        that is down or times out, an argument the server rejects as invalid
+        (JSON-RPC ``-32602``), a tool the operator switched off, a name that
+        is not a well-formed MCP tool name, or structured output that breaks
+        the tool's own ``outputSchema`` -- is raised as :class:`ToolError`,
+        which the tool registry and the orchestrator turn into a failed
+        :class:`~intellicrack.core.types.ToolResult` for the model to read.
 
         Args:
             server_id: The server that owns the tool.
@@ -597,16 +653,40 @@ class McpToolSource:
             arguments: Parsed call arguments.
 
         Returns:
-            object: The mapped result parts. A server-reported error is
-            returned as parts with the failure recorded, not raised, so the
-            model sees what the tool said went wrong.
-
-        A tool that violated its own output schema propagates
-        :class:`McpProtocolError` from the structured-content check.
+            ToolOutput: Every result part the server sent. A result the server
+            flagged ``isError`` comes back with ``is_error`` set and its full
+            content intact, not raised, so the model sees exactly what the
+            tool said went wrong.
 
         Raises:
-            McpConnectionError: If the server is not connected, or the call
-                could not be delivered.
+            ToolError: If the call could not produce a usable result.
+        """
+        try:
+            return await self._call_tool(server_id, function_name, arguments)
+        except McpError as exc:
+            _logger.warning(
+                "mcp_tool_call_failed",
+                server_id=server_id,
+                function_name=function_name,
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
+            raise ToolError(str(exc), tool_name=f"{NAMESPACE_PREFIX}{server_id}") from exc
+
+    async def _call_tool(self, server_id: str, function_name: str, arguments: dict[str, Any]) -> ToolOutput:
+        """Deliver one call and map the server's answer.
+
+        Args:
+            server_id: The server that owns the tool.
+            function_name: Canonical dotted function name.
+            arguments: Parsed call arguments.
+
+        Returns:
+            ToolOutput: The mapped result parts and the server's error flag.
+
+        Raises:
+            McpConnectionError: If the server is not running, the tool is
+                switched off, or the call could not be delivered.
         """
         connection = self._manager.connection(server_id)
         if connection is None:
@@ -626,28 +706,41 @@ class McpToolSource:
         if entry is not None and not is_error and is_json_object(structured):
             validate_structured_content(entry, structured)
 
-        if is_error:
-            rendered = " ".join(part.text for part in parts if isinstance(part, TextResultPart))
-            message = f"tool {tool_name!r} on MCP server '{server_id}' reported an error: {rendered[:512] or 'no detail supplied'}"
-            raise McpConnectionError(message)
-        return parts
+        if is_error and not parts:
+            parts.append(TextResultPart(text=f"tool {tool_name!r} on MCP server '{server_id}' reported an error without any detail"))
+        return ToolOutput(parts=tuple(parts), is_error=is_error)
 
-    async def execute(self, function_name: str, arguments: dict[str, Any]) -> object:
+    async def execute(self, function_name: str, arguments: dict[str, Any], *, routed_server_id: str | None = None) -> ToolOutput:
         """Run one tool call, resolving its server from the canonical name.
+
+        This is the single dispatch path: every namespace the source
+        registers routes through it. The server is always the one the
+        canonical name itself names; a registry that routed the call by a
+        different namespace is refused rather than silently delivering one
+        server's tool name to another server.
 
         Args:
             function_name: Canonical dotted function name.
             arguments: Parsed call arguments.
-
-        A name that does not belong to an MCP server propagates
-        :class:`McpProtocolError` from :func:`from_canonical_name`, and a
-        server that is not connected, or a call that could not be delivered,
-        propagates :class:`McpConnectionError` from :meth:`_execute_on`.
+            routed_server_id: The server whose namespace the registry routed
+                the call through, or ``None`` when the caller did not route.
 
         Returns:
-            object: The mapped result parts.
+            ToolOutput: The mapped result parts and the server's error flag.
+
+        Raises:
+            ToolError: If the name is not a well-formed MCP tool name, names a
+                server other than the one it was routed to, or the call could
+                not produce a usable result.
         """
-        server_id, _ = from_canonical_name(function_name)
+        namespace = function_name.partition(".")[0]
+        try:
+            server_id, _ = from_canonical_name(function_name)
+        except McpConfigError as exc:
+            raise ToolError(str(exc), tool_name=namespace) from exc
+        if routed_server_id is not None and server_id != routed_server_id:
+            message = f"{function_name!r} names MCP server '{server_id}', but was routed to MCP server '{routed_server_id}'"
+            raise ToolError(message, tool_name=namespace)
         return await self._execute_on(server_id, function_name, arguments)
 
 
@@ -659,12 +752,14 @@ __all__ = [
     "UNTRUSTED_BLOCK_END",
     "UNTRUSTED_BLOCK_START",
     "McpToolSource",
+    "estimate_entry_costs",
     "from_canonical_name",
     "is_mcp_namespace",
     "map_result",
     "map_tool_to_function",
     "sanitize_untrusted_text",
     "source_label",
+    "strip_control_characters",
     "to_canonical_name",
     "validate_structured_content",
 ]

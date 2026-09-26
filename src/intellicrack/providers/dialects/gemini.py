@@ -18,9 +18,10 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import uuid
 from typing import TYPE_CHECKING, Any, ClassVar, Final, override
 
-from intellicrack.bridges.json_schema import function_parameters
+from intellicrack.bridges.json_schema import gemini_function_parameters
 from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
@@ -66,6 +67,12 @@ GEMINI_API_KEY_HEADER: Final[str] = "x-goog-api-key"
 """Header Gemini authenticates with when the key is not in the query string."""
 
 _THOUGHT_SIGNATURE_KEY: Final[str] = "thought_signature"
+
+_SSE_QUERY: Final[str] = "alt=sse"
+"""Query string that makes ``streamGenerateContent`` answer as server-sent events."""
+
+_LOCAL_CALL_ID_PREFIX: Final[str] = "gemini_call_"
+"""Prefix of a call id minted locally for a function call Gemini sent without one."""
 
 
 _NARRATIVE_KEY: Final[str] = "content"
@@ -118,7 +125,10 @@ class GeminiAdapter(DialectAdapter):
         entry per function, so the return value is a single-element list. A
         function carrying a raw JSON Schema is reduced to Gemini's supported
         subset first, since Gemini rejects ``$ref``, composition keywords and
-        lowercase type names outright.
+        lowercase type names outright. A function with no arguments declares
+        no ``parameters``, and one with open-ended objects is declared through
+        ``parametersJsonSchema``, because Gemini rejects an ``OBJECT`` with no
+        properties.
 
         Args:
             tools: Tool definitions in final priority order.
@@ -134,14 +144,12 @@ class GeminiAdapter(DialectAdapter):
             return []
         declarations: list[dict[str, Any]] = []
         for tool in tools:
-            declarations.extend(
-                {
-                    "name": wire_function_name(func.name, name_style),
-                    "description": func.description,
-                    "parameters": function_parameters(func, uppercase_types=True),
-                }
-                for func in tool.functions
-            )
+            for func in tool.functions:
+                declaration: dict[str, Any] = {"name": wire_function_name(func.name, name_style), "description": func.description}
+                arguments = gemini_function_parameters(func)
+                if arguments is not None:
+                    declaration[arguments[0]] = arguments[1]
+                declarations.append(declaration)
         return [{"functionDeclarations": declarations}] if declarations else []
 
     def build_contents(
@@ -222,13 +230,20 @@ class GeminiAdapter(DialectAdapter):
         if the signature does not come back. Older models never produce one,
         so the key is omitted entirely rather than sent empty.
 
+        The signature is a protobuf ``bytes`` field, whose JSON form is the
+        base64 string itself, so the stored string is sent verbatim; that is
+        what the REST endpoint expects and what ``google-genai`` validates
+        back into bytes. A stored value that is not valid base64 is dropped
+        rather than sent, since Gemini would reject the whole request.
+
         Args:
             tool_call: The tool call being replayed.
             name_style: How canonical dotted names are written onto the wire.
 
         Returns:
-            dict[str, Any]: A Gemini ``Part``-shaped dict carrying the
-            function call and, when present, the decoded signature bytes.
+            dict[str, Any]: A JSON-serializable Gemini ``Part``-shaped dict
+            carrying the function call and, when present, the base64
+            signature string.
         """
         part: dict[str, Any] = {
             "function_call": {
@@ -238,9 +253,11 @@ class GeminiAdapter(DialectAdapter):
         }
         if tool_call.thought_signature:
             try:
-                part[_THOUGHT_SIGNATURE_KEY] = base64.b64decode(tool_call.thought_signature)
+                _ = base64.b64decode(tool_call.thought_signature, validate=True)
             except (binascii.Error, ValueError):
                 _logger.warning("gemini_thought_signature_undecodable", call_id=tool_call.id)
+            else:
+                part[_THOUGHT_SIGNATURE_KEY] = tool_call.thought_signature
         return part
 
     @override
@@ -272,9 +289,7 @@ class GeminiAdapter(DialectAdapter):
             }
         body["generationConfig"] = generation_config
 
-        if tools := self.build_tool_schemas(
-            request.tools, capabilities, name_style=request.tool_name_style
-        ):
+        if tools := self.build_tool_schemas(request.tools, capabilities, name_style=request.tool_name_style):
             body["tools"] = tools
             if request.tool_choice is not None:
                 body["toolConfig"] = self.tool_config(request.tool_choice, name_style=request.tool_name_style)
@@ -313,15 +328,23 @@ class GeminiAdapter(DialectAdapter):
         return {"functionCallingConfig": {"mode": "AUTO"}}
 
     @override
-    def parse_response(self, payload: Mapping[str, Any]) -> DialectResponse:
+    def parse_response(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> DialectResponse:
         """Parse a Gemini ``generateContent`` response body.
 
         Args:
             payload: The decoded response body.
+            capabilities: Unused; Gemini's response shape does not vary by
+                model.
 
         Returns:
             DialectResponse: The normalized response.
         """
+        del capabilities
         text_parts: list[str] = []
         tool_calls: list[ToolCall] = []
         reasoning: list[ReasoningItem] = []
@@ -348,21 +371,32 @@ class GeminiAdapter(DialectAdapter):
         )
 
     @override
-    def parse_stream_event(self, event: Mapping[str, Any]) -> list[StreamDelta]:
+    def parse_stream_event(
+        self,
+        event: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> list[StreamDelta]:
         """Translate one streamed Gemini chunk into normalized deltas.
 
         Gemini streams whole parts rather than fragments, so a function call
-        arrives complete and its fragment carries the full argument JSON in
-        one piece.
+        arrives complete and its fragment carries the full argument JSON and
+        the part's ``thoughtSignature`` in one piece. Each call is keyed by
+        its own id -- Gemini's ``functionCall.id`` when present, a freshly
+        minted one otherwise -- so two calls never merge, even when they name
+        the same function at the same position of different chunks.
 
         Args:
             event: One decoded chunk.
+            capabilities: Unused; Gemini's stream shape does not vary by
+                model.
 
         Returns:
             list[StreamDelta]: Zero or more deltas, in wire order.
         """
+        del capabilities
         deltas: list[StreamDelta] = []
-        for position, part in enumerate(_iter_candidate_parts(event)):
+        for part in _iter_candidate_parts(event):
             if part.get("thought") is True:
                 text = part.get("text")
                 if isinstance(text, str) and text:
@@ -376,13 +410,15 @@ class GeminiAdapter(DialectAdapter):
                 call: dict[str, Any] = raw_call
                 name = call.get("name")
                 args = call.get("args")
+                call_id = _function_call_id(call)
                 deltas.append(
                     StreamDelta(
                         tool_call_fragment=ToolCallFragment(
-                            token=f"{name}:{position}",
-                            call_id=f"{name}:{position}",
+                            token=call_id,
+                            call_id=call_id,
                             name=name if isinstance(name, str) else None,
                             arguments=json.dumps(args) if is_json_object(args) else "{}",
+                            thought_signature=_thought_signature(part),
                         ),
                     ),
                 )
@@ -430,9 +466,7 @@ class GeminiAdapter(DialectAdapter):
             response: dict[str, Any] = {}
             for part in structured:
                 response |= part.content
-            if narrative := render_parts_as_text(
-                [part for part in result.content or () if part not in structured]
-            ):
+            if narrative := render_parts_as_text([part for part in result.content or () if part not in structured]):
                 response[_NARRATIVE_KEY] = narrative
         elif result.content:
             response = {"result": tool_result_text(result)}
@@ -486,17 +520,27 @@ class GeminiAdapter(DialectAdapter):
     def endpoint_path(self, *, model: str, stream: bool) -> str:
         """Return the model-scoped generate path.
 
+        A model id listed by ``models.list`` is already a resource name
+        (``models/gemini-2.5-pro`` or ``tunedModels/...``) and is used as is;
+        a bare id is placed under ``models/``. Streaming asks for
+        ``alt=sse``, without which Gemini answers with one JSON array instead
+        of a server-sent-event stream.
+
         Args:
-            model: The target model id, which Gemini encodes into the path.
+            model: The target model id or resource name, which Gemini encodes
+                into the path.
             stream: Whether the request streams, which selects
                 ``streamGenerateContent``.
 
         Returns:
-            str: ``"v1beta/models/<model>:generateContent"`` or its streaming
-            counterpart.
+            str: ``"v1beta/models/<model>:generateContent"``, or
+            ``"v1beta/models/<model>:streamGenerateContent?alt=sse"`` when
+            streaming.
         """
-        method = "streamGenerateContent" if stream else "generateContent"
-        return f"v1beta/models/{model}:{method}"
+        resource = model if "/" in model else f"models/{model}"
+        if stream:
+            return f"v1beta/{resource}:streamGenerateContent?{_SSE_QUERY}"
+        return f"v1beta/{resource}:generateContent"
 
     @override
     def token_limit_field(self, capabilities: ModelCapabilities) -> str:
@@ -580,13 +624,47 @@ def _parse_function_call_part(part: Mapping[str, Any]) -> ToolCall | None:
         return None
     raw_args = call.get("args")
     arguments: str | dict[str, object] = dict(raw_args) if is_json_object(raw_args) else "{}"
-    parsed = parse_tool_call(call_id=str(call.get("id", name)), function_name=name, raw_arguments=arguments)
+    parsed = parse_tool_call(call_id=_function_call_id(call), function_name=name, raw_arguments=arguments)
+    parsed.thought_signature = _thought_signature(part)
+    return parsed
+
+
+def _function_call_id(call: Mapping[str, Any]) -> str:
+    """Return a function call's id, minting a unique one when Gemini sent none.
+
+    Gemini answers a call by function name, so its ``functionCall.id`` is
+    optional. A call without one still needs an id of its own: the function
+    name is not one, because two calls to the same function would collide.
+
+    Args:
+        call: The ``functionCall`` object.
+
+    Returns:
+        str: Gemini's id for the call, or a locally minted unique id.
+    """
+    raw_id = call.get("id")
+    if isinstance(raw_id, str) and raw_id:
+        return raw_id
+    return f"{_LOCAL_CALL_ID_PREFIX}{uuid.uuid4().hex}"
+
+
+def _thought_signature(part: Mapping[str, Any]) -> str | None:
+    """Read a part's thought signature as the base64 string Gemini sends.
+
+    Args:
+        part: The content part.
+
+    Returns:
+        str | None: The base64 signature, or ``None`` when the part carries
+        none. A ``bytes`` value (a part that came through ``google-genai``)
+        is base64-encoded.
+    """
     signature = part.get("thoughtSignature") or part.get(_THOUGHT_SIGNATURE_KEY)
     if isinstance(signature, bytes):
-        parsed.thought_signature = base64.b64encode(signature).decode("ascii")
-    elif isinstance(signature, str) and signature:
-        parsed.thought_signature = signature
-    return parsed
+        return base64.b64encode(signature).decode("ascii")
+    if isinstance(signature, str) and signature:
+        return signature
+    return None
 
 
 def parse_usage(raw: object) -> UsageInfo | None:

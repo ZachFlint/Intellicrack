@@ -71,7 +71,9 @@ from intellicrack.credentials.provider_settings import (
     ProviderSettingsStore,
     coerce_timeout_seconds,
     resolve_session_credentials,
+    saved_model_overrides,
 )
+from intellicrack.mcp.errors import McpError
 from intellicrack.providers.configurable import ConfigurableProvider
 from intellicrack.providers.discovery import ModelDiscovery, format_discovery_status
 from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
@@ -91,7 +93,7 @@ from intellicrack.ui.panels.async_bridge import (
     run_bridge_coroutine_logged,
 )
 from intellicrack.ui.panels.base_panel import compute_control_min_height, compute_toolbar_height
-from intellicrack.ui.provider_config import ModelRefreshWorker, ModelSelectionDialog, ProviderConfigDialog
+from intellicrack.ui.provider_config import ModelRefreshWorker, ModelSelectionDialog, ProviderConfigDialog, provider_label
 from intellicrack.ui.resources import FontManager, IconManager, ThemeManager
 from intellicrack.ui.sandbox_config import SandboxConfigDialog, SandboxMonitorWidget
 from intellicrack.ui.session_manager import SessionManagerDialog
@@ -524,6 +526,42 @@ class MainWindow(QMainWindow):
         ordered = [provider for provider in BUILTIN_PROVIDER_IDS if provider in registered or not registered]
         ordered.extend(provider for provider in registered if provider not in ordered)
         return ordered
+
+    def _populate_provider_combo(self) -> None:
+        """Fill the toolbar provider combo from the registry, keeping the selection.
+
+        Runs when the toolbar is built and again whenever the set of providers
+        or their names change -- an instance added, duplicated, imported,
+        renamed or deleted in Provider Settings, or another provider set
+        active -- so the toolbar never offers a deleted provider or misses a
+        new one. A user-defined instance is listed under the display name the
+        user gave it. The current selection is kept when it still exists;
+        changing the items never counts as the user choosing a provider.
+        """
+        current: object = self._provider_combo.currentData()
+        instances = ProviderSettingsStore(get_config_file(PROVIDER_SETTINGS_FILENAME)).load_instances()
+        with QSignalBlocker(self._provider_combo):
+            self._provider_combo.clear()
+            for provider in self._selectable_provider_ids():
+                self._provider_combo.addItem(provider_label(provider, instances), provider)
+            if isinstance(current, str) and (index := self._provider_combo.findData(current)) >= 0:
+                self._provider_combo.setCurrentIndex(index)
+
+    def _api_key_optional(self, provider_name: str) -> bool:
+        """Report whether a provider may connect without an API key.
+
+        Args:
+            provider_name: The provider instance id.
+
+        Returns:
+            bool: ``True`` for a built-in local runtime and for a registered
+            instance whose endpoint accepts unauthenticated requests (the
+            vLLM, LM Studio and LiteLLM presets).
+        """
+        if provider_name in NO_API_KEY_PROVIDER_IDS:
+            return True
+        provider = self._orchestrator.provider_registry.get(provider_name)
+        return isinstance(provider, ConfigurableProvider) and not provider.instance.requires_api_key
 
     def _startup_provider(self, connected: list[str]) -> str:
         """Choose which provider to activate at startup from the connected set.
@@ -1034,8 +1072,7 @@ class MainWindow(QMainWindow):
         self._provider_combo.setMinimumHeight(compute_control_min_height(self))
         self._provider_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._provider_combo.setObjectName("toolbar_combo")
-        for provider in self._selectable_provider_ids():
-            self._provider_combo.addItem(provider_display_name(provider), provider)
+        self._populate_provider_combo()
         self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
         toolbar.addWidget(self._provider_combo)
 
@@ -1443,6 +1480,16 @@ class MainWindow(QMainWindow):
             parent=None,
         )
 
+    def _sync_mcp_session_state(self) -> None:
+        """Record every MCP server's state onto a session that has just become active.
+
+        A new or restored session otherwise carries no MCP record, or the
+        stale one saved with it, until some server happens to change state.
+        """
+        service = self._mcp_service
+        if service is not None:
+            service.sync_session_state()
+
     def _on_configure_mcp_from(self, parent: QWidget) -> None:
         """Open the MCP settings dialog over another dialog.
 
@@ -1627,21 +1674,30 @@ class MainWindow(QMainWindow):
                 :meth:`_request_tool_confirmation`.
         """
         call, future, loop = cast("tuple[ToolCall, asyncio.Future[bool], asyncio.AbstractEventLoop]", payload)
-        confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
-        service = self._mcp_service
-        generation = service.generation_for(call) if service is not None else None
-        origin = service.source_label_for(call) if service is not None else None
-        dialog = confirmation_module.ToolConfirmationDialog(call, self, generation=generation, source_label=origin)
-        dialog.exec()
-        approved: bool = bool(dialog.approved)
-        self._orchestrator.resolve_confirmation(approved=approved)
+        approved = False
+        try:
+            confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
+            service = self._mcp_service
+            generation: str | None = None
+            origin: str | None = None
+            if service is not None:
+                try:
+                    generation = service.generation_for(call)
+                    origin = service.source_label_for(call)
+                except McpError as exc:
+                    _logger.warning("mcp_confirmation_source_unresolved", tool=call.tool_name, error=str(exc))
+            dialog = confirmation_module.ToolConfirmationDialog(call, self, generation=generation, source_label=origin)
+            dialog.exec()
+            approved = bool(dialog.approved)
+        finally:
+            self._orchestrator.resolve_confirmation(approved=approved)
 
-        def _resolve() -> None:
-            """Deliver the dialog approval result onto the waiting asyncio future."""
-            if not future.done():
-                future.set_result(approved)
+            def _resolve() -> None:
+                """Deliver the dialog approval result onto the waiting asyncio future."""
+                if not future.done():
+                    future.set_result(approved)
 
-        loop.call_soon_threadsafe(_resolve)
+            loop.call_soon_threadsafe(_resolve)
 
     def _on_user_message(self, text: str) -> None:
         """Handle user message submission.
@@ -1758,7 +1814,7 @@ class MainWindow(QMainWindow):
             await get_credentials(provider),
             loader=get_credential_loader(),
             settings=ProviderSettingsStore(get_config_file(PROVIDER_SETTINGS_FILENAME)),
-            api_key_optional=provider in NO_API_KEY_PROVIDER_IDS,
+            api_key_optional=self._api_key_optional(provider),
         )
 
         registry = self._orchestrator.provider_registry
@@ -1954,6 +2010,7 @@ class MainWindow(QMainWindow):
         del result
         self._chat_panel.set_input_enabled(enabled=True)
         self._stream_append = None
+        self._sync_mcp_session_state()
         self.status_update.emit("Ready")
 
     def _on_async_error(self, error: object) -> None:
@@ -2230,6 +2287,7 @@ class MainWindow(QMainWindow):
         self.tool_panel.clear_all()
         self._chat_panel.restore_messages(result.messages)
         self._chat_panel.set_input_enabled(enabled=True)
+        self._sync_mcp_session_state()
 
         active_binary = result.active_binary
         if active_binary is not None:
@@ -2717,6 +2775,7 @@ class MainWindow(QMainWindow):
         )
         dialog.provider_updated.connect(self._on_provider_dialog_updated)
         dialog.active_provider_changed.connect(self._on_active_provider_changed)
+        dialog.instances_changed.connect(self._populate_provider_combo)
         if dialog.exec():
             settings: dict[str, dict[str, object]] = dialog.get_settings()
             self._apply_provider_settings(settings)
@@ -2728,6 +2787,7 @@ class MainWindow(QMainWindow):
             provider_id: Identifier of the provider whose settings were saved.
         """
         _logger.info("provider_dialog_updated", provider_id=provider_id)
+        self._populate_provider_combo()
         self.status_update.emit(f"Provider configuration updated: {provider_id}")
 
     def _on_active_provider_changed(self, provider_id: str) -> None:
@@ -2745,6 +2805,7 @@ class MainWindow(QMainWindow):
             return
         new_active = normalize_provider_id(provider_id)
 
+        self._populate_provider_combo()
         for index in range(self._provider_combo.count()):
             data = self._provider_combo.itemData(index)
             if isinstance(data, str) and data == new_active:
@@ -2784,6 +2845,25 @@ class MainWindow(QMainWindow):
             LLMProviderBase | None: The registered provider, or ``None`` when
             no instance is saved under that id.
         """
+        instance = self._saved_provider_instance(provider_id)
+        if instance is None:
+            return None
+        provider = ConfigurableProvider(instance)
+        self._orchestrator.provider_registry.register(provider)
+        _logger.info("provider_instance_registered", instance_id=provider_id)
+        return provider
+
+    @staticmethod
+    def _saved_provider_instance(provider_id: str) -> ProviderInstance | None:
+        """Load a user-defined instance's saved record.
+
+        Args:
+            provider_id: The instance id.
+
+        Returns:
+            ProviderInstance | None: The saved instance, or ``None`` when no
+            usable record is saved under that id.
+        """
         store = ProviderSettingsStore(get_config_file(PROVIDER_SETTINGS_FILENAME))
         record = store.load_instances().get(provider_id)
         if record is None:
@@ -2791,11 +2871,41 @@ class MainWindow(QMainWindow):
         instance = ProviderInstance.from_mapping(cast("dict[str, Any]", record))
         if instance is None:
             _logger.warning("provider_instance_record_invalid", instance_id=provider_id)
-            return None
-        provider = ConfigurableProvider(instance)
-        self._orchestrator.provider_registry.register(provider)
-        _logger.info("provider_instance_registered", instance_id=provider_id)
-        return provider
+        return instance
+
+    def _current_instance_provider(self, provider_id: str) -> tuple[LLMProviderBase | None, LLMProviderBase | None]:
+        """Return the provider to apply settings to, rebuilt when its saved record changed.
+
+        A user-defined instance is a :class:`ConfigurableProvider` built from
+        its record, so a registered one built before the record was edited
+        keeps the old dialect, headers, base URL and transport acknowledgement.
+        When the saved record differs, a fresh provider is registered in its
+        place and the stale one is returned so it can be disconnected.
+
+        Args:
+            provider_id: The provider instance id.
+
+        Returns:
+            tuple[LLMProviderBase | None, LLMProviderBase | None]: The provider
+            the settings apply to (``None`` when neither registered nor saved),
+            and the stale provider it replaced, if any.
+        """
+        registry = self._orchestrator.provider_registry
+        existing = registry.get(provider_id)
+        if provider_id in BUILTIN_PROVIDER_IDS:
+            return existing, None
+        saved = self._saved_provider_instance(provider_id)
+        if saved is None:
+            return existing, None
+        if isinstance(existing, ConfigurableProvider) and existing.instance == saved:
+            return existing, None
+        replacement = ConfigurableProvider(saved)
+        section = ProviderSettingsStore(get_config_file(PROVIDER_SETTINGS_FILENAME)).section(provider_id)
+        for model_id, capability_override in saved_model_overrides(section).items():
+            replacement.set_capability_override(model_id, capability_override)
+        registry.register(replacement)
+        _logger.info("provider_instance_rebuilt", instance_id=provider_id, replaced=existing is not None)
+        return replacement, existing
 
     def _apply_provider_settings(self, settings: dict[str, dict[str, object]]) -> None:
         """Apply provider configuration settings at runtime.
@@ -2815,6 +2925,7 @@ class MainWindow(QMainWindow):
         registry = self._orchestrator.provider_registry
         providers_to_connect: list[tuple[str, ProviderCredentials]] = []
         providers_to_disconnect: list[str] = []
+        stale_providers: list[LLMProviderBase] = []
 
         for provider_id, provider_settings in settings.items():
             enabled = bool(provider_settings.get("enabled", False))
@@ -2827,11 +2938,11 @@ class MainWindow(QMainWindow):
                 continue
             pname = normalize_provider_id(provider_id)
 
-            existing_provider = registry.get(pname) or self._register_saved_instance(pname)
+            existing_provider, stale_provider = self._current_instance_provider(pname)
+            if stale_provider is not None and stale_provider.is_connected:
+                stale_providers.append(stale_provider)
 
-            is_no_key_provider = provider_id in NO_API_KEY_PROVIDER_IDS
-
-            if not enabled or (not api_key and not is_no_key_provider):
+            if not enabled or (not api_key and not self._api_key_optional(pname)):
                 if existing_provider is not None and existing_provider.is_connected:
                     providers_to_disconnect.append(pname)
                 continue
@@ -2844,10 +2955,18 @@ class MainWindow(QMainWindow):
             )
             providers_to_connect.append((pname, creds))
 
-        if providers_to_connect or providers_to_disconnect:
+        self._populate_provider_combo()
+
+        if providers_to_connect or providers_to_disconnect or stale_providers:
 
             async def _apply_provider_changes() -> None:
-                """Disconnect disabled providers, then reconnect updated credentials."""
+                """Disconnect replaced and disabled providers, then reconnect updated credentials."""
+                for stale in stale_providers:
+                    try:
+                        await stale.disconnect()
+                        _logger.info("provider_stale_instance_disconnected", provider=stale.name)
+                    except (ProviderError, RuntimeError, OSError, ValueError) as e:
+                        _logger.warning("provider_disconnect_failed", provider=stale.name, error=str(e))
                 for pname in providers_to_disconnect:
                     try:
                         await registry.disconnect_provider(pname)
@@ -3152,10 +3271,7 @@ class MainWindow(QMainWindow):
         """
         if isinstance(result, dict):
             res_dict = cast("dict[str, list[ModelInfo]]", result)
-            counts: dict[str, int] = {
-                provider_name_obj: len(models_obj)
-                for provider_name_obj, models_obj in res_dict.items()
-            }
+            counts: dict[str, int] = {provider_name_obj: len(models_obj) for provider_name_obj, models_obj in res_dict.items()}
             _logger.info("initial_model_discovery_completed", per_provider_counts=counts)
         else:
             _logger.info("initial_model_discovery_completed", provider_count=0)
@@ -3170,9 +3286,8 @@ class MainWindow(QMainWindow):
                     if k == provider_data:
                         models_list.extend(m.id for m in v)
                         break
-            if not models_list and self.model_discovery is not None:
-                if cached := self.model_discovery.cache.get(provider_data):
-                    models_list = [m.id for m in cached]
+            if not models_list and self.model_discovery is not None and (cached := self.model_discovery.cache.get(provider_data)):
+                models_list = [m.id for m in cached]
 
             if models_list:
                 restore_applies = bool(self._pending_model_restore) and self._pending_model_restore_provider == provider_data
@@ -3924,9 +4039,7 @@ class MainWindow(QMainWindow):
             (
                 index
                 for index, (_base, _size, protection, state) in enumerate(regions)
-                if state == _MEM_COMMIT_STATE
-                and (protection & _PAGE_PROTECTION_BASE_MASK)
-                in _PAGE_READABLE_PROTECTIONS
+                if state == _MEM_COMMIT_STATE and (protection & _PAGE_PROTECTION_BASE_MASK) in _PAGE_READABLE_PROTECTIONS
             ),
             0,
         )
@@ -4245,7 +4358,7 @@ class MainWindow(QMainWindow):
                 "provider_changed_not_connected",
                 provider=provider,
             )
-            display_name = provider_display_name(provider)
+            display_name = self._provider_combo.currentText() or provider_display_name(provider)
             choice = self._prompt_provider_not_connected(display_name)
             if choice == "configure":
                 self._on_configure_providers()

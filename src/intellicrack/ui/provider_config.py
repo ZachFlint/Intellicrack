@@ -57,6 +57,7 @@ from intellicrack.credentials.env_loader import (
     create_env_template,
     get_api_key_env_var_mapping,
     get_credential_loader,
+    instance_env_var_conflict,
 )
 from intellicrack.credentials.oauth import (
     OAUTH_CONFIGS,
@@ -75,12 +76,13 @@ from intellicrack.credentials.provider_settings import (
 from intellicrack.credentials.store import CredentialStore, get_credential_store
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.capabilities import ApiDialect
+from intellicrack.providers.configurable import ConfigurableProvider
 from intellicrack.providers.dialects import adapter_for
 from intellicrack.providers.dialects.base import headers_receiving_api_key
 from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
 from intellicrack.providers.huggingface import fetch_router_served_model_ids
 from intellicrack.providers.ids import BUILTIN_PROVIDER_IDS, is_valid_provider_id, normalize_provider_id
-from intellicrack.providers.instances import ProviderInstance, TransportRisk, classify_transport
+from intellicrack.providers.instances import ProviderInstance, TransportRisk, classify_transport, dialect_api_base
 from intellicrack.providers.model_metadata import ingest_models
 from intellicrack.providers.presets import all_presets, preset_for
 from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
@@ -259,9 +261,7 @@ def _model_overrides_from(saved_settings: dict[str, Any]) -> dict[str, dict[str,
     if not isinstance(raw, dict):
         return {}
     overrides: dict[str, dict[str, Any]] = {
-        model_id: cast("dict[str, Any]", entry)
-        for model_id, entry in cast("dict[str, Any]", raw).items()
-        if isinstance(entry, dict)
+        model_id: cast("dict[str, Any]", entry) for model_id, entry in cast("dict[str, Any]", raw).items() if isinstance(entry, dict)
     }
     return overrides
 
@@ -325,6 +325,65 @@ def _saved_instance(provider_id: str) -> ProviderInstance | None:
     return ProviderInstance.from_mapping(cast("dict[str, Any]", record)) if record else None
 
 
+def provider_label(provider_id: str, instances: Mapping[str, Mapping[str, object]]) -> str:
+    """Return the label to show for a provider.
+
+    A built-in provider shows its fixed display name. A user-defined instance
+    shows the display name the user gave it, which is stored in its record, so
+    renaming an instance renames it everywhere it is listed.
+
+    Args:
+        provider_id: The provider instance id.
+        instances: Saved instance records keyed by id, as
+            :meth:`ProviderSettingsStore.load_instances` returns them.
+
+    Returns:
+        str: The label.
+    """
+    record = instances.get(provider_id)
+    if provider_id in BUILTIN_PROVIDER_IDS or record is None:
+        return provider_display_name(provider_id)
+    instance = ProviderInstance.from_mapping(dict(record))
+    return instance.label() if instance is not None else provider_id
+
+
+_KEY_WITHHELD_MESSAGE: Final[str] = (
+    "API key withheld: this base URL is plain HTTP to a public host. Tick the acknowledgement to send the key over it."
+)
+"""Status shown when the transport policy withholds the API key from a probe."""
+
+
+def _probe_key_withheld(
+    api_key: str,
+    base_url: str | None,
+    *,
+    acknowledged: bool | None,
+    instance: ProviderInstance | None,
+) -> bool:
+    """Report whether the transport policy forbids sending a key to a probe target.
+
+    Test Connection and Refresh Models send the key exactly as a connect does,
+    so they obey the same rule: plain HTTP to a public host needs the user's
+    explicit acknowledgement before the key is attached.
+
+    Args:
+        api_key: The key the probe would send; an empty key is never withheld.
+        base_url: The base URL the probe targets, or ``None`` for the SDK
+            default (always HTTPS).
+        acknowledged: The acknowledgement as currently shown in the settings
+            page, or ``None`` to use the one saved with ``instance``.
+        instance: The saved instance, when the provider is one.
+
+    Returns:
+        bool: ``True`` when the key must not be sent.
+    """
+    if not api_key or classify_transport(base_url) is not TransportRisk.PUBLIC_PLAINTEXT:
+        return False
+    if acknowledged is not None:
+        return not acknowledged
+    return instance is None or not instance.insecure_transport_acknowledged
+
+
 _EDITOR_MAX_HEIGHT: Final[int] = 90
 """Height cap for the multi-line header and body editors."""
 
@@ -380,6 +439,24 @@ def _parse_json_object(raw: str) -> dict[str, Any] | None:
     except json.JSONDecodeError:
         return None
     return cast("dict[str, Any]", decoded) if isinstance(decoded, dict) else None
+
+
+def _worker_key_withheld(provider_id: str, api_key: str, api_base: str | None, *, acknowledged: bool | None) -> bool:
+    """Report whether a probe worker must not send its key.
+
+    Args:
+        provider_id: The provider being probed.
+        api_key: The key the probe would send.
+        api_base: The base URL the page supplied, if any.
+        acknowledged: The acknowledgement the page supplied, or ``None`` to use
+            the saved one.
+
+    Returns:
+        bool: ``True`` when the transport policy withholds the key.
+    """
+    instance = _saved_instance(provider_id) if provider_id not in BUILTIN_PROVIDER_IDS else None
+    base_url = api_base or (instance.api_base if instance is not None else None) or _provider_default_api_base(provider_id) or None
+    return _probe_key_withheld(api_key, base_url, acknowledged=acknowledged, instance=instance)
 
 
 def _provider_default_api_base(provider_id: str) -> str:
@@ -485,6 +562,8 @@ class _TimeoutSpinBox(QSpinBox):
 
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from intellicrack.core.types import ModelInfo
     from intellicrack.providers.base import LLMProviderBase
     from intellicrack.providers.discovery import DiscoveryEvent, ModelDiscovery
@@ -606,8 +685,13 @@ class CredentialSourceDetector:
     Identifies whether API credentials came from a .env file, environment
     variables, manual configuration, or are not configured at all.
 
+    Every provider's variables, a user-defined instance's included, are
+    resolved through :meth:`CredentialLoader.mapping_for`, the same mapping the
+    key is loaded and saved through.
+
     Attributes:
-        ENV_VAR_MAPPING: Mapping of provider names to their API key environment variable names.
+        ENV_VAR_MAPPING: Mapping of built-in provider names to their primary API
+            key environment variable names.
     """
 
     ENV_VAR_MAPPING: ClassVar[dict[str, str]] = get_api_key_env_var_mapping()
@@ -684,16 +768,12 @@ class CredentialSourceDetector:
         if not current_key:
             return CredentialSource.NOT_CONFIGURED
 
-        env_var = self.ENV_VAR_MAPPING.get(provider_id)
-        if not env_var:
-            return CredentialSource.MANUAL
+        mapping = CredentialLoader.mapping_for(provider_id)
+        env_vars = (mapping.api_key_var, *mapping.api_key_aliases)
+        if any(env_var in self._env_file_vars and os.environ.get(env_var, "") == current_key for env_var in env_vars):
+            return CredentialSource.ENV_FILE
 
-        if env_var in self._env_file_vars:
-            env_value = os.environ.get(env_var, "")
-            if env_value == current_key:
-                return CredentialSource.ENV_FILE
-
-        if os.environ.get(env_var) == current_key:
+        if any(os.environ.get(env_var) == current_key for env_var in env_vars):
             return CredentialSource.ENVIRONMENT
 
         if self._config_path.exists():
@@ -750,6 +830,7 @@ class ConnectionTestWorker(RetainedWorker):
         api_base: str | None = None,
         *,
         owner: QWidget | None = None,
+        insecure_transport_acknowledged: bool | None = None,
     ) -> None:
         """Initialize the ConnectionTestWorker for a provider.
 
@@ -760,11 +841,14 @@ class ConnectionTestWorker(RetainedWorker):
             owner: Widget that started the test. It is recorded for scoped draining and delivery guards, never as a Qt parent: a probe
                 against a slow or unreachable endpoint runs for up to the request timeout, and closing the settings page must not destroy
                 the thread waiting on it.
+            insecure_transport_acknowledged: Whether the user has accepted sending the key over plain HTTP to a public host, as the
+                settings page currently shows it, or ``None`` to use the acknowledgement saved with the instance.
         """
         super().__init__(owner=owner)
         self.provider_id = provider_id
         self._api_key = api_key
         self._api_base = api_base
+        self._insecure_transport_acknowledged = insecure_transport_acknowledged
 
     def run(self) -> None:
         """Run the connection test in a separate thread."""
@@ -830,6 +914,10 @@ class ConnectionTestWorker(RetainedWorker):
             "provider_connection_test_starting",
             provider=self.provider_id,
         )
+
+        if _worker_key_withheld(self.provider_id, self._api_key, self._api_base, acknowledged=self._insecure_transport_acknowledged):
+            _logger.warning("provider_connection_test_key_withheld", provider=self.provider_id)
+            return False, _KEY_WITHHELD_MESSAGE
 
         if self.provider_id == "anthropic":
             return self._test_anthropic(timeout)
@@ -1203,6 +1291,7 @@ class ModelRefreshWorker(RetainedWorker):
         provider: LLMProviderBase | None = None,
         *,
         owner: QWidget | None = None,
+        insecure_transport_acknowledged: bool | None = None,
     ) -> None:
         """Initialize the ModelRefreshWorker for a provider.
 
@@ -1214,19 +1303,27 @@ class ModelRefreshWorker(RetainedWorker):
             owner: Widget that started the refresh. It is recorded for scoped draining and delivery guards, never as a Qt parent: a model
                 list from an arbitrary endpoint can take the full request timeout, and closing the settings page must not destroy the
                 thread fetching it.
+            insecure_transport_acknowledged: Whether the user has accepted sending the key over plain HTTP to a public host, as the
+                settings page currently shows it, or ``None`` to use the acknowledgement saved with the instance.
         """
         super().__init__(owner=owner)
         self.provider_id = provider_id
         self._api_key = api_key
         self._api_base = api_base
         self._provider = provider
+        self._insecure_transport_acknowledged = insecure_transport_acknowledged
 
     def run(self) -> None:
-        """Run the model refresh in a separate thread."""
+        """Run the model refresh in a separate thread.
+
+        Every outcome emits :attr:`refresh_finished`, including a provider
+        error, so a caller that disabled its model picker while the refresh
+        runs always gets it back.
+        """
         try:
             success, models, message = self._fetch_models()
             self.refresh_finished.emit(success, models, message)
-        except (RuntimeError, OSError, ValueError) as e:
+        except (ProviderError, RuntimeError, OSError, ValueError) as e:
             _logger.warning("model_refresh_failed", error=str(e))
             success = False
             self.refresh_finished.emit(success, [], f"Error fetching models: {e}")
@@ -1234,20 +1331,32 @@ class ModelRefreshWorker(RetainedWorker):
     def _fetch_models(self) -> tuple[bool, list[str], str]:
         """Fetch available models from the provider API.
 
+        A connected provider is shared with the rest of the application, so its
+        listing runs on the persistent bridge loop its HTTP client belongs to.
+        Running it on a throwaway loop would rebind that client to a loop that
+        is closed as soon as the refresh ends, breaking the provider's next
+        request and its disconnect. A provider error falls back to listing the
+        endpoint directly.
+
         Returns:
             tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
         if self._provider is not None and self._provider.is_connected:
             try:
-                model_infos = asyncio.run(self._provider.list_models())
+                listed = run_bridge_coroutine(self._provider.list_models())
+                model_infos = listed or []
                 if model_ids := sorted(m.id for m in model_infos):
                     return True, model_ids, f"Found {len(model_ids)} models"
-            except (RuntimeError, OSError, ValueError) as exc:
+            except (ProviderError, RuntimeError, OSError, ValueError) as exc:
                 _logger.warning(
                     "provider_list_models_fallback",
                     provider=self.provider_id,
                     error=str(exc),
                 )
+
+        if _worker_key_withheld(self.provider_id, self._api_key, self._api_base, acknowledged=self._insecure_transport_acknowledged):
+            _logger.warning("provider_model_fetch_key_withheld", provider=self.provider_id)
+            return False, [], _KEY_WITHHELD_MESSAGE
 
         timeout = httpx.Timeout(15.0)
 
@@ -1802,7 +1911,10 @@ class ProviderInstanceDialog(QDialog):
 
         self._id_input = QLineEdit()
         self._id_input.setPlaceholderText("my-gateway")
-        self._id_input.setToolTip("Lowercase letters, digits, underscore and hyphen. This is the id the instance is stored under.")
+        self._id_input.setToolTip(
+            "Lowercase letters, digits, underscore and hyphen, starting with a letter. This is the id the instance is stored under, "
+            "and its key is read from <ID>_API_KEY in .env.",
+        )
         form.addRow("Instance ID:", self._id_input)
 
         self._label_input = QLineEdit()
@@ -1870,7 +1982,7 @@ class ProviderInstanceDialog(QDialog):
             if index >= 0:
                 self._dialect_combo.setCurrentIndex(index)
         if not self._base_url_input.text().strip():
-            self._base_url_input.setText(preset.default_api_base or "")
+            self._base_url_input.setText(dialect_api_base(preset) or "")
         if not self._label_input.text().strip():
             self._label_input.setText(preset.display_name)
 
@@ -1887,11 +1999,14 @@ class ProviderInstanceDialog(QDialog):
         if instance_id in self._existing_ids:
             self._error_label.setText(f"'{instance_id}' is already in use. Choose another id.")
             return
+        if conflict := instance_env_var_conflict(instance_id, self._existing_ids):
+            self._error_label.setText(conflict)
+            return
 
         preset_id = self._preset_combo.currentData()
         dialect_value = self._dialect_combo.currentData()
         preset = preset_for(preset_id) if isinstance(preset_id, str) and preset_id else None
-        base_url = self._base_url_input.text().strip() or (preset.default_api_base if preset is not None else None)
+        base_url = self._base_url_input.text().strip() or (dialect_api_base(preset) if preset is not None else None)
 
         self._instance = ProviderInstance(
             instance_id=instance_id,
@@ -1934,10 +2049,14 @@ class ProviderConfigDialog(QDialog):
     Attributes:
         provider_updated: Signal emitted when a provider config changes.
         active_provider_changed: Signal emitted when active provider changes.
+        instances_changed: Signal emitted when a provider instance is added,
+            duplicated, imported or deleted, so every provider selector can
+            be rebuilt.
     """
 
     provider_updated: ClassVar[pyqtSignal] = pyqtSignal(str)
     active_provider_changed: ClassVar[pyqtSignal] = pyqtSignal(str)
+    instances_changed: ClassVar[pyqtSignal] = pyqtSignal()
 
     def __init__(
         self,
@@ -2196,64 +2315,81 @@ class ProviderConfigDialog(QDialog):
         """Return every provider the dialog offers, built-ins first.
 
         Built-ins come from the preset registry rather than a hardcoded tuple,
-        and every saved user-defined instance follows, so an added endpoint
-        appears in the list exactly like a built-in.
+        and every usable saved user-defined instance follows, so an added
+        endpoint appears in the list exactly like a built-in.
 
         Returns:
             list[tuple[str, str]]: ``(display name, provider id)`` pairs, in
             display order.
         """
+        instances = self._settings_store.load_instances()
         listed: list[tuple[str, str]] = [(provider_display_name(provider_id), provider_id) for provider_id in BUILTIN_PROVIDER_IDS]
-        for instance_id, record in self._settings_store.load_instances().items():
-            if instance_id in BUILTIN_PROVIDER_IDS:
-                continue
-            instance = ProviderInstance.from_mapping(cast("dict[str, Any]", record))
-            listed.append((instance.label() if instance is not None else instance_id, instance_id))
+        listed.extend((provider_label(instance_id, instances), instance_id) for instance_id in instances)
         return listed
 
     def _load_providers(self) -> None:
         """Load provider configurations into the list with status indicators."""
-        providers = self._listed_providers()
-
-        active_name = self._get_active_provider_name()
-
-        for display_name, provider_id in providers:
-            item = QListWidgetItem()
-            item.setData(Qt.ItemDataRole.UserRole, provider_id)
-
-            is_active = provider_id == active_name
-            is_connected = self._is_provider_connected(provider_id)
-            model_count = self._get_model_count(provider_id)
-
-            self._update_provider_item_display(item, display_name, is_active=is_active, is_connected=is_connected, model_count=model_count)
-
-            self._provider_list.addItem(item)
-            self._provider_items[provider_id] = item
-
-            widget = ProviderSettingsWidget(
-                provider_id,
-                self._registry,
-                self._config_path,
-                self._credential_detector,
-                self._discovery,
-            )
-
-            def _conn_tested_slot(s: int, m: str) -> None:
-                """Adapt a settings-widget connection_tested signal.
-
-                Args:
-                    s: Success flag from the widget as an integer (nonzero
-                        means the connection test succeeded).
-                    m: Status message accompanying the connection test.
-                """
-                self._on_widget_connection_tested(success=bool(s), _message=m)
-
-            widget.connection_tested.connect(_conn_tested_slot)
-            self._settings_stack.addWidget(widget)
-            self._provider_widgets[provider_id] = widget
+        for row, (display_name, provider_id) in enumerate(self._listed_providers()):
+            self._add_provider_entry(row, display_name, provider_id)
 
         if self._provider_list.count() > 0:
             self._provider_list.setCurrentRow(0)
+
+    def _add_provider_entry(self, row: int, display_name: str, provider_id: str) -> None:
+        """Add one provider's list entry and settings page.
+
+        Args:
+            row: The list row to insert the entry at.
+            display_name: The label to show.
+            provider_id: The provider instance id.
+        """
+        item = QListWidgetItem()
+        item.setData(Qt.ItemDataRole.UserRole, provider_id)
+        self._update_provider_item_display(
+            item,
+            display_name,
+            is_active=provider_id == self._get_active_provider_name(),
+            is_connected=self._is_provider_connected(provider_id),
+            model_count=self._get_model_count(provider_id),
+        )
+        self._provider_list.insertItem(row, item)
+        self._provider_items[provider_id] = item
+
+        widget = ProviderSettingsWidget(
+            provider_id,
+            self._registry,
+            self._config_path,
+            self._credential_detector,
+            self._discovery,
+        )
+
+        def _conn_tested_slot(s: int, m: str) -> None:
+            """Adapt a settings-widget connection_tested signal.
+
+            Args:
+                s: Success flag from the widget as an integer (nonzero
+                    means the connection test succeeded).
+                m: Status message accompanying the connection test.
+            """
+            self._on_widget_connection_tested(success=bool(s), _message=m)
+
+        widget.connection_tested.connect(_conn_tested_slot)
+        self._settings_stack.addWidget(widget)
+        self._provider_widgets[provider_id] = widget
+
+    def _remove_provider_entry(self, provider_id: str) -> None:
+        """Remove one provider's list entry and settings page.
+
+        Args:
+            provider_id: The provider instance id.
+        """
+        item = self._provider_items.pop(provider_id, None)
+        if item is not None:
+            self._provider_list.takeItem(self._provider_list.row(item))
+        widget = self._provider_widgets.pop(provider_id, None)
+        if widget is not None:
+            self._settings_stack.removeWidget(widget)
+            widget.deleteLater()
 
     def _selected_provider_id(self) -> str:
         """Return the provider id the list currently selects.
@@ -2268,21 +2404,32 @@ class ProviderConfigDialog(QDialog):
         data = item.data(Qt.ItemDataRole.UserRole)
         return data if isinstance(data, str) else ""
 
-    def _reload_provider_list(self, select: str = "") -> None:
-        """Rebuild the provider list after the set of instances changed.
+    def _reload_provider_list(self, select: str = "", replace: frozenset[str] = frozenset()) -> None:
+        """Bring the provider list in line with the saved instances.
+
+        Only what changed is touched: an entry whose instance was deleted is
+        removed, a new instance gets an entry, and an entry named in
+        ``replace`` -- an instance overwritten by an import -- is rebuilt from
+        its new record. Every other settings page, and whatever the user has
+        typed into it but not yet saved, is kept as it is.
 
         Args:
-            select: Instance id to select once the list is rebuilt.
+            select: Instance id to select once the list is up to date.
+            replace: Instance ids whose settings pages must be rebuilt because
+                their saved record was replaced.
         """
-        self._provider_list.clear()
-        for widget in self._provider_widgets.values():
-            self._settings_stack.removeWidget(widget)
-            widget.deleteLater()
-        self._provider_widgets.clear()
-        self._provider_items.clear()
-        self._load_providers()
+        listed = self._listed_providers()
+        listed_ids = {provider_id for _, provider_id in listed}
+        for provider_id in [known for known in self._provider_items if known not in listed_ids or known in replace]:
+            self._remove_provider_entry(provider_id)
+        for row, (display_name, provider_id) in enumerate(listed):
+            if provider_id not in self._provider_items:
+                self._add_provider_entry(row, display_name, provider_id)
+        self._refresh_provider_status()
         if select and (item := self._provider_items.get(select)):
             self._provider_list.setCurrentItem(item)
+        elif self._provider_list.currentItem() is None and self._provider_list.count() > 0:
+            self._provider_list.setCurrentRow(0)
 
     def _on_add_instance(self) -> None:
         """Create a new provider instance from a preset or from scratch."""
@@ -2323,7 +2470,11 @@ class ProviderConfigDialog(QDialog):
         self._persist_instance(instance)
 
     def _persist_instance(self, instance: ProviderInstance) -> None:
-        """Write a new or edited instance and refresh the list.
+        """Write a new instance, make it selectable everywhere, and refresh the list.
+
+        The instance is registered, unconnected, with the provider registry so
+        the main window's provider selector offers it at once; it connects on
+        the next Apply or OK once its key and settings are saved.
 
         Args:
             instance: The instance to store.
@@ -2335,10 +2486,38 @@ class ProviderConfigDialog(QDialog):
             show_warning(self, "Save Error", f"Failed to save the provider instance: {exc}")
             return
         _logger.info("provider_instance_saved", instance_id=instance.instance_id)
+        self._register_instance(instance)
         self._reload_provider_list(select=instance.instance_id)
+        self.instances_changed.emit()
+
+    def _register_instance(self, instance: ProviderInstance) -> None:
+        """Register a freshly saved instance with the provider registry.
+
+        A provider already registered under the id is replaced and, when it was
+        connected, disconnected, because it was built from a record that no
+        longer exists.
+
+        Args:
+            instance: The saved instance.
+        """
+        if self._registry is None:
+            return
+        previous = self._registry.get(instance.instance_id)
+        self._registry.register(ConfigurableProvider(instance))
+        if previous is not None and previous.is_connected:
+            run_bridge_coroutine_async(previous.disconnect(), parent=self)
 
     def _on_delete_instance(self) -> None:
-        """Delete the selected instance, or restore a built-in from its preset."""
+        """Delete the selected instance, or restore a built-in from its preset.
+
+        Deleting an instance also disconnects and unregisters its provider, so
+        it stops serving requests and leaves the main window's selector, and
+        removes the endpoint overrides saved for it in ``.env``
+        (``<ID>_API_BASE``, ``<ID>_ORGANIZATION``, ``<ID>_PROJECT``), which
+        would otherwise silently override the base URL of an instance later
+        re-added under the same id. The stored API key is kept, as the
+        confirmation says.
+        """
         provider_id = self._selected_provider_id()
         if not provider_id:
             show_warning(self, "Delete Provider", "Select a provider to delete first.")
@@ -2362,21 +2541,53 @@ class ProviderConfigDialog(QDialog):
             return
         try:
             removed = self._settings_store.delete_instance(provider_id)
+            self._remove_instance_endpoint_overrides(provider_id)
         except OSError as exc:
             _logger.exception("provider_instance_delete_failed", instance_id=provider_id)
             show_warning(self, "Delete Error", f"Failed to delete the provider instance: {exc}")
             return
         if removed:
             _logger.info("provider_instance_deleted", instance_id=provider_id)
+        self._unregister_instance(provider_id)
         self._reload_provider_list()
+        self.instances_changed.emit()
+
+    @staticmethod
+    def _remove_instance_endpoint_overrides(provider_id: str) -> None:
+        """Remove a deleted instance's endpoint overrides from ``.env``.
+
+        Args:
+            provider_id: The deleted instance's id.
+        """
+        loader = get_credential_loader()
+        for credential_field in (CredentialField.API_BASE, CredentialField.ORGANIZATION_ID, CredentialField.PROJECT_ID):
+            if (env_var := loader.env_var_for(provider_id, credential_field)) and loader.remove_from_env_file(env_var):
+                _logger.info("provider_instance_endpoint_override_removed", instance_id=provider_id, env_var=env_var)
+
+    def _unregister_instance(self, provider_id: str) -> None:
+        """Disconnect and unregister a deleted instance's provider.
+
+        Args:
+            provider_id: The deleted instance's id.
+        """
+        if self._registry is None:
+            return
+        provider = self._registry.get(provider_id)
+        if provider is None:
+            return
+        self._registry.unregister(provider_id)
+        _logger.info("provider_instance_unregistered", instance_id=provider_id)
+        if provider.is_connected:
+            run_bridge_coroutine_async(provider.disconnect(), parent=self)
 
     def _known_instance_ids(self) -> frozenset[str]:
         """Return every id already in use.
 
         Returns:
-            frozenset[str]: Built-in ids plus every saved instance id.
+            frozenset[str]: Built-in ids plus every stored instance id,
+            including a stored record the loader skips.
         """
-        return frozenset(BUILTIN_PROVIDER_IDS) | frozenset(self._settings_store.load_instances())
+        return frozenset(BUILTIN_PROVIDER_IDS) | self._settings_store.stored_instance_ids()
 
     def _on_export_instances(self) -> None:
         """Export every saved instance to a JSON file, without secrets."""
@@ -2394,10 +2605,12 @@ class ProviderConfigDialog(QDialog):
         show_info(self, "Export Complete", f"Exported {len(payload['instances'])} provider instances. No secrets were written.")
 
     def _on_import_instances(self) -> None:
-        """Import instances from a JSON file, confirming any unknown host.
+        """Import instances from a JSON file, confirming any unknown host or replaced instance.
 
         An instance whose base-URL host matches no known preset is shown with its host and its headers before it goes live, because an
-        imported record can point a credential at an endpoint the user did not choose.
+        imported record can point a credential at an endpoint the user did not choose. A record naming a built-in provider is refused,
+        since built-ins are owned by their presets, and so is one whose ``.env`` variables would be another provider's. A record whose id
+        is already in use replaces the existing instance only after the user confirms it.
         """
         path_text, _ = QFileDialog.getOpenFileName(self, "Import Provider Instances", "", "JSON (*.json)")
         if not path_text:
@@ -2416,26 +2629,61 @@ class ProviderConfigDialog(QDialog):
             show_warning(self, "Import Error", "The import file contains no 'instances' section.")
             return
 
-        imported = 0
-        last_id = ""
+        imported: list[str] = []
+        replaced: set[str] = set()
+        refused: list[str] = []
         for record in cast("dict[str, Any]", raw_instances).values():
             if not isinstance(record, dict):
                 continue
             instance = ProviderInstance.from_mapping(cast("dict[str, Any]", record))
-            if instance is None or not self._confirm_imported_instance(instance):
+            if instance is None:
+                continue
+            instance_id = instance.instance_id
+            existing = self._known_instance_ids()
+            if conflict := instance_env_var_conflict(instance_id, existing - {instance_id}):
+                _logger.warning("provider_instance_import_refused", instance_id=instance_id, reason=conflict)
+                refused.append(f"{instance_id}: {conflict}")
+                continue
+            overwrites = instance_id in existing
+            if (overwrites and not self._confirm_import_overwrite(instance_id)) or not self._confirm_imported_instance(instance):
                 continue
             try:
-                self._settings_store.write_instance(instance.instance_id, instance.to_mapping())
+                self._settings_store.write_instance(instance_id, instance.to_mapping())
             except OSError as exc:
-                _logger.exception("provider_instance_import_write_failed", instance_id=instance.instance_id)
-                show_warning(self, "Import Error", f"Failed to save '{instance.instance_id}': {exc}")
+                _logger.exception("provider_instance_import_write_failed", instance_id=instance_id)
+                show_warning(self, "Import Error", f"Failed to save '{instance_id}': {exc}")
                 continue
-            imported += 1
-            last_id = instance.instance_id
+            self._register_instance(instance)
+            imported.append(instance_id)
+            if overwrites:
+                replaced.add(instance_id)
 
-        _logger.info("provider_instances_imported", path=path_text, count=imported)
-        self._reload_provider_list(select=last_id)
-        show_info(self, "Import Complete", f"Imported {imported} provider instances. Their API keys were not imported.")
+        _logger.info("provider_instances_imported", path=path_text, count=len(imported), refused=len(refused))
+        self._reload_provider_list(select=imported[-1] if imported else "", replace=frozenset(replaced))
+        if imported:
+            self.instances_changed.emit()
+        summary = f"Imported {len(imported)} provider instances. Their API keys were not imported."
+        if refused:
+            summary += "\n\nNot imported:\n" + "\n".join(refused)
+        show_info(self, "Import Complete", summary)
+
+    def _confirm_import_overwrite(self, instance_id: str) -> bool:
+        """Confirm that an imported record may replace an existing instance.
+
+        Args:
+            instance_id: The id the imported record and the existing instance share.
+
+        Returns:
+            bool: ``True`` when the existing instance may be replaced.
+        """
+        confirm = QMessageBox.question(
+            self,
+            "Replace Provider Instance",
+            f"An instance named '{instance_id}' already exists. Replace its configuration with the imported one?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return confirm == QMessageBox.StandardButton.Yes
 
     def _confirm_imported_instance(self, instance: ProviderInstance) -> bool:
         """Confirm an imported instance whose host matches no known preset.
@@ -2560,7 +2808,7 @@ class ProviderConfigDialog(QDialog):
     def _update_active_label(self) -> None:
         """Update the active provider display label."""
         if active_name := self._get_active_provider_name():
-            display = provider_display_name(active_name)
+            display = provider_label(active_name, self._settings_store.load_instances())
             self._active_label.setText(f"<b>Active:</b> {display}")
         else:
             self._active_label.setText("<b>Active:</b> None selected")
@@ -2596,6 +2844,14 @@ class ProviderConfigDialog(QDialog):
         except ValueError:
             _logger.warning("unknown_provider_name", provider=self._current_provider)
             show_error(self, "Error", f"Unknown provider: {self._current_provider}")
+        except ProviderError as e:
+            _logger.warning("set_active_provider_unavailable", provider=self._current_provider, error=str(e))
+            show_warning(
+                self,
+                "Provider Not Connected",
+                f"'{self._current_provider}' is not connected yet, so it cannot be made active. "
+                "Save its settings with Apply or OK so it connects, then set it active.",
+            )
         except (RuntimeError, AttributeError) as e:
             _logger.warning("set_active_provider_failed", provider=self._current_provider, error=str(e))
             show_error(self, "Error", f"Failed to set active provider: {e}")
@@ -2605,6 +2861,7 @@ class ProviderConfigDialog(QDialog):
         active_name = self._get_active_provider_name()
         overview = getattr(self, "_credential_overview", {})
         configured_providers: list[str] = list(overview.get("configured", []))
+        instances = self._settings_store.load_instances()
 
         for provider_id, item in self._provider_items.items():
             is_active = provider_id == active_name
@@ -2612,7 +2869,7 @@ class ProviderConfigDialog(QDialog):
             model_count = self._get_model_count(provider_id)
             has_credential = provider_id in configured_providers
 
-            display_name = provider_display_name(provider_id)
+            display_name = provider_label(provider_id, instances)
 
             self._update_provider_item_display(
                 item,
@@ -2641,7 +2898,8 @@ class ProviderConfigDialog(QDialog):
         if index >= 0 and (item := self._provider_list.item(index)):
             provider_id = item.data(Qt.ItemDataRole.UserRole)
             self._current_provider = provider_id
-            self._settings_stack.setCurrentIndex(index)
+            if isinstance(provider_id, str) and (widget := self._provider_widgets.get(provider_id)) is not None:
+                self._settings_stack.setCurrentWidget(widget)
 
     def _on_accept(self) -> None:
         """Handle dialog acceptance."""
@@ -2653,10 +2911,12 @@ class ProviderConfigDialog(QDialog):
         self._save_all_settings()
 
     def _save_all_settings(self) -> None:
-        """Save settings for all providers."""
+        """Save settings for all providers, then show any renamed instance under its new name."""
         for provider_id, widget in self._provider_widgets.items():
             widget.save_settings()
             self.provider_updated.emit(provider_id)
+        self._refresh_provider_status()
+        self._update_active_label()
 
     def get_settings(self) -> dict[str, dict[str, Any]]:
         """Get all provider settings.
@@ -3090,8 +3350,8 @@ class ProviderSettingsWidget(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
 
-        title = QLabel(f"<h3>{self._get_display_name()} Settings</h3>")
-        layout.addWidget(title)
+        self._title_label = QLabel(f"<h3>{self._get_display_name()} Settings</h3>")
+        layout.addWidget(self._title_label)
 
         credentials_group = QGroupBox("Credentials")
         credentials_layout = QFormLayout()
@@ -3265,6 +3525,9 @@ class ProviderSettingsWidget(QFrame):
         if instance is None:
             self._update_transport_notice()
             return
+        self._display_name_input.setText(instance.label())
+        self._requires_key_checkbox.setChecked(instance.requires_api_key)
+        self._api_key_input.setToolTip(f"Saved to .env as {instance.api_key_env_var}.")
         index = self._dialect_combo.findData(instance.dialect.value)
         if index >= 0:
             self._dialect_combo.setCurrentIndex(index)
@@ -3291,6 +3554,8 @@ class ProviderSettingsWidget(QFrame):
 
         dialect_value = self._dialect_combo.currentData()
         instance.dialect = ApiDialect(dialect_value) if isinstance(dialect_value, str) else instance.dialect
+        instance.display_name = self._display_name_input.text().strip() or self.provider_id
+        instance.requires_api_key = self._requires_key_checkbox.isChecked()
         instance.headers = _parse_header_lines(self._headers_edit.toPlainText())
         extra_body = _parse_json_object(self._extra_body_edit.toPlainText())
         if extra_body is None:
@@ -3310,6 +3575,8 @@ class ProviderSettingsWidget(QFrame):
         except OSError as exc:
             _logger.exception("provider_instance_save_failed", instance_id=self.provider_id)
             show_warning(self, "Save Error", f"Failed to save endpoint settings: {exc}")
+            return
+        self._title_label.setText(f"<h3>{instance.label()} Settings</h3>")
 
     def _update_transport_notice(self) -> None:
         """Show what the configured base URL means for the API key.
@@ -3345,6 +3612,18 @@ class ProviderSettingsWidget(QFrame):
         """
         endpoint_group = QGroupBox("Custom Endpoint")
         endpoint_layout = QFormLayout()
+
+        self._display_name_input = QLineEdit()
+        self._display_name_input.setPlaceholderText(self.provider_id)
+        self._display_name_input.setToolTip("The name this instance is listed under in Provider Settings and the toolbar.")
+        endpoint_layout.addRow("Display Name:", self._display_name_input)
+
+        self._requires_key_checkbox = QCheckBox("This endpoint requires an API key")
+        self._requires_key_checkbox.setChecked(True)
+        self._requires_key_checkbox.setToolTip(
+            "Clear this for a local runtime such as vLLM, LM Studio or a LiteLLM proxy that accepts requests without a key.",
+        )
+        endpoint_layout.addRow("", self._requires_key_checkbox)
 
         self._dialect_combo = QComboBox()
         for dialect in ApiDialect:
@@ -3875,9 +4154,36 @@ class ProviderSettingsWidget(QFrame):
         """Get the display name for the provider.
 
         Returns:
-            str: Human-readable provider name.
+            str: Human-readable provider name; a user-defined instance's own
+            display name.
         """
-        return provider_display_name(self.provider_id)
+        return provider_label(self.provider_id, self._settings_store.load_instances())
+
+    def _api_key_required(self) -> bool:
+        """Report whether this provider refuses requests without an API key.
+
+        Returns:
+            bool: ``False`` for a built-in local runtime and for an instance
+            whose endpoint accepts unauthenticated requests (vLLM, LM Studio,
+            LiteLLM), otherwise ``True``.
+        """
+        if self.is_custom_instance:
+            return self._requires_key_checkbox.isChecked()
+        return self.provider_id not in NO_API_KEY_PROVIDER_IDS
+
+    def _key_withheld(self, api_key: str, api_base: str | None) -> bool:
+        """Report whether the transport policy forbids sending the typed key.
+
+        Args:
+            api_key: The key typed into the page.
+            api_base: The base URL typed into the page, if any.
+
+        Returns:
+            bool: ``True`` when the base URL is plain HTTP to a public host and
+            the acknowledgement is not ticked.
+        """
+        base_url = api_base or _provider_default_api_base(self.provider_id) or None
+        return _probe_key_withheld(api_key, base_url, acknowledged=self._insecure_ack_checkbox.isChecked(), instance=None)
 
     def _toggle_key_visibility(self, *, show: bool) -> None:
         """Toggle API key visibility.
@@ -3986,14 +4292,14 @@ class ProviderSettingsWidget(QFrame):
         saved_model: str = saved_settings.get("default_model", "")
         self._pending_saved_model = saved_model
         self._context_window_spin.setValue(_saved_context_window(saved_settings, saved_model))
+        self._load_instance_fields()
         self._populate_default_models()
 
-        self._load_instance_fields()
         self._update_credential_source_display(api_key)
         self._update_recommended_model()
 
         has_key = bool(self._api_key_input.text().strip())
-        if has_key or self.provider_id in NO_API_KEY_PROVIDER_IDS:
+        if has_key or not self._api_key_required():
             QTimer.singleShot(200, self._auto_refresh_models)
 
     def _resolve_env_api_key(self) -> str:
@@ -4083,7 +4389,7 @@ class ProviderSettingsWidget(QFrame):
         """Populate model dropdown with initial status text before API fetch."""
         self._model_combo.clear()
         has_key = bool(self._api_key_input.text().strip())
-        if has_key or self.provider_id in NO_API_KEY_PROVIDER_IDS:
+        if has_key or not self._api_key_required():
             self._model_combo.addItem("Loading models...")
         else:
             display = self._get_display_name()
@@ -4103,9 +4409,15 @@ class ProviderSettingsWidget(QFrame):
         api_key = self._api_key_input.text().strip()
         api_base = self._api_base_input.text().strip() if self._api_base_input else None
 
-        if not api_key and self.provider_id not in NO_API_KEY_PROVIDER_IDS:
+        if not api_key and self._api_key_required():
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_warning", 16))
             self._status_label.setText("API key required to refresh models")
+            self._refresh_models_btn.setEnabled(True)
+            return
+        if self._key_withheld(api_key, api_base):
+            _logger.warning("model_refresh_key_withheld", provider=self.provider_id)
+            self._status_icon.setPixmap(icon_manager.get_pixmap("status_warning", 16))
+            self._status_label.setText(_KEY_WITHHELD_MESSAGE)
             self._refresh_models_btn.setEnabled(True)
             return
 
@@ -4119,6 +4431,7 @@ class ProviderSettingsWidget(QFrame):
             api_base,
             provider=provider,
             owner=self,
+            insecure_transport_acknowledged=self._insecure_ack_checkbox.isChecked(),
         )
         self._refresh_worker.refresh_finished.connect(self._on_refresh_worker_finished)
         self._refresh_worker.start()
@@ -4205,7 +4518,7 @@ class ProviderSettingsWidget(QFrame):
         api_key = self._api_key_input.text().strip()
         api_base = self._api_base_input.text().strip() if self._api_base_input else None
 
-        if not api_key and self.provider_id not in NO_API_KEY_PROVIDER_IDS:
+        if not api_key and self._api_key_required():
             _logger.warning(
                 "provider_connection_test_failed",
                 provider=self.provider_id,
@@ -4215,8 +4528,20 @@ class ProviderSettingsWidget(QFrame):
             self._status_label.setText("API key required")
             self._test_btn.setEnabled(True)
             return
+        if self._key_withheld(api_key, api_base):
+            _logger.warning("provider_connection_test_key_withheld", provider=self.provider_id)
+            self._status_icon.setPixmap(icon_manager.get_pixmap("status_error", 16))
+            self._status_label.setText(_KEY_WITHHELD_MESSAGE)
+            self._test_btn.setEnabled(True)
+            return
 
-        self._test_worker = ConnectionTestWorker(self.provider_id, api_key, api_base, owner=self)
+        self._test_worker = ConnectionTestWorker(
+            self.provider_id,
+            api_key,
+            api_base,
+            owner=self,
+            insecure_transport_acknowledged=self._insecure_ack_checkbox.isChecked(),
+        )
         self._test_worker.test_finished.connect(self._on_test_worker_finished)
         self._test_worker.start()
 
@@ -4388,12 +4713,9 @@ class ProviderSettingsWidget(QFrame):
         if self.provider_id in _PROVIDERS_WITHOUT_CREDENTIAL_FIELDS:
             return
 
-        env_var_mapping = get_api_key_env_var_mapping()
-
-        if self.provider_id not in env_var_mapping:
+        env_var_name = _resolve_widget_loader(self).env_var_for(self.provider_id, CredentialField.API_KEY)
+        if env_var_name is None:
             return
-
-        env_var_name = env_var_mapping[self.provider_id]
         _logger.info(
             "env_credential_write_starting",
             provider=self.provider_id,

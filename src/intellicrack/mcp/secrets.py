@@ -18,14 +18,14 @@ from typing import TYPE_CHECKING, Final
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials
-from intellicrack.credentials.store import CredentialStoreError
+from intellicrack.credentials.store import CredentialStoreError, KeyringUnavailableError
 from intellicrack.mcp.config import INPUT_REFERENCE_PATTERN, NAMESPACE_PREFIX, referenced_input_ids
 from intellicrack.mcp.errors import McpAuthError, McpConfigError
 
 
 if TYPE_CHECKING:
     import re
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
     from intellicrack.credentials.store import CredentialStore
 
@@ -138,6 +138,30 @@ class McpSecretResolver:
                 raise McpConfigError(message) from exc
         return expanded
 
+    async def resolve_sequence(self, values: Sequence[str], *, field: str) -> tuple[str, ...]:
+        """Expand references across an ordered list such as launch arguments.
+
+        Args:
+            values: Raw configuration values, in order.
+            field: Name of the list, used in the error message.
+
+        Returns:
+            tuple[str, ...]: The same values, in order, each expanded.
+
+        Raises:
+            McpConfigError: If a referenced input has no stored value. The
+                message names the position so the operator knows which entry
+                to fix.
+        """
+        expanded: list[str] = []
+        for index, value in enumerate(values):
+            try:
+                expanded.append(await self.resolve(value))
+            except McpConfigError as exc:
+                message = f"{field}[{index}]: {exc.message}"
+                raise McpConfigError(message) from exc
+        return tuple(expanded)
+
     async def set_input(self, input_id: str, value: str) -> None:
         """Store one input's value in the keyring.
 
@@ -151,11 +175,11 @@ class McpSecretResolver:
         key = input_credential_key(input_id)
         try:
             await self._store.set(key, ProviderCredentials(api_key=value), key_name=f"MCP input {input_id}")
+        except KeyringUnavailableError as exc:
+            message = f"cannot store MCP input {input_id!r}: {exc}"
+            raise McpAuthError(message) from exc
         except CredentialStoreError as exc:
-            message = (
-                f"cannot store MCP input {input_id!r}: {exc}. Install the keyring package and ensure a backend "
-                f"is available (Windows Credential Manager on Windows)."
-            )
+            message = f"cannot store MCP input {input_id!r}: the keyring refused the value ({exc}). Nothing was stored."
             raise McpAuthError(message) from exc
         _logger.info("mcp_input_stored", input_id=input_id)
 
@@ -198,7 +222,7 @@ class McpSecretResolver:
                 not entered the value yet.
         """
         try:
-            credentials = await self._store.get(input_credential_key(input_id))
+            credentials = await self._store.get_secret(input_credential_key(input_id))
         except CredentialStoreError as exc:
             message = f"cannot read MCP input {input_id!r}: {exc}"
             raise McpAuthError(message) from exc
@@ -218,7 +242,7 @@ class McpSecretResolver:
             McpAuthError: If the keyring is unusable.
         """
         try:
-            credentials = await self._store.get(input_credential_key(input_id))
+            credentials = await self._store.get_secret(input_credential_key(input_id))
         except CredentialStoreError as exc:
             message = f"cannot read MCP input {input_id!r} from the keyring: {exc}. The server will not be started without it."
             raise McpAuthError(message) from exc

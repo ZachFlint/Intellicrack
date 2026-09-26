@@ -216,7 +216,7 @@ class OpenRouterProvider(LLMProviderBase):
             except (ConnectionError, TimeoutError, OSError, RuntimeError, httpx.HTTPError) as exc:
                 self._logger.warning(
                     "openrouter_existing_client_close_error",
-                    error=str(exc),
+                    error=self._redact_error_text(exc, api_key=credentials.api_key),
                 )
             self.client = None
 
@@ -248,8 +248,9 @@ class OpenRouterProvider(LLMProviderBase):
             if self.client is not None:
                 await self.client.aclose()
                 self.client = None
-            self._logger.warning("openrouter_connect_failed", error=str(e))
-            raise ProviderError(_ERR_CONNECT_FAILED % e) from e
+            detail = self._redact_error_text(e, api_key=credentials.api_key)
+            self._logger.warning("openrouter_connect_failed", error=detail)
+            raise ProviderError(_ERR_CONNECT_FAILED % detail) from e
         else:
             self._credentials = credentials
             self._client_loop = asyncio.get_running_loop()
@@ -297,9 +298,9 @@ class OpenRouterProvider(LLMProviderBase):
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
             self._logger.warning(
                 "openrouter_list_models_failed",
-                error=str(e),
+                error=self._redact_error_text(e),
             )
-            raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
+            raise ProviderError(_ERR_LIST_MODELS_FAILED % self._redact_error_text(e)) from e
         else:
             return sorted_models
 
@@ -455,20 +456,15 @@ class OpenRouterProvider(LLMProviderBase):
         if enable_cache:
             self._apply_cache_control(openrouter_messages)
 
-        request_body: dict[str, object] = {
-            "model": model,
-            "messages": openrouter_messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
-
-        if tools:
-            request_body["tools"] = self.convert_tools_to_provider_format(tools)
-        if tool_choice is not None and tools:
-            request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
-        reasoning_effort = self._reasoning_effort_for(thinking)
-        if reasoning_effort is not None:
-            request_body["reasoning"] = {"effort": reasoning_effort}
+        request_body = self._chat_request_body(
+            model=model,
+            openrouter_messages=openrouter_messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            tools=tools,
+            tool_choice=tool_choice,
+            thinking=thinking,
+        )
 
         chat_task: asyncio.Task[httpx.Response] = asyncio.create_task(
             self._retry_with_backoff(lambda: self._post_chat_completion(request_body=request_body, model=model)),
@@ -555,9 +551,9 @@ class OpenRouterProvider(LLMProviderBase):
             self._logger.warning(
                 "openrouter_chat_request_error",
                 model=model,
-                error=str(e),
+                error=self._redact_error_text(e),
             )
-            raise ProviderError(_ERR_API_ERROR % e) from e
+            raise ProviderError(_ERR_API_ERROR % self._redact_error_text(e)) from e
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as e:
@@ -571,6 +567,58 @@ class OpenRouterProvider(LLMProviderBase):
             self._raise_typed_for_status(e.response.status_code, e, messages=_REST_HTTP_MSGS, detail=detail)
             raise ProviderError(_ERR_API_ERROR % detail) from e
         return response
+
+    def _chat_request_body(
+        self,
+        *,
+        model: str,
+        openrouter_messages: list[dict[str, object]],
+        temperature: float,
+        max_tokens: int,
+        tools: list[ToolDefinition] | None,
+        tool_choice: ToolChoice | None,
+        thinking: ThinkingConfig | None,
+    ) -> dict[str, object]:
+        """Build the ``/chat/completions`` body for one model.
+
+        Every model-dependent decision reads the model's resolved capability
+        record -- the OpenRouter preset, the metadata ``/models`` stated for
+        it, and the user's per-model override -- so a model that takes no
+        tools is sent none, a model that rejects sampling control is sent no
+        temperature, and the tool set is trimmed to the model's own cap.
+
+        Args:
+            model: Model ID to use.
+            openrouter_messages: Messages in OpenRouter (OpenAI-compatible)
+                format.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+            tools: Available tools for function calling.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration.
+
+        Returns:
+            dict[str, object]: The request body, without streaming fields.
+        """
+        capabilities = self.capabilities_for(model)
+        request_body: dict[str, object] = {
+            "model": model,
+            "messages": openrouter_messages,
+            "max_tokens": max_tokens,
+        }
+        if capabilities.supports_temperature:
+            request_body["temperature"] = temperature
+        sent_tools = tools if tools and capabilities.supports_tools else None
+        if tools and sent_tools is None:
+            self._logger.debug("openrouter_tools_withheld_model_takes_none", model=model, tools_count=len(tools))
+        if sent_tools:
+            request_body["tools"] = self._convert_tools_to_openai_format(self._enforce_tool_count_cap(sent_tools, capabilities))
+            if tool_choice is not None:
+                request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
+        reasoning_effort = self._reasoning_effort_for(thinking)
+        if reasoning_effort is not None:
+            request_body["reasoning"] = {"effort": reasoning_effort}
+        return request_body
 
     @staticmethod
     def _reasoning_effort_for(thinking: ThinkingConfig | None) -> str | None:
@@ -843,10 +891,10 @@ class OpenRouterProvider(LLMProviderBase):
                 "openrouter_chat_stream_failed",
                 model=model,
                 chunks_yielded=chunks_yielded,
-                error=str(e),
+                error=self._redact_error_text(e),
                 cancel_requested=self._cancel_requested,
             )
-            raise ProviderError(_ERR_STREAM_FAILED % e) from e
+            raise ProviderError(_ERR_STREAM_FAILED % self._redact_error_text(e)) from e
 
     async def _iter_openrouter_stream(
         self,
@@ -886,22 +934,17 @@ class OpenRouterProvider(LLMProviderBase):
         """
         if self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
-        request_body: dict[str, object] = {
-            "model": model,
-            "messages": openrouter_messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "stream": True,
-            "stream_options": {"include_usage": True},
-        }
-
-        if tools:
-            request_body["tools"] = self.convert_tools_to_provider_format(tools)
-        if tool_choice is not None and tools:
-            request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
-        reasoning_effort = self._reasoning_effort_for(thinking)
-        if reasoning_effort is not None:
-            request_body["reasoning"] = {"effort": reasoning_effort}
+        request_body = self._chat_request_body(
+            model=model,
+            openrouter_messages=openrouter_messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            tools=tools,
+            tool_choice=tool_choice,
+            thinking=thinking,
+        )
+        request_body["stream"] = True
+        request_body["stream_options"] = {"include_usage": True}
 
         stack = AsyncExitStack()
         response = await stack.enter_async_context(
@@ -1044,8 +1087,8 @@ class OpenRouterProvider(LLMProviderBase):
             self._logger.warning(
                 "openrouter_get_generation_failed",
                 generation_id=generation_id,
-                error=str(e),
+                error=self._redact_error_text(e),
             )
-            raise ProviderError(_ERR_GET_GENERATION_FAILED % e) from e
+            raise ProviderError(_ERR_GET_GENERATION_FAILED % self._redact_error_text(e)) from e
         else:
             return result

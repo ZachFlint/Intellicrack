@@ -25,38 +25,44 @@ manager must run on that single loop.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import enum
 import os
 import threading
 from collections import deque
 from collections.abc import Callable
-from contextlib import ExitStack, asynccontextmanager, suppress
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, TextIO, cast
+from typing import TYPE_CHECKING, Any, Final, Protocol, Self, TextIO, cast
 
-import psutil
+import anyio
 from mcp import Client
+from mcp.client.auth import OAuthClientProvider
 from mcp.client.stdio import stdio_client
+from mcp.client.subscriptions import ListenNotSupportedError, SubscriptionLost
 from mcp.shared.exceptions import MCPError
-from mcp_types import METHOD_NOT_FOUND, Implementation
+from mcp_types import CONNECTION_CLOSED, METHOD_NOT_FOUND, Implementation, ToolListChangedNotification
+from mcp_types.version import MODERN_PROTOCOL_VERSIONS
 
 from intellicrack._metadata import __version__
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.catalog import McpToolCatalog, fetch_catalog
 from intellicrack.mcp.config import McpConfigStore, McpServerConfig, McpTransportKind
 from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
-from intellicrack.mcp.sandbox_launch import SandboxedJob, build_sandboxed_startup, sandbox_supported
+from intellicrack.mcp.operator_wait import OperatorWaitClock
+from intellicrack.mcp.sandbox_launch import build_sandboxed_startup, confined_stdio_client, sandbox_supported
 from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, open_http_transport
 
 
 if TYPE_CHECKING:
+    import contextvars
     from collections.abc import AsyncGenerator
 
     import httpx2
     from mcp.client.session import ElicitationFnT
+    from mcp.shared.message import SessionMessage
     from mcp_types import CallToolResult
 
     from intellicrack.mcp.config import McpConfigDocument
@@ -91,8 +97,23 @@ BACKOFF_MAX_S: Final[float] = 60.0
 MAX_RECONNECT_ATTEMPTS: Final[int] = 8
 """Consecutive failures after which a server stops retrying by itself."""
 
+RECONNECT_RESET_AFTER_S: Final[float] = 30.0
+"""How long a connection must stay ready for its next drop to start a fresh series.
+
+A drop after a ready period at least this long is a new incident, so the
+attempt count starts again from zero. A server that fails again sooner is
+still in the same series, which keeps a server that crashes right after its
+handshake from retrying forever.
+"""
+
 CONNECT_TIMEOUT_S: Final[float] = 45.0
-"""How long a first connection and tool listing may take."""
+"""How long a first connection and tool listing may take.
+
+Time the operator spends answering a prompt the connection raised -- the
+launch consent dialog, an interactive OAuth sign-in -- is not counted: the
+operator is not the server, and a dialog left open for a minute is not a
+server that failed to start.
+"""
 
 DISCONNECT_TIMEOUT_S: Final[float] = 10.0
 """How long a graceful teardown may take before the task is cancelled."""
@@ -100,20 +121,18 @@ DISCONNECT_TIMEOUT_S: Final[float] = 10.0
 STDERR_JOIN_TIMEOUT_S: Final[float] = 2.0
 """How long to wait for the stderr reader thread to finish."""
 
-SANDBOX_ADOPT_TIMEOUT_S: Final[float] = 10.0
-"""How long to look for a sandboxed child before giving up on confining it."""
-
-SANDBOX_ADOPT_POLL_S: Final[float] = 0.05
-"""How often to re-check for the sandboxed child while waiting for it."""
-
 HEARTBEAT_INTERVAL_S: Final[float] = 15.0
-"""How often a live connection pings its server.
+"""How often a live connection probes its server.
 
-A local server that exits cleanly closes its pipes without raising anything:
-the transport's reader simply reaches EOF and stops. Nothing would notice
-until the next tool call, which would then fail in front of the model. The
-heartbeat turns that silent death into a prompt reconnect instead.
+The 2026-07-28 protocol has no ``ping``; a modern connection is probed with
+``server/discover``, which every such server must answer, and a handshake-era
+connection with ``ping``. The probe is what notices a remote server that
+went away without closing anything; a local server that exits is noticed at
+once, because its output stream ends.
 """
+
+LISTEN_RETRY_S: Final[float] = 5.0
+"""Delay before a change subscription the server ended is opened again."""
 
 TRANSPORT_FAILURES: Final[tuple[type[BaseException], ...]] = (
     OSError,
@@ -164,8 +183,7 @@ def representative_failure(exc: BaseException) -> BaseException:
     """
     if leaves := failure_leaves(exc):
         return next((leaf for leaf in leaves if isinstance(leaf, McpError | MCPError)), leaves[0])
-    else:
-        return exc
+    return exc
 
 
 def fatal_leaf(exc: BaseException) -> BaseException | None:
@@ -332,6 +350,158 @@ def reconnect_delay(attempt: int) -> float:
     return min(BACKOFF_BASE_S * (BACKOFF_FACTOR**attempt), BACKOFF_MAX_S)
 
 
+def is_connection_loss(failure: BaseException) -> bool:
+    """Report whether a request failed because the connection itself is gone.
+
+    A server that answers with a protocol error is alive and still
+    connected; only a closed connection, or the operating system refusing to
+    reach the peer, means the transport must be rebuilt.
+
+    Args:
+        failure: The representative failure of a request.
+
+    Returns:
+        bool: ``True`` for ``CONNECTION_CLOSED`` and for an OS-level error.
+    """
+    if isinstance(failure, MCPError):
+        return failure.code == CONNECTION_CLOSED
+    return isinstance(failure, OSError)
+
+
+class _MessageReceiveStream(Protocol):
+    """The receive side of a transport's stream pair, as the session reads it."""
+
+    async def receive(self) -> SessionMessage | Exception:
+        """Receive one item.
+
+        Returns:
+            SessionMessage | Exception: A message, or a transport fault.
+        """
+        ...
+
+    async def __anext__(self) -> SessionMessage | Exception:
+        """Receive the next item.
+
+        Returns:
+            SessionMessage | Exception: A message, or a transport fault.
+        """
+        ...
+
+    def close(self) -> None:
+        """Close the stream."""
+        ...
+
+    async def aclose(self) -> None:
+        """Close the stream."""
+        ...
+
+
+class _WatchedReceiveStream:
+    """A transport's read stream that reports when it ends.
+
+    When a server's output ends -- a local server exited, a legacy SSE
+    stream was cut -- the session's dispatcher simply stops reading; nothing
+    is raised anywhere. This wrapper sits between the transport and the
+    dispatcher and turns that end into a callback, so the connection learns
+    at once that its server is gone.
+    """
+
+    def __init__(self, inner: _MessageReceiveStream, on_closed: Callable[[], None]) -> None:
+        """Wrap a read stream.
+
+        Args:
+            inner: The transport's read stream.
+            on_closed: Called once the stream has ended.
+        """
+        self._inner = inner
+        self._on_closed = on_closed
+
+    @property
+    def last_context(self) -> contextvars.Context | None:
+        """The sender's context for the last item, when the transport records one.
+
+        Returns:
+            contextvars.Context | None: The context, or ``None``.
+        """
+        return cast("contextvars.Context | None", getattr(self._inner, "last_context", None))
+
+    def _ended(self) -> None:
+        """Report the end of the stream."""
+        self._on_closed()
+
+    async def receive(self) -> SessionMessage | Exception:
+        """Receive one item.
+
+        Returns:
+            SessionMessage | Exception: A message, or a transport fault.
+
+        Raises:
+            anyio.EndOfStream: If the stream has ended.
+            anyio.ClosedResourceError: If the stream was closed.
+            anyio.BrokenResourceError: If the sending side broke.
+        """
+        try:
+            return await self._inner.receive()
+        except anyio.EndOfStream:
+            self._ended()
+            raise
+        except (anyio.ClosedResourceError, anyio.BrokenResourceError):
+            self._ended()
+            raise
+
+    def __aiter__(self) -> Self:
+        """Iterate over the stream.
+
+        Returns:
+            Self: This stream.
+        """
+        return self
+
+    async def __anext__(self) -> SessionMessage | Exception:
+        """Receive the next item.
+
+        Returns:
+            SessionMessage | Exception: A message, or a transport fault.
+
+        Raises:
+            StopAsyncIteration: If the stream has ended.
+            anyio.ClosedResourceError: If the stream was closed.
+            anyio.BrokenResourceError: If the sending side broke.
+        """
+        try:
+            return await self._inner.__anext__()
+        except StopAsyncIteration:
+            self._ended()
+            raise
+        except (anyio.ClosedResourceError, anyio.BrokenResourceError):
+            self._ended()
+            raise
+
+    def close(self) -> None:
+        """Close the stream."""
+        self._inner.close()
+
+    async def aclose(self) -> None:
+        """Close the stream."""
+        await self._inner.aclose()
+
+    async def __aenter__(self) -> Self:
+        """Enter the stream's context.
+
+        Returns:
+            Self: This stream.
+        """
+        return self
+
+    async def __aexit__(self, *exc: object) -> None:
+        """Close the stream on leaving its context.
+
+        Args:
+            *exc: Exception type, value and traceback, when the body raised.
+        """
+        await self._inner.aclose()
+
+
 class McpConnection:
     """One configured server, its transport, and its current tool listing.
 
@@ -366,7 +536,8 @@ class McpConnection:
         self._config = config
         self._resolver = resolver
         self._client_info = client_info if client_info is not None else build_client_info()
-        self._elicitation_callback = elicitation_callback
+        self._operator_wait = OperatorWaitClock()
+        self._elicitation_callback = self._operator_wait.pause_during(elicitation_callback) if elicitation_callback is not None else None
         self._consent = consent
         self._auth_factory = auth_factory
 
@@ -384,8 +555,11 @@ class McpConnection:
         self._call_lock = asyncio.Lock()
         self._dropped = asyncio.Event()
         self._wake = asyncio.Event()
-        self._heartbeat_supported = True
         self._on_change: Callable[[str], None] | None = None
+        self._attempt = 0
+        self._ready_since: float | None = None
+        self._follow_changes = False
+        self._change_notice = asyncio.Event()
 
     @property
     def config(self) -> McpServerConfig:
@@ -503,8 +677,13 @@ class McpConnection:
         return {**from_file, **inline}
 
     @asynccontextmanager
-    async def _open_transport(self) -> AsyncGenerator[Client]:
+    async def _open_transport(self, attempt: int) -> AsyncGenerator[Client]:
         """Open the SDK client for this server's transport.
+
+        Args:
+            attempt: The connection attempt this transport belongs to, so an
+                end-of-stream report from a transport already replaced is
+                ignored.
 
         Yields:
             Client: An entered client, ready to issue requests.
@@ -512,32 +691,62 @@ class McpConnection:
         Raises:
             McpConnectionError: If the transport kind has no implementation.
         """
+        on_closed = partial(self._on_stream_closed, attempt)
         if self._config.kind is McpTransportKind.STDIO:
-            async with self._open_stdio_client() as client:
+            async with self._open_stdio_client(on_closed) as client:
                 yield client
             return
         if self._config.is_http:
-            async with self._open_http_client() as client:
+            async with self._open_http_client(on_closed) as client:
                 yield client
             return
         message = f"server '{self.server_id}': transport {self._config.kind.value!r} is not supported"
         raise McpConnectionError(message)
 
+    def _build_client(self, streams: tuple[Any, Any], on_closed: Callable[[], None], *, legacy: bool = False) -> Client:
+        """Build the SDK client over an open stream pair.
+
+        Args:
+            streams: The transport's read and write streams.
+            on_closed: Called when the read stream ends.
+            legacy: Whether to drive the session in the SDK's ``legacy``
+                mode, with the ``initialize`` handshake, rather than
+                negotiating the protocol version.
+
+        Returns:
+            Client: The client, not yet entered.
+        """
+        return Client(
+            _StreamPairTransport(streams, on_closed),
+            client_info=self._client_info,
+            elicitation_callback=self._elicitation_callback,
+            message_handler=self._on_incoming,
+            read_timeout_seconds=self._config.request_timeout_s,
+            mode="legacy" if legacy else "auto",
+        )
+
     @asynccontextmanager
-    async def _open_stdio_client(self) -> AsyncGenerator[Client]:
+    async def _open_stdio_client(self, on_closed: Callable[[], None]) -> AsyncGenerator[Client]:
         """Spawn a local server and open a client over its stdio streams.
 
-        Teardown is the SDK's: closing the transport closes stdin, waits out
-        the grace period, and then terminates the whole process tree -- on
-        Windows through the job object the child was spawned into, so a
-        server that started children of its own leaves none behind.
+        An unconfined server is spawned by the SDK, whose teardown closes
+        stdin, waits out the grace period, and then terminates the whole
+        process tree. A sandboxed server is spawned by
+        :func:`~intellicrack.mcp.sandbox_launch.confined_stdio_client`,
+        suspended inside its job with a restricted token, so the server and
+        everything it starts are confined from their first instruction; its
+        teardown terminates the job.
+
+        Args:
+            on_closed: Called when the server's output stream ends.
 
         Yields:
             Client: An entered client.
 
         Raises:
-            McpConnectionError: If the server has no launch description or
-                no consent gate is available to ask.
+            McpConnectionError: If the server has no launch description,
+                no consent gate is available to ask, or it is configured to
+                run sandboxed on a platform with no sandbox.
         """
         spec = self._config.stdio
         if spec is None:
@@ -551,20 +760,17 @@ class McpConnection:
                 f"but no consent prompt is available in this process."
             )
             raise McpConnectionError(message)
-        await self._consent.ensure_launch_consent(self._config, env)
+        async with self._operator_wait.operator_turn():
+            await self._consent.ensure_launch_consent(self._config, env)
 
         sandbox = self._config.sandbox
-        launch_spec = spec
-        if sandbox.enabled:
-            if not sandbox_supported():
-                message = (
-                    f"server '{self.server_id}' is configured to run sandboxed, which Intellicrack implements "
-                    f"with Windows job objects. Refusing to start it unconfined on this platform."
-                )
-                raise McpConnectionError(message)
-            confined = build_sandboxed_startup(spec, sandbox, env)
-            env = dict(confined.env)
-            launch_spec = replace(spec, cwd=confined.cwd)
+        launch_spec = replace(spec, args=await self._resolver.resolve_sequence(spec.args, field="args"))
+        if sandbox.enabled and not sandbox_supported():
+            message = (
+                f"server '{self.server_id}' is configured to run sandboxed, which Intellicrack implements "
+                f"with Windows job objects, restricted tokens and integrity levels. Refusing to start it unconfined on this platform."
+            )
+            raise McpConnectionError(message)
 
         parameters = build_stdio_parameters(launch_spec, env)
         errlog = self._stderr.open()
@@ -575,29 +781,33 @@ class McpConnection:
             argument_count=len(parameters.args),
             sandboxed=sandbox.enabled,
         )
-        known_children: frozenset[int] = _child_pids() if sandbox.enabled else frozenset()
         try:
-            with ExitStack() as guards:
-                job = guards.enter_context(SandboxedJob(sandbox)) if sandbox.enabled else None
+            if sandbox.enabled:
+                launch = build_sandboxed_startup(launch_spec, sandbox, env)
+                async with (
+                    confined_stdio_client(launch, sandbox, errlog) as streams,
+                    self._build_client(streams, on_closed) as client,
+                ):
+                    yield client
+            else:
                 async with (
                     stdio_client(parameters, errlog=errlog) as streams,
-                    Client(
-                        _StreamPairTransport(streams),
-                        client_info=self._client_info,
-                        elicitation_callback=self._elicitation_callback,
-                        message_handler=self._on_incoming,
-                        read_timeout_seconds=self._config.request_timeout_s,
-                    ) as client,
+                    self._build_client(streams, on_closed) as client,
                 ):
-                    if job is not None:
-                        await self._confine_child(job, parameters.command, known_children)
                     yield client
         finally:
             self._stderr.close()
 
     @asynccontextmanager
-    async def _open_http_client(self) -> AsyncGenerator[Client]:
+    async def _open_http_client(self, on_closed: Callable[[], None]) -> AsyncGenerator[Client]:
         """Open a client against a remote HTTP server.
+
+        A server declared ``sse`` is spoken to over the SDK's legacy HTTP+SSE
+        transport with the session in ``legacy`` mode; one declared ``http``
+        over Streamable HTTP, negotiating the protocol version.
+
+        Args:
+            on_closed: Called when the transport's read stream ends.
 
         Yields:
             Client: An entered client.
@@ -628,6 +838,8 @@ class McpConnection:
             request_timeout_s=self._config.request_timeout_s,
         )
         auth = self._auth_factory(resolved) if self._auth_factory is not None else None
+        if isinstance(auth, OAuthClientProvider):
+            self._track_operator_steps(auth)
 
         http_spec = resolved.http
         if http_spec is None:
@@ -640,53 +852,27 @@ class McpConnection:
                 headers=headers,
                 auth=auth,
                 timeout_s=self._config.request_timeout_s,
+                kind=self._config.kind,
             ) as streams,
-            Client(
-                _StreamPairTransport(streams),
-                client_info=self._client_info,
-                elicitation_callback=self._elicitation_callback,
-                message_handler=self._on_incoming,
-                read_timeout_seconds=self._config.request_timeout_s,
-            ) as client,
+            self._build_client(streams, on_closed, legacy=self._config.kind is McpTransportKind.SSE) as client,
         ):
             yield client
 
-    async def _confine_child(self, job: SandboxedJob, command: str, known: frozenset[int]) -> None:
-        """Place the server process this launch just started into its job.
+    def _track_operator_steps(self, auth: OAuthClientProvider) -> None:
+        """Count an OAuth sign-in's interactive steps as operator time.
 
-        The SDK owns the spawn and does not report the child's identity, so
-        the new process is found by diffing this process's children around
-        the spawn. When it cannot be found the launch is abandoned rather
-        than continued unconfined: an operator who asked for a sandbox and
-        silently did not get one is worse off than one whose server refused
-        to start.
+        Opening the authorization page and waiting for its redirect are the
+        steps that wait on a person; the token exchange around them does not,
+        and stays inside the connect timeout.
 
         Args:
-            job: The open job the child belongs in.
-            command: The launch command, used to recognise the child.
-            known: Child process ids that existed before the spawn.
-
-        Raises:
-            McpConnectionError: If the child could not be identified or
-                could not be confined.
+            auth: The OAuth handler about to sign this connection's requests.
         """
-        expected = Path(command).stem.lower()
-        deadline = asyncio.get_running_loop().time() + SANDBOX_ADOPT_TIMEOUT_S
-        while asyncio.get_running_loop().time() < deadline:
-            candidates = [pid for pid in _child_pids() - known if _process_matches(pid, expected)]
-            if len(candidates) == 1:
-                try:
-                    job.adopt(candidates[0])
-                except (McpError, OSError) as exc:
-                    message = f"server '{self.server_id}': the sandbox could not confine the server process: {exc}"
-                    raise McpConnectionError(message) from exc
-                return
-            await asyncio.sleep(SANDBOX_ADOPT_POLL_S)
-        message = (
-            f"server '{self.server_id}': the sandbox could not identify the server process it just started, "
-            f"so it cannot confine it. Refusing to leave the server running unconfined."
-        )
-        raise McpConnectionError(message)
+        context = auth.context
+        if context.redirect_handler is not None:
+            context.redirect_handler = self._operator_wait.pause_while(context.redirect_handler)
+        if context.callback_handler is not None:
+            context.callback_handler = self._operator_wait.pause_while(context.callback_handler)
 
     async def _serve_once(self) -> None:
         """Hold one connection open until a stop is requested.
@@ -694,11 +880,13 @@ class McpConnection:
         A tool listing that cannot be retrieved propagates
         :class:`McpConnectionError` from :func:`fetch_catalog`.
         """
-        async with self._open_transport() as client:
+        self._attempt += 1
+        async with self._open_transport(self._attempt) as client:
             catalog = await fetch_catalog(client, self.server_id)
             self._client = client
             self._catalog = catalog
             self._connected_at = datetime.now(tz=UTC)
+            self._ready_since = asyncio.get_running_loop().time()
             self._last_error = None
             self._health = McpHealth.READY
             self._settled.set()
@@ -707,41 +895,86 @@ class McpConnection:
                 server_id=self.server_id,
                 tool_count=catalog.tool_count,
                 generation=catalog.generation,
+                protocol_version=client.protocol_version,
             )
             self._notify_change()
+            self._start_follower(client)
             try:
                 await self._hold_open(client)
             finally:
                 self._client = None
+                await self._stop_follower()
+
+    def _on_stream_closed(self, attempt: int) -> None:
+        """Record that one attempt's transport stopped delivering messages.
+
+        Args:
+            attempt: The attempt whose read stream ended.
+        """
+        if attempt == self._attempt:
+            self._mark_dropped("the server closed the connection")
+
+    def _mark_dropped(self, detail: str) -> None:
+        """Wake the supervisor because the current connection is gone.
+
+        Args:
+            detail: Why the connection is considered gone.
+        """
+        if self._stop.is_set() or self._dropped.is_set():
+            return
+        self._last_error = detail
+        self._dropped.set()
+        self._wake.set()
+        _logger.warning("mcp_transport_fault", server_id=self.server_id, error=detail)
 
     async def _on_incoming(self, message: object) -> None:
-        """Record a transport-level fault the session surfaced.
+        """Handle what the session tees to the message handler.
 
-        The session tees transport exceptions here as well as the server
-        notifications it parses. An exception means the connection is gone,
-        which wakes the supervisor immediately instead of waiting for the
-        next heartbeat.
+        An exception means the transport faulted, which wakes the supervisor
+        immediately instead of waiting for the next heartbeat. A
+        ``notifications/tools/list_changed`` on a handshake-era connection,
+        which has no subscription stream, is queued for a real re-list.
 
         Args:
             message: A server notification, or the exception the transport
                 raised.
         """
         if isinstance(message, Exception):
-            self._last_error = f"{type(message).__name__}: {message}"
-            self._dropped.set()
-            self._wake.set()
-            _logger.warning("mcp_transport_fault", server_id=self.server_id, error=self._last_error)
+            self._mark_dropped(f"{type(message).__name__}: {message}")
+            return
+        if isinstance(message, ToolListChangedNotification) and not self._is_modern(self._client):
+            _logger.info("mcp_tools_list_changed_notice", server_id=self.server_id)
+            self._change_notice.set()
+
+    @staticmethod
+    def _is_modern(client: Client | None) -> bool:
+        """Report whether a client negotiated the 2026-07-28 protocol or later.
+
+        Args:
+            client: The entered client, or ``None``.
+
+        Returns:
+            bool: ``True`` when change notices arrive through a subscription.
+        """
+        if client is None:
+            return False
+        return client.session.protocol_version in MODERN_PROTOCOL_VERSIONS
 
     async def _hold_open(self, client: Client) -> None:
         """Keep a ready connection open, watching that it stays alive.
+
+        Whether the server answers the liveness probe at all is decided per
+        connection: a handshake-era server that refuses ``ping`` stops being
+        probed on this connection only, and the next connection probes again.
 
         Args:
             client: The entered client for this connection.
 
         Raises:
-            McpConnectionError: If the transport reported a fault, or the
-                heartbeat found the server gone.
+            McpConnectionError: If the transport reported a fault, the
+                server's stream ended, or the probe found the server gone.
         """
+        probing = True
         while True:
             with suppress(TimeoutError):
                 await asyncio.wait_for(self._wake.wait(), timeout=HEARTBEAT_INTERVAL_S)
@@ -752,43 +985,74 @@ class McpConnection:
                 message = f"server '{self.server_id}' connection dropped: {detail}"
                 raise McpConnectionError(message)
             self._wake.clear()
-            if not self._heartbeat_supported:
-                continue
-            await self._heartbeat(client)
+            if probing:
+                probing = await self._heartbeat(client)
 
-    async def _heartbeat(self, client: Client) -> None:
-        """Ping the server once to confirm the connection is still alive.
+    async def _heartbeat(self, client: Client) -> bool:
+        """Probe the server once to confirm the connection is still alive.
 
-        A server that answers with "method not found" simply does not
-        implement ping; heartbeats are switched off for that connection
-        rather than treating the refusal as a death.
+        ``ping`` does not exist in the 2026-07-28 protocol, so a modern
+        connection is probed with ``server/discover``, which is stateless,
+        changes nothing on either side, and must be answered by every modern
+        server. A handshake-era connection is probed with ``ping``; a server
+        of that era that answers "method not found" simply does not
+        implement it, and is not probed again on this connection.
 
         Args:
             client: The entered client for this connection.
 
+        Returns:
+            bool: Whether to keep probing this connection.
+
         Raises:
-            McpConnectionError: If the ping could not be delivered, which
-                means the server is gone.
-            asyncio.CancelledError: If the supervisor is cancelled mid-ping.
+            McpConnectionError: If the probe could not be delivered or
+                answered, which means the server is gone.
+            asyncio.CancelledError: If the supervisor is cancelled mid-probe.
         """
+        session = client.session
+        version = session.protocol_version
+        modern = version in MODERN_PROTOCOL_VERSIONS
         try:
-            _ = await client.session.send_ping()
+            if version in MODERN_PROTOCOL_VERSIONS:
+                _ = await session.send_discover(version)
+            else:
+                _ = await session.send_ping()
         except asyncio.CancelledError:
             raise
         except MCPError as exc:
-            if exc.code == METHOD_NOT_FOUND:
-                self._heartbeat_supported = False
-                _logger.debug("mcp_heartbeat_unsupported", server_id=self.server_id)
-                return
+            if exc.code == METHOD_NOT_FOUND and not modern:
+                _logger.debug("mcp_heartbeat_unsupported", server_id=self.server_id, protocol_version=version)
+                return False
             message = f"server '{self.server_id}' stopped responding: {exc}"
             raise McpConnectionError(message) from exc
         except TRANSPORT_FAILURES as exc:
             failure = representative_failure(exc)
             message = f"server '{self.server_id}' stopped responding: {failure}"
             raise McpConnectionError(message) from failure
+        return True
+
+    def _drop_was_isolated(self) -> bool:
+        """Report whether the connection that just ended had been healthy.
+
+        Returns:
+            bool: ``True`` when it had been ready for at least
+            :data:`RECONNECT_RESET_AFTER_S`, so its end starts a new series
+            of attempts rather than continuing the previous one.
+        """
+        ready_since = self._ready_since
+        self._ready_since = None
+        if ready_since is None:
+            return False
+        return asyncio.get_running_loop().time() - ready_since >= RECONNECT_RESET_AFTER_S
 
     async def _supervise(self) -> None:
         """Keep the server connected, retrying with bounded backoff.
+
+        Consecutive failures are counted, and :data:`MAX_RECONNECT_ATTEMPTS`
+        of them stop the retries. A connection that had been ready for
+        :data:`RECONNECT_RESET_AFTER_S` resets the count when it drops, so a
+        server that stays healthy between occasional drops keeps being
+        reconnected for the life of the process.
 
         Raises:
             asyncio.CancelledError: If the supervisor task is cancelled,
@@ -805,6 +1069,7 @@ class McpConnection:
             self._health = McpHealth.CONNECTING
             self._dropped.clear()
             self._wake.clear()
+            self._ready_since = None
             try:
                 await self._serve_once()
             except asyncio.CancelledError:
@@ -834,6 +1099,8 @@ class McpConnection:
 
             if self._stop.is_set():
                 return
+            if self._drop_was_isolated():
+                attempt = 0
             attempt += 1
             if attempt >= MAX_RECONNECT_ATTEMPTS:
                 _logger.error(
@@ -848,15 +1115,38 @@ class McpConnection:
             with suppress(TimeoutError):
                 await asyncio.wait_for(self._stop.wait(), timeout=delay)
 
+    async def _await_settled(self) -> bool:
+        """Wait for the first attempt to settle, excluding operator time.
+
+        The budget is :data:`CONNECT_TIMEOUT_S` of time not spent waiting on
+        the operator: the deadline is suspended for as long as a consent
+        prompt or an interactive sign-in is open, however long the operator
+        takes.
+
+        Returns:
+            bool: ``True`` when the attempt settled, ``False`` when the
+            budget ran out first.
+        """
+        try:
+            async with self._operator_wait.deadline(CONNECT_TIMEOUT_S):
+                _ = await self._settled.wait()
+        except TimeoutError:
+            return False
+        return True
+
     async def connect(self) -> None:
         """Bring the server up and wait for its first tool listing.
+
+        Time spent waiting on the operator -- the launch consent prompt, an
+        interactive OAuth sign-in -- does not count against
+        :data:`CONNECT_TIMEOUT_S`.
 
         Raises:
             McpConsentDeniedError: If the operator refused to let a local
                 server run. Nothing was spawned.
             McpConnectionError: If the server is disabled, the first attempt
                 fails for any other reason, or it does not become ready
-                within :data:`CONNECT_TIMEOUT_S`.
+                within :data:`CONNECT_TIMEOUT_S` of its own time.
         """
         if not self._config.enabled:
             self._health = McpHealth.DISABLED
@@ -869,19 +1159,18 @@ class McpConnection:
         self._settled = asyncio.Event()
         self._dropped = asyncio.Event()
         self._wake = asyncio.Event()
+        self._change_notice = asyncio.Event()
         self._last_error = None
         self._failure = None
         self._health = McpHealth.CONNECTING
         self._task = asyncio.create_task(self._supervise(), name=f"mcp-{self.server_id}")
 
-        try:
-            await asyncio.wait_for(self._settled.wait(), timeout=CONNECT_TIMEOUT_S)
-        except TimeoutError as exc:
+        if not await self._await_settled():
             await self.disconnect()
             self._health = McpHealth.FAILED
             self._last_error = f"timed out after {CONNECT_TIMEOUT_S:.0f}s waiting for the server to become ready"
             message = f"server '{self.server_id}': {self._last_error}"
-            raise McpConnectionError(message) from exc
+            raise McpConnectionError(message)
 
         health, reported, failure = self._settled_outcome()
         if health is not McpHealth.READY:
@@ -916,12 +1205,7 @@ class McpConnection:
             asyncio.CancelledError: If the caller is cancelled while waiting
                 for the supervisor task to finish.
         """
-        listen_task = self._listen_task
-        self._listen_task = None
-        if listen_task is not None and not listen_task.done():
-            _ = listen_task.cancel()
-            with suppress(asyncio.CancelledError, *TRANSPORT_FAILURES):
-                await listen_task
+        await self._stop_follower()
 
         self._stop.set()
         self._wake.set()
@@ -948,13 +1232,22 @@ class McpConnection:
         _logger.info("mcp_server_stopped", server_id=self.server_id)
         self._notify_change()
 
-    async def refresh_catalog(self) -> McpToolCatalog:
-        """Re-list the server's tools, respecting its freshness hint.
+    async def refresh_catalog(self, *, force: bool = False) -> McpToolCatalog:
+        """Re-list the server's tools.
+
+        Without ``force`` the server's freshness hint is respected: a listing
+        still inside its ``ttlMs`` window is returned without a request. With
+        ``force`` the server is always asked, and the SDK's own response
+        cache is refreshed too. A change notification forces: the server
+        has just said the listing it gave is out of date, whatever its
+        freshness hint promised.
+
+        Args:
+            force: Whether to ask the server even while the listing in hand
+                is still fresh.
 
         Returns:
-            McpToolCatalog: The current listing. A listing still inside the
-            server's own ``ttlMs`` window is returned without a second
-            request.
+            McpToolCatalog: The current listing.
 
         Raises:
             McpConnectionError: If the server is not connected, or the
@@ -966,11 +1259,11 @@ class McpConnection:
             message = f"server '{self.server_id}' is not connected"
             raise McpConnectionError(message)
         current = self._catalog
-        if current is not None and current.is_fresh(datetime.now(tz=UTC)):
+        if not force and current is not None and current.is_fresh(datetime.now(tz=UTC)):
             _logger.debug("mcp_catalog_still_fresh", server_id=self.server_id, ttl_ms=current.ttl_ms)
             return current
         try:
-            catalog = await fetch_catalog(client, self.server_id)
+            catalog = await fetch_catalog(client, self.server_id, cache_mode="refresh" if force else "use")
         except asyncio.CancelledError:
             raise
         except TRANSPORT_FAILURES as exc:
@@ -1002,6 +1295,10 @@ class McpConnection:
             CallToolResult: The server's result, error results included. A
             tool that reports failure is a result, not an exception.
 
+        A call that finds the connection closed also wakes the supervisor,
+        which rebuilds the connection instead of waiting for the next
+        liveness probe to notice.
+
         Raises:
             McpConnectionError: If the server is not connected, the call
                 times out, or the transport fails.
@@ -1013,7 +1310,7 @@ class McpConnection:
             raise McpConnectionError(message)
         budget = timeout_s if timeout_s is not None else self._config.request_timeout_s
         try:
-            async with asyncio.timeout(budget):
+            async with self._operator_wait.deadline(budget):
                 return await client.call_tool(tool_name, arguments)
         except TimeoutError as exc:
             message = f"server '{self.server_id}': call to {tool_name!r} exceeded {budget:.0f}s"
@@ -1022,52 +1319,151 @@ class McpConnection:
             raise
         except TRANSPORT_FAILURES as exc:
             failure = representative_failure(exc)
+            if is_connection_loss(failure) and self._client is client:
+                self._mark_dropped(f"call to {tool_name!r} found the connection closed: {failure}")
             message = f"server '{self.server_id}': call to {tool_name!r} failed: {failure}"
             raise McpConnectionError(message) from failure
 
     async def listen_for_changes(self, on_change: Callable[[str], None]) -> None:
-        """Follow the server's tool-list change notifications.
+        """Follow the current connection's tool-list change notices.
 
-        Subscriptions exist only on a 2026-07-28 connection. On an older
-        one this returns immediately rather than failing: the connection is
-        still fully usable, it simply cannot be told about changes and the
-        listing is refreshed on demand instead.
+        On a 2026-07-28 connection the notices arrive on a
+        ``subscriptions/listen`` stream, which is re-opened if the server
+        ends it. On an older connection they arrive as
+        ``notifications/tools/list_changed`` through the message handler.
+        Either way each notice forces a real re-list, whatever the listing's
+        freshness hint said. This runs for as long as the current connection
+        lasts; :meth:`start_listening` is what keeps following across
+        reconnects.
 
         Args:
-            on_change: Callable invoked with the server id after the tool
-                listing has been refetched.
-
-        Raises:
-            asyncio.CancelledError: If the listening task is cancelled.
+            on_change: Callable invoked with the server id whenever a
+                re-list moves the listing.
         """
         client = self._client
         if client is None:
             return
         self.set_change_listener(on_change)
-        try:
-            async with client.listen(tools_list_changed=True) as subscription:
-                _logger.info("mcp_change_subscription_open", server_id=self.server_id)
-                async for _event in subscription:
-                    with suppress(McpConnectionError):
-                        _ = await self.refresh_catalog()
-                    on_change(self.server_id)
-        except asyncio.CancelledError:
-            raise
-        except TRANSPORT_FAILURES as exc:
-            _logger.info("mcp_change_subscription_unavailable", server_id=self.server_id, reason=str(exc))
+        await self._follow(client)
 
     def start_listening(self, on_change: Callable[[str], None]) -> None:
-        """Start following tool-list changes in the background.
+        """Follow tool-list changes in the background, across reconnects.
+
+        The follower belongs to one connection and ends with it; every later
+        connection starts its own as soon as it is ready.
 
         Args:
             on_change: Callable invoked with the server id after a change.
         """
-        if self._listen_task is not None and not self._listen_task.done():
+        self.set_change_listener(on_change)
+        self._follow_changes = True
+        client = self._client
+        if client is not None and self._health is McpHealth.READY:
+            self._start_follower(client)
+
+    def _start_follower(self, client: Client) -> None:
+        """Start following change notices for one ready connection.
+
+        Args:
+            client: The connection's entered client.
+        """
+        if not self._follow_changes:
             return
-        self._listen_task = asyncio.create_task(
-            self.listen_for_changes(on_change),
-            name=f"mcp-listen-{self.server_id}",
-        )
+        task = self._listen_task
+        if task is not None and not task.done():
+            return
+        self._change_notice = asyncio.Event()
+        self._listen_task = asyncio.create_task(self._follow(client), name=f"mcp-listen-{self.server_id}")
+
+    async def _stop_follower(self) -> None:
+        """Stop the change follower of the connection that is ending.
+
+        The follower is awaited through :func:`asyncio.wait`, so its own
+        cancellation is absorbed while a cancellation of the caller still
+        propagates.
+        """
+        task = self._listen_task
+        self._listen_task = None
+        if task is None:
+            return
+        if not task.done():
+            _ = task.cancel()
+            _ = await asyncio.wait({task})
+        if not task.cancelled() and (failure := task.exception()) is not None:
+            _logger.info("mcp_change_follower_failed", server_id=self.server_id, error=str(failure))
+
+    async def _follow(self, client: Client) -> None:
+        """Follow change notices for one connection until it ends.
+
+        Args:
+            client: The connection's entered client.
+        """
+        if self._is_modern(client):
+            await self._follow_subscription(client)
+        else:
+            await self._follow_notices()
+
+    async def _follow_notices(self) -> None:
+        """Re-list after each change notice a handshake-era server sends."""
+        while True:
+            _ = await self._change_notice.wait()
+            self._change_notice.clear()
+            await self._refresh_after_notice()
+
+    async def _follow_subscription(self, client: Client) -> None:
+        """Hold a ``subscriptions/listen`` stream open and re-list on each event.
+
+        A stream the server ends, gracefully or not, is re-opened after
+        :data:`LISTEN_RETRY_S`, and the listing is re-read on re-opening
+        because events sent while no stream was open are not replayed. A
+        server that refuses the subscription outright is not asked again on
+        this connection.
+
+        Args:
+            client: The connection's entered client.
+
+        Raises:
+            asyncio.CancelledError: If the follower is cancelled.
+        """
+        reopened = False
+        while True:
+            try:
+                await self._consume_subscription(client, reopened=reopened)
+            except asyncio.CancelledError:
+                raise
+            except SubscriptionLost as exc:
+                _logger.info("mcp_change_subscription_lost", server_id=self.server_id, reason=str(exc))
+            except ListenNotSupportedError as exc:
+                _logger.info("mcp_change_subscription_unavailable", server_id=self.server_id, reason=str(exc))
+                return
+            except TRANSPORT_FAILURES as exc:
+                _logger.info("mcp_change_subscription_unavailable", server_id=self.server_id, reason=str(exc))
+                return
+            reopened = True
+            await asyncio.sleep(LISTEN_RETRY_S)
+
+    async def _consume_subscription(self, client: Client, *, reopened: bool) -> None:
+        """Hold one ``subscriptions/listen`` stream open until the server ends it.
+
+        Args:
+            client: The connection's entered client.
+            reopened: Whether an earlier stream on this connection ended, so
+                events may have been missed and the listing is re-read first.
+        """
+        async with client.listen(tools_list_changed=True) as subscription:
+            _logger.info("mcp_change_subscription_open", server_id=self.server_id)
+            if reopened:
+                await self._refresh_after_notice()
+            async for _event in subscription:
+                await self._refresh_after_notice()
+        _logger.info("mcp_change_subscription_closed", server_id=self.server_id)
+
+    async def _refresh_after_notice(self) -> None:
+        """Re-list the server's tools because it said they changed."""
+        try:
+            _ = await self.refresh_catalog(force=True)
+        except McpConnectionError as exc:
+            _logger.warning("mcp_catalog_refresh_failed", server_id=self.server_id, error=str(exc))
 
     def _notify_change(self) -> None:
         """Invoke the change listener, absorbing a listener that raises."""
@@ -1080,49 +1476,25 @@ class McpConnection:
             _logger.warning("mcp_change_listener_failed", server_id=self.server_id, error=str(exc))
 
 
-def _child_pids() -> frozenset[int]:
-    """List the process ids of this process's direct and indirect children.
-
-    Returns:
-        frozenset[int]: The child process ids, empty when they cannot be
-        enumerated.
-    """
-    with contextlib.suppress(psutil.Error, OSError):
-        return frozenset(child.pid for child in psutil.Process().children(recursive=True))
-    return frozenset()
-
-
-def _process_matches(pid: int, expected_stem: str) -> bool:
-    """Report whether one process looks like the server that was just started.
-
-    Args:
-        pid: The process to inspect.
-        expected_stem: The launch command's file name without its extension,
-            lower-cased.
-
-    Returns:
-        bool: ``True`` when the process's executable name matches.
-    """
-    with contextlib.suppress(psutil.Error, OSError):
-        return Path(psutil.Process(pid).name()).stem.lower() == expected_stem
-    return False
-
-
 class _StreamPairTransport:
     """Adapts an already-open stream pair to the SDK's transport protocol.
 
-    The HTTP transport is opened as a context manager so its client and task group unwind correctly. The SDK's ``Client`` wants a transport
-    it can enter itself, so the open pair is wrapped in one whose entry is a no-op and whose exit leaves the real teardown to the
-    surrounding context.
+    The transports are opened as context managers so their clients and task groups unwind correctly. The SDK's ``Client`` wants a
+    transport it can enter itself, so the open pair is wrapped in one whose entry is a no-op and whose exit leaves the real teardown to the
+    surrounding context. The read stream is watched on the way through, so the end of the server's output is reported.
     """
 
-    def __init__(self, streams: tuple[Any, Any]) -> None:
+    def __init__(self, streams: tuple[Any, Any], on_closed: Callable[[], None] | None = None) -> None:
         """Initialize the adapter.
 
         Args:
             streams: The already-open read and write streams.
+            on_closed: Called when the read stream ends, or ``None`` to leave
+                it unwatched.
         """
-        self._streams = streams
+        read_stream, write_stream = streams
+        watched: Any = read_stream if on_closed is None else _WatchedReceiveStream(read_stream, on_closed)
+        self._streams: tuple[Any, Any] = (watched, write_stream)
 
     async def __aenter__(self) -> tuple[Any, Any]:
         """Hand over the already-open streams.
@@ -1268,20 +1640,30 @@ class McpConnectionManager:
 
         A server that fails to start does not stop the others: its failure
         is recorded on its own status and the remaining servers continue.
+        Servers are started concurrently, so one waiting on the operator -- a
+        launch-consent prompt or an OAuth sign-in in the browser -- does not
+        hold back every server configured after it.
         """
         self._document = self._store.load()
         self._started = True
-        for config in self._document.servers:
-            if not config.enabled:
-                continue
-            with suppress(McpError):
-                _ = await self.start_server(config.server_id)
+        async with asyncio.TaskGroup() as group:
+            for config in self._document.servers:
+                if config.enabled:
+                    _ = group.create_task(self._start_quietly(config.server_id), name=f"mcp-start-{config.server_id}")
         _logger.info(
             "mcp_manager_started",
             configured=len(self._document.servers),
-            connected=sum(bool(connection.is_ready)
-                      for connection in self._connections.values()),
+            connected=sum(bool(connection.is_ready) for connection in self._connections.values()),
         )
+
+    async def _start_quietly(self, server_id: str) -> None:
+        """Start one server, leaving its failure on its own status.
+
+        Args:
+            server_id: The server to start.
+        """
+        with suppress(McpError):
+            _ = await self.start_server(server_id)
 
     async def stop(self) -> None:
         """Bring every server down, in reverse start order.

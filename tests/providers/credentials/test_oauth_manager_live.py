@@ -319,7 +319,10 @@ async def _drive_oauth_callback(
 def test_state_mismatch_is_rejected(
     reloaded_oauth_module: ModuleType,
 ) -> None:
-    """Callbacks with a mismatched state must be refused with CSRF error.
+    """Callbacks with a mismatched state must be refused and must not complete the flow.
+
+    The forged callback is answered with 400 and ignored, so the wait ends at
+    its timeout rather than returning the attacker's code.
 
     Args:
         reloaded_oauth_module: The freshly reloaded oauth module.
@@ -335,6 +338,7 @@ def test_state_mismatch_is_rejected(
         "OAuthCallbackServer",
         reloaded_oauth_module.OAuthCallbackServer(
             port=callback_port,
+            timeout=2.0,
             expected_state=expected_state,
         ),
     )
@@ -350,7 +354,7 @@ def _assert_state_mismatch_rejected(
     server: OAuthCallbackServer,
     callback_port: int,
 ) -> None:
-    """POST a callback with a wrong state and assert the server refuses it.
+    """Send a callback with a wrong state and assert the server refuses it.
 
     Args:
         reloaded_oauth_module: Freshly reloaded oauth module.
@@ -363,7 +367,7 @@ def _assert_state_mismatch_rejected(
             f"http://127.0.0.1:{callback_port}/callback?{query}",
         )
         assert resp.status_code == 400
-    with pytest.raises(reloaded_oauth_module.OAuthCallbackError):
+    with pytest.raises(reloaded_oauth_module.OAuthCallbackError, match="Timeout"):
         server.wait_for_callback()
 
 

@@ -29,7 +29,14 @@ from intellicrack.mcp.connection import McpConnection
 from intellicrack.mcp.consent import McpConsentGate, TrustState, TrustStore
 from intellicrack.mcp.errors import McpConsentDeniedError
 from intellicrack.mcp.secrets import McpSecretResolver
-from intellicrack.mcp.tool_source import MAX_RESULT_BYTES, MAX_TEXT_PART_CHARS, map_result, map_tool_to_function
+from intellicrack.mcp.tool_source import (
+    MAX_RESULT_BYTES,
+    MAX_TEXT_PART_CHARS,
+    UNTRUSTED_BLOCK_END,
+    UNTRUSTED_BLOCK_START,
+    map_result,
+    map_tool_to_function,
+)
 from tests._helpers.mcp_server_main import (
     DOTTED_TOOL_NAME,
     DOUBLE_UNDERSCORE_TOOL_NAME,
@@ -222,7 +229,7 @@ class TestLiveStdioConnection:
 
         parts, is_error = asyncio.run(_with_connection(connection, body))
         assert is_error is False
-        assert any(getattr(part, "text", "") == "round trip" for part in parts)
+        assert any(getattr(part, "text", "") == f"{UNTRUSTED_BLOCK_START}\nround trip\n{UNTRUSTED_BLOCK_END}" for part in parts)
 
     def test_dotted_tool_name_routes_to_the_server(self, tmp_path: Path) -> None:
         """A tool whose own name contains dots is callable end to end.
@@ -332,8 +339,7 @@ class TestProcessTreeTeardown:
 
         async def body() -> None:
             result = await connection.call_tool("spawn", {})
-            parts, _ = map_result(result)
-            text = next(getattr(part, "text", "") for part in parts if getattr(part, "text", ""))
+            text = next(str(getattr(block, "text", "")) for block in result.content if getattr(block, "text", ""))
             pid = int(text.strip())
             assert psutil.pid_exists(pid), "the grandchild never started, so teardown proves nothing"
             spawned["pid"] = pid

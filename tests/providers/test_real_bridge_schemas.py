@@ -74,13 +74,34 @@ _EXPECTED_TOP_LEVEL_ARRAYS: int = sum(
 _SchemaBuilder = Callable[[ToolDefinition], list[Any]]
 _PropsExtractor = Callable[[Any], Mapping[str, Any]]
 
+
+def _google_arguments(declaration: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Read a Gemini declaration's argument schema from whichever field carries it.
+
+    Gemini rejects an ``OBJECT`` with no properties, so a function with no
+    arguments omits the field and one with a free-form object argument is
+    declared through ``parametersJsonSchema`` instead of ``parameters``.
+
+    Args:
+        declaration: One Gemini function declaration.
+
+    Returns:
+        Mapping[str, Any]: The argument schema, empty when none is declared.
+    """
+    for key in ("parameters", "parametersJsonSchema"):
+        schema = declaration.get(key)
+        if isinstance(schema, Mapping):
+            return cast("Mapping[str, Any]", schema)
+    return {}
+
+
 _BUILDERS: list[tuple[str, _SchemaBuilder, _PropsExtractor]] = [
     ("base.anthropic", create_anthropic_tool_schema, lambda s: s["input_schema"]["properties"]),
     ("base.openai", create_openai_tool_schema, lambda s: s["function"]["parameters"]["properties"]),
-    ("base.google", create_google_tool_schema, lambda s: s["parameters"]["properties"]),
+    ("base.google", create_google_tool_schema, lambda s: _google_arguments(s).get("properties", {})),
     ("schemas.anthropic", to_anthropic_schema, lambda s: s["input_schema"]["properties"]),
     ("schemas.openai", to_openai_schema, lambda s: s["function"]["parameters"]["properties"]),
-    ("schemas.google", to_google_schema, lambda s: s["parameters"]["properties"]),
+    ("schemas.google", to_google_schema, lambda s: _google_arguments(s).get("properties", {})),
 ]
 
 
@@ -231,7 +252,7 @@ def test_required_parameters_in_schema_match_tool_definition() -> None:
             "base.google",
             create_google_tool_schema,
             lambda s: str(s.get("name", "")),
-            lambda s: s["parameters"].get("required", []),
+            lambda s: _google_arguments(s).get("required", []),
         ),
         (
             "schemas.anthropic",
@@ -249,7 +270,7 @@ def test_required_parameters_in_schema_match_tool_definition() -> None:
             "schemas.google",
             to_google_schema,
             lambda s: str(s.get("name", "")),
-            lambda s: s["parameters"].get("required", []),
+            lambda s: _google_arguments(s).get("required", []),
         ),
     ]
 
