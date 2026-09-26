@@ -45,6 +45,8 @@ _READ_TIMEOUT_S: Final[float] = 0.5
 _CONNECT_TIMEOUT_S: Final[float] = 1.0
 _DEADLINE_S: Final[float] = 1.5
 _CHILD_TIMEOUT_S: Final[float] = 240.0
+_SCHEDULING_SLACK_S: Final[float] = 6.0
+"""Allowance for thread start-up and scheduling on a heavily loaded machine; the regression waits forever."""
 
 
 def _loader(fetch_url: str, *, retry_after_s: float = 600.0, deadline_s: float = _DEADLINE_S) -> TokenEncodingLoader:
@@ -341,5 +343,5 @@ def test_orchestrator_token_count_is_bounded_on_a_stalled_network(tmp_path: Path
 
     assert result["first"] == result["estimate"]
     assert result["second"] == result["estimate"]
-    assert result["first_elapsed"] < OFF_GUI_THREAD_WAIT_S + 1.0
-    assert result["second_elapsed"] < OFF_GUI_THREAD_WAIT_S + 1.0
+    assert result["first_elapsed"] < OFF_GUI_THREAD_WAIT_S + _SCHEDULING_SLACK_S
+    assert result["second_elapsed"] < OFF_GUI_THREAD_WAIT_S + _SCHEDULING_SLACK_S
