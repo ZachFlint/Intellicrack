@@ -256,6 +256,7 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v8.2.2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
   x64dbg-plugin-build:
     runs-on: windows-latest
     needs: [setup, changes]

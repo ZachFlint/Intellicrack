@@ -361,13 +361,13 @@ def _write_json_object(path: Path, data: Mapping[str, Any]) -> None:
         path: File to write.
         data: The object to store.
     """
-    path = path.resolve()
     try:
+        path = path.resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_name(f"{path.name}.tmp")
         _ = temporary.write_text(f"{json.dumps(data, indent=2, sort_keys=True)}\n", encoding="utf-8")
         _ = temporary.replace(path)
-    except OSError as exc:
+    except (OSError, RuntimeError) as exc:
         _logger.warning("mcp_consent_store_unwritable", path=str(path), error=str(exc))
 
 

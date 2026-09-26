@@ -1521,10 +1521,14 @@ def create_env_template(path: Path) -> EnvTemplateResult:
             where any backup was written.
 
     Raises:
-        OSError: If the template file, or its pre-write backup, cannot be
-            written.
+        OSError: If the path cannot be resolved, or if the template file, or
+            its pre-write backup, cannot be written.
     """
-    path = path.resolve()
+    try:
+        path = path.resolve()
+    except RuntimeError as exc:
+        msg = f"cannot resolve path {path}: {exc}"
+        raise OSError(msg) from exc
     _logger.debug("env_template_creating", path=str(path))
     path.parent.mkdir(parents=True, exist_ok=True)
 
