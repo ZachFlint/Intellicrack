@@ -164,8 +164,7 @@ def representative_failure(exc: BaseException) -> BaseException:
     """
     if leaves := failure_leaves(exc):
         return next((leaf for leaf in leaves if isinstance(leaf, McpError | MCPError)), leaves[0])
-    else:
-        return exc
+    return exc
 
 
 def fatal_leaf(exc: BaseException) -> BaseException | None:
@@ -554,7 +553,7 @@ class McpConnection:
         await self._consent.ensure_launch_consent(self._config, env)
 
         sandbox = self._config.sandbox
-        launch_spec = spec
+        launch_spec = replace(spec, args=await self._resolver.resolve_sequence(spec.args, field="args"))
         if sandbox.enabled:
             if not sandbox_supported():
                 message = (
@@ -562,9 +561,9 @@ class McpConnection:
                     f"with Windows job objects. Refusing to start it unconfined on this platform."
                 )
                 raise McpConnectionError(message)
-            confined = build_sandboxed_startup(spec, sandbox, env)
+            confined = build_sandboxed_startup(launch_spec, sandbox, env)
             env = dict(confined.env)
-            launch_spec = replace(spec, cwd=confined.cwd)
+            launch_spec = replace(launch_spec, cwd=confined.cwd)
 
         parameters = build_stdio_parameters(launch_spec, env)
         errlog = self._stderr.open()
@@ -1279,8 +1278,7 @@ class McpConnectionManager:
         _logger.info(
             "mcp_manager_started",
             configured=len(self._document.servers),
-            connected=sum(bool(connection.is_ready)
-                      for connection in self._connections.values()),
+            connected=sum(bool(connection.is_ready) for connection in self._connections.values()),
         )
 
     async def stop(self) -> None:
