@@ -21,6 +21,7 @@ easily outlive the operator's patience with the window.
 from __future__ import annotations
 
 import contextlib
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Final, TypeGuard, cast, override
 
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt, pyqtSignal
@@ -49,7 +50,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ToolResultPart
+from intellicrack.core.types import Message, ToolResultPart
 from intellicrack.mcp.auth import has_stored_credentials, issuer_for, sign_out
 from intellicrack.mcp.config import (
     SERVER_ID_PATTERN,
@@ -62,12 +63,23 @@ from intellicrack.mcp.config import (
     StdioServerSpec,
     missing_input_ids,
 )
-from intellicrack.mcp.connection import McpHealth, McpServerStatus
+from intellicrack.mcp.connection import McpConnection, McpHealth, McpServerStatus
+from intellicrack.mcp.consent import ConsentAnswer, TrustState, server_identity
 from intellicrack.mcp.errors import McpError
-from intellicrack.mcp.policy import estimate_tool_cost, total_cost
-from intellicrack.mcp.resources import ResourceSummary, list_resources, read_resource, summarize_parts
+from intellicrack.mcp.policy import enabled_entries, estimate_tool_cost, total_cost
+from intellicrack.mcp.resources import (
+    PromptSummary,
+    ResourceSummary,
+    get_prompt,
+    list_prompts,
+    list_resources,
+    read_resource,
+    summarize_parts,
+)
 from intellicrack.mcp.tool_source import map_tool_to_function
+from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
 from intellicrack.ui.dialogs_helpers import plain_tooltip, show_error, show_info, show_warning
+from intellicrack.ui.mcp_consent_dialog import McpServerConsentDialog
 from intellicrack.ui.panels.async_bridge import BridgeCallWorker, discard_worker, worker_is_running
 from intellicrack.ui.resources.font_manager import FontManager
 
@@ -80,6 +92,7 @@ if TYPE_CHECKING:
 
     from intellicrack.mcp.catalog import McpToolEntry
     from intellicrack.mcp.connection import McpConnectionManager
+    from intellicrack.mcp.consent import ApprovalStore
     from intellicrack.mcp.secrets import McpSecretResolver
 
 
@@ -97,6 +110,12 @@ _STDERR_TAIL_LINES: Final[int] = 400
 _RESOURCE_PREVIEW_CHARS: Final[int] = 4000
 _MIN_TIMEOUT_S: Final[int] = 1
 _MAX_TIMEOUT_S: Final[int] = 3600
+_LIVE_HEALTH: Final[frozenset[McpHealth]] = frozenset({McpHealth.READY, McpHealth.CONNECTING})
+_TRUST_CAPTIONS: Final[dict[TrustState, str]] = {
+    TrustState.UNTRUSTED: "not trusted: every tool call it offers is confirmed",
+    TrustState.TRUSTED: "trusted: tools it marks read-only skip confirmation",
+    TrustState.DENIED: "never started: it is refused without asking",
+}
 
 _HEALTH_CAPTIONS: Final[dict[McpHealth, str]] = {
     McpHealth.DISABLED: "off",
@@ -107,19 +126,31 @@ _HEALTH_CAPTIONS: Final[dict[McpHealth, str]] = {
 }
 
 
-def _status_caption(status: McpServerStatus) -> str:
+def _status_caption(status: McpServerStatus, config: McpServerConfig | None = None, offered: int | None = None) -> str:
     """Render one server's state as a single readable line.
+
+    A running server is described by what the model is actually offered,
+    not only by what the server published: a server switched off still
+    publishes its tools but offers none of them, and saying "running, 5
+    tools" about it would claim the model can use tools it cannot.
 
     Args:
         status: The server's current state.
+        config: The server's configuration, or ``None`` when unknown.
+        offered: How many of its tools are offered to the model, or ``None``
+            when every published tool is.
 
     Returns:
         str: The server id followed by what it is doing.
     """
     caption = _HEALTH_CAPTIONS.get(status.health, status.health.value)
-    if status.health is McpHealth.READY:
-        return f"{status.server_id} - {caption}, {status.tool_count} tools"
-    return f"{status.server_id} - {caption}"
+    if status.health is not McpHealth.READY:
+        return f"{status.server_id} - {caption}"
+    if config is not None and not config.enabled:
+        return f"{status.server_id} - {caption}, but switched off: none of its {status.tool_count} tools are offered"
+    if offered is not None and offered != status.tool_count:
+        return f"{status.server_id} - {caption}, {offered} of {status.tool_count} tools offered"
+    return f"{status.server_id} - {caption}, {status.tool_count} tools"
 
 
 class McpServerListModel(QAbstractListModel):
@@ -133,16 +164,35 @@ class McpServerListModel(QAbstractListModel):
         """
         super().__init__(parent)
         self._rows: list[tuple[McpServerConfig, McpServerStatus]] = []
+        self._offered: dict[str, int] = {}
 
-    def set_rows(self, rows: list[tuple[McpServerConfig, McpServerStatus]]) -> None:
+    def set_rows(self, rows: list[tuple[McpServerConfig, McpServerStatus]], offered: dict[str, int] | None = None) -> None:
         """Replace every row.
 
         Args:
             rows: The configured servers paired with their current state.
+            offered: For each running server, how many of its tools are
+                offered to the model. A server missing from it offers every
+                tool it published.
         """
         self.beginResetModel()
         self._rows = list(rows)
+        self._offered = dict(offered or {})
         self.endResetModel()
+
+    def caption_at(self, row: int) -> str | None:
+        """Read the caption shown for one row.
+
+        Args:
+            row: The row index.
+
+        Returns:
+            str | None: The caption, or ``None`` when the row does not exist.
+        """
+        if not 0 <= row < len(self._rows):
+            return None
+        config, status = self._rows[row]
+        return _status_caption(status, config, self._offered.get(config.server_id))
 
     def config_at(self, row: int) -> McpServerConfig | None:
         """Read the configuration at one row.
@@ -208,7 +258,7 @@ class McpServerListModel(QAbstractListModel):
             return None
         config, status = self._rows[index.row()]
         if role == Qt.ItemDataRole.DisplayRole:
-            return _status_caption(status)
+            return self.caption_at(index.row())
         if role == Qt.ItemDataRole.ToolTipRole:
             return status.last_error or f"{config.kind.value} server"
         return None
@@ -288,7 +338,35 @@ class McpServerEditor(QWidget):
         """
         super().__init__(parent)
         self._server_id = ""
+        self._loading = False
+        self._modified = False
         self._build_ui()
+
+    @property
+    def loaded_server_id(self) -> str:
+        """The id of the server last loaded into the editor.
+
+        Returns:
+            str: The id as it was loaded, before any edit, or an empty
+            string when nothing has been loaded.
+        """
+        return self._server_id
+
+    @property
+    def modified(self) -> bool:
+        """Whether the operator has edited a field since the last load.
+
+        Returns:
+            bool: ``True`` once any field was changed by the operator.
+        """
+        return self._modified
+
+    def _emit_changed(self) -> None:
+        """Report an edit, unless the editor is filling its own fields."""
+        if self._loading:
+            return
+        self._modified = True
+        self.changed.emit()
 
     def _build_ui(self) -> None:
         """Build the shared fields and the two transport-specific pages."""
@@ -302,7 +380,7 @@ class McpServerEditor(QWidget):
         self._id_edit = QLineEdit()
         self._id_edit.setObjectName("mcp_server_id")
         self._id_edit.setPlaceholderText("lower-case letters, digits and hyphens")
-        self._id_edit.textChanged.connect(self.changed)
+        self._id_edit.textChanged.connect(self._emit_changed)
         shared.addRow("Server id", self._id_edit)
 
         self._kind_combo = QComboBox()
@@ -314,13 +392,13 @@ class McpServerEditor(QWidget):
 
         self._enabled_box = QCheckBox("Enabled")
         self._enabled_box.setObjectName("mcp_server_enabled")
-        self._enabled_box.toggled.connect(self.changed)
+        self._enabled_box.toggled.connect(self._emit_changed)
         shared.addRow("", self._enabled_box)
 
         self._timeout_spin = QSpinBox()
         self._timeout_spin.setObjectName("mcp_server_timeout")
         self._timeout_spin.setRange(_MIN_TIMEOUT_S, _MAX_TIMEOUT_S)
-        self._timeout_spin.valueChanged.connect(self.changed)
+        self._timeout_spin.valueChanged.connect(self._emit_changed)
         shared.addRow("Call timeout (s)", self._timeout_spin)
         layout.addLayout(shared)
 
@@ -343,32 +421,32 @@ class McpServerEditor(QWidget):
         self._command_edit = QLineEdit()
         self._command_edit.setObjectName("mcp_stdio_command")
         self._command_edit.setPlaceholderText("npx")
-        self._command_edit.textChanged.connect(self.changed)
+        self._command_edit.textChanged.connect(self._emit_changed)
         form.addRow("Command", self._command_edit)
 
         self._args_edit = QPlainTextEdit()
         self._args_edit.setObjectName("mcp_stdio_args")
         self._args_edit.setPlaceholderText("one argument per line")
         self._args_edit.setFont(FontManager.get_instance().get_code_font(_CODE_FONT_POINT_SIZE))
-        self._args_edit.textChanged.connect(self.changed)
+        self._args_edit.textChanged.connect(self._emit_changed)
         form.addRow("Arguments", self._args_edit)
 
         self._cwd_edit = QLineEdit()
         self._cwd_edit.setObjectName("mcp_stdio_cwd")
         self._cwd_edit.setPlaceholderText("inherited from Intellicrack")
-        self._cwd_edit.textChanged.connect(self.changed)
+        self._cwd_edit.textChanged.connect(self._emit_changed)
         form.addRow("Working directory", self._cwd_edit)
 
         self._env_edit = QPlainTextEdit()
         self._env_edit.setObjectName("mcp_stdio_env")
         self._env_edit.setPlaceholderText("NAME=${input:my-token}, one per line")
         self._env_edit.setFont(FontManager.get_instance().get_code_font(_CODE_FONT_POINT_SIZE))
-        self._env_edit.textChanged.connect(self.changed)
+        self._env_edit.textChanged.connect(self._emit_changed)
         form.addRow("Environment", self._env_edit)
 
         self._env_file_edit = QLineEdit()
         self._env_file_edit.setObjectName("mcp_stdio_env_file")
-        self._env_file_edit.textChanged.connect(self.changed)
+        self._env_file_edit.textChanged.connect(self._emit_changed)
         form.addRow("Environment file", self._env_file_edit)
         return page
 
@@ -385,33 +463,33 @@ class McpServerEditor(QWidget):
         self._url_edit = QLineEdit()
         self._url_edit.setObjectName("mcp_http_url")
         self._url_edit.setPlaceholderText("https://example.com/mcp")
-        self._url_edit.textChanged.connect(self.changed)
+        self._url_edit.textChanged.connect(self._emit_changed)
         form.addRow("URL", self._url_edit)
 
         self._headers_edit = QPlainTextEdit()
         self._headers_edit.setObjectName("mcp_http_headers")
         self._headers_edit.setPlaceholderText("Authorization=Bearer ${input:my-token}, one per line")
         self._headers_edit.setFont(FontManager.get_instance().get_code_font(_CODE_FONT_POINT_SIZE))
-        self._headers_edit.textChanged.connect(self.changed)
+        self._headers_edit.textChanged.connect(self._emit_changed)
         form.addRow("Headers", self._headers_edit)
 
         self._query_edit = QPlainTextEdit()
         self._query_edit.setObjectName("mcp_http_query")
         self._query_edit.setPlaceholderText("toolsets=repos,issues, one per line")
         self._query_edit.setFont(FontManager.get_instance().get_code_font(_CODE_FONT_POINT_SIZE))
-        self._query_edit.textChanged.connect(self.changed)
+        self._query_edit.textChanged.connect(self._emit_changed)
         form.addRow("Query parameters", self._query_edit)
 
         self._client_id_edit = QLineEdit()
         self._client_id_edit.setObjectName("mcp_http_client_id")
         self._client_id_edit.setPlaceholderText("pre-registered OAuth client id, if you have one")
-        self._client_id_edit.textChanged.connect(self.changed)
+        self._client_id_edit.textChanged.connect(self._emit_changed)
         form.addRow("OAuth client id", self._client_id_edit)
 
         self._metadata_url_edit = QLineEdit()
         self._metadata_url_edit.setObjectName("mcp_http_metadata_url")
         self._metadata_url_edit.setPlaceholderText("https://example.com/mcp/client.json")
-        self._metadata_url_edit.textChanged.connect(self.changed)
+        self._metadata_url_edit.textChanged.connect(self._emit_changed)
         form.addRow("Client metadata URL", self._metadata_url_edit)
         return page
 
@@ -419,7 +497,7 @@ class McpServerEditor(QWidget):
         """Show the page matching the selected transport."""
         kind = self.selected_kind()
         self._pages.setCurrentIndex(0 if kind is McpTransportKind.STDIO else 1)
-        self.changed.emit()
+        self._emit_changed()
 
     def selected_kind(self) -> McpTransportKind:
         """Read the transport the operator selected.
@@ -466,6 +544,22 @@ class McpServerEditor(QWidget):
     def load(self, config: McpServerConfig) -> None:
         """Fill every field from one server configuration.
 
+        Loading is not an edit: it clears :attr:`modified` and reports no
+        change.
+
+        Args:
+            config: The server to display.
+        """
+        self._loading = True
+        try:
+            self._fill(config)
+        finally:
+            self._loading = False
+        self._modified = False
+
+    def _fill(self, config: McpServerConfig) -> None:
+        """Write one configuration into every field.
+
         Args:
             config: The server to display.
         """
@@ -490,6 +584,21 @@ class McpServerEditor(QWidget):
         self._query_edit.setPlainText(self._render_pairs(dict(http.query)) if http else "")
         self._client_id_edit.setText((http.oauth_client_id or "") if http else "")
         self._metadata_url_edit.setText((http.oauth_metadata_url or "") if http else "")
+
+    def set_enabled(self, *, enabled: bool) -> None:
+        """Tick or clear the enabled box without reporting an edit.
+
+        Used when the dialog itself changes the configuration, such as
+        switching a server on because the operator asked to start it.
+
+        Args:
+            enabled: Whether the box is ticked.
+        """
+        self._loading = True
+        try:
+            self._enabled_box.setChecked(enabled)
+        finally:
+            self._loading = False
 
     def build(self, existing: McpServerConfig | None) -> McpServerConfig:
         """Build a configuration from the current field values.
@@ -639,18 +748,26 @@ class McpConfigDialog(QDialog):
     the background loop.
 
     Emits ``resource_attached(text)`` when the operator sends a server
-    resource to the conversation. The dialog does not reach into the chat
-    itself: it fetches the resource and forwards the rendered text, leaving
-    the main window to decide where a conversation attachment goes.
+    resource to the conversation, and ``prompt_attached(text)`` when they
+    send one of a server's prompt templates. The dialog does not reach into
+    the chat itself: it fetches the content and forwards the rendered text,
+    leaving the main window to decide where a conversation attachment goes.
+
+    Edits are kept per server while the dialog is open: switching to
+    another server folds the editor's changes into the document first, and
+    Save writes every server's changes, not only the selected one's.
     """
 
     resource_attached = pyqtSignal(str)
+    prompt_attached = pyqtSignal(str)
 
     def __init__(
         self,
         manager: McpConnectionManager,
         resolver: McpSecretResolver,
         parent: QWidget | None = None,
+        *,
+        approvals: ApprovalStore | None = None,
     ) -> None:
         """Initialize the settings dialog.
 
@@ -658,14 +775,22 @@ class McpConfigDialog(QDialog):
             manager: The connection manager owning every server.
             resolver: Resolver used to store ``${input:id}`` values.
             parent: Parent widget.
+            approvals: Store of persisted tool-call answers, listed and
+                revocable on the trust tab. ``None`` lists only the answers
+                remembered for this session.
         """
         super().__init__(parent)
         self._manager = manager
         self._resolver = resolver
+        self._approvals = approvals
         self._document: McpConfigDocument = manager.document
         self._current_id: str | None = None
         self._workers: list[BridgeCallWorker] = []
         self._dirty = False
+        self._syncing_selection = False
+        self._retired: set[str] = set()
+        self._prompt_arguments: dict[str, QLineEdit] = {}
+        self._prompt_required: frozenset[str] = frozenset()
 
         self.setWindowTitle("MCP Servers")
         self.setMinimumSize(_DIALOG_WIDTH, _DIALOG_HEIGHT)
@@ -771,7 +896,383 @@ class McpConfigDialog(QDialog):
         log_column.addWidget(refresh_button)
         self._tabs.addTab(log_pane, "Status and log")
         self._tabs.addTab(self._build_resources_pane(), "Resources")
+        self._tabs.addTab(self._build_prompts_pane(), "Prompts")
+        self._tabs.addTab(self._build_trust_pane(), "Trust and approvals")
         return self._tabs
+
+    def _build_prompts_pane(self) -> QWidget:
+        """Build the prompt-template browser for the selected server.
+
+        Returns:
+            QWidget: The prompts pane.
+        """
+        pane = QWidget()
+        column = QVBoxLayout(pane)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(8)
+
+        note = QLabel(
+            "Prompts are message templates a server suggests. Fetching one runs nothing; the messages it returns are the "
+            "server's own words, so they are attached to the conversation as quoted text.",
+        )
+        note.setObjectName("mcp_prompts_note")
+        note.setWordWrap(True)
+        column.addWidget(note)
+
+        self._prompt_list = QListWidget()
+        self._prompt_list.setObjectName("mcp_prompt_list")
+        self._prompt_list.currentItemChanged.connect(self._on_prompt_selected)
+        column.addWidget(self._prompt_list)
+
+        self._prompt_form_host = QWidget()
+        self._prompt_form = QFormLayout(self._prompt_form_host)
+        self._prompt_form.setContentsMargins(0, 0, 0, 0)
+        column.addWidget(self._prompt_form_host)
+
+        self._prompt_preview = QPlainTextEdit()
+        self._prompt_preview.setObjectName("mcp_prompt_preview")
+        self._prompt_preview.setReadOnly(True)
+        self._prompt_preview.setFont(FontManager.get_instance().get_code_font(_CODE_FONT_POINT_SIZE))
+        column.addWidget(self._prompt_preview)
+
+        row = QHBoxLayout()
+        row.setSpacing(8)
+        list_button = QPushButton("List prompts")
+        list_button.setObjectName("mcp_list_prompts")
+        list_button.clicked.connect(self._on_list_prompts)
+        row.addWidget(list_button)
+
+        preview_button = QPushButton("Preview")
+        preview_button.setObjectName("mcp_preview_prompt")
+        preview_button.clicked.connect(self._on_preview_prompt)
+        row.addWidget(preview_button)
+
+        attach_button = QPushButton("Attach to chat")
+        attach_button.setObjectName("mcp_attach_prompt")
+        attach_button.clicked.connect(self._on_attach_prompt)
+        row.addWidget(attach_button)
+        row.addStretch()
+        column.addLayout(row)
+        return pane
+
+    def _on_list_prompts(self) -> None:
+        """Fetch the selected server's prompt listing."""
+        connection = self._ready_connection()
+        if connection is None:
+            show_info(self, "Prompts", "Start the server before listing what it offers.")
+            return
+        self._prompt_list.clear()
+        self._clear_prompt_form()
+
+        def _listed(result: object) -> None:
+            """Populate the list from the server's listing.
+
+            Args:
+                result: The list of prompt summaries.
+            """
+            summaries = [entry for entry in _as_object_list(result) if isinstance(entry, PromptSummary)]
+            for summary in summaries:
+                item = QListWidgetItem(summary.title or summary.name)
+                item.setData(Qt.ItemDataRole.UserRole, summary)
+                item.setToolTip(plain_tooltip(summary.description or summary.name))
+                self._prompt_list.addItem(item)
+            if not summaries:
+                show_info(self, "Prompts", "This server offers no prompts.")
+
+        self._start_worker(list_prompts(connection), _listed, self._on_worker_error)
+
+    def _selected_prompt(self) -> PromptSummary | None:
+        """Read the prompt selected in the list.
+
+        Returns:
+            PromptSummary | None: The selection, or ``None``.
+        """
+        item = self._prompt_list.currentItem()
+        value: object = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+        return value if isinstance(value, PromptSummary) else None
+
+    def _clear_prompt_form(self) -> None:
+        """Remove every argument field from the prompt form."""
+        while self._prompt_form.rowCount():
+            self._prompt_form.removeRow(0)
+        self._prompt_arguments = {}
+        self._prompt_required = frozenset()
+
+    def _on_prompt_selected(self, current: QListWidgetItem | None, previous: QListWidgetItem | None) -> None:
+        """Show an argument field for each argument the selected prompt takes.
+
+        Args:
+            current: The newly selected item.
+            previous: The previously selected item.
+        """
+        del current, previous
+        self._clear_prompt_form()
+        summary = self._selected_prompt()
+        if summary is None:
+            return
+        self._prompt_required = summary.required_arguments
+        for name in summary.arguments:
+            edit = QLineEdit()
+            edit.setObjectName(f"mcp_prompt_argument_{name}")
+            self._prompt_arguments[name] = edit
+            self._prompt_form.addRow(f"{name} *" if name in summary.required_arguments else name, edit)
+
+    def _fetch_prompt(self, on_text: Callable[[str], None]) -> None:
+        """Fetch the selected prompt with the entered arguments and render it.
+
+        Args:
+            on_text: Called on the GUI thread with the rendered messages.
+        """
+        connection = self._ready_connection()
+        summary = self._selected_prompt()
+        if connection is None or summary is None:
+            show_info(self, "Prompts", "Select a prompt on a running server first.")
+            return
+        arguments = {name: edit.text() for name, edit in self._prompt_arguments.items() if edit.text()}
+        if missing := sorted(self._prompt_required - arguments.keys()):
+            show_warning(self, "Prompts", f"Fill in the required argument(s): {', '.join(missing)}.")
+            return
+
+        def _fetched(result: object) -> None:
+            """Render the fetched messages.
+
+            Args:
+                result: The list of messages the prompt produced.
+            """
+            on_text(_render_prompt_messages(_as_object_list(result)))
+
+        self._start_worker(get_prompt(connection, summary.name, arguments), _fetched, self._on_worker_error)
+
+    def _on_preview_prompt(self) -> None:
+        """Fetch the selected prompt into the preview."""
+        self._fetch_prompt(self._prompt_preview.setPlainText)
+
+    def _on_attach_prompt(self) -> None:
+        """Send the selected prompt's messages to the conversation."""
+
+        def _attach(text: str) -> None:
+            """Preview the messages and forward them to whoever is listening.
+
+            Args:
+                text: The rendered messages.
+            """
+            self._prompt_preview.setPlainText(text)
+            self.prompt_attached.emit(text)
+            _logger.info("mcp_prompt_attached", length=len(text))
+
+        self._fetch_prompt(_attach)
+
+    def _ready_connection(self) -> McpConnection | None:
+        """Resolve the selected server's connection when it can serve requests.
+
+        Returns:
+            McpConnection | None: The connection, or ``None`` when nothing is
+            selected or the server is not running.
+        """
+        config = self._selected_config()
+        connection = self._manager.connection(config.server_id) if config is not None else None
+        return connection if connection is not None and connection.is_ready else None
+
+    def _build_trust_pane(self) -> QWidget:
+        """Build the trust controls and the list of remembered tool-call answers.
+
+        Returns:
+            QWidget: The trust pane.
+        """
+        pane = QWidget()
+        column = QVBoxLayout(pane)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(8)
+
+        trust_group = QGroupBox("This server")
+        trust_column = QVBoxLayout(trust_group)
+        self._trust_label = QLabel("Select a server.")
+        self._trust_label.setObjectName("mcp_trust_state")
+        self._trust_label.setTextFormat(Qt.TextFormat.PlainText)
+        self._trust_label.setWordWrap(True)
+        trust_column.addWidget(self._trust_label)
+
+        trust_row = QHBoxLayout()
+        trust_row.setSpacing(8)
+        for caption, name, handler in (
+            ("Trust", "mcp_trust_grant", self._on_trust_grant),
+            ("Stop trusting", "mcp_trust_revoke", self._on_trust_revoke),
+            ("Never start", "mcp_trust_block", self._on_trust_block),
+            ("Forget consent and trust", "mcp_trust_reset", self._on_trust_reset),
+            ("Review launch...", "mcp_trust_review", self._on_review_launch),
+        ):
+            button = QPushButton(caption)
+            button.setObjectName(name)
+            button.clicked.connect(handler)
+            trust_row.addWidget(button)
+        trust_row.addStretch()
+        trust_column.addLayout(trust_row)
+        column.addWidget(trust_group)
+
+        approvals_group = QGroupBox("Remembered tool-call answers")
+        approvals_column = QVBoxLayout(approvals_group)
+        self._approvals_list = QListWidget()
+        self._approvals_list.setObjectName("mcp_approvals_list")
+        approvals_column.addWidget(self._approvals_list)
+        approvals_row = QHBoxLayout()
+        approvals_row.setSpacing(8)
+        forget = QPushButton("Forget selected")
+        forget.setObjectName("mcp_approvals_forget")
+        forget.clicked.connect(self._on_forget_approval)
+        approvals_row.addWidget(forget)
+        forget_all = QPushButton("Forget all")
+        forget_all.setObjectName("mcp_approvals_forget_all")
+        forget_all.clicked.connect(self._on_forget_all_approvals)
+        approvals_row.addWidget(forget_all)
+        approvals_row.addStretch()
+        approvals_column.addLayout(approvals_row)
+        column.addWidget(approvals_group)
+        return pane
+
+    def _refresh_trust(self) -> None:
+        """Show the selected server's trust state and whether its launch is approved."""
+        config = self._selected_config()
+        if config is None:
+            self._trust_label.setText("Select a server.")
+            return
+        trust = self._manager.consent.trust
+        state = trust.state_for(config)
+        lines = [f"Trust: {_TRUST_CAPTIONS[state]}."]
+        if config.stdio is not None:
+            approved = trust.belongs_to(config) and trust.launch_digest(config.server_id) is not None
+            lines.append("Launch: approved; a changed command is asked about again." if approved else "Launch: asked before it starts.")
+        self._trust_label.setText("\n".join(lines))
+
+    def _set_trust(self, state: TrustState) -> None:
+        """Record a trust decision about the selected server.
+
+        Args:
+            state: The state the operator chose.
+        """
+        config = self._selected_config()
+        if config is None:
+            show_info(self, "Trust", "Select a server first.")
+            return
+        self._manager.consent.trust.set_state(config.server_id, state, identity=server_identity(config))
+        self._refresh_trust()
+
+    def _on_trust_grant(self) -> None:
+        """Trust the selected server's claims about its own tools."""
+        self._set_trust(TrustState.TRUSTED)
+
+    def _on_trust_revoke(self) -> None:
+        """Stop believing the selected server's claims about its own tools."""
+        self._set_trust(TrustState.UNTRUSTED)
+
+    def _on_trust_block(self) -> None:
+        """Refuse the selected server from now on, stopping it if it runs."""
+        config = self._selected_config()
+        self._set_trust(TrustState.DENIED)
+        if config is not None and self._manager.connection(config.server_id) is not None:
+            self._start_worker(self._manager.stop_server(config.server_id), self._after_stop, self._on_worker_error)
+
+    def _on_trust_reset(self) -> None:
+        """Forget every consent and trust decision about the selected server."""
+        config = self._selected_config()
+        if config is None:
+            show_info(self, "Trust", "Select a server first.")
+            return
+        self._manager.consent.trust.reset(config.server_id)
+        self._refresh_trust()
+        show_info(self, "Trust", f"'{config.server_id}' is untrusted again, and its launch will be asked about the next time it starts.")
+
+    def _on_review_launch(self) -> None:
+        """Show exactly what the selected local server would run, and record the answer."""
+        config = self._selected_config()
+        if config is None or config.stdio is None:
+            show_info(self, "Review launch", "Only a local server is launched, so only a local server has a launch to review.")
+            return
+        probe = McpConnection(config, self._resolver)
+
+        def _resolved(result: object) -> None:
+            """Ask about the launch with the environment it would receive.
+
+            Args:
+                result: The resolved environment mapping.
+            """
+            env = (
+                {str(name): str(value) for name, value in cast("dict[object, object]", result).items()} if isinstance(result, dict) else {}
+            )
+            dialog = McpServerConsentDialog.for_config(config, env, self)
+            try:
+                _ = dialog.exec()
+                answer = ConsentAnswer(approved=dialog.approved, trusted=dialog.trusted, blocked=dialog.blocked)
+            finally:
+                dialog.deleteLater()
+            if dialog.result() == QDialog.DialogCode.Accepted.value or answer.blocked:
+                _ = self._manager.consent.record_answer(config, env, answer)
+            self._refresh_trust()
+
+        self._start_worker(probe.resolved_environment(), _resolved, self._on_worker_error)
+
+    def _remembered_answers(self) -> list[tuple[str, str, str | None, bool, str]]:
+        """Gather every remembered tool-call answer, persisted and session-only.
+
+        Returns:
+            list[tuple[str, str, str | None, bool, str]]: ``(tool, function,
+            generation, approved, scope)`` for each answer, an answer kept
+            both ways appearing once as ``always``.
+        """
+        answers: dict[tuple[str, str, str | None], tuple[bool, str]] = {
+            (tool, function, generation): (approved, "this session")
+            for tool, function, generation, approved in ToolConfirmationDialog.session_decisions()
+        }
+        if self._approvals is not None:
+            for record in self._approvals.entries():
+                key = (record.namespace, record.function_name, record.generation or None)
+                scope = "always" if record.scope.value == "always" else "this session"
+                answers[key] = (record.approved, scope)
+        return [
+            (tool, function, generation, approved, scope)
+            for (tool, function, generation), (approved, scope) in sorted(
+                answers.items(),
+                key=lambda entry: (entry[0][0], entry[0][1], entry[0][2] or ""),
+            )
+        ]
+
+    def _refresh_approvals(self) -> None:
+        """List every remembered tool-call answer."""
+        self._approvals_list.clear()
+        for tool, function, generation, approved, scope in self._remembered_answers():
+            verdict = "allowed" if approved else "refused"
+            item = QListWidgetItem(f"{tool}.{function} - {verdict}, {scope}")
+            item.setData(Qt.ItemDataRole.UserRole, (tool, function, generation))
+            self._approvals_list.addItem(item)
+        if not self._approvals_list.count():
+            self._approvals_list.addItem(QListWidgetItem("No tool-call answers are remembered."))
+
+    def _forget(self, tool: str, function: str, generation: str | None) -> None:
+        """Forget one remembered tool-call answer everywhere it is kept.
+
+        Args:
+            tool: The tool namespace.
+            function: The function name.
+            generation: The generation it was recorded under.
+        """
+        _ = ToolConfirmationDialog.forget_decision(tool, function, generation)
+        if self._approvals is not None:
+            _ = self._approvals.revoke(tool, function, generation or "")
+
+    def _on_forget_approval(self) -> None:
+        """Forget the selected remembered answer."""
+        item = self._approvals_list.currentItem()
+        value: object = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+        if not isinstance(value, tuple):
+            return
+        tool, function, generation = cast("tuple[str, str, str | None]", value)
+        self._forget(tool, function, generation)
+        self._refresh_approvals()
+
+    def _on_forget_all_approvals(self) -> None:
+        """Forget every remembered answer."""
+        for tool, function, generation, _approved, _scope in self._remembered_answers():
+            self._forget(tool, function, generation)
+        self._refresh_approvals()
 
     def _build_resources_pane(self) -> QWidget:
         """Build the resource browser for the selected server.
@@ -824,9 +1325,8 @@ class McpConfigDialog(QDialog):
 
     def _on_list_resources(self) -> None:
         """Fetch the selected server's resource listing."""
-        config = self._selected_config()
-        connection = self._manager.connection(config.server_id) if config is not None else None
-        if config is None or connection is None or not connection.is_ready:
+        connection = self._ready_connection()
+        if connection is None:
             show_info(self, "Resources", "Start the server before listing what it offers.")
             return
         self._resource_list.clear()
@@ -1005,12 +1505,31 @@ class McpConfigDialog(QDialog):
         statuses = {status.server_id: status for status in self._manager.statuses()}
         rows = [(config, statuses[config.server_id]) for config in self._document.servers if config.server_id in statuses]
         rows.extend((config, self._offline_status(config)) for config in self._document.servers if config.server_id not in statuses)
-        self._model.set_rows(rows)
-        if self._current_id is not None:
-            row = self._model.row_for(self._current_id)
+        offered: dict[str, int] = {}
+        for config, _status in rows:
+            connection = self._manager.connection(config.server_id)
+            catalog = connection.catalog if connection is not None else None
+            if catalog is not None:
+                offered[config.server_id] = len(enabled_entries(config, catalog))
+        self._model.set_rows(rows, offered)
+        self._select(self._current_id)
+        self._refresh_detail()
+
+    def _select(self, server_id: str | None) -> None:
+        """Move the list's selection to one server without treating it as a switch.
+
+        Args:
+            server_id: The server to select, or ``None`` to select nothing.
+        """
+        row = self._model.row_for(server_id) if server_id is not None else -1
+        self._syncing_selection = True
+        try:
             if row >= 0:
                 self._list_view.setCurrentIndex(self._model.index(row, 0))
-        self._refresh_detail()
+            else:
+                self._list_view.clearSelection()
+        finally:
+            self._syncing_selection = False
 
     @staticmethod
     def _offline_status(config: McpServerConfig) -> McpServerStatus:
@@ -1040,27 +1559,50 @@ class McpConfigDialog(QDialog):
     def _on_selection_changed(self, current: QModelIndex, previous: QModelIndex) -> None:
         """Switch the detail pane to the newly selected server.
 
+        Edits made to the server being left are folded into the document
+        first, so they are kept until Save rather than discarded. Edits that
+        do not describe a valid server keep the selection where it is, with
+        the reason shown.
+
         Args:
             current: The newly selected row.
             previous: The previously selected row.
         """
         del previous
+        if self._syncing_selection:
+            return
         config = self._model.config_at(current.row())
-        self._current_id = config.server_id if config is not None else None
-        self._refresh_detail()
+        target = config.server_id if config is not None else None
+        if target == self._current_id:
+            return
+        if self._editor.modified and self._selected_config() is not None:
+            if self._apply_editor() is None:
+                self._select(self._current_id)
+                return
+            self._dirty = True
+        self._current_id = target
+        self._refresh_list()
 
     def _refresh_detail(self) -> None:
-        """Refresh the editor, tool list and status for the selection."""
+        """Refresh the editor, tool list, status, trust and sign-in state for the selection.
+
+        An editor holding unsaved edits for the selected server is left as it
+        is, so a background refresh never throws away what the operator typed.
+        """
         config = self._selected_config()
         if config is None:
             self._tool_view.clear("Select a server.")
             self._status_label.setText("Select a server.")
             self._log_view.setPlainText("")
-            return
-        self._editor.load(config)
-        self._refresh_tools(config)
-        self._refresh_status(config)
-        self._refresh_log()
+        else:
+            if not (self._editor.modified and self._editor.loaded_server_id == config.server_id):
+                self._editor.load(config)
+            self._refresh_tools(config)
+            self._refresh_status(config)
+            self._refresh_log()
+        self._refresh_trust()
+        self._refresh_approvals()
+        self.refresh_auth_state()
 
     def _refresh_tools(self, config: McpServerConfig) -> None:
         """Refresh the per-tool switches for one server.
@@ -1086,7 +1628,7 @@ class McpConfigDialog(QDialog):
         if status is None:
             self._status_label.setText("Not started.")
             return
-        lines = [_status_caption(status)]
+        lines = [self._model.caption_at(row) or _status_caption(status, config)]
         if status.generation:
             lines.append(f"Tool listing generation: {status.generation}")
         if status.connected_at is not None:
@@ -1153,9 +1695,53 @@ class McpConfigDialog(QDialog):
             return None
         if existing is not None and existing.server_id != candidate.server_id:
             self._document = self._document.without_server(existing.server_id)
+            self._retired.add(existing.server_id)
+        self._retired.discard(candidate.server_id)
         self._document = self._document.with_server(candidate)
         self._current_id = candidate.server_id
+        self._editor.load(candidate)
         return candidate
+
+    def _persist(self) -> bool:
+        """Save the document and bring running servers in line with it.
+
+        A server that was renamed or removed is stopped under its old id --
+        otherwise its process would run on, invisible in the list, until the
+        application exits -- and the consent and trust recorded under that
+        id are forgotten along with its remembered answers. A running server
+        that is now switched off is stopped too, so the list never shows a
+        server running whose tools the model is not offered.
+
+        Returns:
+            bool: ``True`` when the document was saved.
+        """
+        try:
+            self._manager.store.save(self._document)
+        except McpError as exc:
+            show_error(self, "Save failed", str(exc))
+            return False
+        retired = sorted(self._retired - {config.server_id for config in self._document.servers})
+        self._retired.clear()
+        for server_id in retired:
+            self._manager.consent.trust.reset(server_id)
+            ToolConfirmationDialog.clear_decisions_for_source(f"mcp-{server_id}")
+            if self._manager.connection(server_id) is not None:
+                self._start_worker(self._manager.stop_server(server_id), self._after_stop, self._on_worker_error)
+        for config in self._document.servers:
+            connection = self._manager.connection(config.server_id)
+            if not config.enabled and connection is not None and connection.status.health in _LIVE_HEALTH:
+                self._start_worker(self._manager.stop_server(config.server_id), self._after_stop, self._on_worker_error)
+        self._dirty = False
+        return True
+
+    def _after_stop(self, result: object) -> None:
+        """Refresh the list once a server has stopped.
+
+        Args:
+            result: Ignored; stopping reports nothing.
+        """
+        del result
+        self._refresh_list()
 
     def _on_add_server(self) -> None:
         """Add a new, disabled stdio server and select it."""
@@ -1183,19 +1769,10 @@ class McpConfigDialog(QDialog):
             return
         server_id = config.server_id
         self._document = self._document.without_server(server_id)
+        self._retired.add(server_id)
         self._current_id = None
         self._dirty = True
-
-        def _stopped(result: object) -> None:
-            """Refresh the list once the server has stopped.
-
-            Args:
-                result: Ignored; stopping reports nothing.
-            """
-            del result
-            self._refresh_list()
-
-        self._start_worker(self._manager.stop_server(server_id), _stopped, self._on_worker_error)
+        self._start_worker(self._manager.stop_server(server_id), self._after_stop, self._on_worker_error)
 
     def _on_import_json(self) -> None:
         """Import servers from pasted ``mcp.json`` text."""
@@ -1233,14 +1810,10 @@ class McpConfigDialog(QDialog):
 
     def _on_save(self) -> None:
         """Persist the document and re-register it with the manager."""
-        if self._selected_config() is not None and self._apply_editor() is None:
+        if self._selected_config() is not None and self._editor.modified and self._apply_editor() is None:
             return
-        try:
-            self._manager.store.save(self._document)
-        except McpError as exc:
-            show_error(self, "Save failed", str(exc))
+        if not self._persist():
             return
-        self._dirty = False
         self._document = self._manager.reload()
         self._refresh_list()
         show_info(self, "Saved", "MCP settings saved. Start or restart a server for the changes to take effect.")
@@ -1290,14 +1863,21 @@ class McpConfigDialog(QDialog):
         self._start_worker(self._manager.test_connection(config), _finished, _failed)
 
     def _on_start_server(self) -> None:
-        """Start the selected server, saving the edits first."""
+        """Start the selected server, saving the edits first.
+
+        Starting is an explicit request to use the server, so a server that
+        is switched off -- which every newly added server is -- is switched
+        on first. Otherwise it would either refuse to start or run while
+        offering the model nothing.
+        """
         config = self._apply_editor()
         if config is None:
             return
-        try:
-            self._manager.store.save(self._document)
-        except McpError as exc:
-            show_error(self, "Save failed", str(exc))
+        if not config.enabled:
+            config = replace(config, enabled=True)
+            self._document = self._document.with_server(config)
+            self._editor.set_enabled(enabled=True)
+        if not self._persist():
             return
         _ = self._manager.reload()
         self._status_label.setText(f"Starting '{config.server_id}'...")
@@ -1385,6 +1965,7 @@ class McpConfigDialog(QDialog):
             Args:
                 result: ``True`` when a credential was removed.
             """
+            self.refresh_auth_state()
             if result is True:
                 show_info(self, "Sign out", f"Signed out of '{config.server_id}'. Start it again to sign back in.")
             else:
@@ -1393,19 +1974,25 @@ class McpConfigDialog(QDialog):
         self._start_worker(sign_out(self._resolver.store, config.server_id, issuer), _done, self._on_worker_error)
 
     def refresh_auth_state(self) -> None:
-        """Update the sign-out button from what the keyring actually holds."""
+        """Update the sign-out button from what the keyring actually holds.
+
+        Runs whenever the selection or the server's state changes, so the
+        button follows the server being looked at rather than whichever one
+        was selected when the dialog opened.
+        """
         config = self._selected_config()
+        self._sign_out_button.setEnabled(False)
         if config is None or config.http is None:
-            self._sign_out_button.setEnabled(False)
             return
+        server_id = config.server_id
 
         def _checked(result: object) -> None:
-            """Enable the button only when a credential exists.
+            """Enable the button only when a credential exists for the server still selected.
 
             Args:
                 result: ``True`` when a token is stored.
             """
-            self._sign_out_button.setEnabled(result is True)
+            self._sign_out_button.setEnabled(result is True and self._current_id == server_id)
 
         self._start_worker(
             has_stored_credentials(self._resolver.store, config.server_id, issuer_for(config.http)),
@@ -1451,6 +2038,18 @@ class McpConfigDialog(QDialog):
         """
         self._release_workers()
         super().done(a0)
+
+
+def _render_prompt_messages(messages: list[object]) -> str:
+    """Render a fetched prompt's messages as one quoted block of text.
+
+    Args:
+        messages: The messages the prompt produced.
+
+    Returns:
+        str: Each message headed by its role, separated by blank lines.
+    """
+    return "\n\n".join(f"[{entry.role}]\n{entry.content}" for entry in messages if isinstance(entry, Message))
 
 
 def _as_object_list(value: object) -> list[object]:

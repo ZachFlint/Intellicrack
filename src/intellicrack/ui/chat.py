@@ -384,10 +384,11 @@ class MessageBubble(QFrame):
         layout.setContentsMargins(_TOOL_MARGIN_H, _TOOL_MARGIN_V, _TOOL_MARGIN_H, _TOOL_MARGIN_V)
         layout.setSpacing(2)
 
-        status = "Success" if result.success else "Failed"
+        succeeded = result.success and not result.is_error
+        status = "Success" if succeeded else ("Tool reported an error" if result.success else "Failed")
         header = QLabel(f"Result: {status} ({result.duration_ms:.1f}ms)")
         header.setFont(FontManager.get_instance().get_code_font(9))
-        header.setObjectName("result_header_success" if result.success else "result_header_error")
+        header.setObjectName("result_header_success" if succeeded else "result_header_error")
         layout.addWidget(header)
 
         if result.error:

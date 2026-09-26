@@ -15,7 +15,7 @@ import time
 from typing import TYPE_CHECKING, TypedDict, cast, override
 
 import openai
-from openai import AsyncStream
+from openai import AsyncStream, Omit, omit
 
 from intellicrack.core.logging import get_logger, log_provider_request
 from intellicrack.core.types import (
@@ -24,7 +24,6 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    RateLimitError,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
@@ -32,20 +31,14 @@ from intellicrack.core.types import (
 )
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
+    TRANSLATED_OPENAI_ERRORS,
     LLMProviderBase,
     OpenAIErrorMessages,
     ToolCallBufferManager,
-    is_permanent_quota_error,
-    map_thinking_budget_to_effort,
 )
-from intellicrack.providers.capabilities import ApiDialect
+from intellicrack.providers.capabilities import ApiDialect, ReasoningEffortFormat, TokenLimitField, effort_for_thinking_budget
+from intellicrack.providers.presets import GROK_DEFAULT_CONTEXT_WINDOW
 
-
-_GROK_4_CONTEXT_WINDOW = 256000
-_GROK_3_CONTEXT_WINDOW = 131072
-_GROK_2_CONTEXT_WINDOW = 131072
-_GROK_1_CONTEXT_WINDOW = 8192
-_GROK_DEFAULT_CONTEXT_WINDOW = 131072
 
 _ERR_KEY_REQUIRED = "Grok API key is required"
 _ERR_NOT_CONNECTED = "Not connected to Grok API"
@@ -63,6 +56,13 @@ _GROK_CHAT_ERRORS = OpenAIErrorMessages(
     rate_limited=_ERR_RATE_LIMITED,
     api_error=_ERR_API_ERROR,
     request_failed=_ERR_REQUEST_FAILED,
+)
+
+_GROK_STREAM_ERRORS = OpenAIErrorMessages(
+    auth_invalid=_ERR_INVALID_API_KEY,
+    rate_limited=_ERR_RATE_LIMITED,
+    api_error=_ERR_API_ERROR,
+    request_failed=_ERR_STREAM_FAILED,
 )
 
 if TYPE_CHECKING:
@@ -165,21 +165,24 @@ class GrokProvider(LLMProviderBase):
         except openai.AuthenticationError as e:
             self.connected = False
             self.client = None
-            self._logger.warning("grok_auth_failed", error=str(e))
-            raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
+            detail = self._redact_error_text(e, api_key=credentials.api_key)
+            self._logger.warning("grok_auth_failed", error=detail)
+            raise AuthenticationError(_ERR_INVALID_API_KEY % detail) from e
         except openai.BadRequestError as e:
             self.connected = False
             self.client = None
-            self._logger.warning("grok_bad_request", error=str(e))
-            error_str = str(e).lower()
+            detail = self._redact_error_text(e, api_key=credentials.api_key)
+            self._logger.warning("grok_bad_request", error=detail)
+            error_str = detail.lower()
             if "api key" in error_str or "incorrect" in error_str:
-                raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
-            raise ProviderError(_ERR_API_REQUEST % e) from e
+                raise AuthenticationError(_ERR_INVALID_API_KEY % detail) from e
+            raise ProviderError(_ERR_API_REQUEST % detail) from e
         except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
             self.connected = False
             self.client = None
-            self._logger.warning("grok_connect_failed", error=str(e))
-            raise ProviderError(_ERR_CONNECT_FAILED % e) from e
+            detail = self._redact_error_text(e, api_key=credentials.api_key)
+            self._logger.warning("grok_connect_failed", error=detail)
+            raise ProviderError(_ERR_CONNECT_FAILED % detail) from e
         else:
             self._credentials = credentials
             self.connected = True
@@ -215,54 +218,75 @@ class GrokProvider(LLMProviderBase):
             return False
         return "imagine" not in model_id
 
-    @staticmethod
-    def _infer_context_window(model_id: str) -> int:
-        """Infer context window size from model ID prefix patterns.
+    def _infer_context_window(self, model_id: str) -> int:
+        """Resolve a model's context window from its capability record.
 
         Args:
             model_id: Grok model identifier.
 
         Returns:
-            int: Estimated context window in tokens.
+            int: The window the record states -- the Grok preset's family
+            value, or a per-model override -- or the Grok default when the
+            record states none.
         """
-        if "grok-4" in model_id:
-            return _GROK_4_CONTEXT_WINDOW
-        if "grok-3" in model_id:
-            return _GROK_3_CONTEXT_WINDOW
-        if "grok-2" in model_id:
-            return _GROK_2_CONTEXT_WINDOW
-        if "grok-1" in model_id:
-            return _GROK_1_CONTEXT_WINDOW
-        return _GROK_DEFAULT_CONTEXT_WINDOW
+        return self.capabilities_for(model_id).context_window or GROK_DEFAULT_CONTEXT_WINDOW
 
-    @staticmethod
-    def _supports_max_completion_tokens(model_id: str) -> bool:
-        """Determine whether a model uses ``max_completion_tokens``.
-
-        Grok-4 and any future newer Grok generation use OpenAI's newer
-        ``max_completion_tokens`` request field instead of the legacy
-        ``max_tokens`` parameter.  Older Grok generations continue to use
-        ``max_tokens``.
+    def _supports_max_completion_tokens(self, model_id: str) -> bool:
+        """Determine whether a model takes ``max_completion_tokens``.
 
         Args:
             model_id: Grok model identifier.
 
         Returns:
-            bool: True if the model expects ``max_completion_tokens``.
+            bool: True when the model's capability record names
+            ``max_completion_tokens`` as its output-limit field.
         """
-        return "grok-4" in model_id or "grok-5" in model_id or "grok-6" in model_id
+        return self.capabilities_for(model_id).token_limit_field is TokenLimitField.MAX_COMPLETION_TOKENS
 
-    @staticmethod
-    def _infer_supports_vision(model_id: str) -> bool:
-        """Infer vision support from model ID.
+    def _infer_supports_vision(self, model_id: str) -> bool:
+        """Resolve whether a model accepts image input.
 
         Args:
             model_id: Grok model identifier.
 
         Returns:
-            bool: True if the model likely supports image inputs.
+            bool: The model's capability record's answer.
         """
-        return "vision" in model_id or "image" in model_id
+        return self.capabilities_for(model_id).supports_vision
+
+    def _temperature_argument(self, model_id: str, temperature: float) -> float | Omit:
+        """Resolve the temperature argument for one model.
+
+        Args:
+            model_id: Grok model identifier.
+            temperature: The caller's requested temperature.
+
+        Returns:
+            float | Omit: The temperature, or ``omit`` when the model's
+            capability record says it takes none.
+        """
+        return temperature if self.capabilities_for(model_id).supports_temperature else omit
+
+    def _grok_tools(self, model_id: str, tools: list[ToolDefinition] | None) -> list[ChatCompletionToolParam] | None:
+        """Convert the tool set for one model, as its capability record allows.
+
+        Args:
+            model_id: Grok model identifier.
+            tools: The caller's tool definitions, if any.
+
+        Returns:
+            list[ChatCompletionToolParam] | None: The tools in OpenAI format,
+            trimmed to the model's cap, or ``None`` when there are none or the
+            model takes no tools.
+        """
+        if not tools:
+            return None
+        capabilities = self.capabilities_for(model_id)
+        if not capabilities.supports_tools:
+            self._logger.debug("grok_tools_withheld_model_takes_none", model=model_id, tools_count=len(tools))
+            return None
+        converted = self._convert_tools_to_openai_format(self._enforce_tool_count_cap(tools, capabilities))
+        return cast("list[ChatCompletionToolParam]", converted)
 
     async def list_models(self) -> list[ModelInfo]:
         """Dynamically fetch available models from Grok.
@@ -279,8 +303,9 @@ class GrokProvider(LLMProviderBase):
         try:
             return await self._fetch_and_sort_models()
         except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
-            self._logger.warning("grok_list_models_failed", error=str(e))
-            raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
+            detail = self._redact_error_text(e)
+            self._logger.warning("grok_list_models_failed", error=detail)
+            raise ProviderError(_ERR_LIST_MODELS_FAILED % detail) from e
 
     async def _fetch_and_sort_models(self) -> list[ModelInfo]:
         """Fetch chat-capable models from the Grok API and sort them.
@@ -370,10 +395,7 @@ class GrokProvider(LLMProviderBase):
         grok_messages_raw = self.convert_messages_to_provider_format(messages)
         grok_messages_typed = cast("list[ChatCompletionMessageParam]", grok_messages_raw)
 
-        grok_tools_typed: list[ChatCompletionToolParam] | None = None
-        if tools:
-            grok_tools_raw = self.convert_tools_to_provider_format(tools)
-            grok_tools_typed = cast("list[ChatCompletionToolParam]", grok_tools_raw)
+        grok_tools_typed = self._grok_tools(model, tools)
 
         tool_choice_param: ChatCompletionToolChoiceOptionParam | None = None
         if tool_choice is not None and grok_tools_typed:
@@ -426,14 +448,13 @@ class GrokProvider(LLMProviderBase):
             duration_ms=duration_ms,
         )
 
-    @staticmethod
-    def _supports_reasoning_effort(model_id: str) -> bool:
+    def _supports_reasoning_effort(self, model_id: str) -> bool:
         """Return True when the Grok model accepts ``reasoning_effort``.
 
-        Per X.AI's documentation, ``reasoning_effort`` is only honoured
-        on the multi-agent variants such as ``grok-4-multi-agent``.
-        ``grok-4`` and ``grok-4-fast`` reason automatically and reject
-        the parameter, so it must be omitted for those families.
+        The answer is the model's capability record: the Grok preset lists
+        the families xAI documents as taking the parameter (grok-4.5,
+        grok-4.6, grok-4.7, the multi-agent variants and grok-3-mini), and a
+        per-model override can add or withdraw it for any other id.
 
         Args:
             model_id: Grok model identifier.
@@ -441,7 +462,8 @@ class GrokProvider(LLMProviderBase):
         Returns:
             bool: ``True`` if the model accepts ``reasoning_effort``.
         """
-        return "multi-agent" in model_id
+        reasoning = self.capabilities_for(model_id).reasoning
+        return reasoning.supported and reasoning.effort_format is ReasoningEffortFormat.TOP_LEVEL_EFFORT and bool(reasoning.effort_levels)
 
     def _reasoning_effort_for(
         self,
@@ -467,10 +489,8 @@ class GrokProvider(LLMProviderBase):
         if not self._supports_reasoning_effort(model):
             self._logger.debug("grok_thinking_ignored_auto_reasoning_model", model=model)
             return None
-        return cast(
-            "ReasoningEffort",
-            map_thinking_budget_to_effort(thinking.budget_tokens, allow_xhigh=True),
-        )
+        effort = effort_for_thinking_budget(thinking.budget_tokens, self.capabilities_for(model).reasoning.effort_levels)
+        return cast("ReasoningEffort", effort) if effort is not None else None
 
     async def _make_grok_api_call(
         self,
@@ -562,13 +582,14 @@ class GrokProvider(LLMProviderBase):
             self._logger.warning("dispatch_grok_create_not_connected", model=model)
             raise ProviderError(_ERR_NOT_CONNECTED)
         use_max_completion_tokens = self._supports_max_completion_tokens(model)
+        temperature_arg = self._temperature_argument(model, temperature)
         if tools is not None and tool_choice is not None:
             if use_max_completion_tokens:
                 if reasoning_effort is not None:
                     return await self.client.chat.completions.create(
                         model=model,
                         messages=messages,
-                        temperature=temperature,
+                        temperature=temperature_arg,
                         max_completion_tokens=max_tokens,
                         tools=tools,
                         tool_choice=tool_choice,
@@ -577,7 +598,7 @@ class GrokProvider(LLMProviderBase):
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=temperature_arg,
                     max_completion_tokens=max_tokens,
                     tools=tools,
                     tool_choice=tool_choice,
@@ -586,7 +607,7 @@ class GrokProvider(LLMProviderBase):
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=temperature_arg,
                     max_tokens=max_tokens,
                     tools=tools,
                     tool_choice=tool_choice,
@@ -595,7 +616,7 @@ class GrokProvider(LLMProviderBase):
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=temperature_arg,
                 max_tokens=max_tokens,
                 tools=tools,
                 tool_choice=tool_choice,
@@ -606,7 +627,7 @@ class GrokProvider(LLMProviderBase):
                     return await self.client.chat.completions.create(
                         model=model,
                         messages=messages,
-                        temperature=temperature,
+                        temperature=temperature_arg,
                         max_completion_tokens=max_tokens,
                         tools=tools,
                         reasoning_effort=reasoning_effort,
@@ -614,7 +635,7 @@ class GrokProvider(LLMProviderBase):
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=temperature_arg,
                     max_completion_tokens=max_tokens,
                     tools=tools,
                 )
@@ -622,7 +643,7 @@ class GrokProvider(LLMProviderBase):
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=temperature_arg,
                     max_tokens=max_tokens,
                     tools=tools,
                     reasoning_effort=reasoning_effort,
@@ -630,7 +651,7 @@ class GrokProvider(LLMProviderBase):
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=temperature_arg,
                 max_tokens=max_tokens,
                 tools=tools,
             )
@@ -639,28 +660,28 @@ class GrokProvider(LLMProviderBase):
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=temperature_arg,
                     max_completion_tokens=max_tokens,
                     reasoning_effort=reasoning_effort,
                 )
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=temperature_arg,
                 max_completion_tokens=max_tokens,
             )
         if reasoning_effort is not None:
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=temperature_arg,
                 max_tokens=max_tokens,
                 reasoning_effort=reasoning_effort,
             )
         return await self.client.chat.completions.create(
             model=model,
             messages=messages,
-            temperature=temperature,
+            temperature=temperature_arg,
             max_tokens=max_tokens,
         )
 
@@ -700,6 +721,7 @@ class GrokProvider(LLMProviderBase):
             self._logger.warning("open_grok_stream_not_connected", model=model)
             raise ProviderError(_ERR_NOT_CONNECTED)
         use_max_completion_tokens = self._supports_max_completion_tokens(model)
+        temperature_arg = self._temperature_argument(model, temperature)
         stream_options: ChatCompletionStreamOptionsParam = {"include_usage": True}
         if tools is not None and tool_choice is not None:
             if use_max_completion_tokens:
@@ -707,7 +729,7 @@ class GrokProvider(LLMProviderBase):
                     return await self.client.chat.completions.create(
                         model=model,
                         messages=messages,
-                        temperature=temperature,
+                        temperature=temperature_arg,
                         max_completion_tokens=max_tokens,
                         stream=True,
                         stream_options=stream_options,
@@ -718,7 +740,7 @@ class GrokProvider(LLMProviderBase):
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=temperature_arg,
                     max_completion_tokens=max_tokens,
                     stream=True,
                     stream_options=stream_options,
@@ -729,7 +751,7 @@ class GrokProvider(LLMProviderBase):
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=temperature_arg,
                     max_tokens=max_tokens,
                     stream=True,
                     stream_options=stream_options,
@@ -740,7 +762,7 @@ class GrokProvider(LLMProviderBase):
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=temperature_arg,
                 max_tokens=max_tokens,
                 stream=True,
                 stream_options=stream_options,
@@ -753,7 +775,7 @@ class GrokProvider(LLMProviderBase):
                     return await self.client.chat.completions.create(
                         model=model,
                         messages=messages,
-                        temperature=temperature,
+                        temperature=temperature_arg,
                         max_completion_tokens=max_tokens,
                         stream=True,
                         stream_options=stream_options,
@@ -763,7 +785,7 @@ class GrokProvider(LLMProviderBase):
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=temperature_arg,
                     max_completion_tokens=max_tokens,
                     stream=True,
                     stream_options=stream_options,
@@ -773,7 +795,7 @@ class GrokProvider(LLMProviderBase):
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=temperature_arg,
                     max_tokens=max_tokens,
                     stream=True,
                     stream_options=stream_options,
@@ -783,7 +805,7 @@ class GrokProvider(LLMProviderBase):
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=temperature_arg,
                 max_tokens=max_tokens,
                 stream=True,
                 stream_options=stream_options,
@@ -794,7 +816,7 @@ class GrokProvider(LLMProviderBase):
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=temperature_arg,
                     max_completion_tokens=max_tokens,
                     stream=True,
                     stream_options=stream_options,
@@ -803,7 +825,7 @@ class GrokProvider(LLMProviderBase):
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=temperature_arg,
                 max_completion_tokens=max_tokens,
                 stream=True,
                 stream_options=stream_options,
@@ -812,7 +834,7 @@ class GrokProvider(LLMProviderBase):
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=temperature_arg,
                 max_tokens=max_tokens,
                 stream=True,
                 stream_options=stream_options,
@@ -821,7 +843,7 @@ class GrokProvider(LLMProviderBase):
         return await self.client.chat.completions.create(
             model=model,
             messages=messages,
-            temperature=temperature,
+            temperature=temperature_arg,
             max_tokens=max_tokens,
             stream=True,
             stream_options=stream_options,
@@ -858,9 +880,9 @@ class GrokProvider(LLMProviderBase):
             str: Text chunks as they arrive.
 
         Raises:
-            AuthenticationError: If the API key is invalid.
-            ProviderError: If not connected or request fails.
-            RateLimitError: If rate limit is exceeded.
+            ProviderError: If not connected or the request fails. An invalid
+                key raises the :class:`AuthenticationError` subclass and a
+                transient rate limit the :class:`RateLimitError` subclass.
         """
         self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
@@ -874,10 +896,7 @@ class GrokProvider(LLMProviderBase):
         grok_messages_raw = self.convert_messages_to_provider_format(messages)
         grok_messages_typed = cast("list[ChatCompletionMessageParam]", grok_messages_raw)
 
-        grok_tools_typed: list[ChatCompletionToolParam] | None = None
-        if tools:
-            grok_tools_raw = self.convert_tools_to_provider_format(tools)
-            grok_tools_typed = cast("list[ChatCompletionToolParam]", grok_tools_raw)
+        grok_tools_typed = self._grok_tools(model, tools)
 
         tool_choice_value: ChatCompletionToolChoiceOptionParam | None = None
         if tool_choice is not None and grok_tools_typed:
@@ -899,25 +918,13 @@ class GrokProvider(LLMProviderBase):
                 reasoning_effort=reasoning_effort,
             ):
                 yield text_chunk
-        except openai.AuthenticationError as e:
-            self._logger.warning("grok_stream_auth_failed", error=str(e))
-            raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
-        except openai.RateLimitError as e:
-            if is_permanent_quota_error(str(e)):
-                self._logger.warning("grok_stream_quota_exhausted", error=str(e))
-                raise ProviderError(_ERR_API_ERROR % e) from e
-            self._logger.warning("grok_stream_rate_limited", error=str(e))
-            raise RateLimitError(_ERR_RATE_LIMITED % e) from e
-        except openai.APIError as e:
-            self._logger.warning("grok_stream_api_error", error=str(e))
-            raise ProviderError(_ERR_API_ERROR % e) from e
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            self._logger.warning(
-                "grok_stream_failed",
-                error=str(e),
-                cancel_requested=self._cancel_requested,
+        except TRANSLATED_OPENAI_ERRORS as exc:
+            self._raise_translated_openai_error(
+                exc,
+                log_prefix="grok_stream",
+                messages=_GROK_STREAM_ERRORS,
+                log_extra={"model": model, "cancel_requested": self._cancel_requested},
             )
-            raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def _iter_grok_stream(
         self,

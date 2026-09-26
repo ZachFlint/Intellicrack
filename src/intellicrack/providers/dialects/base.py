@@ -135,12 +135,15 @@ class ToolCallFragment:
         call_id: The provider's id for the call, present on the first fragment.
         name: The wire function name, present on the first fragment.
         arguments: A partial JSON argument fragment to append.
+        thought_signature: The base64 signature a provider bound to the call,
+            which must be echoed back when the call is replayed.
     """
 
     token: str
     call_id: str | None = None
     name: str | None = None
     arguments: str | None = None
+    thought_signature: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,6 +162,9 @@ class StreamDelta:
         tool_call_fragment: A tool-call fragment to accumulate, if any.
         usage: Token usage, when the event carries it.
         finish: The finish reason, when the event ends the response.
+        error: The endpoint's description of a failure it reported inside an
+            otherwise successful stream, or ``None``. A delta carrying one
+            ends the response as a failure, not as a completion.
     """
 
     text: str = ""
@@ -167,6 +173,7 @@ class StreamDelta:
     tool_call_fragment: ToolCallFragment | None = None
     usage: UsageInfo | None = None
     finish: str | None = None
+    error: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -472,9 +479,12 @@ def merge_auth_headers(inferred: Mapping[str, str], custom: Mapping[str, str]) -
     """Combine the adapter's inferred auth headers with the user's own.
 
     When the user supplies any header that carries a credential, every
-    inferred auth header is suppressed, so the endpoint receives exactly one
-    credential rather than two that disagree. Non-auth custom headers are
-    merged normally and win on a name collision.
+    inferred header that carries a credential is suppressed, so the endpoint
+    receives exactly one credential rather than two that disagree. Inferred
+    headers that carry no credential -- Anthropic's required
+    ``anthropic-version`` -- are protocol requirements rather than auth, and
+    are kept. Custom headers are merged last and win on a name collision,
+    compared case-insensitively as HTTP compares header names.
 
     Args:
         inferred: Auth headers the adapter derived from the API key.
@@ -483,13 +493,15 @@ def merge_auth_headers(inferred: Mapping[str, str], custom: Mapping[str, str]) -
     Returns:
         dict[str, str]: The headers to send.
     """
-    if custom_auth := {
-        name for name in custom if name.strip().lower() in AUTH_HEADER_NAMES
-    }:
-        _logger.info("inferred_auth_header_suppressed", overridden_by=sorted(custom_auth))
-        merged: dict[str, str] = {}
-    else:
-        merged = dict(inferred)
+    custom_names = {name.strip().lower() for name in custom}
+    custom_auth = sorted(name for name in custom if name.strip().lower() in AUTH_HEADER_NAMES)
+    if custom_auth:
+        _logger.info("inferred_auth_header_suppressed", overridden_by=custom_auth)
+    merged: dict[str, str] = {
+        name: value
+        for name, value in inferred.items()
+        if name.strip().lower() not in custom_names and not (custom_auth and name.strip().lower() in AUTH_HEADER_NAMES)
+    }
     merged |= custom
     return merged
 
@@ -553,26 +565,62 @@ class DialectAdapter(ABC):
         """
 
     @abstractmethod
-    def parse_response(self, payload: Mapping[str, Any]) -> DialectResponse:
+    def parse_response(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> DialectResponse:
         """Parse a non-streaming response body into normalized form.
 
         Args:
             payload: The decoded response body.
+            capabilities: The resolved capability record for the model the
+                request targeted, consulted for response fields a model's
+                record names -- such as the key an OpenAI-compatible gateway
+                carries reasoning text under. ``None`` applies the dialect's
+                defaults.
 
         Returns:
             DialectResponse: The normalized response.
         """
 
     @abstractmethod
-    def parse_stream_event(self, event: Mapping[str, Any]) -> list[StreamDelta]:
+    def parse_stream_event(
+        self,
+        event: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> list[StreamDelta]:
         """Translate one streaming event into normalized deltas.
 
         Args:
             event: One decoded streaming event.
+            capabilities: The resolved capability record for the model the
+                request targeted. ``None`` applies the dialect's defaults.
 
         Returns:
             list[StreamDelta]: Zero or more normalized deltas, in wire order.
         """
+
+    @staticmethod
+    def continues_turn(finish_reason: str | None) -> bool:
+        """Report whether a finish reason means the turn is paused, not over.
+
+        A dialect whose endpoint can stop mid-turn -- Anthropic's
+        ``pause_turn``, returned when a server-executed tool loop yields --
+        expects the partial assistant turn to be sent straight back so the
+        model can resume it. Every other finish ends the turn.
+
+        Args:
+            finish_reason: The finish reason the response reported, if any.
+
+        Returns:
+            bool: ``True`` when the caller must resend the partial turn to let
+            the model continue it. The base dialect never pauses.
+        """
+        del finish_reason
+        return False
 
     @abstractmethod
     def render_tool_result(

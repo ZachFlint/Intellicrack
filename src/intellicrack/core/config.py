@@ -371,7 +371,7 @@ def _default_providers() -> dict[str, ProviderConfig]:
         ),
         provider_ids.HUGGINGFACE: ProviderConfig(
             enabled=True,
-            api_base="https://api-inference.huggingface.co",
+            api_base="https://router.huggingface.co",
             default_model="openai/gpt-oss-120b",
             timeout_seconds=120,
             max_retries=3,

@@ -27,6 +27,8 @@ from typing import Final
 from intellicrack.core.logging import get_logger
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.capabilities import (
+    ANTHROPIC_46_EFFORT_LEVELS,
+    ANTHROPIC_EFFORT_LEVELS,
     EXTENDED_EFFORT_LEVELS,
     TIKTOKEN_CL100K,
     TIKTOKEN_O200K,
@@ -41,7 +43,10 @@ from intellicrack.providers.capabilities import (
 _logger = get_logger(__name__)
 
 OPENAI_CONTEXT_WINDOW: Final[int] = 128000
-"""Context window shared by the GPT-4o / 4.1 / 4.5 families."""
+"""Context window shared by the GPT-4o / 4.5 / GPT-4 Turbo families."""
+
+GPT41_CONTEXT_WINDOW: Final[int] = 1047576
+"""Context window of the GPT-4.1 family."""
 
 OPENAI_REASONING_CONTEXT_WINDOW: Final[int] = 200000
 """Context window of the o-series reasoning models."""
@@ -49,8 +54,11 @@ OPENAI_REASONING_CONTEXT_WINDOW: Final[int] = 200000
 GPT5_CONTEXT_WINDOW: Final[int] = 400000
 """Context window of the GPT-5 family."""
 
-ANTHROPIC_CONTEXT_WINDOW: Final[int] = 200000
-"""Context window shared by current Claude models."""
+ANTHROPIC_CONTEXT_WINDOW: Final[int] = 1000000
+"""Context window of Claude Opus 4.6, Sonnet 4.6 and every later Claude model."""
+
+ANTHROPIC_LEGACY_CONTEXT_WINDOW: Final[int] = 200000
+"""Default context window of Claude models before the 4.6 generation, Haiku 4.5 included."""
 
 GEMINI_CONTEXT_WINDOW: Final[int] = 1048576
 """Context window of the Gemini 1.5+ families."""
@@ -154,14 +162,64 @@ _OPENAI_REASONING = ReasoningSupport(
 
 _ANTHROPIC_REASONING = ReasoningSupport(
     supported=True,
+    effort_levels=ANTHROPIC_EFFORT_LEVELS,
+    effort_format=ReasoningEffortFormat.ADAPTIVE_EFFORT,
+    interleaved=True,
+)
+
+_ANTHROPIC_46_REASONING = ReasoningSupport(
+    supported=True,
+    effort_levels=ANTHROPIC_46_EFFORT_LEVELS,
+    effort_format=ReasoningEffortFormat.ADAPTIVE_EFFORT,
+    interleaved=True,
+)
+
+_ANTHROPIC_BUDGET_REASONING = ReasoningSupport(
+    supported=True,
     effort_format=ReasoningEffortFormat.THINKING_BUDGET,
     interleaved=True,
 )
+
+ANTHROPIC_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
+    ModelPreset(
+        prefixes=("claude-opus-4-6", "claude-sonnet-4-6"),
+        capabilities=CapabilityOverride(reasoning=_ANTHROPIC_46_REASONING, context_window=ANTHROPIC_CONTEXT_WINDOW),
+    ),
+    ModelPreset(
+        prefixes=(
+            "claude-3",
+            "claude-haiku-4",
+            "claude-sonnet-4-5",
+            "claude-sonnet-4-0",
+            "claude-sonnet-4-2",
+            "claude-opus-4-5",
+            "claude-opus-4-1",
+            "claude-opus-4-0",
+            "claude-opus-4-2",
+        ),
+        capabilities=CapabilityOverride(reasoning=_ANTHROPIC_BUDGET_REASONING, context_window=ANTHROPIC_LEGACY_CONTEXT_WINDOW),
+    ),
+)
+"""Claude families whose thinking surface differs from the current default.
+
+The Anthropic base capabilities describe the current generation -- adaptive
+thinking with ``output_config.effort`` up to ``xhigh`` and a 1M window -- so a
+Claude model released after this table was written resolves to the surface it
+most likely has. The families listed here are the closed set that predates it:
+Opus 4.6 and Sonnet 4.6, which take adaptive thinking but no ``xhigh``, and
+every earlier model, which only takes a ``budget_tokens`` thinking budget.
+"""
 
 _GEMINI_REASONING = ReasoningSupport(
     supported=True,
     effort_format=ReasoningEffortFormat.GENERATION_BUDGET,
 )
+
+_ANTHROPIC_GATEWAY_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
+    *ANTHROPIC_MODEL_PRESETS,
+    ModelPreset(prefixes=("claude-",), capabilities=CapabilityOverride(reasoning=_ANTHROPIC_REASONING)),
+)
+"""Claude families behind an Anthropic-compatible gateway, whose base record is the dialect's own."""
 
 _OPENAI_RESPONSES_FAMILY = CapabilityOverride(
     dialect=ApiDialect.RESPONSES,
@@ -188,6 +246,13 @@ _OPENAI_CHAT_FAMILY = CapabilityOverride(
 
 OPENAI_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
     ModelPreset(
+        prefixes=("gpt-5-chat",),
+        capabilities=_merge_overrides(
+            _OPENAI_CHAT_FAMILY,
+            CapabilityOverride(context_window=OPENAI_CONTEXT_WINDOW, supports_vision=True),
+        ),
+    ),
+    ModelPreset(
         prefixes=("gpt-5", "gpt-6"),
         capabilities=_merge_overrides(
             _OPENAI_RESPONSES_FAMILY,
@@ -202,11 +267,22 @@ OPENAI_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
         ),
     ),
     ModelPreset(
-        prefixes=("gpt-4o", "chatgpt-4o", "gpt-4.1", "gpt-4.5", "gpt-4-turbo"),
+        prefixes=("gpt-4.1",),
+        capabilities=_merge_overrides(
+            _OPENAI_CHAT_FAMILY,
+            CapabilityOverride(context_window=GPT41_CONTEXT_WINDOW, max_output_tokens=32768, supports_vision=True),
+        ),
+    ),
+    ModelPreset(
+        prefixes=("gpt-4o", "chatgpt-4o", "gpt-4.5", "gpt-4-turbo", "gpt-4-vision-preview", "gpt-4-1106-vision-preview"),
         capabilities=_merge_overrides(
             _OPENAI_CHAT_FAMILY,
             CapabilityOverride(context_window=OPENAI_CONTEXT_WINDOW, supports_vision=True),
         ),
+    ),
+    ModelPreset(
+        prefixes=("gpt-4-1106-preview", "gpt-4-0125-preview"),
+        capabilities=_merge_overrides(_OPENAI_CHAT_FAMILY, CapabilityOverride(context_window=OPENAI_CONTEXT_WINDOW)),
     ),
     ModelPreset(
         prefixes=("gpt-3.5",),
@@ -217,6 +293,85 @@ OPENAI_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
         capabilities=_merge_overrides(_OPENAI_CHAT_FAMILY, CapabilityOverride(context_window=8192)),
     ),
 )
+
+GROK_DEFAULT_CONTEXT_WINDOW: Final[int] = 131072
+"""Context window assumed for a Grok model no family entry covers."""
+
+
+def _grok_family(
+    *,
+    context_window: int,
+    effort_levels: tuple[str, ...] = (),
+    token_limit_field: TokenLimitField = TokenLimitField.MAX_COMPLETION_TOKENS,
+    supports_vision: bool = True,
+) -> CapabilityOverride:
+    """Describe one Grok model family.
+
+    Args:
+        context_window: The family's context window in tokens.
+        effort_levels: The ``reasoning_effort`` values the family accepts,
+            empty for a family that reasons automatically and rejects the
+            parameter, or does not reason.
+        token_limit_field: Which request field carries the output limit.
+        supports_vision: Whether the family accepts image input.
+
+    Returns:
+        CapabilityOverride: The family's capability record.
+    """
+    reasoning = (
+        ReasoningSupport(supported=True, effort_levels=effort_levels, effort_format=ReasoningEffortFormat.TOP_LEVEL_EFFORT)
+        if effort_levels
+        else None
+    )
+    return CapabilityOverride(
+        context_window=context_window,
+        token_limit_field=token_limit_field,
+        supports_vision=supports_vision,
+        reasoning=reasoning,
+    )
+
+
+_GROK_XHIGH_EFFORT: Final[tuple[str, ...]] = ("low", "medium", "high", "xhigh")
+
+GROK_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
+    ModelPreset(
+        prefixes=("grok-4.20-multi-agent", "grok-4-multi-agent"),
+        capabilities=_grok_family(context_window=1000000, effort_levels=_GROK_XHIGH_EFFORT),
+    ),
+    ModelPreset(prefixes=("grok-4.5",), capabilities=_grok_family(context_window=500000, effort_levels=("low", "medium", "high"))),
+    ModelPreset(prefixes=("grok-4.6", "grok-4.7"), capabilities=_grok_family(context_window=500000, effort_levels=_GROK_XHIGH_EFFORT)),
+    ModelPreset(prefixes=("grok-4.20", "grok-4.3"), capabilities=_grok_family(context_window=1000000)),
+    ModelPreset(prefixes=("grok-build",), capabilities=_grok_family(context_window=256000, supports_vision=False)),
+    ModelPreset(prefixes=("grok-4",), capabilities=_grok_family(context_window=256000)),
+    ModelPreset(
+        prefixes=("grok-3-mini",),
+        capabilities=_grok_family(
+            context_window=131072,
+            effort_levels=("low", "high"),
+            token_limit_field=TokenLimitField.MAX_TOKENS,
+            supports_vision=False,
+        ),
+    ),
+    ModelPreset(
+        prefixes=("grok-2-vision",),
+        capabilities=_grok_family(context_window=32768, token_limit_field=TokenLimitField.MAX_TOKENS),
+    ),
+    ModelPreset(
+        prefixes=("grok-3", "grok-2"),
+        capabilities=_grok_family(context_window=131072, token_limit_field=TokenLimitField.MAX_TOKENS, supports_vision=False),
+    ),
+    ModelPreset(
+        prefixes=("grok-1",),
+        capabilities=_grok_family(context_window=8192, token_limit_field=TokenLimitField.MAX_TOKENS, supports_vision=False),
+    ),
+)
+"""Grok families, most specific first.
+
+``reasoning_effort`` is accepted by grok-4.5 (up to ``high``), grok-4.6 and
+grok-4.7 (up to ``xhigh``), the multi-agent variants and grok-3-mini; the
+other grok-4 generations reason automatically and reject it. Grok-4 and later
+take ``max_completion_tokens``.
+"""
 
 BUILTIN_PRESETS: Final[dict[str, ProviderPreset]] = {
     provider_ids.ANTHROPIC: ProviderPreset(
@@ -234,6 +389,7 @@ BUILTIN_PRESETS: Final[dict[str, ProviderPreset]] = {
             reasoning=_ANTHROPIC_REASONING,
             tokenizer=TIKTOKEN_CL100K,
         ),
+        model_presets=ANTHROPIC_MODEL_PRESETS,
     ),
     provider_ids.OPENAI: ProviderPreset(
         provider_id=provider_ids.OPENAI,
@@ -286,7 +442,7 @@ BUILTIN_PRESETS: Final[dict[str, ProviderPreset]] = {
         provider_id=provider_ids.HUGGINGFACE,
         display_name="HuggingFace",
         dialect=ApiDialect.CHAT_COMPLETIONS,
-        default_api_base="https://api-inference.huggingface.co",
+        default_api_base="https://router.huggingface.co",
         api_key_env_var="HUGGINGFACE_API_TOKEN",
         base_capabilities=CapabilityOverride(supports_tools=True, tokenizer=TIKTOKEN_CL100K),
     ),
@@ -297,6 +453,7 @@ BUILTIN_PRESETS: Final[dict[str, ProviderPreset]] = {
         default_api_base="https://api.x.ai/v1",
         api_key_env_var="XAI_API_KEY",
         base_capabilities=CapabilityOverride(supports_tools=True, tokenizer=TIKTOKEN_CL100K),
+        model_presets=GROK_MODEL_PRESETS,
     ),
     provider_ids.LOCAL_TRANSFORMERS: ProviderPreset(
         provider_id=provider_ids.LOCAL_TRANSFORMERS,
@@ -375,6 +532,7 @@ COMPATIBLE_PRESETS: Final[dict[str, ProviderPreset]] = {
         display_name="Anthropic-compatible gateway",
         dialect=ApiDialect.MESSAGES,
         base_capabilities=CapabilityOverride(supports_tools=True, supports_temperature=False),
+        model_presets=_ANTHROPIC_GATEWAY_MODEL_PRESETS,
     ),
     "openai-gateway": ProviderPreset(
         provider_id="openai-gateway",
