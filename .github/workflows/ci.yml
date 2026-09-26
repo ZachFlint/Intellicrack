@@ -34,6 +34,29 @@ jobs:
             }
           } | Out-File -FilePath requirements.txt -Encoding utf8
         timeout-minutes: 5
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+      x64dbg: ${{ steps.filter.outputs.x64dbg }}
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: dorny/paths-filter@v4.0.3
+        id: filter
+        with:
+          filters: |
+            python:
+              - 'src/intellicrack/**'
+              - 'src/intellicrack-hexcore/**'
+              - 'src/x64dbg-plugin/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - 'pixi.lock'
+              - 'requirements.txt'
+              - '.github/workflows/ci.yml'
+            x64dbg:
+              - 'src/x64dbg-plugin/**'
+              - '.github/workflows/ci.yml'
   python-lint:
     runs-on: windows-latest
     needs: [setup]
@@ -150,8 +173,8 @@ jobs:
           pixi run python scripts/verify_no_mocks.py --ci
   python-test:
     runs-on: windows-latest
-    needs: [setup]
-    if: success() || failure()
+    needs: [setup, changes]
+    if: (success() || failure()) && (needs.changes.outputs.python == 'true' || github.event_name == 'workflow_dispatch')
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6.0.2
@@ -235,8 +258,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   x64dbg-plugin-build:
     runs-on: windows-latest
-    needs: [setup]
-    if: success() || failure()
+    needs: [setup, changes]
+    if: (success() || failure()) && (needs.changes.outputs.x64dbg == 'true' || github.event_name == 'workflow_dispatch')
     steps:
       - uses: actions/checkout@v6.0.2
         with:
