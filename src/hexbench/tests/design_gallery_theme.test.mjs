@@ -41,7 +41,7 @@ const DARK_QUERY = '(prefers-color-scheme: dark)';
 
 const page = await readFile(INDEX_PATH, 'utf8');
 
-const scripts = [...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
+const scripts = [...page.matchAll(/<script>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
 if (scripts.length !== 2) {
   process.stdout.write(`design/index.html carries ${scripts.length} inline scripts, expected the head and body pair\n`);
   process.exit(1);

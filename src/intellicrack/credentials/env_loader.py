@@ -10,8 +10,12 @@ This module handles loading and validating API credentials from .env files for v
 from __future__ import annotations
 
 import functools
+import getpass
 import os
 import re
+import stat
+import sys
+import tempfile
 import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -19,6 +23,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Final
 
+from intellicrack.core import subprocess_compat
 from intellicrack.core.config import get_env_file, get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials
@@ -1247,19 +1252,88 @@ class CredentialLoader:
     def _write_env_file_lines(self, lines: list[str]) -> None:
         """Write lines, each carrying its own line ending, to the ``.env`` file.
 
+        Writes to a sibling temporary file that is restricted to owner-only
+        access before any credential byte is written to it, then atomically
+        replaces the ``.env`` file with it. This closes the window a
+        write-then-``chmod`` sequence leaves open: the file that ever holds
+        plaintext credentials never exists on disk with broader-than-owner
+        permissions, even momentarily, and a failure partway through never
+        leaves the real ``.env`` file partially written.
+
         Args:
             lines: The complete file content split into lines.
 
         Raises:
-            OSError: If the file cannot be written.
+            OSError: If the temporary file cannot be created, restricted, or
+                written, or if the atomic replace fails.
         """
         self.env_path.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp_name = tempfile.mkstemp(
+            prefix=f"{self.env_path.name}.",
+            suffix=".tmp",
+            dir=str(self.env_path.parent),
+        )
+        os.close(fd)
+        tmp_path = Path(tmp_name)
         try:
-            with self.env_path.open("w", encoding="utf-8", newline="") as f:
+            self._restrict_env_file_permissions(tmp_path)
+            with tmp_path.open("w", encoding="utf-8", newline="") as f:
                 f.writelines(lines)
+            tmp_path.replace(self.env_path)
         except OSError:
             _logger.exception("env_file_write_failed", path=str(self.env_path))
+            tmp_path.unlink(missing_ok=True)
             raise
+
+    @staticmethod
+    def _restrict_env_file_permissions(path: Path) -> None:
+        """Restrict a file to owner-only access.
+
+        On POSIX platforms this clears group/other permission bits so only
+        the owning user can read or write the file. On Windows, it resets
+        the file's ACL to remove every existing explicit access-control
+        entry (whatever it inherited from its parent directory or carried
+        over from a prior write) before granting access to the current user
+        only, via ``icacls``, which ships with every supported Windows
+        release. Permission restriction is best-effort: a failure to
+        tighten permissions is logged but never prevents the caller's write
+        from proceeding.
+
+        Args:
+            path: The file to restrict.
+        """
+        if sys.platform == "win32":
+            username = os.environ.get("USERNAME") or getpass.getuser()
+            commands = (
+                ["icacls", str(path), "/reset"],
+                ["icacls", str(path), "/inheritance:r"],
+                ["icacls", str(path), "/grant:r", f"{username}:(R,W)"],
+            )
+            try:
+                for command in commands:
+                    result = subprocess_compat.run(
+                        command,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                        creationflags=subprocess_compat.CREATE_NO_WINDOW,
+                        check=False,
+                    )
+                    if result.returncode != 0:
+                        _logger.warning(
+                            "env_file_permission_restrict_failed",
+                            path=str(path),
+                            command=command,
+                            stderr=result.stderr.strip(),
+                        )
+                        return
+            except (OSError, subprocess_compat.SubprocessError):
+                _logger.warning("env_file_permission_restrict_failed", path=str(path))
+            return
+        try:
+            path.chmod(stat.S_IRUSR | stat.S_IWUSR)
+        except OSError:
+            _logger.warning("env_file_permission_restrict_failed", path=str(path))
 
 
 def get_api_key_env_var_mapping() -> dict[str, str]:
