@@ -43,9 +43,16 @@ $rebaseCmd = "git pull --rebase origin main $Flags"
 Invoke-Expression $rebaseCmd 2>&1 | ForEach-Object { Write-Host "  $_" }
 if ($LASTEXITCODE -ne 0) {
     Write-Fail "Rebase failed"
+    if (Test-GitRebaseInProgress) {
+        Write-Step 'REBASE' "Aborting rebase..." '33'
+        if (-not (Stop-GitRebase)) {
+            Write-Fail "Rebase abort failed; run 'git status' before doing anything else"
+            exit 1
+        }
+        Write-Success "Rebase aborted; local commits unchanged"
+    }
     if ($hasChanges) {
-        Write-Step 'REBASE' "Aborting rebase and restoring stash..." '33'
-        git rebase --abort 2>&1 | ForEach-Object { Write-Host "  $_" }
+        Write-Step 'REBASE' "Restoring stash..." '33'
         git stash pop 2>&1 | ForEach-Object { Write-Host "  $_" }
     }
     exit 1

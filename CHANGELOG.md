@@ -179,6 +179,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 
+- **scripts:** Add automatic rebase-and-retry on push rejection (``)
+
 
 ### Changed
 
@@ -315,6 +317,50 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 
 ### Fixed
+
+- **tests:** Report isolated Frida skips with the location tuple pytest requires (`29acf85`)
+
+- **tokens:** Bounded, non-blocking tiktoken loading with negative caching (`fde2944`)
+
+- **mcp/validation:** Principled ReDoS guard with hard match timeout; nullable and JSON equality (`84ea32e`)
+
+- **json_schema:** Bound $ref inlining, honest strict flag, no empty Gemini OBJECTs (`7a69461`)
+
+- **mcp:** A missing mcp SDK disables MCP instead of breaking the UI (`fbcdbb3`)
+
+- **ui:** Marshal MCP state onto the GUI thread and stop cleanly (`9b485e6`)
+
+- **ui:** MCP settings keep edits per server, track sign-in and running state, expose trust and prompts (`3204101`)
+
+- **mcp:** Withdraw abandoned prompts, follow the elicitation schema, start servers side by side (`0bee273`)
+
+- **mcp:** Make consent, trust and approvals revocable and bound to what they were given for (`52883c7`)
+
+- **mcp:** Detect dead servers, follow changes across reconnects, exclude operator time (`412885c`)
+
+- **mcp:** Confine sandboxed servers from creation with a restricted token (`ef5a9a9`)
+
+- **mcp:** Use the SDK SSE client for sse servers and guard URL scheme logging (`baf6673`)
+
+- **config:** Default HuggingFace to the router host (`c1e5b24`)
+
+- **credentials:** Stop storing a hash of chunked secrets (`42aa720`)
+
+- **credentials:** Let a write replace an unreadable keyring entry (`d5231b4`)
+
+- **mcp:** Accept other clients' mcp.json and check args for secrets (`ee5aa1b`)
+
+- **mcp:** Keep OAuth identity, registration and refresh across restarts (`be3526b`)
+
+- **oauth:** Wait only for the real redirect and own the callback port (`6d43896`)
+
+- **credentials:** Chunk large secrets and report keyring read failures (`d27cd03`)
+
+- **providers:** Repair wire-format dialect replay, streaming errors and headers (`e41eb04`)
+
+- **providers:** ConfigurableProvider HTTP layer and Gemini dialect (`69a6acb`)
+
+- **mcp:** Route MCP tool results through multi-part content and fail calls, not turns (`4dc1df9`)
 
 - **megalint:** Stop a Windows pixi path leaking into clippy, aim lychee's root (`914b0f7`)
 
@@ -1049,6 +1095,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 
 ### Security
+
+- Advanced CodeQL setup, harden .env perms, patch underscore CVEs (`8c56184`)
 
 - Declare core runtime dependencies and bump HTTP security floors (`693a69c`)
 
