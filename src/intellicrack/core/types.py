@@ -10,9 +10,10 @@ This module contains all the fundamental dataclasses, enums, and type definition
 from __future__ import annotations
 
 import enum
+import json
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, runtime_checkable
 
 from intellicrack.core.logging import get_logger
 
@@ -226,12 +227,14 @@ __all__: list[str] = [
     "ToolFunction",
     "ToolName",
     "ToolNotFoundError",
+    "ToolOutput",
     "ToolParameter",
     "ToolResult",
     "ToolResultPart",
     "ToolState",
     "VariableInfo",
     "VtableInfo",
+    "render_schema_parameters",
 ]
 
 
@@ -466,6 +469,27 @@ ToolResultPart = TextResultPart | ImageResultPart | AudioResultPart | ResourceLi
 Dialects that support a native multi-part tool result render each part directly; the rest degrade through the single shared text fallback
 defined in ``intellicrack.providers.dialects.base`` so every dialect degrades identically.
 """
+
+
+@dataclass(frozen=True, slots=True)
+class ToolOutput:
+    """Multi-part output an externally-sourced tool call produced.
+
+    An external executor returns this instead of a bare value when its tool
+    speaks in parts. The orchestrator routes ``parts`` into
+    :attr:`ToolResult.content` and ``is_error`` into :attr:`ToolResult.is_error`,
+    so each dialect renders text, images and structured output through its
+    own native path instead of serializing an opaque value.
+
+    Attributes:
+        parts: The result parts, in the order the tool produced them.
+        is_error: Whether the tool itself reported the call as failed. The
+            call was delivered and answered; the parts describe what went
+            wrong, and the model should see them as an error result.
+    """
+
+    parts: tuple[ToolResultPart, ...]
+    is_error: bool = False
 
 
 @dataclass
@@ -1700,6 +1724,69 @@ class ToolParameter:
     item_properties: list[ToolParameter] | None = None
 
 
+_SCHEMA_LABEL_DEPTH: Final[int] = 3
+"""How deeply nested schemas are described in a one-line argument summary."""
+
+
+def _schema_type_label(schema: object, depth: int = 0) -> str:
+    """Describe one JSON Schema as a short type label.
+
+    Args:
+        schema: A JSON Schema node.
+        depth: Current nesting depth, bounding recursive and deeply nested
+            schemas.
+
+    Returns:
+        str: A label such as ``string``, ``integer|null``, ``array[string]``
+        or the name a ``$ref`` points at; ``any`` when nothing narrower is
+        declared.
+    """
+    if not isinstance(schema, dict) or depth > _SCHEMA_LABEL_DEPTH:
+        return "any"
+    node = cast("dict[str, object]", schema)
+    reference = node.get("$ref")
+    if isinstance(reference, str):
+        return reference.rsplit("/", 1)[-1] or "any"
+    for combinator in ("anyOf", "oneOf"):
+        options = node.get(combinator)
+        if isinstance(options, list):
+            labels = dict.fromkeys(_schema_type_label(option, depth + 1) for option in cast("list[object]", options))
+            return "|".join(labels) or "any"
+    if "const" in node:
+        return json.dumps(node["const"])
+    enum_values = node.get("enum")
+    if isinstance(enum_values, list):
+        return "|".join(json.dumps(value) for value in cast("list[object]", enum_values)) or "any"
+    declared = node.get("type")
+    if isinstance(declared, list):
+        return "|".join(str(item) for item in cast("list[object]", declared)) or "any"
+    if declared == "array":
+        return f"array[{_schema_type_label(node.get('items'), depth + 1)}]"
+    return declared if isinstance(declared, str) else "any"
+
+
+def render_schema_parameters(schema: dict[str, Any]) -> str:
+    """Render an object schema's properties as a one-line argument list.
+
+    Args:
+        schema: The JSON Schema of a function's arguments.
+
+    Returns:
+        str: ``name: type`` pairs in declaration order, with a ``?`` after
+        each property the schema does not list as required.
+    """
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        return ""
+    raw_required = schema.get("required")
+    required: set[str] = {str(item) for item in cast("list[object]", raw_required)} if isinstance(raw_required, list) else set()
+    rendered: list[str] = []
+    for name, subschema in cast("dict[object, object]", properties).items():
+        marker = "" if name in required else "?"
+        rendered.append(f"{name}{marker}: {_schema_type_label(subschema)}")
+    return ", ".join(rendered)
+
+
 @dataclass
 class ToolFunction:
     """Tool function definition for LLM.
@@ -1725,14 +1812,29 @@ class ToolFunction:
     input_schema: dict[str, Any] | None = None
 
     @property
+    def parameter_summary(self) -> str:
+        """Render the function's arguments as ``name: type`` pairs.
+
+        When :attr:`input_schema` is set it is authoritative, exactly as it is
+        for schema generation, so an externally-sourced tool is described by
+        the arguments it really takes rather than by its empty
+        ``parameters`` list. Optional schema properties carry a ``?``.
+
+        Returns:
+            str: The comma-separated argument list.
+        """
+        if self.input_schema is not None:
+            return render_schema_parameters(self.input_schema)
+        return ", ".join(f"{p.name}: {p.type}" for p in self.parameters)
+
+    @property
     def signature(self) -> str:
         """Function signature string.
 
         Returns:
             str: Formatted signature with name, parameters, and return type.
         """
-        params = ", ".join(f"{p.name}: {p.type}" for p in self.parameters)
-        return f"{self.name}({params}) -> {self.returns}"
+        return f"{self.name}({self.parameter_summary}) -> {self.returns}"
 
 
 @dataclass

@@ -54,6 +54,7 @@ from intellicrack.providers.dialects.base import (
     UsageInfo,
     parse_tool_call,
     serialize_tool_result,
+    tool_result_text,
 )
 from intellicrack.providers.presets import preset_capabilities
 from intellicrack.providers.tool_names import to_wire_name
@@ -1257,7 +1258,7 @@ class LLMProviderBase(ABC):
                     {
                         "role": "tool",
                         "tool_call_id": tr.call_id,
-                        "content": serialize_tool_result(tr.result),
+                        "content": tool_result_text(tr),
                     }
                     for tr in msg.tool_results
                 )
