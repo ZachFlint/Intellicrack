@@ -168,14 +168,7 @@ try {
     exit 1
 }
 
-try {
-    $pushArgs = "git push --no-verify origin HEAD $Flags"
-    Invoke-Expression $pushArgs 2>&1 | ForEach-Object { Write-Host "  $_" }
-    if ($LASTEXITCODE -ne 0) { throw "git push failed" }
-    Write-Success "Pushed to origin"
-} catch {
-    Write-Fail "Push failed: $_"
-    exit 1
-}
+& "$PSScriptRoot/git-push.ps1" -Flags $Flags
+if ($LASTEXITCODE -ne 0) { exit 1 }
 
 Write-Footer "Commit Complete" $startTime

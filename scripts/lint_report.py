@@ -3682,7 +3682,11 @@ def generate_report(
     dashboard_data = _build_dashboard_data(reports)
     json_data = json.dumps(dashboard_data)
     html_content = _build_html_template(json_data, dashboard_data["generated"], title)
-    output = Path(output_path)
+    try:
+        output = Path(output_path).resolve()
+    except RuntimeError as exc:
+        print(f"Cannot resolve output path {output_path}: {exc}")
+        sys.exit(1)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(html_content, encoding="utf-8")
 

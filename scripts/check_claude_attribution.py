@@ -184,6 +184,11 @@ def _run_commit_msg(message_file: Path) -> int:
     Returns:
         int: ``0`` to accept the commit, ``1`` to refuse it.
     """
+    try:
+        message_file = message_file.resolve()
+    except RuntimeError as exc:
+        sys.stderr.write(f"commit refused: cannot resolve commit message path {message_file}: {exc}\n")
+        return 1
     cwd = Path.cwd()
     for variable in ("GIT_AUTHOR_IDENT", "GIT_COMMITTER_IDENT"):
         ident = _git(["var", variable], cwd).strip()
