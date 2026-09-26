@@ -18,7 +18,9 @@ import http.server
 import json
 import os
 import secrets
+import socket
 import socketserver
+import sys
 import threading
 import urllib.parse
 import webbrowser
@@ -394,33 +396,116 @@ def verify_pkce_pair(code_verifier: str, code_challenge: str) -> bool:
     return secrets.compare_digest(recomputed, code_challenge)
 
 
-class _OAuthCallbackTCPServer(socketserver.TCPServer):
-    """TCPServer that carries per-instance OAuth callback state.
+_CALLBACK_HANDLER_TIMEOUT_S: Final = 10.0
+"""How long one connection to the callback server may take to send its request."""
 
-    The callback handler stores the received authorization code, state, and
-    error string on the server instance so concurrent OAuth flows running
-    different ``_OAuthCallbackTCPServer`` instances cannot stomp each
-    other's results via shared class state.
+_CALLBACK_POLL_INTERVAL_S: Final = 0.1
+"""How often the serving loop checks whether it has been asked to stop."""
+
+_HTTP_BAD_REQUEST: Final = 400
+_HTTP_NOT_FOUND: Final = 404
+
+
+class _OAuthCallbackTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    """Loopback server that carries per-instance OAuth callback state.
+
+    The callback handler records the outcome on the server instance, so concurrent OAuth flows running different instances cannot stomp
+    each other's results via shared class state. Each request runs on its own thread, so a client that connects and never sends a request
+    cannot hold up the real redirect.
+
+    The listening socket is never shared. ``SO_REUSEADDR`` is enabled only where it merely permits rebinding past ``TIME_WAIT``; on Windows it
+    would let a second socket bind the same port, so there the socket is opened with ``SO_EXCLUSIVEADDRUSE`` instead, which also stops
+    another local program from binding over it and intercepting the code.
 
     Attributes:
+        allow_reuse_address: Whether ``SO_REUSEADDR`` is set before binding. Scoped to this class; ``socketserver.TCPServer`` is untouched.
+        daemon_threads: Request threads do not keep the process alive.
         callback_code: Authorization code received from the OAuth provider.
         callback_state: State parameter echoed back by the provider.
         callback_error: Error string if authorization failed.
         callback_event: Event signalled once a callback has been recorded.
-        expected_state: State value the handler should accept (CSRF check).
+        expected_state: State value the handler accepts (CSRF check).
+        require_state: Whether a callback is refused until ``expected_state`` is known.
+        callback_path: The only request path treated as the redirect.
         callback_issuer: The RFC 9207 ``iss`` parameter, when the
             authorization server includes it in the redirect. Recorded so the
             caller can check the response came from the server it asked,
             which is what defends a multi-server client against a mix-up
             attack.
+        completed: Whether a terminal callback has been recorded.
+        outcome_lock: Serialises recording the outcome across request threads.
     """
+
+    allow_reuse_address = sys.platform != "win32"
+    daemon_threads = True
 
     callback_code: str | None = None
     callback_state: str | None = None
     callback_error: str | None = None
     callback_event: threading.Event | None = None
     expected_state: str | None = None
+    require_state: bool = False
+    callback_path: str = "/callback"
     callback_issuer: str | None = None
+    completed: bool = False
+    outcome_lock: threading.Lock
+
+    def __init__(self, server_address: tuple[str, int], handler: type[http.server.BaseHTTPRequestHandler]) -> None:
+        """Bind the loopback socket.
+
+        Args:
+            server_address: Host and port to bind; port ``0`` asks the OS for a free one.
+            handler: Request handler class.
+        """
+        self.outcome_lock = threading.Lock()
+        super().__init__(server_address, handler)
+
+    def server_bind(self) -> None:
+        """Bind the socket, exclusively on Windows."""
+        exclusive: int | None = getattr(socket, "SO_EXCLUSIVEADDRUSE", None)
+        if exclusive is not None:
+            self.socket.setsockopt(socket.SOL_SOCKET, exclusive, 1)
+        super().server_bind()
+
+
+def classify_callback(
+    path: str,
+    *,
+    callback_path: str,
+    expected_state: str | None,
+    require_state: bool,
+) -> tuple[str, dict[str, str]]:
+    """Decide whether one request to the loopback server is the authorization redirect.
+
+    Only a request on the callback path that carries a ``code`` or an ``error`` and, when a state is expected, the matching ``state`` ends
+    the wait. Anything else -- a favicon fetch, a port probe, a stale tab replaying an older redirect, a forged callback -- is answered and
+    ignored, so it cannot end the sign-in that is actually in progress.
+
+    Args:
+        path: The request target, path and query.
+        callback_path: The path the redirect URI names.
+        expected_state: The ``state`` the authorization request carried, or ``None`` when it is not checked.
+        require_state: Whether to ignore every callback while ``expected_state`` is still unknown.
+
+    Returns:
+        tuple[str, dict[str, str]]: ``"ignore"``, ``"error"`` or ``"code"``, and the first value of each query parameter.
+    """
+    parsed = urllib.parse.urlparse(path)
+    params = {name: values[0] for name, values in urllib.parse.parse_qs(parsed.query).items() if values}
+    if parsed.path != callback_path:
+        return "ignore", params
+    if expected_state is None:
+        if require_state:
+            return "ignore", params
+    else:
+        received = params.get("state")
+        if received is None or not secrets.compare_digest(received.encode("utf-8"), expected_state.encode("utf-8")):
+            return "ignore", params
+    if "error" in params:
+        return "error", params
+    if "code" in params and "state" in params:
+        return "code", params
+    return "ignore", params
 
 
 class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
@@ -428,40 +513,47 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
 
     Reads CSRF/state context from the ``_OAuthCallbackTCPServer`` instance that owns the handler so concurrent OAuth flows on different
     ports do not share class-level state.
+
+    Attributes:
+        timeout: Socket timeout for one connection, so an idle client is dropped.
     """
 
+    timeout = _CALLBACK_HANDLER_TIMEOUT_S
+
     def do_GET(self) -> None:
-        """Handle GET request from OAuth redirect."""
-        _logger.debug("oauth_callback_received")
-        parsed = urllib.parse.urlparse(self.path)
-        params = urllib.parse.parse_qs(parsed.query)
+        """Handle a GET request, recording it only if it is the real redirect."""
         server = cast("_OAuthCallbackTCPServer", self.server)
+        verdict, params = classify_callback(
+            self.path,
+            callback_path=server.callback_path,
+            expected_state=server.expected_state,
+            require_state=server.require_state,
+        )
+        event: threading.Event | None = None
+        with server.outcome_lock:
+            if verdict != "ignore" and server.completed:
+                verdict = "ignore"
+            if verdict == "error":
+                server.callback_error = params["error"]
+                server.completed = True
+                event = server.callback_event
+            elif verdict == "code":
+                server.callback_code = params["code"]
+                server.callback_state = params["state"]
+                server.callback_issuer = params.get("iss")
+                server.completed = True
+                event = server.callback_event
 
-        if "error" in params:
-            server.callback_error = params["error"][0]
-            status = 400
-            message = f"Authorization failed: {params['error'][0]}. You can close this window."
-        elif "code" in params and "state" in params:
-            received_state = params["state"][0]
-            expected = server.expected_state
-            if expected is not None and not secrets.compare_digest(received_state, expected):
-                server.callback_error = "state_mismatch"
-                status = 400
-                message = "State parameter mismatch. Possible CSRF attempt."
-            else:
-                server.callback_code = params["code"][0]
-                server.callback_state = received_state
-                issuer = params.get("iss")
-                server.callback_issuer = issuer[0] if issuer else None
-                status = 200
-                message = "Authorization successful! You can close this window."
+        if verdict == "error":
+            self._send_response(_HTTP_BAD_REQUEST, f"Authorization failed: {params['error']}. You can close this window.")
+        elif verdict == "code":
+            self._send_response(_HTTP_OK, "Authorization successful! You can close this window.")
+        elif urllib.parse.urlparse(self.path).path != server.callback_path:
+            _logger.debug("oauth_callback_unrelated_request_ignored")
+            self._send_response(_HTTP_NOT_FOUND, "Not found.")
         else:
-            status = 400
-            message = "Invalid callback parameters."
-
-        event = server.callback_event
-
-        self._send_response(status, message)
+            _logger.debug("oauth_callback_foreign_request_ignored")
+            self._send_response(_HTTP_BAD_REQUEST, "This request does not belong to the sign-in in progress.")
 
         if event is not None:
             event.set()
@@ -512,7 +604,8 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
 class OAuthCallbackServer:
     """Local HTTP server for receiving OAuth callbacks.
 
-    Runs in a background thread and waits for the OAuth redirect.
+    Serves on a background thread until the authorization redirect arrives or the server is stopped. Requests that are not the redirect are
+    answered and ignored, so the wait continues until the real callback or the timeout.
     """
 
     def __init__(
@@ -520,17 +613,24 @@ class OAuthCallbackServer:
         port: int = 8080,
         timeout: float = 300.0,
         expected_state: str | None = None,
+        *,
+        callback_path: str = "/callback",
+        require_state: bool = False,
     ) -> None:
         """Initialize the OAuthCallbackServer with the given port and timeout.
 
         Args:
-            port: Port to listen on for OAuth callbacks.
+            port: Port to listen on for OAuth callbacks; ``0`` lets the OS choose a free one, readable from :attr:`port` after :meth:`start`.
             timeout: Timeout in seconds to wait for the callback.
             expected_state: Optional state value for CSRF validation.
+            callback_path: The path the redirect URI names; requests on any other path are ignored.
+            require_state: Ignore every callback until a state is supplied, either here or through :meth:`expect_state`.
         """
         self._port = port
         self._timeout = timeout
         self._expected_state = expected_state
+        self._callback_path = callback_path
+        self._require_state = require_state
         self._server: _OAuthCallbackTCPServer | None = None
         self._thread: threading.Thread | None = None
         self._event = threading.Event()
@@ -542,18 +642,40 @@ class OAuthCallbackServer:
             has_expected_state=bool(expected_state),
         )
 
+    @property
+    def port(self) -> int:
+        """The port the server listens on.
+
+        Returns:
+            int: The bound port once started, otherwise the requested one.
+        """
+        server = self._server
+        if server is not None:
+            return int(server.server_address[1])
+        return self._port
+
+    def expect_state(self, state: str) -> None:
+        """Set the ``state`` value the redirect must carry.
+
+        Used when the state is only known after the server has been bound, because the redirect URI (and so the port) had to be fixed first.
+
+        Args:
+            state: The state the authorization request carried.
+        """
+        self._expected_state = state
+        server = self._server
+        if server is not None:
+            with server.outcome_lock:
+                server.expected_state = state
+
     def start(self) -> None:
         """Start the callback server in a background thread.
 
         Raises:
             OAuthCallbackError: If the local bind socket cannot be opened.
         """
-        socketserver.TCPServer.allow_reuse_address = True
         try:
-            self._server = _OAuthCallbackTCPServer(
-                ("127.0.0.1", self._port),
-                OAuthCallbackHandler,
-            )
+            self._server = _OAuthCallbackTCPServer(("127.0.0.1", self._port), OAuthCallbackHandler)
         except OSError as exc:
             _logger.warning("oauth_callback_server_bind_failed", port=self._port, error=str(exc))
             msg = f"Failed to bind OAuth callback server on port {self._port}: {exc}"
@@ -564,19 +686,22 @@ class OAuthCallbackServer:
         server.callback_state = None
         server.callback_error = None
         server.callback_issuer = None
+        server.completed = False
         server.callback_event = self._event
         server.expected_state = self._expected_state
+        server.require_state = self._require_state
+        server.callback_path = self._callback_path
 
         def serve() -> None:
-            """Handle a single OAuth callback HTTP request on the background thread."""
+            """Serve requests on the background thread until the server is shut down."""
             try:
-                server.handle_request()
+                server.serve_forever(poll_interval=_CALLBACK_POLL_INTERVAL_S)
             except OSError:
                 _logger.exception("oauth_callback_server_serve_error")
 
-        self._thread = threading.Thread(target=serve, daemon=True)
+        self._thread = threading.Thread(target=serve, name=f"oauth-callback-{self.port}", daemon=True)
         self._thread.start()
-        _logger.info("oauth_callback_server_started", port=self._port)
+        _logger.info("oauth_callback_server_started", port=self.port)
 
     def wait_for_callback(self) -> tuple[str, str]:
         """Wait for OAuth callback and return code and state.
@@ -636,20 +761,21 @@ class OAuthCallbackServer:
     def stop(self) -> None:
         """Stop the callback server and release the bound socket.
 
-        The server thread uses ``handle_request`` (single-shot) rather than ``serve_forever``; therefore ``shutdown`` is not called here —
-        doing so would block on ``__is_shut_down`` which is only set by ``serve_forever``. We close the socket and wake any blocking
-        ``handle_request`` call via ``server_close``.
+        ``shutdown`` ends the ``serve_forever`` loop and waits for it to exit, then ``server_close`` releases the port. A thread still
+        blocked in :meth:`wait_for_callback` is woken and fails with "not running" instead of holding on until the timeout.
         """
         server = self._server
         if server is not None:
             self._received_issuer = server.callback_issuer
             server.callback_event = None
-            server.expected_state = None
+            if self._thread is not None and self._thread.is_alive():
+                server.shutdown()
             try:
                 server.server_close()
             except OSError:
                 _logger.exception("oauth_callback_server_close_error")
             self._server = None
+            self._event.set()
         if self._thread is not None:
             self._thread.join(timeout=1.0)
             self._thread = None
