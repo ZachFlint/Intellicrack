@@ -98,14 +98,17 @@ class _DangerousPatternHighlighter(QSyntaxHighlighter):
 class McpServerConsentDialog(QDialog):
     """Asks the operator to approve launching one local MCP server.
 
-    Emits ``decision_made(approved: bool, trusted: bool)`` when answered.
-    ``trusted`` reports the "trust this server" checkbox, which is a separate
-    and stronger grant than approving the launch: it decides whether the
-    server's own claims about its tools are believed during classification,
-    so it is off by default and stays off unless the operator ticks it.
+    Emits ``decision_made(approved: bool, trusted: bool, blocked: bool)``
+    when answered. ``trusted`` reports the "trust this server" checkbox,
+    which is a separate and stronger grant than approving the launch: it
+    decides whether the server's own claims about its tools are believed
+    during classification, so it is off by default and stays off unless the
+    operator ticks it. ``blocked`` reports the "never start this server"
+    button: *Cancel* refuses this launch only, so the next start asks again,
+    while blocking refuses until the operator resets it in MCP Settings.
     """
 
-    decision_made = pyqtSignal(bool, bool)
+    decision_made = pyqtSignal(bool, bool, bool)
 
     def __init__(
         self,
@@ -129,6 +132,7 @@ class McpServerConsentDialog(QDialog):
         self._findings = list(findings)
         self._approved = False
         self._trusted = False
+        self._blocked = False
         _logger.info(
             "mcp_consent_dialog_opened",
             server_id=config.server_id,
@@ -185,6 +189,15 @@ class McpServerConsentDialog(QDialog):
         """
         return self._trusted
 
+    @property
+    def blocked(self) -> bool:
+        """Whether the operator asked never to start this server.
+
+        Returns:
+            bool: ``True`` when the never-start button was pressed.
+        """
+        return self._blocked
+
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""
         self.setWindowTitle(f"Start MCP server '{self._config.server_id}'?")
@@ -229,6 +242,12 @@ class McpServerConsentDialog(QDialog):
         button_layout.setSpacing(12)
         button_layout.addStretch()
 
+        block_button = QPushButton("Never start this server")
+        block_button.setObjectName("mcp_consent_block")
+        block_button.setToolTip("Refuse now and on every later start, until you reset it in MCP Settings.")
+        block_button.clicked.connect(self._on_block)
+        button_layout.addWidget(block_button)
+
         cancel_button = QPushButton("Cancel")
         cancel_button.setObjectName("mcp_consent_cancel")
         cancel_button.setMinimumWidth(_BUTTON_MIN_WIDTH)
@@ -244,19 +263,22 @@ class McpServerConsentDialog(QDialog):
 
         layout.addLayout(button_layout)
 
-    def make_decision(self, *, approved: bool) -> None:
+    def make_decision(self, *, approved: bool, blocked: bool = False) -> None:
         """Apply an answer and finalise the dialog.
 
         Args:
             approved: ``True`` when the operator approved the launch.
+            blocked: ``True`` when the operator refused this server for good.
+                Ignored alongside an approval.
         """
         self._approved = approved
         self._trusted = approved and self._trust_checkbox.isChecked()
+        self._blocked = blocked and not approved
         if approved:
             _logger.info("mcp_consent_approved", server_id=self._config.server_id, trusted=self._trusted)
         else:
-            _logger.warning("mcp_consent_refused", server_id=self._config.server_id)
-        self.decision_made.emit(self._approved, self._trusted)
+            _logger.warning("mcp_consent_refused", server_id=self._config.server_id, blocked=self._blocked)
+        self.decision_made.emit(self._approved, self._trusted, self._blocked)
         if approved:
             self.accept()
         else:
@@ -269,3 +291,7 @@ class McpServerConsentDialog(QDialog):
     def _on_cancel(self) -> None:
         """Handle the cancel button."""
         self.make_decision(approved=False)
+
+    def _on_block(self) -> None:
+        """Handle the never-start button."""
+        self.make_decision(approved=False, blocked=True)
