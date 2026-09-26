@@ -89,6 +89,7 @@ import os
 import re
 import socket
 import sys
+import tempfile
 import threading
 import time
 import types
@@ -96,7 +97,6 @@ from collections.abc import Callable
 from dataclasses import fields
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
-from unittest.mock import patch
 
 import pytest
 import structlog
@@ -1078,7 +1078,11 @@ def fresh_bridge() -> GhidraBridge:
     return bridge
 
 
-def test_create_bridge_script_starts_jfx_bridge_server(fresh_bridge: GhidraBridge, tmp_path: Path) -> None:
+def test_create_bridge_script_starts_jfx_bridge_server(
+    fresh_bridge: GhidraBridge,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """F-0003: Deployed script must start a jfx_bridge ``BridgeServer`` and run it.
 
     Ghidra 12.x dropped Jython, so the upstream ``ghidra_bridge_server`` (which
@@ -1091,9 +1095,10 @@ def test_create_bridge_script_starts_jfx_bridge_server(fresh_bridge: GhidraBridg
     Args:
         fresh_bridge: Bridge fixture.
         tmp_path: Pytest-provided per-test temp directory.
+        monkeypatch: Pytest fixture used to redirect the system temp dir.
     """
-    with patch("tempfile.gettempdir", return_value=str(tmp_path)):
-        script_path = fresh_bridge.create_bridge_script()
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    script_path = fresh_bridge.create_bridge_script()
 
     text = script_path.read_text(encoding="utf-8")
     assert "from jfx_bridge import bridge as _ic_bridge" in text, text
@@ -1106,6 +1111,7 @@ def test_create_bridge_script_starts_jfx_bridge_server(fresh_bridge: GhidraBridg
 def test_create_bridge_script_routes_eval_exec_through_pyghidra_namespace(
     fresh_bridge: GhidraBridge,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """F-0004: Script must wire eval/exec hooks into the live PyGhidra namespace.
 
@@ -1119,9 +1125,10 @@ def test_create_bridge_script_routes_eval_exec_through_pyghidra_namespace(
     Args:
         fresh_bridge: Bridge fixture.
         tmp_path: Pytest temp dir.
+        monkeypatch: Pytest fixture used to redirect the system temp dir.
     """
-    with patch("tempfile.gettempdir", return_value=str(tmp_path)):
-        script_path = fresh_bridge.create_bridge_script()
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    script_path = fresh_bridge.create_bridge_script()
 
     text = script_path.read_text(encoding="utf-8")
     assert "_ic_ns = globals()" in text, text
@@ -1133,6 +1140,7 @@ def test_create_bridge_script_routes_eval_exec_through_pyghidra_namespace(
 def test_create_bridge_script_shadows_toaddr_for_64bit_offsets(
     fresh_bridge: GhidraBridge,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """F15: Script must shadow the flat-API ``toAddr`` to survive 64-bit addresses.
 
@@ -1146,9 +1154,10 @@ def test_create_bridge_script_shadows_toaddr_for_64bit_offsets(
     Args:
         fresh_bridge: Bridge fixture.
         tmp_path: Pytest temp dir.
+        monkeypatch: Pytest fixture used to redirect the system temp dir.
     """
-    with patch("tempfile.gettempdir", return_value=str(tmp_path)):
-        script_path = fresh_bridge.create_bridge_script()
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    script_path = fresh_bridge.create_bridge_script()
 
     text = script_path.read_text(encoding="utf-8")
     assert "def toAddr(_ic_off):" in text, text
@@ -1156,15 +1165,20 @@ def test_create_bridge_script_shadows_toaddr_for_64bit_offsets(
     assert "longValue()" in text, text
 
 
-def test_create_bridge_script_utf8_encoding(fresh_bridge: GhidraBridge, tmp_path: Path) -> None:
+def test_create_bridge_script_utf8_encoding(
+    fresh_bridge: GhidraBridge,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """F-0009: Script must be written with explicit utf-8 encoding.
 
     Args:
         fresh_bridge: Bridge fixture.
         tmp_path: Pytest temp dir.
+        monkeypatch: Pytest fixture used to redirect the system temp dir.
     """
-    with patch("tempfile.gettempdir", return_value=str(tmp_path)):
-        script_path = fresh_bridge.create_bridge_script()
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    script_path = fresh_bridge.create_bridge_script()
 
     raw = script_path.read_bytes()
     decoded = raw.decode("utf-8")
@@ -1175,6 +1189,7 @@ def test_create_bridge_script_utf8_encoding(fresh_bridge: GhidraBridge, tmp_path
 def test_create_bridge_script_oserror_raises_toolerror(
     fresh_bridge: GhidraBridge,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """F-0009: ``OSError`` during write must surface as a chained ``ToolError``.
 
@@ -1200,6 +1215,7 @@ def test_create_bridge_script_oserror_raises_toolerror(
     Args:
         fresh_bridge: Bridge fixture.
         tmp_path: Pytest temp dir.
+        monkeypatch: Pytest fixture used to redirect the bridge tempdir.
     """
     script_name: str = cast("str", getattr(ghidra_mod, "_BRIDGE_SCRIPT_NAME"))
 
@@ -1208,10 +1224,12 @@ def test_create_bridge_script_oserror_raises_toolerror(
     blocker: Path = prepared_dir / script_name
     blocker.mkdir()
 
-    with (
-        patch("intellicrack.bridges.ghidra.tempfile.mkdtemp", return_value=str(prepared_dir)),
-        pytest.raises(ToolError) as exc_info,
-    ):
+    def _fake_mkdtemp(*_args: object, **_kwargs: object) -> str:
+        return str(prepared_dir)
+
+    monkeypatch.setattr(ghidra_mod.tempfile, "mkdtemp", _fake_mkdtemp)
+
+    with pytest.raises(ToolError) as exc_info:
         fresh_bridge.create_bridge_script()
 
     raised: ToolError = exc_info.value
@@ -1289,12 +1307,14 @@ def test_create_bridge_script_concurrent_no_collisions() -> None:
 def test_create_bridge_script_logs_after_verification(
     fresh_bridge: GhidraBridge,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """F-0019: ``file_written`` must follow successful readback.
 
     Args:
         fresh_bridge: Bridge fixture.
         tmp_path: Pytest temp dir.
+        monkeypatch: Pytest fixture used to redirect the tempdir and truncate the write.
     """
     real_write_text = Path.write_text
 
@@ -1303,11 +1323,10 @@ def test_create_bridge_script_logs_after_verification(
             return real_write_text(self, "WRONG", encoding=encoding or "utf-8", errors=errors)
         return real_write_text(self, data, encoding=encoding, errors=errors)
 
-    with (
-        patch("tempfile.gettempdir", return_value=str(tmp_path)),
-        patch.object(Path, "write_text", _truncating_write_text),
-        pytest.raises(ToolError, match="bridge script verification failed"),
-    ):
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    monkeypatch.setattr(Path, "write_text", _truncating_write_text)
+
+    with pytest.raises(ToolError, match="bridge script verification failed"):
         fresh_bridge.create_bridge_script()
 
 
@@ -1431,11 +1450,12 @@ def test_cleanup_bridge_script_removes_files(tmp_path: Path) -> None:
     assert not script_dir.exists()
 
 
-def test_cleanup_bridge_script_uses_global_lock(tmp_path: Path) -> None:
+def test_cleanup_bridge_script_uses_global_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """F-0013: ``_cleanup_bridge_script`` must hold the bridge-script lock.
 
     Args:
         tmp_path: Pytest temp dir.
+        monkeypatch: Pytest fixture used to spy on ``Path.unlink``.
     """
     cleanup = cast("Callable[[Path], None]", getattr(GhidraBridge, "_cleanup_bridge_script"))
     bridge_lock = _bridge_script_lock()
@@ -1446,18 +1466,18 @@ def test_cleanup_bridge_script_uses_global_lock(tmp_path: Path) -> None:
         observed.append(bridge_lock.locked())
         real_unlink(self, missing_ok=missing_ok)
 
-    with patch.object(Path, "unlink", _spy_unlink):
-        d = tmp_path / f"intellicrack_lock_test_{os.getpid()}"
-        d.mkdir(exist_ok=True)
-        f = d / "start_bridge.py"
-        f.write_text("x", encoding="utf-8")
-        try:
-            cleanup(f)
-        finally:
-            if f.exists():
-                f.unlink()
-            if d.exists():
-                d.rmdir()
+    monkeypatch.setattr(Path, "unlink", _spy_unlink)
+    d = tmp_path / f"intellicrack_lock_test_{os.getpid()}"
+    d.mkdir(exist_ok=True)
+    f = d / "start_bridge.py"
+    f.write_text("x", encoding="utf-8")
+    try:
+        cleanup(f)
+    finally:
+        if f.exists():
+            f.unlink()
+        if d.exists():
+            d.rmdir()
 
     assert observed, "expected at least one unlink call"
     assert all(observed), "global lock must be held during unlink"
@@ -1563,12 +1583,14 @@ def _drive_drain_threads_and_assert(
 def test_start_headless_uses_correct_popen_kwargs(
     fresh_bridge: GhidraBridge,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """F-0015 + F-0016: real Popen invocation must include cwd, env, and creationflags.
 
     Args:
         fresh_bridge: Bridge fixture.
         tmp_path: Pytest temp dir.
+        monkeypatch: Pytest fixture used to substitute the launched command.
     """
     _ = _make_stub_headless(tmp_path)
     fresh_bridge.ghidra_path = tmp_path
@@ -1611,13 +1633,14 @@ def test_start_headless_uses_correct_popen_kwargs(
 
     project_dir = tmp_path / "proj"
 
+    monkeypatch.setattr(ghidra_mod, "Popen", _spy_popen)
+
     async def _run() -> None:
         try:
-            with patch("intellicrack.bridges.ghidra.Popen", _spy_popen):
-                await asyncio.wait_for(
-                    fresh_bridge.start_headless(project_dir, "intellicrack_test"),
-                    timeout=8,
-                )
+            await asyncio.wait_for(
+                fresh_bridge.start_headless(project_dir, "intellicrack_test"),
+                timeout=8,
+            )
         except (ToolError, TimeoutError):
             pass
         finally:

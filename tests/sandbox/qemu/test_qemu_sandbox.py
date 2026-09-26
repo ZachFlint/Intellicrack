@@ -20,7 +20,6 @@ import time
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -30,6 +29,7 @@ from intellicrack.sandbox.base import SandboxConfig, SandboxError, SandboxTimeou
 if TYPE_CHECKING:
     from collections.abc import Sequence
 from intellicrack.core._optional_imports import require_yara
+from intellicrack.core.process_manager import ProcessManager
 from intellicrack.sandbox import qemu as qemu_module
 from intellicrack.sandbox.qemu import (
     AcceleratorType,
@@ -299,6 +299,52 @@ def _resolve_cmd_exe() -> str:
     resolved = shutil.which("cmd.exe") or shutil.which("cmd")
     assert resolved is not None, "cmd.exe must be available to execute the generated Windows guest script"
     return resolved
+
+
+def _install_guest_command_boundary(sb: _TestQEMUSandbox, *, exit_code: int, stdout: str) -> None:
+    """Replace the sandbox's guest file-copy and command channels with fixed answers.
+
+    ``copy_to_sandbox`` accepts the upload without a guest, and every
+    ``run_command`` invocation completes with ``exit_code`` and ``stdout`` and
+    an empty stderr, standing in for a guest agent that is not running.
+
+    Args:
+        sb: Sandbox whose guest boundary is replaced.
+        exit_code: Exit code every guest command reports.
+        stdout: Standard output every guest command reports.
+    """
+
+    async def _accept_copy(source: Path, dest: str) -> None:
+        """Accept a host-to-guest copy without a guest.
+
+        Args:
+            source: Host file that would have been copied.
+            dest: Guest-relative destination.
+        """
+        await asyncio.sleep(0)
+        del source, dest
+
+    async def _complete_command(
+        command: str,
+        time_limit: int | None = None,
+        working_directory: str | None = None,
+    ) -> tuple[int, str, str]:
+        """Complete a guest command with the configured result.
+
+        Args:
+            command: Guest command line.
+            time_limit: Requested time limit.
+            working_directory: Requested working directory.
+
+        Returns:
+            tuple[int, str, str]: The configured exit code, stdout and empty stderr.
+        """
+        await asyncio.sleep(0)
+        del command, time_limit, working_directory
+        return exit_code, stdout, ""
+
+    setattr(sb, "copy_to_sandbox", _accept_copy)
+    setattr(sb, "run_command", _complete_command)
 
 
 def _make_sandbox(
@@ -966,40 +1012,71 @@ class TestF0009AgentScriptNoPsUsing:
 class TestF0016WhpxRequiresHyperV:
     """F-0016: _detect_accelerator must skip WHPX when Hyper-V prerequisites fail."""
 
-    def test_whpx_skipped_when_hyperv_prerequisites_fail(self) -> None:
+    def test_whpx_skipped_when_hyperv_prerequisites_fail(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """WHPX is not selected when _probe_whpx_host_prerequisites returns False.
 
         The old bug reported WHPX available whenever the QEMU binary was
         compiled with WHPX support, ignoring whether Hyper-V was enabled.
+
+        Args:
+            monkeypatch: Pytest fixture isolating the host Hyper-V probe and
+                the tracked-subprocess boundary.
         """
         sb = _make_sandbox()
         sb.set_qemu_path(Path("qemu-system-x86_64"))
 
-        class _FakeResult:
-            stdout: str = "Available accelerators: whpx kvm tcg\n"
-            stderr: str = ""
-            returncode: int = 0
+        def _hyperv_prerequisites_absent() -> bool:
+            """Report that the host Hyper-V platform is not enabled.
 
-        async def _run() -> AcceleratorType:
-            with (
-                patch(
-                    "intellicrack.sandbox.qemu.QEMUSandbox._probe_whpx_host_prerequisites",
-                    return_value=False,
-                ),
-                patch(
-                    "intellicrack.core.process_manager.ProcessManager.run_tracked_async",
-                    new=AsyncMock(return_value=_FakeResult()),
-                ),
-            ):
-                return await sb.detect_accelerator_for_test()
+            Returns:
+                bool: Always ``False``.
+            """
+            return False
 
-        result = asyncio.run(_run())
+        async def _accel_help_listing_whpx(
+            _self: ProcessManager,
+            args: list[str],
+            name: str,
+            **_kwargs: object,
+        ) -> subprocess.CompletedProcess[str]:
+            """Answer every tracked QEMU invocation with a WHPX-capable accelerator listing.
+
+            Args:
+                _self: The process manager the call was made on.
+                args: Command line that would have been executed.
+                name: Tracking name of the invocation.
+                **_kwargs: Remaining ``run_tracked_async`` options.
+
+            Returns:
+                subprocess.CompletedProcess[str]: Successful result listing whpx, kvm and tcg.
+            """
+            await asyncio.sleep(0)
+            del name
+            return subprocess.CompletedProcess(args, 0, stdout="Available accelerators: whpx kvm tcg\n", stderr="")
+
+        monkeypatch.setattr(QEMUSandbox, "_probe_whpx_host_prerequisites", staticmethod(_hyperv_prerequisites_absent))
+        monkeypatch.setattr(ProcessManager, "run_tracked_async", _accel_help_listing_whpx)
+
+        result = asyncio.run(sb.detect_accelerator_for_test())
         assert result != AcceleratorType.WHPX, "_detect_accelerator must not return WHPX when Hyper-V prerequisites are not met"
 
-    def test_probe_whpx_returns_false_on_non_windows(self) -> None:
-        """_probe_whpx_host_prerequisites returns False on non-Windows hosts."""
-        with patch("platform.system", return_value="Linux"):
-            result = _TestQEMUSandbox.probe_whpx_prerequisites_for_test()
+    def test_probe_whpx_returns_false_on_non_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """_probe_whpx_host_prerequisites returns False on non-Windows hosts.
+
+        Args:
+            monkeypatch: Pytest fixture forcing the reported host OS to Linux.
+        """
+
+        def _linux_host() -> str:
+            """Report a Linux host operating system.
+
+            Returns:
+                str: Always ``"Linux"``.
+            """
+            return "Linux"
+
+        monkeypatch.setattr(qemu_module.platform, "system", _linux_host)
+        result = _TestQEMUSandbox.probe_whpx_prerequisites_for_test()
         assert result is False, "WHPX prerequisites must be False on non-Windows"
 
 
@@ -1068,7 +1145,7 @@ class TestF0022F0029AntiEvasion:
         sb.set_agent(_ConnectableAgent(connected=True))
 
         async def _run() -> dict[str, Any]:
-            sb.set_qmp(MagicMock())
+            sb.set_qmp(QMPClient())
             return await sb.apply_anti_evasion(profile="workstation")
 
         result = asyncio.run(_run())
@@ -1161,7 +1238,7 @@ class TestF0022F0029AntiEvasion:
         sb.set_agent(_ConnectableAgent(connected=True))
 
         async def _run() -> dict[str, Any]:
-            sb.set_qmp(MagicMock())
+            sb.set_qmp(QMPClient())
             return await sb.apply_anti_evasion(profile="laptop")
 
         result = asyncio.run(_run())
@@ -1347,16 +1424,25 @@ class TestF0025StopClearsCaptures:
 
         assert len(sb.get_active_captures()) == 2, "Precondition: captures must be non-empty"
 
+        cleanup_calls: list[None] = []
+
+        async def _record_cleanup() -> None:
+            """Record the cleanup request instead of tearing down host resources."""
+            await asyncio.sleep(0)
+            cleanup_calls.append(None)
+
+        setattr(sb, "_cleanup", _record_cleanup)
+
         async def _run() -> None:
-            with patch.object(sb, "_cleanup", new=AsyncMock()):
-                sb.set_qmp(None)
-                sb.set_agent(None)
-                sb.set_qemu_pid(None)
-                await sb.stop()
+            sb.set_qmp(None)
+            sb.set_agent(None)
+            sb.set_qemu_pid(None)
+            await sb.stop()
 
         asyncio.run(_run())
 
         assert len(sb.get_active_captures()) == 0, "stop() must clear _active_captures; resource leak remains if not emptied"
+        assert len(cleanup_calls) == 1, f"stop() must run _cleanup exactly once; ran it {len(cleanup_calls)} times"
 
 
 # ---------------------------------------------------------------------------
@@ -1398,10 +1484,11 @@ class TestF0028YaraScanFallback:
         assert sources == {collected.resolve()}, f"yara_scan scanned something other than the collected artifact: {sources}"
         assert {match["rule"] for match in matches} == {"PackedBinary"}
 
-    def test_yara_scan_scans_zip_artifacts_when_present(self, tmp_path: Path) -> None:
+    def test_yara_scan_scans_zip_artifacts_when_present(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """When a dropped-file zip exists, yara_scan uses it not the input dir.
 
         Args:
+            monkeypatch: Pytest fixture replacing the YARA rule compiler.
             tmp_path: Pytest temp directory.
         """
         shared = tmp_path / "shared"
@@ -1448,9 +1535,10 @@ class TestF0028YaraScanFallback:
 
         sb = _make_sandbox(shared_folder=shared)
 
+        monkeypatch.setattr(yara_module, "compile", _FakeYara2.compile)
+
         async def _run() -> list[dict[str, Any]]:
-            with patch.object(yara_module, "compile", side_effect=_FakeYara2.compile):
-                return await sb.yara_scan(scan_target="files")
+            return await sb.yara_scan(scan_target="files")
 
         asyncio.run(_run())
 
@@ -1493,14 +1581,12 @@ class TestF0031RunBinaryNoFixedSleep:
         (shared / "logs").mkdir()
         sb.set_qemu_config(QEMUConfig(guest_os=GuestOS.WINDOWS))
 
+        _install_guest_command_boundary(sb, exit_code=0, stdout="ok")
+
         async def _run() -> float:
-            with (
-                patch.object(sb, "copy_to_sandbox", new=AsyncMock()),
-                patch.object(sb, "run_command", new=AsyncMock(return_value=(0, "ok", ""))),
-            ):
-                t0 = time.monotonic()
-                await sb.run_binary(binary, monitor=False)
-                return time.monotonic() - t0
+            t0 = time.monotonic()
+            await sb.run_binary(binary, monitor=False)
+            return time.monotonic() - t0
 
         elapsed = asyncio.run(_run())
         assert elapsed < 1.5, f"run_binary without monitoring took {elapsed:.2f}s — a hard-coded asyncio.sleep(2) would make this >= 2s"
@@ -1536,12 +1622,10 @@ class TestF0035RunBinarySuccessMatchesExitCode:
         (shared / "logs").mkdir(exist_ok=True)
         sb.set_qemu_config(QEMUConfig(guest_os=GuestOS.WINDOWS))
 
+        _install_guest_command_boundary(sb, exit_code=exit_code, stdout="")
+
         async def _run() -> str:
-            with (
-                patch.object(sb, "copy_to_sandbox", new=AsyncMock()),
-                patch.object(sb, "run_command", new=AsyncMock(return_value=(exit_code, "", ""))),
-            ):
-                report = await sb.run_binary(binary, monitor=False)
+            report = await sb.run_binary(binary, monitor=False)
             return report.result
 
         return asyncio.run(_run())
@@ -1666,18 +1750,32 @@ class TestF0015AcceleratorNotRedoneOnStart:
 
         detect_call_count = 0
 
-        def _fake_detect() -> AcceleratorType:
+        async def _counting_detect() -> AcceleratorType:
+            """Count a detection request and report TCG.
+
+            Returns:
+                AcceleratorType: Always TCG.
+            """
+            await asyncio.sleep(0)
             nonlocal detect_call_count
             detect_call_count += 1
             return AcceleratorType.TCG
 
+        async def _qemu_on_path() -> Path:
+            """Report a resolved QEMU executable without searching the host.
+
+            Returns:
+                Path: A fixed QEMU executable path.
+            """
+            await asyncio.sleep(0)
+            return Path("qemu-system-x86_64")
+
+        setattr(sb, "_find_qemu", _qemu_on_path)
+        setattr(sb, "_detect_accelerator", _counting_detect)
+
         async def _run() -> None:
-            with (
-                patch.object(sb, "_find_qemu", new=AsyncMock(return_value=Path("qemu-system-x86_64"))),
-                patch.object(sb, "_detect_accelerator", side_effect=_fake_detect),
-            ):
-                await sb.is_available()
-                await sb.is_available()
+            await sb.is_available()
+            await sb.is_available()
 
         asyncio.run(_run())
 

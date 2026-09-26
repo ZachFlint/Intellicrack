@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any, Literal, cast
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -36,6 +35,7 @@ from intellicrack.sandbox.qemu import (
     GuestOS,
     QEMUConfig,
     QEMUSandbox,
+    QMPClient,
 )
 
 
@@ -59,7 +59,8 @@ class _AntiEvasionTestSandbox(QEMUSandbox):
         """Set the QMP client for tests.
 
         Args:
-            qmp: Duck-typed QMP client (allows MagicMock for the success path).
+            qmp: Duck-typed QMP client (an unconnected real client suffices for the
+                success path, which only checks that one is attached).
         """
         setattr(self, "_qmp", qmp)
 
@@ -98,7 +99,7 @@ def _make_sandbox(
     sb = _AntiEvasionTestSandbox(config=SandboxConfig(), qemu_config=cfg)
     sb.set_accelerator(AcceleratorType.TCG)
     sb.state.status = "running"
-    sb.set_qmp(MagicMock())
+    sb.set_qmp(QMPClient())
     return sb
 
 
