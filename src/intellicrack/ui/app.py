@@ -72,6 +72,7 @@ from intellicrack.credentials.provider_settings import (
     coerce_timeout_seconds,
     resolve_session_credentials,
 )
+from intellicrack.mcp.errors import McpError
 from intellicrack.providers.configurable import ConfigurableProvider
 from intellicrack.providers.discovery import ModelDiscovery, format_discovery_status
 from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
@@ -1443,6 +1444,16 @@ class MainWindow(QMainWindow):
             parent=None,
         )
 
+    def _sync_mcp_session_state(self) -> None:
+        """Record every MCP server's state onto a session that has just become active.
+
+        A new or restored session otherwise carries no MCP record, or the
+        stale one saved with it, until some server happens to change state.
+        """
+        service = self._mcp_service
+        if service is not None:
+            service.sync_session_state()
+
     def _on_configure_mcp_from(self, parent: QWidget) -> None:
         """Open the MCP settings dialog over another dialog.
 
@@ -1627,21 +1638,30 @@ class MainWindow(QMainWindow):
                 :meth:`_request_tool_confirmation`.
         """
         call, future, loop = cast("tuple[ToolCall, asyncio.Future[bool], asyncio.AbstractEventLoop]", payload)
-        confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
-        service = self._mcp_service
-        generation = service.generation_for(call) if service is not None else None
-        origin = service.source_label_for(call) if service is not None else None
-        dialog = confirmation_module.ToolConfirmationDialog(call, self, generation=generation, source_label=origin)
-        dialog.exec()
-        approved: bool = bool(dialog.approved)
-        self._orchestrator.resolve_confirmation(approved=approved)
+        approved = False
+        try:
+            confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
+            service = self._mcp_service
+            generation: str | None = None
+            origin: str | None = None
+            if service is not None:
+                try:
+                    generation = service.generation_for(call)
+                    origin = service.source_label_for(call)
+                except McpError as exc:
+                    _logger.warning("mcp_confirmation_source_unresolved", tool=call.tool_name, error=str(exc))
+            dialog = confirmation_module.ToolConfirmationDialog(call, self, generation=generation, source_label=origin)
+            dialog.exec()
+            approved = bool(dialog.approved)
+        finally:
+            self._orchestrator.resolve_confirmation(approved=approved)
 
-        def _resolve() -> None:
-            """Deliver the dialog approval result onto the waiting asyncio future."""
-            if not future.done():
-                future.set_result(approved)
+            def _resolve() -> None:
+                """Deliver the dialog approval result onto the waiting asyncio future."""
+                if not future.done():
+                    future.set_result(approved)
 
-        loop.call_soon_threadsafe(_resolve)
+            loop.call_soon_threadsafe(_resolve)
 
     def _on_user_message(self, text: str) -> None:
         """Handle user message submission.
@@ -1954,6 +1974,7 @@ class MainWindow(QMainWindow):
         del result
         self._chat_panel.set_input_enabled(enabled=True)
         self._stream_append = None
+        self._sync_mcp_session_state()
         self.status_update.emit("Ready")
 
     def _on_async_error(self, error: object) -> None:
@@ -2230,6 +2251,7 @@ class MainWindow(QMainWindow):
         self.tool_panel.clear_all()
         self._chat_panel.restore_messages(result.messages)
         self._chat_panel.set_input_enabled(enabled=True)
+        self._sync_mcp_session_state()
 
         active_binary = result.active_binary
         if active_binary is not None:
@@ -3152,10 +3174,7 @@ class MainWindow(QMainWindow):
         """
         if isinstance(result, dict):
             res_dict = cast("dict[str, list[ModelInfo]]", result)
-            counts: dict[str, int] = {
-                provider_name_obj: len(models_obj)
-                for provider_name_obj, models_obj in res_dict.items()
-            }
+            counts: dict[str, int] = {provider_name_obj: len(models_obj) for provider_name_obj, models_obj in res_dict.items()}
             _logger.info("initial_model_discovery_completed", per_provider_counts=counts)
         else:
             _logger.info("initial_model_discovery_completed", provider_count=0)
@@ -3170,9 +3189,8 @@ class MainWindow(QMainWindow):
                     if k == provider_data:
                         models_list.extend(m.id for m in v)
                         break
-            if not models_list and self.model_discovery is not None:
-                if cached := self.model_discovery.cache.get(provider_data):
-                    models_list = [m.id for m in cached]
+            if not models_list and self.model_discovery is not None and (cached := self.model_discovery.cache.get(provider_data)):
+                models_list = [m.id for m in cached]
 
             if models_list:
                 restore_applies = bool(self._pending_model_restore) and self._pending_model_restore_provider == provider_data
@@ -3924,9 +3942,7 @@ class MainWindow(QMainWindow):
             (
                 index
                 for index, (_base, _size, protection, state) in enumerate(regions)
-                if state == _MEM_COMMIT_STATE
-                and (protection & _PAGE_PROTECTION_BASE_MASK)
-                in _PAGE_READABLE_PROTECTIONS
+                if state == _MEM_COMMIT_STATE and (protection & _PAGE_PROTECTION_BASE_MASK) in _PAGE_READABLE_PROTECTIONS
             ),
             0,
         )
