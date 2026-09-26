@@ -54,7 +54,7 @@ from intellicrack.providers.dialects.base import (
     tool_result_text,
     wire_function_name,
 )
-from intellicrack.providers.tool_names import from_wire_name, from_wire_pair, to_wire_pair
+from intellicrack.providers.tool_names import from_wire_name, from_wire_pair, to_wire_name, to_wire_pair
 
 
 if TYPE_CHECKING:
@@ -81,6 +81,13 @@ _TOOL_SEARCH_ITEM_TYPES: Final[frozenset[str]] = frozenset({"tool_search_call", 
 """Output items a tool search produces.
 
 A search result is not a tool call: it makes a deferred tool callable, and returning a ``function_call_output`` for one is a protocol error.
+"""
+
+REASONING_SUMMARY_MODE: Final[str] = "auto"
+"""``reasoning.summary`` value requested whenever reasoning is on.
+
+Responses returns no readable reasoning unless a summary is requested, so without it a reasoning model's chain is invisible in the UI and
+every replayed reasoning item carries an empty summary.
 """
 
 _TOOL_SEARCH_EVENT_TYPES: Final[frozenset[str]] = frozenset({
@@ -153,10 +160,10 @@ class ResponsesAdapter(DialectAdapter):
         When the model supports OpenAI tool search, functions are grouped into
         ``namespace`` entries built through
         :func:`~intellicrack.providers.tool_names.to_wire_pair` and every
-        namespace past the first is deferred, so a large toolset ships without
-        putting hundreds of functions in reach at the start of a turn. The
-        first namespace stays non-deferred so the model always has something
-        callable before it searches.
+        function past the first tool definition's is deferred, so a large
+        toolset ships without putting hundreds of functions in reach at the
+        start of a turn. The first tool's functions stay non-deferred so the
+        model always has something callable before it searches.
 
         Args:
             tools: Tool definitions in final priority order. Input order is
@@ -190,32 +197,38 @@ class ResponsesAdapter(DialectAdapter):
 
         Returns:
             list[dict[str, Any]]: The tool-search entry followed by one
-            namespace entry per tool definition, in input order.
+            namespace entry per distinct wire namespace, in order of first
+            appearance. A function whose canonical name cannot split into a
+            namespace pair ships as a top-level function under its registered
+            single-string wire name, so the identity the model reports back
+            is exactly the one the name registry reverses.
         """
         entries: list[dict[str, Any]] = [{"type": TOOL_SEARCH_TYPE}]
+        namespaces: dict[str, list[dict[str, Any]]] = {}
+        loose_count = 0
+        deferred_count = 0
         for position, tool in enumerate(tools):
-            members: list[dict[str, Any]] = []
-            namespace_name = tool.tool_name
             for func in tool.functions:
                 namespace, wire_name = to_wire_pair(func.name)
-                if namespace:
-                    namespace_name = namespace
                 member = self._function_entry(wire_name, func.description, func, name_style=ToolNameStyle.DOTTED)
                 if position > 0:
                     member["defer_loading"] = True
-                members.append(member)
-            if not members:
-                continue
-            entries.append({
-                "type": NAMESPACE_TYPE,
-                "name": namespace_name,
-                "description": tool.description,
-                "tools": members,
-            })
+                    deferred_count += 1
+                if not namespace:
+                    entries.append(member)
+                    loose_count += 1
+                    continue
+                namespace_members = namespaces.get(namespace)
+                if namespace_members is None:
+                    namespace_members = []
+                    namespaces[namespace] = namespace_members
+                    entries.append({"type": NAMESPACE_TYPE, "name": namespace, "description": tool.description, "tools": namespace_members})
+                namespace_members.append(member)
         _logger.debug(
             "responses_namespaces_built",
-            namespace_count=len(entries) - 1,
-            deferred_namespaces=max(len(entries) - 2, 0),
+            namespace_count=len(namespaces),
+            top_level_functions=loose_count,
+            deferred_functions=deferred_count,
             max_deferred=capabilities.tool_search.max_deferred_tools,
         )
         return entries
@@ -282,38 +295,55 @@ class ResponsesAdapter(DialectAdapter):
             if msg.role == "user":
                 items.append({"role": "user", "content": [{"type": "input_text", "text": msg.content}]})
             elif msg.role == "assistant":
-                items.extend(self._assistant_items(msg, name_style=name_style))
+                items.extend(self._assistant_items(msg, capabilities, name_style=name_style))
             elif msg.role == "tool" and msg.tool_results:
                 for result in msg.tool_results:
                     items.extend(self.render_tool_result(result, capabilities))
         return items
 
-    def _assistant_items(self, msg: Message, *, name_style: ToolNameStyle) -> list[dict[str, Any]]:
+    def _assistant_items(
+        self,
+        msg: Message,
+        capabilities: ModelCapabilities,
+        *,
+        name_style: ToolNameStyle,
+    ) -> list[dict[str, Any]]:
         """Build the input items for one assistant turn.
+
+        Under OpenAI tool search a function's wire identity is the
+        ``(namespace, name)`` pair it was declared under, so a replayed call
+        carries both, exactly as the model emitted it.
 
         Args:
             msg: The assistant message.
+            capabilities: The resolved capability record for the target model,
+                consulted for whether functions are declared in namespaces.
             name_style: How canonical dotted names are written onto the wire.
 
         Returns:
-            list[dict[str, Any]]: Reasoning items, then text, then function
-            calls -- the order OpenAI expects on replay.
+            list[dict[str, Any]]: Reasoning and tool-search items in wire
+            order, then text, then function calls -- the order OpenAI expects
+            on replay.
         """
         items: list[dict[str, Any]] = []
         if msg.reasoning:
             items.extend(self.render_reasoning(msg.reasoning))
         if msg.content:
             items.append({"role": "assistant", "content": [{"type": "output_text", "text": msg.content}]})
-        if msg.tool_calls:
-            items.extend(
-                {
-                    "type": "function_call",
-                    "call_id": tc.id,
-                    "name": _call_wire_name(tc, name_style),
-                    "arguments": _encode_arguments(tc),
-                }
-                for tc in msg.tool_calls
-            )
+        namespaced = capabilities.tool_search.style is ToolSearchStyle.OPENAI_TOOL_SEARCH
+        for tc in msg.tool_calls or ():
+            call: dict[str, Any] = {
+                "type": "function_call",
+                "call_id": tc.id,
+                "name": _call_wire_name(tc, name_style),
+                "arguments": _encode_arguments(tc),
+            }
+            if namespaced:
+                namespace, wire_name = to_wire_pair(tc.function_name)
+                call["name"] = wire_name
+                if namespace:
+                    call["namespace"] = namespace
+            items.append(call)
         return items
 
     @override
@@ -338,9 +368,7 @@ class ResponsesAdapter(DialectAdapter):
         if capabilities.supports_temperature:
             body["temperature"] = request.temperature
 
-        if tools := self.build_tool_schemas(
-            request.tools, capabilities, name_style=request.tool_name_style
-        ):
+        if tools := self.build_tool_schemas(request.tools, capabilities, name_style=request.tool_name_style):
             body["tools"] = tools
             if request.tool_choice is not None:
                 body["tool_choice"] = self.tool_choice_param(request.tool_choice, name_style=request.tool_name_style)
@@ -367,6 +395,9 @@ class ResponsesAdapter(DialectAdapter):
     def reasoning_param(request: DialectRequest) -> dict[str, Any] | None:
         """Resolve the nested ``reasoning`` object for a request.
 
+        A summary is always requested alongside the effort: Responses returns
+        no readable reasoning without one.
+
         Args:
             request: The normalized request.
 
@@ -380,8 +411,11 @@ class ResponsesAdapter(DialectAdapter):
         thinking = request.thinking
         if thinking is None or not thinking.enabled:
             return None
+        param: dict[str, Any] = {"summary": REASONING_SUMMARY_MODE}
         effort = _effort_for_budget(thinking.budget_tokens, reasoning.effort_levels)
-        return {"effort": effort} if effort is not None else None
+        if effort is not None:
+            param["effort"] = effort
+        return param
 
     @staticmethod
     def tool_choice_param(
@@ -413,15 +447,26 @@ class ResponsesAdapter(DialectAdapter):
         return {"type": "function", "name": wire_function_name(function_name, name_style)}
 
     @override
-    def parse_response(self, payload: Mapping[str, Any]) -> DialectResponse:
+    def parse_response(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> DialectResponse:
         """Parse a Responses response body.
+
+        Tool-search items are kept, in position among the reasoning items, as
+        provider items: a deferred function the search loaded is only
+        callable on the next turn if the search that loaded it is replayed.
 
         Args:
             payload: The decoded response body.
+            capabilities: Unused; the Responses shape does not vary by model.
 
         Returns:
             DialectResponse: The normalized response.
         """
+        del capabilities
         raw_output = payload.get("output")
         output: list[Any] = raw_output if is_json_array(raw_output) else []
         text_parts: list[str] = []
@@ -444,6 +489,7 @@ class ResponsesAdapter(DialectAdapter):
                 reasoning.append(_parse_reasoning_item(item))
             elif item_type in _TOOL_SEARCH_ITEM_TYPES:
                 loaded.extend(canonical_names_in_tool_search_output(item))
+                reasoning.append(_provider_item(item))
 
         if loaded:
             _logger.info("responses_tool_search_loaded", tools=loaded)
@@ -457,15 +503,28 @@ class ResponsesAdapter(DialectAdapter):
         )
 
     @override
-    def parse_stream_event(self, event: Mapping[str, Any]) -> list[StreamDelta]:
+    def parse_stream_event(
+        self,
+        event: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> list[StreamDelta]:
         """Translate one Responses semantic event into normalized deltas.
+
+        A stream ends in one of three terminal events. ``response.completed``
+        finishes normally; ``response.incomplete`` finishes early with the
+        reason (``max_output_tokens``, ``content_filter``) as the finish, its
+        partial output still valid; ``response.failed`` and a bare ``error``
+        event end it as a failure carrying the endpoint's message.
 
         Args:
             event: One decoded event.
+            capabilities: Unused; the Responses shape does not vary by model.
 
         Returns:
             list[StreamDelta]: Zero or more deltas, in wire order.
         """
+        del capabilities
         event_type = event.get("type")
         if not isinstance(event_type, str):
             return []
@@ -486,10 +545,14 @@ class ResponsesAdapter(DialectAdapter):
             return _argument_delta(event)
         if event_type == "response.completed":
             return _completed_deltas(event)
+        if event_type == "response.incomplete":
+            return _incomplete_deltas(event)
+        if event_type == "response.failed":
+            return _failed_deltas(event)
         if event_type == "error":
-            message = event.get("message")
-            _logger.warning("responses_stream_error", message=message if isinstance(message, str) else "")
-            return [StreamDelta(finish="error")]
+            error = _error_text(event) or "The endpoint reported an error without a message"
+            _logger.warning("responses_stream_error", error=error)
+            return [StreamDelta(finish="error", error=error)]
         return []
 
     @override
@@ -547,20 +610,30 @@ class ResponsesAdapter(DialectAdapter):
         Only items that carry a Responses identity are replayed: an item
         captured from another dialect has no ``id`` OpenAI would recognise,
         and inventing one corrupts the chain rather than extending it.
+        ``summary`` is a required field of a replayed reasoning item, so it is
+        always sent, empty when the model summarized nothing. Tool-search
+        items are echoed exactly as they arrived.
 
         Args:
             reasoning: Reasoning blocks captured from an earlier turn.
 
         Returns:
-            list[dict[str, Any]]: Responses reasoning items, in order.
+            list[dict[str, Any]]: Responses reasoning and tool-search items,
+            in order.
         """
         items: list[dict[str, Any]] = []
         for entry in reasoning:
+            if entry.kind is ReasoningKind.PROVIDER_ITEM:
+                if entry.payload is not None and entry.payload.get("type") in _TOOL_SEARCH_ITEM_TYPES:
+                    items.append(dict(entry.payload))
+                continue
             if entry.kind is not ReasoningKind.RESPONSES_ITEM or entry.item_id is None:
                 continue
-            item: dict[str, Any] = {"type": "reasoning", "id": entry.item_id}
-            if entry.summary:
-                item["summary"] = [{"type": "summary_text", "text": text} for text in entry.summary]
+            item: dict[str, Any] = {
+                "type": "reasoning",
+                "id": entry.item_id,
+                "summary": [{"type": "summary_text", "text": text} for text in entry.summary],
+            }
             if entry.encrypted_content is not None:
                 item["encrypted_content"] = entry.encrypted_content
             items.append(item)
@@ -687,8 +760,8 @@ def _parse_function_call(item: Mapping[str, Any]) -> ToolCall | None:
         ToolCall | None: The parsed call, or ``None`` when the item names no
         function.
     """
-    name = item.get("name")
-    if not isinstance(name, str):
+    name = _function_call_wire_name(item)
+    if name is None:
         return None
     arguments = item.get("arguments")
     call_id = item.get("call_id")
@@ -696,6 +769,48 @@ def _parse_function_call(item: Mapping[str, Any]) -> ToolCall | None:
         call_id=str(call_id) if isinstance(call_id, str) else "",
         function_name=name,
         raw_arguments=arguments if isinstance(arguments, str) else "{}",
+    )
+
+
+def _function_call_wire_name(item: Mapping[str, Any]) -> str | None:
+    """Resolve a ``function_call`` item's identity to one reversible wire name.
+
+    Under tool search the model names a function by ``namespace`` plus
+    ``name``. The pair is reversed to its canonical dotted name and written
+    back as the single-string wire name
+    :func:`~intellicrack.providers.dialects.base.parse_tool_call` reverses,
+    so a namespaced call routes to the same canonical name as a flat one.
+
+    Args:
+        item: The ``function_call`` item, complete or as first announced.
+
+    Returns:
+        str | None: The single-string wire name, or ``None`` when the item
+        names no function.
+    """
+    name = item.get("name")
+    if not isinstance(name, str):
+        return None
+    namespace = item.get("namespace")
+    if not isinstance(namespace, str) or not namespace:
+        return name
+    return to_wire_name(from_wire_pair(namespace, name))
+
+
+def _provider_item(item: Mapping[str, Any]) -> ReasoningItem:
+    """Capture a tool-search output item for verbatim replay.
+
+    Args:
+        item: The ``tool_search_call`` or ``tool_search_output`` item.
+
+    Returns:
+        ReasoningItem: A provider item holding the complete wire object.
+    """
+    item_id = item.get("id")
+    return ReasoningItem(
+        kind=ReasoningKind.PROVIDER_ITEM,
+        item_id=item_id if isinstance(item_id, str) else None,
+        payload=dict(item),
     )
 
 
@@ -752,7 +867,6 @@ def _added_item_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
     item: dict[str, Any] = raw_item
     if item.get("type") != "function_call":
         return []
-    name = item.get("name")
     call_id = item.get("call_id")
     item_id = item.get("id")
     token = str(item_id) if isinstance(item_id, str) else str(call_id)
@@ -761,28 +875,32 @@ def _added_item_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
             tool_call_fragment=ToolCallFragment(
                 token=token,
                 call_id=call_id if isinstance(call_id, str) else None,
-                name=name if isinstance(name, str) else None,
+                name=_function_call_wire_name(item),
             ),
         ),
     ]
 
 
 def _completed_item_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
-    """Translate ``response.output_item.done`` into a completed reasoning item.
+    """Translate ``response.output_item.done`` into a completed replayable item.
 
     Args:
         event: The decoded event.
 
     Returns:
-        list[StreamDelta]: One reasoning-item delta, or an empty list.
+        list[StreamDelta]: One reasoning-item delta for a reasoning or
+        tool-search item, or an empty list.
     """
     raw_item = event.get("item")
     if not is_json_object(raw_item):
         return []
     item: dict[str, Any] = raw_item
-    if item.get("type") != "reasoning":
-        return []
-    return [StreamDelta(reasoning_item=_parse_reasoning_item(item))]
+    item_type = item.get("type")
+    if item_type == "reasoning":
+        return [StreamDelta(reasoning_item=_parse_reasoning_item(item))]
+    if item_type in _TOOL_SEARCH_ITEM_TYPES:
+        return [StreamDelta(reasoning_item=_provider_item(item))]
+    return []
 
 
 def _argument_delta(event: Mapping[str, Any]) -> list[StreamDelta]:
@@ -827,6 +945,69 @@ def _completed_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
     status = response.get("status")
     deltas.append(StreamDelta(finish=status if isinstance(status, str) else "completed"))
     return deltas
+
+
+def _incomplete_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
+    """Translate ``response.incomplete`` into usage and finish deltas.
+
+    Args:
+        event: The decoded event.
+
+    Returns:
+        list[StreamDelta]: A usage delta when usage is present, then a finish
+        delta naming why the response stopped early.
+    """
+    raw_response = event.get("response")
+    response: dict[str, Any] = raw_response if is_json_object(raw_response) else {}
+    deltas: list[StreamDelta] = []
+    usage = parse_usage(response.get("usage"))
+    if usage is not None:
+        deltas.append(StreamDelta(usage=usage))
+    raw_details = response.get("incomplete_details")
+    details: dict[str, Any] = raw_details if is_json_object(raw_details) else {}
+    reason = details.get("reason")
+    finish = reason if isinstance(reason, str) and reason else "incomplete"
+    _logger.warning("responses_stream_incomplete", reason=finish)
+    deltas.append(StreamDelta(finish=finish))
+    return deltas
+
+
+def _failed_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
+    """Translate ``response.failed`` into usage and an error delta.
+
+    Args:
+        event: The decoded event.
+
+    Returns:
+        list[StreamDelta]: A usage delta when usage is present, then an error
+        delta carrying the endpoint's message.
+    """
+    raw_response = event.get("response")
+    response: dict[str, Any] = raw_response if is_json_object(raw_response) else {}
+    deltas: list[StreamDelta] = []
+    usage = parse_usage(response.get("usage"))
+    if usage is not None:
+        deltas.append(StreamDelta(usage=usage))
+    raw_error = response.get("error")
+    error = (_error_text(raw_error) if is_json_object(raw_error) else None) or "The response failed without an error message"
+    _logger.warning("responses_stream_failed", error=error)
+    deltas.append(StreamDelta(finish="failed", error=error))
+    return deltas
+
+
+def _error_text(error: Mapping[str, Any]) -> str | None:
+    """Render a Responses error object as ``"<code>: <message>"``.
+
+    Args:
+        error: An ``error`` event, or the ``error`` object of a failed
+            response.
+
+    Returns:
+        str | None: The code and message, whichever are present, or ``None``
+        when neither is.
+    """
+    parts = [str(error[key]) for key in ("code", "message") if isinstance(error.get(key), str) and error[key]]
+    return ": ".join(parts) if parts else None
 
 
 def parse_usage(raw: object) -> UsageInfo | None:
@@ -875,7 +1056,8 @@ def canonical_names_in_tool_search_output(item: Mapping[str, Any]) -> list[str]:
     """Resolve the canonical names a tool-search result made callable.
 
     A search result names tools by their wire identity, which under
-    namespaces is the ``(namespace, name)`` pair. Reversing it through
+    namespaces is the ``(namespace, name)`` pair; a result that loads a whole
+    ``namespace`` entry names each member inside it. Reversing it through
     :func:`~intellicrack.providers.tool_names.from_wire_pair` is what lets a
     subsequent call on a tool that was never in the active set still route to
     its canonical dotted name.
@@ -901,8 +1083,35 @@ def canonical_names_in_tool_search_output(item: Mapping[str, Any]) -> list[str]:
         name = result.get("name")
         if not isinstance(name, str):
             continue
+        if result.get("type") == NAMESPACE_TYPE:
+            names.extend(_namespace_member_names(name, result.get("tools")))
+            continue
         namespace = result.get("namespace")
         names.append(canonical_from_tool_search_output(namespace if isinstance(namespace, str) else "", name))
+    return names
+
+
+def _namespace_member_names(namespace: str, raw_members: object) -> list[str]:
+    """Resolve the canonical names of the functions inside a loaded namespace.
+
+    Args:
+        namespace: The namespace entry's name.
+        raw_members: The namespace entry's ``tools`` array.
+
+    Returns:
+        list[str]: Canonical dotted names, in declaration order.
+    """
+    if not is_json_array(raw_members):
+        return []
+    members: list[Any] = raw_members
+    names: list[str] = []
+    for member in members:
+        if not is_json_object(member):
+            continue
+        entry: dict[str, Any] = member
+        name = entry.get("name")
+        if isinstance(name, str):
+            names.append(canonical_from_tool_search_output(namespace, name))
     return names
 
 
