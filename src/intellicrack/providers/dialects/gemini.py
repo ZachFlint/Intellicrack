@@ -272,9 +272,7 @@ class GeminiAdapter(DialectAdapter):
             }
         body["generationConfig"] = generation_config
 
-        if tools := self.build_tool_schemas(
-            request.tools, capabilities, name_style=request.tool_name_style
-        ):
+        if tools := self.build_tool_schemas(request.tools, capabilities, name_style=request.tool_name_style):
             body["tools"] = tools
             if request.tool_choice is not None:
                 body["toolConfig"] = self.tool_config(request.tool_choice, name_style=request.tool_name_style)
@@ -313,15 +311,23 @@ class GeminiAdapter(DialectAdapter):
         return {"functionCallingConfig": {"mode": "AUTO"}}
 
     @override
-    def parse_response(self, payload: Mapping[str, Any]) -> DialectResponse:
+    def parse_response(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> DialectResponse:
         """Parse a Gemini ``generateContent`` response body.
 
         Args:
             payload: The decoded response body.
+            capabilities: Unused; Gemini's response shape does not vary by
+                model.
 
         Returns:
             DialectResponse: The normalized response.
         """
+        del capabilities
         text_parts: list[str] = []
         tool_calls: list[ToolCall] = []
         reasoning: list[ReasoningItem] = []
@@ -348,7 +354,12 @@ class GeminiAdapter(DialectAdapter):
         )
 
     @override
-    def parse_stream_event(self, event: Mapping[str, Any]) -> list[StreamDelta]:
+    def parse_stream_event(
+        self,
+        event: Mapping[str, Any],
+        *,
+        capabilities: ModelCapabilities | None = None,
+    ) -> list[StreamDelta]:
         """Translate one streamed Gemini chunk into normalized deltas.
 
         Gemini streams whole parts rather than fragments, so a function call
@@ -357,10 +368,13 @@ class GeminiAdapter(DialectAdapter):
 
         Args:
             event: One decoded chunk.
+            capabilities: Unused; Gemini's stream shape does not vary by
+                model.
 
         Returns:
             list[StreamDelta]: Zero or more deltas, in wire order.
         """
+        del capabilities
         deltas: list[StreamDelta] = []
         for position, part in enumerate(_iter_candidate_parts(event)):
             if part.get("thought") is True:
@@ -430,9 +444,7 @@ class GeminiAdapter(DialectAdapter):
             response: dict[str, Any] = {}
             for part in structured:
                 response |= part.content
-            if narrative := render_parts_as_text(
-                [part for part in result.content or () if part not in structured]
-            ):
+            if narrative := render_parts_as_text([part for part in result.content or () if part not in structured]):
                 response[_NARRATIVE_KEY] = narrative
         elif result.content:
             response = {"result": tool_result_text(result)}

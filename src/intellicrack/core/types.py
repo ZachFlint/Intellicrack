@@ -333,14 +333,19 @@ class ReasoningKind(enum.Enum):
 
     The kind selects the replay shape an adapter must reproduce: a signed
     Anthropic thinking block, a redacted Anthropic block, an OpenAI Responses
-    reasoning item, or the ``reasoning_content`` string that
-    OpenAI-compatible gateways emit alongside Chat Completions deltas.
+    reasoning item, the ``reasoning_content`` string that
+    OpenAI-compatible gateways emit alongside Chat Completions deltas, or a
+    provider-executed tool block -- an Anthropic ``server_tool_use`` /
+    ``tool_search_tool_result`` block or a Responses ``tool_search_call`` /
+    ``tool_search_output`` item -- that the provider requires back verbatim,
+    in position, on the next turn.
     """
 
     THINKING = "thinking"
     REDACTED_THINKING = "redacted_thinking"
     RESPONSES_ITEM = "responses_item"
     REASONING_CONTENT = "reasoning_content"
+    PROVIDER_ITEM = "provider_item"
 
 
 @dataclass
@@ -366,6 +371,9 @@ class ReasoningItem:
             ``False`` and nothing is retained server-side.
         redacted_data: Anthropic ``redacted_thinking`` ``data`` payload.
         summary: Responses reasoning summary parts, in wire order.
+        payload: The complete wire object of a
+            :data:`ReasoningKind.PROVIDER_ITEM`, exactly as the provider
+            returned it, for the adapter of the same dialect to echo back.
     """
 
     kind: ReasoningKind
@@ -375,6 +383,7 @@ class ReasoningItem:
     encrypted_content: str | None = None
     redacted_data: str | None = None
     summary: tuple[str, ...] = ()
+    payload: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
