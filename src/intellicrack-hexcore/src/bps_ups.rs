@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Zachary Flint
+//
+// This file is part of Intellicrack. See LICENSE for details.
+
 //! BPS and UPS patch format encoding and decoding.
 //!
 //! Implements the BPS1 (Beat Patching System) and UPS1 (Universal Patching System)

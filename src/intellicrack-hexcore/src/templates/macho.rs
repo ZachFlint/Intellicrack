@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Zachary Flint
+//
+// This file is part of Intellicrack. See LICENSE for details.
+
 use super::{Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry};
 
 pub fn register_templates(registry: &mut TemplateRegistry) {
