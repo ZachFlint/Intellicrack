@@ -19,9 +19,9 @@ import enum
 import json
 import re
 from dataclasses import dataclass, field, replace
-from itertools import starmap
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
+from urllib.parse import parse_qsl, urlsplit
 
 from intellicrack.core.config import get_config_file
 from intellicrack.core.json_payload import JsonObject, is_json_array, is_json_object
@@ -41,7 +41,11 @@ SERVER_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[a-z0-9][a-z0-9-]{0,31
 
 Lower-case alphanumerics and hyphens only, at most 32 characters. The hyphen is what keeps the namespace unambiguous at the provider
 boundary: the wire layer maps ``.`` to ``__``, and a namespace that can never contain ``_`` or ``.`` can never collide with that separator.
+A key written in another client's style, such as ``GitHub`` or ``my_server``, is brought to this shape by :func:`normalize_server_id`.
 """
+
+_SERVER_ID_MAX_CHARS: Final[int] = 32
+_SERVER_ID_INVALID_RUN: Final[re.Pattern[str]] = re.compile(r"[^a-z0-9]+")
 
 MCP_CONFIG_FILENAME: Final[str] = "mcp.json"
 """Name of the configuration file inside the Intellicrack config directory."""
@@ -87,6 +91,21 @@ class McpTransportKind(enum.Enum):
     SSE = "sse"
 
 
+_TRANSPORT_ALIASES: Final[dict[str, McpTransportKind]] = {
+    "stdio": McpTransportKind.STDIO,
+    "http": McpTransportKind.HTTP,
+    "streamablehttp": McpTransportKind.HTTP,
+    "sse": McpTransportKind.SSE,
+}
+"""Declared ``type`` values, folded to lower case without separators, mapped to the transport they name.
+
+``streamable-http``, ``streamable_http`` and ``streamableHttp`` are how other MCP clients write the Streamable HTTP transport that
+Intellicrack calls ``http``.
+"""
+
+_TRANSPORT_SEPARATORS: Final[re.Pattern[str]] = re.compile(r"[\s_-]+")
+
+
 _SECRET_NAME_TOKENS: Final[frozenset[str]] = frozenset({
     "auth",
     "authorization",
@@ -130,14 +149,37 @@ _SECRET_VALUE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"^[Bb]earer\s+[A-Za-z0-9._~+/-]{16,}=*$"),
     re.compile(r"^-----BEGIN [A-Z ]*PRIVATE KEY-----"),
     re.compile(r"^[0-9a-f]{32,}$"),
-    re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"),
 )
-"""Value shapes that are credentials regardless of the field they sit in."""
+"""Value shapes that are credentials regardless of the field they sit in.
+
+A UUID is deliberately absent: tenant, project and workspace ids are UUIDs, and a UUID used as a key is still caught by the name of the
+field it sits in.
+"""
 
 _MIXED_ENTROPY_MIN_CHARS: Final[int] = 24
 """Length past which a mixed-case alphanumeric run is treated as a credential."""
 
 _NAME_SPLIT_PATTERN: Final[re.Pattern[str]] = re.compile(r"[^a-z0-9]+")
+
+_URL_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://\S+$")
+"""A value written as an absolute URL."""
+
+_PATH_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^(?:[A-Za-z]:[\\/]|\\\\|/|~[\\/]|\.{1,2}[\\/]|\$\{[A-Za-z]+\}[\\/]|%[A-Za-z_]+%[\\/])",
+)
+"""A value written as a filesystem path: drive, UNC, POSIX, home, relative or variable-rooted."""
+
+_RELATIVE_FILE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[\w.-]+(?:[\\/][\w .-]+)+\.[A-Za-z0-9]{1,8}$")
+"""A relative path whose last segment carries a file extension."""
+
+_FLAG_PATTERN: Final[re.Pattern[str]] = re.compile(r"^-{1,2}[A-Za-z][A-Za-z0-9_.-]*$")
+"""A command-line option name such as ``--api-key`` or ``-t``."""
+
+_OPAQUE_MIN_CHARS: Final[int] = 8
+"""Shortest positional option value treated as a possible key."""
+
+_ASSIGNMENT_PATTERN: Final[re.Pattern[str]] = re.compile(r"^(-{0,2}[A-Za-z_][A-Za-z0-9_.-]*)=(.*)$", re.DOTALL)
+"""A ``NAME=value`` or ``--name=value`` argument."""
 
 
 def _name_looks_secret(name: str) -> bool:
@@ -157,8 +199,50 @@ def _name_looks_secret(name: str) -> bool:
     return any(part in _SECRET_NAME_TOKENS for part in parts)
 
 
+def _is_path(value: str) -> bool:
+    """Decide whether a value is written as a filesystem path.
+
+    Args:
+        value: The candidate value.
+
+    Returns:
+        bool: ``True`` for an absolute, home-relative, dot-relative or
+        variable-rooted path, or a relative path ending in a file name.
+    """
+    return bool(_PATH_PATTERN.match(value) or _RELATIVE_FILE_PATTERN.match(value))
+
+
+def _url_carries_secret(url: str) -> bool:
+    """Decide whether a URL embeds a credential.
+
+    A URL names where something is, not a secret, unless it carries a
+    password in its user information or a credential in its query string.
+
+    Args:
+        url: An absolute URL, with every ``${input:id}`` reference already
+            removed.
+
+    Returns:
+        bool: ``True`` when the URL embeds a literal credential.
+    """
+    try:
+        parts = urlsplit(url)
+        password = parts.password
+    except ValueError:
+        return False
+    if password:
+        return True
+    for name, value in parse_qsl(parts.query, keep_blank_values=True):
+        if value and (_name_looks_secret(name) or _value_looks_secret(value)):
+            return True
+    return False
+
+
 def _value_looks_secret(value: str) -> bool:
     """Decide whether a literal value is shaped like a credential.
+
+    URLs and filesystem paths are locations rather than credentials, so they
+    are judged only by whether they embed one.
 
     Args:
         value: The literal value, with every ``${input:id}`` reference
@@ -170,6 +254,10 @@ def _value_looks_secret(value: str) -> bool:
     candidate = value.strip()
     if not candidate:
         return False
+    if _URL_PATTERN.match(candidate):
+        return _url_carries_secret(candidate)
+    if _is_path(candidate):
+        return False
     if any(pattern.match(candidate) for pattern in _SECRET_VALUE_PATTERNS):
         return True
     if len(candidate) < _MIXED_ENTROPY_MIN_CHARS or not candidate.isascii():
@@ -180,6 +268,27 @@ def _value_looks_secret(value: str) -> bool:
     has_lower = any(char.islower() for char in candidate)
     has_digit = any(char.isdigit() for char in candidate)
     return has_upper and has_lower and has_digit
+
+
+def _value_is_opaque(value: str) -> bool:
+    """Decide whether a value could be a key rather than an ordinary argument.
+
+    Used for an option whose value is only inferred from position, where a
+    credential-named flag may be a switch followed by an unrelated argument.
+
+    Args:
+        value: The literal value.
+
+    Returns:
+        bool: ``True`` for a single token of key-like length that is not a
+        URL or path and is not an ordinary word.
+    """
+    candidate = value.strip()
+    if len(candidate) < _OPAQUE_MIN_CHARS or any(char.isspace() for char in candidate):
+        return False
+    if _URL_PATTERN.match(candidate) or _is_path(candidate):
+        return False
+    return any(char.isdigit() for char in candidate) or len(candidate) >= _MIXED_ENTROPY_MIN_CHARS
 
 
 def strip_input_references(value: str) -> str:
@@ -206,12 +315,54 @@ def referenced_input_ids(value: str) -> tuple[str, ...]:
     return tuple(match.group(1) for match in INPUT_REFERENCE_PATTERN.finditer(value))
 
 
-def _reject_literal_secrets(*, server_id: str, section: str, values: Mapping[str, str]) -> None:
-    """Refuse a mapping that writes a credential into the configuration file.
+def literal_secret_problem(name: str, value: str) -> str | None:
+    """Judge one named configuration value for a literal credential.
 
     A value carrying at least one ``${input:id}`` reference supplies its
     secret from the keyring and is accepted even under a credential-shaped
-    name; what is refused is the literal.
+    name, unless the literal text around the reference is itself shaped like
+    a credential. A URL or path under a credential-shaped name is accepted
+    too: ``TOKEN_URL`` names an endpoint and ``KEY_FILE`` names a file.
+
+    Args:
+        name: The field, variable or option name.
+        value: The raw value.
+
+    Returns:
+        str | None: Why the value is refused, or ``None`` when it is fine.
+    """
+    references = referenced_input_ids(value)
+    remainder = strip_input_references(value)
+    if _value_looks_secret(remainder):
+        return "holds a value shaped like a credential"
+    if references:
+        return None
+    candidate = remainder.strip()
+    if _name_looks_secret(name) and not _URL_PATTERN.match(candidate) and not _is_path(candidate):
+        return "looks like a literal secret"
+    return None
+
+
+def _secret_message(server_id: str, field_name: str, problem: str) -> str:
+    """Build the message refusing a literal credential.
+
+    Args:
+        server_id: Server the value belongs to.
+        field_name: Where the value sits, e.g. ``env.API_KEY`` or ``args[2]``.
+        problem: Why it was refused.
+
+    Returns:
+        str: The message for the :class:`McpConfigError`.
+    """
+    return (
+        f"server '{server_id}': {field_name} {problem}. "
+        f"Store it with an 'inputs' entry and reference it as ${{input:<id>}} instead; "
+        f"{MCP_CONFIG_FILENAME} must never contain a credential."
+    )
+
+
+def _reject_literal_secrets(*, server_id: str, section: str, values: Mapping[str, str]) -> None:
+    """Refuse a mapping that writes a credential into the configuration file.
 
     Args:
         server_id: Server the mapping belongs to, for the error message.
@@ -222,24 +373,72 @@ def _reject_literal_secrets(*, server_id: str, section: str, values: Mapping[str
         McpConfigError: If any value is a literal credential.
     """
     for name, value in values.items():
-        references = referenced_input_ids(value)
-        remainder = strip_input_references(value)
-        if references and not _value_looks_secret(remainder):
-            continue
-        if _name_looks_secret(name) and not references:
-            message = (
-                f"server '{server_id}': {section}.{name} looks like a literal secret. "
-                f"Store it with an 'inputs' entry and reference it as ${{input:<id>}} instead; "
-                f"{MCP_CONFIG_FILENAME} must never contain a credential."
-            )
-            raise McpConfigError(message)
-        if _value_looks_secret(remainder):
-            message = (
-                f"server '{server_id}': {section}.{name} holds a value shaped like a credential. "
-                f"Store it with an 'inputs' entry and reference it as ${{input:<id>}} instead; "
-                f"{MCP_CONFIG_FILENAME} must never contain a credential."
-            )
-            raise McpConfigError(message)
+        problem = literal_secret_problem(name, value)
+        if problem is not None:
+            raise McpConfigError(_secret_message(server_id, f"{section}.{name}", problem))
+
+
+def _argument_secret_problem(args: Sequence[str], index: int) -> str | None:
+    """Judge one launch argument for a literal credential.
+
+    An argument is judged as ``--name=value`` or ``NAME=value`` when written
+    that way, as the value of the option before it when that option has a
+    credential-shaped name, and otherwise by its shape alone.
+
+    Args:
+        args: Every launch argument, in order.
+        index: Position of the argument to judge.
+
+    Returns:
+        str | None: Why the argument is refused, or ``None`` when it is fine.
+    """
+    argument = args[index]
+    assignment = _ASSIGNMENT_PATTERN.match(argument)
+    if assignment is not None:
+        return literal_secret_problem(assignment.group(1), assignment.group(2))
+    if _value_looks_secret(strip_input_references(argument)):
+        return "holds a value shaped like a credential"
+    if index == 0 or referenced_input_ids(argument):
+        return None
+    option = args[index - 1]
+    if _FLAG_PATTERN.match(option) and _name_looks_secret(option) and _value_is_opaque(argument):
+        return f"is the value of {option} and looks like a literal secret"
+    return None
+
+
+def _reject_literal_secret_args(*, server_id: str, args: Sequence[str]) -> None:
+    """Refuse launch arguments that write a credential into the configuration file.
+
+    Args:
+        server_id: Server the arguments belong to, for the error message.
+        args: The launch arguments.
+
+    Raises:
+        McpConfigError: If any argument is a literal credential.
+    """
+    for index in range(len(args)):
+        problem = _argument_secret_problem(args, index)
+        if problem is not None:
+            raise McpConfigError(_secret_message(server_id, f"args[{index}]", problem))
+
+
+def normalize_server_id(key: str) -> str | None:
+    """Bring a server key written in another client's style to the id shape.
+
+    Letters are lower-cased and every run of other characters becomes one
+    hyphen, so ``GitHub`` becomes ``github`` and ``my_server`` becomes
+    ``my-server``. The result is cut to 32 characters.
+
+    Args:
+        key: The key the server was stored under.
+
+    Returns:
+        str | None: An id matching :data:`SERVER_ID_PATTERN`, or ``None``
+        when the key has no letter or digit to build one from.
+    """
+    folded = _SERVER_ID_INVALID_RUN.sub("-", key.strip().lower()).strip("-")
+    candidate = folded[:_SERVER_ID_MAX_CHARS].rstrip("-")
+    return candidate if SERVER_ID_PATTERN.match(candidate) else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -403,8 +602,8 @@ class McpServerConfig:
 
         Raises:
             McpConfigError: If the launch block is missing, an HTTP block is
-                also present, the command is empty, or the environment holds
-                a literal credential.
+                also present, the command is empty, or the environment or an
+                argument holds a literal credential.
         """
         if self.stdio is None:
             message = f"server '{self.server_id}': transport is 'stdio' but no command was configured"
@@ -416,6 +615,7 @@ class McpServerConfig:
             message = f"server '{self.server_id}': the launch command is empty"
             raise McpConfigError(message)
         _reject_literal_secrets(server_id=self.server_id, section="env", values=self.stdio.env)
+        _reject_literal_secret_args(server_id=self.server_id, args=self.stdio.args)
 
     def _validate_http(self) -> None:
         """Check the invariants specific to a server reached over HTTP.
@@ -451,6 +651,7 @@ class McpServerConfig:
         """
         values: list[str] = []
         if self.stdio is not None:
+            values.extend(self.stdio.args)
             values.extend(self.stdio.env.values())
         if self.http is not None:
             values.extend(self.http.headers.values())
@@ -538,16 +739,40 @@ def _is_valid_metadata_url(url: str) -> bool:
 
 
 @dataclass(frozen=True, slots=True)
+class McpRejectedServer:
+    """A server entry left out of a document because it cannot be used.
+
+    Attributes:
+        key: The key the entry was stored under.
+        reason: Why it was left out, naming the offending field.
+        raw: The entry exactly as decoded.
+        retained: Whether the entry is written back unchanged when the
+            document is saved. Entries read from the configuration file are,
+            so saving never deletes what the operator wrote; entries from an
+            imported document are not, so a refused credential is never
+            written into the file.
+    """
+
+    key: str
+    reason: str
+    raw: object
+    retained: bool
+
+
+@dataclass(frozen=True, slots=True)
 class McpConfigDocument:
     """The parsed contents of ``mcp.json``.
 
     Attributes:
         servers: Configured servers, in file order.
         inputs: Declared inputs, in file order.
+        rejected: Server entries that could not be used, each with its
+            reason. One bad entry never costs the operator the others.
     """
 
     servers: tuple[McpServerConfig, ...] = ()
     inputs: tuple[McpInputSpec, ...] = ()
+    rejected: tuple[McpRejectedServer, ...] = ()
 
     def server(self, server_id: str) -> McpServerConfig | None:
         """Look up one configured server by id.
@@ -769,12 +994,15 @@ def _parse_transport_kind(data: Mapping[str, Any], *, server_id: str) -> McpTran
     """
     declared = _optional_str(data, "type", server_id=server_id)
     if declared is not None:
-        try:
-            return McpTransportKind(declared.strip().lower())
-        except ValueError as exc:
+        kind = _TRANSPORT_ALIASES.get(_TRANSPORT_SEPARATORS.sub("", declared.strip().lower()))
+        if kind is None:
             supported = ", ".join(sorted(member.value for member in McpTransportKind))
-            message = f"server '{server_id}': {_ERR_UNKNOWN_TRANSPORT} {declared!r}; supported types are {supported}"
-            raise McpConfigError(message) from exc
+            message = (
+                f"server '{server_id}': {_ERR_UNKNOWN_TRANSPORT} {declared!r}; supported types are {supported} "
+                f"(streamable-http and streamableHttp are read as http)"
+            )
+            raise McpConfigError(message)
+        return kind
     if data.get("command") is not None:
         return McpTransportKind.STDIO
     if data.get("url") is not None:
@@ -866,6 +1094,51 @@ def _parse_server(server_id: str, raw: object) -> McpServerConfig:
     return config
 
 
+def _parse_servers(
+    entries: Mapping[str, object],
+    *,
+    retain_rejected: bool,
+) -> tuple[tuple[McpServerConfig, ...], tuple[McpRejectedServer, ...]]:
+    """Parse every entry of the ``servers`` object, keeping the usable ones.
+
+    Keys are brought to the id shape with :func:`normalize_server_id`. An
+    entry that cannot be used -- its key has nothing to build an id from, it
+    normalizes to an id another entry already took, or it fails validation --
+    is set aside with its reason rather than failing the whole document.
+
+    Args:
+        entries: The decoded ``servers`` object.
+        retain_rejected: Whether set-aside entries are written back on save.
+
+    Returns:
+        tuple[tuple[McpServerConfig, ...], tuple[McpRejectedServer, ...]]:
+        The usable servers and the set-aside entries, both in file order.
+    """
+    servers: list[McpServerConfig] = []
+    rejected: list[McpRejectedServer] = []
+    taken: dict[str, str] = {}
+    for key, raw in entries.items():
+        server_id = normalize_server_id(key)
+        if server_id is None:
+            reason = f"invalid MCP server id {key!r}: it has no letter or digit to build an id from"
+        elif server_id in taken:
+            reason = f"server key {key!r} normalizes to '{server_id}', which the entry {taken[server_id]!r} already uses"
+        else:
+            try:
+                config = _parse_server(server_id, raw)
+            except McpConfigError as exc:
+                reason = exc.message if server_id == key else f"server key {key!r}: {exc.message}"
+            else:
+                servers.append(config)
+                taken[server_id] = key
+                if server_id != key:
+                    _logger.info("mcp_config_server_id_normalized", key=key, server_id=server_id)
+                continue
+        _logger.warning("mcp_config_server_rejected", key=key, reason=reason)
+        rejected.append(McpRejectedServer(key=key, reason=reason, raw=raw, retained=retain_rejected))
+    return tuple(servers), tuple(rejected)
+
+
 def _parse_input(raw: object, index: int) -> McpInputSpec:
     """Parse one entry of the ``inputs`` array.
 
@@ -945,6 +1218,26 @@ def _serialize_server(config: McpServerConfig) -> dict[str, Any]:
     return data
 
 
+def _decode_document(raw: str) -> JsonObject:
+    """Decode configuration JSON text to its root object.
+
+    Args:
+        raw: The JSON text.
+
+    Returns:
+        JsonObject: The decoded root.
+
+    Raises:
+        McpConfigError: If the text is not valid JSON.
+    """
+    try:
+        decoded: object = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        message = f"invalid JSON in MCP configuration: {exc}"
+        raise McpConfigError(message) from exc
+    return _require_object(decoded, _ERR_NOT_AN_OBJECT)
+
+
 class McpConfigStore:
     """Reads and writes ``mcp.json``.
 
@@ -991,12 +1284,13 @@ class McpConfigStore:
         except OSError as exc:
             message = f"cannot read {self._path}: {exc}"
             raise McpConfigError(message) from exc
-        document = self.import_document(raw)
+        document = self.parse_document(_decode_document(raw), retain_rejected=True)
         _logger.info(
             "mcp_config_loaded",
             path=str(self._path),
             server_count=len(document.servers),
             input_count=len(document.inputs),
+            rejected_count=len(document.rejected),
         )
         return document
 
@@ -1030,6 +1324,9 @@ class McpConfigStore:
     def import_document(self, raw: str) -> McpConfigDocument:
         """Parse a configuration document from JSON text.
 
+        Server entries that cannot be used are reported in
+        :attr:`McpConfigDocument.rejected` and the rest are imported.
+
         Args:
             raw: JSON text in either the ``servers`` or ``mcpServers`` shape.
 
@@ -1037,33 +1334,39 @@ class McpConfigStore:
             McpConfigDocument: The parsed document.
 
         Raises:
-            McpConfigError: If the text is not valid JSON, or the decoded
-                document fails validation.
+            McpConfigError: If the text is not valid JSON, the decoded
+                document fails validation, or it declares servers and not
+                one of them can be used.
         """
-        try:
-            decoded: object = json.loads(raw)
-        except json.JSONDecodeError as exc:
-            message = f"invalid JSON in MCP configuration: {exc}"
-            raise McpConfigError(message) from exc
-        return self.parse_document(_require_object(decoded, _ERR_NOT_AN_OBJECT))
+        document = self.parse_document(_decode_document(raw))
+        if document.rejected and not document.servers:
+            reasons = "; ".join(entry.reason for entry in document.rejected)
+            message = f"no server in the imported MCP configuration can be used: {reasons}"
+            raise McpConfigError(message)
+        return document
 
     @staticmethod
-    def parse_document(data: Mapping[str, Any]) -> McpConfigDocument:
+    def parse_document(data: Mapping[str, Any], *, retain_rejected: bool = False) -> McpConfigDocument:
         """Parse an already-decoded configuration document.
 
         Both accepted roots are normalized here: ``servers`` is the native
         shape and ``mcpServers`` is the shape other clients write. A document
-        carrying both is refused rather than silently merged.
+        carrying both is refused rather than silently merged. A server entry
+        that cannot be used is set aside in
+        :attr:`McpConfigDocument.rejected` with its reason, and the others
+        are kept.
 
         Args:
             data: The decoded configuration root.
+            retain_rejected: Whether set-aside server entries are written
+                back when the document is saved.
 
         Returns:
             McpConfigDocument: The parsed document.
 
         Raises:
             McpConfigError: If both roots are present, a root has the wrong
-                type, an input id repeats, or a server fails validation.
+                type, or an input entry is malformed or repeats an id.
         """
         native = data.get("servers")
         legacy = data.get("mcpServers")
@@ -1072,9 +1375,10 @@ class McpConfigStore:
             raise McpConfigError(message)
         raw_servers = native if native is not None else legacy
         servers: tuple[McpServerConfig, ...] = ()
+        rejected: tuple[McpRejectedServer, ...] = ()
         if raw_servers is not None:
             entries = _require_object(raw_servers, _ERR_SERVERS_NOT_AN_OBJECT)
-            servers = tuple(starmap(_parse_server, entries.items()))
+            servers, rejected = _parse_servers(entries, retain_rejected=retain_rejected)
 
         raw_inputs = data.get("inputs")
         inputs: tuple[McpInputSpec, ...] = ()
@@ -1089,11 +1393,14 @@ class McpConfigStore:
                     raise McpConfigError(message)
                 seen.add(entry.id)
 
-        return McpConfigDocument(servers=servers, inputs=inputs)
+        return McpConfigDocument(servers=servers, inputs=inputs, rejected=rejected)
 
     @staticmethod
     def serialize_document(document: McpConfigDocument) -> dict[str, Any]:
         """Render a configuration document to its JSON shape.
+
+        Set-aside server entries marked as retained are written back exactly
+        as they were read, unless a usable server now holds the same id.
 
         Args:
             document: The document to render.
@@ -1102,7 +1409,9 @@ class McpConfigStore:
             dict[str, Any]: The JSON root, always in the native ``servers``
             shape.
         """
-        data: dict[str, Any] = {"servers": {server.server_id: _serialize_server(server) for server in document.servers}}
+        servers: dict[str, Any] = {entry.key: entry.raw for entry in document.rejected if entry.retained}
+        servers.update({server.server_id: _serialize_server(server) for server in document.servers})
+        data: dict[str, Any] = {"servers": servers}
         if document.inputs:
             data["inputs"] = [
                 {"id": entry.id, "type": "promptString", "description": entry.description, "password": entry.password}
