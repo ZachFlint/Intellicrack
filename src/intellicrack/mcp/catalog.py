@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from mcp import Client
+    from mcp.client.caching import CacheMode
     from mcp_types import Tool, ToolAnnotations
 
 
@@ -381,16 +382,26 @@ def build_catalog(
     )
 
 
-async def fetch_catalog(client: Client, server_id: str) -> McpToolCatalog:
+async def fetch_catalog(client: Client, server_id: str, *, cache_mode: CacheMode = "use") -> McpToolCatalog:
     """Retrieve a server's complete tool listing.
 
     Pagination is followed to exhaustion, preserving the order the server
     returned tools in. The freshness hints are taken from the first page,
     which is the one a cached re-list would be served from.
 
+    The SDK's client keeps its own response cache, which honours the
+    server's ``ttlMs`` for the first page. ``cache_mode="refresh"`` sends
+    the request regardless and replaces what the cache held, which is what a
+    change notification calls for: the server has just said the cached
+    listing is wrong.
+
     Args:
         client: A connected MCP client.
         server_id: The server's configured id.
+        cache_mode: How the SDK's response cache treats the first page:
+            ``"use"`` serves a fresh cached page, ``"refresh"`` always asks
+            the server and stores the answer, ``"bypass"`` always asks and
+            stores nothing.
 
     Returns:
         McpToolCatalog: The complete listing.
@@ -406,7 +417,7 @@ async def fetch_catalog(client: Client, server_id: str) -> McpToolCatalog:
     seen_cursors: set[str] = set()
 
     for page in range(MAX_LIST_PAGES):
-        result = await client.list_tools(cursor=cursor)
+        result = await client.list_tools(cursor=cursor, cache_mode=cache_mode)
         if page == 0:
             ttl_ms = result.ttl_ms
             cache_scope = result.cache_scope
