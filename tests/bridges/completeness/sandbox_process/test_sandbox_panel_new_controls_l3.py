@@ -15,30 +15,35 @@ Covers the six newly-wired ``SandboxPanel`` controls in
 * ``_on_detect_c2`` -> ``SandboxBridge.detect_c2(instance_id)``.
 * ``_on_diff`` -> ``SandboxBridge.diff(instance_id_a, instance_id_b)``.
 
-Every test patches ``run_bridge_coroutine_logged`` in the panel module under
-test (not the bridge) and asserts the coroutine handed to it is the exact
-coroutine object returned by the real bridge-method mock, with the expected
-call arguments -- this is a genuine gate on the handler's wiring logic. The
-``SandboxBridge`` itself is replaced with a ``MagicMock`` only because the
-production code under test here is the *handler*, not the bridge (which has
-its own dedicated bridge-completeness gates driving the real backend).
+Every test wires a real ``SandboxBridge`` into the panel and replaces
+``run_bridge_coroutine_logged`` in the panel module under test (not the
+bridge) with a recording shim. The shim introspects the real coroutine it
+receives -- code object, bound ``self`` and bound arguments -- and closes it
+before any bridge body runs, so each gate asserts the handler created its
+coroutine from the exact ``SandboxBridge`` method, on the wired bridge, with
+the expected arguments -- a genuine gate on the handler's wiring logic. The
+bridge bodies have their own dedicated bridge-completeness gates driving the
+real backend.
 """
 
 from __future__ import annotations
 
+import inspect
 import os
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
-from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QLineEdit, QTreeWidget
 
+from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.ui.panels import sandbox_panel as _sandbox_panel_mod
 from intellicrack.ui.panels.sandbox_panel import SandboxPanel
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Coroutine, Iterator
+    from types import CodeType
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -76,7 +81,7 @@ def sandbox_panel(qapp: QApplication) -> SandboxPanel:
 def _set_private(widget: object, attr_name: str, value: object) -> None:
     """Assign a value to a named private attribute of a widget under test.
 
-    Used to wire test doubles (e.g. a mock bridge) into private collaborator
+    Used to wire collaborators (e.g. a real bridge) into private collaborator
     slots without a direct private-attribute assignment expression that would
     fight the widget's declared attribute type.
 
@@ -113,6 +118,87 @@ def _invoke(widget: object, method_name: str) -> None:
     handler()
 
 
+@dataclass(frozen=True, slots=True)
+class _DispatchedBridgeCall:
+    """One ``run_bridge_coroutine_logged`` invocation captured before dispatch.
+
+    The real bridge coroutine is introspected (its code object, bound ``self``
+    and bound arguments) and then closed, so no bridge body ever runs and no
+    "coroutine was never awaited" warning is emitted.
+
+    Attributes:
+        coroutine: The exact coroutine object handed to the dispatcher.
+        code: Code object the coroutine executes; identifies the bridge method.
+        bound_self: The ``self`` the bridge method was bound to.
+        arguments: The bridge method's bound arguments, excluding ``self``.
+        dispatch_kwargs: Keyword arguments passed to the dispatcher itself
+            (``on_success``, ``on_error``, ``event``, ...).
+    """
+
+    coroutine: Coroutine[object, object, object]
+    code: CodeType
+    bound_self: object
+    arguments: dict[str, object]
+    dispatch_kwargs: dict[str, object]
+
+
+def _intercept_dispatch(monkeypatch: pytest.MonkeyPatch, module: object) -> list[_DispatchedBridgeCall]:
+    """Replace ``run_bridge_coroutine_logged`` in ``module`` with a recording shim.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture.
+        module: The module whose dispatcher symbol is replaced.
+
+    Returns:
+        list[_DispatchedBridgeCall]: Live list receiving one entry per dispatch.
+    """
+    captured: list[_DispatchedBridgeCall] = []
+
+    def _record(coro: object, *args: object, **kwargs: object) -> None:
+        del args
+        assert inspect.iscoroutine(coro), f"dispatcher must receive a real bridge coroutine; got {coro!r}"
+        frame_locals = dict(inspect.getcoroutinelocals(coro))
+        bound_self = frame_locals.pop("self", None)
+        captured.append(
+            _DispatchedBridgeCall(
+                coroutine=coro,
+                code=coro.cr_code,
+                bound_self=bound_self,
+                arguments=frame_locals,
+                dispatch_kwargs=dict(kwargs),
+            ),
+        )
+        coro.close()
+
+    monkeypatch.setattr(module, "run_bridge_coroutine_logged", _record)
+    return captured
+
+
+def _assert_bridge_call(
+    call: _DispatchedBridgeCall,
+    bridge: object,
+    method_name: str,
+    expected_arguments: dict[str, object],
+) -> None:
+    """Assert a dispatched coroutine came from ``bridge.<method_name>`` with the expected arguments.
+
+    Args:
+        call: The captured dispatch.
+        bridge: The real bridge instance wired into the widget under test.
+        method_name: Name of the bridge coroutine method that must have produced the coroutine.
+        expected_arguments: Every bound argument of that method (defaults included), excluding ``self``.
+    """
+    method: object = getattr(type(bridge), method_name)
+    assert inspect.isfunction(method), f"{type(bridge).__name__}.{method_name} must be a plain coroutine function"
+    assert call.code is method.__code__, (
+        f"dispatched coroutine must come from {type(bridge).__name__}.{method_name}; got {call.code.co_qualname}"
+    )
+    assert call.bound_self is bridge, "dispatched coroutine must be bound to the bridge wired into the widget"
+    assert call.arguments == expected_arguments, (
+        f"{method_name} bound arguments mismatch: expected {expected_arguments!r}, got {call.arguments!r}"
+    )
+
+
 class TestSandboxPanelRefreshInstancesWiringL3:
     """SandboxBridge.list: the Refresh Instances button dispatches list() and renders the result."""
 
@@ -125,31 +211,22 @@ class TestSandboxPanelRefreshInstancesWiringL3:
 
         Falsified by: removing/rewiring the ``self._bridge.list()`` call in
         ``_on_refresh_instances`` turns this red, since the captured coroutine
-        would no longer be ``mock_bridge.list.return_value`` or ``list`` would
-        no longer be called with no args.
+        would no longer come from ``SandboxBridge.list`` or would no longer be
+        bound with no args.
 
         Args:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(sandbox_panel, "_bridge", mock_bridge)
+        bridge = SandboxBridge()
+        _set_private(sandbox_panel, "_bridge", bridge)
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_refresh_instances")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called when a bridge is configured"
-        assert dispatch_args[0][0] is mock_bridge.list.return_value, (
-            f"first positional arg must be the coroutine from bridge.list; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.list.assert_called_once_with()
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called when a bridge is configured"
+        _assert_bridge_call(dispatch_args[0], bridge, "list", {})
 
     def test_on_refresh_instances_no_dispatch_without_bridge(
         self,
@@ -167,12 +244,7 @@ class TestSandboxPanelRefreshInstancesWiringL3:
         """
         _set_private(sandbox_panel, "_bridge", None)
 
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_refresh_instances")
 
@@ -193,19 +265,14 @@ class TestSandboxPanelRefreshInstancesWiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(sandbox_panel, "_bridge", mock_bridge)
+        bridge = SandboxBridge()
+        _set_private(sandbox_panel, "_bridge", bridge)
 
-        captured_on_success: list[object] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del args
-            captured_on_success.append(kwargs["on_success"])
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_refresh_instances")
 
+        captured_on_success = [call.dispatch_kwargs["on_success"] for call in dispatch_args]
         assert captured_on_success, "expected an on_success callback to be captured"
         success_cb = captured_on_success[0]
         assert callable(success_cb)
@@ -271,25 +338,16 @@ class TestSandboxPanelRefreshSnapshotsWiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(sandbox_panel, "_bridge", mock_bridge)
+        bridge = SandboxBridge()
+        _set_private(sandbox_panel, "_bridge", bridge)
         sandbox_panel.sandbox_id = "sbx-active"
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_refresh_snapshots")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with an active instance"
-        assert dispatch_args[0][0] is mock_bridge.snapshot_list.return_value, (
-            f"first positional arg must be the coroutine from bridge.snapshot_list; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.snapshot_list.assert_called_once_with("sbx-active")
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with an active instance"
+        _assert_bridge_call(dispatch_args[0], bridge, "snapshot_list", {"instance_id": "sbx-active"})
 
     def test_on_refresh_snapshots_no_dispatch_without_active_instance(
         self,
@@ -305,15 +363,10 @@ class TestSandboxPanelRefreshSnapshotsWiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(sandbox_panel, "_bridge", MagicMock())
+        _set_private(sandbox_panel, "_bridge", SandboxBridge())
         sandbox_panel.sandbox_id = None
 
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_refresh_snapshots")
 
@@ -337,25 +390,16 @@ class TestSandboxPanelPendingMessagesWiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(sandbox_panel, "_bridge", mock_bridge)
+        bridge = SandboxBridge()
+        _set_private(sandbox_panel, "_bridge", bridge)
         sandbox_panel.sandbox_id = "sbx-msg"
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_pending_messages")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with an active instance"
-        assert dispatch_args[0][0] is mock_bridge.get_pending_messages.return_value, (
-            f"first positional arg must be the coroutine from bridge.get_pending_messages; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.get_pending_messages.assert_called_once_with("sbx-msg")
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with an active instance"
+        _assert_bridge_call(dispatch_args[0], bridge, "get_pending_messages", {"instance_id": "sbx-msg"})
 
     def test_on_pending_messages_no_dispatch_without_active_instance(
         self,
@@ -371,15 +415,10 @@ class TestSandboxPanelPendingMessagesWiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(sandbox_panel, "_bridge", MagicMock())
+        _set_private(sandbox_panel, "_bridge", SandboxBridge())
         sandbox_panel.sandbox_id = None
 
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_pending_messages")
 
@@ -404,28 +443,19 @@ class TestSandboxPanelAntiEvasionWiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(sandbox_panel, "_bridge", mock_bridge)
+        bridge = SandboxBridge()
+        _set_private(sandbox_panel, "_bridge", bridge)
         sandbox_panel.sandbox_id = "sbx-evasion"
 
         profile_input = cast("QLineEdit", _get_private(sandbox_panel, "_anti_evasion_profile_input"))
         profile_input.setText("aggressive")
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_anti_evasion")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with an active instance"
-        assert dispatch_args[0][0] is mock_bridge.anti_evasion.return_value, (
-            f"first positional arg must be the coroutine from bridge.anti_evasion; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.anti_evasion.assert_called_once_with("sbx-evasion", profile="aggressive")
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with an active instance"
+        _assert_bridge_call(dispatch_args[0], bridge, "anti_evasion", {"instance_id": "sbx-evasion", "profile": "aggressive"})
 
     def test_on_anti_evasion_defaults_profile_when_blank(
         self,
@@ -441,25 +471,19 @@ class TestSandboxPanelAntiEvasionWiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(sandbox_panel, "_bridge", mock_bridge)
+        bridge = SandboxBridge()
+        _set_private(sandbox_panel, "_bridge", bridge)
         sandbox_panel.sandbox_id = "sbx-evasion"
 
         profile_input = cast("QLineEdit", _get_private(sandbox_panel, "_anti_evasion_profile_input"))
         profile_input.setText("   ")
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_anti_evasion")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with an active instance"
-        mock_bridge.anti_evasion.assert_called_once_with("sbx-evasion", profile="default")
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with an active instance"
+        _assert_bridge_call(dispatch_args[0], bridge, "anti_evasion", {"instance_id": "sbx-evasion", "profile": "default"})
 
     def test_on_anti_evasion_no_dispatch_without_active_instance(
         self,
@@ -475,15 +499,10 @@ class TestSandboxPanelAntiEvasionWiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(sandbox_panel, "_bridge", MagicMock())
+        _set_private(sandbox_panel, "_bridge", SandboxBridge())
         sandbox_panel.sandbox_id = None
 
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_anti_evasion")
 
@@ -507,25 +526,16 @@ class TestSandboxPanelDetectC2WiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(sandbox_panel, "_bridge", mock_bridge)
+        bridge = SandboxBridge()
+        _set_private(sandbox_panel, "_bridge", bridge)
         sandbox_panel.sandbox_id = "sbx-c2"
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_detect_c2")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with an active instance"
-        assert dispatch_args[0][0] is mock_bridge.detect_c2.return_value, (
-            f"first positional arg must be the coroutine from bridge.detect_c2; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.detect_c2.assert_called_once_with("sbx-c2")
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with an active instance"
+        _assert_bridge_call(dispatch_args[0], bridge, "detect_c2", {"instance_id": "sbx-c2"})
 
     def test_on_detect_c2_no_dispatch_without_active_instance(
         self,
@@ -541,15 +551,10 @@ class TestSandboxPanelDetectC2WiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(sandbox_panel, "_bridge", MagicMock())
+        _set_private(sandbox_panel, "_bridge", SandboxBridge())
         sandbox_panel.sandbox_id = None
 
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_detect_c2")
 
@@ -574,29 +579,20 @@ class TestSandboxPanelDiffWiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(sandbox_panel, "_bridge", mock_bridge)
+        bridge = SandboxBridge()
+        _set_private(sandbox_panel, "_bridge", bridge)
 
         input_a = cast("QLineEdit", _get_private(sandbox_panel, "_diff_instance_a_input"))
         input_b = cast("QLineEdit", _get_private(sandbox_panel, "_diff_instance_b_input"))
         input_a.setText("sbx-A")
         input_b.setText("sbx-B")
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_diff")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called when both instance ids are provided"
-        assert dispatch_args[0][0] is mock_bridge.diff.return_value, (
-            f"first positional arg must be the coroutine from bridge.diff; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.diff.assert_called_once_with("sbx-A", "sbx-B")
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called when both instance ids are provided"
+        _assert_bridge_call(dispatch_args[0], bridge, "diff", {"instance_id_a": "sbx-A", "instance_id_b": "sbx-B"})
 
     def test_on_diff_no_dispatch_when_second_instance_missing(
         self,
@@ -612,7 +608,7 @@ class TestSandboxPanelDiffWiringL3:
             sandbox_panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(sandbox_panel, "_bridge", MagicMock())
+        _set_private(sandbox_panel, "_bridge", SandboxBridge())
         sandbox_panel.sandbox_id = None
 
         input_a = cast("QLineEdit", _get_private(sandbox_panel, "_diff_instance_a_input"))
@@ -620,12 +616,7 @@ class TestSandboxPanelDiffWiringL3:
         input_a.setText("sbx-A")
         input_b.setText("")
 
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
-
-        monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _sandbox_panel_mod)
 
         _invoke(sandbox_panel, "_on_diff")
 

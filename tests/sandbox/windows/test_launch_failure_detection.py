@@ -20,7 +20,6 @@ that specific message (instead of wrapping it in the generic
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -81,6 +80,28 @@ def _make_sandbox() -> WindowsSandbox:
     return WindowsSandbox(SandboxConfig(timeout_seconds=5))
 
 
+class _RecordedProcess:
+    """Minimal stand-in for a launched sandbox-client process.
+
+    Implements only the surface :meth:`WindowsSandbox._check_startup_health`
+    touches (``poll``, ``returncode``, ``pid``), avoiding any mocking
+    framework while still behaving like the real ``Popen`` object.
+    """
+
+    def __init__(self, *, poll_result: int | None, pid: int) -> None:
+        self.returncode = poll_result
+        self.pid = pid
+        self._poll_result = poll_result
+
+    def poll(self) -> int | None:
+        """Return the canned exit code, mirroring ``Popen.poll``.
+
+        Returns:
+            int | None: The configured poll result.
+        """
+        return self._poll_result
+
+
 def _fake_process(*, poll_result: int | None, pid: int) -> Popen[bytes]:
     """Create a fake client process for startup-health tests.
 
@@ -89,13 +110,9 @@ def _fake_process(*, poll_result: int | None, pid: int) -> Popen[bytes]:
         pid: Reported process id.
 
     Returns:
-        Popen[bytes]: A MagicMock typed as the sandbox client process.
+        Popen[bytes]: A real, minimal process stand-in cast to the expected type.
     """
-    proc = MagicMock()
-    proc.poll.return_value = poll_result
-    proc.returncode = poll_result
-    proc.pid = pid
-    return cast("Popen[bytes]", proc)
+    return cast("Popen[bytes]", _RecordedProcess(poll_result=poll_result, pid=pid))
 
 
 def _detect_returns_rpc(_pid: int) -> str | None:
@@ -283,6 +300,25 @@ class TestCheckStartupHealth:
         assert probe.state.last_error is None
 
 
+class _AsyncCallRecorder:
+    """Awaitable stand-in that records invocations and optionally raises.
+
+    Used in place of an async mock to stub ``WindowsSandbox`` coroutine
+    methods: each call is recorded (for later assertion) and, when
+    ``error`` is set, raised instead of returning.
+    """
+
+    def __init__(self, *, error: BaseException | None = None) -> None:
+        self.error = error
+        self.call_count = 0
+
+    async def __call__(self, *_args: object, **_kwargs: object) -> None:
+        """Record the call and raise the configured error, if any."""
+        self.call_count += 1
+        if self.error is not None:
+            raise self.error
+
+
 class TestStartPropagatesActionableError:
     """:meth:`WindowsSandbox.start` surfaces the specific failure message."""
 
@@ -300,10 +336,10 @@ class TestStartPropagatesActionableError:
         monkeypatch.setattr(
             WindowsSandbox,
             "_start_impl",
-            AsyncMock(side_effect=SandboxError(_ERR_LAUNCH_RPC_ENDPOINT)),
+            _AsyncCallRecorder(error=SandboxError(_ERR_LAUNCH_RPC_ENDPOINT)),
         )
-        abort = AsyncMock()
-        cleanup = AsyncMock()
+        abort = _AsyncCallRecorder()
+        cleanup = _AsyncCallRecorder()
         monkeypatch.setattr(WindowsSandbox, "_abort_client", abort)
         monkeypatch.setattr(WindowsSandbox, "_cleanup", cleanup)
 
@@ -313,8 +349,8 @@ class TestStartPropagatesActionableError:
         assert str(excinfo.value) == _ERR_LAUNCH_RPC_ENDPOINT
         assert sandbox.state.status == "error"
         assert sandbox.state.last_error == _ERR_LAUNCH_RPC_ENDPOINT
-        abort.assert_awaited_once()
-        cleanup.assert_awaited_once()
+        assert abort.call_count == 1
+        assert cleanup.call_count == 1
 
     @pytest.mark.asyncio
     async def test_os_error_wrapped_in_generic_start_failed(
@@ -330,10 +366,10 @@ class TestStartPropagatesActionableError:
         monkeypatch.setattr(
             WindowsSandbox,
             "_start_impl",
-            AsyncMock(side_effect=OSError("boom")),
+            _AsyncCallRecorder(error=OSError("boom")),
         )
-        monkeypatch.setattr(WindowsSandbox, "_abort_client", AsyncMock())
-        monkeypatch.setattr(WindowsSandbox, "_cleanup", AsyncMock())
+        monkeypatch.setattr(WindowsSandbox, "_abort_client", _AsyncCallRecorder())
+        monkeypatch.setattr(WindowsSandbox, "_cleanup", _AsyncCallRecorder())
 
         with pytest.raises(SandboxError) as excinfo:
             await sandbox.start()

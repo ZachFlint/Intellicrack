@@ -35,7 +35,6 @@ import os
 import struct
 import sys
 from typing import TYPE_CHECKING, cast
-from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
@@ -191,21 +190,23 @@ class TestF0008SehWow64PointerSize:
         seh_frame_addr = 0x0000_1000
         wow64_terminal = 0xFFFFFFFF
 
-        def _fake_read_memory(address: int, size: int) -> bytes:
+        def _scripted_read_memory(address: int, size: int) -> bytes:
             del address
             read_sizes.append(size)
             return struct.pack("<II", wow64_terminal, 0xDEADBEEF)
 
-        async def _fake_read_teb(tid: int) -> dict[str, object]:
+        async def _scripted_read_teb(tid: int) -> dict[str, object]:
             del tid
             await asyncio.sleep(0)
             return {"seh_frame": seh_frame_addr}
 
-        with (
-            patch.object(bridge, _ATTR_TARGET_IS_WOW64, return_value=True),
-            patch.object(bridge, "_sync_read_memory", side_effect=_fake_read_memory),
-            patch.object(bridge, "read_teb", side_effect=_fake_read_teb),
-        ):
+        def _target_always_wow64() -> bool:
+            return True
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(bridge, _ATTR_TARGET_IS_WOW64, _target_always_wow64)
+            mp.setattr(bridge, "_sync_read_memory", _scripted_read_memory)
+            mp.setattr(bridge, "read_teb", _scripted_read_teb)
             chain = await bridge.get_seh_chain(tid=0)
 
         assert isinstance(chain, list)

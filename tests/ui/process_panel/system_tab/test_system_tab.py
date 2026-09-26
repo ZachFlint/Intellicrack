@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import asyncio
 import os
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Iterator
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, cast
-from unittest.mock import patch
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QPlainTextEdit, QTableWidget, QTableWidgetItem, QTreeWidget
@@ -504,6 +504,22 @@ def _attached_pid(tab: SystemTab) -> int | None:
 _MOD = "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async"
 
 
+@contextmanager
+def _dispatcher_replaced(runner: Callable[..., None]) -> Iterator[None]:
+    """Swap ``run_bridge_coroutine_async`` for ``runner`` for the duration of the block.
+
+    Args:
+        runner: Synchronous stand-in dispatcher built by ``_make_sync_runner``
+            or ``_make_error_capture_runner``.
+
+    Yields:
+        None: Control returns to the block while ``runner`` is installed.
+    """
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(_MOD, runner)
+        yield
+
+
 @pytest.mark.usefixtures("qapp")
 class TestPipeCloseKeepsRowOnFailure:
     """F-0020: row must not be removed before close succeeds."""
@@ -520,7 +536,7 @@ class TestPipeCloseKeepsRowOnFailure:
         calls: list[_CallRecord] = []
         runner = _make_sync_runner(calls, error_exc=exc)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_on_pipe_close")()
 
         assert len(calls) == 1, "bridge must have been called exactly once"
@@ -537,7 +553,7 @@ class TestPipeCloseKeepsRowOnFailure:
         calls: list[_CallRecord] = []
         runner = _make_sync_runner(calls)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_on_pipe_close")()
 
         assert len(calls) == 1
@@ -557,7 +573,7 @@ class TestJobInfoClearsBeforePopulate:
         calls: list[_CallRecord] = []
         runner = _make_sync_runner(calls)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_on_job_info")()
             getattr(tab, "_on_job_info")()
 
@@ -579,7 +595,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
         calls: list[_CallRecord] = []
         runner = _make_sync_runner(calls)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_refresh_privileges")()
 
         assert not calls, "no dispatcher call must occur when _attached_pid is None"
@@ -595,7 +611,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
         calls: list[_CallRecord] = []
         runner = _make_sync_runner(calls)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_on_enable_debug")()
 
         assert not calls, "no dispatcher call must occur when _attached_pid is None"
@@ -611,7 +627,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
         calls: list[_CallRecord] = []
         runner = _make_sync_runner(calls)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_refresh_services")()
 
         assert not calls, "no dispatcher call must occur when _attached_pid is None"
@@ -625,7 +641,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
         calls: list[_CallRecord] = []
         runner = _make_sync_runner(calls)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_on_read_peb")()
 
         assert not calls, "no dispatcher call must occur when _attached_pid is None"
@@ -639,7 +655,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
         calls: list[_CallRecord] = []
         runner = _make_sync_runner(calls)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_refresh_privileges")()
 
         assert not calls
@@ -658,7 +674,7 @@ class TestQueryErrorSurfacesToUser:
         errors_received: list[object] = []
         runner = _make_error_capture_runner(errors_received, error_exc)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_refresh_privileges")()
 
         assert errors_received, "on_error must have been wired and called"
@@ -674,7 +690,7 @@ class TestQueryErrorSurfacesToUser:
         errors_received: list[object] = []
         runner = _make_error_capture_runner(errors_received, error_exc)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_on_pipe_close")()
 
         assert errors_received, "on_error must have been wired and invoked"
@@ -687,7 +703,7 @@ class TestQueryErrorSurfacesToUser:
         errors_received: list[object] = []
         runner = _make_error_capture_runner(errors_received, error_exc)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_on_job_info")()
 
         assert errors_received, "on_error must have been wired and invoked"
@@ -700,7 +716,7 @@ class TestQueryErrorSurfacesToUser:
         errors_received: list[object] = []
         runner = _make_error_capture_runner(errors_received, error_exc)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_refresh_services")()
 
         assert errors_received, "on_error must have been wired and invoked"
@@ -733,7 +749,7 @@ class TestUserVisibleWarningDialogIsShown:
         calls: list[_CallRecord] = []
         runner = _make_sync_runner(calls)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_refresh_privileges")()
 
         assert not calls, "no bridge dispatch may occur when unattached"
@@ -754,7 +770,7 @@ class TestUserVisibleWarningDialogIsShown:
         calls: list[_CallRecord] = []
         runner = _make_sync_runner(calls)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_on_read_teb")()
 
         assert not calls, "no bridge dispatch may occur when no thread is selected"
@@ -772,7 +788,7 @@ class TestUserVisibleWarningDialogIsShown:
         calls: list[_CallRecord] = []
         runner = _make_sync_runner(calls)
 
-        with patch(_MOD, runner):
+        with _dispatcher_replaced(runner):
             getattr(tab, "_refresh_privileges")()
             getattr(tab, "_refresh_services")()
 

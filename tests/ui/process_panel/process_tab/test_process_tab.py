@@ -12,12 +12,13 @@ on the fixed implementation.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
-from unittest.mock import patch
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from intellicrack.bridges.process import ProcessBridge
+from intellicrack.ui.panels import async_bridge as async_bridge_module
+from intellicrack.ui.panels.process_panel import process_tab as process_tab_module
 from intellicrack.ui.panels.process_panel.process_tab import ProcessTab
 
 
@@ -204,7 +205,7 @@ def tab(qapp: QApplication, bridge: ProcessBridge) -> Generator[_TestProcessTab]
 class TestF0013InjectRequiresAttachment:
     """F-0013: _on_inject_dll must guard on _attached_pid and warn when unattached."""
 
-    def test_inject_warns_when_no_process_attached(self, tab: _TestProcessTab) -> None:
+    def test_inject_warns_when_no_process_attached(self, tab: _TestProcessTab, monkeypatch: pytest.MonkeyPatch) -> None:
         """Calling inject without attachment must show a "Not Attached" warning dialog and never dispatch the bridge.
 
         Three properties are verified against independent known-correct constants:
@@ -218,6 +219,7 @@ class TestF0013InjectRequiresAttachment:
 
         Args:
             tab: _TestProcessTab fixture (bridge is set, no PID attached).
+            monkeypatch: Pytest fixture for patching module attributes.
         """
         assert tab.get_attached_pid_state() is None
 
@@ -231,14 +233,9 @@ class TestF0013InjectRequiresAttachment:
         def _capture_bridge_dispatch(*_args: object, **_kwargs: object) -> None:
             bridge_dispatch_calls.append(_args)
 
-        with (
-            patch.object(QMessageBox, "warning", side_effect=_capture_warning),
-            patch(
-                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_logged",
-                side_effect=_capture_bridge_dispatch,
-            ),
-        ):
-            tab.invoke_on_inject_dll()
+        monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
+        monkeypatch.setattr(process_tab_module, "run_bridge_coroutine_logged", _capture_bridge_dispatch)
+        tab.invoke_on_inject_dll()
 
         assert len(warning_calls) == 1, (
             f"_on_inject_dll must show exactly one warning when no process is attached; got {len(warning_calls)}"
@@ -263,7 +260,7 @@ class TestF0013InjectRequiresAttachment:
             "_on_inject_dll must not dispatch the bridge (run_bridge_coroutine_logged) when no process is attached"
         )
 
-    def test_inject_does_not_warn_when_attached(self, tab: _TestProcessTab) -> None:
+    def test_inject_does_not_warn_when_attached(self, tab: _TestProcessTab, monkeypatch: pytest.MonkeyPatch) -> None:
         """When a process is attached, inject must not show the no-attachment warning.
 
         After attaching (setting _attached_pid), the inject path should proceed
@@ -271,6 +268,7 @@ class TestF0013InjectRequiresAttachment:
 
         Args:
             tab: _TestProcessTab fixture.
+            monkeypatch: Pytest fixture for patching module attributes.
         """
         tab.set_attached_pid_state(1234)
         warning_calls: list[tuple[Any, ...]] = []
@@ -279,14 +277,12 @@ class TestF0013InjectRequiresAttachment:
             warning_calls.append(_args)
             return QMessageBox.StandardButton.No
 
-        with (
-            patch.object(QMessageBox, "warning", side_effect=_capture_warning),
-            patch(
-                "intellicrack.ui.panels.process_panel.process_tab.QFileDialog.getOpenFileName",
-                return_value=("", ""),
-            ),
-        ):
-            tab.invoke_on_inject_dll()
+        def _fake_get_open_file_name(*_args: object, **_kwargs: object) -> tuple[str, str]:
+            return "", ""
+
+        monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
+        monkeypatch.setattr(process_tab_module.QFileDialog, "getOpenFileName", _fake_get_open_file_name)
+        tab.invoke_on_inject_dll()
 
         for call_args in warning_calls:
             if len(call_args) >= 2:
@@ -366,6 +362,7 @@ class TestF0015AttachSurfacesFailure:
     def test_attach_error_callback_shows_warning_dialog(
         self,
         tab: _TestProcessTab,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """When the bridge raises during attach, a QMessageBox warning must appear.
 
@@ -374,6 +371,7 @@ class TestF0015AttachSurfacesFailure:
 
         Args:
             tab: _TestProcessTab fixture.
+            monkeypatch: Pytest fixture for patching module attributes.
         """
         tab.set_selected_pid_state(9999)
         warning_shown: list[bool] = []
@@ -391,22 +389,18 @@ class TestF0015AttachSurfacesFailure:
             if callable(on_error):
                 on_error(RuntimeError("simulated attach failure"))
 
-        with (
-            patch(
-                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
-                side_effect=_fake_run_bridge_coroutine_async,
-            ),
-            patch.object(QMessageBox, "warning", side_effect=_capture_warning),
-        ):
-            tab.invoke_on_attach()
+        monkeypatch.setattr(async_bridge_module, "run_bridge_coroutine_async", _fake_run_bridge_coroutine_async)
+        monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
+        tab.invoke_on_attach()
 
         assert warning_shown, "_on_attach error callback must show a QMessageBox warning on failure"
 
-    def test_attach_success_sets_attached_pid(self, tab: _TestProcessTab) -> None:
+    def test_attach_success_sets_attached_pid(self, tab: _TestProcessTab, monkeypatch: pytest.MonkeyPatch) -> None:
         """When the bridge succeeds, _attached_pid must be set to the target PID.
 
         Args:
             tab: _TestProcessTab fixture.
+            monkeypatch: Pytest fixture for patching module attributes.
         """
         target_pid = 7777
         tab.set_selected_pid_state(target_pid)
@@ -420,14 +414,12 @@ class TestF0015AttachSurfacesFailure:
             if callable(on_success):
                 on_success(None)
 
-        with (
-            patch(
-                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
-                side_effect=_fake_run_bridge_coroutine_async,
-            ),
-            patch.object(QMessageBox, "information", return_value=None),
-        ):
-            tab.invoke_on_attach()
+        def _fake_information(*_args: object, **_kwargs: object) -> QMessageBox.StandardButton:
+            return QMessageBox.StandardButton.Ok
+
+        monkeypatch.setattr(async_bridge_module, "run_bridge_coroutine_async", _fake_run_bridge_coroutine_async)
+        monkeypatch.setattr(QMessageBox, "information", _fake_information)
+        tab.invoke_on_attach()
 
         assert tab.get_attached_pid_state() == target_pid, "_on_attach success callback must set _attached_pid to the attached PID"
 
@@ -440,11 +432,12 @@ class TestF0015AttachSurfacesFailure:
 class TestF0016SuspendResumeHaveErrorCallbacks:
     """F-0016: suspend and resume must surface bridge errors via warning dialogs."""
 
-    def test_suspend_error_callback_shows_warning(self, tab: _TestProcessTab) -> None:
+    def test_suspend_error_callback_shows_warning(self, tab: _TestProcessTab, monkeypatch: pytest.MonkeyPatch) -> None:
         """_on_suspend must pass an error callback that shows a warning dialog.
 
         Args:
             tab: _TestProcessTab fixture.
+            monkeypatch: Pytest fixture for patching module attributes.
         """
         tab.set_selected_pid_state(1111)
         warning_shown: list[bool] = []
@@ -462,22 +455,18 @@ class TestF0016SuspendResumeHaveErrorCallbacks:
             if callable(on_error):
                 on_error(RuntimeError("suspend failed"))
 
-        with (
-            patch(
-                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
-                side_effect=_fake_run_bridge_coroutine_async,
-            ),
-            patch.object(QMessageBox, "warning", side_effect=_capture_warning),
-        ):
-            tab.invoke_on_suspend()
+        monkeypatch.setattr(async_bridge_module, "run_bridge_coroutine_async", _fake_run_bridge_coroutine_async)
+        monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
+        tab.invoke_on_suspend()
 
         assert warning_shown, "_on_suspend must show a warning dialog when the bridge raises"
 
-    def test_resume_error_callback_shows_warning(self, tab: _TestProcessTab) -> None:
+    def test_resume_error_callback_shows_warning(self, tab: _TestProcessTab, monkeypatch: pytest.MonkeyPatch) -> None:
         """_on_resume must pass an error callback that shows a warning dialog.
 
         Args:
             tab: _TestProcessTab fixture.
+            monkeypatch: Pytest fixture for patching module attributes.
         """
         tab.set_selected_pid_state(2222)
         warning_shown: list[bool] = []
@@ -495,14 +484,9 @@ class TestF0016SuspendResumeHaveErrorCallbacks:
             if callable(on_error):
                 on_error(RuntimeError("resume failed"))
 
-        with (
-            patch(
-                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
-                side_effect=_fake_run_bridge_coroutine_async,
-            ),
-            patch.object(QMessageBox, "warning", side_effect=_capture_warning),
-        ):
-            tab.invoke_on_resume()
+        monkeypatch.setattr(async_bridge_module, "run_bridge_coroutine_async", _fake_run_bridge_coroutine_async)
+        monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
+        tab.invoke_on_resume()
 
         assert warning_shown, "_on_resume must show a warning dialog when the bridge raises"
 
@@ -518,6 +502,7 @@ class TestF0017TerminateRefreshesBothTabs:
     def test_terminate_success_triggers_tracked_refresh(
         self,
         tab: _TestProcessTab,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """After termination succeeds, _refresh_tracked must be called.
 
@@ -529,6 +514,7 @@ class TestF0017TerminateRefreshesBothTabs:
 
         Args:
             tab: _TestProcessTab fixture.
+            monkeypatch: Pytest fixture for patching module attributes.
         """
         tab.set_selected_pid_state(3333)
 
@@ -544,18 +530,13 @@ class TestF0017TerminateRefreshesBothTabs:
         before_refresh_tracked = tab.refresh_tracked_calls
         before_on_refresh = tab.on_refresh_calls
 
-        with (
-            patch(
-                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
-                side_effect=_fake_run_bridge_coroutine_async,
-            ),
-            patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Yes),
-            patch(
-                "intellicrack.ui.panels.process_panel.process_tab.QTimer.singleShot",
-                side_effect=_fire_slot,
-            ),
-        ):
-            tab.invoke_on_terminate()
+        def _fake_warning_yes(*_args: object, **_kwargs: object) -> QMessageBox.StandardButton:
+            return QMessageBox.StandardButton.Yes
+
+        monkeypatch.setattr(async_bridge_module, "run_bridge_coroutine_async", _fake_run_bridge_coroutine_async)
+        monkeypatch.setattr(QMessageBox, "warning", _fake_warning_yes)
+        monkeypatch.setattr(process_tab_module.QTimer, "singleShot", _fire_slot)
+        tab.invoke_on_terminate()
 
         assert tab.refresh_tracked_calls > before_refresh_tracked, "_on_terminate success must call _refresh_tracked"
         assert tab.on_refresh_calls > before_on_refresh, "_on_terminate success must call _on_refresh"
@@ -572,6 +553,7 @@ class TestF0018TerminateDetachesIfAttached:
     def test_terminate_attached_pid_clears_attached_state(
         self,
         tab: _TestProcessTab,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """When the terminated PID is the currently attached PID, clear attachment.
 
@@ -581,6 +563,7 @@ class TestF0018TerminateDetachesIfAttached:
 
         Args:
             tab: _TestProcessTab fixture.
+            monkeypatch: Pytest fixture for patching module attributes.
         """
         attached_pid = 5555
         tab.set_selected_pid_state(attached_pid)
@@ -595,24 +578,20 @@ class TestF0018TerminateDetachesIfAttached:
             if callable(on_success):
                 on_success(None)
 
-        with (
-            patch(
-                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
-                side_effect=_fake_run_bridge_coroutine_async,
-            ),
-            patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Yes),
-            patch(
-                "intellicrack.ui.panels.process_panel.process_tab.QTimer.singleShot",
-                side_effect=_fire_slot,
-            ),
-        ):
-            tab.invoke_on_terminate()
+        def _fake_warning_yes(*_args: object, **_kwargs: object) -> QMessageBox.StandardButton:
+            return QMessageBox.StandardButton.Yes
+
+        monkeypatch.setattr(async_bridge_module, "run_bridge_coroutine_async", _fake_run_bridge_coroutine_async)
+        monkeypatch.setattr(QMessageBox, "warning", _fake_warning_yes)
+        monkeypatch.setattr(process_tab_module.QTimer, "singleShot", _fire_slot)
+        tab.invoke_on_terminate()
 
         assert tab.get_attached_pid_state() is None, "_on_terminate must set _attached_pid = None when the attached PID is terminated"
 
     def test_terminate_unattached_pid_does_not_clear_attachment(
         self,
         tab: _TestProcessTab,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """When a non-attached PID is terminated, attachment state must not change.
 
@@ -621,6 +600,7 @@ class TestF0018TerminateDetachesIfAttached:
 
         Args:
             tab: _TestProcessTab fixture.
+            monkeypatch: Pytest fixture for patching module attributes.
         """
         attached_pid = 4444
         other_pid = 8888
@@ -636,17 +616,12 @@ class TestF0018TerminateDetachesIfAttached:
             if callable(on_success):
                 on_success(None)
 
-        with (
-            patch(
-                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
-                side_effect=_fake_run_bridge_coroutine_async,
-            ),
-            patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Yes),
-            patch(
-                "intellicrack.ui.panels.process_panel.process_tab.QTimer.singleShot",
-                side_effect=_fire_slot,
-            ),
-        ):
-            tab.invoke_on_terminate()
+        def _fake_warning_yes(*_args: object, **_kwargs: object) -> QMessageBox.StandardButton:
+            return QMessageBox.StandardButton.Yes
+
+        monkeypatch.setattr(async_bridge_module, "run_bridge_coroutine_async", _fake_run_bridge_coroutine_async)
+        monkeypatch.setattr(QMessageBox, "warning", _fake_warning_yes)
+        monkeypatch.setattr(process_tab_module.QTimer, "singleShot", _fire_slot)
+        tab.invoke_on_terminate()
 
         assert tab.get_attached_pid_state() == attached_pid, "_on_terminate must not clear _attached_pid when a different PID is terminated"

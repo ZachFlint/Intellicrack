@@ -36,9 +36,10 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, cast, override
-from unittest.mock import AsyncMock, MagicMock, patch
 
+import anthropic
 import httpx
 import httpx2
 import openai
@@ -51,7 +52,6 @@ from intellicrack.core.types import (
     Message,
     ProviderCredentials,
     ProviderError,
-    RateLimitError,
     ThinkingConfig,
     ToolChoice,
     ToolChoiceMode,
@@ -90,6 +90,9 @@ _CANCEL_REQUESTED_ATTR: str = "_cancel_requested"
 _CLIENT_ATTR: str = "_client"
 _STATS_ATTR: str = "_stats"
 _CONFIG_ATTR: str = "_config"
+_PENDING_USAGE_ATTR: str = "_pending_usage"
+_PENDING_THINKING_ATTR: str = "_pending_thinking"
+_BASE_SLEEP_TARGET: str = "intellicrack.providers.base.asyncio.sleep"
 
 _convert_tool_choice: Any = getattr(LLMProviderBase, _CONVERT_TOOL_CHOICE_ATTR)
 _convert_tools_to_openai: Any = getattr(LLMProviderBase, _CONVERT_TOOLS_OPENAI_ATTR)
@@ -139,6 +142,250 @@ def _user_messages(text: str = "Hello, world.") -> list[Message]:
         list[Message]: One-element list with a ``user`` role message.
     """
     return [Message(role="user", content=text)]
+
+
+_Handler2 = Callable[[httpx2.Request], Awaitable[httpx2.Response]]
+_Handler1 = Callable[[httpx.Request], Awaitable[httpx.Response]]
+
+
+class _HandlerTransport2(httpx2.AsyncBaseTransport):
+    """Real ``httpx2`` transport that answers every request via a handler.
+
+    Used as the network seam under the real ``openai`` / ``anthropic`` SDK
+    clients so every SDK serialisation and parsing layer runs unmodified.
+    """
+
+    def __init__(self, handler: _Handler2) -> None:
+        """Store the per-request handler.
+
+        Args:
+            handler: Coroutine function producing the response for a request.
+        """
+        self._handler = handler
+
+    @override
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
+        """Delegate the request to the configured handler.
+
+        Args:
+            request: Outgoing request built by the SDK.
+
+        Returns:
+            httpx2.Response: The handler's response.
+        """
+        return await self._handler(request)
+
+
+class _HandlerTransport1(httpx.AsyncBaseTransport):
+    """Real ``httpx`` transport that answers every request via a handler.
+
+    Used under the real ``httpx.AsyncClient`` (OpenRouter) and the real
+    ``google.genai`` client.
+    """
+
+    def __init__(self, handler: _Handler1) -> None:
+        """Store the per-request handler.
+
+        Args:
+            handler: Coroutine function producing the response for a request.
+        """
+        self._handler = handler
+
+    @override
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        """Delegate the request to the configured handler.
+
+        Args:
+            request: Outgoing request built by the client.
+
+        Returns:
+            httpx.Response: The handler's response.
+        """
+        return await self._handler(request)
+
+
+class _ConnectionErrorByteStream(httpx2.AsyncByteStream):
+    """Response body stream that fails with ``ConnectionError`` on first read."""
+
+    @override
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        """Raise a transport failure as soon as the body is consumed.
+
+        Yields:
+            bytes: Never yields; the first iteration raises.
+
+        Raises:
+            ConnectionError: Always, carrying :data:`_KABOOM_MESSAGE`.
+        """
+        raise ConnectionError(_KABOOM_MESSAGE)
+        yield b""
+
+
+def _json_response2(status_code: int, body: dict[str, object]) -> httpx2.Response:
+    """Build a JSON ``httpx2`` response.
+
+    Args:
+        status_code: HTTP status code.
+        body: JSON-serialisable body.
+
+    Returns:
+        httpx2.Response: Response with ``content-type: application/json``.
+    """
+    return httpx2.Response(
+        status_code,
+        content=json.dumps(body).encode(),
+        headers={"content-type": "application/json"},
+    )
+
+
+def _json_response1(status_code: int, body: dict[str, object]) -> httpx.Response:
+    """Build a JSON ``httpx`` response.
+
+    Args:
+        status_code: HTTP status code.
+        body: JSON-serialisable body.
+
+    Returns:
+        httpx.Response: Response with ``content-type: application/json``.
+    """
+    return httpx.Response(
+        status_code,
+        content=json.dumps(body).encode(),
+        headers={"content-type": "application/json"},
+    )
+
+
+def _chat_completion_body(content: str, model: str) -> dict[str, object]:
+    """Build an OpenAI Chat Completions response body.
+
+    Args:
+        content: Assistant message text.
+        model: Model identifier echoed in the body.
+
+    Returns:
+        dict[str, object]: A ``chat.completion`` object per the OpenAI schema.
+    """
+    return {
+        "id": "chatcmpl-audit",
+        "object": "chat.completion",
+        "created": 0,
+        "model": model,
+        "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+    }
+
+
+def _anthropic_message_body(text: str) -> dict[str, object]:
+    """Build an Anthropic Messages API response body.
+
+    Args:
+        text: Assistant text block content.
+
+    Returns:
+        dict[str, object]: A ``message`` object per the Anthropic schema.
+    """
+    return {
+        "id": "msg_audit",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-opus-4-7",
+        "content": [{"type": "text", "text": text}],
+        "stop_reason": "end_turn",
+        "stop_sequence": None,
+        "usage": {
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 0,
+        },
+    }
+
+
+def _openai_sdk_client(handler: _Handler2, base_url: str | None = None) -> openai.AsyncOpenAI:
+    """Build a real ``openai.AsyncOpenAI`` client over a handler transport.
+
+    SDK-level retries are disabled so any retry observed by a test is the
+    provider's own ``_retry_with_backoff``.
+
+    Args:
+        handler: Per-request handler for the transport seam.
+        base_url: Optional API base URL (e.g. Grok's).
+
+    Returns:
+        openai.AsyncOpenAI: The configured client.
+    """
+    return openai.AsyncOpenAI(
+        api_key="test-key",
+        base_url=base_url,
+        max_retries=0,
+        http_client=httpx2.AsyncClient(transport=_HandlerTransport2(handler)),
+    )
+
+
+def _anthropic_sdk_client(handler: _Handler2) -> anthropic.AsyncAnthropic:
+    """Build a real ``anthropic.AsyncAnthropic`` client over a handler transport.
+
+    Args:
+        handler: Per-request handler for the transport seam.
+
+    Returns:
+        anthropic.AsyncAnthropic: The configured client with SDK retries off.
+    """
+    return anthropic.AsyncAnthropic(
+        api_key="test-key",
+        max_retries=0,
+        http_client=httpx2.AsyncClient(transport=_HandlerTransport2(handler)),
+    )
+
+
+def _genai_client(handler: _Handler1) -> GenaiClient:
+    """Build a real ``google.genai`` client over a handler transport.
+
+    Args:
+        handler: Per-request handler for the transport seam.
+
+    Returns:
+        GenaiClient: The configured client.
+    """
+    return GenaiClient(
+        api_key="test-key",
+        http_options=HttpOptions(httpx_async_client=httpx.AsyncClient(transport=_HandlerTransport1(handler))),
+    )
+
+
+class _BackoffSleepRecorder:
+    """Replacement for ``asyncio.sleep`` that records delays without waiting.
+
+    Each call still yields to the event loop once (via the original
+    ``asyncio.sleep(0)``) so scheduling semantics are preserved.
+    """
+
+    def __init__(self) -> None:
+        """Capture the original sleep and initialise the delay log."""
+        self._original_sleep = asyncio.sleep
+        self.delays: list[float] = []
+
+    async def __call__(self, delay: float, result: object = None) -> object:
+        """Record ``delay`` and yield once instead of sleeping.
+
+        Args:
+            delay: Requested sleep duration in seconds.
+            result: Value returned to the caller, mirroring ``asyncio.sleep``.
+
+        Returns:
+            object: ``result`` unchanged.
+        """
+        self.delays.append(delay)
+        await self._original_sleep(0)
+        return result
+
+    def backoff_delays(self) -> list[float]:
+        """Return the recorded delays that are real backoff waits.
+
+        Returns:
+            list[float]: Delays of at least the base backoff of 1 second.
+        """
+        return [delay for delay in self.delays if delay >= 1.0]
 
 
 # ---------------------------------------------------------------------------
@@ -338,38 +585,54 @@ def test_f0005_enable_cache_disabled_leaves_payload_untouched() -> None:
 async def test_f0010_fetch_all_models_forwards_limit() -> None:
     """``_fetch_all_models`` must pass ``limit`` to every page call.
 
-    The method now accepts a keyword-only ``limit`` and the fake
-    client's ``list`` is called with it on every iteration (not just
-    the probe).
+    The method now accepts a keyword-only ``limit`` and the real
+    ``anthropic.AsyncAnthropic`` client sends it as a query parameter on
+    every ``GET /v1/models`` page request (not just the probe).  The
+    requests are captured at the HTTP transport seam.
     """
     provider = AnthropicProvider()
-    fake_client = MagicMock()
+    pages: list[dict[str, object]] = [
+        {
+            "data": [
+                {
+                    "type": "model",
+                    "id": "claude-opus-4-7",
+                    "display_name": "Opus 4.7",
+                    "created_at": "2026-01-01T00:00:00Z",
+                },
+            ],
+            "has_more": True,
+            "first_id": "claude-opus-4-7",
+            "last_id": "claude-opus-4-7",
+        },
+        {
+            "data": [
+                {
+                    "type": "model",
+                    "id": "claude-sonnet-4-6",
+                    "display_name": "Sonnet 4.6",
+                    "created_at": "2026-01-01T00:00:00Z",
+                },
+            ],
+            "has_more": False,
+            "first_id": "claude-sonnet-4-6",
+            "last_id": "claude-sonnet-4-6",
+        },
+    ]
+    list_calls: list[dict[str, str]] = []
 
-    page_one = MagicMock()
-    page_one.data = [MagicMock(id="claude-opus-4-7", display_name="Opus 4.7")]
-    page_one.has_more = True
-    page_one.last_id = "claude-opus-4-7"
-
-    page_two = MagicMock()
-    page_two.data = [MagicMock(id="claude-sonnet-4-6", display_name="Sonnet 4.6")]
-    page_two.has_more = False
-    page_two.last_id = "claude-sonnet-4-6"
-
-    list_calls: list[dict[str, object]] = []
-
-    async def _list(**kwargs: object) -> object:
-        list_calls.append(kwargs)
-        page_index = len(list_calls)
+    async def _serve_models_page(request: httpx2.Request) -> httpx2.Response:
+        list_calls.append(dict(request.url.params))
         await asyncio.sleep(0)
-        return page_one if page_index == 1 else page_two
+        return _json_response2(200, pages[min(len(list_calls), len(pages)) - 1])
 
-    fake_client.models.list = _list
-    setattr(provider, _CLIENT_ATTR, fake_client)
+    setattr(provider, _CLIENT_ATTR, _anthropic_sdk_client(_serve_models_page))
 
     fetch_all = getattr(provider, _FETCH_ALL_MODELS_ATTR)
     models = await fetch_all(limit=5)
     assert len(models) == 2
-    assert all(call["limit"] == 5 for call in list_calls)
+    assert len(list_calls) == 2
+    assert all(call["limit"] == "5" for call in list_calls)
     assert "after_id" not in list_calls[0]
     assert list_calls[1]["after_id"] == "claude-opus-4-7"
 
@@ -638,27 +901,19 @@ async def test_f0002_openai_o_series_uses_max_completion_tokens_and_temp_1() -> 
     OpenAI rejects o-series requests that send ``max_tokens`` (legacy field)
     or any temperature other than ``1.0``.  The bridge must dispatch
     ``max_completion_tokens`` and pin temperature when ``reasoning_effort``
-    is active.
+    is active.  The serialised request body is captured at the HTTP
+    transport seam under the real ``openai.AsyncOpenAI`` client.
     """
     provider = OpenAIProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    provider.client = fake_client
-
     captured_kwargs: list[dict[str, object]] = []
 
-    async def _capture(**kwargs: object) -> object:
+    async def _capture(request: httpx2.Request) -> httpx2.Response:
         await asyncio.sleep(0)
-        captured_kwargs.append(dict(kwargs))
-        completion = MagicMock()
-        completion.choices = [MagicMock()]
-        completion.choices[0].message = MagicMock(content="ok", tool_calls=None)
-        completion.usage = MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
-        return completion
+        captured_kwargs.append(cast("dict[str, object]", json.loads(request.content)))
+        return _json_response2(200, _chat_completion_body("ok", "o4-mini"))
 
-    fake_client.chat = MagicMock()
-    fake_client.chat.completions = MagicMock()
-    fake_client.chat.completions.create = _capture
+    provider.client = _openai_sdk_client(_capture)
 
     provider.set_capability_override("o4-mini", CapabilityOverride(dialect=ApiDialect.CHAT_COMPLETIONS))
     await provider.chat(
@@ -736,23 +991,14 @@ async def test_f0003_openai_chat_populates_current_task() -> None:
     """
     provider = OpenAIProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    provider.client = fake_client
-
     captured: list[asyncio.Task[object] | None] = []
 
-    async def _slow_call(**_: object) -> object:
+    async def _slow_call(_request: httpx2.Request) -> httpx2.Response:
         captured.append(getattr(provider, _CURRENT_TASK_ATTR))
         await asyncio.sleep(0.05)
-        completion = MagicMock()
-        completion.choices = [MagicMock()]
-        completion.choices[0].message = MagicMock(content="ok", tool_calls=None)
-        completion.usage = MagicMock(prompt_tokens=1, completion_tokens=1, total_tokens=2)
-        return completion
+        return _json_response2(200, _chat_completion_body("ok", "gpt-4o"))
 
-    fake_client.chat = MagicMock()
-    fake_client.chat.completions = MagicMock()
-    fake_client.chat.completions.create = _slow_call
+    provider.client = _openai_sdk_client(_slow_call)
 
     response, _calls = await provider.chat(
         messages=_user_messages(),
@@ -781,23 +1027,16 @@ async def test_f0003_anthropic_chat_populates_current_task() -> None:
     """
     provider = AnthropicProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    setattr(provider, _CLIENT_ATTR, fake_client)
-
     in_flight = asyncio.Event()
     release = asyncio.Event()
     captured_task: list[object] = []
 
-    async def _slow_create(**_: object) -> object:
+    async def _slow_create(_request: httpx2.Request) -> httpx2.Response:
         in_flight.set()
         await release.wait()
-        msg = MagicMock()
-        msg.content = [MagicMock(type="text", text="done")]
-        msg.usage = MagicMock(input_tokens=1, output_tokens=1, cache_creation_input_tokens=0, cache_read_input_tokens=0)
-        return msg
+        return _json_response2(200, _anthropic_message_body("done"))
 
-    fake_client.messages = MagicMock()
-    fake_client.messages.create = _slow_create
+    setattr(provider, _CLIENT_ATTR, _anthropic_sdk_client(_slow_create))
 
     async def _chat_then_observe() -> None:
         await in_flight.wait()
@@ -831,18 +1070,17 @@ def test_f0008_orchestrator_records_provider_usage() -> None:
 
     The unit constructs the helper directly and asserts that the
     counters land in :class:`OrchestratorStats` and the response
-    message inherits the captured ``thinking_content``.
+    message inherits the captured ``thinking_content``.  A real
+    :class:`AnthropicProvider` is used with its pending usage and thinking
+    buffers populated exactly as a completed ``chat`` call leaves them.
     """
-    fake_provider = MagicMock(spec=LLMProviderBase)
-    fake_provider.name = MagicMock()
-    fake_provider.name.value = "anthropic"
-    fake_provider.get_pending_usage.return_value = UsageInfo(
-        prompt_tokens=120,
-        completion_tokens=84,
-        total_tokens=204,
+    provider = AnthropicProvider()
+    setattr(
+        provider,
+        _PENDING_USAGE_ATTR,
+        UsageInfo(prompt_tokens=120, completion_tokens=84, total_tokens=204),
     )
-    fake_provider.get_pending_thinking.return_value = ["First thought.", "Second thought."]
-    fake_provider.get_pending_reasoning.return_value = []
+    setattr(provider, _PENDING_THINKING_ATTR, ["First thought.", "Second thought."])
 
     response = Message(role="assistant", content="hi")
 
@@ -851,7 +1089,7 @@ def test_f0008_orchestrator_records_provider_usage() -> None:
     setattr(orchestrator, _STATS_ATTR, OrchestratorStats())
     setattr(orchestrator, _CONFIG_ATTR, config)
     record = getattr(orchestrator, _RECORD_USAGE_ATTR)
-    record(provider=fake_provider, response=response)
+    record(provider=provider, response=response)
 
     stats: OrchestratorStats = getattr(orchestrator, _STATS_ATTR)
     assert stats.provider_prompt_tokens == 120
@@ -859,6 +1097,8 @@ def test_f0008_orchestrator_records_provider_usage() -> None:
     assert stats.provider_total_tokens == 204
     assert stats.thinking_blocks_collected == 2
     assert response.thinking_content == "First thought.\n\nSecond thought."
+    assert provider.get_pending_usage() is None, "Pending usage must be drained"
+    assert provider.get_pending_thinking() == [], "Pending thinking must be drained"
 
 
 # ---------------------------------------------------------------------------
@@ -873,22 +1113,21 @@ async def test_f0006_openai_chat_stream_reraises_on_cancel_and_error() -> None:
     Previously the stream loop only re-raised when ``cancel_requested``
     was ``False``.  After the fix the outer ``except`` always raises a
     typed :class:`ProviderError`, even when the cancel flag is set.
+    The real ``openai.AsyncOpenAI`` client receives a 200 SSE response
+    whose body stream fails with ``ConnectionError`` on first read.
     """
     provider = OpenAIProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    provider.client = fake_client
 
-    class _Stream:
-        def __aiter__(self) -> _Stream:
-            return self
+    async def _failing_sse(_request: httpx2.Request) -> httpx2.Response:
+        await asyncio.sleep(0)
+        return httpx2.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            stream=_ConnectionErrorByteStream(),
+        )
 
-        async def __anext__(self) -> object:
-            raise ConnectionError(_KABOOM_MESSAGE)
-
-    fake_client.chat = MagicMock()
-    fake_client.chat.completions = MagicMock()
-    fake_client.chat.completions.create = AsyncMock(return_value=_Stream())
+    provider.client = _openai_sdk_client(_failing_sse)
 
     async def _consume() -> None:
         setattr(provider, _CANCEL_REQUESTED_ATTR, True)
@@ -915,20 +1154,17 @@ async def test_f0006_openrouter_chat_stream_reraises_on_cancel_and_error() -> No
     Previously ``if not self._cancel_requested: raise`` swallowed the
     transport error when the cancel flag was set.  The fix always raises
     :class:`ProviderError` so real connection failures are surfaced.
+    The real ``httpx.AsyncClient`` transport raises ``ConnectionError``
+    when the stream request is sent.
     """
     provider = OpenRouterProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    provider.client = fake_client
 
-    class _FailCtx:
-        async def __aenter__(self) -> object:
-            raise ConnectionError(_KABOOM_MESSAGE)
+    async def _refuse_connection(_request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(0)
+        raise ConnectionError(_KABOOM_MESSAGE)
 
-        async def __aexit__(self, *_: object) -> bool:
-            return False
-
-    fake_client.stream = MagicMock(return_value=_FailCtx())
+    provider.client = httpx.AsyncClient(transport=_HandlerTransport1(_refuse_connection))
 
     async def _consume() -> None:
         setattr(provider, _CANCEL_REQUESTED_ATTR, True)
@@ -948,23 +1184,22 @@ async def test_f0006_grok_chat_stream_reraises_on_cancel_and_error() -> None:
     """Grok stream re-raises transport errors even when cancel flag is set.
 
     Previously ``if not self._cancel_requested: raise`` swallowed the
-    error.  The fix always raises :class:`ProviderError`.
+    error.  The fix always raises :class:`ProviderError`.  The real
+    ``openai.AsyncOpenAI`` client (Grok base URL) receives a 200 SSE
+    response whose body stream fails with ``ConnectionError``.
     """
     provider = GrokProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    provider.client = fake_client
 
-    class _ErrStream:
-        def __aiter__(self) -> _ErrStream:
-            return self
+    async def _failing_sse(_request: httpx2.Request) -> httpx2.Response:
+        await asyncio.sleep(0)
+        return httpx2.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            stream=_ConnectionErrorByteStream(),
+        )
 
-        async def __anext__(self) -> object:
-            raise ConnectionError(_KABOOM_MESSAGE)
-
-    fake_client.chat = MagicMock()
-    fake_client.chat.completions = MagicMock()
-    fake_client.chat.completions.create = AsyncMock(return_value=_ErrStream())
+    provider.client = _openai_sdk_client(_failing_sse, base_url=GrokProvider.BASE_URL)
 
     async def _consume() -> None:
         setattr(provider, _CANCEL_REQUESTED_ATTR, True)
@@ -985,18 +1220,18 @@ async def test_f0006_anthropic_chat_stream_reraises_on_cancel_and_error() -> Non
 
     Previously ``if not self._cancel_requested: raise`` in the
     ``except (ConnectionError, ...)`` clause swallowed errors during
-    cancellation.  The fix always raises :class:`ProviderError`.
+    cancellation.  The fix always raises :class:`ProviderError`.  The
+    real ``anthropic.AsyncAnthropic`` client's transport raises
+    ``ConnectionError`` when the stream request is sent.
     """
     provider = AnthropicProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    setattr(provider, _CLIENT_ATTR, fake_client)
 
-    stream_ctx = MagicMock()
-    stream_ctx.__aenter__ = AsyncMock(side_effect=ConnectionError(_KABOOM_MESSAGE))
-    stream_ctx.__aexit__ = AsyncMock(return_value=False)
-    fake_client.messages = MagicMock()
-    fake_client.messages.stream = MagicMock(return_value=stream_ctx)
+    async def _refuse_connection(_request: httpx2.Request) -> httpx2.Response:
+        await asyncio.sleep(0)
+        raise ConnectionError(_KABOOM_MESSAGE)
+
+    setattr(provider, _CLIENT_ATTR, _anthropic_sdk_client(_refuse_connection))
 
     async def _consume() -> None:
         setattr(provider, _CANCEL_REQUESTED_ATTR, True)
@@ -1020,16 +1255,12 @@ async def test_f0006_google_chat_stream_reraises_on_cancel_and_error() -> None:
     """
     provider = GoogleProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    provider.client = fake_client
 
-    async def _raise_stream(*_args: object, **_kwargs: object) -> object:
+    async def _refuse_connection(_request: httpx.Request) -> httpx.Response:
         await asyncio.sleep(0)
         raise ConnectionError(_KABOOM_MESSAGE)
 
-    fake_client.aio = MagicMock()
-    fake_client.aio.models = MagicMock()
-    fake_client.aio.models.generate_content_stream = _raise_stream
+    provider.client = _genai_client(_refuse_connection)
 
     async def _consume() -> None:
         setattr(provider, _CANCEL_REQUESTED_ATTR, True)
@@ -1056,26 +1287,19 @@ async def test_f0002_openai_o_series_pins_temperature_without_thinking() -> None
     The o-series API constraint on temperature applies to the model itself,
     not to the reasoning_effort parameter.  A request without thinking but
     targeting o4-mini must still pin temperature to 1.0 or the API returns
-    HTTP 400.
+    HTTP 400.  The serialised request body is captured at the HTTP
+    transport seam under the real ``openai.AsyncOpenAI`` client.
     """
     provider = OpenAIProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    provider.client = fake_client
     captured_kwargs: list[dict[str, object]] = []
 
-    async def _capture(**kwargs: object) -> object:
+    async def _capture(request: httpx2.Request) -> httpx2.Response:
         await asyncio.sleep(0)
-        captured_kwargs.append(dict(kwargs))
-        completion = MagicMock()
-        completion.choices = [MagicMock()]
-        completion.choices[0].message = MagicMock(content="ok", tool_calls=None)
-        completion.usage = MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
-        return completion
+        captured_kwargs.append(cast("dict[str, object]", json.loads(request.content)))
+        return _json_response2(200, _chat_completion_body("ok", "o4-mini"))
 
-    fake_client.chat = MagicMock()
-    fake_client.chat.completions = MagicMock()
-    fake_client.chat.completions.create = _capture
+    provider.client = _openai_sdk_client(_capture)
 
     provider.set_capability_override("o4-mini", CapabilityOverride(dialect=ApiDialect.CHAT_COMPLETIONS))
     await provider.chat(
@@ -1100,161 +1324,167 @@ async def test_f0002_openai_o_series_pins_temperature_without_thinking() -> None
 
 
 @pytest.mark.asyncio
-async def test_f0004_grok_retries_on_transient_rate_limit() -> None:
+async def test_f0004_grok_retries_on_transient_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     """Grok ``chat`` retries once on a transient ``RateLimitError``.
 
-    Drives the real :meth:`GrokProvider.chat` against a fake transport
-    boundary that raises :class:`RateLimitError` on the first call and
-    returns a valid completion on the second.  The independent oracle is
-    the invocation counter: exactly two transport calls must occur and
-    the returned :class:`Message` must carry the expected content.  If
+    Drives the real :meth:`GrokProvider.chat` through the real
+    ``openai.AsyncOpenAI`` client (SDK retries disabled) against an HTTP
+    transport seam that answers the first request with HTTP 429 and the
+    second with a valid completion.  The provider translates the 429 into
+    :class:`RateLimitError`.  The independent oracle is the invocation
+    counter: exactly two transport calls must occur and the returned
+    :class:`Message` must carry the expected content.  If
     ``_retry_with_backoff`` were removed from ``GrokProvider.chat``, the
     first ``RateLimitError`` would propagate uncaught and the test would
     fail with that exception instead of reaching the assertion.
 
-    ``asyncio.sleep`` is patched to a no-op so backoff delays do not slow
-    the test suite.
+    ``asyncio.sleep`` in the provider base is replaced with a recorder so
+    backoff delays do not slow the test suite; exactly one backoff wait
+    must be recorded.
     """
-    rate_limit_msg = "grok transient rate limit"
     call_count = 0
 
-    async def _create_with_one_failure(**_kwargs: object) -> object:
+    async def _create_with_one_failure(_request: httpx2.Request) -> httpx2.Response:
         nonlocal call_count
         call_count += 1
-        if call_count == 1:
-            raise RateLimitError(rate_limit_msg)
         await asyncio.sleep(0)
-        completion = MagicMock()
-        completion.choices = [MagicMock()]
-        completion.choices[0].message = MagicMock(content="grok-retried-ok", tool_calls=None)
-        completion.usage = MagicMock(prompt_tokens=5, completion_tokens=3, total_tokens=8)
-        return completion
+        if call_count == 1:
+            return _json_response2(
+                429,
+                {"error": {"message": "grok transient rate limit", "type": "rate_limit_error", "code": None}},
+            )
+        return _json_response2(200, _chat_completion_body("grok-retried-ok", "grok-3"))
 
     provider = GrokProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    fake_client.chat = MagicMock()
-    fake_client.chat.completions = MagicMock()
-    fake_client.chat.completions.create = _create_with_one_failure
-    provider.client = fake_client
+    provider.client = _openai_sdk_client(_create_with_one_failure, base_url=GrokProvider.BASE_URL)
 
-    with patch("intellicrack.providers.base.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-        mock_sleep.return_value = None
-        response, _ = await provider.chat(
-            messages=_user_messages("hello"),
-            model="grok-3",
-            max_tokens=64,
-        )
+    sleep_recorder = _BackoffSleepRecorder()
+    monkeypatch.setattr(_BASE_SLEEP_TARGET, sleep_recorder)
+    response, _ = await provider.chat(
+        messages=_user_messages("hello"),
+        model="grok-3",
+        max_tokens=64,
+    )
 
     assert call_count == 2, f"Grok must retry once: expected 2 calls, got {call_count}"
     assert response.content == "grok-retried-ok"
     assert response.role == "assistant"
+    assert len(sleep_recorder.backoff_delays()) == 1
 
 
 @pytest.mark.asyncio
-async def test_f0004_openrouter_retries_on_transient_rate_limit() -> None:
+async def test_f0004_openrouter_retries_on_transient_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     """OpenRouter ``chat`` retries once on a transient ``RateLimitError``.
 
-    Drives the real :meth:`OpenRouterProvider.chat` against a fake httpx
-    transport boundary that raises :class:`RateLimitError` on the first
-    call and returns a valid JSON response on the second.  The independent
+    Drives the real :meth:`OpenRouterProvider.chat` through a real
+    ``httpx.AsyncClient`` whose transport answers the first request with
+    HTTP 429 and the second with a valid JSON completion.  The provider
+    translates the 429 into :class:`RateLimitError`.  The independent
     oracle is the invocation counter: exactly two transport calls must
-    occur and the returned :class:`Message` must carry the expected content.
-    If ``_retry_with_backoff`` were removed from ``OpenRouterProvider.chat``,
-    the first ``RateLimitError`` would propagate uncaught.
+    occur and the returned :class:`Message` must carry the expected
+    content.  If ``_retry_with_backoff`` were removed from
+    ``OpenRouterProvider.chat``, the first ``RateLimitError`` would
+    propagate uncaught.
 
-    ``asyncio.sleep`` is patched to a no-op so backoff delays do not slow
-    the test suite.
+    ``asyncio.sleep`` in the provider base is replaced with a recorder so
+    backoff delays do not slow the test suite; exactly one backoff wait
+    must be recorded.
     """
-    rate_limit_msg = "openrouter transient rate limit"
     call_count = 0
 
-    async def _post_with_one_failure(*_args: object, **_kwargs: object) -> object:
+    async def _post_with_one_failure(_request: httpx.Request) -> httpx.Response:
         nonlocal call_count
         call_count += 1
-        if call_count == 1:
-            raise RateLimitError(rate_limit_msg)
         await asyncio.sleep(0)
-        resp = MagicMock()
-        resp.status_code = 200
-        resp.raise_for_status = MagicMock()
-        resp.json.return_value = {
-            "choices": [{"message": {"content": "openrouter-retried-ok"}}],
-            "usage": {"prompt_tokens": 5, "completion_tokens": 3, "total_tokens": 8},
-        }
-        return resp
+        if call_count == 1:
+            return _json_response1(429, {"error": {"message": "openrouter transient rate limit", "code": 429}})
+        return _json_response1(
+            200,
+            {
+                "choices": [{"message": {"content": "openrouter-retried-ok"}}],
+                "usage": {"prompt_tokens": 5, "completion_tokens": 3, "total_tokens": 8},
+            },
+        )
 
     provider = OpenRouterProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    fake_client.post = AsyncMock(side_effect=_post_with_one_failure)
-    provider.client = fake_client
+    provider.client = httpx.AsyncClient(transport=_HandlerTransport1(_post_with_one_failure))
 
-    with patch("intellicrack.providers.base.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-        mock_sleep.return_value = None
-        response, _ = await provider.chat(
-            messages=_user_messages("hello"),
-            model="openai/gpt-4o",
-            max_tokens=64,
-        )
+    sleep_recorder = _BackoffSleepRecorder()
+    monkeypatch.setattr(_BASE_SLEEP_TARGET, sleep_recorder)
+    response, _ = await provider.chat(
+        messages=_user_messages("hello"),
+        model="openai/gpt-4o",
+        max_tokens=64,
+    )
 
     assert call_count == 2, f"OpenRouter must retry once: expected 2 calls, got {call_count}"
     assert response.content == "openrouter-retried-ok"
     assert response.role == "assistant"
+    assert len(sleep_recorder.backoff_delays()) == 1
 
 
 @pytest.mark.asyncio
-async def test_f0004_google_retries_on_transient_rate_limit() -> None:
+async def test_f0004_google_retries_on_transient_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     """Google ``chat`` retries once on a transient ``RateLimitError``.
 
     Drives the real :meth:`GoogleProvider.chat` (which delegates to
-    ``_run_google_chat``) against a fake ``generate_content`` transport
-    boundary that raises :class:`RateLimitError` on the first call and
-    returns a valid response on the second.  The independent oracle is
-    the invocation counter: exactly two transport calls must occur and
-    the returned :class:`Message` must carry the expected content.  If
-    ``_retry_with_backoff`` were removed from ``_run_google_chat``, the
-    first ``RateLimitError`` would propagate uncaught.
+    ``_run_google_chat``) through the real ``google.genai`` client whose
+    HTTP transport answers the first ``generateContent`` request with
+    HTTP 429 and the second with a valid response.  ``_call_generate_content``
+    translates the 429 into :class:`RateLimitError`.  The independent
+    oracle is the invocation counter: exactly two transport calls must
+    occur and the returned :class:`Message` must carry the expected
+    content.  If ``_retry_with_backoff`` were removed from
+    ``_run_google_chat``, the first ``RateLimitError`` would propagate
+    uncaught.
 
-    ``asyncio.sleep`` is patched to a no-op so backoff delays do not slow
-    the test suite.
+    ``asyncio.sleep`` in the provider base is replaced with a recorder so
+    backoff delays do not slow the test suite; exactly one backoff wait
+    must be recorded.
     """
-    rate_limit_msg = "google transient rate limit"
     call_count = 0
 
-    async def _generate_with_one_failure(**_kwargs: object) -> object:
+    async def _generate_with_one_failure(_request: httpx.Request) -> httpx.Response:
         nonlocal call_count
         call_count += 1
-        if call_count == 1:
-            raise RateLimitError(rate_limit_msg)
         await asyncio.sleep(0)
-        resp = MagicMock()
-        resp.text = "google-retried-ok"
-        resp.function_calls = None
-        resp.candidates = []
-        resp.prompt_feedback = None
-        resp.usage_metadata = None
-        return resp
+        if call_count == 1:
+            return _json_response1(
+                429,
+                {"error": {"code": 429, "message": "google transient rate limit", "status": "RESOURCE_EXHAUSTED"}},
+            )
+        return _json_response1(
+            200,
+            {
+                "candidates": [
+                    {
+                        "content": {"parts": [{"text": "google-retried-ok"}], "role": "model"},
+                        "finishReason": "STOP",
+                        "index": 0,
+                    },
+                ],
+                "usageMetadata": {"promptTokenCount": 3, "candidatesTokenCount": 2, "totalTokenCount": 5},
+            },
+        )
 
     provider = GoogleProvider()
     provider.connected = True
-    fake_client = MagicMock()
-    fake_client.aio = MagicMock()
-    fake_client.aio.models = MagicMock()
-    fake_client.aio.models.generate_content = AsyncMock(side_effect=_generate_with_one_failure)
-    provider.client = fake_client
+    provider.client = _genai_client(_generate_with_one_failure)
 
-    with patch("intellicrack.providers.base.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-        mock_sleep.return_value = None
-        response, _ = await provider.chat(
-            messages=_user_messages("hello"),
-            model="gemini-2.0-flash",
-            max_tokens=64,
-        )
+    sleep_recorder = _BackoffSleepRecorder()
+    monkeypatch.setattr(_BASE_SLEEP_TARGET, sleep_recorder)
+    response, _ = await provider.chat(
+        messages=_user_messages("hello"),
+        model="gemini-2.0-flash",
+        max_tokens=64,
+    )
 
     assert call_count == 2, f"Google must retry once: expected 2 calls, got {call_count}"
     assert response.content == "google-retried-ok"
     assert response.role == "assistant"
+    assert len(sleep_recorder.backoff_delays()) == 1
 
 
 # ---------------------------------------------------------------------------
