@@ -17,7 +17,7 @@ attrs==26.1.0
 autopep8==2.3.2
 babel==2.18.0
 backports-zstd==1.6.0
-backrefs==7.0
+backrefs==8.0
 bandit==1.9.4
 basedpyright==1.40.1
 bitsandbytes==0.50.2
