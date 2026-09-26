@@ -35,6 +35,7 @@ from urllib.parse import urlsplit
 
 from intellicrack.core.json_payload import is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
+from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.capabilities import ApiDialect, CapabilityOverride
 from intellicrack.providers.dialects.base import ToolNameStyle, headers_receiving_api_key
 from intellicrack.providers.ids import api_key_env_var, normalize_provider_id
@@ -48,6 +49,28 @@ LOCAL_HOST_SUFFIXES: Final[tuple[str, ...]] = (".localhost", ".local", ".interna
 
 LOCAL_HOST_NAMES: Final[frozenset[str]] = frozenset({"localhost", "ip6-localhost", "ip6-loopback"})
 """Host names treated as local for the plaintext-transport rule."""
+
+BUILTIN_DIALECT_API_BASES: Final[dict[str, str]] = {
+    provider_ids.ANTHROPIC: "https://api.anthropic.com",
+    provider_ids.OPENAI: "https://api.openai.com/v1",
+    provider_ids.GOOGLE: "https://generativelanguage.googleapis.com",
+    provider_ids.OLLAMA: "http://localhost:11434/v1",
+    provider_ids.HUGGINGFACE: "https://router.huggingface.co/v1",
+}
+"""Where a copy of a built-in provider sends its dialect's requests.
+
+A built-in provider talks to its service through a dedicated SDK client, so
+its preset records the SDK's own notion of a base URL -- or none at all when
+the SDK default applies. A duplicated built-in is an ordinary instance that
+speaks its dialect directly, and each dialect resolves its paths relative to
+the base URL: ``chat/completions`` and ``models`` for Chat Completions,
+``v1/messages`` and ``v1/models`` for Messages, ``v1beta/models/...`` for
+Gemini. These are the base URLs those relative paths need for each built-in
+whose preset base URL cannot serve them: OpenAI's ``/v1`` root, Anthropic's
+and Gemini's hosts, Ollama's OpenAI-compatible ``/v1`` root, and the
+HuggingFace router's OpenAI-compatible ``/v1`` root (the preset still names
+the retired ``api-inference.huggingface.co`` host).
+"""
 
 
 class TransportRisk(enum.Enum):
@@ -168,15 +191,22 @@ class ProviderInstance:
         """
         return classify_transport(self.api_base)
 
-    def may_send_api_key(self) -> bool:
+    def may_send_api_key(self, api_base: str | None = None) -> bool:
         """Report whether this instance's key may be attached to a request.
+
+        Args:
+            api_base: The base URL the request will actually go to, when it
+                differs from the configured one -- for example a ``.env``
+                override passed in the connect credentials. ``None`` checks
+                the configured base URL.
 
         Returns:
             bool: ``False`` only when the endpoint is plain HTTP to a public
             host and the user has not acknowledged that. Everything else,
             including plain HTTP to a local runtime, is allowed.
         """
-        if self.transport_risk is not TransportRisk.PUBLIC_PLAINTEXT:
+        target = api_base.strip() if api_base and api_base.strip() else self.api_base
+        if classify_transport(target) is not TransportRisk.PUBLIC_PLAINTEXT:
             return True
         return self.insecure_transport_acknowledged
 
@@ -299,9 +329,23 @@ class ProviderInstance:
             display_name=preset.display_name,
             preset_id=preset.provider_id,
             dialect=preset.dialect if preset.dialect is not None else ApiDialect.CHAT_COMPLETIONS,
-            api_base=preset.default_api_base,
+            api_base=dialect_api_base(preset),
             requires_api_key=preset.requires_api_key,
         )
+
+
+def dialect_api_base(preset: ProviderPreset) -> str | None:
+    """Return the base URL an instance created from a preset should use.
+
+    Args:
+        preset: The preset the instance is created from.
+
+    Returns:
+        str | None: The base URL the preset's dialect paths resolve against,
+        or ``None`` when the preset names no endpoint at all (a generic
+        gateway preset, where the user supplies the URL).
+    """
+    return BUILTIN_DIALECT_API_BASES.get(preset.provider_id, preset.default_api_base)
 
 
 def instance_from_preset_id(preset_id: str, *, instance_id: str | None = None) -> ProviderInstance | None:
