@@ -133,7 +133,8 @@ def _make_panel(qapp: QApplication, bridge: _RecordingFridaBridge) -> FridaPanel
 
 
 def test_write_memory_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_write_memory``'s success closure formats the real parsed address.
 
@@ -155,7 +156,8 @@ def test_write_memory_renders_narrowed_address_and_forwards_it(
 
 
 def test_copy_memory_renders_narrowed_addresses_and_forwards_them(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_copy_memory``'s success closure formats both real parsed addresses in order.
 
@@ -189,8 +191,12 @@ def test_replace_function_fast_installed_renders_integer_trampoline(qapp: QAppli
     """
     panel = _make_panel(qapp, _RecordingFridaBridge())
     result = HookInfo(
-        id="hook-1", target="kernel32!CreateFileW", address=0x1000,
-        script_id="s1", active=True, original_trampoline=0x7FFE0000,
+        id="hook-1",
+        target="kernel32!CreateFileW",
+        address=0x1000,
+        script_id="s1",
+        active=True,
+        original_trampoline=0x7FFE0000,
     )
 
     panel._on_replace_function_fast_installed("pending-1", "kernel32!CreateFileW", result)

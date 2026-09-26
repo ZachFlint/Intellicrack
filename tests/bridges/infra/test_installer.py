@@ -972,9 +972,9 @@ class TestDeployPluginAggregation:
         result = path_requires_admin(tmp_path)
 
         assert result is False
-        assert (
-            not recorded
-        ), f"path_requires_admin must not emit warnings for a user-writable path; got {recorded} (regression: path_requires_admin_prefix_check_failed noise)"
+        assert not recorded, (
+            f"path_requires_admin must not emit warnings for a user-writable path; got {recorded} (regression: path_requires_admin_prefix_check_failed noise)"
+        )
 
     @staticmethod
     def test_deploy_returns_failure_when_one_arch_failed_other_uptodate(

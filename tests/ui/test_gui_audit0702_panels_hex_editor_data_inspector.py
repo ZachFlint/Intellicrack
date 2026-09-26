@@ -202,9 +202,7 @@ class TestM4BitToggleAsyncDispatch:
                 "bit button was already updated before the bridge worker could have completed; "
                 "the write did not go through the async dispatcher"
             )
-            assert not bool(
-                document.get_bit(0, 0)
-            ), "document bit was already flipped before the bridge worker could have completed"
+            assert not bool(document.get_bit(0, 0)), "document bit was already flipped before the bridge worker could have completed"
 
             qtbot.waitUntil(lambda: bool(document.get_bit(0, 0)), timeout=3000)
 
@@ -266,9 +264,7 @@ class TestM4BitToggleAsyncDispatch:
             elapsed = time.monotonic() - started
 
             assert elapsed < _NON_BLOCKING_CEILING_S, f"_on_bit_toggled blocked for {elapsed:.3f}s even on the failure path"
-            assert not bool(
-                document.get_bit(0, 0)
-            ), "document was mutated before the bridge failure could be observed"
+            assert not bool(document.get_bit(0, 0)), "document was mutated before the bridge failure could be observed"
 
             qtbot.waitUntil(lambda: bool(document.get_bit(0, 0)), timeout=3000)
             assert document.read(0, 1) == b"\x01", "failure fallback did not perform the direct document write"

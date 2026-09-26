@@ -416,11 +416,7 @@ class _LinuxGuestModel:
                 stderr="lsblk: no output columns requested",
             )
         columns = argv[argv.index("--output") + 1].split(",")
-        if unknown := [
-            column
-            for column in columns
-            if column not in {"PATH", "FSTYPE", "LABEL", "MOUNTPOINT"}
-        ]:
+        if unknown := [column for column in columns if column not in {"PATH", "FSTYPE", "LABEL", "MOUNTPOINT"}]:
             return GuestCommandResult(
                 exit_code=_NOT_FOUND_EXIT,
                 stdout="",
@@ -1087,9 +1083,7 @@ class _WindowsAgentGuest:
             return GuestCommandResult(exit_code=0, stdout="".join(f"{name}\n" for name in names), stderr="")
 
         prefix = requested.rstrip("\\") + "\\"
-        if held := sorted(
-            path for path in self._guest_files if path.startswith(prefix)
-        ):
+        if held := sorted(path for path in self._guest_files if path.startswith(prefix)):
             listed = held if recursive else [PureWindowsPath(path).name for path in held]
             return GuestCommandResult(exit_code=0, stdout="".join(f"{entry}\n" for entry in listed), stderr="")
 
@@ -1956,11 +1950,7 @@ class TestWindowsGuestResolvesTheDriveLetter:
                 f"echo {_SYSTEM_ROOT_REFERENCE}",
                 sandbox.probe_command_line(),
             )
-            unexpected = [
-                line
-                for line in command_lines
-                if all(token not in line for token in allowed)
-            ]
+            unexpected = [line for line in command_lines if all(token not in line for token in allowed)]
             assert not unexpected, f"only drive enumeration and existence probes may run: {unexpected}"
 
 

@@ -465,11 +465,7 @@ def custom_template_json() -> str:
         message = f"{BUILTIN_TEMPLATE} exported as {type(decoded).__name__}, not a JSON object"
         raise RecipeError(message)
     definition = cast("dict[str, JsonValue]", decoded)
-    if missing := [
-        field
-        for field in (_TEMPLATE_NAME_FIELD, _TEMPLATE_FIELDS_FIELD)
-        if field not in definition
-    ]:
+    if missing := [field for field in (_TEMPLATE_NAME_FIELD, _TEMPLATE_FIELDS_FIELD) if field not in definition]:
         message = f"{BUILTIN_TEMPLATE} exported without {', '.join(missing)}; the template schema has changed"
         raise RecipeError(message)
     definition[_TEMPLATE_NAME_FIELD] = CUSTOM_TEMPLATE_NAME

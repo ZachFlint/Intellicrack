@@ -309,16 +309,10 @@ def decode_arguments(parameters: tuple[Parameter, ...], payload: dict[str, JsonV
     Raises:
         DecodeError: If a parameter is missing, unexpected, or fails conversion.
     """
-    if missing := [
-        parameter.name
-        for parameter in parameters
-        if parameter.name not in payload
-    ]:
+    if missing := [parameter.name for parameter in parameters if parameter.name not in payload]:
         message = f"missing required argument(s): {', '.join(missing)}"
         raise DecodeError(message)
-    if unexpected := sorted(
-        set(payload) - {parameter.name for parameter in parameters}
-    ):
+    if unexpected := sorted(set(payload) - {parameter.name for parameter in parameters}):
         message = f"unexpected argument(s): {', '.join(unexpected)}"
         raise DecodeError(message)
     return [decode_argument(parameter, payload[parameter.name]) for parameter in parameters]

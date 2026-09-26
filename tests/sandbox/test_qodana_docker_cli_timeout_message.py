@@ -86,7 +86,8 @@ def _invoke_run_docker(args: list[str], *, check: bool, timeout: float | None) -
 
 
 def test_timeout_message_reports_the_real_effective_timeout(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A genuine subprocess timeout must render ``exc.timeout``'s real value, not a stale one.
 
@@ -104,7 +105,8 @@ def test_timeout_message_reports_the_real_effective_timeout(
 
 
 def test_timeout_without_check_returns_synthetic_124_with_real_timeout_in_stderr(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """With ``check=False``, the synthetic result's return code is 124 on a genuine timeout.
 

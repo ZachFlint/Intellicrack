@@ -183,10 +183,9 @@ def test_create_script_signature_rejects_a_cancellable_keyword() -> None:
     """``Session.create_script`` takes no keyword bucket in Frida 17."""
     parameters = inspect.signature(frida.Session.create_script).parameters
     assert "cancellable" not in parameters
-    assert all(
-        parameter.kind is not inspect.Parameter.VAR_KEYWORD
-        for parameter in parameters.values()
-    ), "create_script would silently swallow a cancellable= keyword"
+    assert all(parameter.kind is not inspect.Parameter.VAR_KEYWORD for parameter in parameters.values()), (
+        "create_script would silently swallow a cancellable= keyword"
+    )
 
 
 def test_cancellable_context_publishes_the_current_token() -> None:

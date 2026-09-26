@@ -92,7 +92,8 @@ def _drive(
 
 
 def test_patch_dialog_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_patch_dialog``'s success closure formats the real parsed address.
 

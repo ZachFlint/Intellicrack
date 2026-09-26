@@ -150,11 +150,7 @@ def _argument_value(vector: tuple[str, ...], name: str) -> str:
         str: The following element, or the empty string when absent.
     """
     return next(
-        (
-            vector[index + 1]
-            for index, argument in enumerate(vector[:-1])
-            if argument == name
-        ),
+        (vector[index + 1] for index, argument in enumerate(vector[:-1]) if argument == name),
         "",
     )
 

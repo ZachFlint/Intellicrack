@@ -205,9 +205,7 @@ def _lift_source_statements(script_path: Path, *, expect_unhandled: bool) -> lis
     if all("Process(" not in statement for statement in statements):
         msg = f"{script_path.name} no longer pumps its source; the gate would cover nothing"
         raise AssertionError(msg)
-    if expect_unhandled and all(
-        "UnhandledEvents" not in statement for statement in statements
-    ):
+    if expect_unhandled and all("UnhandledEvents" not in statement for statement in statements):
         msg = f"{script_path.name} no longer registers an UnhandledEvents handler; the gate would cover nothing"
         raise AssertionError(msg)
     return statements
@@ -322,11 +320,7 @@ def _counter(stdout: str, prefix: str) -> int:
         int: The count, or ``-1`` when the harness printed no such line.
     """
     return next(
-        (
-            int(line.removeprefix(prefix).strip())
-            for line in stdout.splitlines()
-            if line.startswith(prefix)
-        ),
+        (int(line.removeprefix(prefix).strip()) for line in stdout.splitlines() if line.startswith(prefix)),
         -1,
     )
 

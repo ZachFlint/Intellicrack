@@ -650,9 +650,9 @@ def test_run_section_offers_launch_and_defers_dism_to_code() -> None:
     assert launch, "[Run] has no entry that launches the Intellicrack launcher on finish"
     assert any("postinstall" in line.lower() for line in launch), "the launch-on-finish [Run] entry must carry the postinstall flag"
 
-    assert all(
-        "dism" not in line.lower() for line in run_lines
-    ), "DISM must not run from [Run]; it moved to [Code] ssPostInstall for 3010 reboot detection"
+    assert all("dism" not in line.lower() for line in run_lines), (
+        "DISM must not run from [Run]; it moved to [Code] ssPostInstall for 3010 reboot detection"
+    )
 
 
 def test_uninstall_delete_purges_config_and_install_dir() -> None:
@@ -995,9 +995,7 @@ def test_iss_section_lines_is_scoped_and_skips_comments() -> None:
     """
     run = iss_section_lines(_FAKE_SECTIONS_ISS, "Run")
     assert run == ['Filename: "{app}\\Intellicrack.exe"; Flags: nowait postinstall skipifsilent']
-    assert all(
-        "dism" not in line.lower() for line in run
-    ), "commented DISM line must be skipped"
+    assert all("dism" not in line.lower() for line in run), "commented DISM line must be skipped"
 
     tasks = iss_section_lines(_FAKE_SECTIONS_ISS, "TASKS")
     assert len(tasks) == 2
@@ -1246,9 +1244,7 @@ def test_launcher_specs_and_bootstrappers_are_tracked() -> None:
     launcher_dir = _REPO_ROOT / "packaging" / "launcher"
     untracked = [name for name in _TRACKED_LAUNCHER_FILES if name not in tracked]
     absent = [name for name in untracked if not (launcher_dir / name).is_file()]
-    assert (
-        not absent
-    ), f"launcher build inputs are neither tracked nor present on disk: {absent}"
+    assert not absent, f"launcher build inputs are neither tracked nor present on disk: {absent}"
 
     if not untracked:
         return

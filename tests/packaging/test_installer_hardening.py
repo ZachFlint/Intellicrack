@@ -111,11 +111,7 @@ def pascal_code(iss_text: str) -> str:
     """
     lines = iss_text.splitlines()
     start: int | None = next(
-        (
-            index + 1
-            for index, line in enumerate(lines)
-            if line.strip().lower() == "[code]"
-        ),
+        (index + 1 for index, line in enumerate(lines) if line.strip().lower() == "[code]"),
         None,
     )
     if start is None:
@@ -508,9 +504,9 @@ def test_windows_floor_is_declared_in_setup_and_enforced_in_code() -> None:
     code = pascal_code(iss_text)
     constant = re.search(r"(?m)^\s*MinWindowsBuild\s*=\s*(\d+)\s*;", code)
     assert constant is not None, "[Code] declares no MinWindowsBuild constant"
-    assert (
-        int(constant[1]) == _MIN_WINDOWS_BUILD
-    ), f"MinWindowsBuild is {constant.group(1)}, not the Windows 10 RTM build {_MIN_WINDOWS_BUILD}"
+    assert int(constant[1]) == _MIN_WINDOWS_BUILD, (
+        f"MinWindowsBuild is {constant.group(1)}, not the Windows 10 RTM build {_MIN_WINDOWS_BUILD}"
+    )
     assert re.search(r"Version\.Build\s*<\s*MinWindowsBuild", code) is not None, (
         "the [Code] guard never compares Version.Build against MinWindowsBuild, so a pre-RTM build 10 passes"
     )
