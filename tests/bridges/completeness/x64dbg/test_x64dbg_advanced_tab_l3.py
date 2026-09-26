@@ -35,9 +35,9 @@ arguments the handler read from the UI.
 
 from __future__ import annotations
 
+import asyncio
 import sys
-from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import pytest
 from PyQt6.QtCore import QTimer
@@ -51,10 +51,108 @@ from .conftest import FakePipeClient, install_fake_pipe, ok, priv, pump_until
 
 
 if TYPE_CHECKING:
+    import types
     from collections.abc import Iterator
 
 
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="x64dbg is a Windows-only debugger bridge")
+
+
+_T = TypeVar("_T")
+
+
+async def _unreached_result[T](value: T) -> T:
+    """Return ``value``; the coroutine wrapping it is captured, never awaited.
+
+    Args:
+        value: Placeholder result the coroutine would resolve to.
+
+    Returns:
+        T: ``value`` unchanged.
+    """
+    await asyncio.sleep(0)
+    return value
+
+
+class _CallRecordingX64DbgBridge(X64DbgBridge):
+    """Real ``X64DbgBridge`` whose PE-walking / OS-query entry points only record calls.
+
+    The overridden methods record the exact arguments they were called with
+    and hand back a fresh, never-started coroutine so the test can assert the
+    object passed to ``run_bridge_coroutine_logged`` is precisely that method's
+    return value. :meth:`close_pending` closes every coroutine handed out so no
+    "never awaited" warning leaks from the capture.
+    """
+
+    def __init__(self) -> None:
+        """Initialize a pipe-less bridge with empty call/coroutine logs."""
+        super().__init__()
+        self.calls: list[tuple[str, tuple[object, ...]]] = []
+        self.returned: dict[str, list[types.CoroutineType[Any, Any, Any]]] = {}
+
+    def _record(self, name: str, args: tuple[object, ...], coro: types.CoroutineType[Any, Any, _T]) -> types.CoroutineType[Any, Any, _T]:
+        """Log a call and remember the coroutine it returns.
+
+        Args:
+            name: Bridge method name that was called.
+            args: Positional arguments the method received.
+            coro: The coroutine being returned to the caller.
+
+        Returns:
+            types.CoroutineType[Any, Any, _T]: ``coro`` unchanged.
+        """
+        self.calls.append((name, args))
+        self.returned.setdefault(name, []).append(coro)
+        return coro
+
+    def calls_to(self, name: str) -> list[tuple[object, ...]]:
+        """Return the argument tuples of every recorded call to ``name``.
+
+        Args:
+            name: Bridge method name to filter on.
+
+        Returns:
+            list[tuple[object, ...]]: Recorded positional-argument tuples.
+        """
+        return [args for called, args in self.calls if called == name]
+
+    def close_pending(self) -> None:
+        """Close every captured coroutine so none is reported as never awaited."""
+        for coros in self.returned.values():
+            for coro in coros:
+                coro.close()
+
+    def get_entry_point(self, module_name: str | None = None) -> types.CoroutineType[Any, Any, dict[str, Any]]:
+        """Record the call and return an unstarted coroutine.
+
+        Args:
+            module_name: Module whose entry point was requested.
+
+        Returns:
+            types.CoroutineType[Any, Any, dict[str, Any]]: Captured, never-awaited coroutine.
+        """
+        return self._record("get_entry_point", (module_name,), _unreached_result(dict[str, Any]()))
+
+    def get_handles(self) -> types.CoroutineType[Any, Any, list[dict[str, Any]]]:
+        """Record the call and return an unstarted coroutine.
+
+        Returns:
+            types.CoroutineType[Any, Any, list[dict[str, Any]]]: Captured, never-awaited coroutine.
+        """
+        return self._record("get_handles", (), _unreached_result(list[dict[str, Any]]()))
+
+
+@pytest.fixture
+def recording_bridge() -> Iterator[_CallRecordingX64DbgBridge]:
+    """Provide a call-recording bridge and close its captured coroutines afterwards.
+
+    Yields:
+        _CallRecordingX64DbgBridge: The recording bridge.
+    """
+    bridge = _CallRecordingX64DbgBridge()
+    yield bridge
+    bridge.close_pending()
+
 
 _MODAL_WATCHDOG_INTERVAL_MS: int = 5
 
@@ -294,6 +392,7 @@ class TestModuleInfoDispatch:
     @staticmethod
     def test_entry_point_button_dispatches_get_entry_point_with_module(
         wired_tab: tuple[X64DbgAdvancedTab, X64DbgBridge],
+        recording_bridge: _CallRecordingX64DbgBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """The Entry Point button must call ``get_entry_point`` with the entered module.
@@ -309,11 +408,11 @@ class TestModuleInfoDispatch:
 
         Args:
             wired_tab: Advanced-tab/bridge pair fixture.
+            recording_bridge: Call-recording bridge swapped into the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
         tab, _bridge = wired_tab
-        mock_bridge = MagicMock()
-        setattr(tab, "_bridge", mock_bridge)
+        setattr(tab, "_bridge", recording_bridge)
 
         captured: list[tuple[object, ...]] = []
 
@@ -327,8 +426,8 @@ class TestModuleInfoDispatch:
         priv(tab, "_modinfo_entry_btn", QPushButton).click()
 
         assert captured, "Entry Point button must dispatch through run_bridge_coroutine_logged"
-        assert captured[0][0] is mock_bridge.get_entry_point.return_value
-        mock_bridge.get_entry_point.assert_called_once_with("kernel32.dll")
+        assert captured[0][0] is recording_bridge.returned["get_entry_point"][0]
+        assert recording_bridge.calls == [("get_entry_point", ("kernel32.dll",))]
 
 
 class TestProcessStructuresDispatch:
@@ -1065,6 +1164,7 @@ class TestHandlesDispatch:
     @staticmethod
     def test_enumerate_button_dispatches_get_handles(
         wired_tab: tuple[X64DbgAdvancedTab, X64DbgBridge],
+        recording_bridge: _CallRecordingX64DbgBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """The Enumerate Handles button must call ``get_handles``.
@@ -1079,11 +1179,11 @@ class TestHandlesDispatch:
 
         Args:
             wired_tab: Advanced-tab/bridge pair fixture.
+            recording_bridge: Call-recording bridge swapped into the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
         tab, _bridge = wired_tab
-        mock_bridge = MagicMock()
-        setattr(tab, "_bridge", mock_bridge)
+        setattr(tab, "_bridge", recording_bridge)
 
         captured: list[tuple[object, ...]] = []
 
@@ -1096,8 +1196,8 @@ class TestHandlesDispatch:
         priv(tab, "_handles_refresh_btn", QPushButton).click()
 
         assert captured, "Enumerate Handles button must dispatch through run_bridge_coroutine_logged"
-        assert captured[0][0] is mock_bridge.get_handles.return_value
-        mock_bridge.get_handles.assert_called_once_with()
+        assert captured[0][0] is recording_bridge.returned["get_handles"][0]
+        assert recording_bridge.calls == [("get_handles", ())]
 
     @staticmethod
     def test_close_button_dispatches_handleclose_script(

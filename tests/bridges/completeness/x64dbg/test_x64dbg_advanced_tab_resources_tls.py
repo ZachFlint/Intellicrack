@@ -24,9 +24,9 @@ handlers through ``getattr`` (mirroring the ``priv`` helper's rationale in
 
 from __future__ import annotations
 
+import asyncio
 import sys
-from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QTableWidget
@@ -39,10 +39,121 @@ from .conftest import priv
 
 
 if TYPE_CHECKING:
+    import types
     from collections.abc import Iterator
 
 
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="x64dbg is a Windows-only debugger bridge")
+
+
+_T = TypeVar("_T")
+
+
+async def _unreached_result[T](value: T) -> T:
+    """Return ``value``; the coroutine wrapping it is captured, never awaited.
+
+    Args:
+        value: Placeholder result the coroutine would resolve to.
+
+    Returns:
+        T: ``value`` unchanged.
+    """
+    await asyncio.sleep(0)
+    return value
+
+
+class _CallRecordingX64DbgBridge(X64DbgBridge):
+    """Real ``X64DbgBridge`` whose PE-walking / OS-query entry points only record calls.
+
+    The overridden methods record the exact arguments they were called with
+    and hand back a fresh, never-started coroutine so the test can assert the
+    object passed to ``run_bridge_coroutine_logged`` is precisely that method's
+    return value. :meth:`close_pending` closes every coroutine handed out so no
+    "never awaited" warning leaks from the capture.
+    """
+
+    def __init__(self) -> None:
+        """Initialize a pipe-less bridge with empty call/coroutine logs."""
+        super().__init__()
+        self.calls: list[tuple[str, tuple[object, ...]]] = []
+        self.returned: dict[str, list[types.CoroutineType[Any, Any, Any]]] = {}
+
+    def _record(self, name: str, args: tuple[object, ...], coro: types.CoroutineType[Any, Any, _T]) -> types.CoroutineType[Any, Any, _T]:
+        """Log a call and remember the coroutine it returns.
+
+        Args:
+            name: Bridge method name that was called.
+            args: Positional arguments the method received.
+            coro: The coroutine being returned to the caller.
+
+        Returns:
+            types.CoroutineType[Any, Any, _T]: ``coro`` unchanged.
+        """
+        self.calls.append((name, args))
+        self.returned.setdefault(name, []).append(coro)
+        return coro
+
+    def calls_to(self, name: str) -> list[tuple[object, ...]]:
+        """Return the argument tuples of every recorded call to ``name``.
+
+        Args:
+            name: Bridge method name to filter on.
+
+        Returns:
+            list[tuple[object, ...]]: Recorded positional-argument tuples.
+        """
+        return [args for called, args in self.calls if called == name]
+
+    def close_pending(self) -> None:
+        """Close every captured coroutine so none is reported as never awaited."""
+        for coros in self.returned.values():
+            for coro in coros:
+                coro.close()
+
+    def get_resources(self, module_name: str) -> types.CoroutineType[Any, Any, list[dict[str, Any]]]:
+        """Record the call and return an unstarted coroutine.
+
+        Args:
+            module_name: Module the handler read from the UI.
+
+        Returns:
+            types.CoroutineType[Any, Any, list[dict[str, Any]]]: Captured, never-awaited coroutine.
+        """
+        return self._record("get_resources", (module_name,), _unreached_result(list[dict[str, Any]]()))
+
+    def get_tls_callbacks(self, module_name: str) -> types.CoroutineType[Any, Any, list[dict[str, Any]]]:
+        """Record the call and return an unstarted coroutine.
+
+        Args:
+            module_name: Module the handler read from the UI.
+
+        Returns:
+            types.CoroutineType[Any, Any, list[dict[str, Any]]]: Captured, never-awaited coroutine.
+        """
+        return self._record("get_tls_callbacks", (module_name,), _unreached_result(list[dict[str, Any]]()))
+
+    def break_on_tls_callbacks(self, module_name: str) -> types.CoroutineType[Any, Any, dict[str, Any]]:
+        """Record the call and return an unstarted coroutine.
+
+        Args:
+            module_name: Module the handler read from the UI.
+
+        Returns:
+            types.CoroutineType[Any, Any, dict[str, Any]]: Captured, never-awaited coroutine.
+        """
+        return self._record("break_on_tls_callbacks", (module_name,), _unreached_result(dict[str, Any]()))
+
+
+@pytest.fixture
+def recording_bridge() -> Iterator[_CallRecordingX64DbgBridge]:
+    """Provide a call-recording bridge and close its captured coroutines afterwards.
+
+    Yields:
+        _CallRecordingX64DbgBridge: The recording bridge.
+    """
+    bridge = _CallRecordingX64DbgBridge()
+    yield bridge
+    bridge.close_pending()
 
 
 @pytest.fixture
@@ -128,6 +239,7 @@ class TestResourcesButtonDispatch:
     @staticmethod
     def test_resources_button_dispatches_get_resources_with_module(
         wired_tab: tuple[X64DbgAdvancedTab, X64DbgBridge],
+        recording_bridge: _CallRecordingX64DbgBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """The Resources button must call ``get_resources`` with the entered module.
@@ -140,11 +252,11 @@ class TestResourcesButtonDispatch:
 
         Args:
             wired_tab: Advanced-tab/bridge pair fixture.
+            recording_bridge: Call-recording bridge swapped into the tab.
             monkeypatch: Pytest monkeypatch fixture.
         """
         tab, _bridge = wired_tab
-        mock_bridge = MagicMock()
-        setattr(tab, "_bridge", mock_bridge)
+        setattr(tab, "_bridge", recording_bridge)
         capture = _CoroutineCapture()
 
         monkeypatch.setattr(_advanced_mod, "run_bridge_coroutine_logged", capture)
@@ -153,12 +265,13 @@ class TestResourcesButtonDispatch:
         priv(tab, "_modinfo_resources_btn", QPushButton).click()
 
         assert capture.calls, "Resources button must dispatch through run_bridge_coroutine_logged"
-        assert capture.calls[0][0] is mock_bridge.get_resources.return_value
-        mock_bridge.get_resources.assert_called_once_with("kernel32.dll")
+        assert capture.calls[0][0] is recording_bridge.returned["get_resources"][0]
+        assert recording_bridge.calls == [("get_resources", ("kernel32.dll",))]
 
     @staticmethod
     def test_resources_button_blank_module_does_not_dispatch(
         wired_tab: tuple[X64DbgAdvancedTab, X64DbgBridge],
+        recording_bridge: _CallRecordingX64DbgBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A blank module field must skip the ``get_resources`` dispatch entirely.
@@ -169,11 +282,11 @@ class TestResourcesButtonDispatch:
 
         Args:
             wired_tab: Advanced-tab/bridge pair fixture.
+            recording_bridge: Call-recording bridge swapped into the tab.
             monkeypatch: Pytest monkeypatch fixture.
         """
         tab, _bridge = wired_tab
-        mock_bridge = MagicMock()
-        setattr(tab, "_bridge", mock_bridge)
+        setattr(tab, "_bridge", recording_bridge)
         capture = _CoroutineCapture()
 
         monkeypatch.setattr(_advanced_mod, "run_bridge_coroutine_logged", capture)
@@ -182,7 +295,7 @@ class TestResourcesButtonDispatch:
         priv(tab, "_modinfo_resources_btn", QPushButton).click()
 
         assert capture.calls == []
-        mock_bridge.get_resources.assert_not_called()
+        assert recording_bridge.calls_to("get_resources") == []
 
 
 class TestTlsCallbacksButtonDispatch:
@@ -191,6 +304,7 @@ class TestTlsCallbacksButtonDispatch:
     @staticmethod
     def test_tls_callbacks_button_dispatches_get_tls_callbacks_with_module(
         wired_tab: tuple[X64DbgAdvancedTab, X64DbgBridge],
+        recording_bridge: _CallRecordingX64DbgBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """The TLS Callbacks button must call ``get_tls_callbacks`` with the entered module.
@@ -201,11 +315,11 @@ class TestTlsCallbacksButtonDispatch:
 
         Args:
             wired_tab: Advanced-tab/bridge pair fixture.
+            recording_bridge: Call-recording bridge swapped into the tab.
             monkeypatch: Pytest monkeypatch fixture.
         """
         tab, _bridge = wired_tab
-        mock_bridge = MagicMock()
-        setattr(tab, "_bridge", mock_bridge)
+        setattr(tab, "_bridge", recording_bridge)
         capture = _CoroutineCapture()
 
         monkeypatch.setattr(_advanced_mod, "run_bridge_coroutine_logged", capture)
@@ -214,23 +328,24 @@ class TestTlsCallbacksButtonDispatch:
         priv(tab, "_modinfo_tls_btn", QPushButton).click()
 
         assert capture.calls, "TLS Callbacks button must dispatch through run_bridge_coroutine_logged"
-        assert capture.calls[0][0] is mock_bridge.get_tls_callbacks.return_value
-        mock_bridge.get_tls_callbacks.assert_called_once_with("target.exe")
+        assert capture.calls[0][0] is recording_bridge.returned["get_tls_callbacks"][0]
+        assert recording_bridge.calls == [("get_tls_callbacks", ("target.exe",))]
 
     @staticmethod
     def test_tls_callbacks_button_blank_module_does_not_dispatch(
         wired_tab: tuple[X64DbgAdvancedTab, X64DbgBridge],
+        recording_bridge: _CallRecordingX64DbgBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A blank module field must skip the ``get_tls_callbacks`` dispatch entirely.
 
         Args:
             wired_tab: Advanced-tab/bridge pair fixture.
+            recording_bridge: Call-recording bridge swapped into the tab.
             monkeypatch: Pytest monkeypatch fixture.
         """
         tab, _bridge = wired_tab
-        mock_bridge = MagicMock()
-        setattr(tab, "_bridge", mock_bridge)
+        setattr(tab, "_bridge", recording_bridge)
         capture = _CoroutineCapture()
 
         monkeypatch.setattr(_advanced_mod, "run_bridge_coroutine_logged", capture)
@@ -239,7 +354,7 @@ class TestTlsCallbacksButtonDispatch:
         priv(tab, "_modinfo_tls_btn", QPushButton).click()
 
         assert capture.calls == []
-        mock_bridge.get_tls_callbacks.assert_not_called()
+        assert recording_bridge.calls_to("get_tls_callbacks") == []
 
 
 class TestBreakOnTlsCallbacksButtonDispatch:
@@ -248,6 +363,7 @@ class TestBreakOnTlsCallbacksButtonDispatch:
     @staticmethod
     def test_break_button_dispatches_break_on_tls_callbacks_with_module(
         wired_tab: tuple[X64DbgAdvancedTab, X64DbgBridge],
+        recording_bridge: _CallRecordingX64DbgBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """The Break on TLS CBs button must call ``break_on_tls_callbacks`` with the entered module.
@@ -258,11 +374,11 @@ class TestBreakOnTlsCallbacksButtonDispatch:
 
         Args:
             wired_tab: Advanced-tab/bridge pair fixture.
+            recording_bridge: Call-recording bridge swapped into the tab.
             monkeypatch: Pytest monkeypatch fixture.
         """
         tab, _bridge = wired_tab
-        mock_bridge = MagicMock()
-        setattr(tab, "_bridge", mock_bridge)
+        setattr(tab, "_bridge", recording_bridge)
         capture = _CoroutineCapture()
 
         monkeypatch.setattr(_advanced_mod, "run_bridge_coroutine_logged", capture)
@@ -271,23 +387,24 @@ class TestBreakOnTlsCallbacksButtonDispatch:
         priv(tab, "_modinfo_tls_break_btn", QPushButton).click()
 
         assert capture.calls, "Break on TLS CBs button must dispatch through run_bridge_coroutine_logged"
-        assert capture.calls[0][0] is mock_bridge.break_on_tls_callbacks.return_value
-        mock_bridge.break_on_tls_callbacks.assert_called_once_with("target.exe")
+        assert capture.calls[0][0] is recording_bridge.returned["break_on_tls_callbacks"][0]
+        assert recording_bridge.calls == [("break_on_tls_callbacks", ("target.exe",))]
 
     @staticmethod
     def test_break_button_blank_module_does_not_dispatch(
         wired_tab: tuple[X64DbgAdvancedTab, X64DbgBridge],
+        recording_bridge: _CallRecordingX64DbgBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A blank module field must skip the ``break_on_tls_callbacks`` dispatch entirely.
 
         Args:
             wired_tab: Advanced-tab/bridge pair fixture.
+            recording_bridge: Call-recording bridge swapped into the tab.
             monkeypatch: Pytest monkeypatch fixture.
         """
         tab, _bridge = wired_tab
-        mock_bridge = MagicMock()
-        setattr(tab, "_bridge", mock_bridge)
+        setattr(tab, "_bridge", recording_bridge)
         capture = _CoroutineCapture()
 
         monkeypatch.setattr(_advanced_mod, "run_bridge_coroutine_logged", capture)
@@ -296,7 +413,7 @@ class TestBreakOnTlsCallbacksButtonDispatch:
         priv(tab, "_modinfo_tls_break_btn", QPushButton).click()
 
         assert capture.calls == []
-        mock_bridge.break_on_tls_callbacks.assert_not_called()
+        assert recording_bridge.calls_to("break_on_tls_callbacks") == []
 
 
 class TestApplyResourcesRendering:

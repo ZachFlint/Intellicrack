@@ -28,7 +28,6 @@ from __future__ import annotations
 import os
 import time
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
 import pytest
 from PyQt6.QtCore import QPoint, Qt
@@ -77,20 +76,43 @@ def _reset_process_manager() -> Generator[None]:
     ProcessManager.reset_instance()
 
 
+def _answer_yes(*_args: object, **_kwargs: object) -> QMessageBox.StandardButton:
+    """Stand in for ``QMessageBox.question`` by answering Yes without blocking.
+
+    Args:
+        *_args: Positional dialog arguments (ignored).
+        **_kwargs: Keyword dialog arguments (ignored).
+
+    Returns:
+        QMessageBox.StandardButton: Always ``Yes``.
+    """
+    return QMessageBox.StandardButton.Yes
+
+
+def _acknowledge_ok(*_args: object, **_kwargs: object) -> QMessageBox.StandardButton:
+    """Stand in for an informational ``QMessageBox`` by acknowledging it without blocking.
+
+    Args:
+        *_args: Positional dialog arguments (ignored).
+        **_kwargs: Keyword dialog arguments (ignored).
+
+    Returns:
+        QMessageBox.StandardButton: Always ``Ok``.
+    """
+    return QMessageBox.StandardButton.Ok
+
+
 @pytest.fixture(autouse=True)
-def _guard_modal_dialogs() -> Generator[None]:
+def _guard_modal_dialogs(monkeypatch: pytest.MonkeyPatch) -> None:
     """Prevent any stray QMessageBox popup from hanging the headless test run.
 
-    Yields:
-        None: Control passes to the test with all modal dialog entry points patched.
+    Args:
+        monkeypatch: pytest monkeypatch fixture; restores every dialog entry point on teardown.
     """
-    with (
-        patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes),
-        patch.object(QMessageBox, "critical", return_value=QMessageBox.StandardButton.Ok),
-        patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Ok),
-        patch.object(QMessageBox, "information", return_value=QMessageBox.StandardButton.Ok),
-    ):
-        yield
+    monkeypatch.setattr(QMessageBox, "question", _answer_yes)
+    monkeypatch.setattr(QMessageBox, "critical", _acknowledge_ok)
+    monkeypatch.setattr(QMessageBox, "warning", _acknowledge_ok)
+    monkeypatch.setattr(QMessageBox, "information", _acknowledge_ok)
 
 
 @pytest.fixture
@@ -189,13 +211,14 @@ class TestSystemProcessTableHasTrackContextMenu:
         rect = tab._process_table.visualItemRect(item)
         pos = QPoint(rect.center().x(), rect.center().y())
 
-        def _fake_exec(self: QMenu, _pos: object = None) -> object:
+        def _choose_track_action(self: QMenu, _pos: object = None) -> object:
             for action in self.actions():
                 if action.text() == _TRACK_ACTION_TEXT:
                     return action
             return None
 
-        with patch.object(QMenu, "exec", _fake_exec):
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(QMenu, "exec", _choose_track_action)
             tab._on_process_context_menu(pos)
 
         manager = ProcessManager.get_instance()
