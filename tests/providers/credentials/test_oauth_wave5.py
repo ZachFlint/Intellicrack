@@ -682,10 +682,10 @@ def test_callback_handler_error_param_returns_400_and_sets_callback_error() -> N
 
 @_requires_loopback
 def test_callback_handler_missing_params_returns_400() -> None:
-    """do_GET with no recognised params must send HTTP 400.
+    """do_GET with no recognised params must send HTTP 400 and keep waiting.
 
-    Mutation: removing the else clause that sets status=400 for missing params
-    would cause the handler to try accessing missing dict keys.
+    A request carrying neither ``code`` nor ``error`` is not the redirect, so
+    it must not end the wait for the one that is.
     """
     port = _find_free_port()
     server = OAuthCallbackServer(port=port, timeout=5.0)
@@ -702,8 +702,11 @@ def test_callback_handler_missing_params_returns_400() -> None:
     finally:
         conn.close()
 
-    assert event.wait(timeout=3.0), "callback handler did not fire the event"
-    assert status == 400
+    try:
+        assert not event.wait(timeout=0.5), "an unrelated request ended the wait for the redirect"
+        assert status == 400
+    finally:
+        server.stop()
 
 
 # ---------------------------------------------------------------------------
@@ -715,16 +718,17 @@ def test_callback_handler_missing_params_returns_400() -> None:
 def test_callback_server_start_raises_callback_error_when_port_occupied() -> None:
     """start() must raise OAuthCallbackError when the port is already bound.
 
-    SO_EXCLUSIVEADDRUSE (Windows constant 12) prevents any other socket from
-    binding to the held port, overriding allow_reuse_address=True that the SUT
-    sets globally before calling bind().
+    The holder listens on the port first, with ``SO_EXCLUSIVEADDRUSE`` where
+    the platform has it, so the server's own bind must fail.
 
     Mutation: removing the OSError catch in start() would let the OSError
     propagate as-is rather than as OAuthCallbackError.
     """
     port = _find_free_port()
     holder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    holder.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+    exclusive: int | None = getattr(socket, "SO_EXCLUSIVEADDRUSE", None)
+    if exclusive is not None:
+        holder.setsockopt(socket.SOL_SOCKET, exclusive, 1)
     try:
         holder.bind(("127.0.0.1", port))
         holder.listen(1)
@@ -805,16 +809,14 @@ def test_wait_for_callback_access_denied_raises_authorization_error() -> None:
 
 @_requires_loopback
 def test_wait_for_callback_missing_code_and_state_raises_callback_error() -> None:
-    """wait_for_callback must raise OAuthCallbackError when callback has no code or state.
+    """wait_for_callback must raise OAuthCallbackError when no real callback arrives.
 
-    A background thread sends a GET with unrecognised params; the handler fires
-    the event without setting code/state, triggering the null-check guard.
-
-    Mutation: removing ``if not code or not state:`` would return (None, None)
-    instead of raising.
+    A background thread sends a GET with unrecognised params. That request is
+    not the redirect, so it is ignored and the wait runs out instead of
+    returning a missing code.
     """
     port = _find_free_port()
-    server = OAuthCallbackServer(port=port, timeout=5.0)
+    server = OAuthCallbackServer(port=port, timeout=1.0)
     server.start()
 
     def _send_no_code() -> None:
@@ -831,7 +833,7 @@ def test_wait_for_callback_missing_code_and_state_raises_callback_error() -> Non
     sender.start()
 
     try:
-        with pytest.raises(OAuthCallbackError, match=r"[Cc]ode|[Ss]tate|[Ii]nvalid"):
+        with pytest.raises(OAuthCallbackError, match=r"[Tt]imeout"):
             server.wait_for_callback()
     finally:
         server.stop()
