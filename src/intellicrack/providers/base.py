@@ -717,6 +717,10 @@ class LLMProviderBase(ABC):
         """Execute an async operation with exponential backoff retry.
 
         Retries on transient failures using exponential backoff with jitter.
+        A :class:`RateLimitError` carrying the server's requested wait
+        (``retry_after``) waits exactly that long instead, and is re-raised at
+        once when the requested wait exceeds ``max_delay``, since retrying
+        sooner than the server allows cannot succeed.
         ``AuthenticationError`` is never retried regardless of the
         ``retryable_exceptions`` parameter.
 
@@ -726,7 +730,8 @@ class LLMProviderBase(ABC):
             max_retries: Maximum number of retry attempts after the initial
                 try.
             base_delay: Initial delay in seconds before the first retry.
-            max_delay: Upper bound on the delay between retries.
+            max_delay: Upper bound on the delay between retries, including a
+                server-requested one.
             retryable_exceptions: Tuple of exception types that should
                 trigger a retry.
 
@@ -761,6 +766,25 @@ class LLMProviderBase(ABC):
                         max_retries=max_retries,
                     )
                     raise
+                requested = exc.retry_after if isinstance(exc, RateLimitError) else None
+                if requested is not None and requested > max_delay:
+                    self._logger.warning(
+                        "provider_retry_after_exceeds_limit",
+                        attempt=attempt + 1,
+                        retry_after=requested,
+                        max_delay=max_delay,
+                    )
+                    raise
+                if requested is not None:
+                    self._logger.warning(
+                        "provider_retry_after",
+                        attempt=attempt + 1,
+                        max_retries=max_retries,
+                        delay=requested,
+                        error=str(exc),
+                    )
+                    await asyncio.sleep(requested)
+                    continue
                 delay = min(base_delay * (2**attempt), max_delay)
                 jitter = _secure_rng.uniform(0, delay * 0.1)
                 self._logger.warning(
@@ -1537,6 +1561,7 @@ class ToolCallBufferManager:
         call_id: str | None = None,
         name: str | None = None,
         arguments: str | None = None,
+        thought_signature: str | None = None,
     ) -> None:
         """Merge a single streaming fragment into the buffer.
 
@@ -1549,15 +1574,18 @@ class ToolCallBufferManager:
             call_id: Unique identifier for the tool call (first fragment only).
             name: Wire function name (first fragment only).
             arguments: Partial JSON argument fragment to append.
+            thought_signature: Base64 signature the provider bound to the call.
         """
         key = token if token is not None else str(index)
-        buf = self._buffers.setdefault(key, {"id": "", "name": "", "arguments": ""})
+        buf = self._buffers.setdefault(key, {"id": "", "name": "", "arguments": "", "thought_signature": ""})
         if call_id:
             buf["id"] = call_id
         if name:
             buf["name"] = name
         if arguments:
             buf["arguments"] += arguments
+        if thought_signature:
+            buf["thought_signature"] = thought_signature
 
     def absorb(self, delta: StreamDelta) -> None:
         """Merge a normalized stream delta's tool-call fragment, if it has one.
@@ -1573,6 +1601,7 @@ class ToolCallBufferManager:
             call_id=fragment.call_id,
             name=fragment.name,
             arguments=fragment.arguments,
+            thought_signature=fragment.thought_signature,
         )
 
     def finalize(self) -> list[ToolCall]:
@@ -1584,15 +1613,13 @@ class ToolCallBufferManager:
             list[ToolCall]: List of parsed ToolCall instances, in the order the
             endpoint started them.
         """
-        results = [
-            parse_tool_call(
-                call_id=buf["id"],
-                function_name=buf["name"],
-                raw_arguments=buf["arguments"],
-            )
-            for buf in self._buffers.values()
-            if buf["id"] and buf["name"]
-        ]
+        results: list[ToolCall] = []
+        for buf in self._buffers.values():
+            if not (buf["id"] and buf["name"]):
+                continue
+            call = parse_tool_call(call_id=buf["id"], function_name=buf["name"], raw_arguments=buf["arguments"])
+            call.thought_signature = buf["thought_signature"] or None
+            results.append(call)
         self._buffers.clear()
         return results
 
