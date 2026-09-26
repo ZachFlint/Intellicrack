@@ -64,6 +64,8 @@ _MSG_STREAM_FAILED = "Stream failed"
 _MSG_NO_MODELS_AVAILABLE = "No models available from Anthropic API"
 _MSG_FETCH_MODELS_FAILED = "Failed to fetch models from Anthropic API"
 
+_MSG_WITH_DETAIL = "%s: %s"
+
 _HTTP_SERVER_ERROR_MIN = 500
 
 
@@ -124,11 +126,13 @@ class AnthropicProvider(LLMProviderBase):
             )
             await self._client.models.list(limit=1)
         except anthropic.AuthenticationError as e:
-            self._logger.warning("anthropic_auth_failed", error=str(e))
-            raise AuthenticationError(_MSG_INVALID_API_KEY) from e
+            detail = self._redact_error_text(e, api_key=credentials.api_key)
+            self._logger.warning("anthropic_auth_failed", error=detail)
+            raise AuthenticationError(_MSG_WITH_DETAIL % (_MSG_INVALID_API_KEY, detail)) from e
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError) as e:
-            self._logger.warning("anthropic_connect_failed", error=str(e))
-            raise ProviderError(_MSG_CONNECTION_FAILED) from e
+            detail = self._redact_error_text(e, api_key=credentials.api_key)
+            self._logger.warning("anthropic_connect_failed", error=detail)
+            raise ProviderError(_MSG_WITH_DETAIL % (_MSG_CONNECTION_FAILED, detail)) from e
         else:
             self._credentials = credentials
             self.connected = True
@@ -166,11 +170,12 @@ class AnthropicProvider(LLMProviderBase):
         try:
             models = await self._fetch_all_models()
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError) as e:
+            detail = self._redact_error_text(e)
             self._logger.warning(
                 "anthropic_list_models_api_failed",
-                error=str(e),
+                error=detail,
             )
-            raise ProviderError(_MSG_FETCH_MODELS_FAILED) from e
+            raise ProviderError(_MSG_WITH_DETAIL % (_MSG_FETCH_MODELS_FAILED, detail)) from e
         else:
             self._logger.info("anthropic_models_listed", count=len(models))
             return models
@@ -438,21 +443,24 @@ class AnthropicProvider(LLMProviderBase):
         try:
             return cast("AnthropicMessage", await self._client.messages.create(**api_kwargs))
         except anthropic.RateLimitError as e:
-            self._logger.warning("anthropic_rate_limited", error=str(e))
-            raise RateLimitError(_MSG_RATE_LIMITED) from e
+            detail = self._redact_error_text(e)
+            self._logger.warning("anthropic_rate_limited", error=detail)
+            raise RateLimitError(_MSG_WITH_DETAIL % (_MSG_RATE_LIMITED, detail)) from e
         except anthropic.APIStatusError as e:
             status_code = int(getattr(e, "status_code", 0) or 0)
             if status_code >= _HTTP_SERVER_ERROR_MIN:
+                detail = self._redact_error_text(e)
                 self._logger.warning(
                     "anthropic_server_error_retryable",
                     status_code=status_code,
-                    error=str(e),
+                    error=detail,
                 )
-                raise RateLimitError(_MSG_REQUEST_FAILED) from e
-            log_passthrough(
-                self._logger,
-                "anthropic_api_status_error_passthrough",
-                e,
+                raise RateLimitError(_MSG_WITH_DETAIL % (_MSG_REQUEST_FAILED, detail)) from e
+            self._logger.warning(
+                "passthrough_exception",
+                op_event="anthropic_api_status_error_passthrough",
+                error=self._redact_error_text(e),
+                error_type=type(e).__name__,
                 status_code=status_code,
             )
             raise
@@ -531,8 +539,9 @@ class AnthropicProvider(LLMProviderBase):
             )
             raise
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError, ValueError) as e:
-            self._logger.warning("anthropic_request_failed", error=str(e))
-            raise ProviderError(_MSG_REQUEST_FAILED) from e
+            detail = self._redact_error_text(e)
+            self._logger.warning("anthropic_request_failed", error=detail)
+            raise ProviderError(_MSG_WITH_DETAIL % (_MSG_REQUEST_FAILED, detail)) from e
 
     async def _await_anthropic_chat(
         self,
@@ -638,31 +647,34 @@ class AnthropicProvider(LLMProviderBase):
             async for text in self._iter_anthropic_stream(api_kwargs):
                 yield text
         except anthropic.RateLimitError as e:
-            self._logger.warning("anthropic_stream_rate_limited", error=str(e))
-            raise RateLimitError(_MSG_RATE_LIMITED) from e
+            detail = self._redact_error_text(e)
+            self._logger.warning("anthropic_stream_rate_limited", error=detail)
+            raise RateLimitError(_MSG_WITH_DETAIL % (_MSG_RATE_LIMITED, detail)) from e
         except anthropic.APIStatusError as e:
             status_code = int(getattr(e, "status_code", 0) or 0)
+            detail = self._redact_error_text(e)
             if status_code >= _HTTP_SERVER_ERROR_MIN:
                 self._logger.warning(
                     "anthropic_stream_server_error",
                     status_code=status_code,
-                    error=str(e),
+                    error=detail,
                 )
-                raise RateLimitError(_MSG_STREAM_FAILED) from e
+                raise RateLimitError(_MSG_WITH_DETAIL % (_MSG_STREAM_FAILED, detail)) from e
             self._logger.warning(
                 "anthropic_stream_status_error",
                 status_code=status_code,
-                error=str(e),
+                error=detail,
                 cancel_requested=self._cancel_requested,
             )
-            raise ProviderError(_MSG_STREAM_FAILED) from e
+            raise ProviderError(_MSG_WITH_DETAIL % (_MSG_STREAM_FAILED, detail)) from e
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError, ValueError) as e:
+            detail = self._redact_error_text(e)
             self._logger.warning(
                 "anthropic_stream_failed",
-                error=str(e),
+                error=detail,
                 cancel_requested=self._cancel_requested,
             )
-            raise ProviderError(_MSG_STREAM_FAILED) from e
+            raise ProviderError(_MSG_WITH_DETAIL % (_MSG_STREAM_FAILED, detail)) from e
 
     async def _iter_anthropic_stream(self, api_kwargs: dict[str, Any]) -> AsyncIterator[str]:
         """Open the Anthropic stream, yield text deltas, and capture final state.

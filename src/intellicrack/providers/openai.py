@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, TypedDict, cast, override
 import httpx
 import openai
 from openai import AsyncStream
+from openai.types.responses import Response, ResponseStreamEvent
 
 from intellicrack.core.logging import get_logger, log_provider_request, log_provider_response
 from intellicrack.core.types import (
@@ -25,8 +26,8 @@ from intellicrack.core.types import (
     ModelInfo,
     ProviderCredentials,
     ProviderError,
-    RateLimitError,
     ReasoningItem,
+    ReasoningKind,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
@@ -34,16 +35,22 @@ from intellicrack.core.types import (
 )
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.base import (
+    TRANSLATED_OPENAI_ERRORS,
     LLMProviderBase,
     OpenAIErrorMessages,
     ToolCallBufferManager,
-    is_permanent_quota_error,
     map_thinking_budget_to_effort,
+    redact_secrets,
 )
 from intellicrack.providers.capabilities import ApiDialect, TokenLimitField
-from intellicrack.providers.dialects.base import DialectRequest
+from intellicrack.providers.dialects.base import DialectRequest, StreamDelta, ToolCallFragment
 from intellicrack.providers.dialects.chat_completions import ChatCompletionsAdapter
-from intellicrack.providers.dialects.responses import ResponsesAdapter
+from intellicrack.providers.dialects.responses import (
+    ResponsesAdapter,
+    canonical_from_tool_search_output,
+    canonical_names_in_tool_search_output,
+    parse_usage,
+)
 from intellicrack.providers.presets import OPENAI_CONTEXT_WINDOW, preset_capabilities
 
 
@@ -58,7 +65,7 @@ if TYPE_CHECKING:
         ChatCompletionToolParam,
     )
     from openai.types.chat.chat_completion import ChatCompletion
-    from openai.types.responses import ResponseStreamEvent
+    from openai.types.responses import ResponseFunctionToolCall, ResponseReasoningItem, ResponseUsage
     from openai.types.shared import ReasoningEffort
 
 
@@ -86,26 +93,127 @@ _RESPONSES_PATH: str = "/responses"
 """Path of the Responses endpoint, relative to the client's base URL."""
 
 
-def _event_mapping(event: object) -> dict[str, Any]:
-    """Decode one streamed Responses event into a plain mapping.
+_OPENAI_STREAM_ERRORS = OpenAIErrorMessages(
+    auth_invalid=_ERR_INVALID_KEY,
+    rate_limited=_ERR_RATE_LIMITED,
+    api_error=_ERR_API_ERROR,
+    request_failed=_ERR_STREAM_FAILED,
+)
 
-    The SDK hands back a typed event model; the adapter works on the wire
-    shape, so the model is dumped by field alias to recover exactly what the
-    endpoint sent.
+_ERR_RESPONSE_FAILED = "response failed: %s"
+_ERR_RESPONSE_FAILED_UNSTATED = "the endpoint reported response.failed without an error object"
+
+_module_logger = get_logger(__name__)
+
+
+def _usage_delta(usage: ResponseUsage | None) -> list[StreamDelta]:
+    """Translate a streamed response's usage block into a usage delta.
 
     Args:
-        event: The streamed event object.
+        usage: The typed usage object carried by a terminal response event.
 
     Returns:
-        dict[str, Any]: The event's wire form, or an empty mapping when the
-        object cannot be dumped.
+        list[StreamDelta]: One usage delta, or an empty list when the event
+        carried no usage.
     """
-    dump = getattr(event, "model_dump", None)
-    if callable(dump):
-        dumped: object = dump(by_alias=True, exclude_none=True)
-        if isinstance(dumped, dict):
-            return cast("dict[str, Any]", dumped)
-    return {}
+    if usage is None:
+        return []
+    parsed = parse_usage(usage.to_dict())
+    return [StreamDelta(usage=parsed)] if parsed is not None else []
+
+
+def _function_call_fragment(item: ResponseFunctionToolCall) -> StreamDelta:
+    """Open a tool-call buffer for a function call the model just started.
+
+    The argument text follows as ``response.function_call_arguments.delta``
+    events keyed by the item's id, so the item id is the correlation token.
+    A call made inside a tool-search namespace is resolved to its canonical
+    dotted name from the ``(namespace, name)`` pair.
+
+    Args:
+        item: The typed function-call output item.
+
+    Returns:
+        StreamDelta: The opening tool-call fragment.
+    """
+    name = canonical_from_tool_search_output(item.namespace, item.name) if item.namespace else item.name
+    return StreamDelta(
+        tool_call_fragment=ToolCallFragment(
+            token=item.id or item.call_id,
+            call_id=item.call_id,
+            name=name,
+        ),
+    )
+
+
+def _reasoning_item(item: ResponseReasoningItem) -> ReasoningItem:
+    """Capture a completed reasoning output item for verbatim replay.
+
+    Args:
+        item: The typed reasoning output item.
+
+    Returns:
+        ReasoningItem: The captured item with its summary and encrypted state.
+    """
+    summary = tuple(part.text for part in item.summary)
+    return ReasoningItem(
+        kind=ReasoningKind.RESPONSES_ITEM,
+        text="\n\n".join(summary),
+        item_id=item.id,
+        encrypted_content=item.encrypted_content,
+        summary=summary,
+    )
+
+
+def _responses_stream_deltas(event: ResponseStreamEvent) -> list[StreamDelta]:
+    """Translate one typed Responses stream event into normalized deltas.
+
+    Dispatch is on the event's ``type`` discriminator rather than on its
+    class, because the SDK constructs an event type it does not know as the
+    first member of the union; such events match no branch and are ignored.
+
+    Args:
+        event: One event yielded by the SDK's ``AsyncStream``.
+
+    Returns:
+        list[StreamDelta]: Zero or more deltas, in wire order.
+
+    Raises:
+        ProviderError: If the stream reports an ``error`` event or the
+            response ends with ``response.failed``.
+    """
+    if event.type == "response.output_text.delta":
+        return [StreamDelta(text=event.delta)] if event.delta else []
+    if event.type == "response.reasoning_summary_text.delta":
+        return [StreamDelta(reasoning=event.delta)] if event.delta else []
+    if event.type == "response.reasoning_text.delta":
+        return [StreamDelta(reasoning=event.delta)] if event.delta else []
+    if event.type == "response.output_item.added":
+        return [_function_call_fragment(event.item)] if event.item.type == "function_call" else []
+    if event.type == "response.function_call_arguments.delta":
+        if not event.delta:
+            return []
+        return [StreamDelta(tool_call_fragment=ToolCallFragment(token=event.item_id, arguments=event.delta))]
+    if event.type == "response.output_item.done":
+        if event.item.type == "reasoning":
+            return [StreamDelta(reasoning_item=_reasoning_item(event.item))]
+        if event.item.type == "tool_search_output" and (loaded := canonical_names_in_tool_search_output(event.item.to_dict())):
+            _module_logger.info("responses_tool_search_loaded", tools=loaded)
+        return []
+    if event.type == "response.completed":
+        return [*_usage_delta(event.response.usage), StreamDelta(finish=event.response.status or "completed")]
+    if event.type == "response.incomplete":
+        details = event.response.incomplete_details
+        _module_logger.warning("responses_stream_incomplete", reason=details.reason if details is not None else None)
+        return [*_usage_delta(event.response.usage), StreamDelta(finish="incomplete")]
+    if event.type == "response.failed":
+        error = event.response.error
+        detail = f"{error.code}: {error.message}" if error is not None else _ERR_RESPONSE_FAILED_UNSTATED
+        raise ProviderError(_ERR_API_ERROR % (_ERR_RESPONSE_FAILED % redact_secrets(detail)))
+    if event.type == "error":
+        detail = f"{event.code}: {event.message}" if event.code else event.message
+        raise ProviderError(_ERR_API_ERROR % redact_secrets(detail))
+    return []
 
 
 class OpenAIMessageContent(TypedDict, total=False):
@@ -208,19 +316,21 @@ class OpenAIProvider(LLMProviderBase):
         except openai.AuthenticationError as e:
             self.connected = False
             self.client = None
+            detail = self._redact_error_text(e, api_key=credentials.api_key)
             self._logger.warning(
                 "openai_connect_auth_failed",
-                error=str(e),
+                error=detail,
             )
-            raise AuthenticationError(_ERR_INVALID_KEY % e) from e
+            raise AuthenticationError(_ERR_INVALID_KEY % detail) from e
         except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
             self.connected = False
             self.client = None
+            detail = self._redact_error_text(e, api_key=credentials.api_key)
             self._logger.warning(
                 "openai_connect_failed",
-                error=str(e),
+                error=detail,
             )
-            raise ProviderError(_ERR_CONNECT_FAILED % e) from e
+            raise ProviderError(_ERR_CONNECT_FAILED % detail) from e
         else:
             self._credentials = credentials
             self.connected = True
@@ -330,11 +440,12 @@ class OpenAIProvider(LLMProviderBase):
         try:
             sorted_models = await self._fetch_and_sort_models()
         except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
+            detail = self._redact_error_text(e)
             self._logger.warning(
                 "openai_list_models_failed",
-                error=str(e),
+                error=detail,
             )
-            raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
+            raise ProviderError(_ERR_LIST_MODELS_FAILED % detail) from e
         else:
             return sorted_models
 
@@ -937,9 +1048,10 @@ class OpenAIProvider(LLMProviderBase):
             str: Text chunks as they arrive.
 
         Raises:
-            AuthenticationError: If the API key is invalid.
-            ProviderError: If not connected or request fails.
-            RateLimitError: If rate limited by OpenAI.
+            ProviderError: If not connected or the request fails, over either
+                wire format. An invalid key raises the
+                :class:`AuthenticationError` subclass and a transient rate
+                limit the :class:`RateLimitError` subclass.
         """
         self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
@@ -963,8 +1075,16 @@ class OpenAIProvider(LLMProviderBase):
                 enable_cache=enable_cache,
                 stream=True,
             )
-            async for responses_chunk in self._iter_responses_stream(body):
-                yield responses_chunk
+            try:
+                async for responses_chunk in self._iter_responses_stream(body):
+                    yield responses_chunk
+            except TRANSLATED_OPENAI_ERRORS as exc:
+                self._raise_translated_openai_error(
+                    exc,
+                    log_prefix="openai_responses_stream",
+                    messages=_OPENAI_STREAM_ERRORS,
+                    log_extra={"model": model},
+                )
             return
 
         openai_messages = self.convert_messages_to_provider_format(messages)
@@ -990,26 +1110,13 @@ class OpenAIProvider(LLMProviderBase):
                 reasoning_effort=reasoning_effort,
             ):
                 yield text_chunk
-        except openai.AuthenticationError as e:
-            self._logger.warning("openai_stream_auth_failed", model=model, error=str(e))
-            raise AuthenticationError(_ERR_INVALID_KEY % e) from e
-        except openai.RateLimitError as e:
-            if is_permanent_quota_error(str(e)):
-                self._logger.warning("openai_stream_quota_exhausted", model=model, error=str(e))
-                raise ProviderError(_ERR_API_ERROR % e) from e
-            self._logger.warning("openai_stream_rate_limited", model=model, error=str(e))
-            raise RateLimitError(_ERR_RATE_LIMITED % e) from e
-        except openai.APIError as e:
-            self._logger.warning("openai_stream_api_error", model=model, error=str(e))
-            raise ProviderError(_ERR_API_ERROR % e) from e
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            self._logger.warning(
-                "openai_stream_failed",
-                model=model,
-                error=str(e),
-                cancel_requested=self._cancel_requested,
+        except TRANSLATED_OPENAI_ERRORS as exc:
+            self._raise_translated_openai_error(
+                exc,
+                log_prefix="openai_stream",
+                messages=_OPENAI_STREAM_ERRORS,
+                log_extra={"model": model, "cancel_requested": self._cancel_requested},
             )
-            raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def _iter_openai_stream(
         self,
@@ -1236,22 +1343,19 @@ class OpenAIProvider(LLMProviderBase):
         if self.client is None:
             self._logger.warning("openai_responses_stream_not_connected", model=body.get("model"))
             raise ProviderError(_ERR_NOT_CONNECTED)
-        stream = cast(
-            "AsyncStream[ResponseStreamEvent]",
-            await self.client.post(
-                _RESPONSES_PATH,
-                cast_to=httpx.Response,
-                body=body,
-                stream=True,
-                stream_cls=AsyncStream[cast("type[Any]", object)],
-            ),
+        stream = await self.client.post(
+            _RESPONSES_PATH,
+            cast_to=Response,
+            body=body,
+            stream=True,
+            stream_cls=AsyncStream[ResponseStreamEvent],
         )
         buffer = ToolCallBufferManager()
         reasoning: list[ReasoningItem] = []
         async for event in stream:
             if self._cancel_requested:
                 break
-            for delta in self._responses_adapter.parse_stream_event(_event_mapping(event)):
+            for delta in _responses_stream_deltas(event):
                 buffer.absorb(delta)
                 if delta.usage is not None:
                     self._pending_usage = delta.usage
