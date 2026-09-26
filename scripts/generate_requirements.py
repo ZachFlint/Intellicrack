@@ -27,6 +27,7 @@ import yaml
 
 _NAME_NORMALIZE_RE: re.Pattern[str] = re.compile(r"[-_.]+")
 _PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
+_ObjectList = list[object]
 
 
 def _normalize_name(name: str) -> str:
@@ -75,7 +76,7 @@ def _require_object_list(value: object, field_name: str) -> list[object]:
     if not isinstance(value, list):
         msg = f"Expected '{field_name}' to be a list (got {type(value).__name__})"
         raise TypeError(msg)
-    return list(cast("list[object]", value))
+    return list(cast("_ObjectList", value))
 
 
 def _package_name_and_version(fields: dict[str, object]) -> tuple[str, str] | None:
@@ -122,7 +123,7 @@ def _platform_pypi_urls(root: dict[str, object], platform_key: str) -> set[str]:
     urls: set[str] = set()
     if not isinstance(entries, list):
         return urls
-    for entry in cast("list[object]", entries):
+    for entry in cast("_ObjectList", entries):
         fields = _coerce_str_mapping(entry)
         url = fields.get("pypi")
         if isinstance(url, str) and url:
@@ -147,7 +148,7 @@ def _select_lock_platform(root: dict[str, object]) -> str | None:
     platforms_field = root.get("platforms")
     platform_keys: list[str] = []
     if isinstance(platforms_field, list):
-        for entry in cast("list[object]", platforms_field):
+        for entry in cast("_ObjectList", platforms_field):
             if isinstance(entry, str):
                 platform_keys.append(entry)
             else:

@@ -15,10 +15,10 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.10.2
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -42,15 +42,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
-      python: ${{ steps.filter.outputs.python }}
-      x64dbg: ${{ steps.filter.outputs.x64dbg }}
+      python: ${{ steps.python_diff.outputs.substantive || 'false' }}
+      x64dbg: ${{ steps.x64dbg_diff.outputs.substantive || 'false' }}
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: dorny/paths-filter@v4.0.3
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
+          list-files: shell
           filters: |
             python:
               - 'src/intellicrack/**'
@@ -64,6 +65,20 @@ jobs:
             x64dbg:
               - 'src/x64dbg-plugin/**'
               - '.github/workflows/ci.yml'
+      - name: Classify python-relevant changes as substantive or comment-only
+        if: steps.filter.outputs.python == 'true'
+        id: python_diff
+        uses: ./.github/actions/comment-only-diff
+        with:
+          paths: ${{ steps.filter.outputs.python_files }}
+          base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      - name: Classify x64dbg-relevant changes as substantive or comment-only
+        if: steps.filter.outputs.x64dbg == 'true'
+        id: x64dbg_diff
+        uses: ./.github/actions/comment-only-diff
+        with:
+          paths: ${{ steps.filter.outputs.x64dbg_files }}
+          base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
   python-lint:
     runs-on: windows-latest
     needs: [setup]
@@ -71,10 +86,10 @@ jobs:
     continue-on-error: true
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.10.2
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -91,10 +106,10 @@ jobs:
     continue-on-error: true
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.10.2
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -124,7 +139,7 @@ jobs:
               print("No bandit report found")
       - name: Upload bandit report
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bandit-report
           path: bandit-report.json
@@ -135,10 +150,10 @@ jobs:
     continue-on-error: true
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.10.2
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -170,10 +185,10 @@ jobs:
     if: success() || failure()
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.10.2
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -189,10 +204,10 @@ jobs:
     continue-on-error: true
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.10.2
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
@@ -244,7 +259,7 @@ jobs:
           PYTHONUTF8: 1
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results
           path: |
@@ -253,7 +268,7 @@ jobs:
             coverage.xml
       - name: Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v7.1.1
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: ./coverage.xml
           flags: unittests
@@ -265,7 +280,7 @@ jobs:
       - name: SonarQube Scan
         if: always()
         continue-on-error: true
-        uses: SonarSource/sonarqube-scan-action@v8.2.2
+        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
@@ -275,7 +290,7 @@ jobs:
     if: (success() || failure()) && (needs.changes.outputs.x64dbg == 'true' || github.event_name == 'workflow_dispatch')
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -314,7 +329,7 @@ jobs:
           }
       - name: Upload plugin artifacts
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: x64dbg-bridge-plugins
           path: |
