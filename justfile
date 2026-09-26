@@ -462,7 +462,7 @@ generate-structure:
 changelog MESSAGE='':
     @& scripts/update-changelog.ps1 -Pixi "{{ pixi }}" -Message '{{ MESSAGE }}'
 
-[doc('Auto-generate commit message via Gemini API, skip hooks, push to origin (flags passed to git push)')]
+[doc('Auto-generate commit message via Gemini API, skip hooks, push to origin, rebasing and retrying if origin moved (flags passed to git push)')]
 [group('git')]
 git-commit *FLAGS:
     @& scripts/git-commit.ps1 -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"

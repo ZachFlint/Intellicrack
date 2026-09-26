@@ -39,6 +39,20 @@ function Write-Footer {
     Write-Host "$script:e[90mTotal time: $("{0:N1}" -f $elapsed) seconds$script:e[0m`n"
 }
 
+function Test-GitRebaseInProgress {
+    foreach ($name in 'rebase-merge', 'rebase-apply') {
+        $path = git rev-parse --git-path $name 2>$null
+        if ($path -and (Test-Path $path)) { return $true }
+    }
+    return $false
+}
+
+function Stop-GitRebase {
+    if (-not (Test-GitRebaseInProgress)) { return $true }
+    git rebase --abort 2>&1 | ForEach-Object { Write-Host "  $_" }
+    return -not (Test-GitRebaseInProgress)
+}
+
 function Install-GitHubRelease {
     param(
         [Parameter(Mandatory)][string]$Tag,
