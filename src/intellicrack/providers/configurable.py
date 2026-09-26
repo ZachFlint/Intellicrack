@@ -208,7 +208,7 @@ class ConfigurableProvider(LLMProviderBase):
         if self.instance.requires_api_key and not api_key:
             self._logger.warning("configurable_connect_missing_key")
             raise AuthenticationError(_ERR_MISSING_KEY % self.name)
-        if api_key and not self.instance.may_send_api_key():
+        if api_key and not self.instance.may_send_api_key(base_url):
             self._logger.warning("configurable_connect_insecure_transport_unacknowledged", base_url=base_url)
             raise AuthenticationError(_ERR_KEY_WITHHELD)
 
@@ -247,7 +247,7 @@ class ConfigurableProvider(LLMProviderBase):
             dict[str, str]: The headers to send.
         """
         api_key = self._credentials.api_key if self._credentials is not None else None
-        if api_key and not self.instance.may_send_api_key():
+        if api_key and not self.instance.may_send_api_key(self._credentials.api_base if self._credentials is not None else None):
             api_key = None
         headers = self._adapter.resolve_headers(api_key, self.instance.headers)
         headers.setdefault("Content-Type", "application/json")
