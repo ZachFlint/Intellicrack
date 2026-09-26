@@ -87,6 +87,7 @@ def _serialize_reasoning_item(item: ReasoningItem) -> dict[str, Any]:
         "encrypted_content": item.encrypted_content,
         "redacted_data": item.redacted_data,
         "summary": list(item.summary),
+        "payload": item.payload,
     }
 
 
@@ -107,6 +108,7 @@ def _deserialize_reasoning_item(data: dict[str, Any]) -> ReasoningItem:
     except ValueError:
         kind = ReasoningKind.THINKING
     raw_summary = data.get("summary")
+    raw_payload = data.get("payload")
     return ReasoningItem(
         kind=kind,
         text=str(data.get("text", "")),
@@ -115,6 +117,7 @@ def _deserialize_reasoning_item(data: dict[str, Any]) -> ReasoningItem:
         encrypted_content=data.get("encrypted_content"),
         redacted_data=data.get("redacted_data"),
         summary=tuple(str(part) for part in raw_summary) if is_json_array(raw_summary) else (),
+        payload=dict(raw_payload) if is_json_object(raw_payload) else None,
     )
 
 
