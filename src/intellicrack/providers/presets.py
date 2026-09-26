@@ -43,7 +43,10 @@ from intellicrack.providers.capabilities import (
 _logger = get_logger(__name__)
 
 OPENAI_CONTEXT_WINDOW: Final[int] = 128000
-"""Context window shared by the GPT-4o / 4.1 / 4.5 families."""
+"""Context window shared by the GPT-4o / 4.5 / GPT-4 Turbo families."""
+
+GPT41_CONTEXT_WINDOW: Final[int] = 1047576
+"""Context window of the GPT-4.1 family."""
 
 OPENAI_REASONING_CONTEXT_WINDOW: Final[int] = 200000
 """Context window of the o-series reasoning models."""
@@ -243,6 +246,13 @@ _OPENAI_CHAT_FAMILY = CapabilityOverride(
 
 OPENAI_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
     ModelPreset(
+        prefixes=("gpt-5-chat",),
+        capabilities=_merge_overrides(
+            _OPENAI_CHAT_FAMILY,
+            CapabilityOverride(context_window=OPENAI_CONTEXT_WINDOW, supports_vision=True),
+        ),
+    ),
+    ModelPreset(
         prefixes=("gpt-5", "gpt-6"),
         capabilities=_merge_overrides(
             _OPENAI_RESPONSES_FAMILY,
@@ -257,11 +267,22 @@ OPENAI_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
         ),
     ),
     ModelPreset(
-        prefixes=("gpt-4o", "chatgpt-4o", "gpt-4.1", "gpt-4.5", "gpt-4-turbo"),
+        prefixes=("gpt-4.1",),
+        capabilities=_merge_overrides(
+            _OPENAI_CHAT_FAMILY,
+            CapabilityOverride(context_window=GPT41_CONTEXT_WINDOW, max_output_tokens=32768, supports_vision=True),
+        ),
+    ),
+    ModelPreset(
+        prefixes=("gpt-4o", "chatgpt-4o", "gpt-4.5", "gpt-4-turbo", "gpt-4-vision-preview", "gpt-4-1106-vision-preview"),
         capabilities=_merge_overrides(
             _OPENAI_CHAT_FAMILY,
             CapabilityOverride(context_window=OPENAI_CONTEXT_WINDOW, supports_vision=True),
         ),
+    ),
+    ModelPreset(
+        prefixes=("gpt-4-1106-preview", "gpt-4-0125-preview"),
+        capabilities=_merge_overrides(_OPENAI_CHAT_FAMILY, CapabilityOverride(context_window=OPENAI_CONTEXT_WINDOW)),
     ),
     ModelPreset(
         prefixes=("gpt-3.5",),
