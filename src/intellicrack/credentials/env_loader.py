@@ -17,12 +17,16 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import ClassVar, Final
+from typing import TYPE_CHECKING, ClassVar, Final
 
 from intellicrack.core.config import get_env_file, get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials
 from intellicrack.providers import ids as provider_ids
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 _logger = get_logger(__name__)
@@ -133,13 +137,35 @@ _ENV_LINE_PATTERN: re.Pattern[str] = re.compile(
 
 _SAFE_VALUE_PATTERN: re.Pattern[str] = re.compile(r"^[A-Za-z0-9._/\-]+$")
 
+_UNICODE_ESCAPE_DIGITS: Final[int] = 4
+"""Hexadecimal digits in a ``\\uXXXX`` escape."""
+
+_UNICODE_ESCAPE_PATTERN: Final[re.Pattern[str]] = re.compile(r"[0-9A-Fa-f]{4}")
+"""The four hexadecimal digits following ``\\u``."""
+
+_ENV_LINE_BREAKS: Final[re.Pattern[str]] = re.compile(r"\r\n|\n|\r")
+"""The only sequences that end a ``.env`` line.
+
+``str.splitlines`` also splits on vertical tab, form feed, the file, group and
+record separators, NEL and the Unicode line and paragraph separators; a value
+carrying any of those must stay on its line.
+"""
+
+_SHORT_ESCAPES: Final[dict[str, str]] = {"\\": "\\\\", '"': '\\"', "$": "\\$", "\n": "\\n", "\r": "\\r", "\t": "\\t"}
+"""Characters the writer escapes with a two-character sequence."""
+
+_ENV_NAME_PATTERN: Final[re.Pattern[str]] = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+"""A variable name the ``.env`` parser and every shell accept."""
+
 
 def _decode_double_quoted(value: str) -> str:
     r"""Decode escape sequences inside a double-quoted .env value.
 
-    Supports backslash-escapes for ``\\``, ``"``, ``$``, ``n``, ``r``, and
-    ``t``. Unknown escapes are preserved as the escaped character (dropping
-    the leading backslash) to mirror common dotenv parser behavior.
+    Supports backslash-escapes for ``\\``, ``"``, ``$``, ``n``, ``r``, ``t``
+    and ``uXXXX`` (four hexadecimal digits naming one code point, which is how
+    the writer encodes every other line separator). Unknown escapes are
+    preserved as the escaped character (dropping the leading backslash) to
+    mirror common dotenv parser behavior.
 
     Args:
         value: The raw string content between the surrounding double quotes.
@@ -166,6 +192,10 @@ def _decode_double_quoted(value: str) -> str:
                 result.append('"')
             elif nxt == "$":
                 result.append("$")
+            elif nxt == "u" and _UNICODE_ESCAPE_PATTERN.fullmatch(value, index + 2, index + 2 + _UNICODE_ESCAPE_DIGITS):
+                result.append(chr(int(value[index + 2 : index + 2 + _UNICODE_ESCAPE_DIGITS], 16)))
+                index += 2 + _UNICODE_ESCAPE_DIGITS
+                continue
             else:
                 result.append(nxt)
             index += 2
@@ -237,8 +267,10 @@ def _parse_env_value(raw: str) -> str:
 def _parse_env_text(text: str) -> dict[str, str]:
     r"""Parse .env file content into a ``dict`` of key to value.
 
-    Accepts both ``\n`` and ``\r\n`` line endings. Blank lines and comment
-    lines starting with ``#`` are ignored.
+    Accepts ``\n``, ``\r\n`` and ``\r`` line endings and nothing else, so a
+    value holding another character ``str.splitlines`` treats as a line
+    boundary is never cut short. Blank lines and comment lines starting with
+    ``#`` are ignored.
 
     Args:
         text: The raw .env file content.
@@ -247,7 +279,7 @@ def _parse_env_text(text: str) -> dict[str, str]:
         dict[str, str]: Mapping of variable names to their parsed values.
     """
     result: dict[str, str] = {}
-    for raw_line in text.splitlines():
+    for raw_line, _ in _split_env_lines(text):
         stripped_line = raw_line.strip()
         if not stripped_line or stripped_line.startswith("#"):
             continue
@@ -267,10 +299,13 @@ def _quote_env_value(value: str) -> str:
         * Empty string becomes ``""`` (no quotes, bare ``=``).
         * Value made only of ASCII alphanumerics plus ``.``, ``_``, ``/``,
           and ``-`` is emitted unquoted.
-        * Any other value is wrapped in double quotes with these escape
-          sequences applied in order: ``\\`` becomes ``\\\\``, ``"`` becomes
-          ``\"``, ``$`` becomes ``\$``, literal newline becomes ``\n``,
-          carriage return becomes ``\r``, and tab becomes ``\t``.
+        * Any other value is wrapped in double quotes. ``\\`` becomes
+          ``\\\\``, ``"`` becomes ``\"``, ``$`` becomes ``\$``, newline becomes
+          ``\n``, carriage return becomes ``\r`` and tab becomes ``\t``. Every
+          other character ``str.splitlines`` treats as a line boundary
+          (vertical tab, form feed, ``\x1c`` to ``\x1e``, NEL, U+2028 and
+          U+2029) becomes a ``\uXXXX`` escape, so the value round-trips through
+          any reader that splits lines the way Python does.
 
     Args:
         value: The value to serialize.
@@ -283,10 +318,23 @@ def _quote_env_value(value: str) -> str:
         return ""
     if _SAFE_VALUE_PATTERN.match(value):
         return value
-    escaped = (
-        value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
-    )
-    return f'"{escaped}"'
+    return f'"{"".join(_escape_env_character(character) for character in value)}"'
+
+
+def _escape_env_character(character: str) -> str:
+    """Escape one character of a double-quoted ``.env`` value.
+
+    Args:
+        character: A single character of the value.
+
+    Returns:
+        str: The character itself, or the escape sequence that encodes it.
+    """
+    if short := _SHORT_ESCAPES.get(character):
+        return short
+    if len(f"a{character}b".splitlines()) > 1:
+        return f"\\u{ord(character):04x}"
+    return character
 
 
 def _detect_eol(text: str) -> str:
@@ -318,8 +366,9 @@ def _split_env_lines(text: str) -> list[tuple[str, str]]:
     r"""Split ``.env`` text into ``(content, line_ending)`` pairs.
 
     Only ``\r\n``, ``\n`` and ``\r`` are treated as line endings; any other
-    separator ``str.splitlines`` recognises stays inside the content so the
-    original bytes are reproduced exactly when the pairs are re-joined.
+    separator ``str.splitlines`` recognises stays inside the content, so the
+    original bytes are reproduced exactly when the pairs are re-joined and a
+    variable's line is never split in two.
 
     Args:
         text: Raw ``.env`` file content.
@@ -329,13 +378,12 @@ def _split_env_lines(text: str) -> list[tuple[str, str]]:
         the final line's ending is empty when the text has no trailing newline.
     """
     pairs: list[tuple[str, str]] = []
-    for raw_line in text.splitlines(keepends=True):
-        if raw_line.endswith("\r\n"):
-            pairs.append((raw_line[:-2], "\r\n"))
-        elif raw_line.endswith(("\n", "\r")):
-            pairs.append((raw_line[:-1], raw_line[-1]))
-        else:
-            pairs.append((raw_line, ""))
+    start = 0
+    for match in _ENV_LINE_BREAKS.finditer(text):
+        pairs.append((text[start : match.start()], match.group()))
+        start = match.end()
+    if start < len(text):
+        pairs.append((text[start:], ""))
     return pairs
 
 
@@ -454,8 +502,8 @@ def validate_key_format(provider: str, api_key: str) -> str | None:
     return None
 
 
-def derived_credential_mapping(provider: str) -> ProviderCredentialMapping:
-    """Derive the environment variables an unregistered instance reads.
+def derived_credential_mapping(provider: str, *, api_key_aliases: tuple[str, ...] = ()) -> ProviderCredentialMapping:
+    """Derive the environment variables a user-defined instance reads.
 
     A user-defined instance has no entry in :data:`CredentialLoader.PROVIDER_MAPPINGS`,
     so its variables are derived from its id the way Zed derives them:
@@ -464,16 +512,168 @@ def derived_credential_mapping(provider: str) -> ProviderCredentialMapping:
 
     Args:
         provider: The instance id.
+        api_key_aliases: Further variables checked for the key when the
+            derived one is unset, such as the variable the instance's preset
+            names (``DEEPSEEK_API_KEY`` for an instance created from the
+            DeepSeek preset under another id).
 
     Returns:
         ProviderCredentialMapping: The derived variable mapping.
     """
     prefix = provider_ids.env_var_prefix(provider)
+    api_key_var = f"{prefix}_API_KEY"
     return ProviderCredentialMapping(
-        api_key_var=f"{prefix}_API_KEY",
+        api_key_var=api_key_var,
         api_base_var=f"{prefix}_API_BASE",
         organization_var=f"{prefix}_ORGANIZATION",
         project_var=f"{prefix}_PROJECT",
+        api_key_aliases=tuple(dict.fromkeys(alias for alias in api_key_aliases if alias and alias != api_key_var)),
+    )
+
+
+def builtin_env_var_names() -> frozenset[str]:
+    """Return every variable a built-in provider reads.
+
+    Returns:
+        frozenset[str]: Primary, alias and endpoint variable names of the
+        eight built-in providers.
+    """
+    names: set[str] = set()
+    for mapping in CredentialLoader.PROVIDER_MAPPINGS.values():
+        candidates = (mapping.api_key_var, *mapping.api_key_aliases, mapping.api_base_var, mapping.organization_var, mapping.project_var)
+        names.update(name for name in candidates if name)
+    return frozenset(names)
+
+
+def instance_env_var_conflict(instance_id: str, other_ids: Iterable[str]) -> str | None:
+    """Explain why an instance id cannot own its derived ``.env`` variables.
+
+    An instance's variables are derived from its id by upper-casing it and
+    folding hyphens to underscores. Three kinds of id would therefore read a
+    variable that is not theirs, or one no ``.env`` parser accepts: an id whose
+    stem starts with a digit (``1gw`` would read ``1GW_API_KEY``), an id whose
+    derived variables are a built-in provider's (``xai`` would read Grok's
+    ``XAI_API_KEY``, ``gemini`` Google's ``GEMINI_API_KEY``, ``google_cloud``
+    Google's ``GOOGLE_CLOUD_PROJECT``), and an id differing from another only
+    by hyphen versus underscore (``my-gw`` and ``my_gw`` would share
+    ``MY_GW_API_KEY``). Such an id is refused when an instance is created or
+    imported, and skipped when saved instances are loaded, so both paths
+    agree.
+
+    Args:
+        instance_id: The candidate instance id.
+        other_ids: Every other instance id already in use, built-ins included.
+
+    Returns:
+        str | None: A user-facing reason when the id is unusable, otherwise
+        ``None``.
+    """
+    normalized = instance_id.strip().lower()
+    if provider_ids.is_builtin_provider_id(normalized):
+        return f"'{normalized}' is a built-in provider id."
+    prefix = provider_ids.env_var_prefix(normalized)
+    if _ENV_NAME_PATTERN.fullmatch(prefix) is None:
+        return f"'{normalized}' would store its key in {prefix}_API_KEY, which is not a valid environment variable name. Start the id with a letter."
+    mapping = derived_credential_mapping(normalized)
+    reserved = builtin_env_var_names()
+    derived = (mapping.api_key_var, mapping.api_base_var, mapping.organization_var, mapping.project_var)
+    if clash := next((name for name in derived if name in reserved), None):
+        return f"'{normalized}' would read {clash}, which belongs to a built-in provider. Choose another id."
+    for other in other_ids:
+        other_normalized = other.strip().lower()
+        if other_normalized != normalized and provider_ids.env_var_prefix(other_normalized) == prefix:
+            return f"'{normalized}' and '{other_normalized}' would share the variable {mapping.api_key_var}. Choose another id."
+    return None
+
+
+class _InstanceMappingRegistry:
+    """Credential mappings of the user-defined instances currently known.
+
+    A user-defined instance's variables depend on more than its id: an instance
+    created from a preset also reads the variable that preset names. The
+    settings store registers every instance it loads or writes, so every
+    :class:`CredentialLoader` resolves the same mapping for it.
+    """
+
+    def __init__(self) -> None:
+        """Initialize an empty registry."""
+        self._mappings: dict[str, ProviderCredentialMapping] = {}
+        self._lock = threading.Lock()
+
+    def register(self, instance_id: str, mapping: ProviderCredentialMapping) -> None:
+        """Record the mapping an instance reads.
+
+        Args:
+            instance_id: The instance id.
+            mapping: The instance's variable mapping.
+        """
+        with self._lock:
+            self._mappings[instance_id] = mapping
+
+    def unregister(self, instance_id: str) -> None:
+        """Forget an instance.
+
+        Args:
+            instance_id: The instance id.
+        """
+        with self._lock:
+            self._mappings.pop(instance_id, None)
+
+    def get(self, instance_id: str) -> ProviderCredentialMapping | None:
+        """Return an instance's registered mapping.
+
+        Args:
+            instance_id: The instance id.
+
+        Returns:
+            ProviderCredentialMapping | None: The mapping, or ``None`` when the
+            instance is not registered.
+        """
+        with self._lock:
+            return self._mappings.get(instance_id)
+
+    def ids(self) -> tuple[str, ...]:
+        """Return every registered instance id.
+
+        Returns:
+            tuple[str, ...]: Registered ids in registration order.
+        """
+        with self._lock:
+            return tuple(self._mappings)
+
+
+_INSTANCE_MAPPINGS: Final[_InstanceMappingRegistry] = _InstanceMappingRegistry()
+
+
+def register_instance_mapping(instance_id: str, mapping: ProviderCredentialMapping) -> None:
+    """Record the variables a user-defined instance reads.
+
+    Args:
+        instance_id: The instance id.
+        mapping: The instance's variable mapping.
+    """
+    _INSTANCE_MAPPINGS.register(instance_id, mapping)
+
+
+def unregister_instance_mapping(instance_id: str) -> None:
+    """Forget a user-defined instance's variable mapping.
+
+    Args:
+        instance_id: The instance id.
+    """
+    _INSTANCE_MAPPINGS.unregister(instance_id)
+
+
+def known_provider_ids() -> tuple[str, ...]:
+    """Return every provider whose credentials the application may hold.
+
+    Returns:
+        tuple[str, ...]: The eight built-ins, then every registered
+        user-defined instance.
+    """
+    return (
+        *provider_ids.BUILTIN_PROVIDER_IDS,
+        *(name for name in _INSTANCE_MAPPINGS.ids() if name not in provider_ids.BUILTIN_PROVIDER_IDS),
     )
 
 
@@ -531,9 +731,11 @@ class CredentialLoader:
         """Return the environment-variable mapping one instance reads.
 
         A built-in provider keeps its historical variable names, so ``.env``
-        files stay byte-compatible. Every other instance id derives its
-        variables from itself, which is what lets a user-defined endpoint be
-        configured from ``.env`` at all.
+        files stay byte-compatible. A registered user-defined instance reads
+        the mapping registered for it, which adds its preset's key variable as
+        an alias. Every other instance id derives its variables from itself,
+        which is what lets a user-defined endpoint be configured from ``.env``
+        at all.
 
         Args:
             provider: The provider instance id.
@@ -541,7 +743,7 @@ class CredentialLoader:
         Returns:
             ProviderCredentialMapping: The instance's variable mapping.
         """
-        mapping = cls.PROVIDER_MAPPINGS.get(provider)
+        mapping = cls.PROVIDER_MAPPINGS.get(provider) or _INSTANCE_MAPPINGS.get(provider)
         return mapping if mapping is not None else derived_credential_mapping(provider)
 
     def __init__(self, env_path: Path | None = None) -> None:
@@ -752,9 +954,11 @@ class CredentialLoader:
     def _clearable_variables(cls, mapping: ProviderCredentialMapping, field: CredentialField) -> tuple[str, ...]:
         """Return the variables removed when a credential field is cleared.
 
-        Clearing an API key also removes the provider's alias variables,
-        except an alias that is another provider's primary key variable, which
-        that provider still owns.
+        Clearing a built-in provider's API key also removes its alias
+        variables, except an alias that is another provider's primary key
+        variable, which that provider still owns. A user-defined instance's
+        aliases are its preset's shared variables, which it never owns, so
+        only its own variable is removed.
 
         Args:
             mapping: The provider's credential variable mapping.
@@ -766,7 +970,7 @@ class CredentialLoader:
         primary = mapping.env_var_for(field)
         if primary is None:
             return ()
-        if field is not CredentialField.API_KEY:
+        if field is not CredentialField.API_KEY or all(mapping is not builtin for builtin in cls.PROVIDER_MAPPINGS.values()):
             return (primary,)
         foreign_primaries = {other.api_key_var for other in cls.PROVIDER_MAPPINGS.values() if other is not mapping}
         return (primary, *(alias for alias in mapping.api_key_aliases if alias not in foreign_primaries))
@@ -880,7 +1084,7 @@ class CredentialLoader:
             list[str]: List of provider names with valid credentials.
         """
         configured: list[str] = []
-        for provider in provider_ids.BUILTIN_PROVIDER_IDS:
+        for provider in known_provider_ids():
             is_valid, _ = self.validate_credentials(provider)
             if is_valid:
                 configured.append(provider)
@@ -898,7 +1102,7 @@ class CredentialLoader:
             list[str]: List of provider names without valid credentials.
         """
         missing: list[str] = []
-        for provider in provider_ids.BUILTIN_PROVIDER_IDS:
+        for provider in known_provider_ids():
             is_valid, _ = self.validate_credentials(provider)
             if not is_valid:
                 missing.append(provider)
@@ -1059,13 +1263,15 @@ class CredentialLoader:
 
 
 def get_api_key_env_var_mapping() -> dict[str, str]:
-    """Get a mapping of provider ID to API key environment variable name.
+    """Get a mapping of built-in provider ID to API key environment variable name.
 
     Derives the mapping from PROVIDER_MAPPINGS to maintain a single source
-    of truth for env var names.
+    of truth for env var names. A user-defined instance's variables are
+    resolved per instance through :meth:`CredentialLoader.mapping_for`,
+    which every credential read and write goes through.
 
     Returns:
-        dict[str, str]: Dict mapping provider ID string to API key env var name.
+        dict[str, str]: Dict mapping built-in provider ID to API key env var name.
     """
     return {provider: mapping.api_key_var for provider, mapping in CredentialLoader.PROVIDER_MAPPINGS.items()}
 
