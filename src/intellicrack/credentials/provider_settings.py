@@ -27,9 +27,19 @@ from typing import TYPE_CHECKING, Any, Final, cast
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials
-from intellicrack.credentials.env_loader import CredentialField, EnvPersistAction
+from intellicrack.credentials.env_loader import (
+    CredentialField,
+    EnvPersistAction,
+    ProviderCredentialMapping,
+    builtin_env_var_names,
+    derived_credential_mapping,
+    instance_env_var_conflict,
+    register_instance_mapping,
+    unregister_instance_mapping,
+)
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.capabilities import CapabilityOverride
+from intellicrack.providers.presets import preset_for
 
 
 if TYPE_CHECKING:
@@ -169,6 +179,46 @@ def saved_enabled(section: Mapping[str, object]) -> bool:
     """
     value = section.get(ENABLED_KEY, True)
     return value if isinstance(value, bool) else True
+
+
+def instance_credential_mapping(instance_id: str, preset_id: str | None) -> ProviderCredentialMapping:
+    """Build the ``.env`` variable mapping a user-defined instance reads.
+
+    The key is saved under the instance's own derived variable
+    (``<INSTANCE_ID>_API_KEY``). The variables the instance's preset names --
+    ``DEEPSEEK_API_KEY`` for an instance created from the DeepSeek preset --
+    are read as aliases when that variable is unset, so an instance named
+    ``ds`` still finds the key the DeepSeek preset documents. A built-in
+    provider's variables are never borrowed this way: a duplicated OpenAI
+    instance can be pointed at another host, and must not carry the built-in
+    provider's key there without the user entering it.
+
+    Args:
+        instance_id: The instance id.
+        preset_id: The preset the instance was created from, if any.
+
+    Returns:
+        ProviderCredentialMapping: The instance's variable mapping.
+    """
+    preset = preset_for(preset_id) if preset_id else None
+    if preset is None:
+        return derived_credential_mapping(instance_id)
+    reserved = builtin_env_var_names()
+    candidates = (preset.api_key_env_var, *preset.api_key_aliases)
+    return derived_credential_mapping(instance_id, api_key_aliases=tuple(name for name in candidates if name and name not in reserved))
+
+
+def _record_preset_id(record: Mapping[str, object]) -> str | None:
+    """Read the preset id an instance record names.
+
+    Args:
+        record: A saved instance record.
+
+    Returns:
+        str | None: The preset id, or ``None`` when the record names none.
+    """
+    raw = record.get("preset_id")
+    return raw.strip() if isinstance(raw, str) and raw.strip() else None
 
 
 def build_settings_section(values: Mapping[str, object]) -> dict[str, object]:
@@ -334,23 +384,57 @@ class ProviderSettingsStore:
             return {}
         return cast("dict[str, object]", payload) if isinstance(payload, dict) else {}
 
-    def load_instances(self) -> dict[str, dict[str, object]]:
-        """Load every saved provider instance.
+    def _stored_instance_records(self) -> dict[str, object]:
+        """Return the raw ``instances`` section exactly as stored.
 
         Returns:
-            dict[str, dict[str, object]]: Instance records keyed by instance
-            id. Entries that are not JSON objects are skipped, so one damaged
-            record cannot cost the user the rest.
+            dict[str, object]: Stored entries keyed by instance id, including
+            entries :meth:`load_instances` rejects.
         """
         raw = self._load_raw().get(INSTANCES_KEY)
-        if not isinstance(raw, dict):
-            return {}
+        return cast("dict[str, object]", raw) if isinstance(raw, dict) else {}
+
+    def stored_instance_ids(self) -> frozenset[str]:
+        """Return every id the ``instances`` section holds, usable or not.
+
+        Returns:
+            frozenset[str]: Stored instance ids, including ones
+            :meth:`load_instances` skips.
+        """
+        return frozenset(self._stored_instance_records())
+
+    def load_instances(self) -> dict[str, dict[str, object]]:
+        """Load every usable saved provider instance.
+
+        A record is skipped, with a warning, when it is not a JSON object, when
+        its id is not a normalized provider id, when the id is a built-in's, or
+        when the ``.env`` variables derived from its id are unusable or belong
+        to a built-in or to an earlier record (see
+        :func:`~intellicrack.credentials.env_loader.instance_env_var_conflict`).
+        This is the same rule the settings dialog applies when an instance is
+        created or imported, so a hand-edited or legacy file can never make
+        two instances, or an instance and a built-in, read one variable. Every
+        accepted instance's variable mapping is registered with the credential
+        loader so its preset's key variable is honoured.
+
+        Returns:
+            dict[str, dict[str, object]]: Usable instance records keyed by
+            instance id, in stored order.
+        """
         instances: dict[str, dict[str, object]] = {}
-        for instance_id, record in cast("dict[str, object]", raw).items():
-            if isinstance(record, dict):
-                instances[instance_id] = cast("dict[str, object]", record)
-            else:
+        for instance_id, record in self._stored_instance_records().items():
+            if not isinstance(record, dict):
                 _logger.warning("provider_instance_record_not_an_object", instance_id=instance_id)
+                continue
+            if not provider_ids.is_valid_provider_id(instance_id) or provider_ids.normalize_provider_id(instance_id) != instance_id:
+                _logger.warning("provider_instance_id_invalid", instance_id=instance_id)
+                continue
+            if reason := instance_env_var_conflict(instance_id, (*provider_ids.BUILTIN_PROVIDER_IDS, *instances)):
+                _logger.warning("provider_instance_rejected", instance_id=instance_id, reason=reason)
+                continue
+            typed_record = cast("dict[str, object]", record)
+            instances[instance_id] = typed_record
+            register_instance_mapping(instance_id, instance_credential_mapping(instance_id, _record_preset_id(typed_record)))
         return instances
 
     def write_instance(self, instance_id: str, record: Mapping[str, object]) -> None:
@@ -370,9 +454,15 @@ class ProviderSettingsStore:
             instances[instance_id] = dict(record)
             payload[INSTANCES_KEY] = instances
             self._write_payload(payload)
+        register_instance_mapping(instance_id, instance_credential_mapping(instance_id, _record_preset_id(record)))
 
     def delete_instance(self, instance_id: str) -> bool:
-        """Remove one saved provider instance.
+        """Remove one saved provider instance and its settings section.
+
+        The instance's per-provider section (enabled flag, timeout, default
+        model, capability overrides) goes with it, so an instance later
+        re-added under the same id starts from its own configuration rather
+        than inheriting the deleted one's.
 
         Args:
             instance_id: The instance's id.
@@ -391,8 +481,10 @@ class ProviderSettingsStore:
             if instances.pop(instance_id, None) is None:
                 return False
             payload[INSTANCES_KEY] = instances
+            payload.pop(instance_id, None)
             self._write_payload(payload)
-            return True
+        unregister_instance_mapping(instance_id)
+        return True
 
     def section(self, provider_id: str) -> dict[str, object]:
         """Return one provider's saved section.
@@ -434,20 +526,26 @@ class ProviderSettingsStore:
     def connect_policy(self, config_enabled: Callable[[str], bool] | None = None) -> ProviderConnectPolicy:
         """Build the automatic-connection policy from the saved settings.
 
+        Every built-in provider and every usable saved instance is covered. An
+        instance is disabled when its own record's ``enabled`` flag is off, as
+        well as by its settings section or the configuration.
+
         Args:
             config_enabled: Optional additional enablement source, such as the
                 application configuration's per-provider flag. A provider is
-                disabled when either source disables it.
+                disabled when any source disables it.
 
         Returns:
             ProviderConnectPolicy: The disabled providers and timeout overrides.
         """
         sections = self.load()
+        instances = self.load_instances()
         disabled: set[str] = set()
         timeouts: dict[str, float] = {}
-        for provider in provider_ids.BUILTIN_PROVIDER_IDS:
+        for provider in (*provider_ids.BUILTIN_PROVIDER_IDS, *instances):
             section = sections.get(provider, {})
-            if not saved_enabled(section) or (config_enabled is not None and not config_enabled(provider)):
+            record = instances.get(provider, {})
+            if not saved_enabled(section) or not saved_enabled(record) or (config_enabled is not None and not config_enabled(provider)):
                 disabled.add(provider)
             timeout = saved_timeout_seconds(section)
             if timeout is not None:
