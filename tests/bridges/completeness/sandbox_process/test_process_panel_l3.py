@@ -18,21 +18,22 @@ L3 wiring for:
 * P65 -- ``ThreadsTab``'s "Time Wait" button invokes
   ``ProcessBridge.time_thread_wait`` with the selected thread id.
 
-Every test patches ``run_bridge_coroutine_logged`` in the tab module under
-test (not the bridge) and asserts the coroutine handed to it is the exact
-coroutine object returned by the real bridge-method mock, with the expected
-call arguments -- this is a genuine gate on the handler's wiring logic. The
-``ProcessBridge`` itself is replaced with a ``MagicMock`` only because the
-production code under test here is the *handler*, not the bridge (which has
-its own dedicated L1 gates in ``test_process_l1_l2.py`` driving the real
-WinAPI calls).
+Every test wires a real ``ProcessBridge`` into the tab and replaces
+``run_bridge_coroutine_logged`` in the tab module under test (not the bridge)
+with a recording shim. The shim introspects the real coroutine it receives --
+its code object, bound ``self`` and bound arguments -- and closes it before
+any bridge body runs, so each gate asserts the handler created its coroutine
+from the exact ``ProcessBridge`` method, on the wired bridge, with the exact
+arguments parsed from the UI. The bridge bodies themselves (real WinAPI
+calls) have their own dedicated L1 gates in ``test_process_l1_l2.py``.
 """
 
 from __future__ import annotations
 
+import inspect
 import os
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
-from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtWidgets import (
@@ -46,6 +47,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
 )
 
+from intellicrack.bridges.process import ProcessBridge
 from intellicrack.ui.panels.process_panel import (
     memory_tab as _memory_tab_mod,
     system_tab as _system_tab_mod,
@@ -57,7 +59,8 @@ from intellicrack.ui.panels.process_panel.threads_tab import ThreadsTab
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Coroutine, Iterator
+    from types import CodeType
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -123,7 +126,7 @@ def threads_tab(qapp: QApplication) -> ThreadsTab:
 def _set_private(widget: object, attr_name: str, value: object) -> None:
     """Assign a value to a named private attribute of a widget under test.
 
-    Used to wire test doubles (e.g. a mock bridge) into private collaborator
+    Used to wire collaborators (e.g. a real bridge) into private collaborator
     slots without a direct private-attribute assignment expression that would
     fight the widget's declared attribute type.
 
@@ -160,6 +163,87 @@ def _invoke(widget: object, method_name: str) -> None:
     handler()
 
 
+@dataclass(frozen=True, slots=True)
+class _DispatchedBridgeCall:
+    """One ``run_bridge_coroutine_logged`` invocation captured before dispatch.
+
+    The real bridge coroutine is introspected (its code object, bound ``self``
+    and bound arguments) and then closed, so no bridge body ever runs and no
+    "coroutine was never awaited" warning is emitted.
+
+    Attributes:
+        coroutine: The exact coroutine object handed to the dispatcher.
+        code: Code object the coroutine executes; identifies the bridge method.
+        bound_self: The ``self`` the bridge method was bound to.
+        arguments: The bridge method's bound arguments, excluding ``self``.
+        dispatch_kwargs: Keyword arguments passed to the dispatcher itself
+            (``on_success``, ``on_error``, ``event``, ...).
+    """
+
+    coroutine: Coroutine[object, object, object]
+    code: CodeType
+    bound_self: object
+    arguments: dict[str, object]
+    dispatch_kwargs: dict[str, object]
+
+
+def _intercept_dispatch(monkeypatch: pytest.MonkeyPatch, module: object) -> list[_DispatchedBridgeCall]:
+    """Replace ``run_bridge_coroutine_logged`` in ``module`` with a recording shim.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture.
+        module: The module whose dispatcher symbol is replaced.
+
+    Returns:
+        list[_DispatchedBridgeCall]: Live list receiving one entry per dispatch.
+    """
+    captured: list[_DispatchedBridgeCall] = []
+
+    def _record(coro: object, *args: object, **kwargs: object) -> None:
+        del args
+        assert inspect.iscoroutine(coro), f"dispatcher must receive a real bridge coroutine; got {coro!r}"
+        frame_locals = dict(inspect.getcoroutinelocals(coro))
+        bound_self = frame_locals.pop("self", None)
+        captured.append(
+            _DispatchedBridgeCall(
+                coroutine=coro,
+                code=coro.cr_code,
+                bound_self=bound_self,
+                arguments=frame_locals,
+                dispatch_kwargs=dict(kwargs),
+            ),
+        )
+        coro.close()
+
+    monkeypatch.setattr(module, "run_bridge_coroutine_logged", _record)
+    return captured
+
+
+def _assert_bridge_call(
+    call: _DispatchedBridgeCall,
+    bridge: object,
+    method_name: str,
+    expected_arguments: dict[str, object],
+) -> None:
+    """Assert a dispatched coroutine came from ``bridge.<method_name>`` with the expected arguments.
+
+    Args:
+        call: The captured dispatch.
+        bridge: The real bridge instance wired into the widget under test.
+        method_name: Name of the bridge coroutine method that must have produced the coroutine.
+        expected_arguments: Every bound argument of that method (defaults included), excluding ``self``.
+    """
+    method: object = getattr(type(bridge), method_name)
+    assert inspect.isfunction(method), f"{type(bridge).__name__}.{method_name} must be a plain coroutine function"
+    assert call.code is method.__code__, (
+        f"dispatched coroutine must come from {type(bridge).__name__}.{method_name}; got {call.code.co_qualname}"
+    )
+    assert call.bound_self is bridge, "dispatched coroutine must be bound to the bridge wired into the widget"
+    assert call.arguments == expected_arguments, (
+        f"{method_name} bound arguments mismatch: expected {expected_arguments!r}, got {call.arguments!r}"
+    )
+
+
 def _noop_warning_yes(*_args: object, **_kwargs: object) -> QMessageBox.StandardButton:
     """Return Yes without showing a real dialog.
 
@@ -186,24 +270,18 @@ class TestMemoryTabDecommitWiringL3:
         Falsified by: removing the ``self._bridge.decommit_memory(pid, addr,
         size)`` call in ``memory_tab.py``'s ``_on_decommit`` (or wiring the
         Decommit button to any other handler) turns this red, since the
-        captured coroutine would no longer be
-        ``mock_bridge.decommit_memory.return_value``.
+        captured coroutine would no longer come from
+        ``ProcessBridge.decommit_memory``.
 
         Args:
             memory_tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(memory_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(memory_tab, "_bridge", bridge)
         memory_tab.set_attached_pid(4321)
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _memory_tab_mod)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning_yes)
 
         free_addr = cast("QLineEdit", _get_private(memory_tab, "_free_addr"))
@@ -213,11 +291,8 @@ class TestMemoryTabDecommitWiringL3:
 
         _invoke(memory_tab, "_on_decommit")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called when attached with a valid address"
-        assert dispatch_args[0][0] is mock_bridge.decommit_memory.return_value, (
-            f"first positional arg must be the coroutine from bridge.decommit_memory; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.decommit_memory.assert_called_once_with(4321, 0x2000, 8192)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called when attached with a valid address"
+        _assert_bridge_call(dispatch_args[0], bridge, "decommit_memory", {"pid": 4321, "address": 0x2000, "size": 8192})
 
     def test_on_decommit_no_dispatch_when_unattached(
         self,
@@ -230,13 +305,8 @@ class TestMemoryTabDecommitWiringL3:
             memory_tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(memory_tab, "_bridge", MagicMock())
+        _set_private(memory_tab, "_bridge", ProcessBridge())
         memory_tab.set_attached_pid(None)
-
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
 
         warning_calls: list[tuple[object, ...]] = []
 
@@ -244,7 +314,7 @@ class TestMemoryTabDecommitWiringL3:
             warning_calls.append(args)
             return QMessageBox.StandardButton.Ok
 
-        monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _memory_tab_mod)
         monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
 
         free_addr = cast("QLineEdit", _get_private(memory_tab, "_free_addr"))
@@ -291,28 +361,19 @@ class TestSystemTabPipeReadWriteWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         _select_pipe_row(system_tab, r"\\.\pipe\TestPipe", 0x1234)
 
         read_size = cast("QSpinBox", _get_private(system_tab, "_pipe_read_size"))
         read_size.setValue(2048)
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_system_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_pipe_read")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called when a pipe row is selected"
-        assert dispatch_args[0][0] is mock_bridge.pipe_read.return_value, (
-            f"first positional arg must be the coroutine from bridge.pipe_read; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.pipe_read.assert_called_once_with(0x1234, 2048)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called when a pipe row is selected"
+        _assert_bridge_call(dispatch_args[0], bridge, "pipe_read", {"handle": 0x1234, "size": 2048})
 
     def test_on_pipe_read_warns_when_no_pipe_selected(
         self,
@@ -325,12 +386,7 @@ class TestSystemTabPipeReadWriteWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(system_tab, "_bridge", MagicMock())
-
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
+        _set_private(system_tab, "_bridge", ProcessBridge())
 
         warning_calls: list[tuple[object, ...]] = []
 
@@ -338,7 +394,7 @@ class TestSystemTabPipeReadWriteWiringL3:
             warning_calls.append(args)
             return QMessageBox.StandardButton.Ok
 
-        monkeypatch.setattr(_system_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _system_tab_mod)
         monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
 
         _invoke(system_tab, "_on_pipe_read")
@@ -361,28 +417,24 @@ class TestSystemTabPipeReadWriteWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         _select_pipe_row(system_tab, r"\\.\pipe\TestPipe", 0x5678)
 
         io_data = cast("QPlainTextEdit", _get_private(system_tab, "_pipe_io_data"))
         io_data.setPlainText("90 90 CC 48")
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_system_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_pipe_write")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called when a pipe row is selected with valid hex input"
-        assert dispatch_args[0][0] is mock_bridge.pipe_write.return_value, (
-            f"first positional arg must be the coroutine from bridge.pipe_write; got {dispatch_args[0][0]!r}"
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called when a pipe row is selected with valid hex input"
+        _assert_bridge_call(
+            dispatch_args[0],
+            bridge,
+            "pipe_write",
+            {"handle": 0x5678, "data": bytes.fromhex("90 90 CC 48".replace(" ", ""))},
         )
-        mock_bridge.pipe_write.assert_called_once_with(0x5678, bytes.fromhex("90 90 CC 48".replace(" ", "")))
 
     def test_on_pipe_write_rejects_invalid_hex_without_dispatch(
         self,
@@ -395,19 +447,14 @@ class TestSystemTabPipeReadWriteWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         _select_pipe_row(system_tab, r"\\.\pipe\TestPipe", 0x5678)
 
         io_data = cast("QPlainTextEdit", _get_private(system_tab, "_pipe_io_data"))
         io_data.setPlainText("not-hex-data")
 
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
-
-        monkeypatch.setattr(_system_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_pipe_write")
 
@@ -430,25 +477,16 @@ class TestSystemTabTokenControlsWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         system_tab.set_attached_pid(9001)
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_system_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_duplicate_token")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called when attached"
-        assert dispatch_args[0][0] is mock_bridge.duplicate_token.return_value, (
-            f"first positional arg must be the coroutine from bridge.duplicate_token; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.duplicate_token.assert_called_once_with(9001)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called when attached"
+        _assert_bridge_call(dispatch_args[0], bridge, "duplicate_token", {"pid": 9001})
 
     def test_on_remove_privilege_dispatches_with_pid_and_privilege_name(
         self,
@@ -461,29 +499,20 @@ class TestSystemTabTokenControlsWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         system_tab.set_attached_pid(9002)
 
         priv_name = cast("QLineEdit", _get_private(system_tab, "_remove_priv_name"))
         priv_name.setText("SeShutdownPrivilege")
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_system_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning_yes)
 
         _invoke(system_tab, "_on_remove_privilege")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called with a non-empty privilege name"
-        assert dispatch_args[0][0] is mock_bridge.remove_privilege.return_value, (
-            f"first positional arg must be the coroutine from bridge.remove_privilege; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.remove_privilege.assert_called_once_with(9002, "SeShutdownPrivilege")
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called with a non-empty privilege name"
+        _assert_bridge_call(dispatch_args[0], bridge, "remove_privilege", {"pid": 9002, "privilege_name": "SeShutdownPrivilege"})
 
     def test_on_remove_privilege_requires_non_empty_name(
         self,
@@ -496,18 +525,13 @@ class TestSystemTabTokenControlsWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(system_tab, "_bridge", MagicMock())
+        _set_private(system_tab, "_bridge", ProcessBridge())
         system_tab.set_attached_pid(9003)
 
         priv_name = cast("QLineEdit", _get_private(system_tab, "_remove_priv_name"))
         priv_name.setText("")
 
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
-
-        monkeypatch.setattr(_system_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_remove_privilege")
 
@@ -528,25 +552,16 @@ class TestSystemTabDetectKernelDebuggerWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         system_tab.set_attached_pid(9004)
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_system_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_detect_kernel_debugger")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called when attached"
-        assert dispatch_args[0][0] is mock_bridge.detect_kernel_debugger.return_value, (
-            f"first positional arg must be the coroutine from bridge.detect_kernel_debugger; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.detect_kernel_debugger.assert_called_once_with(9004)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called when attached"
+        _assert_bridge_call(dispatch_args[0], bridge, "detect_kernel_debugger", {"pid": 9004})
 
     def test_success_callback_renders_detected_status(
         self,
@@ -559,20 +574,15 @@ class TestSystemTabDetectKernelDebuggerWiringL3:
             system_tab: SystemTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(system_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(system_tab, "_bridge", bridge)
         system_tab.set_attached_pid(9005)
 
-        captured_on_success: list[object] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del args
-            captured_on_success.append(kwargs["on_success"])
-
-        monkeypatch.setattr(_system_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _system_tab_mod)
 
         _invoke(system_tab, "_on_detect_kernel_debugger")
 
+        captured_on_success = [call.dispatch_kwargs["on_success"] for call in dispatch_args]
         assert captured_on_success, "expected an on_success callback to be captured"
         success_cb = captured_on_success[0]
         assert callable(success_cb)
@@ -597,29 +607,20 @@ class TestThreadsTabTimeWaitWiringL3:
             threads_tab: ThreadsTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(threads_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(threads_tab, "_bridge", bridge)
 
         thread_table = cast("QTableWidget", _get_private(threads_tab, "_thread_table"))
         thread_table.setRowCount(1)
         thread_table.setItem(0, 0, QTableWidgetItem("5150"))
         thread_table.selectRow(0)
 
-        dispatch_args: list[tuple[object, ...]] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del kwargs
-            dispatch_args.append(args)
-
-        monkeypatch.setattr(_threads_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _threads_tab_mod)
 
         _invoke(threads_tab, "_on_time_thread_wait")
 
-        assert dispatch_args, "run_bridge_coroutine_logged must be called when a thread row is selected"
-        assert dispatch_args[0][0] is mock_bridge.time_thread_wait.return_value, (
-            f"first positional arg must be the coroutine from bridge.time_thread_wait; got {dispatch_args[0][0]!r}"
-        )
-        mock_bridge.time_thread_wait.assert_called_once_with(5150)
+        assert len(dispatch_args) == 1, "run_bridge_coroutine_logged must be called when a thread row is selected"
+        _assert_bridge_call(dispatch_args[0], bridge, "time_thread_wait", {"tid": 5150, "timeout_ms": 0})
 
     def test_on_time_thread_wait_warns_when_no_thread_selected(
         self,
@@ -632,12 +633,7 @@ class TestThreadsTabTimeWaitWiringL3:
             threads_tab: ThreadsTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(threads_tab, "_bridge", MagicMock())
-
-        dispatch_calls: list[object] = []
-
-        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
+        _set_private(threads_tab, "_bridge", ProcessBridge())
 
         warning_calls: list[tuple[object, ...]] = []
 
@@ -645,7 +641,7 @@ class TestThreadsTabTimeWaitWiringL3:
             warning_calls.append(args)
             return QMessageBox.StandardButton.Ok
 
-        monkeypatch.setattr(_threads_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        dispatch_calls = _intercept_dispatch(monkeypatch, _threads_tab_mod)
         monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
 
         _invoke(threads_tab, "_on_time_thread_wait")
@@ -664,24 +660,19 @@ class TestThreadsTabTimeWaitWiringL3:
             threads_tab: ThreadsTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(threads_tab, "_bridge", mock_bridge)
+        bridge = ProcessBridge()
+        _set_private(threads_tab, "_bridge", bridge)
 
         thread_table = cast("QTableWidget", _get_private(threads_tab, "_thread_table"))
         thread_table.setRowCount(1)
         thread_table.setItem(0, 0, QTableWidgetItem("42"))
         thread_table.selectRow(0)
 
-        captured_on_success: list[object] = []
-
-        def _capture_dispatch(*args: object, **kwargs: object) -> None:
-            del args
-            captured_on_success.append(kwargs["on_success"])
-
-        monkeypatch.setattr(_threads_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        dispatch_args = _intercept_dispatch(monkeypatch, _threads_tab_mod)
 
         _invoke(threads_tab, "_on_time_thread_wait")
 
+        captured_on_success = [call.dispatch_kwargs["on_success"] for call in dispatch_args]
         assert captured_on_success, "expected an on_success callback to be captured"
         success_cb = captured_on_success[0]
         assert callable(success_cb)

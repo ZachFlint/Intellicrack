@@ -24,7 +24,6 @@ import importlib
 import inspect
 import io
 import unittest
-import unittest.mock
 from typing import TYPE_CHECKING, Final
 
 from PyInstaller.utils.hooks import collect_submodules
@@ -50,7 +49,7 @@ from hexbench.window import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Generator
     from pathlib import Path
 
 
@@ -323,6 +322,26 @@ class _RecordingToolkit:
         self.events.append("start")
 
 
+@contextlib.contextmanager
+def _replaced_attribute(owner: object, name: str, replacement: object) -> Generator[None]:
+    """Swap one attribute of ``owner`` for the duration of a ``with`` block.
+
+    Args:
+        owner: Module or class whose attribute is swapped.
+        name: Attribute to swap.
+        replacement: Value the attribute holds inside the block.
+
+    Yields:
+        None: Control, with the replacement installed; the original is restored on exit.
+    """
+    original = getattr(owner, name)
+    setattr(owner, name, replacement)
+    try:
+        yield
+    finally:
+        setattr(owner, name, original)
+
+
 class WindowCloseTests(Assertions, unittest.TestCase):
     """Ending the session from the page must close the window, not just the server."""
 
@@ -350,7 +369,7 @@ class WindowCloseTests(Assertions, unittest.TestCase):
             toolkit.events.append("handover")
             seen.append(handed)
 
-        with unittest.mock.patch.object(window_module, "load_toolkit", return_value=toolkit):
+        with _replaced_attribute(window_module, "load_toolkit", lambda: toolkit):
             run_window("http://127.0.0.1:1/#token", on_ready=_remember)
 
         self.require_same(toolkit.events, ["create", "handover", "start"], "the order run_window did its work in")
@@ -362,7 +381,7 @@ class WindowCloseTests(Assertions, unittest.TestCase):
         toolkit = _RecordingToolkit(None)
         handed: list[WebviewWindow] = []
 
-        with unittest.mock.patch.object(window_module, "load_toolkit", return_value=toolkit):
+        with _replaced_attribute(window_module, "load_toolkit", lambda: toolkit):
             run_window("http://127.0.0.1:1/#token", on_ready=handed.append)
 
         self.require_same(toolkit.events, ["create", "start"], "the order run_window did its work in")

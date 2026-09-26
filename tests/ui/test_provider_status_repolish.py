@@ -35,16 +35,17 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
 from PyQt6.QtWidgets import QLabel
 
+from intellicrack.ui import provider_config
 from intellicrack.ui.provider_config import ProviderSettingsWidget
 
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import pytest
     from PyQt6.QtWidgets import QApplication
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -100,6 +101,7 @@ def _make_xpu_widget(tmp_path: Path) -> ProviderSettingsWidget:
 def test_requirements_label_repolishes_through_success_warning_error(
     qapp: QApplication,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Each requirements-check outcome updates the status property and repolishes the label.
 
@@ -113,6 +115,7 @@ def test_requirements_label_repolishes_through_success_warning_error(
     Args:
         qapp: Session-scoped Qt application fixture.
         tmp_path: Per-test temporary directory.
+        monkeypatch: Pytest fixture used to swap in each requirements-check outcome.
     """
     del qapp
     widget = _make_xpu_widget(tmp_path)
@@ -137,22 +140,21 @@ def test_requirements_label_repolishes_through_success_warning_error(
         polished_before = len(stand_in.polished)
         unpolished_before = len(stand_in.unpolished)
 
-        if result is None:
+        def _check_windows_requirements() -> tuple[bool, list[str]]:
+            """Report the outcome chosen for this transition.
 
-            def _raise() -> tuple[bool, list[str]]:
+            Returns:
+                tuple[bool, list[str]]: The configured ``(all_met, warnings)`` result.
+
+            Raises:
+                RuntimeError: When no result was configured, simulating a failed check.
+            """
+            if result is None:
                 raise RuntimeError(_SIMULATED_FAILURE_MESSAGE)
+            return result
 
-            with patch(
-                "intellicrack.ui.provider_config.check_windows_requirements",
-                side_effect=_raise,
-            ):
-                widget._on_check_requirements()
-        else:
-            with patch(
-                "intellicrack.ui.provider_config.check_windows_requirements",
-                return_value=result,
-            ):
-                widget._on_check_requirements()
+        monkeypatch.setattr(provider_config, "check_windows_requirements", _check_windows_requirements)
+        widget._on_check_requirements()
 
         new_status = warnings_label.property("status")
         assert new_status == expected_status, f"expected status {expected_status!r}, got {new_status!r}"

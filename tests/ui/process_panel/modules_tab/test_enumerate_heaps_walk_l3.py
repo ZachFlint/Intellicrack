@@ -13,31 +13,112 @@ caller anywhere in the codebase. The fix adds a "Walk Heap Blocks" button to
 
 Each wiring test replaces ``run_bridge_coroutine_logged`` in the
 ``modules_tab`` module with a capture shim (never the bridge) and asserts
-the button dispatches the coroutine returned by the real
-``ProcessBridge.enumerate_heaps`` mock -- proving it is wired to that method
+the button dispatches the coroutine returned by
+``ProcessBridge.enumerate_heaps`` -- proving it is wired to that method
 specifically, and not to ``get_heaps``. The rendering test then invokes the
 captured, real ``on_success``/``on_error`` callbacks with a realistic
 ``enumerate_heaps`` payload to prove the tree-population logic itself is
-correct; only the bridge call is mocked, matching the project convention in
-``tests/bridges/completeness/sandbox_process/test_process_panel_new_controls_l3.py``.
+correct. The bridge is a real ``ProcessBridge`` subclass that overrides only
+``enumerate_heaps``/``get_heaps`` to record their calls and hand back a
+never-started coroutine, so the Toolhelp32 heap walk itself never runs.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
-from unittest.mock import MagicMock
+import asyncio
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 from PyQt6.QtWidgets import QMessageBox, QTreeWidget
 
+from intellicrack.bridges.process import ProcessBridge
 from intellicrack.ui.panels.process_panel import modules_tab as _modules_tab_mod
 from intellicrack.ui.panels.process_panel.modules_tab import ModulesTab
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Coroutine, Iterator
 
     from PyQt6.QtWidgets import QApplication
+
+
+async def _unreached_result[T](value: T) -> T:
+    """Return ``value``; the coroutine wrapping it is captured, never awaited.
+
+    Args:
+        value: Placeholder result the coroutine would resolve to.
+
+    Returns:
+        T: ``value`` unchanged.
+    """
+    await asyncio.sleep(0)
+    return value
+
+
+class _HeapCallRecordingBridge(ProcessBridge):
+    """Real ``ProcessBridge`` whose two heap entry points only record their calls.
+
+    ``enumerate_heaps`` and ``get_heaps`` each log the pid they were called
+    with and return a fresh, never-started coroutine, so a test can assert
+    the object handed to the dispatcher is exactly ``enumerate_heaps``'s
+    return value and that ``get_heaps`` was never reached.
+    :meth:`close_pending` closes every coroutine handed out.
+    """
+
+    def __init__(self) -> None:
+        """Initialize an unattached bridge with empty call/coroutine logs."""
+        super().__init__()
+        self.enumerate_heaps_calls: list[int | None] = []
+        self.get_heaps_calls: list[int | None] = []
+        self.enumerate_heaps_returned: list[Coroutine[Any, Any, list[dict[str, object]]]] = []
+        self._pending: list[Coroutine[Any, Any, list[dict[str, object]]]] = []
+
+    def enumerate_heaps(self, pid: int | None = None) -> Coroutine[Any, Any, list[dict[str, object]]]:
+        """Record the call and return an unstarted coroutine.
+
+        Args:
+            pid: Process ID the handler requested.
+
+        Returns:
+            Coroutine[Any, Any, list[dict[str, object]]]: Captured, never-awaited coroutine.
+        """
+        self.enumerate_heaps_calls.append(pid)
+        coro = _unreached_result(list[dict[str, object]]())
+        self.enumerate_heaps_returned.append(coro)
+        self._pending.append(coro)
+        return coro
+
+    def get_heaps(self, pid: int | None = None) -> Coroutine[Any, Any, list[dict[str, object]]]:
+        """Record the call and return an unstarted coroutine.
+
+        Args:
+            pid: Process ID the handler requested.
+
+        Returns:
+            Coroutine[Any, Any, list[dict[str, object]]]: Captured, never-awaited coroutine.
+        """
+        self.get_heaps_calls.append(pid)
+        coro = _unreached_result(list[dict[str, object]]())
+        self._pending.append(coro)
+        return coro
+
+    def close_pending(self) -> None:
+        """Close every captured coroutine so none is reported as never awaited."""
+        for coro in self._pending:
+            coro.close()
+
+
+@pytest.fixture
+def recording_bridge() -> Iterator[_HeapCallRecordingBridge]:
+    """Provide a heap-call-recording bridge and close its captured coroutines afterwards.
+
+    Yields:
+        _HeapCallRecordingBridge: The recording bridge.
+    """
+    bridge = _HeapCallRecordingBridge()
+    yield bridge
+    bridge.close_pending()
+
 
 _DispatchCall = dict[str, object]
 
@@ -113,6 +194,7 @@ class TestModulesTabWalkHeapBlocksWiringL3:
     def test_on_refresh_heap_blocks_dispatches_enumerate_heaps_with_attached_pid(
         self,
         modules_tab: ModulesTab,
+        recording_bridge: _HeapCallRecordingBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """_refresh_heap_blocks dispatches bridge.enumerate_heaps with the attached pid, not get_heaps.
@@ -123,10 +205,10 @@ class TestModulesTabWalkHeapBlocksWiringL3:
 
         Args:
             modules_tab: ModulesTab fixture.
+            recording_bridge: Heap-call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        modules_tab.set_bridge(mock_bridge)
+        modules_tab.set_bridge(recording_bridge)
         modules_tab.set_attached_pid(4321)
 
         dispatch_calls = _intercept_dispatch(monkeypatch)
@@ -135,25 +217,26 @@ class TestModulesTabWalkHeapBlocksWiringL3:
         handler()
 
         assert dispatch_calls, "run_bridge_coroutine_logged must be called when attached"
-        assert dispatch_calls[0]["coro"] is mock_bridge.enumerate_heaps.return_value, (
+        assert dispatch_calls[0]["coro"] is recording_bridge.enumerate_heaps_returned[0], (
             f"first positional arg must be the coroutine from bridge.enumerate_heaps; got {dispatch_calls[0]['coro']!r}"
         )
-        mock_bridge.enumerate_heaps.assert_called_once_with(4321)
-        mock_bridge.get_heaps.assert_not_called()
+        assert recording_bridge.enumerate_heaps_calls == [4321]
+        assert recording_bridge.get_heaps_calls == []
 
     def test_on_refresh_heap_blocks_no_dispatch_without_attached_pid(
         self,
         modules_tab: ModulesTab,
+        recording_bridge: _HeapCallRecordingBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """_refresh_heap_blocks skips dispatch entirely when no process is attached.
 
         Args:
             modules_tab: ModulesTab fixture.
+            recording_bridge: Heap-call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        modules_tab.set_bridge(mock_bridge)
+        modules_tab.set_bridge(recording_bridge)
 
         dispatch_calls = _intercept_dispatch(monkeypatch)
 
@@ -161,7 +244,7 @@ class TestModulesTabWalkHeapBlocksWiringL3:
         handler()
 
         assert dispatch_calls == [], "enumerate_heaps must not be dispatched without an attached pid"
-        mock_bridge.enumerate_heaps.assert_not_called()
+        assert recording_bridge.enumerate_heaps_calls == []
 
     def test_on_refresh_heap_blocks_no_dispatch_without_bridge(
         self,
@@ -185,16 +268,17 @@ class TestModulesTabWalkHeapBlocksWiringL3:
     def test_on_refresh_heap_blocks_error_shows_message_box(
         self,
         modules_tab: ModulesTab,
+        recording_bridge: _HeapCallRecordingBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A real dispatch failure surfaces through QMessageBox.warning, not silently swallowed.
 
         Args:
             modules_tab: ModulesTab fixture.
+            recording_bridge: Heap-call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        modules_tab.set_bridge(mock_bridge)
+        modules_tab.set_bridge(recording_bridge)
         modules_tab.set_attached_pid(4321)
 
         dispatch_calls = _intercept_dispatch(monkeypatch)
@@ -217,6 +301,7 @@ class TestModulesTabHeapBlocksTreeRenderingL3:
     def test_on_success_renders_heaps_and_blocks(
         self,
         modules_tab: ModulesTab,
+        recording_bridge: _HeapCallRecordingBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A real enumerate_heaps-shaped payload populates one tree node per heap and per block.
@@ -228,10 +313,10 @@ class TestModulesTabHeapBlocksTreeRenderingL3:
 
         Args:
             modules_tab: ModulesTab fixture.
+            recording_bridge: Heap-call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        modules_tab.set_bridge(mock_bridge)
+        modules_tab.set_bridge(recording_bridge)
         modules_tab.set_attached_pid(4321)
 
         dispatch_calls = _intercept_dispatch(monkeypatch)
@@ -282,16 +367,17 @@ class TestModulesTabHeapBlocksTreeRenderingL3:
     def test_on_success_ignores_non_list_result(
         self,
         modules_tab: ModulesTab,
+        recording_bridge: _HeapCallRecordingBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A malformed (non-list) result must not raise and must leave the tree untouched.
 
         Args:
             modules_tab: ModulesTab fixture.
+            recording_bridge: Heap-call-recording ProcessBridge installed on the tab.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        modules_tab.set_bridge(mock_bridge)
+        modules_tab.set_bridge(recording_bridge)
         modules_tab.set_attached_pid(4321)
 
         dispatch_calls = _intercept_dispatch(monkeypatch)

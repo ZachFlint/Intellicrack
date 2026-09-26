@@ -135,7 +135,6 @@ jobs:
     runs-on: windows-latest
     needs: [setup]
     if: success() || failure()
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6.0.2
         with:

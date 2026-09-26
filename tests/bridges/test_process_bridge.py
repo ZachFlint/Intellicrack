@@ -24,7 +24,6 @@ import time
 from ctypes import wintypes
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
-from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
@@ -2653,7 +2652,7 @@ class TestF0003Process32FirstFailure:
     async def test_forced_snapshot_failure_raises_tool_error(self) -> None:
         """Force CreateToolhelp32Snapshot to return INVALID_HANDLE_VALUE.
 
-        Injects a stub via unittest.mock.patch that returns INVALID_HANDLE_VALUE
+        Replaces the kernel32 export via ``pytest.MonkeyPatch`` with a function returning INVALID_HANDLE_VALUE
         for every call. The bridge must detect this and raise ToolError.
         """
         bridge = ProcessBridge()
@@ -2669,8 +2668,10 @@ class TestF0003Process32FirstFailure:
             return _INVALID_HANDLE_VALUE
 
         try:
-            with pytest.raises(ToolError), patch.object(k32, "CreateToolhelp32Snapshot", side_effect=_bad_snapshot):
-                await bridge.list_processes()
+            with pytest.MonkeyPatch.context() as mp:
+                mp.setattr(k32, "CreateToolhelp32Snapshot", _bad_snapshot)
+                with pytest.raises(ToolError):
+                    await bridge.list_processes()
         finally:
             await bridge.shutdown()
 
@@ -2734,7 +2735,7 @@ class TestF0040HandleBufferBounds:
         """NtQuerySystemInformation returning a buffer with 1M handles in 4 KiB must raise ToolError.
 
         Constructs a fake buffer header claiming 1_000_000 handles in 4096 bytes
-        and injects it via mock. The bridge must detect the overflow and raise
+        and injects it via ``pytest.MonkeyPatch``. The bridge must detect the overflow and raise
         ToolError before iterating.
         """
         bridge = ProcessBridge()
@@ -2753,7 +2754,7 @@ class TestF0040HandleBufferBounds:
         fake_buffer = ctypes.create_string_buffer(fake_buf_size)
         struct.pack_into(fmt, fake_buffer, 0, fake_num_handles)
 
-        def _mock_ntquery(
+        def _overflowing_ntquery(
             info_class: int,
             buf: ctypes.Array[ctypes.c_char],
             buf_len: int,
@@ -2765,8 +2766,10 @@ class TestF0040HandleBufferBounds:
             return 0
 
         try:
-            with pytest.raises(ToolError), patch.object(ntdll, "NtQuerySystemInformation", side_effect=_mock_ntquery):
-                await bridge.get_handles(os.getpid())
+            with pytest.MonkeyPatch.context() as mp:
+                mp.setattr(ntdll, "NtQuerySystemInformation", _overflowing_ntquery)
+                with pytest.raises(ToolError):
+                    await bridge.get_handles(os.getpid())
         finally:
             await bridge.shutdown()
 

@@ -26,9 +26,9 @@ state as soon as the create request is dispatched.
 
 from __future__ import annotations
 
+import inspect
 import os
-from typing import TYPE_CHECKING, cast
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QPushButton, QTabWidget, QWidget
@@ -182,13 +182,20 @@ class TestVncWidgetPopoutAndRedock:
         assert tabs.indexOf(vnc) == _ORIGINAL_TAB_INDEX, "clicking it again while popped out must redock"
 
 
-def _no_op_dispatch(*_args: object, **_kwargs: object) -> None:
+def _no_op_dispatch(*args: object, **_kwargs: object) -> None:
     """Stand in for ``run_bridge_coroutine_logged`` without dispatching anything real.
 
+    The bridge coroutine handed in is closed unstarted, so the real
+    ``SandboxBridge.create`` body never runs and no un-awaited coroutine
+    warning is emitted.
+
     Args:
-        *_args: Ignored positional arguments (the coroutine and callbacks).
+        *args: Positional arguments (the coroutine and callbacks); coroutines are closed.
         **_kwargs: Ignored keyword arguments (event name, logger, context).
     """
+    for arg in args:
+        if inspect.iscoroutine(arg):
+            arg.close()
 
 
 def _no_op_show_error(*_args: object, **_kwargs: object) -> None:
@@ -253,7 +260,7 @@ class TestSandboxCreateHeaderState:
         assert isinstance(qapp, QApplication)
         monkeypatch.setattr(sandbox_panel_module, "run_bridge_coroutine_logged", _no_op_dispatch)
         panel = _ExposedSandboxPanel()
-        panel.set_bridge(cast(SandboxBridge, MagicMock()))
+        panel.set_bridge(SandboxBridge())
         return panel
 
     @staticmethod

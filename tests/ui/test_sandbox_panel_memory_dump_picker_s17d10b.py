@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING, cast
-from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtWidgets import QDialog
@@ -92,6 +91,55 @@ class _FakeGuestProcessPickerDialog:
         return self.pid
 
 
+class _RecordingSandboxBridge:
+    """Stand-in for ``SandboxBridge`` that records ``memory_dump``/``list_guest_processes`` calls.
+
+    Both methods are plain (non-async) so the call itself -- not some later
+    await -- records the exact positional/keyword arguments the handler
+    passed, matching what these tests observe: ``run_bridge_coroutine_logged``
+    is monkeypatched and never actually drives the returned result.
+    """
+
+    def __init__(self) -> None:
+        """Initialize with empty call logs."""
+        self.memory_dump_calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+        self.list_guest_processes_calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+        self.last_memory_dump_result: object | None = None
+        self.last_list_guest_processes_result: object | None = None
+
+    def memory_dump(self, *args: object, **kwargs: object) -> object:
+        """Record the call and return a distinct per-call result object.
+
+        Args:
+            *args: Positional arguments forwarded by the panel handler.
+            **kwargs: Keyword arguments forwarded by the panel handler.
+
+        Returns:
+            object: A fresh sentinel object standing in for the awaitable the
+            real bridge would return.
+        """
+        self.memory_dump_calls.append((args, kwargs))
+        result = object()
+        self.last_memory_dump_result = result
+        return result
+
+    def list_guest_processes(self, *args: object, **kwargs: object) -> object:
+        """Record the call and return a distinct per-call result object.
+
+        Args:
+            *args: Positional arguments forwarded by the panel handler.
+            **kwargs: Keyword arguments forwarded by the panel handler.
+
+        Returns:
+            object: A fresh sentinel object standing in for the awaitable the
+            real bridge would return.
+        """
+        self.list_guest_processes_calls.append((args, kwargs))
+        result = object()
+        self.last_list_guest_processes_result = result
+        return result
+
+
 def _set_private(widget: object, attr_name: str, value: object) -> None:
     """Assign a value to a named private attribute of a widget under test.
 
@@ -105,7 +153,7 @@ def _set_private(widget: object, attr_name: str, value: object) -> None:
 
 @pytest.fixture
 def panel(qapp: QApplication) -> SandboxPanel:
-    """Create a ``SandboxPanel`` wired to a live, mocked instance id.
+    """Create a ``SandboxPanel`` wired to a live instance id.
 
     Args:
         qapp: QApplication fixture -- required to ensure Qt is initialised.
@@ -155,26 +203,25 @@ class TestNonWindowsMemoryDumpUnchanged:
 
         Falsified by: routing the QEMU path through the picker too (e.g.
         removing the ``_effective_sandbox_type() == "windows"`` branch) would
-        make ``mock_bridge.list_guest_processes`` get called, failing the
-        ``assert_not_called()`` below.
+        make ``bridge.list_guest_processes_calls`` non-empty.
 
         Args:
             panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
         panel.sandbox_type_combo.setCurrentText("QEMU")
-        mock_bridge = MagicMock()
-        _set_private(panel, "_bridge", mock_bridge)
+        bridge = _RecordingSandboxBridge()
+        _set_private(panel, "_bridge", bridge)
 
         calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
         monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch(calls))
 
         panel._on_memory_dump()
 
-        mock_bridge.list_guest_processes.assert_not_called()
-        mock_bridge.memory_dump.assert_called_once_with(_INSTANCE_ID)
+        assert not bridge.list_guest_processes_calls
+        assert bridge.memory_dump_calls == [((_INSTANCE_ID,), {})]
         assert calls, "run_bridge_coroutine_logged must have been called"
-        assert calls[0][0][0] is mock_bridge.memory_dump.return_value, (
+        assert calls[0][0][0] is bridge.last_memory_dump_result, (
             "the dispatched coroutine must be the exact object bridge.memory_dump() returned"
         )
 
@@ -191,27 +238,26 @@ class TestWindowsMemoryDumpUsesPicker:
 
         Falsified by: reverting to the pre-fix ``_on_memory_dump`` (a bare
         ``self._bridge.memory_dump(self.sandbox_id)`` for every backend) would
-        make ``mock_bridge.list_guest_processes`` never get called, failing
-        the ``assert_called_once_with`` below, and would call
-        ``mock_bridge.memory_dump`` with no ``target_pid`` instead.
+        leave ``bridge.list_guest_processes_calls`` empty and instead call
+        ``bridge.memory_dump`` with no ``target_pid``.
 
         Args:
             panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
         panel.sandbox_type_combo.setCurrentText("Windows Sandbox")
-        mock_bridge = MagicMock()
-        _set_private(panel, "_bridge", mock_bridge)
+        bridge = _RecordingSandboxBridge()
+        _set_private(panel, "_bridge", bridge)
 
         calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
         monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch(calls))
 
         panel._on_memory_dump()
 
-        mock_bridge.list_guest_processes.assert_called_once_with(_INSTANCE_ID)
-        mock_bridge.memory_dump.assert_not_called()
+        assert bridge.list_guest_processes_calls == [((_INSTANCE_ID,), {})]
+        assert not bridge.memory_dump_calls
         assert calls, "run_bridge_coroutine_logged must have been called"
-        assert calls[0][0][0] is mock_bridge.list_guest_processes.return_value, (
+        assert calls[0][0][0] is bridge.last_list_guest_processes_result, (
             "the dispatched coroutine must be the exact object bridge.list_guest_processes() returned"
         )
 
@@ -226,8 +272,8 @@ class TestWindowsMemoryDumpUsesPicker:
             panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(panel, "_bridge", mock_bridge)
+        bridge = _RecordingSandboxBridge()
+        _set_private(panel, "_bridge", bridge)
 
         calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
         monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch(calls))
@@ -277,9 +323,9 @@ class TestWindowsMemoryDumpUsesPicker:
         assert [row["pid"] for row in _FakeGuestProcessPickerDialog.last_instance.processes] == [chosen_pid, 999], (
             "the picker must be given the exact process rows the bridge reported"
         )
-        mock_bridge.memory_dump.assert_called_once_with(_INSTANCE_ID, target_pid=chosen_pid)
+        assert bridge.memory_dump_calls == [((_INSTANCE_ID,), {"target_pid": chosen_pid})]
         assert calls, "run_bridge_coroutine_logged must have been called for the dump dispatch"
-        assert calls[-1][0][0] is mock_bridge.memory_dump.return_value
+        assert calls[-1][0][0] is bridge.last_memory_dump_result
 
     def test_cancelling_the_picker_does_not_dispatch_a_dump(
         self,
@@ -290,14 +336,14 @@ class TestWindowsMemoryDumpUsesPicker:
 
         Falsified by: dispatching the dump unconditionally after opening the
         picker (ignoring the ``exec()`` result) would make
-        ``mock_bridge.memory_dump.assert_not_called()`` fail.
+        ``bridge.memory_dump_calls`` non-empty.
 
         Args:
             panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(panel, "_bridge", mock_bridge)
+        bridge = _RecordingSandboxBridge()
+        _set_private(panel, "_bridge", bridge)
 
         calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
         monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch(calls))
@@ -313,7 +359,7 @@ class TestWindowsMemoryDumpUsesPicker:
         assert _FakeGuestProcessPickerDialog.last_instance.exec_result == int(QDialog.DialogCode.Rejected.value), (
             "test premise: the fake dialog must default to Rejected"
         )
-        mock_bridge.memory_dump.assert_not_called()
+        assert not bridge.memory_dump_calls
         assert not calls, "no dump coroutine may be dispatched when the picker was cancelled"
         assert panel.memdump_btn.isEnabled(), "the control must be restored after a cancelled picker"
 
@@ -331,8 +377,8 @@ class TestWindowsMemoryDumpUsesPicker:
             panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(panel, "_bridge", mock_bridge)
+        bridge = _RecordingSandboxBridge()
+        _set_private(panel, "_bridge", bridge)
 
         calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
         monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch(calls))
@@ -357,7 +403,7 @@ class TestWindowsMemoryDumpUsesPicker:
         bridge_result = {"instance_id": _INSTANCE_ID, "processes": [{"pid": 111, "name": "a.exe", "path": ""}]}
         panel._on_list_guest_processes_for_dump_success(bridge_result)
 
-        mock_bridge.memory_dump.assert_not_called()
+        assert not bridge.memory_dump_calls
         assert not calls
 
 
@@ -375,8 +421,8 @@ class TestEmptyGuestProcessList:
             panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(panel, "_bridge", mock_bridge)
+        bridge = _RecordingSandboxBridge()
+        _set_private(panel, "_bridge", bridge)
 
         calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
         monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch(calls))
@@ -393,7 +439,7 @@ class TestEmptyGuestProcessList:
         panel._on_list_guest_processes_for_dump_success(bridge_result)
 
         assert not opened, "the picker dialog must not be constructed for an empty process list"
-        mock_bridge.memory_dump.assert_not_called()
+        assert not bridge.memory_dump_calls
         assert not calls
         assert panel.memdump_btn.isEnabled(), "the control must be restored after an empty process list"
 
@@ -408,8 +454,8 @@ class TestEmptyGuestProcessList:
             panel: SandboxPanel fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        mock_bridge = MagicMock()
-        _set_private(panel, "_bridge", mock_bridge)
+        bridge = _RecordingSandboxBridge()
+        _set_private(panel, "_bridge", bridge)
 
         calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
         monkeypatch.setattr(_sandbox_panel_mod, "run_bridge_coroutine_logged", _capture_dispatch(calls))
@@ -426,7 +472,7 @@ class TestEmptyGuestProcessList:
         ):
             panel._on_list_guest_processes_for_dump_success(bad_result)
 
-        mock_bridge.memory_dump.assert_not_called()
+        assert not bridge.memory_dump_calls
         assert not calls
 
 
