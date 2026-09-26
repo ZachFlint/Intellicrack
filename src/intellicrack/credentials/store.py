@@ -503,7 +503,8 @@ class CredentialStore:
 
         A value that fits is written directly under ``key``, exactly as before chunking existed. A larger one is written as chunks under a
         fresh generation tag first, and only then is the manifest written under ``key``, so the entry always points at a complete set. The
-        chunks of whatever was stored previously are removed afterwards.
+        chunks of whatever was stored previously are removed afterwards. An existing entry that cannot be read does not block the write,
+        because overwriting it is how the operator repairs it; only its old chunks, which cannot be located, are left behind.
 
         Runs on a worker thread; every call it makes blocks on the backend.
 
@@ -512,8 +513,13 @@ class CredentialStore:
             key: The value's own keyring key.
             value: The value to store.
         """
-        previous_primary: object = keyring.get_password(self.SERVICE_NAME, key)
-        previous = ChunkManifest.parse(str(previous_primary)) if previous_primary is not None else None
+        previous: ChunkManifest | None = None
+        try:
+            previous_primary: object = keyring.get_password(self.SERVICE_NAME, key)
+        except (OSError, ValueError, _KeyringError, _Win32CredentialError):
+            _logger.warning("credential_previous_entry_unreadable", key_id=key, exc_info=True)
+        else:
+            previous = ChunkManifest.parse(str(previous_primary)) if previous_primary is not None else None
         if credential_blob_size(value) <= CRED_MAX_CREDENTIAL_BLOB_BYTES and ChunkManifest.parse(value) is None:
             keyring.set_password(self.SERVICE_NAME, key, value)
         else:
@@ -677,7 +683,7 @@ class CredentialStore:
         try:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_metadata(data, provider) if data else None
-        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError):
+        except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError, KeyringReadError):
             _logger.debug("metadata_get_failed", provider=provider, exc_info=True)
             return None
 
