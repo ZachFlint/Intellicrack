@@ -21,8 +21,7 @@ from typing import TYPE_CHECKING, ClassVar, Final
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import IntellicrackError, ProviderCredentials
-from intellicrack.credentials.env_loader import CredentialLoader, get_credential_loader, validate_key_format
-from intellicrack.providers import ids as provider_ids
+from intellicrack.credentials.env_loader import CredentialLoader, get_credential_loader, known_provider_ids, validate_key_format
 
 
 if TYPE_CHECKING:
@@ -582,7 +581,7 @@ class CredentialStore:
         results: list[StoredCredential] = []
 
         async with self._lock:
-            for provider in provider_ids.BUILTIN_PROVIDER_IDS:
+            for provider in known_provider_ids():
                 creds = await self._get_unlocked(provider)
                 if creds is not None and creds.api_key:
                     metadata = await self._get_metadata(provider)
@@ -623,7 +622,7 @@ class CredentialStore:
         """
         _logger.debug(
             "credential_migration_started",
-            provider_count=len(providers) if providers is not None else len(provider_ids.BUILTIN_PROVIDER_IDS),
+            provider_count=len(providers) if providers is not None else len(known_provider_ids()),
             overwrite=overwrite,
         )
         if not self.keyring_available:
@@ -631,7 +630,7 @@ class CredentialStore:
             msg = "Keyring is not available for migration"
             raise KeyringUnavailableError(msg)
 
-        target_providers = providers or list(provider_ids.BUILTIN_PROVIDER_IDS)
+        target_providers = providers or list(known_provider_ids())
         results: dict[str, bool] = {}
 
         async with self._lock:

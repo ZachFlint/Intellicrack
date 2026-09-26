@@ -54,6 +54,7 @@ if TYPE_CHECKING:
     from intellicrack.credentials.provider_settings import ProviderConnectPolicy, ProviderSettingsStore
     from intellicrack.providers.base import LLMProviderBase
     from intellicrack.providers.capabilities import CapabilityOverride
+    from intellicrack.providers.configurable import ConfigurableProvider
     from intellicrack.providers.discovery import ModelDiscovery
     from intellicrack.providers.registry import ProviderRegistry
     from intellicrack.ui.app import MainWindow
@@ -719,6 +720,29 @@ def _apply_saved_capability_overrides(
         )
 
 
+def _connects_without_api_key(provider: LLMProviderBase, provider_name: str) -> bool:
+    """Report whether a provider may connect with no API key at all.
+
+    A built-in local runtime (Ollama, Local Transformers) never needs a key,
+    and a user-defined instance says so itself: one created from the vLLM, LM
+    Studio or LiteLLM preset records ``requires_api_key = False``.
+
+    Args:
+        provider: The constructed provider instance.
+        provider_name: Registry key for the provider.
+
+    Returns:
+        bool: ``True`` when the provider connects without an API key.
+    """
+    display_mod = importlib.import_module("intellicrack.providers.display_names")
+    configurable_mod = importlib.import_module("intellicrack.providers.configurable")
+    no_api_key_providers = cast("frozenset[str]", display_mod.NO_API_KEY_PROVIDERS)
+    configurable_cls = cast("type[ConfigurableProvider]", configurable_mod.ConfigurableProvider)
+    if provider_name in no_api_key_providers:
+        return True
+    return isinstance(provider, configurable_cls) and not provider.instance.requires_api_key
+
+
 async def _connect_provider_at_startup(
     provider: LLMProviderBase,
     provider_name: str,
@@ -747,12 +771,10 @@ async def _connect_provider_at_startup(
         logger.info("provider_connect_skipped_disabled", provider=provider_name)
         return
 
-    display_mod = importlib.import_module("intellicrack.providers.display_names")
     types_mod = importlib.import_module("intellicrack.core.types")
-    no_api_key_providers = cast("frozenset[str]", display_mod.NO_API_KEY_PROVIDERS)
     provider_error_cls = cast("type[Exception]", types_mod.ProviderError)
 
-    creds = credentials.get_connect_credentials(provider_name, api_key_optional=provider_name in no_api_key_providers)
+    creds = credentials.get_connect_credentials(provider_name, api_key_optional=_connects_without_api_key(provider, provider_name))
     if creds is None:
         logger.debug("no_credentials", provider=provider_name)
         return
@@ -1477,9 +1499,8 @@ def _drain_and_stop_bridge_loop(logger: BoundLogger) -> None:
     """
     bridge_module = importlib.import_module("intellicrack.ui.panels.async_bridge")
     drain_fn = getattr(bridge_module, "drain_bridge_workers", None)
-    if callable(drain_fn):
-        if drained := int(cast("Callable[[], int]", drain_fn)()):
-            logger.info("bridge_workers_drained", count=drained)
+    if callable(drain_fn) and (drained := int(cast("Callable[[], int]", drain_fn)())):
+        logger.info("bridge_workers_drained", count=drained)
     shutdown_fn = getattr(bridge_module, "shutdown_bridge_loop", None)
     if callable(shutdown_fn):
         shutdown_fn()
