@@ -29,8 +29,8 @@ observes only the single fabricated data row the live run did.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import shutil
-import time
 from typing import TYPE_CHECKING, Final
 
 import pytest
@@ -67,7 +67,6 @@ _LIFECYCLE_STOPPED: Final[str] = "stopped"
 # named for that step, so this stage means the script itself faulted.
 _UNGUARDED_STAGE: Final[str] = "session"
 
-_POLL_S: Final[float] = 0.5
 _PROCESS_EXIT_WAIT_S: Final[float] = 30.0
 _PROCESS_KILL_GRACE_S: Final[float] = 5.0
 
@@ -247,9 +246,8 @@ async def _run_to_completion(powershell: str, script_path: Path, logs_dir: Path)
     ]
     proc = Popen(argv, stdout=PIPE, stderr=PIPE, text=True, encoding="utf-8", errors="replace")
     try:
-        deadline = time.monotonic() + _PROCESS_EXIT_WAIT_S
-        while not proc.poll() is not None and not time.monotonic() >= deadline:
-            await asyncio.sleep(_POLL_S)
+        with contextlib.suppress(TimeoutExpired):
+            await asyncio.to_thread(proc.wait, timeout=_PROCESS_EXIT_WAIT_S)
     finally:
         stdout, stderr = _terminate(proc)
     return stdout, stderr
