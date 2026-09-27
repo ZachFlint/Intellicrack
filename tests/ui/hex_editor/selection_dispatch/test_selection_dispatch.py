@@ -381,11 +381,10 @@ class _DocumentOpenedHarness(QWidget):
             event_type: The ``HexDocumentEvent`` member describing what changed.
             data: Event-specific payload describing the change.
         """
-        if event_type == HexDocumentEvent.DOCUMENT_OPENED:
-            if file_path_str := data.get("file_path"):
-                if self.document is not None:
-                    self.document = None
-                self.load_file(file_path_str)
+        if event_type == HexDocumentEvent.DOCUMENT_OPENED and (file_path_str := data.get("file_path")):
+            if self.document is not None:
+                self.document = None
+            self.load_file(file_path_str)
 
     def load_file(self, file_path: str) -> bool:
         """Record the path and simulate a successful load by setting document.

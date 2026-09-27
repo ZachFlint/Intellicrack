@@ -34,7 +34,6 @@ import asyncio
 import re
 import shutil
 import sys
-import time
 import winreg
 from typing import TYPE_CHECKING, Final
 
@@ -43,6 +42,7 @@ import pytest
 from intellicrack.core.subprocess_compat import PIPE, Popen, TimeoutExpired
 from intellicrack.sandbox.base import SandboxConfig
 from intellicrack.sandbox.qemu import MONITOR_SCRIPT_NAMES, GuestOS, QEMUConfig, QEMUSandbox
+from tests._helpers.polling import wait_until
 
 
 if TYPE_CHECKING:
@@ -324,9 +324,11 @@ class TestARealRegistryWriteReachesTheReportedChangeList:
 
             _create_probe_subkey()
 
-            deadline = time.monotonic() + _DETECTION_TIMEOUT_S
-            while not _log_names_the_probe_key(log_path) and not time.monotonic() >= deadline:
-                await asyncio.sleep(_DETECTION_POLL_S)
+            await wait_until(
+                lambda: _log_names_the_probe_key(log_path),
+                budget=_DETECTION_TIMEOUT_S,
+                interval=_DETECTION_POLL_S,
+            )
         finally:
             stdout, stderr = _terminate(proc)
             _delete_probe_subkey()
