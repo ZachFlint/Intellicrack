@@ -207,9 +207,7 @@ class TestGraphViewRealDisassembly:
         scene.load_graph(real_blocks)
 
         edge_count = sum(
-            int(block.get("jump", -1)) in scene.block_items
-            or int(block.get("fail", -1)) in scene.block_items
-            for block in real_blocks
+            int(block.get("jump", -1)) in scene.block_items or int(block.get("fail", -1)) in scene.block_items for block in real_blocks
         )
         if edge_count == 0:
             pytest.skip("real block window produced no resolvable successor edges")

@@ -87,7 +87,8 @@ def _drive(
 
 
 def test_set_pc_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_set_pc``'s success closure formats the real parsed address.
 

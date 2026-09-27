@@ -27,6 +27,7 @@ import yaml
 
 _NAME_NORMALIZE_RE: re.Pattern[str] = re.compile(r"[-_.]+")
 _PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
+_ObjectList = list[object]
 
 
 def _normalize_name(name: str) -> str:
@@ -75,11 +76,102 @@ def _require_object_list(value: object, field_name: str) -> list[object]:
     if not isinstance(value, list):
         msg = f"Expected '{field_name}' to be a list (got {type(value).__name__})"
         raise TypeError(msg)
-    return list(cast("list[object]", value))
+    return list(cast("_ObjectList", value))
+
+
+def _package_name_and_version(fields: dict[str, object]) -> tuple[str, str] | None:
+    """Extract ``(name, version)`` from a ``packages`` entry's fields.
+
+    Args:
+        fields: A single ``packages`` list entry, coerced to a string-keyed
+            mapping.
+
+    Returns:
+        tuple[str, str] | None: The raw package name and version, or
+            ``None`` when either is absent (e.g. the editable self-install).
+    """
+    raw_name = fields.get("name")
+    raw_version = fields.get("version")
+    if not isinstance(raw_name, str) or not raw_name:
+        return None
+    if isinstance(raw_version, str):
+        version = raw_version.strip()
+    elif isinstance(raw_version, (int, float)):
+        version = str(raw_version).strip()
+    else:
+        return None
+    if not version:
+        return None
+    return raw_name, version
+
+
+def _platform_pypi_urls(root: dict[str, object], platform_key: str) -> set[str]:
+    """Return every PyPI package URL selected for one environment platform.
+
+    Args:
+        root: The parsed ``pixi.lock`` document root.
+        platform_key: Platform key under ``environments.default.packages``
+            (e.g. ``win-64``).
+
+    Returns:
+        set[str]: The ``pypi`` URLs pixi resolved for that platform.
+    """
+    environments = _coerce_str_mapping(root.get("environments"))
+    default_env = _coerce_str_mapping(environments.get("default"))
+    env_packages = _coerce_str_mapping(default_env.get("packages"))
+    entries = env_packages.get(platform_key)
+    urls: set[str] = set()
+    if not isinstance(entries, list):
+        return urls
+    for entry in cast("_ObjectList", entries):
+        fields = _coerce_str_mapping(entry)
+        url = fields.get("pypi")
+        if isinstance(url, str) and url:
+            urls.add(url)
+    return urls
+
+
+def _select_lock_platform(root: dict[str, object]) -> str | None:
+    """Pick which locked platform's PyPI resolution to use.
+
+    Prefers ``win-64`` since this project targets Windows as a priority and
+    its CI runs on ``windows-latest``. Falls back to the lockfile's only
+    platform when there is exactly one.
+
+    Args:
+        root: The parsed ``pixi.lock`` document root.
+
+    Returns:
+        str | None: The chosen platform key, or ``None`` when no platform
+            can be unambiguously selected.
+    """
+    platforms_field = root.get("platforms")
+    platform_keys: list[str] = []
+    if isinstance(platforms_field, list):
+        for entry in cast("_ObjectList", platforms_field):
+            if isinstance(entry, str):
+                platform_keys.append(entry)
+            else:
+                fields = _coerce_str_mapping(entry)
+                name = fields.get("name")
+                if isinstance(name, str) and name:
+                    platform_keys.append(name)
+    if "win-64" in platform_keys:
+        return "win-64"
+    if len(platform_keys) == 1:
+        return platform_keys[0]
+    return None
 
 
 def _load_lock_pypi_packages(lock_path: Path) -> dict[str, tuple[str, str]]:
     """Load PyPI package entries from a pixi lockfile.
+
+    When the lockfile targets multiple platforms (for example ``win-64`` and
+    ``linux-64``), a single package can resolve to different versions per
+    platform because not every release ships wheels for every platform. This
+    restricts the result to the packages actually selected for this
+    project's priority platform (``win-64``) instead of picking whichever
+    platform happens to appear last in the file.
 
     Args:
         lock_path: Path to the pixi.lock file.
@@ -90,8 +182,9 @@ def _load_lock_pypi_packages(lock_path: Path) -> dict[str, tuple[str, str]]:
             (e.g. the editable self-install) are skipped.
 
     Raises:
-        TypeError: If the lockfile root is not a mapping or its ``packages``
-            field is not a list.
+        TypeError: If the lockfile root is not a mapping, its ``packages``
+            field is not a list, or its locked platform cannot be
+            unambiguously selected.
     """
     with lock_path.open("rb") as fh:
         loaded: object = cast("object", yaml.safe_load(fh))
@@ -101,24 +194,39 @@ def _load_lock_pypi_packages(lock_path: Path) -> dict[str, tuple[str, str]]:
         msg = f"pixi.lock root must be a non-empty mapping (got {type(loaded).__name__})"
         raise TypeError(msg)
 
-    packages: dict[str, tuple[str, str]] = {}
+    by_url: dict[str, tuple[str, str]] = {}
+    by_name: dict[str, tuple[str, str]] = {}
     for entry in _require_object_list(root.get("packages"), "packages"):
         fields = _coerce_str_mapping(entry)
-        if "pypi" not in fields:
+        url = fields.get("pypi")
+        if not isinstance(url, str) or not url:
             continue
-        raw_name = fields.get("name")
-        raw_version = fields.get("version")
-        if not isinstance(raw_name, str) or not raw_name:
+        name_version = _package_name_and_version(fields)
+        if name_version is None:
             continue
-        if isinstance(raw_version, str):
-            version = raw_version.strip()
-        elif isinstance(raw_version, (int, float)):
-            version = str(raw_version).strip()
-        else:
-            continue
-        if not version:
-            continue
-        packages[_normalize_name(raw_name)] = (raw_name, version)
+        by_url[url] = name_version
+        by_name[_normalize_name(name_version[0])] = name_version
+
+    platform_key = _select_lock_platform(root)
+    if platform_key is None:
+        msg = (
+            "pixi.lock locks more than one platform and none of them is 'win-64': "
+            "cannot unambiguously select which platform's PyPI resolution belongs in "
+            "requirements.txt. Update _select_lock_platform in scripts/generate_requirements.py."
+        )
+        raise TypeError(msg)
+
+    selected_urls = _platform_pypi_urls(root, platform_key)
+    if not selected_urls:
+        # No per-platform package list (e.g. an older lockfile schema): fall back to
+        # the flat package list, matching this function's pre-multi-platform behavior.
+        return by_name
+
+    packages: dict[str, tuple[str, str]] = {}
+    for url in selected_urls:
+        name_version = by_url.get(url)
+        if name_version is not None:
+            packages[_normalize_name(name_version[0])] = name_version
     return packages
 
 

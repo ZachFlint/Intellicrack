@@ -411,10 +411,7 @@ def build_catalog() -> tuple[Operation, ...]:
     document_names, module_names = runtime_surface()
     live_names = document_names | module_names
 
-    if (
-        stale := {name for name in signatures if not name.startswith("_")}
-        - live_names
-    ):
+    if stale := {name for name in signatures if not name.startswith("_")} - live_names:
         message = (
             f"type stub declares {sorted(stale)} but the compiled module exposes no such callable; "
             "the Rust crate and its stub have drifted apart"

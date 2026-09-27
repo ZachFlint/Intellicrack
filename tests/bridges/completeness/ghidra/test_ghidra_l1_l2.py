@@ -839,11 +839,7 @@ class _FakeModule(_FakeGroup):
             depth, False otherwise.
         """
         return any(
-            isinstance(existing, _FakeModule)
-            and (
-                existing.get_name() == module.get_name()
-                or existing.is_descendant(module)
-            )
+            isinstance(existing, _FakeModule) and (existing.get_name() == module.get_name() or existing.is_descendant(module))
             for existing in self.children
         )
 
@@ -3414,7 +3410,7 @@ class TestAnalyzeConfigurableTimeout:
             if "_ic_analysis_done" in expr:
                 poll_calls["count"] += 1
                 return True
-            return None if "_ic_analysis_error" in expr else None
+            return None
 
         fake.set_eval_responder(_eval_responder)
 

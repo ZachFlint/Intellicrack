@@ -220,7 +220,8 @@ def _make_tab(qapp: QApplication, bridge: _RecordingX64DbgBridge) -> X64DbgAdvan
 
 
 def test_configure_breakpoint_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_configure_breakpoint``'s success closure formats the real parsed address.
 
@@ -239,7 +240,8 @@ def test_configure_breakpoint_renders_narrowed_address_and_forwards_it(
 
 
 def test_set_logging_breakpoint_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_set_logging_breakpoint``'s success closure formats the real parsed address.
 
@@ -259,7 +261,8 @@ def test_set_logging_breakpoint_renders_narrowed_address_and_forwards_it(
 
 
 def test_set_breakpoint_log_condition_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_set_breakpoint_log_condition``'s success closure formats the real parsed address.
 
@@ -279,7 +282,8 @@ def test_set_breakpoint_log_condition_renders_narrowed_address_and_forwards_it(
 
 
 def test_set_breakpoint_command_condition_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_set_breakpoint_command_condition``'s success closure formats the real parsed address.
 
@@ -300,7 +304,10 @@ def test_set_breakpoint_command_condition_renders_narrowed_address_and_forwards_
 
 @pytest.mark.parametrize("checked", [True, False])
 def test_set_breakpoint_singleshot_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch, *, checked: bool,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    checked: bool,
 ) -> None:
     """``_on_set_breakpoint_singleshot``'s success closure formats the real parsed address.
 
@@ -322,7 +329,10 @@ def test_set_breakpoint_singleshot_renders_narrowed_address_and_forwards_it(
 
 @pytest.mark.parametrize("checked", [True, False])
 def test_set_breakpoint_silent_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch, *, checked: bool,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    checked: bool,
 ) -> None:
     """``_on_set_breakpoint_silent``'s success closure formats the real parsed address.
 
@@ -343,7 +353,8 @@ def test_set_breakpoint_silent_renders_narrowed_address_and_forwards_it(
 
 
 def test_reset_breakpoint_hit_count_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_reset_breakpoint_hit_count``'s success closure formats the real parsed address.
 
@@ -362,7 +373,8 @@ def test_reset_breakpoint_hit_count_renders_narrowed_address_and_forwards_it(
 
 
 def test_set_breakpoint_name_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_set_breakpoint_name``'s success closure formats the real parsed address.
 
@@ -382,7 +394,8 @@ def test_set_breakpoint_name_renders_narrowed_address_and_forwards_it(
 
 
 def test_all_eight_handlers_return_silently_when_address_field_is_invalid(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Every handler must bail out before touching the bridge when the address is unparsable.
 

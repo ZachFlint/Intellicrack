@@ -17,7 +17,6 @@ side rather than silently truncated, since ``SetThreadContext`` would
 otherwise receive a value the CPU never actually held.
 """
 
-
 from __future__ import annotations
 
 import sys

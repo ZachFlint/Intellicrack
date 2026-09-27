@@ -463,13 +463,7 @@ def _region_containing(regions: list[MemoryRegion], address: int) -> MemoryRegio
         ``regions`` covers ``address``.
     """
     return next(
-        (
-            region
-            for region in regions
-            if region.base_address
-            <= address
-            < region.base_address + region.size
-        ),
+        (region for region in regions if region.base_address <= address < region.base_address + region.size),
         None,
     )
 
