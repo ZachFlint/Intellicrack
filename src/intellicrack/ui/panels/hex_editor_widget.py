@@ -1187,9 +1187,8 @@ class HexEditorWidget(QAbstractScrollArea):
                 return "       NaN"
             if math.isinf(val_f):
                 return "       Inf" if val_f > 0 else "      -Inf"
-            else:
-                return f"{val_f:13.6g}"
-        elif mode == "float64":
+            return f"{val_f:13.6g}"
+        if mode == "float64":
             try:
                 val_d = struct.unpack_from("<d", padded)[0]
             except struct.error:

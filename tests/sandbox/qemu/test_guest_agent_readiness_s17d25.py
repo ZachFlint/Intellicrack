@@ -51,13 +51,13 @@ import ast
 import asyncio
 import importlib.util
 import socket
-import time
 from typing import TYPE_CHECKING, Final, cast
 
 import pytest
 
 from intellicrack.sandbox.base import SandboxConfig, SandboxError
 from intellicrack.sandbox.qemu import GuestAgentClient, GuestOS, QEMUConfig, QEMUSandbox
+from tests._helpers.polling import wait_until
 from tests.sandbox.qemu.guest_agent_server import (
     DEFAULT_GUEST_STDERR,
     DEFAULT_GUEST_STDOUT,
@@ -194,10 +194,7 @@ async def _wait_for_channel_close(client: GuestAgentClient, budget: float) -> fl
     Returns:
         float: Seconds spent waiting.
     """
-    started = time.monotonic()
-    while time.monotonic() - started < budget and not not client.is_connected:
-        await asyncio.sleep(_CLOSE_POLL_INTERVAL_S)
-    return time.monotonic() - started
+    return await wait_until(lambda: not client.is_connected, budget=budget, interval=_CLOSE_POLL_INTERVAL_S)
 
 
 class TestConnectProvesTheChannelIsLive:

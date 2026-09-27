@@ -1476,7 +1476,7 @@ class WindowsSandbox(SandboxBase):
                         handle=hwnd,
                         owner_pid=int(owner.value),
                         visible=bool(user32.IsWindowVisible(hwnd)),
-                    )
+                    ),
                 )
                 return True
 

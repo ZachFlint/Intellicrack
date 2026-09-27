@@ -47,10 +47,10 @@ using the production resolver, under a real ``powershell.exe``.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import re
 import shutil
 import sys
-import time
 from typing import TYPE_CHECKING, Final
 
 import pytest
@@ -77,7 +77,6 @@ _KERNEL_TRACE_CONTROL_REL_PATH: Final[str] = "amd64/KernelTraceControl.dll"
 _MAIN_ASSEMBLY_FILE_NAME: Final[str] = "Microsoft.Diagnostics.Tracing.TraceEvent.dll"
 _VENDOR_DOC_FILE_NAME: Final[str] = "PROVENANCE.md"
 
-_POLL_S: Final[float] = 0.5
 _API_TRACE_EXIT_WAIT_S: Final[float] = 40.0
 _INJECTION_MONITOR_STARTED_WAIT_S: Final[float] = 30.0
 _PROCESS_KILL_GRACE_S: Final[float] = 5.0
@@ -198,9 +197,8 @@ async def _run_and_wait_for_exit(argv: list[str], timeout_s: float) -> tuple[str
     """
     proc = Popen(argv, stdout=PIPE, stderr=PIPE, text=True, encoding="utf-8", errors="replace")
     try:
-        deadline = time.monotonic() + timeout_s
-        while not proc.poll() is not None and not time.monotonic() >= deadline:
-            await asyncio.sleep(_POLL_S)
+        with contextlib.suppress(TimeoutExpired):
+            await asyncio.to_thread(proc.wait, timeout=timeout_s)
     finally:
         stdout, stderr = _terminate(proc)
     return stdout, stderr

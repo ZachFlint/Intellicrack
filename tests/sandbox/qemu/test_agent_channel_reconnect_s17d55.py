@@ -36,13 +36,13 @@ than against the client's opinion of itself.
 
 from __future__ import annotations
 
-import asyncio
 import time
 from typing import TYPE_CHECKING, Final
 
 import pytest
 
 from intellicrack.sandbox.qemu import GuestAgentClient
+from tests._helpers.polling import wait_until
 from tests.sandbox.qemu.guest_agent_server import GuestCommandResult, IntellicrackAgentServer
 
 
@@ -134,10 +134,7 @@ async def _wait_until_channel_lost(client: GuestAgentClient, budget: float) -> f
     Returns:
         float: Seconds spent waiting, whether or not the close was observed.
     """
-    started = time.monotonic()
-    while time.monotonic() - started < budget and not not client.is_connected:
-        await asyncio.sleep(_CLOSE_POLL_INTERVAL_S)
-    return time.monotonic() - started
+    return await wait_until(lambda: not client.is_connected, budget=budget, interval=_CLOSE_POLL_INTERVAL_S)
 
 
 class TestADroppedChannelIsReopenedForTheNextCommand:
