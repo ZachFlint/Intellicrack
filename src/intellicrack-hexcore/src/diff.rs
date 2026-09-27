@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Zachary Flint
+//
+// This file is part of Intellicrack. See LICENSE for details.
+
 use adler2::Adler32;
 use similar::{capture_diff_slices, Algorithm, DiffOp};
 

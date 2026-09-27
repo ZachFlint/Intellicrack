@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Zachary Flint
+//
+// This file is part of Intellicrack. See LICENSE for details.
+
 //! Full-document string extraction (ASCII and UTF-16LE).
 //!
 //! Scans binary data for printable ASCII and UTF-16LE string sequences,

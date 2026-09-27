@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Zachary Flint
+//
+// This file is part of Intellicrack. See LICENSE for details.
+
 /**
  * @file command_handler.cpp
  * @brief Command dispatcher implementation for Intellicrack bridge
