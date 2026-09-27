@@ -43,7 +43,8 @@ async def wait_until(condition: Callable[[], bool], *, budget: float, interval: 
     """
     started = time.monotonic()
     while not condition():
-        if time.monotonic() - started >= budget:
+        remaining = budget - (time.monotonic() - started)
+        if remaining <= 0:
             break
-        await asyncio.sleep(interval)
+        await asyncio.sleep(min(interval, remaining))
     return time.monotonic() - started

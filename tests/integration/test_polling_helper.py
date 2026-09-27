@@ -25,6 +25,7 @@ from tests._helpers.polling import wait_until
 _TINY_INTERVAL_S: Final[float] = 0.001
 _UNREACHABLE_BUDGET_S: Final[float] = 60.0
 _EXHAUSTED_BUDGET_S: Final[float] = 0.05
+_OVERSIZED_INTERVAL_S: Final[float] = 5.0
 _HANG_GUARD_S: Final[float] = 10.0
 _FLIPS_ON_CALL: Final[int] = 4
 
@@ -89,3 +90,17 @@ class TestWaitUntil:
 
         assert waited >= _EXHAUSTED_BUDGET_S, f"the wait gave up after {waited:.4f}s of a {_EXHAUSTED_BUDGET_S}s budget"
         assert condition.calls > 1, "the condition was looked at once and then abandoned instead of polled"
+
+    @pytest.mark.asyncio
+    async def test_an_interval_longer_than_the_budget_never_carries_the_wait_past_it(self) -> None:
+        """A sleep is cut to the time left, so the budget stays a hard deadline."""
+        condition = _CountingCondition(true_on_call=None)
+
+        waited = await asyncio.wait_for(
+            wait_until(condition, budget=_EXHAUSTED_BUDGET_S, interval=_OVERSIZED_INTERVAL_S),
+            timeout=_HANG_GUARD_S,
+        )
+
+        assert waited < _OVERSIZED_INTERVAL_S, (
+            f"a {_OVERSIZED_INTERVAL_S}s interval carried the wait to {waited:.2f}s against a {_EXHAUSTED_BUDGET_S}s budget"
+        )
