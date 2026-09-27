@@ -24,6 +24,15 @@ per-module isolation pays that start-up once per module instead. If the child
 dies part-way through, the results it already flushed are still used and only
 the tests it never reported are failed with the crash detail.
 
+A module opts in either by requesting the ``self_attached_bridge`` fixture or by
+declaring ``pytestmark`` with the ``frida_selfattach`` marker at module level.
+Self-attach that reaches frida-core any other way -- a differently named fixture,
+dispatch through a ``ToolRegistry``, or a panel's own attach handler -- would
+inject the Frida agent into the pytest process itself, where the fault it can
+leave behind detonates later in whatever unrelated test runs next. The static
+classifier below (:func:`classify_self_attach_modules`) finds every such module
+so a gate can insist each one is isolated.
+
 The plugin is registered from ``tests/conftest.py`` so it loads for the whole
 session regardless of optional native modules; its hooks are no-ops for every
 test that is not in a Frida self-attach module.
@@ -31,6 +40,7 @@ test that is not in a Frida self-attach module.
 
 from __future__ import annotations
 
+import ast
 import os
 import subprocess
 import sys
@@ -41,6 +51,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import pytest
+
+from scripts.sandbox.test_types import to_pyargs_argv
 
 
 if TYPE_CHECKING:
@@ -62,9 +74,20 @@ MARKER_NAME = "frida_selfattach"
 _MARKER_DESCRIPTION = (
     "run this test in an isolated child pytest process so a native Frida self-attach crash "
     "(access violation) fails only these tests instead of aborting the whole run; auto-applied "
-    "to every test in a module that uses the self_attached_bridge fixture"
+    "to every test in a module that uses the self_attached_bridge fixture, or applied to a whole "
+    "module through a module-level pytestmark"
 )
 _SELF_ATTACH_FIXTURE = "self_attached_bridge"
+_PYTESTMARK_NAME = "pytestmark"
+_MARK_NAMESPACE = "mark"
+_USEFIXTURES_NAME = "usefixtures"
+_FRIDA_MODULES = frozenset({"frida", "intellicrack.bridges.frida_bridge"})
+"""Imports that bring real frida-core into a test module."""
+_DEVICE_ACQUIRERS = frozenset({"initialize", "get_local_device"})
+"""Calls that resolve a real local Frida device rather than a test double."""
+_SELF_PID_CALL = "getpid"
+_TEST_FILE_PREFIX = "test_"
+_TEST_FILE_SUFFIX = "_test.py"
 _CHILD_ENV_FLAG = "IC_FRIDA_SELFATTACH_ISOLATED_CHILD"
 _RESULT_FILE_ENV = "IC_FRIDA_SELFATTACH_RESULT_FILE"
 _CHILD_TIMEOUT_SECONDS = 1800.0
@@ -152,6 +175,179 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     for item in items:
         if str(item.location[0]) in self_attach_modules:
             item.add_marker(MARKER_NAME)
+
+
+def _called_name(call: ast.Call) -> str | None:
+    """Return the bare name a call invokes, ignoring its receiver.
+
+    Args:
+        call: A call expression.
+
+    Returns:
+        str | None: ``attach`` for both ``attach(...)`` and ``bridge.attach(...)``,
+            or ``None`` when the callee is not a plain name or attribute.
+    """
+    func = call.func
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    if isinstance(func, ast.Name):
+        return func.id
+    return None
+
+
+def _imports_frida(tree: ast.Module) -> bool:
+    """Report whether a module imports real frida-core anywhere.
+
+    Args:
+        tree: Parsed test module.
+
+    Returns:
+        bool: ``True`` when the module imports ``frida`` or the Frida bridge.
+    """
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import) and any(alias.name in _FRIDA_MODULES for alias in node.names):
+            return True
+        if isinstance(node, ast.ImportFrom) and node.module in _FRIDA_MODULES:
+            return True
+    return False
+
+
+def self_attaches_frida(tree: ast.Module) -> bool:
+    """Report whether a test module injects the Frida agent into its own process.
+
+    A module self-attaches when it imports real Frida, resolves a real local
+    device, and targets the current process id. The device requirement is what
+    separates a real injection from a module that only hands ``os.getpid()`` to
+    a fake device, which never reaches frida-core. The route to the attach is
+    deliberately not constrained: a direct ``bridge.attach(os.getpid())``, a
+    ``ToolRegistry`` dispatch of ``frida.attach`` and a panel's attach handler
+    all inject the same agent into the same process.
+
+    Args:
+        tree: Parsed test module.
+
+    Returns:
+        bool: ``True`` when the module performs a real Frida self-attach.
+    """
+    if not _imports_frida(tree):
+        return False
+    called = {name for node in ast.walk(tree) if isinstance(node, ast.Call) and (name := _called_name(node)) is not None}
+    return _SELF_PID_CALL in called and not called.isdisjoint(_DEVICE_ACQUIRERS)
+
+
+def _requests_self_attach_fixture(tree: ast.Module) -> bool:
+    """Report whether any function or ``usefixtures`` in a module requests the self-attach fixture.
+
+    Args:
+        tree: Parsed test module.
+
+    Returns:
+        bool: ``True`` when the module requests ``self_attached_bridge``, which
+            makes :func:`pytest_collection_modifyitems` isolate it.
+    """
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            params = (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
+            if any(param.arg == _SELF_ATTACH_FIXTURE for param in params):
+                return True
+        if (
+            isinstance(node, ast.Call)
+            and _called_name(node) == _USEFIXTURES_NAME
+            and any(isinstance(arg, ast.Constant) and arg.value == _SELF_ATTACH_FIXTURE for arg in node.args)
+        ):
+            return True
+    return False
+
+
+def _is_isolation_mark(node: ast.AST) -> bool:
+    """Report whether an expression is the ``pytest.mark.frida_selfattach`` marker.
+
+    Args:
+        node: Any expression node.
+
+    Returns:
+        bool: ``True`` for an attribute access naming :data:`MARKER_NAME` on a ``mark`` namespace.
+    """
+    return (
+        isinstance(node, ast.Attribute)
+        and node.attr == MARKER_NAME
+        and isinstance(node.value, ast.Attribute)
+        and node.value.attr == _MARK_NAMESPACE
+    )
+
+
+def _marked_for_isolation(tree: ast.Module) -> bool:
+    """Report whether a module's own ``pytestmark`` carries the isolation marker.
+
+    Only a module-level ``pytestmark`` counts. A class-level one isolates just
+    that class, leaving the module's other tests to run in the parent process.
+
+    Args:
+        tree: Parsed test module.
+
+    Returns:
+        bool: ``True`` when a module-level ``pytestmark`` includes :data:`MARKER_NAME`.
+    """
+    for statement in tree.body:
+        if isinstance(statement, ast.Assign):
+            targets: list[ast.expr] = statement.targets
+            value: ast.expr | None = statement.value
+        elif isinstance(statement, ast.AnnAssign):
+            targets = [statement.target]
+            value = statement.value
+        else:
+            continue
+        if value is None or not any(isinstance(target, ast.Name) and target.id == _PYTESTMARK_NAME for target in targets):
+            continue
+        if any(_is_isolation_mark(node) for node in ast.walk(value)):
+            return True
+    return False
+
+
+def declares_isolation(tree: ast.Module) -> bool:
+    """Report whether a test module will be run in an isolated child process.
+
+    Args:
+        tree: Parsed test module.
+
+    Returns:
+        bool: ``True`` when the module requests ``self_attached_bridge`` or marks
+            itself with :data:`MARKER_NAME` at module level.
+    """
+    return _requests_self_attach_fixture(tree) or _marked_for_isolation(tree)
+
+
+def _is_test_file(path: Path) -> bool:
+    """Report whether pytest's ``python_files`` patterns collect a file.
+
+    Args:
+        path: Candidate Python file.
+
+    Returns:
+        bool: ``True`` for ``test_*.py`` and ``*_test.py`` files.
+    """
+    return path.suffix == ".py" and (path.name.startswith(_TEST_FILE_PREFIX) or path.name.endswith(_TEST_FILE_SUFFIX))
+
+
+def classify_self_attach_modules(tests_root: Path) -> dict[Path, bool]:
+    """Map every Frida self-attach test module under a tree to whether it is isolated.
+
+    Args:
+        tests_root: Root of the test tree to scan.
+
+    Returns:
+        dict[Path, bool]: Each self-attaching test module mapped to ``True`` when
+            it declares isolation and ``False`` when it would inject the Frida
+            agent into the pytest process itself.
+    """
+    classified: dict[Path, bool] = {}
+    for path in sorted(tests_root.rglob("*.py")):
+        if not _is_test_file(path):
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        if self_attaches_frida(tree):
+            classified[path] = declares_isolation(tree)
+    return classified
 
 
 def pytest_runtest_logreport(report: TestReport) -> None:
@@ -244,6 +440,12 @@ def run_target_isolated(
     termination) ends only the child. The parent observes a non-zero exit code
     and turns it into an ordinary failure instead of dying with the child.
 
+    The child addresses ``target`` by import path. Inside the Windows test
+    container a filesystem path makes pytest build the package chain twice, and
+    one of the two copies then fails to resolve fixtures from its package's
+    ``conftest.py`` -- turning every such test in an isolated module into a
+    spurious setup error.
+
     Args:
         target: A pytest target such as ``tests/.../test_x.py`` or one node id.
         rootpath: Directory to run the child from (the session's rootdir).
@@ -260,15 +462,7 @@ def run_target_isolated(
         sys.executable,
         "-m",
         "pytest",
-        target,
-        "-p",
-        "no:randomly",
-        "-p",
-        "no:cacheprovider",
-        "-o",
-        "addopts=",
-        "-q",
-        "--no-header",
+        *to_pyargs_argv([target, "-p", "no:randomly", "-p", "no:cacheprovider", "-o", "addopts=", "-q", "--no-header"]),
     ]
     child_env = dict(os.environ)
     child_env[_CHILD_ENV_FLAG] = "1"

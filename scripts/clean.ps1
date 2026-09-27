@@ -23,16 +23,6 @@ try {
     Write-Skip "Python cleanup skipped: $_"
 }
 
-Write-Step 'CLEAN' "Checking for MagicMock artifact directory..."
-$magicMockPath = Join-Path (Get-Location) "MagicMock"
-if ((Test-Path $magicMockPath) -and (Get-Item $magicMockPath).PSIsContainer -and (Test-Path (Join-Path $magicMockPath "mock"))) {
-    Remove-Item -Recurse -Force $magicMockPath -ErrorAction Stop
-    Write-Success "MagicMock directory removed"
-    $removed++
-} else {
-    Write-Skip "MagicMock not found or not matching expected structure"
-}
-
 Write-Step 'CLEAN' "Cleaning test artifacts..."
 $artifacts = @('.pytest_cache', 'coverage_html_report', '.coverage', '.mypy_cache', '.ruff_cache')
 foreach ($art in $artifacts) {

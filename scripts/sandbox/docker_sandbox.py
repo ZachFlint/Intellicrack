@@ -47,6 +47,7 @@ from .admission import (
     SlotGate,
     plan_capacity,
 )
+from .argfiles import materialize_invocation
 from .reporting import (
     SummaryRecord,
     harvest_reports,
@@ -56,9 +57,12 @@ from .reporting import (
     write_summary_json,
 )
 from .test_types import (
+    ARGFILE_NAME_PREFIX,
+    ARGFILE_NAME_SUFFIX,
     TestRunSpec,
     TestType,
-    build_pytest_args,
+    argfile_sources,
+    rewritten_argfile_name,
     run_token,
     spec_to_dict,
 )
@@ -1031,19 +1035,31 @@ def _write_spec_file(spec: TestRunSpec) -> Path:
     """Persist the serialized spec where the container entrypoint expects it.
 
     The destination carries the run's identity token, so a second driver
-    running at the same time cannot overwrite this run's pytest argv.
+    running at the same time cannot overwrite this run's pytest argv. Any
+    argfile the run references is read here, on the host, relative to the
+    project root the container runs from, and its rewritten copy is written
+    beside the spec file where the container reads it.
 
     Args:
         spec: The run specification to serialize.
 
     Returns:
         Path: The host path the specification was written to.
+
+    Raises:
+        SandboxError: If a referenced argfile cannot be read or its references
+            form a cycle.
     """
     destination = host_spec_path(spec)
     destination.parent.mkdir(parents=True, exist_ok=True)
     pytest_args: list[str] = []
     if spec.test_type not in {TestType.INTERACTIVE, TestType.INTERACTIVE_RW}:
-        pytest_args = build_pytest_args(spec)
+        try:
+            invocation = materialize_invocation(spec, base=_PROJECT_ROOT, destination=_REPORTS_ROOT)
+        except (OSError, ValueError) as exc:
+            message = f"unable to prepare pytest argfiles: {exc}"
+            raise SandboxError(message) from exc
+        pytest_args = list(invocation.argv)
     payload = {**spec_to_dict(spec), "pytest_args": pytest_args}
     destination.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     _LOGGER.debug("sandbox_spec_written", path=str(destination), argc=len(pytest_args))
@@ -1106,10 +1122,23 @@ def _delete_control_file(path: Path) -> bool:
     return True
 
 
-def _discard_control_files(spec: TestRunSpec) -> tuple[Path, ...]:
-    """Remove a finished run's own spec and exit-code files.
+def host_argfile_paths(spec: TestRunSpec) -> tuple[Path, ...]:
+    """Return the host paths of a run's rewritten argfiles.
 
-    Safe under concurrency by construction: both names are derived from this
+    Args:
+        spec: The run specification.
+
+    Returns:
+        tuple[Path, ...]: One path under ``reports/tests/`` per argfile the
+            run references, in reference order.
+    """
+    return tuple(_REPORTS_ROOT / rewritten_argfile_name(spec, index) for index in range(len(argfile_sources(spec))))
+
+
+def _discard_control_files(spec: TestRunSpec) -> tuple[Path, ...]:
+    """Remove a finished run's own spec, exit-code, and rewritten argfile files.
+
+    Safe under concurrency by construction: every name is derived from this
     run's unique identity token, so no sibling's files can be addressed.
 
     Args:
@@ -1118,7 +1147,8 @@ def _discard_control_files(spec: TestRunSpec) -> tuple[Path, ...]:
     Returns:
         tuple[Path, ...]: The control files that no longer exist afterwards.
     """
-    removed = [path for path in (host_spec_path(spec), host_exit_code_path(spec)) if _delete_control_file(path)]
+    candidates = (host_spec_path(spec), host_exit_code_path(spec), *host_argfile_paths(spec))
+    removed = [path for path in candidates if _delete_control_file(path)]
     if removed:
         _LOGGER.debug("sandbox_control_files_discarded", run_id=spec.run_id, count=len(removed))
     return tuple(removed)
@@ -1140,6 +1170,9 @@ def _control_file_token(path: Path) -> str | None:
         return name[len(_SPEC_FILE_PREFIX) : -len(_SPEC_FILE_SUFFIX)] or None
     if name.startswith(_EXIT_CODE_FILE_PREFIX):
         return name.removeprefix(_EXIT_CODE_FILE_PREFIX) or None
+    if name.startswith(ARGFILE_NAME_PREFIX) and name.endswith(ARGFILE_NAME_SUFFIX):
+        token, separator, index = name[len(ARGFILE_NAME_PREFIX) : -len(ARGFILE_NAME_SUFFIX)].rpartition("_")
+        return token if separator and token and index.isdigit() else None
     return None
 
 

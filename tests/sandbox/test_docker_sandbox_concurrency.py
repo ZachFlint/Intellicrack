@@ -31,7 +31,7 @@ import re
 import sys
 import textwrap
 import time
-from pathlib import Path, PureWindowsPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, cast
 
 import pytest
@@ -53,7 +53,6 @@ from scripts.sandbox.test_types import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import PurePosixPath
 
 
 _DOCKER_MODULE_MEMBERS = vars(docker_sandbox)
@@ -581,6 +580,104 @@ def test_control_files_survive_a_failed_run_and_vanish_after_a_clean_one(
             _discard_control_files(spec)
         assert spec_path.exists() is must_survive, f"exit {exit_code}: spec survival should be {must_survive}"
         assert exit_path.exists() is must_survive, f"exit {exit_code}: exit-code survival should be {must_survive}"
+
+
+def _argfile_spec(source: Path, run_id: str | None = None) -> TestRunSpec:
+    """Build a custom-mode run that replays node ids from an argfile.
+
+    Args:
+        source: The operator's argfile.
+        run_id: Explicit run identity; a fresh one is generated when omitted.
+
+    Returns:
+        TestRunSpec: The constructed specification.
+    """
+    extra_args = (f"@{source}",)
+    if run_id is None:
+        return TestRunSpec(test_type=TestType.CUSTOM, timestamp=_SHARED_MINUTE, extra_args=extra_args)
+    return TestRunSpec(test_type=TestType.CUSTOM, timestamp=_SHARED_MINUTE, extra_args=extra_args, run_id=run_id)
+
+
+def test_spec_file_ships_a_rewritten_argfile_that_the_run_discards(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The spec write must produce the rewritten argfile the container argv names.
+
+    The container argv must reference the rewritten copy under the mounted
+    reports directory, that copy must hold the dotted node id, and a clean run
+    must discard it with its other control files while leaving the operator's
+    own argfile alone.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory used as the reports root.
+        monkeypatch: Fixture used to redirect the reports root.
+    """
+    monkeypatch.setattr(docker_sandbox, "_REPORTS_ROOT", tmp_path)
+    source = tmp_path / "order.txt"
+    _ = source.write_text("tests/sandbox/analysis_regex/test_domain_pattern.py::test_x\n", encoding="utf-8")
+    spec = _argfile_spec(source)
+
+    spec_path = _write_spec_file(spec)
+
+    (rewritten,) = docker_sandbox.host_argfile_paths(spec)
+    pytest_args = cast("list[str]", json.loads(spec_path.read_text(encoding="utf-8"))["pytest_args"])
+    assert f"@{PurePosixPath('C:/app/reports/tests') / rewritten.name}" in pytest_args, pytest_args
+    assert f"@{source}" not in pytest_args, "the container argv still names the operator's argfile"
+    assert rewritten.read_text(encoding="utf-8").splitlines() == ["tests.sandbox.analysis_regex.test_domain_pattern::test_x"]
+
+    _discard_control_files(spec)
+
+    assert not rewritten.exists(), "a completed run left its rewritten argfile behind"
+    assert source.is_file(), "cleanup deleted the operator's own argfile"
+
+
+def test_unreadable_argfile_stops_the_run_before_launch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A missing argfile must surface as a sandbox error, not a container failure.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory used as the reports root.
+        monkeypatch: Fixture used to redirect the reports root.
+    """
+    monkeypatch.setattr(docker_sandbox, "_REPORTS_ROOT", tmp_path)
+    spec = _argfile_spec(tmp_path / "absent.txt")
+    with pytest.raises(docker_sandbox.SandboxError, match="argfiles"):
+        _ = _write_spec_file(spec)
+    assert not docker_sandbox.host_spec_path(spec).exists(), "a spec was written for a run that cannot start"
+
+
+def test_reaper_treats_rewritten_argfiles_as_control_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A stale orphan's rewritten argfile must be reaped like its spec file.
+
+    A live sibling's and this run's own rewritten argfiles must be spared, and
+    an operator's argfile that happens to sit in the reports directory is not
+    a control file at all.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory used as the reports root.
+        monkeypatch: Fixture used to redirect the reports root.
+    """
+    monkeypatch.setattr(docker_sandbox, "_REPORTS_ROOT", tmp_path)
+    source = tmp_path / "order.txt"
+    _ = source.write_text("tests/sandbox\n", encoding="utf-8")
+    own = _argfile_spec(source, run_id="p1-aaaaaa")
+    live = _argfile_spec(source, run_id="p2-bbbbbb")
+    orphan = _argfile_spec(source, run_id="p4-dddddd")
+    for spec in (own, live, orphan):
+        _ = _write_spec_file(spec)
+    rewritten = {spec.run_id: docker_sandbox.host_argfile_paths(spec)[0] for spec in (own, live, orphan)}
+    for path in (*rewritten.values(), source):
+        _age_file(path, 172800.0)
+
+    targets = _select_reapable_control_files(
+        tmp_path.iterdir(),
+        frozenset({run_token(live)}),
+        own_token=run_token(own),
+        now=time.time(),
+        retention_seconds=86400.0,
+    )
+
+    assert rewritten[orphan.run_id] in targets, f"a stale orphan's rewritten argfile was not reaped: {targets!r}"
+    assert rewritten[live.run_id] not in targets, "the reaper targeted a live sibling's rewritten argfile"
+    assert rewritten[own.run_id] not in targets, "the reaper targeted this run's own rewritten argfile"
+    assert source not in targets, "the reaper targeted an operator's argfile"
 
 
 def test_reaper_spares_live_and_recent_control_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

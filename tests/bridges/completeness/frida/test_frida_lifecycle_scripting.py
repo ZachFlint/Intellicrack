@@ -71,6 +71,8 @@ from intellicrack.core.tools import ToolRegistry
 from intellicrack.core.types import ToolError, ToolName
 
 
+pytestmark = pytest.mark.frida_selfattach
+
 _ATTACH_WAIT_S: Final[float] = 5.0
 
 
