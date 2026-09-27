@@ -604,8 +604,7 @@ def _worker_positional_limits() -> dict[str, int | None]:
         if any(parameter.kind is inspect.Parameter.VAR_POSITIONAL for parameter in parameters):
             limits[worker_cls.__name__] = None
         else:
-            limits[worker_cls.__name__] = sum(bool(parameter.kind in positional)
-                                          for parameter in parameters)
+            limits[worker_cls.__name__] = sum(bool(parameter.kind in positional) for parameter in parameters)
     return limits
 
 
@@ -621,16 +620,9 @@ def _declared_arity(node: ast.ClassDef, inherited: int | None) -> int | None:
     """
     return next(
         (
-            (
-                None
-                if statement.args.vararg is not None
-                else len(statement.args.posonlyargs)
-                + len(statement.args.args)
-                - 1
-            )
+            (None if statement.args.vararg is not None else len(statement.args.posonlyargs) + len(statement.args.args) - 1)
             for statement in node.body
-            if isinstance(statement, ast.FunctionDef)
-            and statement.name == "__init__"
+            if isinstance(statement, ast.FunctionDef) and statement.name == "__init__"
         ),
         inherited,
     )

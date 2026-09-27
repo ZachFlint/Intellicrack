@@ -1418,9 +1418,7 @@ class SandboxPanel(AnalysisPanelBase):
             if paths:
                 self._append_companions(paths)
         elif chosen is folder_action:
-            if folder := QFileDialog.getExistingDirectory(
-                self, "Select companion folder"
-            ):
+            if folder := QFileDialog.getExistingDirectory(self, "Select companion folder"):
                 self._append_companions([folder])
 
     def _on_run_binary(self) -> None:

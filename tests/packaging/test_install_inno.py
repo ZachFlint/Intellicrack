@@ -194,9 +194,7 @@ def test_justfile_exposes_install_inno_delegating_to_the_script() -> None:
     text = _JUSTFILE.read_text(encoding="utf-8")
     match = re.search(r"(?m)^install-inno:\n((?:[ \t]+.*\n?)+)", text)
     assert match is not None, "the justfile has no install-inno recipe"
-    assert (
-        "scripts/install-inno.ps1" in match[1]
-    ), f"the install-inno recipe does not delegate to the script:\n{match.group(1)}"
+    assert "scripts/install-inno.ps1" in match[1], f"the install-inno recipe does not delegate to the script:\n{match.group(1)}"
 
 
 def test_install_all_provisions_inno_and_step_count_stays_consistent() -> None:

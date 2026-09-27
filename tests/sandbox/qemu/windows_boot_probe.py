@@ -464,8 +464,7 @@ def non_black_coverage(ppm_path: Path) -> float:
     total = len(pixels) // _RGB_CHANNELS
     if total == 0:
         return 0.0
-    lit = sum(bool(value > _BLACK_CHANNEL_CEILING)
-          for value in pixels)
+    lit = sum(bool(value > _BLACK_CHANNEL_CEILING) for value in pixels)
     return lit / (total * _RGB_CHANNELS)
 
 

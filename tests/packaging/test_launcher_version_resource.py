@@ -174,9 +174,7 @@ def parse_rendered_resource(text: str) -> tuple[tuple[int, ...], tuple[int, ...]
         msg = "the rendered resource carries no FixedFileInfo"
         raise TypeError(msg)
     versions: dict[str, tuple[int, ...]] = {
-        keyword.arg: _integer_tuple(keyword.arg, keyword.value)
-        for keyword in fixed.keywords
-        if keyword.arg in {"filevers", "prodvers"}
+        keyword.arg: _integer_tuple(keyword.arg, keyword.value) for keyword in fixed.keywords if keyword.arg in {"filevers", "prodvers"}
     }
     if set(versions) != {"filevers", "prodvers"}:
         msg = f"FixedFileInfo declares {sorted(versions)}, not both filevers and prodvers"

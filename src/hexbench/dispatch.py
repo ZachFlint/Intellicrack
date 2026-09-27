@@ -386,12 +386,8 @@ def _factory_label(operation: Operation, arguments: Sequence[object]) -> str:
     return next(
         (
             PurePath(argument).name or argument
-            for parameter, argument in zip(
-                operation.parameters, arguments, strict=False
-            )
-            if parameter.kind is ValueKind.TEXT
-            and isinstance(argument, str)
-            and argument
+            for parameter, argument in zip(operation.parameters, arguments, strict=False)
+            if parameter.kind is ValueKind.TEXT and isinstance(argument, str) and argument
         ),
         operation.name,
     )

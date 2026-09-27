@@ -90,13 +90,7 @@ def _find_owning_module(modules: list[ModuleInfo], address: int) -> ModuleInfo |
         if no module covers it.
     """
     return next(
-        (
-            module
-            for module in modules
-            if module.base_address
-            <= address
-            < module.base_address + module.size
-        ),
+        (module for module in modules if module.base_address <= address < module.base_address + module.size),
         None,
     )
 

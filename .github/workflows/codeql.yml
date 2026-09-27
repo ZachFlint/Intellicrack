@@ -13,9 +13,96 @@ concurrency:
 permissions:
   contents: read
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      languages: ${{ steps.combine.outputs.languages }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          list-files: shell
+          filters: |
+            actions:
+              - '.github/workflows/**'
+              - '.github/actions/**'
+            c-cpp:
+              - 'src/x64dbg-plugin/**'
+            javascript-typescript:
+              - 'src/hexbench/static/**'
+            python:
+              - 'src/intellicrack/**'
+              - 'src/hexbench/**'
+              - 'scripts/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+            rust:
+              - 'src/intellicrack-hexcore/**'
+      - name: Classify actions changes
+        if: steps.filter.outputs.actions == 'true'
+        id: diff_actions
+        uses: ./.github/actions/comment-only-diff
+        with:
+          paths: ${{ steps.filter.outputs.actions_files }}
+          base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      - name: Classify c-cpp changes
+        if: steps.filter.outputs.c-cpp == 'true'
+        id: diff_c_cpp
+        uses: ./.github/actions/comment-only-diff
+        with:
+          paths: ${{ steps.filter.outputs.c-cpp_files }}
+          base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      - name: Classify javascript-typescript changes
+        if: steps.filter.outputs.javascript-typescript == 'true'
+        id: diff_js_ts
+        uses: ./.github/actions/comment-only-diff
+        with:
+          paths: ${{ steps.filter.outputs.javascript-typescript_files }}
+          base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      - name: Classify python changes
+        if: steps.filter.outputs.python == 'true'
+        id: diff_python
+        uses: ./.github/actions/comment-only-diff
+        with:
+          paths: ${{ steps.filter.outputs.python_files }}
+          base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      - name: Classify rust changes
+        if: steps.filter.outputs.rust == 'true'
+        id: diff_rust
+        uses: ./.github/actions/comment-only-diff
+        with:
+          paths: ${{ steps.filter.outputs.rust_files }}
+          base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      - name: Combine per-language results
+        id: combine
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+            json='{"actions":"true","c-cpp":"true","javascript-typescript":"true","python":"true","rust":"true"}'
+          else
+            json=$(cat <<EOF
+          {
+            "actions": "${{ steps.diff_actions.outputs.substantive || 'false' }}",
+            "c-cpp": "${{ steps.diff_c_cpp.outputs.substantive || 'false' }}",
+            "javascript-typescript": "${{ steps.diff_js_ts.outputs.substantive || 'false' }}",
+            "python": "${{ steps.diff_python.outputs.substantive || 'false' }}",
+            "rust": "${{ steps.diff_rust.outputs.substantive || 'false' }}"
+          }
+          EOF
+            )
+          fi
+          echo "languages<<GHOUT_EOF" >> "$GITHUB_OUTPUT"
+          echo "$json" >> "$GITHUB_OUTPUT"
+          echo "GHOUT_EOF" >> "$GITHUB_OUTPUT"
   analyze:
     name: Analyze (${{ matrix.language }})
+    needs: [changes]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       security-events: write
@@ -36,15 +123,18 @@ jobs:
             build-mode: none
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.2
+        if: fromJSON(needs.changes.outputs.languages)[matrix.language] == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        if: fromJSON(needs.changes.outputs.languages)[matrix.language] == 'true'
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v4
+        if: fromJSON(needs.changes.outputs.languages)[matrix.language] == 'true'
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           category: '/language:${{ matrix.language }}'

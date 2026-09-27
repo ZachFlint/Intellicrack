@@ -1,0 +1,89 @@
+name: 'Comment-only diff check'
+description: 'Reports whether the diff touching the given paths is entirely comment or blank-line changes'
+inputs:
+  paths:
+    description: 'Shell-quoted, whitespace-separated file list (e.g. dorny/paths-filter list-files: shell output)'
+    required: true
+  base-sha:
+    description: 'Base commit SHA to diff against. Empty or all-zeros is treated as "unknown" (never skip).'
+    required: true
+outputs:
+  substantive:
+    description: "'true' if any given path has a non-comment, non-blank changed line, or the base could not be determined; 'false' only when every change is comment/blank-only"
+    value: ${{ steps.check.outputs.substantive }}
+runs:
+  using: composite
+  steps:
+    - id: check
+      shell: python
+      env:
+        COMMENT_DIFF_PATHS: ${{ inputs.paths }}
+        COMMENT_DIFF_BASE_SHA: ${{ inputs.base-sha }}
+      run: |
+        import os
+        import pathlib
+        import shlex
+        import subprocess
+
+        _COMMENT_PREFIXES: dict[str, str] = {
+            ".py": "#",
+            ".yml": "#",
+            ".yaml": "#",
+            ".toml": "#",
+            ".cfg": "#",
+            ".ini": "#",
+            ".sh": "#",
+            ".rs": "//",
+            ".cpp": "//",
+            ".cc": "//",
+            ".cxx": "//",
+            ".h": "//",
+            ".hpp": "//",
+            ".hh": "//",
+            ".js": "//",
+            ".jsx": "//",
+            ".ts": "//",
+            ".tsx": "//",
+        }
+
+
+        def is_comment_only(path: str, base_sha: str) -> bool:
+            suffix = pathlib.Path(path).suffix.lower()
+            prefix = _COMMENT_PREFIXES.get(suffix)
+            if prefix is None:
+                return False
+            result = subprocess.run(
+                ["git", "diff", "--unified=0", "--no-color", base_sha, "--", path],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode != 0:
+                return False
+            for line in result.stdout.splitlines():
+                if not line.startswith(("+", "-")) or line.startswith(("+++", "---")):
+                    continue
+                content = line[1:].strip()
+                if not content:
+                    continue
+                if not content.startswith(prefix):
+                    return False
+            return True
+
+
+        raw_paths = os.environ.get("COMMENT_DIFF_PATHS", "").strip()
+        base_sha = os.environ.get("COMMENT_DIFF_BASE_SHA", "").strip()
+        paths = shlex.split(raw_paths) if raw_paths else []
+
+        if not paths:
+            substantive = False
+        elif not base_sha or set(base_sha) == {"0"}:
+            substantive = True
+        else:
+            substantive = any(not is_comment_only(p, base_sha) for p in paths)
+
+        value = "true" if substantive else "false"
+        gh_output = os.environ["GITHUB_OUTPUT"]
+        with open(gh_output, "a", encoding="utf-8") as fh:
+            fh.write(f"substantive={value}\n")
+        print(f"comment-only-diff: substantive={value} ({len(paths)} path(s) checked against {base_sha or '<unknown base>'})")
