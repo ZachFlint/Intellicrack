@@ -55,7 +55,7 @@ except ImportError:
 
 _logger = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures("qapp")
+pytestmark = [pytest.mark.usefixtures("qapp"), pytest.mark.frida_selfattach]
 
 _DISPATCH_EXCEPTIONS: tuple[type[BaseException], ...] = (
     IntellicrackError,

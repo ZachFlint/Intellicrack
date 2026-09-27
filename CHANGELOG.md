@@ -179,8 +179,6 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 
-- **scripts:** Add automatic rebase-and-retry on push rejection (``)
-
 
 ### Changed
 
@@ -1088,6 +1086,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 - **hexcore:** Record undo entries for swap_blocks, repair_pe_checksum, BPS/UPS imports (`ba163d0`)
 
+- Isolate frida self-attach tests and rewrite sandbox argfiles (``)
+
 
 ### Performance
 
@@ -1095,6 +1095,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 
 ### Security
+
+- Fix Sonar Blocker findings, wire CI-based coverage import (`353ce8b`)
 
 - Advanced CodeQL setup, harden .env perms, patch underscore CVEs (`8c56184`)
 

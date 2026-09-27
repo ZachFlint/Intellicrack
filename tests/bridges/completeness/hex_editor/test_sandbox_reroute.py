@@ -27,11 +27,14 @@ sandbox-VM boundary is faked.
 from __future__ import annotations
 
 import posixpath
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
-from PyQt6.QtWidgets import QComboBox, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QSpinBox, QWidget
+import pytest
+from PyQt6.QtWidgets import QComboBox, QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox, QWidget
 
 from intellicrack.bridges.hex_editor import HexEditorBridge
+from intellicrack.ui.panels.hex_editor import sandbox as hex_editor_sandbox
 from intellicrack.ui.panels.hex_editor.panel import HexEditorPanel
 
 from .conftest import FakeSandboxBridge, make_registry_with_sandbox, open_doc, priv, priv_method, pump_until, release_and_unlink
@@ -43,6 +46,48 @@ if TYPE_CHECKING:
 
 _SANDBOX_DEST_PATH: str = posixpath.join("/", "tmp", "target.bin")
 """Destination path inside the (fake) sandbox container, not a host temp file."""
+
+
+@dataclass(frozen=True, slots=True)
+class WarningCall:
+    """One captured ``QMessageBox.warning`` invocation from the sandbox mixin.
+
+    Attributes:
+        parent: The parent widget the production handler passed to the dialog.
+        title: The dialog window title.
+        text: The dialog body text.
+    """
+
+    parent: object
+    title: str
+    text: str
+
+
+@pytest.fixture
+def sandbox_warnings(monkeypatch: pytest.MonkeyPatch) -> list[WarningCall]:
+    """Capture every ``QMessageBox.warning`` the sandbox mixin raises, without opening a modal.
+
+    The patch is installed on the exact ``QMessageBox`` binding that
+    ``ui/panels/hex_editor/sandbox.py`` looks up at call time, and is owned
+    by this module rather than inherited from the package-root autouse
+    guard, so the warning branches can never reach a real blocking
+    ``exec()`` loop under the headless ``offscreen`` platform even when the
+    package ``conftest`` is not resolved for a collected node.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture used to install the recorder.
+
+    Returns:
+        list[WarningCall]: Ledger that fills with one entry per warning shown.
+    """
+    calls: list[WarningCall] = []
+
+    def _record(parent: object, title: str, text: str, *_args: object, **_kwargs: object) -> QMessageBox.StandardButton:
+        calls.append(WarningCall(parent=parent, title=title, text=text))
+        return QMessageBox.StandardButton.Ok
+
+    monkeypatch.setattr(hex_editor_sandbox.QMessageBox, "warning", _record)
+    return calls
 
 
 class TestSaveToSandboxRoutesThroughHexEditorBridge:
@@ -190,13 +235,22 @@ class TestTestInSandboxRoutesThroughHexEditorBridge:
             panel.deleteLater()
 
     @staticmethod
-    def test_without_saved_file_path_warns_and_never_dispatches(qapp: QApplication) -> None:
-        """An unsaved (no ``file_path``) document must not reach the sandbox bridge at all.
+    def test_without_saved_file_path_warns_and_never_dispatches(
+        qapp: QApplication,
+        sandbox_warnings: list[WarningCall],
+    ) -> None:
+        """An unsaved (no ``file_path``) document must warn the user and never reach the sandbox bridge.
+
+        Falsifiable: if the ``file_path is None`` guard in
+        ``SandboxMixin._on_test_in_sandbox`` were removed, no warning would be
+        captured and the handler would dispatch ``bridge.test_in_sandbox``,
+        flipping the status label to "Testing in sandbox..." and recording a
+        ``run_binary`` call on the fake sandbox.
 
         Args:
             qapp: Session QApplication fixture.
+            sandbox_warnings: Ledger of warnings raised by the sandbox mixin.
         """
-        del qapp
         panel = HexEditorPanel()
         bridge = HexEditorBridge()
         fake_sandbox = FakeSandboxBridge()
@@ -205,8 +259,52 @@ class TestTestInSandboxRoutesThroughHexEditorBridge:
         panel.file_path = None
         try:
             priv_method(panel, "_on_test_in_sandbox")()
+            pump_until(qapp, lambda: len(fake_sandbox.run_binary_calls) > 0, timeout_s=0.5)
+
+            assert sandbox_warnings == [
+                WarningCall(
+                    parent=panel,
+                    title="Sandbox",
+                    text="No file is loaded. Save the document before testing in a sandbox.",
+                ),
+            ]
             assert fake_sandbox.run_binary_calls == []
+            assert not priv(panel, "_sandbox_status", QLabel).text()
         finally:
+            panel.deleteLater()
+
+    @staticmethod
+    def test_without_attached_bridge_warns_and_never_dispatches(
+        qapp: QApplication,
+        sandbox_warnings: list[WarningCall],
+    ) -> None:
+        """A saved document with no hex-editor bridge attached must warn instead of dispatching.
+
+        Falsifiable: if the ``bridge is None`` guard in
+        ``SandboxMixin._on_test_in_sandbox`` were removed, the handler would
+        fall through to ``bridge.test_in_sandbox(...)`` on ``None`` and raise
+        ``AttributeError`` after setting the status label, and no warning
+        would be captured.
+
+        Args:
+            qapp: Session QApplication fixture.
+            sandbox_warnings: Ledger of warnings raised by the sandbox mixin.
+        """
+        del qapp
+        panel = HexEditorPanel()
+        bridge = HexEditorBridge()
+        path = open_doc(bridge, b"\x4d\x5a\x90\x00" * 4)
+        try:
+            panel.file_path = path
+
+            priv_method(panel, "_on_test_in_sandbox")()
+
+            assert sandbox_warnings == [
+                WarningCall(parent=panel, title="Sandbox", text="Hex editor bridge is not attached."),
+            ]
+            assert not priv(panel, "_sandbox_status", QLabel).text()
+        finally:
+            release_and_unlink(bridge, path)
             panel.deleteLater()
 
 

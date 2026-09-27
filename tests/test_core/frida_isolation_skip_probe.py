@@ -7,7 +7,7 @@
 
 The file name does not match ``python_files``, so the normal suite never
 collects it. :mod:`tests.test_core.test_frida_isolation` passes it to a real
-pytest run by path, which collects it, marks it for isolation through its
+pytest run by import path, which collects it, marks it for isolation through its
 ``self_attached_bridge`` fixture and serves its skips from the isolated child.
 """
 

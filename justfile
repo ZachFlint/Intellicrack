@@ -46,6 +46,14 @@ install-ghidra:
 install-radare2:
     @& scripts/install-radare2.ps1
 
+# hexcore goes first because hexbench and intellicrack bundle it; the installer goes after the
+# x64dbg plugin because stage.ps1 copies the plugin out of tools/x64dbg.
+[doc('Build hexcore, the x64dbg plugin, Hexbench and Intellicrack; --all adds the installer and test sandbox')]
+[group('build')]
+[arg('all', long='all', value='true')]
+build all='false':
+    @$steps = @('build-hexcore', 'build-x64dbg-plugin', 'build-hexbench', 'build-intellicrack'); if ('{{ all }}' -eq 'true') { $steps += @('build-installer', 'build-testing-sandbox') }; foreach ($step in $steps) { Write-Host "==> just $step" -ForegroundColor Cyan; & '{{ just_executable() }}' --justfile '{{ justfile() }}' $step; if ($LASTEXITCODE -ne 0) { Write-Host "==> $step failed (exit $LASTEXITCODE)" -ForegroundColor Red; exit $LASTEXITCODE } }; Write-Host "==> build complete: $($steps -join ', ')" -ForegroundColor Green
+
 [doc('Build the Rust hex editor core (intellicrack-hexcore) tuned for meteorlake')]
 [group('build')]
 build-hexcore:
@@ -118,8 +126,19 @@ build-installer *ARGS:
 
 [doc('Delete installer build artifacts (build/ and packaging/Output/)')]
 [group('installer')]
-clean-installer:
-    @foreach ($p in @('build', 'packaging/Output')) { if (Test-Path $p) { $gb = [math]::Round((Get-ChildItem $p -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum / 1GB, 2); Remove-Item $p -Recurse -Force; Write-Host "==> removed $p ($gb GB)" -ForegroundColor Green } else { Write-Host "==> already absent: $p" -ForegroundColor DarkGray } }
+clean-installer: (_remove-paths 'build' 'packaging/Output')
+
+[doc('Delete Hexbench build artifacts (dist/hexbench, build/hexbench, Hexbench.lnk)')]
+[group('build')]
+clean-hexbench: (_remove-paths 'dist/hexbench' 'build/hexbench' 'Hexbench.lnk')
+
+[doc('Delete Intellicrack build artifacts (dist/intellicrack, build/intellicrack)')]
+[group('build')]
+clean-intellicrack: (_remove-paths 'dist/intellicrack' 'build/intellicrack')
+
+[private]
+_remove-paths +PATHS:
+    @foreach ($p in '{{ PATHS }}'.Split(' ')) { if (Test-Path $p) { $mb = [math]::Round((Get-ChildItem $p -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum / 1MB, 1); Remove-Item $p -Recurse -Force; Write-Host "==> removed $p ($mb MB)" -ForegroundColor Green } else { Write-Host "==> already absent: $p" -ForegroundColor DarkGray } }
 
 [doc('Download and install the latest QEMU emulator')]
 [group('install')]
@@ -141,10 +160,17 @@ install-cutter:
 install-inno:
     @& scripts/install-inno.ps1
 
-# Clean all build artifacts (Python, test caches)
+[doc('Clean Python bytecode and test/lint caches')]
 [group('cleanup')]
-clean:
+clean-caches:
     @& scripts/clean.ps1 -Pixi "{{ pixi }}" -SrcAndTests "{{ src_and_tests }}"
+
+# --all is opt-in because clean-testing-sandbox deletes the sandbox image, a multi-hour rebuild.
+[doc('Clean caches and hexcore, x64dbg plugin, Hexbench and Intellicrack artifacts; --all adds the installer and test sandbox')]
+[group('cleanup')]
+[arg('all', long='all', value='true')]
+clean all='false':
+    @$steps = @('clean-caches', 'clean-hexcore', 'clean-x64dbg-plugin', 'clean-hexbench', 'clean-intellicrack'); if ('{{ all }}' -eq 'true') { $steps += @('clean-installer', 'clean-testing-sandbox') }; foreach ($step in $steps) { Write-Host "==> just $step" -ForegroundColor Cyan; & '{{ just_executable() }}' --justfile '{{ justfile() }}' $step; if ($LASTEXITCODE -ne 0) { Write-Host "==> $step failed (exit $LASTEXITCODE)" -ForegroundColor Red; exit $LASTEXITCODE } }; Write-Host "==> clean complete: $($steps -join ', ')" -ForegroundColor Green
 
 # Run tests in Docker sandbox. Usage: just test [TYPE] [FLAGS...]
 # TYPE: unit (default), all, integration, e2e, smoke, parallel, failed, verbose, bench, module, module-cov, registry, custom

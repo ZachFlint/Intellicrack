@@ -63,6 +63,8 @@ except ImportError:
     _frida_available = False
 
 
+pytestmark = pytest.mark.frida_selfattach
+
 _DISPATCH_EXCEPTIONS: tuple[type[BaseException], ...] = (
     IntellicrackError,
     *async_bridge_module.WORKER_DEFAULT_EXCEPTIONS,

@@ -12,6 +12,14 @@ parameters for a single invocation, and :func:`build_pytest_args` deterministica
 maps a spec to the concrete ``pytest`` argument vector. Host and container
 share this definition via a serialized spec so the resulting command line is
 identical regardless of where it is constructed.
+
+Pytest argfiles (``@path``) are expanded by pytest's own argument parser, so
+their contents never pass through this module's target rewriting. They are
+therefore modelled explicitly: :func:`build_pytest_invocation` takes the
+already-read contents of every referenced argfile, rewrites them together with
+the surrounding argv, and returns the rewritten argfiles alongside an argv that
+references them. Reading and writing those files is the host's job (see
+:mod:`scripts.sandbox.argfiles`); everything here stays pure.
 """
 
 from __future__ import annotations
@@ -20,8 +28,12 @@ import os
 import secrets
 from dataclasses import dataclass, field
 from enum import StrEnum
-from pathlib import PurePosixPath
-from typing import cast
+from pathlib import PurePath, PurePosixPath
+from typing import TYPE_CHECKING, cast
+
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
 
 
 _CONTAINER_WORKSPACE = PurePosixPath("C:/app")
@@ -32,6 +44,10 @@ _TEST_ROOT_PACKAGE = "tests"
 _PYARGS_FLAG = "--pyargs"
 _PYTHON_SUFFIX = ".py"
 _NODEID_SEPARATOR = "::"
+_ARGFILE_PREFIX = "@"
+
+ARGFILE_NAME_PREFIX = "_argfile_"
+ARGFILE_NAME_SUFFIX = ".txt"
 
 # Options whose value is a separate token. A ``tests/...`` token following one
 # of these is that option's value (``--ignore tests/slow``) rather than a
@@ -130,6 +146,33 @@ class TestRunSpec:
     extra_args: tuple[str, ...] = field(default_factory=tuple)
     timeout_seconds: int = 7200
     run_id: str = field(default_factory=new_run_id)
+
+
+@dataclass(frozen=True, slots=True)
+class RewrittenArgfile:
+    """An argfile whose collection targets have been rewritten for ``--pyargs``.
+
+    Attributes:
+        name: Run-scoped filename, see :func:`rewritten_argfile_name`.
+        tokens: The argfile's arguments, one per line when written.
+    """
+
+    name: str
+    tokens: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PytestInvocation:
+    """A complete pytest invocation: the argv plus the argfiles it references.
+
+    Attributes:
+        argv: The pytest argument vector. Every argfile reference points at one
+            of :attr:`argfiles` under the argfile root it was built for.
+        argfiles: Rewritten argfiles, in the order the argv references them.
+    """
+
+    argv: tuple[str, ...]
+    argfiles: tuple[RewrittenArgfile, ...]
 
 
 def run_token(spec: TestRunSpec) -> str:
@@ -232,6 +275,46 @@ def _is_collection_target(token: str) -> bool:
     return normalized == _TEST_ROOT_PACKAGE or normalized.startswith(f"{_TEST_ROOT_PACKAGE}/")
 
 
+def to_pyargs_segments(segments: Sequence[Sequence[str]]) -> list[list[str]]:
+    """Rewrite collection targets across an argv split into consecutive segments.
+
+    The concatenation of ``segments`` is treated as one argument vector, so an
+    option in one segment still claims its value at the start of the next:
+    ``--ignore`` ending one segment keeps a ``tests/...`` token opening the
+    following segment in filesystem form. This is what lets the contents of an
+    argfile be rewritten in the context of the argv that references it.
+
+    Only bare positional targets are rewritten. Tokens beginning with ``-`` and
+    values belonging to :data:`_VALUE_OPTIONS` keep their filesystem form, so
+    ``--ignore tests/slow`` and ``-k tests`` are left intact.
+
+    Args:
+        segments: Consecutive pieces of one pytest argument vector.
+
+    Returns:
+        list[list[str]]: The segments, same shape, with targets rewritten. When
+            at least one target was rewritten and no segment already carries
+            ``--pyargs``, it is inserted at the start of the first segment.
+    """
+    converted: list[list[str]] = []
+    rewritten = False
+    previous = ""
+    for segment in segments:
+        piece: list[str] = []
+        for token in segment:
+            eligible = previous not in _VALUE_OPTIONS and not token.startswith("-") and _is_collection_target(token)
+            if eligible:
+                piece.append(to_pyargs_target(token))
+                rewritten = True
+            else:
+                piece.append(token)
+            previous = token
+        converted.append(piece)
+    if rewritten and converted and not any(_PYARGS_FLAG in piece for piece in converted):
+        converted[0].insert(0, _PYARGS_FLAG)
+    return converted
+
+
 def to_pyargs_argv(args: list[str]) -> list[str]:
     """Rewrite filesystem collection targets to importable ``--pyargs`` targets.
 
@@ -241,9 +324,8 @@ def to_pyargs_argv(args: list[str]) -> list[str]:
     live in a sibling ``conftest.py`` one of the two copies fails to resolve
     them. Addressing the same tests by import path collects each exactly once.
 
-    Only bare positional targets are rewritten. Tokens beginning with ``-`` and
-    values belonging to :data:`_VALUE_OPTIONS` keep their filesystem form, so
-    ``--ignore tests/slow`` and ``-k tests`` are left intact.
+    The rewriting rules are those of :func:`to_pyargs_segments`, applied to a
+    single segment.
 
     Args:
         args: The assembled pytest argument vector.
@@ -252,20 +334,59 @@ def to_pyargs_argv(args: list[str]) -> list[str]:
         list[str]: The vector with targets rewritten and ``--pyargs`` present
             when at least one target was rewritten.
     """
-    converted: list[str] = []
-    rewritten = False
-    previous = ""
-    for token in args:
-        eligible = previous not in _VALUE_OPTIONS and not token.startswith("-") and _is_collection_target(token)
-        if eligible:
-            converted.append(to_pyargs_target(token))
-            rewritten = True
-        else:
-            converted.append(token)
-        previous = token
-    if rewritten and _PYARGS_FLAG not in converted:
-        converted.insert(0, _PYARGS_FLAG)
-    return converted
+    return to_pyargs_segments([args])[0]
+
+
+def argfile_source(token: str) -> str | None:
+    """Return the path an argfile reference names, mirroring pytest's parser.
+
+    Pytest's argument parser treats every argument starting with ``@`` as a
+    file whose lines are further arguments, regardless of its position in the
+    argv, and opens the remainder relative to the current directory.
+
+    Args:
+        token: A single pytest argument.
+
+    Returns:
+        str | None: The referenced path exactly as written, or ``None`` when
+            the token is not an argfile reference.
+    """
+    if token.startswith(_ARGFILE_PREFIX):
+        return token.removeprefix(_ARGFILE_PREFIX)
+    return None
+
+
+def argfile_sources(spec: TestRunSpec) -> tuple[str, ...]:
+    """Return every argfile a run references, in argv order.
+
+    Only operator-supplied arguments can reference argfiles; the arguments
+    each mode contributes never do.
+
+    Args:
+        spec: The run specification.
+
+    Returns:
+        tuple[str, ...]: Referenced paths as written, repeats included, so the
+            position of each matches the index in :func:`rewritten_argfile_name`.
+    """
+    return tuple(source for source in map(argfile_source, spec.extra_args) if source is not None)
+
+
+def rewritten_argfile_name(spec: TestRunSpec, index: int) -> str:
+    """Return the filename of a run's rewritten argfile.
+
+    The name carries the run's identity token, so concurrent runs never share
+    a rewritten argfile and the host can discard or reap it with the run's
+    other control files.
+
+    Args:
+        spec: The run specification.
+        index: Zero-based position of the reference among the run's argfiles.
+
+    Returns:
+        str: ``_argfile_<run token>_<index>.txt``.
+    """
+    return f"{ARGFILE_NAME_PREFIX}{run_token(spec)}_{index}{ARGFILE_NAME_SUFFIX}"
 
 
 def build_pytest_args(spec: TestRunSpec) -> list[str]:
@@ -277,11 +398,83 @@ def build_pytest_args(spec: TestRunSpec) -> list[str]:
     container. Collection targets are emitted as importable ``--pyargs``
     targets rather than filesystem paths; see :func:`to_pyargs_argv`.
 
+    A run that references argfiles needs their contents, so it must be built
+    with :func:`build_pytest_invocation` instead.
+
     Args:
         spec: The active run specification.
 
     Returns:
         list[str]: The pytest argument vector.
+    """
+    return list(build_pytest_invocation(spec).argv)
+
+
+def build_pytest_invocation(
+    spec: TestRunSpec,
+    argfile_contents: Mapping[str, Sequence[str]] | None = None,
+    *,
+    argfile_root: PurePath | None = None,
+) -> PytestInvocation:
+    """Build the pytest argv and the rewritten argfiles it references.
+
+    Each ``@path`` reference is replaced by a reference to a run-scoped
+    rewritten argfile under ``argfile_root``. The contents of every argfile
+    are rewritten in place within the surrounding argv (see
+    :func:`to_pyargs_segments`), so a ``tests/...`` node id listed in an
+    argfile is collected by import path exactly like one passed directly.
+
+    Args:
+        spec: The active run specification.
+        argfile_contents: Fully expanded arguments of every argfile the spec
+            references, keyed by the path as written after ``@``.
+        argfile_root: Directory the rewritten argfiles will be written to, as
+            the pytest process will see it. Defaults to the container's
+            ``reports/tests`` directory, beside the run's other artifacts.
+
+    Returns:
+        PytestInvocation: The argv and the rewritten argfiles, in reference
+            order.
+
+    Raises:
+        ValueError: If an argfile referenced by the spec has no entry in
+            ``argfile_contents``; passing it through unrewritten would bring
+            back the duplicated collection this builder exists to prevent.
+    """
+    contents: Mapping[str, Sequence[str]] = argfile_contents or {}
+    root: PurePath = _CONTAINER_REPORTS if argfile_root is None else argfile_root
+    segments: list[list[str]] = [[]]
+    for token in _mode_args(spec):
+        source = argfile_source(token)
+        if source is None:
+            segments[-1].append(token)
+            continue
+        if source not in contents:
+            message = f"argfile {token!r} was not read; build this run with its argfile contents"
+            raise ValueError(message)
+        segments.extend((list(contents[source]), []))
+
+    argv: list[str] = []
+    argfiles: list[RewrittenArgfile] = []
+    for position, segment in enumerate(to_pyargs_segments(segments)):
+        if position % 2 == 0:
+            argv.extend(segment)
+            continue
+        name = rewritten_argfile_name(spec, len(argfiles))
+        argfiles.append(RewrittenArgfile(name=name, tokens=tuple(segment)))
+        argv.append(f"{_ARGFILE_PREFIX}{root / name}")
+    return PytestInvocation(argv=tuple(argv), argfiles=tuple(argfiles))
+
+
+def _mode_args(spec: TestRunSpec) -> list[str]:
+    """Assemble the unrewritten pytest arguments for a run specification.
+
+    Args:
+        spec: The active run specification.
+
+    Returns:
+        list[str]: The mode's arguments followed by the operator's extra
+            arguments, with collection targets still in filesystem form.
 
     Raises:
         ValueError: If the spec references :attr:`TestType.MODULE` or
@@ -399,7 +592,7 @@ def build_pytest_args(spec: TestRunSpec) -> list[str]:
             raise ValueError(message)
 
     args.extend(spec.extra_args)
-    return to_pyargs_argv(args)
+    return args
 
 
 def spec_to_dict(spec: TestRunSpec) -> dict[str, object]:
