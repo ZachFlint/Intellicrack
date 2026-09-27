@@ -277,8 +277,12 @@ jobs:
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Warn when coverage.xml is missing
+        if: always() && hashFiles('coverage.xml') == ''
+        run: |
+          Write-Host '::warning::coverage.xml was not produced (the pytest step likely crashed before pytest-cov could write its report). Skipping the SonarQube Scan step for this run so SonarCloud does not record a false 0% coverage analysis and fail the quality gate on a run that never had coverage data to begin with.'
       - name: SonarQube Scan
-        if: always()
+        if: always() && hashFiles('coverage.xml') != ''
         continue-on-error: true
         uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         env:
