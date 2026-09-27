@@ -6,9 +6,46 @@ on:
     branches:
       - main
       - 'releases/*'
+concurrency:
+  group: qodana-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name != 'workflow_dispatch'
+    outputs:
+      python: ${{ steps.python_diff.outputs.substantive || 'false' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          list-files: shell
+          filters: |
+            python:
+              - 'src/intellicrack/**'
+              - 'src/intellicrack-hexcore/**'
+              - 'src/x64dbg-plugin/**'
+              - 'src/hexbench/**'
+              - 'scripts/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - 'pixi.lock'
+              - '.github/workflows/qodana_code_quality.yml'
+      - name: Classify python changes
+        if: steps.filter.outputs.python == 'true'
+        id: python_diff
+        uses: ./.github/actions/comment-only-diff
+        with:
+          paths: ${{ steps.filter.outputs.python_files }}
+          base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
   qodana:
     runs-on: windows-latest
+    needs: [changes]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.python == 'true'
     continue-on-error: true
     timeout-minutes: 60
     permissions:
@@ -16,18 +53,18 @@ jobs:
       pull-requests: write
       checks: write
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.9.5
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: latest
       - name: Install dependencies
         run: pixi install
         timeout-minutes: 15
       - name: 'Qodana Scan'
-        uses: JetBrains/qodana-action@v2026.2.1
+        uses: JetBrains/qodana-action@10be11607eb323a180e2b76b26c9c5cdceac3e77 # v2026.2.1
         with:
           pr-mode: false
           upload-result: true

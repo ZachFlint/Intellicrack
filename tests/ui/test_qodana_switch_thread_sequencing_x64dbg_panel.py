@@ -91,7 +91,8 @@ def _drive(
 
 
 def test_switch_thread_success_prints_message_and_refreshes_state_in_order(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The success handler must both print the console message and call ``_refresh_state``.
 
@@ -120,7 +121,8 @@ def test_switch_thread_success_prints_message_and_refreshes_state_in_order(
 
 
 def test_switch_thread_with_no_selection_does_not_touch_bridge_or_refresh(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """With no thread row selected, the handler must return before the bridge/refresh.
 

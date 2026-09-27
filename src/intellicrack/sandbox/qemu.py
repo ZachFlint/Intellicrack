@@ -5505,11 +5505,7 @@ class QEMUSandbox(SandboxBase):
             ``None`` when there is no such folder.
         """
         return next(
-            (
-                configured
-                for configured, read_only in self._configured_shares()
-                if not read_only
-            ),
+            (configured for configured, read_only in self._configured_shares() if not read_only),
             None,
         )
 

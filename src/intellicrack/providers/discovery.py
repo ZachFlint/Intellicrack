@@ -1090,9 +1090,7 @@ class ModelDiscovery:
         """
         cached = self._cache.get_all_cached()
 
-        result: dict[str, int] = {
-            provider: len(models) for provider, models in cached.items()
-        }
+        result: dict[str, int] = {provider: len(models) for provider, models in cached.items()}
         return result
 
     async def save_cache(self, path: Path) -> None:

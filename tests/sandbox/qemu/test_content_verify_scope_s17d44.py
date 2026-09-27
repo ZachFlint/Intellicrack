@@ -367,11 +367,7 @@ def _flag_keyword(name: str) -> object | None:
         object | None: Its literal value, or None when it is not supplied.
     """
     return next(
-        (
-            ast.literal_eval(keyword.value)
-            for keyword in _flag_declaration().keywords
-            if keyword.arg == name
-        ),
+        (ast.literal_eval(keyword.value) for keyword in _flag_declaration().keywords if keyword.arg == name),
         None,
     )
 

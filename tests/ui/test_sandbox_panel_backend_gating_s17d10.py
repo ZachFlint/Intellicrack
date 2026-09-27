@@ -90,9 +90,7 @@ def test_windows_backend_disables_qemu_only_controls() -> None:
     panel._set_sandbox_controls_active(active=True)
 
     still_enabled = [name for name in _QEMU_ONLY_CONTROLS if _enabled(panel, name)]
-    assert (
-        not still_enabled
-    ), f"controls the Windows backend cannot service are enabled: {still_enabled}"
+    assert not still_enabled, f"controls the Windows backend cannot service are enabled: {still_enabled}"
     assert not panel._output_tabs.isTabEnabled(panel._vnc_tab_index), "the VM Display tab must be disabled for a backend with no VNC port"
 
 
@@ -134,9 +132,7 @@ def test_switching_type_while_inactive_reapplies_the_gating() -> None:
     panel._set_sandbox_controls_active(active=True)
 
     disabled = [name for name in _QEMU_ONLY_CONTROLS if not _enabled(panel, name)]
-    assert (
-        not disabled
-    ), f"switching to QEMU while inactive did not re-enable: {disabled}"
+    assert not disabled, f"switching to QEMU while inactive did not re-enable: {disabled}"
 
 
 @pytest.mark.usefixtures("qapp")
@@ -163,9 +159,7 @@ def test_deactivation_disables_everything_on_qemu() -> None:
     panel._set_sandbox_controls_active(active=False)
 
     still_enabled = [name for name in _QEMU_ONLY_CONTROLS if _enabled(panel, name)]
-    assert (
-        not still_enabled
-    ), f"controls stayed live with no sandbox: {still_enabled}"
+    assert not still_enabled, f"controls stayed live with no sandbox: {still_enabled}"
     assert panel.create_btn.isEnabled()
 
 

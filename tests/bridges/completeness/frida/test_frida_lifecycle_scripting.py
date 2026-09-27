@@ -751,11 +751,7 @@ class _SignalRecordingDevice:
             callback: Callback to unregister; must match the object
                 originally passed to :meth:`on`.
         """
-        self.registered = [
-            (s, cb)
-            for s, cb in self.registered
-            if s != signal or cb is not callback
-        ]
+        self.registered = [(s, cb) for s, cb in self.registered if s != signal or cb is not callback]
 
     def fire(self, signal: str) -> None:
         """Synchronously invoke every callback registered for ``signal``.
@@ -1123,9 +1119,9 @@ class TestSessionChildGatingC1:
                 if all(getattr(c, "pid", None) != child.pid for c in pending):
                     break
                 time.sleep(0.1)
-            assert all(
-                getattr(c, "pid", None) != child.pid for c in pending
-            ), "resume_session_child must clear the child from the pending list"
+            assert all(getattr(c, "pid", None) != child.pid for c in pending), (
+                "resume_session_child must clear the child from the pending list"
+            )
         finally:
             with contextlib.suppress(ToolError):
                 _run_async(bridge.disable_session_child_gating())

@@ -124,7 +124,8 @@ def _make_panel(qapp: QApplication, bridge: _RecordingGhidraBridge) -> GhidraPan
 
 
 def test_apply_structure_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_apply_structure``'s success closure formats the real parsed address.
 
@@ -146,7 +147,8 @@ def test_apply_structure_renders_narrowed_address_and_forwards_it(
 
 
 def test_write_bytes_renders_narrowed_address_and_forwards_it(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch,
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``_on_write_bytes``'s success closure formats the real parsed address.
 

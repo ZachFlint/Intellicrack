@@ -563,8 +563,7 @@ _STRING_ROWS: Final[tuple[tuple[int, int, str, str], ...]] = (
 )
 
 _STRING_CUTOFF: Final = 5
-_UNDER_CUTOFF: Final = sum(bool(row[1] < _STRING_CUTOFF)
-                       for row in _STRING_ROWS)
+_UNDER_CUTOFF: Final = sum(bool(row[1] < _STRING_CUTOFF) for row in _STRING_ROWS)
 
 _SEARCH_ROWS: Final[tuple[tuple[int, str, str], ...]] = (
     (0x000001F8, ".text", "2e 74 65 78 74"),
@@ -1217,9 +1216,7 @@ def _classify(chunk: bytes) -> int:
     if not any(chunk):
         return 0
     measured = _entropy(chunk)
-    printable = sum(
-        _byte_class(value) in {"bc-print", "bc-null"} for value in chunk
-    )
+    printable = sum(_byte_class(value) in {"bc-print", "bc-null"} for value in chunk)
     if printable >= len(chunk) * _TEXT_SHARE and measured < _MID_ENTROPY:
         return 1
     if measured > _HIGH_ENTROPY:
@@ -2692,8 +2689,7 @@ def _card_diff_minimap() -> str:
         "Diff mini-map",
         "One band per region from <code>diff_files</code>. Each of the four <code>diff_type</code> values gets a colour and a "
         "glyph, so the map survives greyscale printing and colour blindness. The caret position is tracked by the vertical rule.",
-        f'{frame}<div class="hb-legend">{legend}</div>'
-        + _frame("Summary", summary),
+        f'{frame}<div class="hb-legend">{legend}</div>' + _frame("Summary", summary),
     )
 
 
@@ -3179,9 +3175,7 @@ def _sections(stylesheet: str) -> tuple[_Section, ...]:
     if not numbered or numbered != expected:
         message = f"{_CSS_PATH.name} declares sections {numbered}, which do not run consecutively from {_FIRST_SECTION} as {expected}"
         raise ValueError(message)
-    if unnoted := tuple(
-        section for section in numbered if section not in _SECTION_NOTES
-    ):
+    if unnoted := tuple(section for section in numbered if section not in _SECTION_NOTES):
         message = f"no gallery note is written for {_CSS_PATH.name} section(s) {unnoted}"
         raise ValueError(message)
     ends = [start - 1 for _section, _name, start in banners[1:]] + [len(lines)]
