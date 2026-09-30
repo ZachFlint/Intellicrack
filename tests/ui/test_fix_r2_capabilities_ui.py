@@ -90,8 +90,10 @@ def test_status_tab_names_the_version_and_both_sides_capabilities(qtbot: QtBot, 
             qtbot.waitUntil(lambda: "Protocol version:" in label.text(), timeout=_WAIT_MS)
             lines = label.text().splitlines()
             assert f"Protocol version: {era.value}" in lines
-            offered = "logging; prompts (listChanged); resources (subscribe, listChanged); tools (listChanged)"
-            assert f"Server offers: {offered if era is Era.MODERN else 'logging; prompts; resources; tools'}" in lines
+            offered = "logging; prompts (listChanged); resources (subscribe, listChanged); tools (listChanged); completions"
+            assert (
+                f"Server offers: {offered if era is Era.MODERN else 'logging; prompts; resources (subscribe); tools; completions'}" in lines
+            )
             assert f"Intellicrack declared: {'roots (listChanged)' if era is Era.LEGACY else 'roots'}" in lines
         finally:
             dialog.done(QDialog.DialogCode.Rejected.value)

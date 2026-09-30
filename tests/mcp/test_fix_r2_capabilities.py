@@ -136,8 +136,8 @@ def test_nothing_is_declared_without_the_features(tmp_path: Path, era: Era) -> N
 @pytest.mark.parametrize(
     ("era", "offered"),
     [
-        (Era.MODERN, ("logging", "prompts (listChanged)", "resources (subscribe, listChanged)", "tools (listChanged)")),
-        (Era.LEGACY, ("logging", "prompts", "resources", "tools")),
+        (Era.MODERN, ("logging", "prompts (listChanged)", "resources (subscribe, listChanged)", "tools (listChanged)", "completions")),
+        (Era.LEGACY, ("logging", "prompts", "resources (subscribe)", "tools", "completions")),
     ],
     ids=["modern", "legacy"],
 )
