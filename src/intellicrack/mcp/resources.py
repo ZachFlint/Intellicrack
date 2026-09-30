@@ -78,6 +78,9 @@ _URI_CHARS: Final[int] = 2048
 _DESCRIPTION_CHARS: Final[int] = 2048
 """Longest description kept from a listing."""
 
+MAX_COMPLETION_VALUES: Final[int] = 100
+"""Most completion suggestions kept, the protocol's own limit."""
+
 
 def _label(value: str | None, limit: int = _LABEL_CHARS) -> str | None:
     """Clean an optional server-supplied label.
@@ -134,6 +137,55 @@ class PromptSummary:
     required_arguments: frozenset[str] = frozenset()
 
 
+@dataclass(frozen=True, slots=True)
+class ResourceTemplateSummary:
+    """One resource template a server offers.
+
+    Attributes:
+        uri_template: The RFC 6570 template exactly as the server wrote it,
+            which is what completion requests refer to. Clean it before
+            showing it.
+        name: The server's own name for it, cleaned.
+        title: The server's display title, or ``None``.
+        description: The server's description, or ``None``.
+        mime_type: The media type of what it addresses, or ``None``.
+    """
+
+    uri_template: str
+    name: str
+    title: str | None = None
+    description: str | None = None
+    mime_type: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Page[T]:
+    """One page of a listing.
+
+    Attributes:
+        entries: The page's entries.
+        next_cursor: Where the next page starts, or ``None`` on the last.
+    """
+
+    entries: tuple[T, ...]
+    next_cursor: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CompletionSummary:
+    """A server's suggestions for one argument.
+
+    Attributes:
+        values: The suggestions, cleaned, at most :data:`MAX_COMPLETION_VALUES`.
+        total: How many suggestions there are in all, or ``None``.
+        has_more: Whether there are more than were sent.
+    """
+
+    values: tuple[str, ...]
+    total: int | None = None
+    has_more: bool = False
+
+
 def _require_client(connection: McpConnection) -> Client:
     """Resolve a connection's entered client, or refuse.
 
@@ -153,8 +205,8 @@ def _require_client(connection: McpConnection) -> Client:
     return client
 
 
-async def list_resources(connection: McpConnection) -> list[ResourceSummary]:
-    """List every resource a server offers.
+async def list_resource_page(connection: McpConnection, cursor: str | None = None) -> Page[ResourceSummary]:
+    """List one page of the resources a server offers.
 
     A server that is not connected propagates
     :class:`~intellicrack.mcp.errors.McpConnectionError` from the connection
@@ -163,31 +215,92 @@ async def list_resources(connection: McpConnection) -> list[ResourceSummary]:
 
     Args:
         connection: The connected server.
+        cursor: Where the page starts, or ``None`` for the first.
+
+    Returns:
+        Page[ResourceSummary]: The page, capped at :data:`MAX_ENTRIES`.
+    """
+    client = _require_client(connection)
+    result = await connection.request("list resources", partial(client.list_resources, cursor=cursor))
+    entries = tuple(
+        ResourceSummary(
+            uri=str(resource.uri),
+            name=clean_untrusted_label(resource.name, limit=_LABEL_CHARS),
+            title=_label(resource.title),
+            description=_label(resource.description, _DESCRIPTION_CHARS),
+            mime_type=_label(resource.mime_type),
+            size=resource.size,
+        )
+        for resource in result.resources[:MAX_ENTRIES]
+    )
+    return Page(entries=entries, next_cursor=result.next_cursor)
+
+
+async def list_resources(connection: McpConnection) -> list[ResourceSummary]:
+    """List every resource a server offers, following its pages.
+
+    Args:
+        connection: The connected server.
 
     Returns:
         list[ResourceSummary]: The resources, in server order, capped at
         :data:`MAX_ENTRIES`.
     """
-    client = _require_client(connection)
     summaries: list[ResourceSummary] = []
     cursor: str | None = None
     for _ in range(MAX_LIST_PAGES):
-        result = await connection.request("list resources", partial(client.list_resources, cursor=cursor))
-        summaries.extend(
-            ResourceSummary(
-                uri=str(resource.uri),
-                name=clean_untrusted_label(resource.name, limit=_LABEL_CHARS),
-                title=_label(resource.title),
-                description=_label(resource.description, _DESCRIPTION_CHARS),
-                mime_type=_label(resource.mime_type),
-                size=resource.size,
-            )
-            for resource in result.resources
-        )
-        cursor = result.next_cursor
+        page = await list_resource_page(connection, cursor)
+        summaries.extend(page.entries)
+        cursor = page.next_cursor
         if cursor is None or len(summaries) >= MAX_ENTRIES:
             break
     _logger.debug("mcp_resources_listed", server_id=connection.server_id, count=len(summaries))
+    return summaries[:MAX_ENTRIES]
+
+
+async def list_resource_template_page(connection: McpConnection, cursor: str | None = None) -> Page[ResourceTemplateSummary]:
+    """List one page of the resource templates a server offers.
+
+    Args:
+        connection: The connected server.
+        cursor: Where the page starts, or ``None`` for the first.
+
+    Returns:
+        Page[ResourceTemplateSummary]: The page, capped at :data:`MAX_ENTRIES`.
+    """
+    client = _require_client(connection)
+    result = await connection.request("list resource templates", partial(client.list_resource_templates, cursor=cursor))
+    entries = tuple(
+        ResourceTemplateSummary(
+            uri_template=template.uri_template,
+            name=clean_untrusted_label(template.name, limit=_LABEL_CHARS),
+            title=_label(template.title),
+            description=_label(template.description, _DESCRIPTION_CHARS),
+            mime_type=_label(template.mime_type),
+        )
+        for template in result.resource_templates[:MAX_ENTRIES]
+    )
+    return Page(entries=entries, next_cursor=result.next_cursor)
+
+
+async def list_resource_templates(connection: McpConnection) -> list[ResourceTemplateSummary]:
+    """List every resource template a server offers, following its pages.
+
+    Args:
+        connection: The connected server.
+
+    Returns:
+        list[ResourceTemplateSummary]: The templates, in server order, capped
+        at :data:`MAX_ENTRIES`.
+    """
+    summaries: list[ResourceTemplateSummary] = []
+    cursor: str | None = None
+    for _ in range(MAX_LIST_PAGES):
+        page = await list_resource_template_page(connection, cursor)
+        summaries.extend(page.entries)
+        cursor = page.next_cursor
+        if cursor is None or len(summaries) >= MAX_ENTRIES:
+            break
     return summaries[:MAX_ENTRIES]
 
 
@@ -240,8 +353,8 @@ async def read_resource(connection: McpConnection, uri: str, *, on_progress: Pro
     return parts
 
 
-async def list_prompts(connection: McpConnection) -> list[PromptSummary]:
-    """List every prompt template a server offers.
+async def list_prompt_page(connection: McpConnection, cursor: str | None = None) -> Page[PromptSummary]:
+    """List one page of the prompt templates a server offers.
 
     A server that is not connected propagates
     :class:`~intellicrack.mcp.errors.McpConnectionError` from the connection
@@ -250,33 +363,78 @@ async def list_prompts(connection: McpConnection) -> list[PromptSummary]:
 
     Args:
         connection: The connected server.
+        cursor: Where the page starts, or ``None`` for the first.
+
+    Returns:
+        Page[PromptSummary]: The page, capped at :data:`MAX_ENTRIES`.
+    """
+    client = _require_client(connection)
+    result = await connection.request("list prompts", partial(client.list_prompts, cursor=cursor))
+    entries = tuple(
+        PromptSummary(
+            name=prompt.name,
+            title=_label(prompt.title),
+            description=_label(prompt.description, _DESCRIPTION_CHARS),
+            arguments=tuple(argument.name for argument in prompt.arguments or ()),
+            required_arguments=frozenset(argument.name for argument in prompt.arguments or () if argument.required),
+        )
+        for prompt in result.prompts[:MAX_ENTRIES]
+    )
+    return Page(entries=entries, next_cursor=result.next_cursor)
+
+
+async def list_prompts(connection: McpConnection) -> list[PromptSummary]:
+    """List every prompt template a server offers, following its pages.
+
+    Args:
+        connection: The connected server.
 
     Returns:
         list[PromptSummary]: The prompts, in server order, capped at
         :data:`MAX_ENTRIES`.
     """
-    client = _require_client(connection)
     summaries: list[PromptSummary] = []
     cursor: str | None = None
     for _ in range(MAX_LIST_PAGES):
-        result = await connection.request("list prompts", partial(client.list_prompts, cursor=cursor))
-        for prompt in result.prompts:
-            arguments = tuple(argument.name for argument in prompt.arguments or ())
-            required = frozenset(argument.name for argument in prompt.arguments or () if argument.required)
-            summaries.append(
-                PromptSummary(
-                    name=prompt.name,
-                    title=_label(prompt.title),
-                    description=_label(prompt.description, _DESCRIPTION_CHARS),
-                    arguments=arguments,
-                    required_arguments=required,
-                ),
-            )
-        cursor = result.next_cursor
+        page = await list_prompt_page(connection, cursor)
+        summaries.extend(page.entries)
+        cursor = page.next_cursor
         if cursor is None or len(summaries) >= MAX_ENTRIES:
             break
     _logger.debug("mcp_prompts_listed", server_id=connection.server_id, count=len(summaries))
     return summaries[:MAX_ENTRIES]
+
+
+async def complete_argument(
+    connection: McpConnection,
+    *,
+    prompt: bool,
+    reference: str,
+    argument: str,
+    value: str,
+    context: Mapping[str, str] | None = None,
+) -> CompletionSummary:
+    """Ask a server to suggest values for one argument of a prompt or a resource template.
+
+    Args:
+        connection: The connected server.
+        prompt: Whether the argument is a prompt's rather than a template's.
+        reference: The prompt's name, or the template's URI template.
+        argument: The argument.
+        value: What has been typed of it so far.
+        context: The values already chosen for the other arguments.
+
+    Returns:
+        CompletionSummary: The suggestions, cleaned.
+    """
+    _ = _require_client(connection)
+    result = await connection.complete(prompt=prompt, reference=reference, argument=argument, value=value, context=context)
+    completion = result.completion
+    return CompletionSummary(
+        values=tuple(clean_untrusted_label(entry, limit=_LABEL_CHARS) for entry in completion.values[:MAX_COMPLETION_VALUES]),
+        total=completion.total,
+        has_more=bool(completion.has_more),
+    )
 
 
 def _render_prompt_content(content: object) -> str:

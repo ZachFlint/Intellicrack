@@ -60,6 +60,8 @@ from intellicrack.core.untrusted_text import (
 )
 from intellicrack.mcp.config import NAMESPACE_PREFIX, from_canonical_name, is_mcp_namespace, to_canonical_name
 from intellicrack.mcp.consent import approval_binding, server_identity
+from intellicrack.mcp.context_events import McpContextChange
+from intellicrack.mcp.context_tools import READ_ONLY_CONTEXT_TOOLS, ContextTool, context_function, offered_context_tools, run_context_tool
 from intellicrack.mcp.errors import McpConfigError, McpConnectionError, McpError, McpProtocolError
 from intellicrack.mcp.policy import ToolCost, enabled_entries, estimate_tool_cost
 from intellicrack.mcp.validation import validate_against_schema
@@ -74,7 +76,8 @@ if TYPE_CHECKING:
     from intellicrack.core.tool_progress import ToolProgressReporter
     from intellicrack.core.tools import ToolRegistry
     from intellicrack.mcp.catalog import McpToolEntry
-    from intellicrack.mcp.connection import McpConnectionManager
+    from intellicrack.mcp.connection import McpConnection, McpConnectionManager
+    from intellicrack.mcp.context_events import McpContextEvent
     from intellicrack.mcp.progress import McpProgress, ProgressFn
 
 
@@ -544,6 +547,7 @@ class McpToolSource:
         self._manager = manager
         self._registry = registry
         self._registered: list[str] = []
+        self._updated_resources: dict[tuple[str, str], None] = {}
 
     @property
     def manager(self) -> McpConnectionManager:
@@ -623,13 +627,16 @@ class McpToolSource:
     def _definitions_for(self, server_id: str) -> list[ToolDefinition]:
         """Build the tool definitions one server currently contributes.
 
+        Beside the server's own enabled tools come the functions that reach
+        its resources and prompts, for the capabilities it declared, unless
+        the operator switched them off like any other tool.
+
         Args:
             server_id: The server to describe.
 
         Returns:
             list[ToolDefinition]: A single definition, or an empty list when
-            the server is disconnected, disabled, or has every tool switched
-            off.
+            the server is disconnected, disabled, or offers nothing enabled.
         """
         config = self._manager.document.server(server_id)
         connection = self._manager.connection(server_id)
@@ -638,15 +645,74 @@ class McpToolSource:
         catalog = connection.catalog
         if catalog is None:
             return []
-        if entries := enabled_entries(config, catalog):
-            return [
-                ToolDefinition(
-                    tool_name=config.namespace,
-                    description=f"Tools provided by the third-party MCP server {server_id!r} ({len(entries)} available).",
-                    functions=[map_tool_to_function(entry) for entry in entries],
-                ),
-            ]
-        return []
+        functions = [map_tool_to_function(entry) for entry in enabled_entries(config, catalog)]
+        functions.extend(
+            context_function(to_canonical_name(server_id, tool.value), tool, server_id)
+            for tool in self._context_tools(server_id)
+            if tool.value not in config.disabled_tools
+        )
+        if not functions:
+            return []
+        return [
+            ToolDefinition(
+                tool_name=config.namespace,
+                description=f"Tools provided by the third-party MCP server {server_id!r} ({len(functions)} available).",
+                functions=functions,
+            ),
+        ]
+
+    def _context_tools(self, server_id: str) -> list[ContextTool]:
+        """List the functions that reach one running server's resources and prompts.
+
+        Args:
+            server_id: The server.
+
+        Returns:
+            list[ContextTool]: The functions for what it declared, none when it
+            is not running.
+        """
+        connection = self._manager.connection(server_id)
+        client = connection.client if connection is not None and connection.is_ready else None
+        catalog = connection.catalog if connection is not None else None
+        if client is None or catalog is None:
+            return []
+        return offered_context_tools(client.server_capabilities, {entry.name for entry in catalog.entries})
+
+    def context_tool_for(self, canonical_name: str) -> ContextTool | None:
+        """Resolve a canonical name to the resource or prompt function behind it.
+
+        Args:
+            canonical_name: ``mcp-<serverId>.<name>``.
+
+        Returns:
+            ContextTool | None: The function, or ``None`` when the name is one
+            of the server's own tools or the server does not offer it.
+        """
+        if not is_mcp_namespace(canonical_name.partition(".")[0]):
+            return None
+        try:
+            server_id, name = from_canonical_name(canonical_name)
+        except McpConfigError:
+            return None
+        return next((tool for tool in self._context_tools(server_id) if tool.value == name), None)
+
+    def note_context_event(self, event: McpContextEvent) -> None:
+        """Remember that a subscribed resource changed, until the model next reads it.
+
+        Args:
+            event: What the server announced.
+        """
+        if event.change is McpContextChange.RESOURCE_UPDATED and event.uri is not None:
+            self._updated_resources[event.server_id, event.uri] = None
+
+    @property
+    def updated_resources(self) -> list[tuple[str, str]]:
+        """The subscribed resources that changed since the model last read them.
+
+        Returns:
+            list[tuple[str, str]]: Each server id and resource URI, oldest first.
+        """
+        return list(self._updated_resources)
 
     def owns_namespace(self, namespace: str) -> bool:
         """Report whether a tool namespace belongs to a configured server.
@@ -680,7 +746,7 @@ class McpToolSource:
             list[str]: Prompt lines, empty when no server is connected.
         """
         statuses = self._manager.statuses()
-        connected = [status for status in statuses if status.tool_count > 0]
+        connected = [status for status in statuses if status.tool_count > 0 or self._context_tools(status.server_id)]
         if not connected:
             return []
         lines: list[str] = [
@@ -698,6 +764,15 @@ class McpToolSource:
             f"Find their tools with `{_SEARCH_FUNCTION_HINT}` the same way as any other tool; every one of their "
             f"names begins with `{NAMESPACE_PREFIX}<serverId>.`.",
         )
+        offering = [status.server_id for status in connected if self._context_tools(status.server_id)]
+        if offering:
+            lines.append(
+                f"{', '.join(offering)} also offer resources or prompts, reached through their "
+                f"`{NAMESPACE_PREFIX}<serverId>.context.*` functions.",
+            )
+        if updated := self.updated_resources:
+            lines.append("Subscribed resources that changed since you last read them:")
+            lines.extend(f"- {server_id}: {sanitize_untrusted_text(uri)}" for server_id, uri in updated)
         return lines
 
     def entry_for(self, canonical_name: str) -> McpToolEntry | None:
@@ -782,6 +857,9 @@ class McpToolSource:
             return False
         if not self._manager.consent.is_trusted(server_id):
             return False
+        context_tool = self.context_tool_for(canonical_name)
+        if context_tool is not None:
+            return context_tool in READ_ONLY_CONTEXT_TOOLS
         entry = self.entry_for(canonical_name)
         return entry is not None and entry.read_only_hint
 
@@ -868,6 +946,10 @@ class McpToolSource:
             message = f"tool {tool_name!r} on MCP server '{server_id}' is switched off"
             raise McpConnectionError(message)
 
+        context_tool = self.context_tool_for(function_name)
+        if context_tool is not None:
+            return await self._call_context_tool(server_id, connection, context_tool, arguments)
+
         entry = self.entry_for(function_name)
         delivered = entry.advertised_schema.restore_arguments(arguments) if entry is not None else dict(arguments)
         reporter = current_progress_reporter()
@@ -881,6 +963,34 @@ class McpToolSource:
         if is_error and not parts:
             parts.append(TextResultPart(text=f"tool {tool_name!r} on MCP server '{server_id}' reported an error without any detail"))
         return ToolOutput(parts=tuple(parts), is_error=is_error)
+
+    async def _call_context_tool(
+        self,
+        server_id: str,
+        connection: McpConnection,
+        tool: ContextTool,
+        arguments: dict[str, Any],
+    ) -> ToolOutput:
+        """Carry out one call to a server's resources or prompts.
+
+        A resource the model reads is no longer reported as changed until the
+        server announces it again.
+
+        Args:
+            server_id: The server.
+            connection: Its connection.
+            tool: The function called.
+            arguments: The call's arguments.
+
+        Returns:
+            ToolOutput: What the model receives.
+        """
+        reporter = current_progress_reporter()
+        output = await run_context_tool(connection, tool, arguments, on_progress=_forwarding(reporter) if reporter is not None else None)
+        uri = arguments.get("uri")
+        if isinstance(uri, str) and tool in {ContextTool.READ_RESOURCE, ContextTool.UNSUBSCRIBE_RESOURCE}:
+            _ = self._updated_resources.pop((server_id, uri), None)
+        return output
 
     async def execute(self, function_name: str, arguments: dict[str, Any], *, routed_server_id: str | None = None) -> ToolOutput:
         """Run one tool call, resolving its server from the canonical name.

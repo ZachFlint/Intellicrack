@@ -14,8 +14,10 @@ Run it as ``python mcp_features_server.py [--transport stdio|http|sse] [--port N
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import sys
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Annotated, Any, Final
 
 import anyio.lowlevel
@@ -24,13 +26,26 @@ from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.resolve import ListRoots, Resolve
 from mcp_types import (
     LOG_LEVEL_META_KEY,
+    Completion,
+    CompletionArgument,
+    CompletionContext,
     EmptyResult,
+    ListResourcesResult,
     ListRootsResult,
     LoggingLevel,
     LoggingMessageNotification,
     LoggingMessageNotificationParams,
     NotificationParams,
+    PaginatedRequestParams,
+    PromptListChangedNotification,
+    PromptReference,
+    ResourceListChangedNotification,
+    ResourceTemplateReference,
+    ResourceUpdatedNotification,
+    ResourceUpdatedNotificationParams,
     SetLevelRequestParams,
+    SubscribeRequestParams,
+    UnsubscribeRequestParams,
 )
 from mcp_types.version import MODERN_PROTOCOL_VERSIONS
 
@@ -74,10 +89,44 @@ SLOW_RESOURCE: Final[str] = "features://slow/report"
 SLOW_PROMPT: Final[str] = "slow_prompt"
 """A prompt whose fetch reports progress once."""
 
+NOTES_RESOURCE: Final[str] = "features://notes/readme"
+"""A text resource whose words carry a hidden character a client must strip."""
+
+PIXEL_RESOURCE: Final[str] = "features://images/pixel.png"
+"""A one-pixel PNG, served as a binary blob."""
+
+PIXEL_PNG_BASE64: Final[str] = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
+"""The pixel's bytes."""
+
+REPORT_TEMPLATE: Final[str] = "features://reports/{name}"
+"""A resource template; its ``name`` completes to the report names."""
+
+REPORT_NAMES: Final[tuple[str, ...]] = ("alpha", "alpine", "beta")
+"""What ``name`` completes to."""
+
+GREET_PROMPT: Final[str] = "greet"
+"""A prompt taking a required ``person`` and an optional ``style``; ``person`` completes."""
+
+RESOURCE_PAGE_SIZE: Final[int] = 1
+"""How many resources each page of the listing holds, so a listing always spans pages."""
+
+FORGET_SUBSCRIPTIONS_TOOL: Final[str] = "forget_subscriptions"
+"""Makes the server forget every 2025-11-25 subscription, as a restarted server would."""
+
+SUBSCRIBED_TOOL: Final[str] = "subscribed"
+"""Reports the resources a 2025-11-25 client is subscribed to, as JSON."""
+
+TOUCH_TOOL: Final[str] = "touch"
+"""Adds :data:`ADDED_RESOURCE`, then tells subscribers that a resource changed and that the resource and prompt lists changed."""
+
+ADDED_RESOURCE: Final[str] = "features://notes/added"
+"""The resource the touch tool adds, so a client that lists again sees the list change."""
+
 
 _LEVELS: Final[tuple[str, ...]] = ("debug", "info", "notice", "warning", "error", "critical", "alert", "emergency")
 
 
+@dataclass
 class _LegacyLogLevel:
     """What a 2025-11-25 client has told the server outside any request.
 
@@ -85,11 +134,13 @@ class _LegacyLogLevel:
         level: The level asked for with ``logging/setLevel``, or ``None`` before the client asked.
         roots_changes: How many ``notifications/roots/list_changed`` arrived.
         cancellations: How many slow calls were cancelled before they finished.
+        subscribed: The resources a 2025-11-25 client subscribed to.
     """
 
     level: str | None = None
     roots_changes: int = 0
     cancellations: int = 0
+    subscribed: set[str] = field(default_factory=set)
 
 
 _legacy = _LegacyLogLevel()
@@ -121,12 +172,66 @@ async def _roots_changed(_ctx: ServerRequestContext[Any, Any], _params: Notifica
     await anyio.lowlevel.checkpoint()
 
 
+async def _subscribe(_ctx: ServerRequestContext[Any, Any], params: SubscribeRequestParams) -> EmptyResult:
+    """Record a 2025-11-25 client's subscription.
+
+    Args:
+        _ctx: The request context.
+        params: The request's parameters.
+
+    Returns:
+        EmptyResult: The empty acknowledgement.
+    """
+    _legacy.subscribed.add(str(params.uri))
+    await anyio.lowlevel.checkpoint()
+    return EmptyResult()
+
+
+async def _unsubscribe(_ctx: ServerRequestContext[Any, Any], params: UnsubscribeRequestParams) -> EmptyResult:
+    """Forget a 2025-11-25 client's subscription.
+
+    Args:
+        _ctx: The request context.
+        params: The request's parameters.
+
+    Returns:
+        EmptyResult: The empty acknowledgement.
+    """
+    _legacy.subscribed.discard(str(params.uri))
+    await anyio.lowlevel.checkpoint()
+    return EmptyResult()
+
+
 class FeaturesServer(MCPServer):
     """The fixture server, which also serves ``logging/setLevel`` to 2025-11-25 clients."""
 
     def serve_log_level(self) -> None:
         """Register the ``logging/setLevel`` handler, which is also what advertises the ``logging`` capability."""
         self._lowlevel_server.add_request_handler("logging/setLevel", SetLevelRequestParams, _set_level)
+
+    def serve_subscriptions(self) -> None:
+        """Register ``resources/subscribe`` and ``resources/unsubscribe``, which advertises subscriptions to 2025-11-25 clients."""
+        self._lowlevel_server.add_request_handler("resources/subscribe", SubscribeRequestParams, _subscribe)
+        self._lowlevel_server.add_request_handler("resources/unsubscribe", UnsubscribeRequestParams, _unsubscribe)
+
+    def page_resources(self) -> None:
+        """Serve ``resources/list`` a page of :data:`RESOURCE_PAGE_SIZE` at a time, with a cursor to the next."""
+        self._lowlevel_server.add_request_handler("resources/list", PaginatedRequestParams, self._list_resource_page)
+
+    async def _list_resource_page(self, _ctx: ServerRequestContext[Any, Any], params: PaginatedRequestParams) -> ListResourcesResult:
+        """List one page of resources.
+
+        Args:
+            _ctx: The request context.
+            params: The request's parameters, carrying the cursor.
+
+        Returns:
+            ListResourcesResult: The page.
+        """
+        resources = await self.list_resources()
+        start = int(params.cursor or "0")
+        end = start + RESOURCE_PAGE_SIZE
+        return ListResourcesResult(resources=resources[start:end], next_cursor=str(end) if end < len(resources) else None)
 
     def count_roots_changes(self) -> None:
         """Register the ``notifications/roots/list_changed`` handler."""
@@ -302,6 +407,121 @@ async def slow_prompt(ctx: Context) -> str:
     return "a slow prompt"
 
 
+def notes() -> str:
+    """Serve the notes.
+
+    Returns:
+        str: The notes.
+    """
+    return f"remember the target{HIDDEN_MARK}"
+
+
+def pixel() -> bytes:
+    """Serve the pixel.
+
+    Returns:
+        bytes: The PNG.
+    """
+    return base64.b64decode(PIXEL_PNG_BASE64)
+
+
+def greet(person: str, style: str = "plain") -> str:
+    """Build a greeting prompt.
+
+    Args:
+        person: Who to greet.
+        style: How.
+
+    Returns:
+        str: The prompt text.
+    """
+    return f"Greet {person} in a {style} way."
+
+
+async def complete(
+    ref: PromptReference | ResourceTemplateReference,
+    argument: CompletionArgument,
+    context: CompletionContext | None,
+) -> Completion | None:
+    """Suggest values for the report template's ``name`` and the greeting's ``person``.
+
+    Args:
+        ref: What the argument belongs to.
+        argument: The argument and what is typed so far.
+        context: The other arguments' values, unused.
+
+    Returns:
+        Completion | None: The suggestions, or ``None`` for an argument that has none.
+    """
+    del context
+    await anyio.lowlevel.checkpoint()
+    if isinstance(ref, ResourceTemplateReference) and ref.uri == REPORT_TEMPLATE and argument.name == "name":
+        values = [name for name in REPORT_NAMES if name.startswith(argument.value)]
+        return Completion(values=values, total=len(values), has_more=False)
+    if isinstance(ref, PromptReference) and ref.name == GREET_PROMPT and argument.name == "person":
+        values = [name for name in ("ada", "alan", "grace") if name.startswith(argument.value)]
+        return Completion(values=values, total=len(values), has_more=False)
+    return None
+
+
+def added() -> str:
+    """Serve the added resource.
+
+    Returns:
+        str: Its text.
+    """
+    return "added later"
+
+
+async def touch(uri: str, ctx: Context) -> str:
+    """Add a resource, then tell clients that a resource changed and that the lists changed.
+
+    On 2026-07-28 the events go to ``subscriptions/listen`` streams; on 2025-11-25 the resource update goes to a client that subscribed
+    to it, and the list changes to every client.
+
+    Args:
+        uri: The resource that changed.
+        ctx: The request context.
+
+    Returns:
+        str: What was sent.
+    """
+    _ = ctx.mcp_server.resource(ADDED_RESOURCE, mime_type="text/plain")(added)
+    if ctx.protocol_version in MODERN_PROTOCOL_VERSIONS:
+        await ctx.notify_resource_updated(uri)
+        await ctx.notify_resources_changed()
+        await ctx.notify_prompts_changed()
+        return "published"
+    session = ctx.request_context.session
+    sent = "lists"
+    if uri in _legacy.subscribed:
+        await session.send_notification(ResourceUpdatedNotification(params=ResourceUpdatedNotificationParams(uri=uri)))
+        sent = "update and lists"
+    await session.send_notification(ResourceListChangedNotification())
+    await session.send_notification(PromptListChangedNotification())
+    return sent
+
+
+def forget_subscriptions() -> str:
+    """Forget every subscription.
+
+    Returns:
+        str: How many were forgotten.
+    """
+    count = len(_legacy.subscribed)
+    _legacy.subscribed.clear()
+    return str(count)
+
+
+def subscribed() -> str:
+    """Report the subscriptions.
+
+    Returns:
+        str: The subscribed URIs, sorted, as JSON.
+    """
+    return json.dumps(sorted(_legacy.subscribed))
+
+
 def build_server() -> MCPServer:
     """Build the server.
 
@@ -310,6 +530,8 @@ def build_server() -> MCPServer:
     """
     server = FeaturesServer(name="intellicrack-features-fixture")
     server.serve_log_level()
+    server.serve_subscriptions()
+    server.page_resources()
     server.count_roots_changes()
     server.add_tool(chatter, name=CHATTER_TOOL, description="Log messages at several levels.")
     server.add_tool(log_level_seen, name=LOG_LEVEL_SEEN_TOOL, description="Report the requested log level.")
@@ -320,6 +542,14 @@ def build_server() -> MCPServer:
     server.add_tool(cancellations, name=CANCELLATIONS_TOOL, description="Count cancelled slow calls.")
     _ = server.resource("features://slow/{name}")(slow_report)
     _ = server.prompt(SLOW_PROMPT)(slow_prompt)
+    _ = server.resource(NOTES_RESOURCE, mime_type="text/plain")(notes)
+    _ = server.resource(PIXEL_RESOURCE, mime_type="image/png")(pixel)
+    _ = server.resource(REPORT_TEMPLATE)(slow_report)
+    _ = server.prompt(GREET_PROMPT)(greet)
+    _ = server.completion()(complete)
+    server.add_tool(touch, name=TOUCH_TOOL, description="Announce resource and list changes.")
+    server.add_tool(forget_subscriptions, name=FORGET_SUBSCRIPTIONS_TOOL, description="Forget every subscription.")
+    server.add_tool(subscribed, name=SUBSCRIBED_TOOL, description="Report the subscriptions.")
     return server
 
 

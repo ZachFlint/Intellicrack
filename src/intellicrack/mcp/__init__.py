@@ -60,6 +60,8 @@ from intellicrack.mcp.consent import (
     scan_command_for_dangerous_patterns,
     server_identity,
 )
+from intellicrack.mcp.context_events import McpContextChange, McpContextEvent, McpContextListener
+from intellicrack.mcp.context_tools import ContextTool, run_context_tool
 from intellicrack.mcp.errors import (
     McpAuthError,
     McpConfigError,
@@ -81,6 +83,7 @@ from intellicrack.mcp.tool_source import (
     source_label,
     validate_structured_content,
 )
+from intellicrack.mcp.uri_template import expand_uri_template, template_variables
 from intellicrack.mcp.validation import SchemaViolation, validate_against_schema
 
 
@@ -195,6 +198,7 @@ __all__ = [
     "ApprovalScope",
     "ApprovalStore",
     "ConsentAnswer",
+    "ContextTool",
     "DangerousPattern",
     "HttpServerSpec",
     "JobLimits",
@@ -210,6 +214,9 @@ __all__ = [
     "McpConnectionManager",
     "McpConsentDeniedError",
     "McpConsentGate",
+    "McpContextChange",
+    "McpContextEvent",
+    "McpContextListener",
     "McpError",
     "McpHealth",
     "McpHooksFactory",
@@ -249,6 +256,7 @@ __all__ = [
     "describe_launch",
     "enabled_entries",
     "estimate_tool_cost",
+    "expand_uri_template",
     "fetch_catalog",
     "from_canonical_name",
     "get_prompt",
@@ -263,12 +271,14 @@ __all__ = [
     "read_resource",
     "resolve_client_identity",
     "root_uri",
+    "run_context_tool",
     "sandbox_supported",
     "sanitize_untrusted_text",
     "scan_command_for_dangerous_patterns",
     "server_identity",
     "sign_out",
     "source_label",
+    "template_variables",
     "to_canonical_name",
     "validate_against_schema",
     "validate_structured_content",

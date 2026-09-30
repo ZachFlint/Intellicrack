@@ -65,6 +65,7 @@ from intellicrack.core.types import (
     ToolName,
     ToolResult,
 )
+from intellicrack.core.untrusted_text import clean_untrusted_label
 from intellicrack.credentials import get_credentials
 from intellicrack.credentials.env_loader import CredentialField, get_credential_loader
 from intellicrack.credentials.provider_settings import (
@@ -75,6 +76,7 @@ from intellicrack.credentials.provider_settings import (
     saved_model_overrides,
     saved_reasoning_summary_mode,
 )
+from intellicrack.mcp.context_events import McpContextChange, McpContextEvent
 from intellicrack.mcp.errors import McpError
 from intellicrack.providers.configurable import ConfigurableProvider
 from intellicrack.providers.discovery import ModelDiscovery, format_discovery_status
@@ -1387,6 +1389,7 @@ class MainWindow(QMainWindow):
         self.tool_result_received.connect(self._on_tool_result)
         self.tool_progress_received.connect(self._on_tool_progress)
         self._chat_panel.tool_activity.cancel_requested.connect(self._on_cancel_tool_call)
+        self._chat_panel.context_requested.connect(self._on_browse_mcp_context)
         self.stream_chunk_received.connect(self._on_stream_chunk)
         self.status_update.connect(self._update_status)
         self.tool_panel.address_clicked.connect(self._on_address_clicked)
@@ -1482,6 +1485,7 @@ class MainWindow(QMainWindow):
             return
         self._mcp_service = service
         service.set_attachment_handler(self._chat_panel.insert_context_text)
+        service.set_context_notice_handler(self._on_mcp_context_changed)
         run_bridge_coroutine_async(
             service.start(),
             on_success=lambda _result: _logger.info("mcp_service_ready"),
@@ -1942,6 +1946,34 @@ class MainWindow(QMainWindow):
         name = self._running_call_names.get(progress.call_id)
         if name is not None:
             self.status_update.emit(f"Running: {name} ({progress.describe()})")
+
+    def _on_browse_mcp_context(self) -> None:
+        """Open the browser of the MCP servers' resources and prompts."""
+        service = self._mcp_service
+        if service is None:
+            QMessageBox.information(
+                self,
+                "MCP resources and prompts",
+                "The MCP client is not available in this session. Check the log for why it could not start.",
+            )
+            return
+        _ = service.open_context_browser(self)
+
+    def _on_mcp_context_changed(self, event: McpContextEvent) -> None:
+        """Tell the operator a server's resources or prompts changed.
+
+        Args:
+            event: What changed.
+        """
+        server = clean_untrusted_label(event.server_id)
+        match event.change:
+            case McpContextChange.RESOURCE_UPDATED:
+                text = f"MCP server '{server}' says {clean_untrusted_label(event.uri or '')} changed."
+            case McpContextChange.RESOURCES_LISTED:
+                text = f"MCP server '{server}' changed its list of resources."
+            case McpContextChange.PROMPTS_LISTED:
+                text = f"MCP server '{server}' changed its list of prompts."
+        self._chat_panel.show_notice(text)
 
     def _on_cancel_tool_call(self, call_id: str) -> None:
         """Cancel one running tool call, leaving the rest of the turn to go on.

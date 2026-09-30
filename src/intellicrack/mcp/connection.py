@@ -41,7 +41,7 @@ from typing import TYPE_CHECKING, Any, Final, Protocol, Self, TextIO, TypeVar, c
 import anyio
 from mcp.client.auth import OAuthClientProvider
 from mcp.client.stdio import stdio_client
-from mcp.client.subscriptions import ListenNotSupportedError, SubscriptionLost
+from mcp.client.subscriptions import ListenNotSupportedError, PromptsListChanged, ResourcesListChanged, ResourceUpdated, SubscriptionLost
 from mcp.shared.exceptions import MCPError
 from mcp_types import (
     CONNECTION_CLOSED,
@@ -51,10 +51,19 @@ from mcp_types import (
     Implementation,
     ProgressNotification,
     ProgressNotificationParams,
+    PromptListChangedNotification,
+    PromptReference,
+    ResourceListChangedNotification,
+    ResourceTemplateReference,
+    ResourceUpdatedNotification,
     RootsListChangedNotification,
     SetLevelRequest,
     SetLevelRequestParams,
+    SubscribeRequest,
+    SubscribeRequestParams,
     ToolListChangedNotification,
+    UnsubscribeRequest,
+    UnsubscribeRequestParams,
 )
 from mcp_types.version import MODERN_PROTOCOL_VERSIONS
 
@@ -66,7 +75,8 @@ from intellicrack.mcp.client_hooks import McpClientHooks
 from intellicrack.mcp.client_session import McpClient, PreciseClientSession, describe_capabilities
 from intellicrack.mcp.config import SERVER_LOG_LEVELS, McpConfigStore, McpServerConfig, McpTransportKind
 from intellicrack.mcp.consent import McpConsentStoreError
-from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
+from intellicrack.mcp.context_events import McpContextChange, McpContextEvent
+from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError, McpProtocolError
 from intellicrack.mcp.operator_wait import OperatorWaitClock, RequestDeadline
 from intellicrack.mcp.progress import McpProgress, ProgressFn, ProgressKind
 from intellicrack.mcp.sandbox_launch import (
@@ -81,17 +91,18 @@ from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, op
 
 if TYPE_CHECKING:
     import contextvars
-    from collections.abc import AsyncGenerator, Iterable
+    from collections.abc import AsyncGenerator, Iterable, Mapping
 
     import httpx2
     from mcp import Client
     from mcp.client.session import ElicitationFnT, LoggingFnT
     from mcp.shared.message import SessionMessage
-    from mcp_types import CallToolResult, LoggingLevel, LoggingMessageNotificationParams, RequestParamsMeta
+    from mcp_types import CallToolResult, CompleteResult, LoggingLevel, LoggingMessageNotificationParams, RequestParamsMeta
 
     from intellicrack.mcp.client_hooks import McpHooksFactory
     from intellicrack.mcp.config import McpConfigDocument
     from intellicrack.mcp.consent import McpConsentGate
+    from intellicrack.mcp.context_events import McpContextListener
     from intellicrack.mcp.secrets import McpSecretResolver
 
 
@@ -677,6 +688,9 @@ class McpConnection:
         self._follow_changes = False
         self._change_notice = asyncio.Event()
         self._progress: dict[str, _ProgressTracker] = {}
+        self._subscriptions: set[str] = set()
+        self._listen_filter_changed = asyncio.Event()
+        self._on_context: McpContextListener | None = None
 
     @property
     def config(self) -> McpServerConfig:
@@ -1136,6 +1150,7 @@ class McpConnection:
             self._client = client
             self._catalog = catalog
             await self._apply_log_level(client)
+            await self._restore_subscriptions(client)
             self._connected_at = datetime.now(tz=UTC)
             self._ready_since = asyncio.get_running_loop().time()
             self._last_error = None
@@ -1301,6 +1316,166 @@ class McpConnection:
             await self._apply_log_level(client)
         _logger.info("mcp_log_level_set", server_id=self.server_id, level=level)
 
+    def set_context_listener(self, listener: McpContextListener | None) -> None:
+        """Choose who hears about changes to this server's resources and prompts.
+
+        Args:
+            listener: Receives each change, or ``None``.
+        """
+        self._on_context = listener
+
+    def _announce_context(self, change: McpContextChange, uri: str | None = None) -> None:
+        """Hand one announced change to the context listener.
+
+        Args:
+            change: What changed.
+            uri: The updated resource, for an update.
+        """
+        _logger.info("mcp_context_changed", server_id=self.server_id, change=change.value, uri=clean_untrusted_label(uri) if uri else None)
+        listener = self._on_context
+        if listener is not None:
+            listener(McpContextEvent(server_id=self.server_id, change=change, uri=uri))
+
+    @property
+    def subscriptions(self) -> frozenset[str]:
+        """The resources this connection asked to hear about.
+
+        Returns:
+            frozenset[str]: Their URIs.
+        """
+        return frozenset(self._subscriptions)
+
+    def _require_subscribable(self) -> Client:
+        """Check the server lets a client subscribe to its resources.
+
+        Returns:
+            Client: The entered client.
+
+        Raises:
+            McpConnectionError: If the server is not connected.
+            McpProtocolError: If it does not offer resource subscriptions.
+        """
+        client = self._client
+        if client is None or self._health is not McpHealth.READY:
+            message = f"server '{self.server_id}' is not connected"
+            raise McpConnectionError(message)
+        resources = client.server_capabilities.resources
+        if resources is None or not resources.subscribe:
+            message = f"server '{self.server_id}' does not offer resource subscriptions"
+            raise McpProtocolError(message)
+        return client
+
+    async def subscribe_resource(self, uri: str) -> None:
+        """Ask to hear whenever one of the server's resources changes.
+
+        On 2025-11-25 the server is sent ``resources/subscribe``; on
+        2026-07-28 the ``subscriptions/listen`` stream is re-opened with the
+        resource in its filter. The subscription is kept across reconnects.
+
+        Args:
+            uri: The resource's URI, exactly as the server gave it.
+
+        Raises:
+            McpConnectionError: If the server is not connected, did not
+                answer, or the transport failed.
+        """
+        client = self._require_subscribable()
+        if not self._is_modern(client):
+            try:
+                async with self.request_deadline():
+                    _ = await client.session.send_request(SubscribeRequest(params=SubscribeRequestParams(uri=uri)), EmptyResult)
+            except TimeoutError as exc:
+                message = f"server '{self.server_id}': subscribing to {uri!r} timed out"
+                raise McpConnectionError(message) from exc
+            except TRANSPORT_FAILURES as exc:
+                message = f"server '{self.server_id}': cannot subscribe to {uri!r}: {failure_text(representative_failure(exc))}"
+                raise McpConnectionError(message) from exc
+        self._subscriptions.add(uri)
+        self._listen_filter_changed.set()
+        _logger.info("mcp_resource_subscribed", server_id=self.server_id, uri=clean_untrusted_label(uri))
+
+    async def unsubscribe_resource(self, uri: str) -> None:
+        """Stop hearing about one of the server's resources.
+
+        Args:
+            uri: The resource's URI.
+
+        Raises:
+            McpConnectionError: If the server is not connected, did not
+                answer, or the transport failed.
+        """
+        client = self._require_subscribable()
+        if not self._is_modern(client) and uri in self._subscriptions:
+            try:
+                async with self.request_deadline():
+                    _ = await client.session.send_request(UnsubscribeRequest(params=UnsubscribeRequestParams(uri=uri)), EmptyResult)
+            except TimeoutError as exc:
+                message = f"server '{self.server_id}': unsubscribing from {uri!r} timed out"
+                raise McpConnectionError(message) from exc
+            except TRANSPORT_FAILURES as exc:
+                message = f"server '{self.server_id}': cannot unsubscribe from {uri!r}: {failure_text(representative_failure(exc))}"
+                raise McpConnectionError(message) from exc
+        self._subscriptions.discard(uri)
+        self._listen_filter_changed.set()
+        _logger.info("mcp_resource_unsubscribed", server_id=self.server_id, uri=clean_untrusted_label(uri))
+
+    async def complete(
+        self,
+        *,
+        prompt: bool,
+        reference: str,
+        argument: str,
+        value: str,
+        context: Mapping[str, str] | None = None,
+    ) -> CompleteResult:
+        """Ask the server to suggest values for one argument of a prompt or a resource template.
+
+        Args:
+            prompt: Whether the argument is a prompt's rather than a template's.
+            reference: The prompt's name, or the template's URI template.
+            argument: The argument.
+            value: What has been typed of it so far.
+            context: The values already chosen for the other arguments.
+
+        Returns:
+            CompleteResult: The server's suggestions.
+
+        Raises:
+            McpConnectionError: If the server is not connected, did not
+                answer, or the transport failed.
+        """
+        client = self._client
+        if client is None or self._health is not McpHealth.READY:
+            message = f"server '{self.server_id}' is not connected"
+            raise McpConnectionError(message)
+        ref: PromptReference | ResourceTemplateReference = (
+            PromptReference(type="ref/prompt", name=reference) if prompt else ResourceTemplateReference(type="ref/resource", uri=reference)
+        )
+        chosen = dict(context) if context else None
+        return await self.request(f"complete {argument!r}", partial(client.complete, ref, {"name": argument, "value": value}, chosen))
+
+    async def _restore_subscriptions(self, client: Client) -> None:
+        """Subscribe a new 2025-11-25 connection to what the last one was subscribed to.
+
+        A 2026-07-28 connection carries its subscriptions in the filter of
+        the stream it opens, so it has nothing to restore here. A server that
+        refuses one keeps the others.
+
+        Args:
+            client: The connected client.
+        """
+        resources = client.server_capabilities.resources
+        if self._is_modern(client) or not self._subscriptions or resources is None or not resources.subscribe:
+            return
+        for uri in sorted(self._subscriptions):
+            try:
+                async with self.request_deadline():
+                    _ = await client.session.send_request(SubscribeRequest(params=SubscribeRequestParams(uri=uri)), EmptyResult)
+            except TimeoutError:
+                _logger.warning("mcp_resource_resubscribe_timed_out", server_id=self.server_id, uri=clean_untrusted_label(uri))
+            except MCPError as exc:
+                _logger.warning("mcp_resource_resubscribe_refused", server_id=self.server_id, error=clean_untrusted_label(str(exc)))
+
     async def announce_roots_changed(self) -> bool:
         """Tell a 2025-11-25 server that the roots it was given have changed.
 
@@ -1350,7 +1525,8 @@ class McpConnection:
         An exception means the transport faulted, which wakes the supervisor
         immediately instead of waiting for the next heartbeat. A
         ``notifications/progress`` goes to the request it names, if that
-        request is still running. A ``notifications/tools/list_changed`` on a
+        request is still running. A change to the server's resources or
+        prompts goes to the context listener. A ``notifications/tools/list_changed`` on a
         handshake-era connection, which has no subscription stream, is queued
         for a real re-list.
 
@@ -1365,6 +1541,15 @@ class McpConnection:
             tracker = self._progress.get(str(message.params.progress_token))
             if tracker is not None:
                 tracker.receive(message.params)
+            return
+        if isinstance(message, ResourceUpdatedNotification):
+            self._announce_context(McpContextChange.RESOURCE_UPDATED, str(message.params.uri))
+            return
+        if isinstance(message, ResourceListChangedNotification):
+            self._announce_context(McpContextChange.RESOURCES_LISTED)
+            return
+        if isinstance(message, PromptListChangedNotification):
+            self._announce_context(McpContextChange.PROMPTS_LISTED)
             return
         if isinstance(message, ToolListChangedNotification) and not self._is_modern(self._client):
             _logger.info("mcp_tools_list_changed_notice", server_id=self.server_id)
@@ -1941,7 +2126,9 @@ class McpConnection:
         reopened = False
         while True:
             try:
-                await self._consume_subscription(client, reopened=reopened)
+                if await self._consume_until_refiltered(client, reopened=reopened):
+                    reopened = True
+                    continue
             except asyncio.CancelledError:
                 raise
             except SubscriptionLost as exc:
@@ -1955,6 +2142,33 @@ class McpConnection:
             reopened = True
             await asyncio.sleep(LISTEN_RETRY_S)
 
+    async def _consume_until_refiltered(self, client: Client, *, reopened: bool) -> bool:
+        """Hold one stream open until the server ends it or the resources subscribed to change.
+
+        Args:
+            client: The connection's entered client.
+            reopened: Whether an earlier stream on this connection ended.
+
+        Returns:
+            bool: ``True`` when the stream was closed to re-open it with a new
+            filter; ``False`` when the server ended it.
+        """
+        self._listen_filter_changed.clear()
+        stream = asyncio.create_task(self._consume_subscription(client, reopened=reopened), name=f"mcp-listen-stream-{self.server_id}")
+        refiltered = asyncio.create_task(self._listen_filter_changed.wait(), name=f"mcp-listen-filter-{self.server_id}")
+        try:
+            done, _ = await asyncio.wait({stream, refiltered}, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            for task in (stream, refiltered):
+                if not task.done():
+                    _ = task.cancel()
+            _ = await asyncio.gather(stream, refiltered, return_exceptions=True)
+        if stream in done and not stream.cancelled():
+            stream.result()
+            return False
+        _logger.info("mcp_change_subscription_refiltered", server_id=self.server_id, resources=len(self._subscriptions))
+        return True
+
     async def _consume_subscription(self, client: Client, *, reopened: bool) -> None:
         """Hold one ``subscriptions/listen`` stream open until the server ends it.
 
@@ -1965,12 +2179,26 @@ class McpConnection:
         """
         async with AsyncExitStack() as stack:
             async with self.request_deadline():
-                subscription = await stack.enter_async_context(client.listen(tools_list_changed=True))
+                subscription = await stack.enter_async_context(
+                    client.listen(
+                        tools_list_changed=True,
+                        prompts_list_changed=True,
+                        resources_list_changed=True,
+                        resource_subscriptions=sorted(self._subscriptions),
+                    ),
+                )
             _logger.info("mcp_change_subscription_open", server_id=self.server_id)
             if reopened:
                 await self._refresh_after_notice()
-            async for _event in subscription:
-                await self._refresh_after_notice()
+            async for event in subscription:
+                if isinstance(event, ResourceUpdated):
+                    self._announce_context(McpContextChange.RESOURCE_UPDATED, event.uri)
+                elif isinstance(event, ResourcesListChanged):
+                    self._announce_context(McpContextChange.RESOURCES_LISTED)
+                elif isinstance(event, PromptsListChanged):
+                    self._announce_context(McpContextChange.PROMPTS_LISTED)
+                else:
+                    await self._refresh_after_notice()
         _logger.info("mcp_change_subscription_closed", server_id=self.server_id)
 
     async def _refresh_after_notice(self) -> None:
@@ -2069,6 +2297,7 @@ class McpConnectionManager:
         self._connections: dict[str, McpConnection] = {}
         self._order: list[str] = []
         self._listener: Callable[[str], None] | None = None
+        self._context_listener: McpContextListener | None = None
         self._started = False
         self._stopped = False
 
@@ -2179,6 +2408,16 @@ class McpConnectionManager:
             if connection is not None and await connection.announce_roots_changed():
                 told.append(server_id)
         return told
+
+    def set_context_listener(self, listener: McpContextListener | None) -> None:
+        """Choose who hears about changes to any server's resources and prompts.
+
+        Args:
+            listener: Receives each change, or ``None``.
+        """
+        self._context_listener = listener
+        for connection in self._connections.values():
+            connection.set_context_listener(listener)
 
     def set_change_listener(self, listener: Callable[[str], None]) -> None:
         """Install the callback invoked when any server's state moves.
@@ -2337,6 +2576,7 @@ class McpConnectionManager:
             hooks=self._hooks_for(config),
         )
         connection.set_change_listener(self._on_connection_changed)
+        connection.set_context_listener(self._context_listener)
         self._connections[server_id] = connection
         if server_id not in self._order:
             self._order.append(server_id)

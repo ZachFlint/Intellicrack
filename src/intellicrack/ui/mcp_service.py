@@ -30,7 +30,7 @@ import contextlib
 import functools
 from typing import TYPE_CHECKING, cast
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QMessageBox
 
 from intellicrack.core.logging import get_logger
@@ -40,6 +40,7 @@ from intellicrack.mcp.client_hooks import McpClientHooks
 from intellicrack.mcp.config import McpConfigStore, is_mcp_namespace
 from intellicrack.mcp.connection import McpConnectionManager
 from intellicrack.mcp.consent import ApprovalStore, McpConsentGate, TrustStore, deny_all_launches
+from intellicrack.mcp.context_events import McpContextEvent
 from intellicrack.mcp.errors import McpError
 from intellicrack.mcp.roots import McpRootSet
 from intellicrack.mcp.secrets import McpSecretResolver
@@ -48,6 +49,7 @@ from intellicrack.mcp.tool_source import McpToolSource, source_label
 from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
 from intellicrack.ui.mcp_bridge import QtMcpPrompts, elicitation_factory
 from intellicrack.ui.mcp_config import McpConfigDialog
+from intellicrack.ui.mcp_context_browser import McpContextBrowser
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
 
 
@@ -103,6 +105,7 @@ class _GuiThreadRelay(QObject):
     server_state_changed = pyqtSignal(object)
     sign_in_opened = pyqtSignal(str, str)
     approvals_released = pyqtSignal()
+    context_changed = pyqtSignal(object)
 
 
 class McpService:
@@ -160,6 +163,9 @@ class McpService:
         self._gate.set_config_lookup(self._configured_server)
         self._source = McpToolSource(self._manager, tool_registry)
         self._manager.set_change_listener(self._on_server_changed)
+        self._manager.set_context_listener(self._on_context_event)
+        _ = self._relay.context_changed.connect(self._apply_context_event)
+        self._context_notice_handler: Callable[[McpContextEvent], None] | None = None
         self._attachment_handler: Callable[[str], None] | None = None
         self._recorded_session: Session | None = None
         self._start_task: asyncio.Task[None] | None = None
@@ -625,6 +631,61 @@ class McpService:
         has installed since is left in place.
         """
         ToolConfirmationDialog.release_approval_store(self._approvals)
+
+    def _on_context_event(self, event: McpContextEvent) -> None:
+        """Take a change a server announced to its resources or prompts.
+
+        Runs on the background loop: the tool source remembers an updated
+        resource for the model's next turn, and the change is carried to the
+        GUI thread.
+
+        Args:
+            event: What changed.
+        """
+        self._source.note_context_event(event)
+        self._relay.context_changed.emit(event)
+
+    def _apply_context_event(self, payload: object) -> None:
+        """Tell the operator about a change a server announced.
+
+        Runs on the GUI thread.
+
+        Args:
+            payload: The :class:`~intellicrack.mcp.context_events.McpContextEvent`.
+        """
+        handler = self._context_notice_handler
+        if handler is not None and isinstance(payload, McpContextEvent):
+            handler(payload)
+
+    def set_context_notice_handler(self, handler: Callable[[McpContextEvent], None] | None) -> None:
+        """Install what tells the operator a server's resources or prompts changed.
+
+        Args:
+            handler: Called on the GUI thread with each change, or ``None``.
+        """
+        self._context_notice_handler = handler
+
+    def open_context_browser(self, parent: QWidget | None = None) -> McpContextBrowser:
+        """Open the browser of running servers' resources and prompts beside the chat.
+
+        What the operator inserts goes where attachments go. The browser
+        follows the servers' own announcements, re-listing when a server's
+        resources or prompts change.
+
+        Args:
+            parent: Widget to parent it to, defaulting to the service's own.
+
+        Returns:
+            McpContextBrowser: The open browser, which deletes itself when closed.
+        """
+        browser = McpContextBrowser(self._manager, parent if parent is not None else self._parent)
+        browser.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        handler = self._attachment_handler
+        if handler is not None:
+            _ = browser.inserted.connect(handler)
+        _ = self._relay.context_changed.connect(browser.on_context_event)
+        browser.open()
+        return browser
 
     def set_attachment_handler(self, handler: Callable[[str], None] | None) -> None:
         """Install what happens when the operator attaches a server resource or prompt.
