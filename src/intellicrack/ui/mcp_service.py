@@ -98,6 +98,7 @@ class _GuiThreadRelay(QObject):
     identity_changed = pyqtSignal(str)
     server_state_changed = pyqtSignal(object)
     sign_in_opened = pyqtSignal(str, str)
+    approvals_released = pyqtSignal()
 
 
 class McpService:
@@ -133,6 +134,7 @@ class McpService:
         _ = self._relay.identity_changed.connect(self._apply_identity_change)
         _ = self._relay.server_state_changed.connect(self._apply_server_state)
         _ = self._relay.sign_in_opened.connect(self._show_sign_in_notice)
+        _ = self._relay.approvals_released.connect(self._release_approvals)
         self._prompts = QtMcpPrompts(parent)
         self._gate = McpConsentGate(
             self._trust,
@@ -528,8 +530,18 @@ class McpService:
         self._orchestrator.set_mcp_tool_source(None)
         with contextlib.suppress(McpError):
             await self._manager.stop()
-        ToolConfirmationDialog.set_approval_store(None)
+        self._relay.approvals_released.emit()
         _logger.info("mcp_service_stopped")
+
+    def _release_approvals(self) -> None:
+        """Withdraw the persistent approval store from the confirmation dialog.
+
+        Runs on the GUI thread, the thread every confirmation dialog reads the
+        store from, so a dialog being answered never sees it vanish between
+        offering ``always`` and writing the answer. A store another service
+        has installed since is left in place.
+        """
+        ToolConfirmationDialog.release_approval_store(self._approvals)
 
     def set_attachment_handler(self, handler: Callable[[str], None] | None) -> None:
         """Install what happens when the operator attaches a server resource or prompt.
@@ -558,6 +570,7 @@ class McpService:
             self._resolver,
             parent if parent is not None else self._parent,
             approvals=self._approvals,
+            tool_source=self._source,
         )
         handler = self._attachment_handler
         if handler is not None:

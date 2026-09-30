@@ -1742,30 +1742,76 @@ class ToolParameter:
 _SCHEMA_LABEL_DEPTH: Final[int] = 3
 """How deeply nested schemas are described in a one-line argument summary."""
 
+_SCHEMA_LABEL_NODES: Final[int] = 64
+"""How many schema nodes one argument's label may describe before the rest is elided."""
 
-def _schema_type_label(schema: object, depth: int = 0) -> str:
+_SCHEMA_LABEL_PROPERTIES: Final[int] = 16
+"""How many properties of a nested object are listed before the rest are counted."""
+
+_ELIDED_LABEL: Final[str] = "..."
+
+
+@dataclass(slots=True)
+class _LabelBudget:
+    """What is left of the schema nodes one argument's label may describe.
+
+    Attributes:
+        remaining: Nodes that may still be described.
+    """
+
+    remaining: int = _SCHEMA_LABEL_NODES
+
+
+def _schema_type_label(schema: object, depth: int = 0, budget: _LabelBudget | None = None) -> str:
     """Describe one JSON Schema as a short type label.
 
     Args:
         schema: A JSON Schema node.
         depth: Current nesting depth, bounding recursive and deeply nested
             schemas.
+        budget: Nodes this label may still describe, shared by every node
+            under one argument so wide schemas cannot multiply its length.
 
     Returns:
-        str: A label such as ``string``, ``integer|null``, ``array[string]``
-        or the name a ``$ref`` points at; ``any`` when nothing narrower is
-        declared.
+        str: A label such as ``string``, ``integer|null``, ``array[string]``,
+        ``string&Path``, ``{name: string, size?: integer}`` or the name a
+        ``$ref`` points at; ``any`` when nothing narrower is declared, and
+        ``...`` for what the budget leaves undescribed.
     """
     if not isinstance(schema, dict) or depth > _SCHEMA_LABEL_DEPTH:
         return "any"
+    budget = budget if budget is not None else _LabelBudget()
+    if budget.remaining <= 0:
+        return _ELIDED_LABEL
+    budget.remaining -= 1
     node = cast("dict[str, object]", schema)
+    own = _own_type_label(node, depth, budget)
+    branches = node.get("allOf")
+    if not isinstance(branches, list):
+        return own
+    labels = (own, *(_schema_type_label(branch, depth + 1, budget) for branch in cast("list[object]", branches)))
+    parts = dict.fromkeys(f"({label})" if "|" in label else label for label in labels if label != "any")
+    return "&".join(parts) or "any"
+
+
+def _own_type_label(node: dict[str, object], depth: int, budget: _LabelBudget) -> str:
+    """Describe what one schema node declares itself, leaving ``allOf`` to the caller.
+
+    Args:
+        node: The schema node.
+        depth: Its nesting depth.
+        budget: Nodes the label may still describe.
+
+    Returns:
+        str: The node's own label.
+    """
     reference = node.get("$ref")
     if isinstance(reference, str):
         return clean_untrusted_label(reference.rsplit("/", 1)[-1]) or "any"
     for combinator in ("anyOf", "oneOf"):
         options = node.get(combinator)
         if isinstance(options, list):
-            labels = dict.fromkeys(_schema_type_label(option, depth + 1) for option in cast("list[object]", options))
+            labels = dict.fromkeys(_schema_type_label(option, depth + 1, budget) for option in cast("list[object]", options))
             return "|".join(labels) or "any"
     if "const" in node:
         return clean_untrusted_label(json.dumps(node["const"]))
@@ -1776,8 +1822,44 @@ def _schema_type_label(schema: object, depth: int = 0) -> str:
     if isinstance(declared, list):
         return clean_untrusted_label("|".join(str(item) for item in cast("list[object]", declared))) or "any"
     if declared == "array":
-        return f"array[{_schema_type_label(node.get('items'), depth + 1)}]"
+        return f"array[{_schema_type_label(node.get('items'), depth + 1, budget)}]"
+    if declared == "object" or (declared is None and isinstance(node.get("properties"), dict)):
+        listed = _render_properties(node, depth + 1, budget, _SCHEMA_LABEL_PROPERTIES)
+        return f"{{{listed}}}" if listed else "object"
     return clean_untrusted_label(declared) if isinstance(declared, str) else "any"
+
+
+def _render_properties(schema: dict[str, object], depth: int, budget: _LabelBudget | None, limit: int | None) -> str:
+    """Render an object schema's properties as ``name: type`` pairs.
+
+    Args:
+        schema: The object schema.
+        depth: Nesting depth of its properties.
+        budget: Nodes the enclosing label may still describe, or ``None``
+            to give each property a budget of its own.
+        limit: How many properties to list before counting the rest, or
+            ``None`` to list them all.
+
+    Returns:
+        str: The pairs in declaration order, with a ``?`` after each property
+        the schema does not list as required, or an empty string when it
+        declares none.
+    """
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        return ""
+    raw_required = schema.get("required")
+    required: set[str] = {str(item) for item in cast("list[object]", raw_required)} if isinstance(raw_required, list) else set()
+    named = cast("dict[object, object]", properties)
+    rendered: list[str] = []
+    for name, subschema in named.items():
+        if limit is not None and len(rendered) == limit:
+            rendered.append(f"+{len(named) - limit} more")
+            break
+        marker = "" if name in required else "?"
+        label = _schema_type_label(subschema, depth, budget if budget is not None else _LabelBudget())
+        rendered.append(f"{clean_untrusted_label(str(name))}{marker}: {label}")
+    return ", ".join(rendered)
 
 
 def render_schema_parameters(schema: dict[str, Any]) -> str:
@@ -1786,7 +1868,8 @@ def render_schema_parameters(schema: dict[str, Any]) -> str:
     Every name and value is read from the schema, which for an
     externally-sourced tool is the server's own text, so each one is cleaned
     of invisible characters and forged fence markers before it is written
-    into the prompt.
+    into the prompt. A property that is itself an object is shown with its
+    own properties, and ``allOf`` branches are joined with ``&``.
 
     Args:
         schema: The JSON Schema of a function's arguments.
@@ -1795,16 +1878,7 @@ def render_schema_parameters(schema: dict[str, Any]) -> str:
         str: ``name: type`` pairs in declaration order, with a ``?`` after
         each property the schema does not list as required.
     """
-    properties = schema.get("properties")
-    if not isinstance(properties, dict):
-        return ""
-    raw_required = schema.get("required")
-    required: set[str] = {str(item) for item in cast("list[object]", raw_required)} if isinstance(raw_required, list) else set()
-    rendered: list[str] = []
-    for name, subschema in cast("dict[object, object]", properties).items():
-        marker = "" if name in required else "?"
-        rendered.append(f"{clean_untrusted_label(str(name))}{marker}: {_schema_type_label(subschema)}")
-    return ", ".join(rendered)
+    return _render_properties(schema, 0, None, None)
 
 
 @dataclass

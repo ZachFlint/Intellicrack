@@ -1668,13 +1668,47 @@ class MainWindow(QMainWindow):
     def _show_confirmation_dialog(self, payload: object) -> None:
         """Show the tool-confirmation dialog on the GUI thread and resolve the future.
 
+        The answer is delivered from the dialog's ``decision_made`` signal, so
+        the waiting call is released the moment the operator decides (or a
+        remembered answer is replayed) rather than once the dialog has
+        finished closing. A dialog dismissed without a decision, or one that
+        failed to open, delivers a denial.
+
         Args:
             payload: Tuple of ``(ToolCall, asyncio.Future[bool],
                 asyncio.AbstractEventLoop)`` emitted by
                 :meth:`_request_tool_confirmation`.
         """
         call, future, loop = cast("tuple[ToolCall, asyncio.Future[bool], asyncio.AbstractEventLoop]", payload)
-        approved = False
+        delivered: list[bool] = []
+
+        def _deliver(*, approved: bool) -> None:
+            """Hand the operator's answer to the orchestrator and the waiting future, once.
+
+            Args:
+                approved: Whether the call was approved.
+            """
+            if delivered:
+                return
+            delivered.append(approved)
+            self._orchestrator.resolve_confirmation(approved=approved)
+
+            def _resolve() -> None:
+                """Deliver the dialog approval result onto the waiting asyncio future."""
+                if not future.done():
+                    future.set_result(approved)
+
+            loop.call_soon_threadsafe(_resolve)
+
+        def _on_decision(*decision: bool) -> None:
+            """Deliver the answer the dialog's ``decision_made`` signal carries.
+
+            Args:
+                *decision: Whether the call was approved, then whether the
+                    answer outlives this call (already stored by the dialog).
+            """
+            _deliver(approved=decision[0])
+
         try:
             confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
             service = self._mcp_service
@@ -1687,17 +1721,10 @@ class MainWindow(QMainWindow):
                 except McpError as exc:
                     _logger.warning("mcp_confirmation_source_unresolved", tool=call.tool_name, error=str(exc))
             dialog = confirmation_module.ToolConfirmationDialog(call, self, generation=generation, source_label=origin)
+            _ = dialog.decision_made.connect(_on_decision)
             dialog.exec()
-            approved = bool(dialog.approved)
         finally:
-            self._orchestrator.resolve_confirmation(approved=approved)
-
-            def _resolve() -> None:
-                """Deliver the dialog approval result onto the waiting asyncio future."""
-                if not future.done():
-                    future.set_result(approved)
-
-            loop.call_soon_threadsafe(_resolve)
+            _deliver(approved=False)
 
     def _on_user_message(self, text: str) -> None:
         """Handle user message submission.

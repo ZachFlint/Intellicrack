@@ -70,7 +70,7 @@ from intellicrack.mcp.config import (
 from intellicrack.mcp.connection import McpConnection, McpHealth, McpServerStatus
 from intellicrack.mcp.consent import ConsentAnswer, TrustState, server_identity
 from intellicrack.mcp.errors import McpError
-from intellicrack.mcp.policy import enabled_entries, estimate_tool_cost, total_cost
+from intellicrack.mcp.policy import enabled_entries, total_cost
 from intellicrack.mcp.resources import (
     PromptSummary,
     ResourceSummary,
@@ -81,7 +81,7 @@ from intellicrack.mcp.resources import (
     summarize_parts,
 )
 from intellicrack.mcp.sandbox_launch import sandbox_supported
-from intellicrack.mcp.tool_source import map_tool_to_function
+from intellicrack.mcp.tool_source import estimate_entry_costs
 from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
 from intellicrack.ui.dialogs_helpers import plain_tooltip, show_error, show_info, show_warning
 from intellicrack.ui.mcp_consent_dialog import McpServerConsentDialog
@@ -90,7 +90,7 @@ from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Callable, Coroutine, Sequence
 
     from PyQt6.QtCore import QObject
     from PyQt6.QtGui import QCloseEvent
@@ -98,7 +98,9 @@ if TYPE_CHECKING:
     from intellicrack.mcp.catalog import McpToolEntry
     from intellicrack.mcp.connection import McpConnectionManager
     from intellicrack.mcp.consent import ApprovalStore
+    from intellicrack.mcp.policy import ToolCost
     from intellicrack.mcp.secrets import McpSecretResolver
+    from intellicrack.mcp.tool_source import McpToolSource
 
 
 _logger = get_logger(__name__)
@@ -804,16 +806,28 @@ class McpToolToggleView(QWidget):
         self._list.clear()
         self._summary.setText(message)
 
-    def load(self, entries: tuple[McpToolEntry, ...], disabled: frozenset[str]) -> None:
+    def load(
+        self,
+        entries: tuple[McpToolEntry, ...],
+        disabled: frozenset[str],
+        *,
+        costs: Sequence[ToolCost] | None = None,
+    ) -> None:
         """Populate the list from a server's catalog.
 
         Args:
             entries: Every tool the server published.
             disabled: Names of the tools currently switched off.
+            costs: What each tool costs to advertise, as the tool source
+                prices it. A tool it does not price, or every tool when it is
+                ``None``, is priced here the same way.
         """
         self._loading = True
         self._list.clear()
-        costs = [estimate_tool_cost(map_tool_to_function(entry)) for entry in entries]
+        priced = {cost.canonical_name: cost for cost in costs or ()}
+        unpriced = [entry for entry in entries if entry.canonical_name not in priced]
+        priced.update((cost.canonical_name, cost) for cost in estimate_entry_costs(unpriced))
+        costs = [priced[entry.canonical_name] for entry in entries]
         for entry, cost in zip(entries, costs, strict=True):
             item = QListWidgetItem(f"{entry.display_name}  ({cost.total_tokens} tokens)")
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
@@ -888,6 +902,7 @@ class McpConfigDialog(QDialog):
         parent: QWidget | None = None,
         *,
         approvals: ApprovalStore | None = None,
+        tool_source: McpToolSource | None = None,
     ) -> None:
         """Initialize the settings dialog.
 
@@ -898,11 +913,15 @@ class McpConfigDialog(QDialog):
             approvals: Store of persisted tool-call answers, listed and
                 revocable on the trust tab. ``None`` lists only the answers
                 remembered for this session.
+            tool_source: The tool source advertising these servers' tools to
+                the model, which prices each tool as it is advertised.
+                ``None`` prices the tools from the catalog directly.
         """
         super().__init__(parent)
         self._manager = manager
         self._resolver = resolver
         self._approvals = approvals
+        self._tool_source = tool_source
         self._document: McpConfigDocument = manager.document
         self._current_id: str | None = None
         self._workers: list[BridgeCallWorker] = []
@@ -1738,7 +1757,8 @@ class McpConfigDialog(QDialog):
         if catalog is None:
             self._tool_view.clear("Start this server to see the tools it publishes.")
             return
-        self._tool_view.load(catalog.entries, config.disabled_tools)
+        costs = self._tool_source.costs(config.server_id) if self._tool_source is not None else None
+        self._tool_view.load(catalog.entries, config.disabled_tools, costs=costs)
 
     def _refresh_status(self, config: McpServerConfig) -> None:
         """Refresh the status line for one server.

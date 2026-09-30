@@ -1613,13 +1613,76 @@ class Orchestrator:
             timestamp=datetime.now(tz=UTC),
         )
 
-        messages = [system_message, *(self._bound_message_for_llm(m) for m in self._current_session.messages)]
+        history = self._pair_tool_history(self._current_session.messages)
+        messages = [system_message, *(self._bound_message_for_llm(m) for m in history)]
         _logger.debug(
             "messages_built",
             message_count=len(messages),
             system_prompt_length=len(system_prompt),
         )
         return messages
+
+    @staticmethod
+    def _pair_tool_history(history: list[Message]) -> list[Message]:
+        """Return the history with every tool call and tool result paired.
+
+        Every provider rejects a tool result whose call is not in the
+        assistant message right before it, and a tool call nothing answered.
+        A history can hold either one: a session saved by an older build, or
+        one saved while a turn was still running, can start with the results
+        of a call that is no longer there. The outgoing copy drops those
+        results (and a ``tool`` message left with none), and drops the calls
+        no result answers from their assistant message, dropping the message
+        too when nothing else is left in it. The session's own history is not
+        changed.
+
+        Args:
+            history: The session's messages, oldest first.
+
+        Returns:
+            list[Message]: The paired messages; the same objects wherever
+            nothing needed dropping.
+        """
+        owners: list[int | None] = []
+        answered: dict[int, set[str]] = {}
+        owner: int | None = None
+        for index, message in enumerate(history):
+            if message.role == "assistant":
+                owner = index if message.tool_calls else None
+                if owner is not None:
+                    answered[owner] = set()
+            elif message.role != "tool":
+                owner = None
+            owners.append(owner if message.role == "tool" else None)
+            if message.role == "tool" and owner is not None:
+                issued = {call.id for call in history[owner].tool_calls or ()}
+                answered[owner].update(result.call_id for result in message.tool_results or () if result.call_id in issued)
+
+        paired: list[Message] = []
+        dropped_results = 0
+        dropped_calls = 0
+        for index, message in enumerate(history):
+            if message.role == "tool":
+                tool_owner = owners[index]
+                results = message.tool_results or []
+                kept = [result for result in results if tool_owner is not None and result.call_id in answered[tool_owner]]
+                if tool_owner is None or (results and not kept):
+                    dropped_results += max(len(results), 1)
+                    continue
+                dropped_results += len(results) - len(kept)
+                paired.append(message if len(kept) == len(results) else replace(message, tool_results=kept))
+            elif message.role == "assistant" and message.tool_calls:
+                calls = [call for call in message.tool_calls if call.id in answered[index]]
+                dropped_calls += len(message.tool_calls) - len(calls)
+                if len(calls) == len(message.tool_calls):
+                    paired.append(message)
+                elif calls or message.content:
+                    paired.append(replace(message, tool_calls=calls or None))
+            else:
+                paired.append(message)
+        if dropped_results or dropped_calls:
+            _logger.warning("tool_history_unpaired_dropped", results=dropped_results, calls=dropped_calls)
+        return paired
 
     @staticmethod
     def _bound_message_for_llm(message: Message) -> Message:
