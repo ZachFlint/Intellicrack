@@ -10,7 +10,9 @@ while holding ``tiktoken``'s process-wide registry lock. A stalled connection th
 
 This module puts three bounds around that. The BPE files of the encodings ``tiktoken`` ships are fetched here first, with connect, read
 and overall deadlines and a size cap, and written into the cache directory ``tiktoken`` itself reads, under the key it computes, so the
-subsequent ``get_encoding`` is a local file read. Loading runs on a daemon worker thread, one per encoding, so a caller waits only as long
+subsequent ``get_encoding`` is a local file read. Resolving the server's name counts against the connect deadline too, since the system
+resolver takes no timeout of its own. When ``TIKTOKEN_CACHE_DIR`` is set to an empty string, which turns ``tiktoken``'s cache off, the
+files are fetched the same way into a temporary directory that is removed once the encoding is built from it. Loading runs on a daemon worker thread, one per encoding, so a caller waits only as long
 as it chooses -- the GUI thread does not wait at all. And a failed load is remembered for :data:`RETRY_AFTER_S` before it is attempted
 again, so an offline machine pays for the failure once rather than on every count.
 
@@ -20,25 +22,37 @@ A caller that gets no encoder back counts with :func:`estimate_tokens_without_en
 from __future__ import annotations
 
 import hashlib
+import importlib
+import ipaddress
 import math
 import os
+import socket
 import tempfile
 import threading
 import time
+import types
+import urllib.request
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final, cast, override
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
+import httpcore
 import httpx
 import tiktoken
+import tiktoken.load
 
 from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    import ssl
+    from collections.abc import Callable, Iterable, Mapping, Sequence
+
+    from httpcore import NetworkStream
+    from httpcore._backends.base import SOCKET_OPTION
 
 
 _logger = get_logger(__name__)
@@ -58,6 +72,13 @@ DOWNLOAD_DEADLINE_S: Final[float] = 120.0
 
 MAX_ENCODING_BYTES: Final[int] = 64 * 1024 * 1024
 """Largest BPE file accepted; the biggest ``tiktoken`` ships is under 4 MiB."""
+
+MAX_REDIRECTS: Final[int] = 5
+"""Most redirects one BPE download follows."""
+
+_REDIRECT_STATUSES: Final[frozenset[int]] = frozenset({301, 302, 303, 307, 308})
+_SUCCESS_STATUSES: Final[range] = range(200, 300)
+_CONSTRUCTOR_MODULE: Final[str] = "tiktoken_ext.openai_public"
 
 RETRY_AFTER_S: Final[float] = 300.0
 """How long a failed load is remembered before it is attempted again."""
@@ -197,37 +218,245 @@ def _is_verified(path: Path, sha256: str) -> bool:
     return hashlib.sha256(data).hexdigest() == sha256
 
 
-def _download(url: str, timeout: httpx.Timeout, deadline_s: float, max_bytes: int) -> bytes:
-    """Stream one file into memory under a deadline and a size cap.
+type AddressResolver = Callable[[str, int], Sequence[str]]
+"""Resolves a host and port to the addresses to try, in order."""
+
+
+def resolve_addresses(host: str, port: int) -> list[str]:
+    """Resolve a host through the system resolver.
+
+    Args:
+        host: The host name.
+        port: The port to connect to.
+
+    Returns:
+        list[str]: The distinct addresses, in the resolver's order.
+    """
+    found = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    return list(dict.fromkeys(str(entry[4][0]) for entry in found))
+
+
+def _resolve_within(resolve: AddressResolver, host: str, port: int, timeout: float | None) -> Sequence[str]:
+    """Resolve a host, giving up once the connect timeout has passed.
+
+    The system resolver cannot be interrupted, so a lookup that outlives the
+    timeout is left to finish on its daemon thread and its answer dropped.
+
+    Args:
+        resolve: The resolver.
+        host: The host name or address literal.
+        port: The port to connect to.
+        timeout: Longest the lookup may take; ``None`` waits for it.
+
+    Returns:
+        Sequence[str]: The addresses to try.
+
+    Raises:
+        httpcore.ConnectTimeout: When the lookup takes longer than ``timeout``.
+        httpcore.ConnectError: When the lookup fails or finds nothing.
+    """
+    try:
+        return [str(ipaddress.ip_address(host.strip("[]")))]
+    except ValueError:
+        pass
+    found: list[str] = []
+    failures: list[OSError] = []
+    done = threading.Event()
+
+    def lookup() -> None:
+        """Run the lookup and record what it found."""
+        try:
+            found.extend(resolve(host, port))
+        except OSError as exc:
+            failures.append(exc)
+        finally:
+            done.set()
+
+    threading.Thread(target=lookup, name=f"resolve-{host}", daemon=True).start()
+    if not done.wait(timeout):
+        message = f"resolving {host} took longer than {timeout:g}s"
+        raise httpcore.ConnectTimeout(message)
+    if failures or not found:
+        message = f"could not resolve {host}: {failures[0] if failures else 'no addresses'}"
+        raise httpcore.ConnectError(message)
+    return found
+
+
+class _BoundedResolutionBackend(httpcore.SyncBackend):
+    """Opens connections whose name lookup counts against the connect timeout."""
+
+    def __init__(self, resolve: AddressResolver) -> None:
+        """Use a resolver.
+
+        Args:
+            resolve: Resolves each host before it is connected to.
+        """
+        super().__init__()
+        self._resolve = resolve
+
+    @override
+    def connect_tcp(
+        self,
+        host: str,
+        port: int,
+        timeout: float | None = None,
+        local_address: str | None = None,
+        socket_options: Iterable[SOCKET_OPTION] | None = None,
+    ) -> NetworkStream:
+        """Resolve a host within the timeout, then connect to the first address that answers.
+
+        Args:
+            host: The host to connect to.
+            port: The port.
+            timeout: Longest the lookup and connection may take together.
+            local_address: Address to bind locally, if any.
+            socket_options: Options to set on the socket.
+
+        Returns:
+            NetworkStream: The connected stream.
+
+        Raises:
+            httpcore.ConnectTimeout: When the timeout passes first.
+            httpcore.ConnectError: When no address can be connected to.
+        """
+        started = time.monotonic()
+        errors: list[str] = []
+        for address in _resolve_within(self._resolve, host, port, timeout):
+            remaining = None if timeout is None else timeout - (time.monotonic() - started)
+            if remaining is not None and remaining <= 0:
+                message = f"connecting to {host}:{port} took longer than {timeout:g}s"
+                raise httpcore.ConnectTimeout(message)
+            try:
+                return super().connect_tcp(address, port, remaining, local_address, socket_options)
+            except httpcore.ConnectError as exc:
+                errors.append(f"{address}: {exc}")
+        message = f"could not connect to {host}:{port}: {'; '.join(errors)}"
+        raise httpcore.ConnectError(message)
+
+
+def _proxy_for(url: str) -> str | None:
+    """Pick the proxy a URL is fetched through, as ``httpx`` and ``urllib`` read the environment and system settings.
+
+    Args:
+        url: The URL to fetch.
+
+    Returns:
+        str | None: The proxy URL, or ``None`` to connect directly.
+    """
+    parts = urlsplit(url)
+    proxies = urllib.request.getproxies()
+    proxy = proxies.get(parts.scheme) or proxies.get("all")
+    if not proxy or urllib.request.proxy_bypass(parts.hostname or ""):
+        return None
+    return proxy if "://" in proxy else f"http://{proxy}"
+
+
+def _connection_pool(
+    url: str,
+    ssl_context: ssl.SSLContext,
+    backend: httpcore.SyncBackend,
+) -> httpcore.ConnectionPool:
+    """Build the connection pool one request goes through, direct or by its proxy.
+
+    Args:
+        url: The URL to fetch.
+        ssl_context: TLS settings for the server.
+        backend: Opens the connections.
+
+    Returns:
+        httpcore.ConnectionPool: The pool.
+    """
+    proxy = _proxy_for(url)
+    if proxy is None:
+        return httpcore.ConnectionPool(ssl_context=ssl_context, network_backend=backend)
+    parts = urlsplit(proxy)
+    auth = (parts.username or "", parts.password or "") if parts.username is not None else None
+    bare = urlunsplit((parts.scheme, parts.netloc.rpartition("@")[2], parts.path, parts.query, parts.fragment))
+    if parts.scheme.startswith("socks"):
+        return httpcore.SOCKSProxy(proxy_url=bare, proxy_auth=auth, ssl_context=ssl_context, network_backend=backend)
+    return httpcore.HTTPProxy(proxy_url=bare, proxy_auth=auth, ssl_context=ssl_context, network_backend=backend)
+
+
+@dataclass(frozen=True, slots=True)
+class _DownloadBounds:
+    """The limits one download runs under.
+
+    Attributes:
+        connect_timeout_s: Longest resolving and connecting may take.
+        read_timeout_s: Longest the download may go without data.
+        deadline_s: Longest the whole download may take.
+        max_bytes: Largest file accepted.
+    """
+
+    connect_timeout_s: float
+    read_timeout_s: float
+    deadline_s: float
+    max_bytes: int
+
+
+def _download(url: str, bounds: _DownloadBounds, resolve: AddressResolver) -> bytes:
+    """Stream one file into memory under a deadline and a size cap, following redirects.
 
     Args:
         url: The file to download.
-        timeout: Connect and per-read timeouts.
-        deadline_s: Longest the whole download may take.
-        max_bytes: Largest file accepted.
+        bounds: The limits the download runs under.
+        resolve: Resolves each host connected to, within the connect timeout.
 
     Returns:
         bytes: The file's content.
 
     Raises:
-        EncodingDownloadError: When the file passes ``max_bytes`` or the
-            download passes ``deadline_s``.
+        EncodingDownloadError: When the server refuses the file, redirects
+            too often, or the file passes ``max_bytes`` or the download
+            passes ``deadline_s``.
     """
     started = time.monotonic()
-    chunks: list[bytes] = []
-    received = 0
-    with httpx.Client(timeout=timeout, follow_redirects=True) as client, client.stream("GET", url) as response:
-        _ = response.raise_for_status()
-        for chunk in response.iter_bytes():
-            received += len(chunk)
-            if received > max_bytes:
-                message = f"{url} exceeded {max_bytes} bytes"
+    backend = _BoundedResolutionBackend(resolve)
+    ssl_context = httpx.create_ssl_context()
+    extensions = {
+        "timeout": {
+            "connect": bounds.connect_timeout_s,
+            "read": bounds.read_timeout_s,
+            "write": bounds.read_timeout_s,
+            "pool": bounds.read_timeout_s,
+        },
+    }
+    target = url
+    for _hop in range(MAX_REDIRECTS + 1):
+        with _connection_pool(target, ssl_context, backend) as pool, pool.stream("GET", target, extensions=extensions) as response:
+            if response.status in _REDIRECT_STATUSES:
+                location = {key.lower(): value for key, value in response.headers}.get(b"location")
+                if location is None:
+                    message = f"{target} redirected without a location"
+                    raise EncodingDownloadError(message)
+                target = urljoin(target, location.decode("latin-1"))
+                continue
+            if response.status not in _SUCCESS_STATUSES:
+                message = f"{target} answered HTTP {response.status}"
                 raise EncodingDownloadError(message)
-            if time.monotonic() - started > deadline_s:
-                message = f"{url} did not finish within {deadline_s:g}s"
-                raise EncodingDownloadError(message)
-            chunks.append(chunk)
-    return b"".join(chunks)
+            chunks: list[bytes] = []
+            received = 0
+            for chunk in response.iter_stream():
+                received += len(chunk)
+                if received > bounds.max_bytes:
+                    message = f"{url} exceeded {bounds.max_bytes} bytes"
+                    raise EncodingDownloadError(message)
+                if time.monotonic() - started > bounds.deadline_s:
+                    message = f"{url} did not finish within {bounds.deadline_s:g}s"
+                    raise EncodingDownloadError(message)
+                chunks.append(chunk)
+            return b"".join(chunks)
+    message = f"{url} redirected more than {MAX_REDIRECTS} times"
+    raise EncodingDownloadError(message)
+
+
+_TRANSFER_ERRORS: Final[tuple[type[Exception], ...]] = (
+    httpcore.TimeoutException,
+    httpcore.NetworkError,
+    httpcore.ProtocolError,
+    httpcore.ProxyError,
+    httpcore.UnsupportedProtocol,
+)
 
 
 def fetch_encoding_source(
@@ -238,21 +467,26 @@ def fetch_encoding_source(
     read_timeout_s: float = READ_TIMEOUT_S,
     deadline_s: float = DOWNLOAD_DEADLINE_S,
     max_bytes: int = MAX_ENCODING_BYTES,
+    resolve: AddressResolver = resolve_addresses,
 ) -> Path:
     """Place one verified encoding file in the ``tiktoken`` cache.
 
     A cache entry that is already present and intact is used as-is. Otherwise
     the file is streamed with bounded connect and read timeouts, an overall
     deadline and a size cap, verified against its digest, and written
-    atomically.
+    atomically; a staging file that could not be moved into place is
+    removed.
 
     Args:
         source: The encoding file.
         cache_dir: The ``tiktoken`` cache directory.
-        connect_timeout_s: Longest the connection may take.
+        connect_timeout_s: Longest resolving the server and connecting may
+            take.
         read_timeout_s: Longest the download may go without data.
         deadline_s: Longest the whole download may take.
         max_bytes: Largest file accepted.
+        resolve: Resolves each host connected to, within the connect
+            timeout.
 
     Returns:
         Path: The verified cache entry.
@@ -265,10 +499,10 @@ def fetch_encoding_source(
     if _is_verified(path, source.sha256):
         return path
 
-    timeout = httpx.Timeout(read_timeout_s, connect=connect_timeout_s)
+    bounds = _DownloadBounds(connect_timeout_s, read_timeout_s, deadline_s, max_bytes)
     try:
-        data = _download(source.download_url, timeout, deadline_s, max_bytes)
-    except httpx.HTTPError as exc:
+        data = _download(source.download_url, bounds, resolve)
+    except _TRANSFER_ERRORS as exc:
         message = f"{source.download_url} could not be downloaded: {exc}"
         raise EncodingDownloadError(message) from exc
 
@@ -278,9 +512,76 @@ def fetch_encoding_source(
 
     cache_dir.mkdir(parents=True, exist_ok=True)
     staging = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
-    _ = staging.write_bytes(data)
-    _ = staging.replace(path)
+    try:
+        _ = staging.write_bytes(data)
+        _ = staging.replace(path)
+    finally:
+        staging.unlink(missing_ok=True)
     return path
+
+
+def _staged_constructor(name: str, staged: Mapping[str, Path]) -> Callable[[], dict[str, Any]]:
+    """Rebuild ``tiktoken``'s constructor for an encoding so it reads local copies of its files.
+
+    ``tiktoken_ext.openai_public`` names each file by URL and looks its two
+    loaders up as module globals when a constructor runs. The copy returned
+    here runs the same code over a copy of those globals whose loaders read
+    the file downloaded for each URL instead, so the encoding's pattern and
+    special tokens still come from ``tiktoken`` itself.
+
+    Args:
+        name: An encoding ``tiktoken_ext.openai_public`` constructs.
+        staged: The local copy of each file, by the URL ``tiktoken`` names it by.
+
+    Returns:
+        Callable[[], dict[str, Any]]: The constructor, returning the
+        keyword arguments of :class:`tiktoken.Encoding`.
+    """
+
+    def local(value: object) -> object:
+        """Swap a staged URL for its local copy.
+
+        Args:
+            value: An argument a constructor passes to a loader.
+
+        Returns:
+            object: The local path, or the argument unchanged.
+        """
+        return str(staged[value]) if isinstance(value, str) and value in staged else value
+
+    def redirected(loader: Callable[..., dict[bytes, int]]) -> Callable[..., dict[bytes, int]]:
+        """Wrap a loader so it reads the local copies.
+
+        Args:
+            loader: The ``tiktoken.load`` function.
+
+        Returns:
+            Callable[..., dict[bytes, int]]: The wrapped loader.
+        """
+
+        def call(*args: object, **kwargs: object) -> dict[bytes, int]:
+            """Call the loader with each staged URL swapped for its local copy.
+
+            Args:
+                *args: Positional arguments.
+                **kwargs: Keyword arguments.
+
+            Returns:
+                dict[bytes, int]: The mergeable ranks.
+            """
+            return loader(*(local(arg) for arg in args), **{key: local(arg) for key, arg in kwargs.items()})
+
+        return call
+
+    module = importlib.import_module(_CONSTRUCTOR_MODULE)
+    constructors = cast("Mapping[str, types.FunctionType]", vars(module)["ENCODING_CONSTRUCTORS"])
+    namespace: dict[str, object] = dict(vars(module))
+    namespace["load_tiktoken_bpe"] = redirected(tiktoken.load.load_tiktoken_bpe)
+    namespace["data_gym_to_mergeable_bpe_ranks"] = redirected(tiktoken.load.data_gym_to_mergeable_bpe_ranks)
+    for key, value in vars(module).items():
+        if isinstance(value, types.FunctionType) and value.__module__ == module.__name__:
+            namespace[key] = types.FunctionType(value.__code__, namespace, value.__name__, value.__defaults__, value.__closure__)
+    return cast("Callable[[], dict[str, Any]]", namespace[constructors[name].__name__])
 
 
 def estimate_tokens_without_encoder(text: str) -> int:
@@ -315,6 +616,7 @@ class TokenEncodingLoader:
         read_timeout_s: float = READ_TIMEOUT_S,
         deadline_s: float = DOWNLOAD_DEADLINE_S,
         retry_after_s: float = RETRY_AFTER_S,
+        resolve: AddressResolver = resolve_addresses,
     ) -> None:
         """Configure a loader.
 
@@ -327,6 +629,8 @@ class TokenEncodingLoader:
             read_timeout_s: Longest a download may go without data.
             deadline_s: Longest one file download may take in total.
             retry_after_s: How long a failed load is remembered.
+            resolve: Resolves each download server, within the connect
+                timeout.
         """
         self._default_name = default_name
         self._sources = sources
@@ -334,6 +638,7 @@ class TokenEncodingLoader:
         self._read_timeout_s = read_timeout_s
         self._deadline_s = deadline_s
         self._retry_after_s = retry_after_s
+        self._resolve = resolve
         self._lock = threading.Lock()
         self._encoders: dict[str, tiktoken.Encoding] = {}
         self._aliases: dict[str, str] = {}
@@ -451,17 +756,32 @@ class TokenEncodingLoader:
         sources = self._sources.get(name, ())
         cache_dir = tiktoken_cache_dir()
         if sources and cache_dir is None:
-            _logger.warning("token_encoding_cache_disabled", encoding=name)
-        elif cache_dir is not None:
+            with tempfile.TemporaryDirectory(prefix="intellicrack-tiktoken-") as staging:
+                staged = {source.cache_url: self._fetch(source, Path(staging)) for source in sources}
+                return tiktoken.Encoding(**_staged_constructor(name, staged)())
+        if cache_dir is not None:
             for source in sources:
-                _ = fetch_encoding_source(
-                    source,
-                    cache_dir,
-                    connect_timeout_s=self._connect_timeout_s,
-                    read_timeout_s=self._read_timeout_s,
-                    deadline_s=self._deadline_s,
-                )
+                _ = self._fetch(source, cache_dir)
         return tiktoken.get_encoding(name)
+
+    def _fetch(self, source: EncodingSource, directory: Path) -> Path:
+        """Fetch one encoding file under this loader's download bounds.
+
+        Args:
+            source: The file.
+            directory: Where to place it.
+
+        Returns:
+            Path: The verified file.
+        """
+        return fetch_encoding_source(
+            source,
+            directory,
+            connect_timeout_s=self._connect_timeout_s,
+            read_timeout_s=self._read_timeout_s,
+            deadline_s=self._deadline_s,
+            resolve=self._resolve,
+        )
 
 
 _shared_loader: TokenEncodingLoader = TokenEncodingLoader()
