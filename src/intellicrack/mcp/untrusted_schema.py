@@ -22,7 +22,9 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Final
 
+from intellicrack.bridges.json_schema import MAX_SCHEMA_NESTING, truncate_schema_nesting
 from intellicrack.core.json_payload import is_json_array, is_json_object, map_json_strings
+from intellicrack.core.logging import get_logger
 from intellicrack.core.untrusted_text import (
     clean_untrusted_label,
     escape_identifier,
@@ -33,6 +35,9 @@ from intellicrack.core.untrusted_text import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
+
+
+_logger = get_logger(__name__)
 
 
 SCHEMA_TEXT_LIMIT: Final[int] = 2048
@@ -376,12 +381,20 @@ def sanitize_input_schema(schema: Mapping[str, Any]) -> SanitizedSchema:
     Args:
         schema: The raw ``inputSchema`` the server published.
 
+    Containers nested deeper than
+    :data:`~intellicrack.bridges.json_schema.MAX_SCHEMA_NESTING` are replaced by
+    the permissive empty schema first, so no published schema, however deep,
+    exhausts the recursion limit while it is rewritten.
+
     Returns:
         SanitizedSchema: The rewritten schema and the aliases it introduced.
     """
+    bounded, replaced = truncate_schema_nesting(dict(schema))
+    if replaced:
+        _logger.warning("mcp_input_schema_nesting_truncated", nodes=replaced, limit=MAX_SCHEMA_NESTING)
     table = _AliasTable()
-    _collect_identifiers(dict(schema), table.taken)
-    rewritten = _walk(dict(schema), table)
+    _collect_identifiers(bounded, table.taken)
+    rewritten = _walk(bounded, table)
     return SanitizedSchema(
         schema=rewritten if is_json_object(rewritten) else {},
         aliases={alias: original for original, alias in table.forward.items()},

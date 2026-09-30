@@ -15,6 +15,7 @@ and nothing downstream is unknown.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any, TypeIs
 
 
@@ -168,14 +169,98 @@ def map_json_strings(value: object, rename: Callable[[str], str]) -> object:
     return root[0]
 
 
+def copy_json(value: object) -> object:
+    """Copy a JSON value, however deeply it nests.
+
+    :func:`copy.deepcopy` recurses once per level and fails past the
+    interpreter's recursion limit; this walk is iterative.
+
+    Args:
+        value: The JSON value to copy.
+
+    Returns:
+        object: A new value equal to ``value`` sharing no container with it.
+    """
+    return map_json_strings(value, _unchanged)
+
+
+def _unchanged(text: str) -> str:
+    """Return a string as it is.
+
+    Args:
+        text: The string.
+
+    Returns:
+        str: ``text``.
+    """
+    return text
+
+
+def json_equality_key(value: object) -> str:
+    """Build the text under which JSON Schema equality becomes string equality.
+
+    JSON Schema compares numbers by value, so ``1`` and ``1.0`` are equal,
+    but keeps booleans apart from numbers, so ``true`` and ``1`` are not;
+    arrays compare in order and objects without regard to member order.
+    Python's own ``==`` gets the booleans wrong, and neither lists nor dicts
+    can be hashed. The key is canonical JSON text -- members sorted by name,
+    integral numbers written as integers -- so equal keys mean equal JSON
+    values, and since a string hashes, comparing ``n`` values for duplicates
+    takes ``n`` steps rather than ``n`` squared. Both the walk and the key
+    are flat, so no nesting depth is too deep.
+
+    Args:
+        value: The JSON value.
+
+    Returns:
+        str: Its key.
+    """
+    results: list[str] = []
+    stack: list[tuple[object, bool]] = [(value, False)]
+    while stack:
+        current, built = stack.pop()
+        if is_json_array(current):
+            if not built:
+                stack.append((current, True))
+                stack.extend((member, False) for member in reversed(current))
+                continue
+            count = len(current)
+            members = results[len(results) - count :] if count else []
+            del results[len(results) - count :]
+            results.append(f"[{','.join(members)}]")
+        elif is_json_object(current):
+            names = sorted(current)
+            if not built:
+                stack.append((current, True))
+                stack.extend((current[name], False) for name in reversed(names))
+                continue
+            count = len(names)
+            members = results[len(results) - count :] if count else []
+            del results[len(results) - count :]
+            results.append("{" + ",".join(f"{json.dumps(name)}:{member}" for name, member in zip(names, members, strict=True)) + "}")
+        elif isinstance(current, bool):
+            results.append("true" if current else "false")
+        elif isinstance(current, int):
+            results.append(str(current))
+        elif isinstance(current, float):
+            results.append(str(int(current)) if current.is_integer() else repr(current))
+        elif isinstance(current, str):
+            results.append(json.dumps(current))
+        else:
+            results.append("null" if current is None else f"!{current!r}")
+    return results[0]
+
+
 __all__ = [
     "JsonArray",
     "JsonObject",
     "as_json_array",
     "as_json_object",
+    "copy_json",
     "is_json_array",
     "is_json_object",
     "json_array_at",
+    "json_equality_key",
     "json_object_at",
     "json_str_at",
     "map_json_strings",
