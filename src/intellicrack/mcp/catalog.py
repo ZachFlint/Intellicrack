@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final
@@ -36,7 +37,8 @@ from intellicrack.mcp.untrusted_schema import SanitizedSchema, sanitize_input_sc
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
+    from contextlib import AbstractAsyncContextManager
 
     from mcp import Client
     from mcp.client.caching import CacheMode
@@ -393,7 +395,13 @@ def build_catalog(
     )
 
 
-async def fetch_catalog(client: Client, server_id: str, *, cache_mode: CacheMode = "use") -> McpToolCatalog:
+async def fetch_catalog(
+    client: Client,
+    server_id: str,
+    *,
+    cache_mode: CacheMode = "use",
+    request_deadline: Callable[[], AbstractAsyncContextManager[None]] = nullcontext,
+) -> McpToolCatalog:
     """Retrieve a server's complete tool listing.
 
     Pagination is followed to exhaustion, preserving the order the server
@@ -413,6 +421,12 @@ async def fetch_catalog(client: Client, server_id: str, *, cache_mode: CacheMode
             ``"use"`` serves a fresh cached page, ``"refresh"`` always asks
             the server and stores the answer, ``"bypass"`` always asks and
             stores nothing.
+        request_deadline: Builds the deadline each page request runs under.
+            The SDK client carries no timeout of its own, so this is what
+            bounds a server that never answers.
+
+    A page that overruns its deadline propagates the :class:`TimeoutError`
+    the deadline raises.
 
     Returns:
         McpToolCatalog: The complete listing.
@@ -428,7 +442,8 @@ async def fetch_catalog(client: Client, server_id: str, *, cache_mode: CacheMode
     seen_cursors: set[str] = set()
 
     for page in range(MAX_LIST_PAGES):
-        result = await client.list_tools(cursor=cursor, cache_mode=cache_mode)
+        async with request_deadline():
+            result = await client.list_tools(cursor=cursor, cache_mode=cache_mode)
         if page == 0:
             ttl_ms = result.ttl_ms
             cache_scope = result.cache_scope

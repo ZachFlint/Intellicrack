@@ -20,6 +20,7 @@ import os
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -182,6 +183,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--ttl-ms", type=int, default=0)
     parser.add_argument("--spawn-at-start", default=None, help="Spawn a grandchild before serving and write its pid here.")
+    parser.add_argument(
+        "--linger-s",
+        type=float,
+        default=0.0,
+        help="Keep running this long after stdin closes, like a server slow to exit.",
+    )
     arguments = parser.parse_args(argv)
 
     if arguments.spawn_at_start is not None:
@@ -194,6 +201,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         uvicorn.run(server.sse_app(), host="127.0.0.1", port=arguments.port, log_level="error")
         return 0
     server.run(transport="stdio")
+    time.sleep(arguments.linger_s)
     return 0
 
 

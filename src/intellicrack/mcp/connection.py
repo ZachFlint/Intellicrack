@@ -29,13 +29,13 @@ import enum
 import os
 import threading
 from collections import deque
-from collections.abc import Callable
-from contextlib import asynccontextmanager, suppress
+from collections.abc import Awaitable, Callable
+from contextlib import AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager, suppress
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Protocol, Self, TextIO, cast
+from typing import TYPE_CHECKING, Any, Final, Protocol, Self, TextIO, TypeVar, cast
 
 import anyio
 from mcp import Client
@@ -55,7 +55,7 @@ from intellicrack.mcp.consent import McpConsentStoreError
 from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
 from intellicrack.mcp.operator_wait import OperatorWaitClock
 from intellicrack.mcp.sandbox_launch import build_sandboxed_startup, confined_stdio_client, revert_stale_write_grants, sandbox_supported
-from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, open_http_transport
+from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, open_http_transport, sign_in_before_handshake
 
 
 if TYPE_CHECKING:
@@ -73,6 +73,8 @@ if TYPE_CHECKING:
 
 
 _logger = get_logger(__name__)
+
+_T = TypeVar("_T")
 
 
 AuthFactory = Callable[["McpServerConfig"], "httpx2.Auth | None"]
@@ -733,6 +735,14 @@ class McpConnection:
                 mode, with the ``initialize`` handshake, rather than
                 negotiating the protocol version.
 
+        The SDK's own per-request read timeout is off. It runs on the SDK's
+        clock, which knows nothing of the operator: a legacy server that asks
+        the operator something in the middle of ``tools/call`` would have the
+        call fail under it however long the question's own timeout was. Every
+        request Intellicrack sends is bounded instead by a deadline on this
+        connection's :class:`~intellicrack.mcp.operator_wait.OperatorWaitClock`,
+        which stops while the operator is being asked.
+
         Returns:
             Client: The client, not yet entered.
         """
@@ -741,7 +751,7 @@ class McpConnection:
             client_info=self._client_info,
             elicitation_callback=self._elicitation_callback,
             message_handler=self._on_incoming,
-            read_timeout_seconds=self._config.request_timeout_s,
+            read_timeout_seconds=None,
             mode="legacy" if legacy else "auto",
         )
 
@@ -826,6 +836,13 @@ class McpConnection:
         transport with the session in ``legacy`` mode; one declared ``http``
         over Streamable HTTP, negotiating the protocol version.
 
+        An OAuth-protected Streamable HTTP server is signed in to first,
+        through :func:`~intellicrack.mcp.transport.sign_in_before_handshake`,
+        so the handshake's own requests never wait on the operator. An SSE
+        server needs no such step: its transport opens the event stream, and
+        so completes any sign-in, before it hands over the streams the
+        handshake runs on.
+
         Args:
             on_closed: Called when the transport's read stream ends.
 
@@ -866,6 +883,15 @@ class McpConnection:
             message = f"server '{self.server_id}' has no endpoint URL"
             raise McpConnectionError(message)
 
+        if isinstance(auth, OAuthClientProvider) and self._config.kind is McpTransportKind.HTTP:
+            _ = await sign_in_before_handshake(
+                http_spec,
+                headers=headers,
+                auth=auth,
+                timeout_s=self._config.request_timeout_s,
+                client_info=self._client_info,
+            )
+
         async with (
             open_http_transport(
                 http_spec,
@@ -894,15 +920,79 @@ class McpConnection:
         if context.callback_handler is not None:
             context.callback_handler = self._operator_wait.pause_while(context.callback_handler)
 
+    def request_deadline(self, budget_s: float | None = None) -> AbstractAsyncContextManager[None]:
+        """Bound one request to this server by the server's time alone.
+
+        Time spent waiting on the operator -- a question the server asked in
+        the middle of the request, an interactive sign-in -- is not counted.
+
+        Args:
+            budget_s: Seconds the request may take, defaulting to the
+                server's configured per-request timeout.
+
+        Returns:
+            AbstractAsyncContextManager[None]: A context that interrupts its
+            block with :class:`TimeoutError` once the budget is spent.
+        """
+        return self._operator_wait.deadline(budget_s if budget_s is not None else self._config.request_timeout_s)
+
+    async def request(self, operation: str, send: Callable[[], Awaitable[_T]]) -> _T:
+        """Send one request to this server under its per-request deadline.
+
+        Args:
+            operation: What the request does, for the error message, such as
+                ``"list resources"``.
+            send: Sends the request and returns its result.
+
+        Returns:
+            _T: What ``send`` returned.
+
+        Raises:
+            McpConnectionError: If the server did not answer within its
+                per-request timeout, not counting time spent waiting on the
+                operator, or the transport failed.
+            asyncio.CancelledError: If the caller is cancelled mid-request.
+        """
+        budget = self._config.request_timeout_s
+        try:
+            async with self.request_deadline(budget):
+                return await send()
+        except TimeoutError as exc:
+            message = f"server '{self.server_id}': {operation} exceeded {budget:.0f}s"
+            raise McpConnectionError(message) from exc
+        except asyncio.CancelledError:
+            raise
+        except TRANSPORT_FAILURES as exc:
+            failure = representative_failure(exc)
+            message = f"server '{self.server_id}': cannot {operation}: {failure_text(failure)}"
+            raise McpConnectionError(message) from failure
+
     async def _serve_once(self) -> None:
         """Hold one connection open until a stop is requested.
 
+        Opening the transport, the handshake and the first tool listing
+        together get :data:`CONNECT_TIMEOUT_S` of the server's time; a launch
+        consent prompt or an interactive sign-in inside them stops the clock.
+        This bound holds on every attempt, including the reconnects no caller
+        is waiting on.
+
         A tool listing that cannot be retrieved propagates
         :class:`McpConnectionError` from :func:`fetch_catalog`.
+
+        Raises:
+            McpConnectionError: If the server did not complete its handshake
+                and first tool listing within :data:`CONNECT_TIMEOUT_S`.
         """
         self._attempt += 1
-        async with self._open_transport(self._attempt) as client:
-            catalog = await fetch_catalog(client, self.server_id)
+        budget = CONNECT_TIMEOUT_S
+        async with AsyncExitStack() as stack:
+            try:
+                async with self._operator_wait.deadline(budget):
+                    client = await stack.enter_async_context(self._open_transport(self._attempt))
+                    catalog = await fetch_catalog(client, self.server_id, request_deadline=self.request_deadline)
+            except TimeoutError as exc:
+                message = f"server '{self.server_id}' timed out after {budget:.0f}s without completing its handshake and tool listing"
+                raise McpConnectionError(message) from exc
             self._client = client
             self._catalog = catalog
             self._connected_at = datetime.now(tz=UTC)
@@ -1033,10 +1123,14 @@ class McpConnection:
         version = session.protocol_version
         modern = version in MODERN_PROTOCOL_VERSIONS
         try:
-            if version in MODERN_PROTOCOL_VERSIONS:
-                _ = await session.send_discover(version)
-            else:
-                _ = await session.send_ping()
+            async with self.request_deadline():
+                if version in MODERN_PROTOCOL_VERSIONS:
+                    _ = await session.send_discover(version)
+                else:
+                    _ = await session.send_ping()
+        except TimeoutError as exc:
+            message = f"server '{self.server_id}' stopped responding: no answer to the liveness probe within {self._config.request_timeout_s:.0f}s"
+            raise McpConnectionError(message) from exc
         except asyncio.CancelledError:
             raise
         except MCPError as exc:
@@ -1074,9 +1168,26 @@ class McpConnection:
         server that stays healthy between occasional drops keeps being
         reconnected for the life of the process.
 
+        However the supervisor ends -- a stop, a refused launch, exhausted
+        retries, cancellation -- the first attempt counts as settled, so a
+        :meth:`connect` still waiting learns the outcome at once instead of
+        waiting out :data:`CONNECT_TIMEOUT_S`.
+
+        Cancellation of the supervisor task, which unwinds the transport in
+        the task that opened it, and a non-ordinary leaf of a transport
+        failure, such as interpreter shutdown, both propagate from
+        :meth:`_supervise_attempts`.
+        """
+        try:
+            await self._supervise_attempts()
+        finally:
+            self._settled.set()
+
+    async def _supervise_attempts(self) -> None:
+        """Run connection attempts until one ends by a stop, a refusal or exhaustion.
+
         Raises:
-            asyncio.CancelledError: If the supervisor task is cancelled,
-                which unwinds the transport in the task that opened it.
+            asyncio.CancelledError: If the supervisor task is cancelled.
             fatal: The leaf :func:`fatal_leaf` found, when a transport
                 failure carried one that is not an ordinary exception, such
                 as interpreter shutdown. It is re-raised as itself, rather
@@ -1161,12 +1272,19 @@ class McpConnection:
         interactive OAuth sign-in -- does not count against
         :data:`CONNECT_TIMEOUT_S`.
 
+        Cancelling the caller abandons the attempt: the supervisor is
+        cancelled with it, so nothing the attempt was waiting on -- a consent
+        prompt, a sign-in, a handshake -- can bring the server up afterwards.
+
         Raises:
             McpConsentDeniedError: If the operator refused to let a local
                 server run. Nothing was spawned.
-            McpConnectionError: If the server is disabled, the first attempt
-                fails for any other reason, or it does not become ready
-                within :data:`CONNECT_TIMEOUT_S` of its own time.
+            McpConnectionError: If the server is disabled, was stopped while
+                connecting, the first attempt fails for any other reason, or
+                it does not become ready within :data:`CONNECT_TIMEOUT_S` of
+                its own time.
+            asyncio.CancelledError: If the caller is cancelled; the attempt
+                has been abandoned by the time it propagates.
         """
         if not self._config.enabled:
             self._health = McpHealth.DISABLED
@@ -1185,7 +1303,15 @@ class McpConnection:
         self._health = McpHealth.CONNECTING
         self._task = asyncio.create_task(self._supervise(), name=f"mcp-{self.server_id}")
 
-        if not await self._await_settled():
+        try:
+            settled = await self._await_settled()
+        except asyncio.CancelledError:
+            await asyncio.shield(self._abandon())
+            raise
+        if self._stop.is_set():
+            message = f"server '{self.server_id}' was stopped before it became ready"
+            raise McpConnectionError(message)
+        if not settled:
             await self.disconnect()
             self._health = McpHealth.FAILED
             self._last_error = f"timed out after {CONNECT_TIMEOUT_S:.0f}s waiting for the server to become ready"
@@ -1200,6 +1326,31 @@ class McpConnection:
                 raise McpConsentDeniedError(str(failure)) from failure
             message = f"server '{self.server_id}': {detail}"
             raise McpConnectionError(message) from failure
+
+    async def _abandon(self) -> None:
+        """Cancel a connection attempt nobody is waiting for any more.
+
+        Unlike :meth:`disconnect`, nothing is waited out gracefully: the
+        attempt has not produced a ready connection, so whatever it is blocked
+        on -- a prompt, a sign-in, a handshake -- is cancelled at once, and
+        the transport it opened is unwound in the supervisor's own task.
+        """
+        self._stop.set()
+        self._wake.set()
+        await self._stop_follower()
+        task = self._task
+        self._task = None
+        if task is not None and not task.done():
+            _ = task.cancel()
+            _ = await asyncio.wait({task})
+        if task is not None and not task.cancelled() and (failure := task.exception()) is not None:
+            _logger.info("mcp_server_abandoned_attempt_failed", server_id=self.server_id, error=str(failure))
+        self._client = None
+        self._connected_at = None
+        self._health = McpHealth.DISCONNECTED if self._config.enabled else McpHealth.DISABLED
+        self._stderr.close()
+        _logger.info("mcp_server_attempt_abandoned", server_id=self.server_id)
+        self._notify_change()
 
     def _settled_outcome(self) -> tuple[McpHealth, str | None, BaseException | None]:
         """Read the state the supervisor task settled on.
@@ -1217,6 +1368,13 @@ class McpConnection:
     async def disconnect(self) -> None:
         """Tear the connection down, leaving no child process behind.
 
+        A ready connection is closed gracefully, with up to
+        :data:`DISCONNECT_TIMEOUT_S` for the server to go. One that is not
+        ready -- still waiting on a consent prompt, an OAuth sign-in in the
+        browser or a handshake, or between reconnect attempts -- has nothing
+        to close gracefully, and is cancelled at once, which ends any such
+        wait.
+
         A connection that had already failed keeps its ``FAILED`` health and
         its recorded error, so the reason a server is not running survives
         the teardown that follows.
@@ -1227,11 +1385,15 @@ class McpConnection:
         """
         await self._stop_follower()
 
+        ready = self._health is McpHealth.READY
         self._stop.set()
         self._wake.set()
         task = self._task
         self._task = None
-        if task is not None and not task.done():
+        if task is not None and not task.done() and not ready:
+            _ = task.cancel()
+            _ = await asyncio.wait({task})
+        elif task is not None and not task.done():
             try:
                 await asyncio.wait_for(asyncio.shield(task), timeout=DISCONNECT_TIMEOUT_S)
             except TimeoutError:
@@ -1283,7 +1445,15 @@ class McpConnection:
             _logger.debug("mcp_catalog_still_fresh", server_id=self.server_id, ttl_ms=current.ttl_ms)
             return current
         try:
-            catalog = await fetch_catalog(client, self.server_id, cache_mode="refresh" if force else "use")
+            catalog = await fetch_catalog(
+                client,
+                self.server_id,
+                cache_mode="refresh" if force else "use",
+                request_deadline=self.request_deadline,
+            )
+        except TimeoutError as exc:
+            message = f"server '{self.server_id}': listing tools exceeded {self._config.request_timeout_s:.0f}s"
+            raise McpConnectionError(message) from exc
         except asyncio.CancelledError:
             raise
         except TRANSPORT_FAILURES as exc:
@@ -1392,7 +1562,6 @@ class McpConnection:
         task = self._listen_task
         if task is not None and not task.done():
             return
-        self._change_notice = asyncio.Event()
         self._listen_task = asyncio.create_task(self._follow(client), name=f"mcp-listen-{self.server_id}")
 
     async def _stop_follower(self) -> None:
@@ -1470,7 +1639,9 @@ class McpConnection:
             reopened: Whether an earlier stream on this connection ended, so
                 events may have been missed and the listing is re-read first.
         """
-        async with client.listen(tools_list_changed=True) as subscription:
+        async with AsyncExitStack() as stack:
+            async with self.request_deadline():
+                subscription = await stack.enter_async_context(client.listen(tools_list_changed=True))
             _logger.info("mcp_change_subscription_open", server_id=self.server_id)
             if reopened:
                 await self._refresh_after_notice()
@@ -1571,6 +1742,7 @@ class McpConnectionManager:
         self._order: list[str] = []
         self._listener: Callable[[str], None] | None = None
         self._started = False
+        self._stopped = False
 
     @property
     def document(self) -> McpConfigDocument:
@@ -1663,8 +1835,12 @@ class McpConnectionManager:
         Servers are started concurrently, so one waiting on the operator -- a
         launch-consent prompt or an OAuth sign-in in the browser -- does not
         hold back every server configured after it.
+
+        Starting the manager again after :meth:`stop` is allowed; it is what
+        lifts the refusal :meth:`stop` puts on :meth:`start_server`.
         """
         self._document = self._store.load()
+        self._stopped = False
         self._started = True
         reverted = await asyncio.to_thread(revert_stale_write_grants)
         if reverted:
@@ -1689,29 +1865,64 @@ class McpConnectionManager:
             _ = await self.start_server(server_id)
 
     async def stop(self) -> None:
-        """Bring every server down, in reverse start order.
+        """Bring every server down at once.
 
-        Teardown is deterministic and total: every connection is torn down
-        even if an earlier one raised, so no child process and no pending
-        task outlives the call.
+        Teardown is total: every connection is torn down even if another one
+        raised, so no child process and no pending task outlives the call.
+        The servers are torn down concurrently, so the call takes as long as
+        the slowest server rather than the sum of them, and a server still
+        connecting -- waiting on a prompt or an OAuth sign-in in the browser
+        -- is cancelled at once rather than waited on.
 
-        Raises:
-            asyncio.CancelledError: If the caller is cancelled mid-teardown.
+        From here on :meth:`start_server` refuses, until :meth:`start` is
+        called again: a start queued behind the stop, such as one the
+        settings dialog submitted, never brings a server back up.
+
+        A caller cancelled mid-teardown propagates
+        :class:`asyncio.CancelledError` once every teardown has been
+        cancelled with it.
         """
-        for server_id in reversed(self._order):
-            connection = self._connections.get(server_id)
-            if connection is None:
-                continue
-            try:
-                await connection.disconnect()
-            except asyncio.CancelledError:
-                raise
-            except TRANSPORT_FAILURES as exc:
-                _logger.warning("mcp_manager_stop_error", server_id=server_id, error=str(exc))
+        self._stopped = True
+        connections = [(server_id, connection) for server_id, connection in self._connections.items()]
         self._connections.clear()
         self._order.clear()
+        async with asyncio.TaskGroup() as group:
+            for server_id, connection in connections:
+                _ = group.create_task(self._stop_quietly(server_id, connection), name=f"mcp-stop-{server_id}")
         self._started = False
-        _logger.info("mcp_manager_stopped")
+        _logger.info("mcp_manager_stopped", servers=len(connections))
+
+    @staticmethod
+    async def _stop_quietly(server_id: str, connection: McpConnection) -> None:
+        """Tear one connection down, logging a failure rather than raising it.
+
+        Args:
+            server_id: The server's id.
+            connection: Its connection.
+
+        Raises:
+            asyncio.CancelledError: If the stop is cancelled.
+        """
+        try:
+            await connection.disconnect()
+        except asyncio.CancelledError:
+            raise
+        except TRANSPORT_FAILURES as exc:
+            _logger.warning("mcp_manager_stop_error", server_id=server_id, error=str(exc))
+
+    def _refuse_if_stopped(self, server_id: str) -> None:
+        """Refuse to bring a server up once the manager has been stopped.
+
+        Args:
+            server_id: The server that was to be started.
+
+        Raises:
+            McpConnectionError: If :meth:`stop` has run and :meth:`start` has
+                not run since.
+        """
+        if self._stopped:
+            message = f"server '{server_id}' was not started: MCP has been shut down"
+            raise McpConnectionError(message)
 
     async def start_server(self, server_id: str) -> McpServerStatus:
         """Bring one configured server up.
@@ -1723,9 +1934,10 @@ class McpConnectionManager:
             McpServerStatus: The server's state once the attempt settled.
 
         Raises:
-            McpConnectionError: If no such server is configured, or the
-                connection attempt failed.
+            McpConnectionError: If no such server is configured, the manager
+                has been stopped, or the connection attempt failed.
         """
+        self._refuse_if_stopped(server_id)
         config = self._document.server(server_id)
         if config is None:
             self._document = self._store.load()
@@ -1737,6 +1949,7 @@ class McpConnectionManager:
         existing = self._connections.get(server_id)
         if existing is not None:
             await existing.disconnect()
+        self._refuse_if_stopped(server_id)
 
         try:
             _ = self._consent.note_identity(config)

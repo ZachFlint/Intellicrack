@@ -15,17 +15,18 @@ import subprocess
 import sys
 import time
 from contextlib import contextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from pathlib import Path
 
 
 _BOOT_TIMEOUT_S: Final[float] = 60.0
 _POLL_S: Final[float] = 0.2
 _STOP_TIMEOUT_S: Final[float] = 10.0
+_REPOSITORY_ROOT: Final[Path] = Path(__file__).resolve().parents[2]
 
 
 def free_port() -> int:
@@ -86,12 +87,49 @@ def running_server(script: Path, *args: str) -> Generator[int]:
         await_port(port, process)
         yield port
     finally:
-        process.terminate()
-        try:
-            _ = process.wait(timeout=_STOP_TIMEOUT_S)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            _ = process.wait(timeout=_STOP_TIMEOUT_S)
+        _stop(process)
 
 
-__all__ = ["await_port", "free_port", "running_server"]
+@contextmanager
+def running_module(module: str, *args: str) -> Generator[int]:
+    """Run a server module from the repository root on a free loopback port until the block exits.
+
+    For a server that imports other test helpers, which only resolve with the repository root on the path. The module receives
+    ``--port <port>`` after ``args``.
+
+    Args:
+        module: The dotted module name, such as ``tests._helpers.mcp_oauth_server``.
+        *args: Arguments selecting its mode.
+
+    Yields:
+        int: The port it listens on.
+    """
+    port = free_port()
+    process = subprocess.Popen(
+        [sys.executable, "-m", module, *args, "--port", str(port)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        cwd=str(_REPOSITORY_ROOT),
+    )
+    try:
+        await_port(port, process)
+        yield port
+    finally:
+        _stop(process)
+
+
+def _stop(process: subprocess.Popen[bytes]) -> None:
+    """Stop a server process, killing it if it does not exit when asked.
+
+    Args:
+        process: The process.
+    """
+    process.terminate()
+    try:
+        _ = process.wait(timeout=_STOP_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        _ = process.wait(timeout=_STOP_TIMEOUT_S)
+
+
+__all__ = ["await_port", "free_port", "running_module", "running_server"]

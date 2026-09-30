@@ -26,6 +26,9 @@ import httpx2
 from mcp.client.sse import sse_client
 from mcp.client.stdio import StdioServerParameters
 from mcp.client.streamable_http import streamable_http_client
+from mcp.shared.inbound import MCP_METHOD_HEADER, MCP_PROTOCOL_VERSION_HEADER
+from mcp_types import CLIENT_CAPABILITIES_META_KEY, CLIENT_INFO_META_KEY, PROTOCOL_VERSION_META_KEY
+from mcp_types.version import LATEST_MODERN_VERSION
 
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.config import McpTransportKind
@@ -34,6 +37,8 @@ from intellicrack.mcp.errors import McpConfigError
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
+
+    from mcp_types import Implementation
 
     from intellicrack.mcp.config import HttpServerSpec, StdioServerSpec
 
@@ -374,6 +379,109 @@ async def open_http_transport(
     async with client, streamable_http_client(endpoint, http_client=client) as streams:
         read_stream, write_stream = streams[0], streams[1]
         yield read_stream, write_stream
+
+
+_SIGN_IN_METHOD: Final[str] = "server/discover"
+"""The request the sign-in probe sends: the first one a modern client sends, and one that changes nothing on the server."""
+
+_SIGN_IN_REQUEST_ID: Final[str] = "intellicrack-sign-in"
+
+
+async def sign_in_before_handshake(
+    spec: HttpServerSpec,
+    *,
+    headers: Mapping[str, str],
+    auth: httpx2.Auth,
+    timeout_s: float,
+    client_info: Implementation,
+) -> int:
+    """Complete a Streamable HTTP server's authorization before the protocol handshake starts.
+
+    The SDK signs a request in when the server answers it ``401``, from inside
+    the request that was refused. On a Streamable HTTP server that request is
+    the handshake's ``server/discover``, which the SDK bounds at ten seconds
+    and answers a timeout to by falling back to the legacy handshake, and
+    whose fallback ``initialize`` is bounded by the per-request timeout. An
+    operator who takes longer than that to sign in would silently downgrade
+    the connection or fail it.
+
+    This sends the same ``server/discover`` through the same authorization
+    handler first, outside any SDK timeout, so an interactive sign-in happens
+    here and the handshake that follows already carries a token. Its answer
+    is not used: whatever the server says once authorized, the handshake
+    asks again.
+
+    Redirects are followed only while they stay on the endpoint's origin,
+    which is what the transport itself does.
+
+    Args:
+        spec: The configured endpoint, with resolved query parameters.
+        headers: Fully resolved request headers.
+        auth: The authorization handler the transport will use.
+        timeout_s: Connect and write timeout in seconds for each HTTP request.
+        client_info: The client identity the handshake sends.
+
+    Returns:
+        int: The HTTP status of the final answer.
+    """
+    endpoint = compose_endpoint_url(spec.url, spec.query)
+    body = {
+        "jsonrpc": "2.0",
+        "id": _SIGN_IN_REQUEST_ID,
+        "method": _SIGN_IN_METHOD,
+        "params": {
+            "_meta": {
+                PROTOCOL_VERSION_META_KEY: LATEST_MODERN_VERSION,
+                CLIENT_INFO_META_KEY: client_info.model_dump(by_alias=True, mode="json", exclude_none=True),
+                CLIENT_CAPABILITIES_META_KEY: {},
+            },
+        },
+    }
+    request_headers = {
+        **headers,
+        "accept": "application/json, text/event-stream",
+        "content-type": "application/json",
+        MCP_PROTOCOL_VERSION_HEADER: LATEST_MODERN_VERSION,
+        MCP_METHOD_HEADER: _SIGN_IN_METHOD,
+    }
+    origin = _origin(endpoint)
+    async with _build_http_client(headers={}, timeout=httpx2.Timeout(timeout_s), auth=auth) as client:
+        response = await _send_and_close(client, client.build_request("POST", endpoint, json=body, headers=request_headers))
+        for _ in range(client.max_redirects):
+            follow = response.next_request
+            if follow is None or _origin(str(follow.url)) != origin:
+                break
+            response = await _send_and_close(client, follow)
+    _logger.debug("mcp_sign_in_probe_answered", endpoint=_redact_endpoint(endpoint), status=response.status_code)
+    return response.status_code
+
+
+async def _send_and_close(client: httpx2.AsyncClient, request: httpx2.Request) -> httpx2.Response:
+    """Send one request through the client's authorization handler and discard the body.
+
+    Args:
+        client: The client carrying the authorization handler.
+        request: The request.
+
+    Returns:
+        httpx2.Response: The closed response, with its status and headers.
+    """
+    response = await client.send(request, stream=True, follow_redirects=False)
+    await response.aclose()
+    return response
+
+
+def _origin(url: str) -> tuple[str, str, int | None]:
+    """Reduce a URL to the origin a redirect must stay within.
+
+    Args:
+        url: The URL.
+
+    Returns:
+        tuple[str, str, int | None]: The scheme, host and port.
+    """
+    parts = urlsplit(url)
+    return parts.scheme.lower(), (parts.hostname or "").lower(), parts.port
 
 
 def _build_http_client(

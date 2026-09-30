@@ -16,7 +16,9 @@ bounded; whatever reaches the model as prose is fenced, exactly as tool output
 is. A resource URI and a prompt name are kept exactly as the server wrote them
 where the server needs them back to serve a read or a fetch.
 
-Every request here catches transport failures and re-raises them as
+Every request here goes through :meth:`~intellicrack.mcp.connection.McpConnection.request`,
+which bounds it by the server's per-request timeout, not counting time spent
+waiting on the operator, and re-raises a timeout or a transport failure as
 :class:`~intellicrack.mcp.errors.McpConnectionError`.
 :class:`asyncio.CancelledError` is deliberately not among them: it propagates
 untouched, so cancelling a caller mid-request unwinds rather than being
@@ -26,6 +28,7 @@ recorded as a server fault.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 from typing import TYPE_CHECKING, Final
 
 from intellicrack.core.logging import get_logger
@@ -37,7 +40,6 @@ from intellicrack.core.types import (
     ToolResultPart,
 )
 from intellicrack.core.untrusted_text import clean_untrusted_label, sanitize_untrusted_text
-from intellicrack.mcp.connection import TRANSPORT_FAILURES, failure_text, representative_failure
 from intellicrack.mcp.errors import McpConnectionError
 
 
@@ -151,27 +153,23 @@ def _require_client(connection: McpConnection) -> Client:
 async def list_resources(connection: McpConnection) -> list[ResourceSummary]:
     """List every resource a server offers.
 
+    A server that is not connected propagates
+    :class:`~intellicrack.mcp.errors.McpConnectionError` from the connection
+    check, and a request that times out or fails propagates the same from
+    :meth:`~intellicrack.mcp.connection.McpConnection.request`.
+
     Args:
         connection: The connected server.
 
     Returns:
         list[ResourceSummary]: The resources, in server order, capped at
         :data:`MAX_ENTRIES`.
-
-    Raises:
-        McpConnectionError: If the server is not connected, or the listing
-            could not be retrieved.
     """
     client = _require_client(connection)
     summaries: list[ResourceSummary] = []
     cursor: str | None = None
     for _ in range(MAX_LIST_PAGES):
-        try:
-            result = await client.list_resources(cursor=cursor)
-        except TRANSPORT_FAILURES as exc:
-            failure = representative_failure(exc)
-            message = f"server '{connection.server_id}': cannot list resources: {failure_text(failure)}"
-            raise McpConnectionError(message) from failure
+        result = await connection.request("list resources", partial(client.list_resources, cursor=cursor))
         summaries.extend(
             ResourceSummary(
                 uri=str(resource.uri),
@@ -193,24 +191,20 @@ async def list_resources(connection: McpConnection) -> list[ResourceSummary]:
 async def read_resource(connection: McpConnection, uri: str) -> list[ToolResultPart]:
     """Fetch one resource's contents.
 
+    A server that is not connected propagates
+    :class:`~intellicrack.mcp.errors.McpConnectionError` from the connection
+    check, and a request that times out or fails propagates the same from
+    :meth:`~intellicrack.mcp.connection.McpConnection.request`.
+
     Args:
         connection: The connected server.
         uri: The resource URI, as the listing reported it.
 
     Returns:
         list[ToolResultPart]: One part per content block the server returned.
-
-    Raises:
-        McpConnectionError: If the server is not connected, or the read
-            failed.
     """
     client = _require_client(connection)
-    try:
-        result = await client.read_resource(uri)
-    except TRANSPORT_FAILURES as exc:
-        failure = representative_failure(exc)
-        message = f"server '{connection.server_id}': cannot read {uri!r}: {failure_text(failure)}"
-        raise McpConnectionError(message) from failure
+    result = await connection.request(f"read {uri!r}", partial(client.read_resource, uri))
 
     parts: list[ToolResultPart] = []
     for contents in result.contents:
@@ -231,27 +225,23 @@ async def read_resource(connection: McpConnection, uri: str) -> list[ToolResultP
 async def list_prompts(connection: McpConnection) -> list[PromptSummary]:
     """List every prompt template a server offers.
 
+    A server that is not connected propagates
+    :class:`~intellicrack.mcp.errors.McpConnectionError` from the connection
+    check, and a request that times out or fails propagates the same from
+    :meth:`~intellicrack.mcp.connection.McpConnection.request`.
+
     Args:
         connection: The connected server.
 
     Returns:
         list[PromptSummary]: The prompts, in server order, capped at
         :data:`MAX_ENTRIES`.
-
-    Raises:
-        McpConnectionError: If the server is not connected, or the listing
-            could not be retrieved.
     """
     client = _require_client(connection)
     summaries: list[PromptSummary] = []
     cursor: str | None = None
     for _ in range(MAX_LIST_PAGES):
-        try:
-            result = await client.list_prompts(cursor=cursor)
-        except TRANSPORT_FAILURES as exc:
-            failure = representative_failure(exc)
-            message = f"server '{connection.server_id}': cannot list prompts: {failure_text(failure)}"
-            raise McpConnectionError(message) from failure
+        result = await connection.request("list prompts", partial(client.list_prompts, cursor=cursor))
         for prompt in result.prompts:
             arguments = tuple(argument.name for argument in prompt.arguments or ())
             required = frozenset(argument.name for argument in prompt.arguments or () if argument.required)
@@ -308,6 +298,11 @@ async def get_prompt(connection: McpConnection, name: str, arguments: Mapping[st
     The messages a server returns are its own words, not Intellicrack's, so
     each one is fenced before it can reach the model as conversation.
 
+    A server that is not connected propagates
+    :class:`~intellicrack.mcp.errors.McpConnectionError` from the connection
+    check, and a request that times out or fails propagates the same from
+    :meth:`~intellicrack.mcp.connection.McpConnection.request`.
+
     Args:
         connection: The connected server.
         name: The prompt name, as the listing reported it.
@@ -315,18 +310,9 @@ async def get_prompt(connection: McpConnection, name: str, arguments: Mapping[st
 
     Returns:
         list[Message]: The rendered conversation messages.
-
-    Raises:
-        McpConnectionError: If the server is not connected, or the prompt
-            could not be fetched.
     """
     client = _require_client(connection)
-    try:
-        result = await client.get_prompt(name, dict(arguments))
-    except TRANSPORT_FAILURES as exc:
-        failure = representative_failure(exc)
-        message = f"server '{connection.server_id}': cannot fetch prompt {name!r}: {failure_text(failure)}"
-        raise McpConnectionError(message) from failure
+    result = await connection.request(f"fetch prompt {name!r}", partial(client.get_prompt, name, dict(arguments)))
 
     messages: list[Message] = []
     for entry in result.messages:
