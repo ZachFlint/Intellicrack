@@ -63,7 +63,7 @@ from intellicrack.providers.dialects.base import (
     tool_result_text,
 )
 from intellicrack.providers.dialects.responses import without_reasoning_summary
-from intellicrack.providers.presets import preset_capabilities
+from intellicrack.providers.presets import dialect_model_capabilities, preset_capabilities, preset_for
 from intellicrack.providers.tool_names import to_wire_name
 
 
@@ -540,7 +540,9 @@ class LLMProviderBase(ABC):
         """Resolve one model's capability record through the layered merge.
 
         Resolution order is the dialect's defaults, then the preset's known
-        capabilities for that model family, then metadata ingested from the
+        capabilities for that model family (or, for an endpoint configured
+        from no preset, what the model family's wire format needs), then
+        metadata ingested from the
         endpoint's own ``/models`` payload, then the per-model user override,
         which always wins. A model id that matches nothing exactly is retried
         with its variant suffix stripped, so ``my-model:free`` resolves
@@ -554,7 +556,12 @@ class LLMProviderBase(ABC):
         """
         adapter = self.adapter()
         base = adapter.default_capabilities() if adapter is not None else ModelCapabilities()
-        base = merge_capabilities(base, preset_capabilities(self.preset_id, model))
+        family = (
+            preset_capabilities(self.preset_id, model)
+            if preset_for(self.preset_id) is not None
+            else dialect_model_capabilities(self.dialect, model)
+        )
+        base = merge_capabilities(base, family)
         ingested = self._lookup_model_entry(self._model_capabilities, model)
         if ingested is not None:
             base = ingested

@@ -122,7 +122,10 @@ class ReasoningEffortFormat(enum.Enum):
             depth set by ``output_config.effort``. Claude Opus 4.6 and Sonnet
             4.6 accept it in place of the deprecated budget; Opus 4.7 and
             later, Sonnet 5 and Fable reject a budget outright.
-        GENERATION_BUDGET: Gemini ``generationConfig.thinkingConfig.thinkingBudget``.
+        GENERATION_BUDGET: Gemini ``generationConfig.thinkingConfig.thinkingBudget``,
+            which Gemini 2.5 takes.
+        GENERATION_LEVEL: Gemini ``generationConfig.thinkingConfig.thinkingLevel``,
+            which Gemini 3 takes in place of a budget.
     """
 
     NONE = "none"
@@ -131,6 +134,7 @@ class ReasoningEffortFormat(enum.Enum):
     THINKING_BUDGET = "thinking.budget_tokens"
     ADAPTIVE_EFFORT = "output_config.effort"
     GENERATION_BUDGET = "thinkingConfig.thinkingBudget"
+    GENERATION_LEVEL = "thinkingConfig.thinkingLevel"
 
 
 class ToolSearchStyle(enum.Enum):
@@ -162,6 +166,12 @@ ANTHROPIC_EFFORT_LEVELS: Final[tuple[str, ...]] = ("low", "medium", "high", "xhi
 
 ANTHROPIC_46_EFFORT_LEVELS: Final[tuple[str, ...]] = ("low", "medium", "high", "max")
 """``output_config.effort`` values of Claude Opus 4.6 and Sonnet 4.6, which predate ``xhigh``."""
+
+GEMINI_3_THINKING_LEVELS: Final[tuple[str, ...]] = ("low", "high")
+"""``thinkingLevel`` values Gemini 3 Pro accepts."""
+
+GEMINI_3_FLASH_THINKING_LEVELS: Final[tuple[str, ...]] = ("minimal", "low", "medium", "high")
+"""``thinkingLevel`` values Gemini 3 Flash accepts."""
 
 _BUDGET_EFFORT_LADDER: Final[tuple[tuple[int, str], ...]] = (
     (4000, "low"),

@@ -38,6 +38,7 @@ from intellicrack.providers.capabilities import (
     ReasoningEffortFormat,
     ReasoningSupport,
     TokenLimitField,
+    effort_for_thinking_budget,
 )
 from intellicrack.providers.dialects.base import (
     GEMINI_IMAGE_POLICY,
@@ -89,6 +90,28 @@ _STRUCTURED_KEY: Final[str] = "structured"
 
 _TEXT_KEY: Final[str] = "text"
 """Key, inside ``output``, of a result's prose when the result also carries structured data."""
+
+
+def gemini_thinking_config(budget_tokens: int, reasoning: ReasoningSupport) -> dict[str, Any]:
+    """Build Gemini's ``thinkingConfig`` in the field the model family takes.
+
+    Gemini 3 takes a ``thinkingLevel``, mapped from the budget onto the
+    levels the model offers; earlier models take the ``thinkingBudget``
+    itself.
+
+    Args:
+        budget_tokens: The caller's thinking budget.
+        reasoning: The model's reasoning surface.
+
+    Returns:
+        dict[str, Any]: The ``thinkingConfig`` object, asking for thought
+        summaries too.
+    """
+    if reasoning.effort_format is ReasoningEffortFormat.GENERATION_LEVEL:
+        level = effort_for_thinking_budget(budget_tokens, reasoning.effort_levels)
+        if level is not None:
+            return {"thinkingLevel": level, "includeThoughts": True}
+    return {"thinkingBudget": budget_tokens, "includeThoughts": True}
 
 
 class GeminiAdapter(DialectAdapter):
@@ -298,10 +321,7 @@ class GeminiAdapter(DialectAdapter):
             generation_config["temperature"] = request.temperature
         thinking = request.thinking
         if thinking is not None and thinking.enabled and capabilities.reasoning.supported:
-            generation_config["thinkingConfig"] = {
-                "thinkingBudget": thinking.budget_tokens,
-                "includeThoughts": True,
-            }
+            generation_config["thinkingConfig"] = gemini_thinking_config(thinking.budget_tokens, capabilities.reasoning)
         body["generationConfig"] = generation_config
 
         if tools := self.build_tool_schemas(request.tools, capabilities, name_style=request.tool_name_style):

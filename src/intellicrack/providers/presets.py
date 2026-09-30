@@ -30,6 +30,8 @@ from intellicrack.providers.capabilities import (
     ANTHROPIC_46_EFFORT_LEVELS,
     ANTHROPIC_EFFORT_LEVELS,
     EXTENDED_EFFORT_LEVELS,
+    GEMINI_3_FLASH_THINKING_LEVELS,
+    GEMINI_3_THINKING_LEVELS,
     TIKTOKEN_CL100K,
     TIKTOKEN_O200K,
     ApiDialect,
@@ -219,6 +221,30 @@ _GEMINI_REASONING = ReasoningSupport(
     supported=True,
     effort_format=ReasoningEffortFormat.GENERATION_BUDGET,
 )
+
+_GEMINI_3_REASONING = ReasoningSupport(
+    supported=True,
+    effort_levels=GEMINI_3_THINKING_LEVELS,
+    effort_format=ReasoningEffortFormat.GENERATION_LEVEL,
+)
+
+_GEMINI_3_FLASH_REASONING = ReasoningSupport(
+    supported=True,
+    effort_levels=GEMINI_3_FLASH_THINKING_LEVELS,
+    effort_format=ReasoningEffortFormat.GENERATION_LEVEL,
+)
+
+GEMINI_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
+    ModelPreset(prefixes=("gemini-3-flash", "models/gemini-3-flash"), capabilities=CapabilityOverride(reasoning=_GEMINI_3_FLASH_REASONING)),
+    ModelPreset(prefixes=("gemini-3", "models/gemini-3"), capabilities=CapabilityOverride(reasoning=_GEMINI_3_REASONING)),
+)
+"""Gemini families whose thinking is set by level rather than by budget.
+
+Gemini 3 takes ``thinkingLevel``; Gemini 2.5, the dialect's default, takes
+``thinkingBudget``. Flash offers four levels and Pro two.
+"""
+
+_DIALECT_MODEL_PRESETS: Final[dict[ApiDialect, tuple[ModelPreset, ...]]] = {ApiDialect.GEMINI: GEMINI_MODEL_PRESETS}
 
 _ANTHROPIC_GATEWAY_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
     *ANTHROPIC_MODEL_PRESETS,
@@ -425,6 +451,7 @@ BUILTIN_PRESETS: Final[dict[str, ProviderPreset]] = {
             reasoning=_GEMINI_REASONING,
             tokenizer=TIKTOKEN_CL100K,
         ),
+        model_presets=GEMINI_MODEL_PRESETS,
     ),
     provider_ids.OLLAMA: ProviderPreset(
         provider_id=provider_ids.OLLAMA,
@@ -574,6 +601,29 @@ def preset_for(preset_id: str) -> ProviderPreset | None:
         ProviderPreset | None: The preset, or ``None`` when none matches.
     """
     return all_presets().get(preset_id.strip().lower())
+
+
+def dialect_model_capabilities(dialect: ApiDialect | None, model: str) -> CapabilityOverride:
+    """Resolve what a model family's wire format needs, for an endpoint created from no preset.
+
+    Args:
+        dialect: The wire format the endpoint speaks, or ``None`` when it
+            has none.
+        model: The model id.
+
+    Returns:
+        CapabilityOverride: The first matching family's capabilities, or an
+        empty override.
+    """
+    lowered = model.strip().lower()
+    return next(
+        (
+            preset.capabilities
+            for preset in (_DIALECT_MODEL_PRESETS.get(dialect, ()) if dialect is not None else ())
+            if lowered.startswith(preset.prefixes)
+        ),
+        CapabilityOverride(),
+    )
 
 
 def preset_capabilities(preset_id: str, model: str) -> CapabilityOverride:
