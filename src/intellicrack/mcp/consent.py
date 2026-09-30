@@ -251,7 +251,9 @@ def describe_sandbox(sandbox: McpSandboxSpec) -> list[str]:
         "Sandbox: ON",
         "  It runs at Low integrity with every privilege removed, inside a job",
         "  that ends it and everything it starts when Intellicrack stops it.",
-        "  It can write only to these folders:",
+        "  It can change files already in these folders, and add new ones:"
+        if sandbox.write_existing
+        else "  It can add new files to these folders, but not change what is already there:",
     ]
     lines.extend(f"    {entry}" for entry in sandbox.allow_write)
     if not sandbox.allow_write:
@@ -340,6 +342,7 @@ def _sandbox_material(sandbox: McpSandboxSpec) -> dict[str, object]:
         "allowWrite": [os.path.normcase(os.path.normpath(entry)) for entry in sandbox.allow_write],
         "allowedDomains": sorted(domain.strip().lower() for domain in sandbox.allowed_domains),
         "inheritEnv": sorted(name.upper() for name in sandbox.inherit_env),
+        "writeExisting": sandbox.write_existing,
     }
 
 

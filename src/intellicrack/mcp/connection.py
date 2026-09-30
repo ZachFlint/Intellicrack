@@ -54,7 +54,7 @@ from intellicrack.mcp.config import McpConfigStore, McpServerConfig, McpTranspor
 from intellicrack.mcp.consent import McpConsentStoreError
 from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
 from intellicrack.mcp.operator_wait import OperatorWaitClock
-from intellicrack.mcp.sandbox_launch import build_sandboxed_startup, confined_stdio_client, sandbox_supported
+from intellicrack.mcp.sandbox_launch import build_sandboxed_startup, confined_stdio_client, revert_stale_write_grants, sandbox_supported
 from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, open_http_transport
 
 
@@ -1666,6 +1666,9 @@ class McpConnectionManager:
         """
         self._document = self._store.load()
         self._started = True
+        reverted = await asyncio.to_thread(revert_stale_write_grants)
+        if reverted:
+            _logger.warning("mcp_stale_sandbox_grants_reverted", count=reverted)
         async with asyncio.TaskGroup() as group:
             for config in self._document.servers:
                 if config.enabled:

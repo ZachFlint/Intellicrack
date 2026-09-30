@@ -522,11 +522,13 @@ class McpSandboxSpec:
         enabled: Whether the child is created suspended inside a job object,
             with a restricted Low integrity token and an allowlisted
             environment, before it runs.
-        allow_write: Absolute directories the child may write to. They are
-            given a Low mandatory label; everything the operator owns
-            outside them stays unwritable to the child, apart from locations
-            Windows itself labels Low such as ``AppData/LocalLow``. Reads are
-            not restricted.
+        allow_write: Absolute directories the child may create files and
+            folders in. For as long as the server runs each one carries a
+            Low mandatory label that new content inherits; the label is
+            removed again when the server stops. Everything the operator
+            owns outside them stays unwritable to the child, apart from
+            locations Windows itself labels Low such as ``AppData/LocalLow``.
+            Reads are not restricted.
         allowed_domains: Hostnames the operator expects the child to reach.
             Recorded and logged only: it is not enforced, and a sandboxed
             server can still connect to any host.
@@ -535,12 +537,18 @@ class McpSandboxSpec:
             :mod:`intellicrack.mcp.sandbox_launch`. Nothing is inherited by
             default that could carry a credential; a name listed here is the
             operator's deliberate choice.
+        write_existing: Whether files and folders already inside the
+            ``allow_write`` directories may be changed too. Off by default,
+            so a server can add to a directory without being able to alter
+            what was there before it started; either way every label is
+            reverted when the server stops.
     """
 
     enabled: bool = False
     allow_write: tuple[str, ...] = ()
     allowed_domains: tuple[str, ...] = ()
     inherit_env: tuple[str, ...] = ()
+    write_existing: bool = False
 
 
 _DEFAULT_SANDBOX: Final[McpSandboxSpec] = McpSandboxSpec()
@@ -1084,6 +1092,7 @@ def _parse_sandbox(data: Mapping[str, Any], *, server_id: str) -> McpSandboxSpec
         allow_write=_str_sequence(raw, "allowWrite", server_id=server_id),
         allowed_domains=_str_sequence(raw, "allowedDomains", server_id=server_id),
         inherit_env=_str_sequence(raw, "inheritEnv", server_id=server_id),
+        write_existing=_optional_bool(raw, "writeExisting", server_id=server_id, default=False),
     )
 
 
@@ -1264,6 +1273,8 @@ def _serialize_server(config: McpServerConfig) -> dict[str, Any]:
             sandbox["allowedDomains"] = list(config.sandbox.allowed_domains)
         if config.sandbox.inherit_env:
             sandbox["inheritEnv"] = list(config.sandbox.inherit_env)
+        if config.sandbox.write_existing:
+            sandbox["writeExisting"] = True
         data["sandbox"] = sandbox
     if config.request_timeout_s != DEFAULT_REQUEST_TIMEOUT_S:
         data["requestTimeout"] = config.request_timeout_s

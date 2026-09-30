@@ -17,10 +17,13 @@ What is enforced:
   configured entries. Nothing is merged in from anywhere else, so the API keys and tokens Intellicrack's environment carries do not travel.
 * **Token.** Every privilege except change-notify is removed, the Administrators group is deny-only, and the integrity level is lowered to
   Low.
-* **Writes.** A Low integrity process cannot write to anything labelled above Low, which by default is everything the operator owns. The
-  directories in ``allowWrite`` are given a Low mandatory label (inherited by their contents) so the server can write there. Locations
-  Windows itself labels Low, such as ``%USERPROFILE%\AppData\LocalLow``, remain writable to any Low integrity process, this one
-  included. Reads are not restricted.
+* **Writes.** A Low integrity process cannot write to anything labelled above Low, which by default is everything the operator owns. For
+  as long as the server runs, each directory in ``allowWrite`` carries an inheritable Low mandatory label, so the server can create files
+  and folders there; what was already inside keeps its own label unless the operator opted into ``writeExisting``. When the server stops,
+  every directory's original label is put back and the Low label is withdrawn from everything that inherited it, so nothing stays
+  writable to other Low integrity processes afterwards. A grant still in force when Intellicrack last exited is reverted at the next
+  start. Labelling runs on a worker thread, never on the event loop. Locations Windows itself labels Low, such as
+  ``%USERPROFILE%\AppData\LocalLow``, remain writable to any Low integrity process, this one included. Reads are not restricted.
 * **Job.** An active-process cap, per-process and per-job committed-memory caps, UI restrictions, and kill-on-close, so a server that
   spawns children cannot outlive its connection.
 * **Console.** The child runs with no console window.
@@ -39,6 +42,7 @@ import ctypes
 import functools
 import os
 import sys
+import threading
 from contextlib import asynccontextmanager, suppress
 from ctypes import wintypes
 from dataclasses import dataclass, field
@@ -51,6 +55,9 @@ import mcp_types
 from anyio.streams.file import FileReadStream, FileWriteStream
 from mcp.shared.message import SessionMessage
 
+from intellicrack.core.config import get_config_file
+from intellicrack.core.json_payload import JsonObject, is_json_object
+from intellicrack.core.locked_json import JsonDocumentError, LockedJsonFile
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.config import sandbox_limitations
 from intellicrack.mcp.errors import McpConfigError
@@ -194,9 +201,15 @@ _SECURITY_MAX_SID_SIZE: Final[int] = 68
 _LOW_LABEL_SDDL: Final[str] = "S:(ML;OICI;NW;;;LW)"
 """A SACL granting Low integrity write access, inherited by files and subdirectories."""
 
+_NO_LABEL_SDDL: Final[str] = "S:"
+"""A SACL with no entries: an object carrying it has no explicit mandatory label."""
+
 _SDDL_REVISION_1: Final[int] = 1
 _SE_FILE_OBJECT: Final[int] = 1
 _LABEL_SECURITY_INFORMATION: Final[int] = 0x00000010
+
+GRANTS_FILENAME: Final[str] = "mcp_sandbox_grants.json"
+"""File recording every Low integrity write grant in force, so one left behind by a crash is reverted at the next start."""
 
 _STARTF_USESTDHANDLES: Final[int] = 0x00000100
 _PROC_THREAD_ATTRIBUTE_HANDLE_LIST: Final[int] = 0x00020002
@@ -347,6 +360,8 @@ class SandboxedLaunch:
         temp_dir: The directory ``TEMP`` and ``TMP`` point at.
         creation_flags: Win32 process creation flags.
         limits: The ceilings to apply to the job the child runs in.
+        write_existing: Whether content already in the writable directories
+            may be changed too.
     """
 
     command: str
@@ -358,6 +373,7 @@ class SandboxedLaunch:
     temp_dir: str
     creation_flags: int = SANDBOX_CREATION_FLAGS
     limits: JobLimits = field(default_factory=JobLimits)
+    write_existing: bool = False
 
     @property
     def is_batch_script(self) -> bool:
@@ -653,6 +669,7 @@ def plan_sandboxed_launch(
         cwd=cwd,
         writable=writable,
         temp_dir=temp_dir,
+        write_existing=sandbox.write_existing,
     )
     _ = launch.command_line
     return launch
@@ -826,6 +843,18 @@ def _advapi32() -> ctypes.WinDLL:
         ctypes.c_void_p,
     ]
     advapi32.SetNamedSecurityInfoW.restype = wintypes.DWORD
+    advapi32.GetFileSecurityW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
+    advapi32.GetFileSecurityW.restype = wintypes.BOOL
+    advapi32.SetFileSecurityW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, ctypes.c_void_p]
+    advapi32.SetFileSecurityW.restype = wintypes.BOOL
+    advapi32.ConvertSecurityDescriptorToStringSecurityDescriptorW.argtypes = [
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.LPWSTR),
+        ctypes.POINTER(wintypes.ULONG),
+    ]
+    advapi32.ConvertSecurityDescriptorToStringSecurityDescriptorW.restype = wintypes.BOOL
     return advapi32
 
 
@@ -1081,72 +1110,425 @@ def create_restricted_token() -> int:
     return int(restricted.value or 0)
 
 
-def label_directory_low_integrity(directory: str) -> None:
-    """Let Low integrity processes write inside one directory.
+@dataclass(frozen=True, slots=True)
+class WriteGrant:
+    """One directory made writable to Low integrity processes, and how to undo it.
 
-    The directory receives a Low mandatory label that its files and
-    subdirectories inherit. That is the only change: its access control list
-    is untouched, so it grants nobody anything it did not already grant.
+    Attributes:
+        directory: The directory, resolved.
+        original_label: The directory's mandatory label before the grant, in
+            SDDL; ``"S:"`` when it carried none.
+        existing: Whether content already in the directory was relabelled
+            too, rather than only the directory itself.
+    """
+
+    directory: str
+    original_label: str
+    existing: bool
+
+
+def _security_descriptor_from_sddl(sddl: str) -> ctypes.c_void_p:
+    """Build a self-relative security descriptor from SDDL.
+
+    Args:
+        sddl: The descriptor's SDDL.
+
+    Returns:
+        ctypes.c_void_p: The descriptor. The caller frees it with ``LocalFree``.
+
+    Raises:
+        ctypes.WinError: If the SDDL could not be converted.
+    """
+    descriptor = ctypes.c_void_p()
+    if not _advapi32().ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl, _SDDL_REVISION_1, ctypes.byref(descriptor), None):
+        raise ctypes.WinError(ctypes.get_last_error())
+    return descriptor
+
+
+def read_mandatory_label(path: str) -> str:
+    """Read a file or directory's mandatory label as SDDL.
 
     A platform with no sandbox propagates :class:`McpConfigError` from
     :func:`_kernel32`.
 
     Args:
-        directory: The directory the confined server may write to.
+        path: The file or directory.
+
+    Returns:
+        str: The label's SDDL, such as ``"S:(ML;OICI;NW;;;LW)"``, or
+        ``"S:"`` when the object carries no explicit label.
+
+    Raises:
+        ctypes.WinError: If the label could not be read.
+    """
+    kernel32 = _kernel32()
+    advapi32 = _advapi32()
+    needed = wintypes.DWORD(0)
+    _ = advapi32.GetFileSecurityW(path, _LABEL_SECURITY_INFORMATION, None, 0, ctypes.byref(needed))
+    if ctypes.get_last_error() != _ERROR_INSUFFICIENT_BUFFER or not needed.value:
+        raise ctypes.WinError(ctypes.get_last_error())
+    buffer = ctypes.create_string_buffer(needed.value)
+    if not advapi32.GetFileSecurityW(path, _LABEL_SECURITY_INFORMATION, buffer, needed, ctypes.byref(needed)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    text = wintypes.LPWSTR()
+    length = wintypes.ULONG(0)
+    if not advapi32.ConvertSecurityDescriptorToStringSecurityDescriptorW(
+        buffer,
+        _SDDL_REVISION_1,
+        _LABEL_SECURITY_INFORMATION,
+        ctypes.byref(text),
+        ctypes.byref(length),
+    ):
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        rendered = text.value or ""
+    finally:
+        _ = kernel32.LocalFree(ctypes.cast(text, ctypes.c_void_p))
+    return rendered if rendered.startswith("S:") else _NO_LABEL_SDDL
+
+
+def set_mandatory_label(path: str, sddl: str, *, propagate: bool) -> None:
+    """Set a file or directory's mandatory label.
+
+    Without ``propagate`` only the object itself changes: its children keep
+    their labels, and an inheritable label reaches only what is created in it
+    afterwards. With ``propagate`` the change is carried to every descendant,
+    which adds an inheritable label to all of them or withdraws one they
+    inherited.
+
+    A platform with no sandbox propagates :class:`McpConfigError` from
+    :func:`_kernel32`.
+
+    Args:
+        path: The file or directory.
+        sddl: The label's SDDL; ``"S:"`` removes any explicit label.
+        propagate: Whether descendants follow the change.
 
     Raises:
         ctypes.WinError: If the label could not be built or applied.
     """
     kernel32 = _kernel32()
     advapi32 = _advapi32()
-    descriptor = ctypes.c_void_p()
-    if not advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW(
-        _LOW_LABEL_SDDL,
-        _SDDL_REVISION_1,
-        ctypes.byref(descriptor),
-        None,
-    ):
-        raise ctypes.WinError(ctypes.get_last_error())
+    descriptor = _security_descriptor_from_sddl(sddl)
     try:
+        if not propagate:
+            if not advapi32.SetFileSecurityW(path, _LABEL_SECURITY_INFORMATION, descriptor):
+                raise ctypes.WinError(ctypes.get_last_error())
+            return
         present = wintypes.BOOL()
         defaulted = wintypes.BOOL()
         sacl = ctypes.c_void_p()
         if not advapi32.GetSecurityDescriptorSacl(descriptor, ctypes.byref(present), ctypes.byref(sacl), ctypes.byref(defaulted)):
             raise ctypes.WinError(ctypes.get_last_error())
-        path = ctypes.create_unicode_buffer(directory)
-        status = advapi32.SetNamedSecurityInfoW(path, _SE_FILE_OBJECT, _LABEL_SECURITY_INFORMATION, None, None, None, sacl)
+        buffer = ctypes.create_unicode_buffer(path)
+        status = advapi32.SetNamedSecurityInfoW(buffer, _SE_FILE_OBJECT, _LABEL_SECURITY_INFORMATION, None, None, None, sacl)
         if status:
             raise ctypes.WinError(status)
     finally:
         _ = kernel32.LocalFree(descriptor)
-    _logger.info("mcp_sandbox_write_path_labelled", directory=directory)
 
 
-def apply_write_confinement(launch: SandboxedLaunch) -> None:
+def label_directory_low_integrity(directory: str, *, existing: bool = False) -> None:
+    """Let Low integrity processes create files inside one directory.
+
+    The directory receives a Low mandatory label that whatever is created in
+    it inherits. Its access control list is untouched, so it grants nobody
+    anything it did not already grant. Content already inside keeps its own
+    label unless ``existing`` is set, in which case the label is carried to
+    every descendant too.
+
+    A platform with no sandbox propagates :class:`McpConfigError` from
+    :func:`_kernel32`, and a label that cannot be built or applied
+    propagates ``ctypes.WinError`` from :func:`set_mandatory_label`.
+
+    Args:
+        directory: The directory the confined server may write to.
+        existing: Whether content already inside becomes writable too.
+    """
+    set_mandatory_label(directory, _LOW_LABEL_SDDL, propagate=existing)
+    _logger.info("mcp_sandbox_write_path_labelled", directory=directory, existing=existing)
+
+
+class WriteGrantLedger:
+    """Every Low integrity write grant this process holds, counted and recorded on disk.
+
+    Two servers may nominate the same directory. The first grant records the directory's original label; later ones only count, and the
+    label is put back when the last of them is revoked. Each grant in force is also written to :data:`GRANTS_FILENAME`, so a grant a crash
+    left behind can be reverted at the next start.
+    """
+
+    def __init__(self, path: Path | None = None) -> None:
+        """Start with no grants.
+
+        Args:
+            path: The file grants are recorded in, defaulting to
+                :data:`GRANTS_FILENAME` in Intellicrack's configuration
+                directory, resolved when first needed.
+        """
+        self._path = path
+        self._lock = threading.Lock()
+        self._held: dict[str, tuple[int, WriteGrant]] = {}
+
+    def _record(self) -> LockedJsonFile:
+        """Open the file grants are recorded in.
+
+        Returns:
+            LockedJsonFile: The ledger file.
+        """
+        return LockedJsonFile(self._path if self._path is not None else get_config_file(GRANTS_FILENAME))
+
+    def held(self) -> tuple[WriteGrant, ...]:
+        """List the grants this ledger holds.
+
+        Returns:
+            tuple[WriteGrant, ...]: One per directory, in no particular order.
+        """
+        with self._lock:
+            return tuple(grant for _, grant in self._held.values())
+
+    def acquire(self, directory: str, *, existing: bool) -> WriteGrant:
+        """Make one directory writable at Low integrity, or count another holder of it.
+
+        Args:
+            directory: The directory, resolved.
+            existing: Whether content already inside is made writable too.
+
+        Returns:
+            WriteGrant: The grant in force.
+
+        Raises:
+            McpConfigError: If the directory's label could not be read,
+                recorded or changed. Nothing is left changed.
+        """
+        key = os.path.normcase(directory)
+        with self._lock:
+            held = self._held.get(key)
+            if held is not None:
+                count, grant = held
+                if existing and not grant.existing:
+                    self._apply(grant.directory, existing=True)
+                    grant = WriteGrant(grant.directory, grant.original_label, existing=True)
+                self._held[key] = (count + 1, grant)
+                return grant
+            try:
+                original = read_mandatory_label(directory)
+            except OSError as exc:
+                message = f"cannot read the integrity label of sandbox write path {directory}: {exc}"
+                raise McpConfigError(message) from exc
+            grant = WriteGrant(directory, original, existing=existing)
+            self._remember(key, grant)
+            try:
+                self._apply(directory, existing=existing)
+            except McpConfigError:
+                self._forget(key)
+                raise
+            self._held[key] = (1, grant)
+            _logger.info("mcp_sandbox_write_granted", directory=directory, existing=existing, original_label=original)
+            return grant
+
+    def release(self, grant: WriteGrant) -> None:
+        """Give up one holder of a grant, reverting the directory when it was the last.
+
+        Args:
+            grant: The grant being given up.
+        """
+        key = os.path.normcase(grant.directory)
+        with self._lock:
+            held = self._held.get(key)
+            if held is None:
+                return
+            count, current = held
+            if count > 1:
+                self._held[key] = (count - 1, current)
+                return
+            del self._held[key]
+            if revert_write_grant(current):
+                self._forget(key)
+
+    @staticmethod
+    def _apply(directory: str, *, existing: bool) -> None:
+        """Put the Low label on a directory.
+
+        Args:
+            directory: The directory.
+            existing: Whether content already inside is relabelled too.
+
+        Raises:
+            McpConfigError: If the label could not be applied.
+        """
+        try:
+            label_directory_low_integrity(directory, existing=existing)
+        except OSError as exc:
+            message = f"cannot make sandbox write path {directory} writable at low integrity: {exc}"
+            raise McpConfigError(message) from exc
+
+    def _remember(self, key: str, grant: WriteGrant) -> None:
+        """Record a grant on disk before it takes effect.
+
+        Args:
+            key: The directory's normalized key.
+            grant: The grant.
+
+        Raises:
+            McpConfigError: If the record could not be written, in which case
+                no label is changed.
+        """
+
+        def _add(data: JsonObject) -> bool:
+            """Add the grant.
+
+            Args:
+                data: The decoded ledger.
+
+            Returns:
+                bool: Always ``True``.
+            """
+            data[key] = {"directory": grant.directory, "originalLabel": grant.original_label, "existing": grant.existing}
+            return True
+
+        try:
+            _ = self._record().update(_add)
+        except JsonDocumentError as exc:
+            message = f"cannot record the sandbox write grant for {grant.directory}: {exc}"
+            raise McpConfigError(message) from exc
+
+    def _forget(self, key: str) -> None:
+        """Drop a grant's record once it has been reverted.
+
+        Args:
+            key: The directory's normalized key.
+        """
+
+        def _drop(data: JsonObject) -> bool:
+            """Drop the grant.
+
+            Args:
+                data: The decoded ledger.
+
+            Returns:
+                bool: Whether it was recorded.
+            """
+            return data.pop(key, None) is not None
+
+        try:
+            _ = self._record().update(_drop)
+        except JsonDocumentError as exc:
+            _logger.warning("mcp_sandbox_grant_record_unremoved", key=key, error=str(exc))
+
+    def revert_stale(self) -> int:
+        """Revert every recorded grant this process does not hold.
+
+        Returns:
+            int: How many grants were reverted.
+        """
+        try:
+            recorded = self._record().read()
+        except JsonDocumentError as exc:
+            _logger.warning("mcp_sandbox_grant_ledger_unreadable", error=str(exc))
+            return 0
+        reverted = 0
+        for key, entry in recorded.items():
+            with self._lock:
+                if key in self._held:
+                    continue
+            if not is_json_object(entry):
+                self._forget(key)
+                continue
+            directory = entry.get("directory")
+            original = entry.get("originalLabel")
+            if not isinstance(directory, str) or not isinstance(original, str):
+                self._forget(key)
+                continue
+            if revert_write_grant(WriteGrant(directory, original, existing=entry.get("existing") is True)):
+                self._forget(key)
+                reverted += 1
+        return reverted
+
+
+def revert_write_grant(grant: WriteGrant) -> bool:
+    """Put a directory's original label back and withdraw the Low label from its content.
+
+    The original label is restored with propagation, so every file and
+    folder that inherited the Low label while the grant was in force -- all
+    of the directory's content when ``existing`` was chosen, otherwise only
+    what the server created -- loses it again.
+
+    Args:
+        grant: The grant to revert.
+
+    Returns:
+        bool: ``True`` when the directory is back as it was, ``False`` when it
+        no longer exists or could not be changed, which is logged.
+    """
+    if not Path(grant.directory).exists():
+        _logger.info("mcp_sandbox_write_grant_target_gone", directory=grant.directory)
+        return True
+    try:
+        set_mandatory_label(grant.directory, grant.original_label, propagate=True)
+    except OSError as exc:
+        _logger.warning("mcp_sandbox_write_grant_unreverted", directory=grant.directory, error=str(exc))
+        return False
+    _logger.info("mcp_sandbox_write_revoked", directory=grant.directory)
+    return True
+
+
+_GRANTS = WriteGrantLedger()
+
+
+def revert_stale_write_grants() -> int:
+    """Revert every write grant a previous run left in force.
+
+    Returns:
+        int: How many grants were reverted; ``0`` on a platform with no
+        sandbox.
+    """
+    if not sandbox_supported():
+        return 0
+    return _GRANTS.revert_stale()
+
+
+def apply_write_confinement(launch: SandboxedLaunch) -> tuple[WriteGrant, ...]:
     """Make exactly the nominated directories writable to the confined child.
 
-    Every ``allowWrite`` directory receives a Low mandatory label, and the
-    child's temporary directory is created inside the first of them so it
-    inherits that label.
+    Every ``allowWrite`` directory receives an inheritable Low mandatory
+    label, on the directory alone unless ``writeExisting`` was chosen, and
+    the child's temporary directory is created inside the first of them so it
+    inherits that label. Blocking: run it on a worker thread.
 
     Args:
         launch: The planned launch.
 
+    Returns:
+        tuple[WriteGrant, ...]: The grants now in force, to be handed to
+        :func:`release_write_confinement` once the server has stopped.
+
     Raises:
         McpConfigError: If a directory could not be labelled or the
-            temporary directory could not be created.
+            temporary directory could not be created. Every grant already
+            made is reverted first.
     """
-    for directory in launch.writable:
-        try:
-            label_directory_low_integrity(directory)
-        except OSError as exc:
-            message = f"cannot make sandbox write path {directory} writable at low integrity: {exc}"
-            raise McpConfigError(message) from exc
+    grants: list[WriteGrant] = []
     try:
+        grants.extend(_GRANTS.acquire(directory, existing=launch.write_existing) for directory in launch.writable)
         Path(launch.temp_dir).mkdir(exist_ok=True)
     except OSError as exc:
+        release_write_confinement(tuple(grants))
         message = f"cannot create the sandbox temporary directory {launch.temp_dir}: {exc}"
         raise McpConfigError(message) from exc
+    except McpConfigError:
+        release_write_confinement(tuple(grants))
+        raise
+    return tuple(grants)
+
+
+def release_write_confinement(grants: Sequence[WriteGrant]) -> None:
+    """Give up the grants one confined launch held. Blocking: run it on a worker thread.
+
+    Args:
+        grants: The grants :func:`apply_write_confinement` returned.
+    """
+    for grant in reversed(grants):
+        _GRANTS.release(grant)
 
 
 def environment_block(env: Mapping[str, str]) -> str:
@@ -1663,7 +2045,10 @@ async def confined_stdio_client(
     write paths carry their labels and the restricted token exists before
     the process is created, and the process is in the job before it runs.
     Teardown closes standard input, waits out the grace period, and then
-    terminates the job, which takes every descendant with it.
+    terminates the job, which takes every descendant with it; only then are
+    the write paths' labels reverted, so nothing in the job can write to
+    them while they change back. Labelling and reverting run on a worker
+    thread, so a large tree never stalls the event loop.
 
     A job, token or process that cannot be created propagates
     :class:`OSError` from :class:`SandboxedJob`,
@@ -1690,18 +2075,23 @@ async def confined_stdio_client(
         if job_handle is None:
             message = "the sandbox job is not open"
             raise McpConfigError(message)
-        apply_write_confinement(launch)
-        token = create_restricted_token()
+        grants = await anyio.to_thread.run_sync(apply_write_confinement, launch)
         try:
-            process = spawn_confined_process(launch, job_handle, token, errlog)
-        finally:
-            _ = _kernel32().CloseHandle(wintypes.HANDLE(token))
-        try:
+            token = create_restricted_token()
+            try:
+                process = spawn_confined_process(launch, job_handle, token, errlog)
+            finally:
+                _ = _kernel32().CloseHandle(wintypes.HANDLE(token))
+            try:
 
-            async def shutdown() -> None:
-                await _stop_confined_process(process, job_handle)
+                async def shutdown() -> None:
+                    await _stop_confined_process(process, job_handle)
 
-            async with pipe_session_streams(FileReadStream(process.stdout), FileWriteStream(process.stdin), shutdown) as streams:
-                yield streams
+                async with pipe_session_streams(FileReadStream(process.stdout), FileWriteStream(process.stdin), shutdown) as streams:
+                    yield streams
+            finally:
+                process.close()
         finally:
-            process.close()
+            with anyio.CancelScope(shield=True):
+                terminate_job(job_handle)
+                await anyio.to_thread.run_sync(release_write_confinement, grants)

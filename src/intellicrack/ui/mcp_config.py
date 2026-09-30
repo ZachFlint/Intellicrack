@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -77,6 +78,7 @@ from intellicrack.mcp.resources import (
     read_resource,
     summarize_parts,
 )
+from intellicrack.mcp.sandbox_launch import sandbox_supported
 from intellicrack.mcp.tool_source import map_tool_to_function
 from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
 from intellicrack.ui.dialogs_helpers import plain_tooltip, show_error, show_info, show_warning
@@ -111,6 +113,18 @@ _STDERR_TAIL_LINES: Final[int] = 400
 _RESOURCE_PREVIEW_CHARS: Final[int] = 4000
 _MIN_TIMEOUT_S: Final[int] = 1
 _MAX_TIMEOUT_S: Final[int] = 3600
+SANDBOX_NETWORK_NOTICE: Final[str] = (
+    "Not enforced. Intellicrack records these hosts and logs them, but a sandboxed server can still connect to any host on "
+    "the network. Do not rely on this list to keep a server off the network."
+)
+"""What the sandbox editor says, always, about ``allowedDomains``."""
+
+SANDBOX_PLATFORM_NOTICE: Final[str] = (
+    "Sandboxing uses Windows job objects, restricted tokens and integrity levels, and is not available on this platform: "
+    "a server set to run sandboxed will not start here."
+)
+"""What the sandbox editor says on a platform with no sandbox."""
+
 _LIVE_HEALTH: Final[frozenset[McpHealth]] = frozenset({McpHealth.READY, McpHealth.CONNECTING})
 _TRUST_CAPTIONS: Final[dict[TrustState, str]] = {
     TrustState.UNTRUSTED: "not trusted: every tool call it offers is confirmed",
@@ -449,7 +463,91 @@ class McpServerEditor(QWidget):
         self._env_file_edit.setObjectName("mcp_stdio_env_file")
         self._env_file_edit.textChanged.connect(self._emit_changed)
         form.addRow("Environment file", self._env_file_edit)
+        form.addRow(self._build_sandbox_group())
         return page
+
+    def _build_sandbox_group(self) -> QGroupBox:
+        """Build the editor for a local server's sandbox.
+
+        Returns:
+            QGroupBox: The sandbox group.
+        """
+        group = QGroupBox("Sandbox")
+        group.setObjectName("mcp_sandbox_group")
+        form = QFormLayout(group)
+        form.setSpacing(8)
+
+        self._sandbox_enabled_box = QCheckBox("Run this server sandboxed")
+        self._sandbox_enabled_box.setObjectName("mcp_sandbox_enabled")
+        self._sandbox_enabled_box.setToolTip(
+            "Low integrity, every privilege removed, confined to a job, with only the environment listed below.",
+        )
+        self._sandbox_enabled_box.toggled.connect(self._emit_changed)
+        form.addRow("", self._sandbox_enabled_box)
+
+        if not sandbox_supported():
+            platform_notice = QLabel(SANDBOX_PLATFORM_NOTICE)
+            platform_notice.setObjectName("mcp_sandbox_platform_notice")
+            platform_notice.setWordWrap(True)
+            form.addRow("", platform_notice)
+
+        self._allow_write_edit = QPlainTextEdit()
+        self._allow_write_edit.setObjectName("mcp_sandbox_allow_write")
+        self._allow_write_edit.setPlaceholderText("one absolute folder per line; the first is the server's working folder")
+        self._allow_write_edit.setFont(FontManager.get_instance().get_code_font(_CODE_FONT_POINT_SIZE))
+        self._allow_write_edit.textChanged.connect(self._emit_changed)
+        add_folder = QPushButton("Add folder...")
+        add_folder.setObjectName("mcp_sandbox_add_folder")
+        add_folder.clicked.connect(self._on_add_write_folder)
+        write_row = QVBoxLayout()
+        write_row.addWidget(self._allow_write_edit)
+        write_row.addWidget(add_folder)
+        form.addRow("Writable folders", write_row)
+
+        self._write_existing_box = QCheckBox("Let it change files already in these folders, not only add new ones")
+        self._write_existing_box.setObjectName("mcp_sandbox_write_existing")
+        self._write_existing_box.toggled.connect(self._emit_changed)
+        form.addRow("", self._write_existing_box)
+
+        self._domains_edit = QPlainTextEdit()
+        self._domains_edit.setObjectName("mcp_sandbox_allowed_domains")
+        self._domains_edit.setPlaceholderText("one host per line, for your own record")
+        self._domains_edit.setFont(FontManager.get_instance().get_code_font(_CODE_FONT_POINT_SIZE))
+        self._domains_edit.textChanged.connect(self._emit_changed)
+        form.addRow("Allowed domains", self._domains_edit)
+
+        network_notice = QLabel(SANDBOX_NETWORK_NOTICE)
+        network_notice.setObjectName("mcp_sandbox_network_notice")
+        network_notice.setWordWrap(True)
+        form.addRow("", network_notice)
+
+        self._inherit_env_edit = QPlainTextEdit()
+        self._inherit_env_edit.setObjectName("mcp_sandbox_inherit_env")
+        self._inherit_env_edit.setPlaceholderText("one variable name per line, passed through from Intellicrack's own environment")
+        self._inherit_env_edit.setFont(FontManager.get_instance().get_code_font(_CODE_FONT_POINT_SIZE))
+        self._inherit_env_edit.textChanged.connect(self._emit_changed)
+        form.addRow("Extra inherited variables", self._inherit_env_edit)
+        return group
+
+    def _on_add_write_folder(self) -> None:
+        """Append a folder the operator picks to the writable folders."""
+        chosen = QFileDialog.getExistingDirectory(self, "Folder the sandboxed server may write to")
+        if not chosen:
+            return
+        current = self._allow_write_edit.toPlainText().rstrip("\n")
+        self._allow_write_edit.setPlainText(f"{current}\n{chosen}" if current else chosen)
+
+    @staticmethod
+    def _lines(text: str) -> tuple[str, ...]:
+        """Split a one-entry-per-line block into its entries.
+
+        Args:
+            text: The block the operator typed.
+
+        Returns:
+            tuple[str, ...]: The non-blank entries, stripped, in order.
+        """
+        return tuple(line.strip() for line in text.splitlines() if line.strip())
 
     def _build_http_page(self) -> QWidget:
         """Build the editor for a remote HTTP server.
@@ -578,6 +676,12 @@ class McpServerEditor(QWidget):
         self._cwd_edit.setText((stdio.cwd or "") if stdio else "")
         self._env_edit.setPlainText(self._render_pairs(dict(stdio.env)) if stdio else "")
         self._env_file_edit.setText((stdio.env_file or "") if stdio else "")
+        sandbox = config.sandbox
+        self._sandbox_enabled_box.setChecked(sandbox.enabled)
+        self._allow_write_edit.setPlainText("\n".join(sandbox.allow_write))
+        self._write_existing_box.setChecked(sandbox.write_existing)
+        self._domains_edit.setPlainText("\n".join(sandbox.allowed_domains))
+        self._inherit_env_edit.setPlainText("\n".join(sandbox.inherit_env))
 
         http = config.http
         self._url_edit.setText(http.url if http else "")
@@ -606,8 +710,7 @@ class McpServerEditor(QWidget):
 
         Args:
             existing: The configuration being edited, whose per-tool
-                switches and sandbox settings are carried over. ``None`` for
-                a brand new server.
+                switches are carried over. ``None`` for a brand new server.
 
         Returns:
             McpServerConfig: The configuration the operator described. It is
@@ -640,8 +743,22 @@ class McpServerEditor(QWidget):
             http=http,
             enabled=self._enabled_box.isChecked(),
             disabled_tools=existing.disabled_tools if existing is not None else frozenset(),
-            sandbox=existing.sandbox if existing is not None else McpSandboxSpec(),
+            sandbox=self.build_sandbox(),
             request_timeout_s=float(self._timeout_spin.value()),
+        )
+
+    def build_sandbox(self) -> McpSandboxSpec:
+        """Build the sandbox settings from the sandbox fields.
+
+        Returns:
+            McpSandboxSpec: The sandbox the operator described.
+        """
+        return McpSandboxSpec(
+            enabled=self._sandbox_enabled_box.isChecked(),
+            allow_write=self._lines(self._allow_write_edit.toPlainText()),
+            allowed_domains=self._lines(self._domains_edit.toPlainText()),
+            inherit_env=self._lines(self._inherit_env_edit.toPlainText()),
+            write_existing=self._write_existing_box.isChecked(),
         )
 
 
