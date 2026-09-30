@@ -574,7 +574,7 @@ class OpenAIProvider(LLMProviderBase):
                 enable_cache=enable_cache,
             )
 
-        openai_messages = self.convert_messages_to_provider_format(messages)
+        openai_messages = self._openai_format_for_model(messages, model)
         openai_tools = self.convert_tools_to_provider_format(tools) if tools else None
 
         tool_choice_param: ChatCompletionToolChoiceOptionParam | None = None
@@ -1094,7 +1094,7 @@ class OpenAIProvider(LLMProviderBase):
                 )
             return
 
-        openai_messages = self.convert_messages_to_provider_format(messages)
+        openai_messages = self._openai_format_for_model(messages, model)
         openai_tools = self.convert_tools_to_provider_format(tools) if tools else None
 
         tool_choice_value: ChatCompletionToolChoiceOptionParam | None = None

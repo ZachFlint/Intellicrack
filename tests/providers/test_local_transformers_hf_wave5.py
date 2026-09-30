@@ -300,7 +300,12 @@ class TestPrepareRequestPayload:
         provider = HuggingFaceProvider()
         messages = [Message(role="user", content="analyse this binary")]
 
-        hf_messages, hf_tools, hf_tool_choice = getattr(provider, "_prepare_request_payload")(messages, None, None)
+        hf_messages, hf_tools, hf_tool_choice = getattr(provider, "_prepare_request_payload")(
+            messages,
+            None,
+            None,
+            "meta-llama/Llama-3.3-70B-Instruct",
+        )
 
         assert hf_messages == [{"role": "user", "content": "analyse this binary"}]
         assert hf_tools is None
@@ -313,7 +318,12 @@ class TestPrepareRequestPayload:
         messages = [Message(role="user", content="q")]
         tool = _make_binary_tool()
 
-        _hf_messages, hf_tools, _hf_choice = getattr(provider, "_prepare_request_payload")(messages, [tool], None)
+        _hf_messages, hf_tools, _hf_choice = getattr(provider, "_prepare_request_payload")(
+            messages,
+            [tool],
+            None,
+            "meta-llama/Llama-3.3-70B-Instruct",
+        )
 
         assert hf_tools is not None
         assert len(hf_tools) == 1

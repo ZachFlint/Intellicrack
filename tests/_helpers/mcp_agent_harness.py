@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from intellicrack.mcp.consent import LaunchPrompt
+    from intellicrack.providers.base import LLMProviderBase
     from tests._helpers.scripted_http_server import RecordedRequest, ScriptedResponse
 
 
@@ -250,12 +251,74 @@ DIALECT_SCRIPTS: Final[dict[ApiDialect, DialectScript]] = {
 """Every dialect the configurable provider speaks."""
 
 
-def _models_listing() -> dict[str, Any]:
-    """Build one model listing every dialect's parser accepts.
+def _ollama_tool_call(function_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Build a native Ollama ``/api/chat`` response asking for one tool call.
+
+    Args:
+        function_name: Canonical dotted function name.
+        arguments: Call arguments.
 
     Returns:
-        dict[str, Any]: A body carrying the model under both ``data`` and ``models``.
+        dict[str, Any]: The response body.
     """
+    call = {"function": {"name": to_wire_name(function_name), "arguments": arguments}}
+    return {
+        "model": MODEL,
+        "created_at": "2026-01-01T00:00:00Z",
+        "message": {"role": "assistant", "content": "", "tool_calls": [call]},
+        "done": True,
+        "done_reason": "stop",
+        "prompt_eval_count": 1,
+        "eval_count": 1,
+    }
+
+
+def _ollama_final() -> dict[str, Any]:
+    """Build a native Ollama ``/api/chat`` response ending the turn.
+
+    Returns:
+        dict[str, Any]: The response body.
+    """
+    return {
+        "model": MODEL,
+        "created_at": "2026-01-01T00:00:00Z",
+        "message": {"role": "assistant", "content": "done"},
+        "done": True,
+        "done_reason": "stop",
+        "prompt_eval_count": 1,
+        "eval_count": 1,
+    }
+
+
+OLLAMA_SCRIPT: Final[DialectScript] = DialectScript("", "/api/chat", "/api/tags", _ollama_tool_call, _ollama_final)
+"""A local Ollama server's native chat API."""
+
+
+@dataclass(frozen=True, slots=True)
+class BuiltinProvider:
+    """A built-in provider class driven against the loopback endpoint instead of the configurable one.
+
+    Attributes:
+        factory: Builds the provider, not yet connected.
+        script: How its endpoint is addressed and answers.
+    """
+
+    factory: Callable[[], LLMProviderBase]
+    script: DialectScript
+
+
+def _models_listing(models_path: str) -> dict[str, Any]:
+    """Build one model listing the endpoint's parser accepts.
+
+    Args:
+        models_path: Where the listing is read from, which says whose shape it takes.
+
+    Returns:
+        dict[str, Any]: Ollama's ``/api/tags`` shape for Ollama, and otherwise a body carrying the model under both ``data`` and
+        ``models``, which every dialect's parser accepts.
+    """
+    if models_path == OLLAMA_SCRIPT.models_path:
+        return {"models": [{"name": MODEL, "model": MODEL, "modified_at": "2026-01-01T00:00:00Z", "size": 1, "digest": "sha256:0"}]}
     entry = {"id": MODEL, "object": "model", "type": "model", "display_name": MODEL, "created_at": "2026-01-01T00:00:00Z"}
     gemini = {"name": f"models/{MODEL}", "displayName": MODEL, "supportedGenerationMethods": ["generateContent"]}
     return {"object": "list", "data": [entry], "models": [gemini], "has_more": False, "first_id": MODEL, "last_id": MODEL}
@@ -335,6 +398,7 @@ async def agent_stack(
     prompt: LaunchPrompt = approve_every_launch,
     overrides: CapabilityOverride | None = None,
     dynamic_loading: bool = False,
+    builtin: BuiltinProvider | None = None,
 ) -> AsyncGenerator[AgentStack]:
     """Bring the whole stack up, yield it, and tear it all down.
 
@@ -348,11 +412,13 @@ async def agent_stack(
         overrides: Capability override for the model, defaulting to one with
             vision and a large context window.
         dynamic_loading: Whether the orchestrator loads tools on demand.
+        builtin: A built-in provider to drive instead of the configurable one;
+            ``dialect`` is then ignored.
 
     Yields:
         AgentStack: The running stack.
     """
-    script = DIALECT_SCRIPTS[dialect]
+    script = builtin.script if builtin is not None else DIALECT_SCRIPTS[dialect]
     store = McpConfigStore(tmp_path / "mcp.json")
     store.save(McpConfigDocument(servers=servers))
     credentials = CredentialStore(fallback_loader=CredentialLoader(env_path=tmp_path / ".env"))
@@ -362,21 +428,32 @@ async def agent_stack(
     registry = ToolRegistry(tools_dir=tools_dir)
     source = McpToolSource(manager, registry)
     with ScriptedHttpServer() as endpoint:
-        endpoint.script("GET", script.models_path, *(json_response(200, _models_listing()) for _ in range(_MODEL_LISTINGS)))
+        endpoint.script(
+            "GET",
+            script.models_path,
+            *(json_response(200, _models_listing(script.models_path)) for _ in range(_MODEL_LISTINGS)),
+        )
         endpoint.script(
             "POST",
             script.generate_path,
             *(entry if callable(entry) else json_response(200, entry) for entry in responses),
         )
-        instance = ProviderInstance(
-            instance_id="loopback",
-            dialect=dialect,
-            api_base=f"{endpoint.origin}{script.base_path}",
-            requires_api_key=False,
-            model_overrides={MODEL: overrides or CapabilityOverride(supports_vision=True, context_window=200_000)},
-        )
-        provider = ConfigurableProvider(instance)
-        await provider.connect(ProviderCredentials())
+        override = overrides or CapabilityOverride(supports_vision=True, context_window=200_000)
+        provider: LLMProviderBase
+        if builtin is None:
+            instance = ProviderInstance(
+                instance_id="loopback",
+                dialect=dialect,
+                api_base=f"{endpoint.origin}{script.base_path}",
+                requires_api_key=False,
+                model_overrides={MODEL: override},
+            )
+            provider = ConfigurableProvider(instance)
+            await provider.connect(ProviderCredentials())
+        else:
+            provider = builtin.factory()
+            provider.set_capability_override(MODEL, override)
+            await provider.connect(ProviderCredentials(api_key="loopback-key", api_base=f"{endpoint.origin}{script.base_path}"))
         providers = ProviderRegistry()
         providers.register(provider)
         orchestrator = Orchestrator(
@@ -395,7 +472,7 @@ async def agent_stack(
         try:
             await asyncio.wait_for(manager.start(), timeout=CONNECT_TIMEOUT_S)
             source.register_all()
-            _ = await orchestrator.start_session("loopback", MODEL)
+            _ = await orchestrator.start_session(provider.name, MODEL)
             yield AgentStack(orchestrator, manager, source, endpoint, results, script.generate_path)
         finally:
             orchestrator.set_mcp_tool_source(None)
@@ -411,6 +488,7 @@ def run_tool_turn(
     arguments: dict[str, Any],
     *,
     overrides: CapabilityOverride | None = None,
+    builtin: BuiltinProvider | None = None,
 ) -> tuple[list[ToolResult], list[dict[str, Any]]]:
     """Run one agent turn in which the model calls one MCP tool.
 
@@ -421,12 +499,13 @@ def run_tool_turn(
         function_name: Canonical name the model calls.
         arguments: Arguments the model passes.
         overrides: Capability override for the model.
+        builtin: A built-in provider to drive instead of the configurable one.
 
     Returns:
         tuple[list[ToolResult], list[dict[str, Any]]]: The tool results the
         orchestrator produced and every model request body the endpoint saw.
     """
-    script = DIALECT_SCRIPTS[dialect]
+    script = builtin.script if builtin is not None else DIALECT_SCRIPTS[dialect]
 
     async def _turn() -> tuple[list[ToolResult], list[dict[str, Any]]]:
         """Drive the turn inside a running stack.
@@ -438,7 +517,7 @@ def run_tool_turn(
             script.tool_call(function_name, arguments),
             script.final(),
         ]
-        async with agent_stack(tmp_path, dialect, (server,), responses, overrides=overrides) as stack:
+        async with agent_stack(tmp_path, dialect, (server,), responses, overrides=overrides, builtin=builtin) as stack:
             await asyncio.wait_for(stack.orchestrator.process_user_input("call the tool"), timeout=TURN_TIMEOUT_S)
             return list(stack.results), stack.model_requests()
 
@@ -481,8 +560,10 @@ __all__ = [
     "CONNECT_TIMEOUT_S",
     "DIALECT_SCRIPTS",
     "MODEL",
+    "OLLAMA_SCRIPT",
     "TURN_TIMEOUT_S",
     "AgentStack",
+    "BuiltinProvider",
     "DialectScript",
     "agent_stack",
     "approve_every_launch",

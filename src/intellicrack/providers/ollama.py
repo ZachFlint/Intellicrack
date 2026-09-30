@@ -1060,9 +1060,15 @@ class OllamaProvider(LLMProviderBase):
             self._logger.debug("ollama_cache_ignored")
 
         client, base_url, actual_model = self._get_client_and_model(model)
-        ollama_messages = self.convert_messages_to_provider_format(messages)
         endpoint = self._chat_endpoint(base_url)
         is_cloud = self._is_cloud_endpoint(base_url)
+        ollama_messages = self._openai_format_for_model(
+            messages,
+            model,
+            serialize_tool_arguments=False,
+            include_tool_call_type=False,
+            ollama_images=not is_cloud,
+        )
 
         log_provider_request(
             provider="ollama",
@@ -1398,9 +1404,15 @@ class OllamaProvider(LLMProviderBase):
             self._logger.debug("ollama_cache_ignored")
 
         client, base_url, actual_model = self._get_client_and_model(model)
-        ollama_messages = self.convert_messages_to_provider_format(messages)
         endpoint = self._chat_endpoint(base_url)
         is_cloud = self._is_cloud_endpoint(base_url)
+        ollama_messages = self._openai_format_for_model(
+            messages,
+            model,
+            serialize_tool_arguments=False,
+            include_tool_call_type=False,
+            ollama_images=not is_cloud,
+        )
 
         request_body: dict[str, object]
         if is_cloud:

@@ -98,6 +98,13 @@ OPENAI_IMAGE_POLICY: Final[ImagePolicy] = ImagePolicy(
 )
 """Images OpenAI Chat Completions and Responses accept: JPEG, PNG, GIF and WebP, at most 20 MB each."""
 
+OLLAMA_IMAGE_POLICY: Final[ImagePolicy] = ImagePolicy(
+    mime_types=frozenset({IMAGE_MIME_JPEG, IMAGE_MIME_PNG}),
+    max_bytes=20 * 1024 * 1024,
+)
+"""Images Ollama's native chat API takes in a message's ``images`` list: JPEG and PNG, the formats its vision models are documented
+to decode."""
+
 GEMINI_IMAGE_POLICY: Final[ImagePolicy] = ImagePolicy(
     mime_types=frozenset({IMAGE_MIME_JPEG, IMAGE_MIME_PNG, IMAGE_MIME_WEBP, IMAGE_MIME_HEIC, IMAGE_MIME_HEIF}),
     max_bytes=20 * 1024 * 1024,
@@ -929,6 +936,7 @@ __all__ = [
     "AUTH_HEADER_NAMES",
     "GEMINI_IMAGE_POLICY",
     "MESSAGES_IMAGE_POLICY",
+    "OLLAMA_IMAGE_POLICY",
     "OPENAI_IMAGE_POLICY",
     "PROTOCOL_HEADER_NAMES",
     "ApiDialect",
