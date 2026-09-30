@@ -16,6 +16,7 @@ Run it as ``python mcp_lifecycle_server.py --transport <stdio|http|sse>``.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -128,6 +129,25 @@ def build_server(ttl_ms: int) -> MCPServer:
         await ctx.request_context.session.send_tool_list_changed()
         return name
 
+    def env_value(name: str) -> str:
+        """Report one environment variable this process received.
+
+        Args:
+            name: The variable's name.
+
+        Returns:
+            str: Its value, or an empty string when it is not set.
+        """
+        return os.environ.get(name, "")
+
+    def argv() -> str:
+        """Report the arguments this process was started with, after the script.
+
+        Returns:
+            str: The arguments as a JSON list.
+        """
+        return json.dumps(sys.argv[1:])
+
     def env_keys() -> str:
         """Report the names of every environment variable this process received.
 
@@ -161,6 +181,8 @@ def build_server(ttl_ms: int) -> MCPServer:
 
     server.add_tool(whoami, name="whoami", description="Report the server process id.")
     server.add_tool(env_keys, name="env_keys", description="List environment variable names.")
+    server.add_tool(env_value, name="env_value", description="Report one environment variable.")
+    server.add_tool(argv, name="argv", description="Report the process arguments.")
     server.add_tool(write_probe, name="write_probe", description="Try to write a file.")
     server.add_tool(spawn_child, name="spawn_child", description="Spawn a long-lived grandchild.")
     server.add_tool(quit_cleanly, name="quit", description="Exit cleanly.")
@@ -183,6 +205,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--ttl-ms", type=int, default=0)
     parser.add_argument("--spawn-at-start", default=None, help="Spawn a grandchild before serving and write its pid here.")
+    parser.add_argument("--note", action="append", default=[], help="Accepted and ignored, so a gate can see how arguments arrive.")
     parser.add_argument(
         "--linger-s",
         type=float,

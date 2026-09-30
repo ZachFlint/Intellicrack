@@ -13,8 +13,13 @@ and every process it ever starts run inside the job from creation; nothing has t
 
 What is enforced:
 
-* **Environment.** The child receives exactly :data:`ENVIRONMENT_ALLOWLIST` from Intellicrack's own environment plus the server's own
-  configured entries. Nothing is merged in from anywhere else, so the API keys and tokens Intellicrack's environment carries do not travel.
+* **Environment.** The child receives exactly :data:`ENVIRONMENT_ALLOWLIST` from Intellicrack's own environment, the variables the
+  operator named in ``inheritEnv``, the locations of its own sandbox home, and the server's own configured entries. Nothing is merged in
+  from anywhere else, so the API keys and tokens Intellicrack's environment carries do not travel.
+* **Home.** Each server gets a home of its own under Intellicrack's state directory -- temporary files, a profile, local and roaming
+  application data, and the caches and tool directories of npm, uv, pip and pipx -- and the child's environment points every launcher
+  there. The operator's own profile is not writable at Low integrity, so without it ``npx``, ``uvx`` and their kind fail to create their
+  caches. The home is writable to the server for as long as it runs, like an ``allowWrite`` directory with ``writeExisting``.
 * **Token.** Every privilege except change-notify is removed, the Administrators group is deny-only, and the integrity level is lowered to
   Low.
 * **Writes.** A Low integrity process cannot write to anything labelled above Low, which by default is everything the operator owns. For
@@ -41,6 +46,7 @@ import codecs
 import ctypes
 import functools
 import os
+import re
 import sys
 import threading
 from contextlib import asynccontextmanager, suppress
@@ -56,10 +62,11 @@ from anyio.streams.file import FileReadStream, FileWriteStream
 from mcp.shared.message import SessionMessage
 
 from intellicrack.core.config import get_config_file
+from intellicrack.core.handle_inheritance import INHERITANCE_LOCK
 from intellicrack.core.json_payload import JsonObject, is_json_object
 from intellicrack.core.locked_json import JsonDocumentError, LockedJsonFile
 from intellicrack.core.logging import get_logger
-from intellicrack.mcp.config import sandbox_limitations
+from intellicrack.mcp.config import launcher_notes, sandbox_limitations
 from intellicrack.mcp.errors import McpConfigError
 
 
@@ -118,8 +125,34 @@ the operator's temporary directory is not writable at Low integrity, so they are
 writable directory instead. Everything else the server needs it must be given explicitly in its own configuration.
 """
 
-SANDBOX_TEMP_DIRNAME: Final[str] = ".mcp-sandbox-tmp"
-"""Directory created inside the first ``allowWrite`` entry for the child's ``TEMP`` and ``TMP``."""
+SANDBOX_HOMES_DIRNAME: Final[str] = "mcp-sandbox"
+"""Directory under Intellicrack's configuration directory holding one sandbox home per server."""
+
+SANDBOX_TEMP_DIRNAME: Final[str] = "tmp"
+"""Directory inside a server's sandbox home that its ``TEMP`` and ``TMP`` name."""
+
+SANDBOX_HOME_LAYOUT: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
+    (SANDBOX_TEMP_DIRNAME, ("TEMP", "TMP")),
+    ("profile", ("USERPROFILE", "HOME")),
+    ("profile/.docker", ("DOCKER_CONFIG",)),
+    ("local", ("LOCALAPPDATA",)),
+    ("roaming", ("APPDATA",)),
+    ("cache", ("XDG_CACHE_HOME",)),
+    ("cache/npm", ("npm_config_cache",)),
+    ("cache/uv", ("UV_CACHE_DIR",)),
+    ("cache/pip", ("PIP_CACHE_DIR",)),
+    ("local/uv/tools", ("UV_TOOL_DIR",)),
+    ("local/uv/bin", ("UV_TOOL_BIN_DIR", "UV_PYTHON_BIN_DIR")),
+    ("local/uv/python", ("UV_PYTHON_INSTALL_DIR",)),
+    ("local/pipx", ("PIPX_HOME",)),
+    ("local/pipx/bin", ("PIPX_BIN_DIR",)),
+)
+"""Each directory of a sandbox home, relative to its root, and the variables that name it.
+
+The profile and application-data variables cover whatever reads them, npm included. uv and pipx find their directories through the Windows
+known-folder API rather than the environment, so they are pointed at the home by their own variables; without them ``uv`` and ``uvx``
+fail with "Failed to initialize cache ... Access is denied".
+"""
 
 BATCH_SUFFIXES: Final[frozenset[str]] = frozenset({".cmd", ".bat"})
 """Script suffixes that run through the command interpreter rather than directly."""
@@ -357,11 +390,13 @@ class SandboxedLaunch:
             inherited environment; it is not merged over it.
         cwd: The confined working directory.
         writable: The directories the child may write to, resolved.
-        temp_dir: The directory ``TEMP`` and ``TMP`` point at.
+        temp_dir: The directory ``TEMP`` and ``TMP`` point at, inside
+            ``home``.
         creation_flags: Win32 process creation flags.
         limits: The ceilings to apply to the job the child runs in.
         write_existing: Whether content already in the writable directories
             may be changed too.
+        home: The server's own sandbox home.
     """
 
     command: str
@@ -374,6 +409,7 @@ class SandboxedLaunch:
     creation_flags: int = SANDBOX_CREATION_FLAGS
     limits: JobLimits = field(default_factory=JobLimits)
     write_existing: bool = False
+    home: SandboxHome | None = None
 
     @property
     def is_batch_script(self) -> bool:
@@ -394,6 +430,110 @@ class SandboxedLaunch:
         return render_command_line(self.application, self.command, self.args)
 
 
+@dataclass(frozen=True, slots=True)
+class SandboxHome:
+    """The directories one sandboxed server keeps its own state in.
+
+    Attributes:
+        root: The home's root directory.
+    """
+
+    root: str
+
+    @property
+    def temp(self) -> str:
+        """The directory ``TEMP`` and ``TMP`` name.
+
+        Returns:
+            str: The temporary directory.
+        """
+        return str(Path(self.root, SANDBOX_TEMP_DIRNAME))
+
+    def directories(self) -> tuple[str, ...]:
+        """List every directory of the home, root first.
+
+        Returns:
+            tuple[str, ...]: The directories, each after its parent.
+        """
+        return (self.root, *(str(Path(self.root, relative)) for relative, _ in SANDBOX_HOME_LAYOUT))
+
+    def environment(self) -> dict[str, str]:
+        """Build the variables that point a launcher at this home.
+
+        Returns:
+            dict[str, str]: Each variable of :data:`SANDBOX_HOME_LAYOUT` and the directory it names.
+        """
+        return {name: str(Path(self.root, relative)) for relative, names in SANDBOX_HOME_LAYOUT for name in names}
+
+    def create(self) -> None:
+        """Create every directory of the home that does not exist yet."""
+        for directory in self.directories():
+            Path(directory).mkdir(parents=True, exist_ok=True)
+
+
+def sandbox_home(server_id: str) -> SandboxHome:
+    """Locate one server's sandbox home under Intellicrack's configuration directory.
+
+    Args:
+        server_id: The server id, which :data:`~intellicrack.mcp.config.SERVER_ID_PATTERN` keeps to a single safe path component.
+
+    Returns:
+        SandboxHome: The home. Nothing is created.
+    """
+    return SandboxHome(str(get_config_file(SANDBOX_HOMES_DIRNAME) / server_id))
+
+
+_ACCESS_DENIED: Final[re.Pattern[str]] = re.compile(
+    r"access is denied|access denied|\beacces\b|\beperm\b|permissionerror|operation not permitted|os error 5\b",
+    re.IGNORECASE,
+)
+"""How the common runtimes report a write the sandbox refused."""
+
+_QUOTED_WINDOWS_PATH: Final[re.Pattern[str]] = re.compile(r"""['"`]((?:[A-Za-z]:\\|\\\\)[^'"`]+)['"`]""")
+"""A Windows path in quotes or backticks, as Python, Node and uv print the path they were refused."""
+
+
+def sandbox_access_guidance(stderr_lines: Sequence[str]) -> str | None:
+    """Tell the operator what to change when a sandboxed server failed on a refused access.
+
+    The refused path is looked for on the line reporting the refusal and on the line before it, where uv names the cache it could not
+    create.
+
+    Args:
+        stderr_lines: What the server wrote to its standard error, oldest first.
+
+    Returns:
+        str | None: The guidance, naming the refused path when the server's message carried one, or ``None`` when nothing the server
+        wrote reads as a refused access.
+    """
+    refused = [index for index, line in enumerate(stderr_lines) if _ACCESS_DENIED.search(line)]
+    if not refused:
+        return None
+    nearby = [stderr_lines[line] for index in reversed(refused) for line in (index, index - 1) if line >= 0]
+    path = next((_unrepr_path(match.group(1)) for line in nearby if (match := _QUOTED_WINDOWS_PATH.search(line))), None)
+    where = f" to {path}" if path is not None else ""
+    return (
+        f"The sandbox refused the server access{where}. If the server has to write there, add the folder under Writable folders "
+        f"(sandbox.allowWrite), and turn on writeExisting if it changes files already in it. If it needs a variable from your own "
+        f"environment, add the variable's name under Extra inherited variables (sandbox.inheritEnv)."
+    )
+
+
+def _unrepr_path(path: str) -> str:
+    r"""Undo the doubled backslashes of a path Python printed with :func:`repr`.
+
+    Python reports ``PermissionError: [WinError 5] Access is denied: 'C:\\x'``; Node and uv print the path as it is.
+
+    Args:
+        path: The path as the message carried it.
+
+    Returns:
+        str: The path with single separators.
+    """
+    doubled = path[2:4] == "\\\\" if path[1:2] == ":" else path.startswith("\\\\" * 2)
+    return path.replace("\\\\", "\\") if doubled else path
+
+
 def sandbox_supported() -> bool:
     """Report whether sandboxed launches are available on this platform.
 
@@ -403,28 +543,54 @@ def sandbox_supported() -> bool:
     return IS_WIN32
 
 
-def build_environment_allowlist(env: Mapping[str, str], inherited: Mapping[str, str], temp_dir: str) -> dict[str, str]:
+def build_environment_allowlist(
+    env: Mapping[str, str],
+    inherited: Mapping[str, str],
+    home: SandboxHome,
+    inherit: Sequence[str] = (),
+) -> dict[str, str]:
     """Build the complete environment a confined child receives.
 
-    The inherited environment is filtered to :data:`ENVIRONMENT_ALLOWLIST`,
-    ``TEMP`` and ``TMP`` are pointed at the confined temporary directory, and
-    the server's own configured entries are merged over the result. Nothing
-    else crosses: a credential sitting in Intellicrack's environment for one
-    provider has no business reaching a third-party server. The mapping is
-    the child's whole environment; the spawn adds nothing to it.
+    Four layers, each overriding the one before: the inherited environment
+    filtered to :data:`ENVIRONMENT_ALLOWLIST`; the variables pointing every
+    launcher at the server's sandbox home; the inherited variables the
+    operator named in ``inheritEnv``; and the server's own configured
+    entries. Nothing else crosses: a credential sitting in Intellicrack's
+    environment for one provider has no business reaching a third-party
+    server. Names are compared without regard to case, as Windows compares
+    them, so a later layer replaces an earlier entry rather than sitting
+    beside it. The mapping is the child's whole environment; the spawn adds
+    nothing to it.
 
     Args:
         env: The server's own resolved environment entries.
         inherited: The environment Intellicrack itself is running with.
-        temp_dir: The directory the child's ``TEMP`` and ``TMP`` name.
+        home: The server's sandbox home.
+        inherit: Further variable names to pass through from ``inherited``.
 
     Returns:
         dict[str, str]: The environment to hand to the child.
     """
-    allowed = {name: value for name, value in inherited.items() if name.upper() in ENVIRONMENT_ALLOWLIST}
-    allowed |= {"TEMP": temp_dir, "TMP": temp_dir}
-    allowed |= env
+    wanted = {name.upper() for name in inherit}
+    allowed: dict[str, str] = {}
+    _merge_environment(allowed, {name: value for name, value in inherited.items() if name.upper() in ENVIRONMENT_ALLOWLIST})
+    _merge_environment(allowed, home.environment())
+    _merge_environment(allowed, {name: value for name, value in inherited.items() if name.upper() in wanted})
+    _merge_environment(allowed, env)
     return allowed
+
+
+def _merge_environment(target: dict[str, str], layer: Mapping[str, str]) -> None:
+    """Lay one set of variables over another, comparing names as Windows does.
+
+    Args:
+        target: The environment being built, changed in place.
+        layer: The variables that win over what ``target`` holds.
+    """
+    for name, value in layer.items():
+        for existing in [key for key in target if key.upper() == name.upper()]:
+            del target[existing]
+        target[name] = value
 
 
 def _lookup(env: Mapping[str, str], name: str) -> str | None:
@@ -483,9 +649,11 @@ def render_command_line(application: str, command: str, args: Sequence[str]) -> 
     A native program gets the standard MSVC quoting of ``command`` and its
     arguments. A batch script cannot be executed directly; it runs as
     ``cmd.exe /d /v:off /s /c "..."`` with every token double-quoted, which
-    keeps ``&``, ``|``, ``<``, ``>``, ``^`` and parentheses literal. The
-    characters in :data:`BATCH_UNSAFE_CHARACTERS` cannot be made literal for
-    the interpreter and are refused.
+    keeps ``&``, ``|``, ``<``, ``>``, ``^`` and parentheses literal, and
+    with the backslashes before each closing quote doubled for the program
+    the script hands its arguments to. The characters in
+    :data:`BATCH_UNSAFE_CHARACTERS` cannot be made literal for the
+    interpreter and are refused.
 
     Args:
         application: The image executed.
@@ -509,8 +677,28 @@ def render_command_line(application: str, command: str, args: Sequence[str]) -> 
                 f"launch the script's underlying program directly instead"
             )
             raise McpConfigError(message)
-    quoted = " ".join(f'"{token}"' for token in [command, *args])
+    quoted = " ".join(_quote_batch_token(token) for token in [command, *args])
     return f'"{application}" /d /v:off /s /c "{quoted}"'
+
+
+def _quote_batch_token(token: str) -> str:
+    r"""Double-quote one token of a batch script's command line.
+
+    The script hands its arguments on, ``%*`` and all, to a program that
+    parses them with the MSVC rules, where backslashes before a closing
+    quote escape it. Those backslashes are doubled, so an argument ending in
+    one, such as ``C:\proj\``, still ends where it should instead of
+    swallowing every argument after it. The token holds no double quote:
+    :func:`render_command_line` refuses those first.
+
+    Args:
+        token: The argument.
+
+    Returns:
+        str: The quoted token.
+    """
+    doubled = "\\" * (len(token) - len(token.rstrip("\\")))
+    return f'"{token}{doubled}"'
 
 
 def quote_windows_argument(argument: str) -> str:
@@ -625,6 +813,8 @@ def plan_sandboxed_launch(
     sandbox: McpSandboxSpec,
     env: Mapping[str, str],
     inherited: Mapping[str, str],
+    *,
+    home: SandboxHome,
 ) -> SandboxedLaunch:
     """Work out every detail of a confined launch without touching the system.
 
@@ -637,6 +827,7 @@ def plan_sandboxed_launch(
         sandbox: The server's sandbox settings.
         env: The server's own resolved environment entries.
         inherited: The environment to filter.
+        home: The server's sandbox home.
 
     Returns:
         SandboxedLaunch: Everything needed to spawn the child confined.
@@ -657,8 +848,7 @@ def plan_sandboxed_launch(
 
     cwd = confine_working_directory(spec, sandbox)
     writable = tuple(str(Path(entry).resolve()) for entry in sandbox.allow_write)
-    temp_dir = str(Path(writable[0], SANDBOX_TEMP_DIRNAME))
-    environment = build_environment_allowlist(env, inherited, temp_dir)
+    environment = build_environment_allowlist(env, inherited, home, sandbox.inherit_env)
     program = resolve_executable(command, environment)
     batch = PureWindowsPath(program).suffix.lower() in BATCH_SUFFIXES
     launch = SandboxedLaunch(
@@ -668,8 +858,9 @@ def plan_sandboxed_launch(
         env=environment,
         cwd=cwd,
         writable=writable,
-        temp_dir=temp_dir,
+        temp_dir=home.temp,
         write_existing=sandbox.write_existing,
+        home=home,
     )
     _ = launch.command_line
     return launch
@@ -680,6 +871,8 @@ def build_sandboxed_startup(
     sandbox: McpSandboxSpec,
     env: Mapping[str, str],
     inherited: Mapping[str, str] | None = None,
+    *,
+    server_id: str,
 ) -> SandboxedLaunch:
     """Build the confined launch for one local server.
 
@@ -692,6 +885,7 @@ def build_sandboxed_startup(
         env: The server's own resolved environment entries.
         inherited: The environment to filter, defaulting to the running
             process's own.
+        server_id: The server, whose sandbox home the launch uses.
 
     Returns:
         SandboxedLaunch: Everything needed to spawn the child confined.
@@ -701,7 +895,7 @@ def build_sandboxed_startup(
     """
     if not sandbox_supported():
         raise McpConfigError(_ERR_UNSUPPORTED_PLATFORM)
-    launch = plan_sandboxed_launch(spec, sandbox, env, inherited if inherited is not None else os.environ)
+    launch = plan_sandboxed_launch(spec, sandbox, env, inherited if inherited is not None else os.environ, home=sandbox_home(server_id))
     _logger.info(
         "mcp_sandbox_launch_built",
         command=launch.command,
@@ -713,6 +907,8 @@ def build_sandboxed_startup(
     )
     for limitation in sandbox_limitations(sandbox):
         _logger.warning("mcp_sandbox_limitation", limitation=limitation)
+    for note in launcher_notes(spec.command):
+        _logger.info("mcp_sandbox_launcher_note", server_id=server_id, note=note)
     return launch
 
 
@@ -1491,9 +1687,10 @@ def apply_write_confinement(launch: SandboxedLaunch) -> tuple[WriteGrant, ...]:
     """Make exactly the nominated directories writable to the confined child.
 
     Every ``allowWrite`` directory receives an inheritable Low mandatory
-    label, on the directory alone unless ``writeExisting`` was chosen, and
-    the child's temporary directory is created inside the first of them so it
-    inherits that label. Blocking: run it on a worker thread.
+    label, on the directory alone unless ``writeExisting`` was chosen. The
+    server's sandbox home is created and made writable throughout, since
+    everything in it is the server's own from an earlier run. Blocking: run
+    it on a worker thread.
 
     Args:
         launch: The planned launch.
@@ -1504,21 +1701,42 @@ def apply_write_confinement(launch: SandboxedLaunch) -> tuple[WriteGrant, ...]:
 
     Raises:
         McpConfigError: If a directory could not be labelled or the
-            temporary directory could not be created. Every grant already
-            made is reverted first.
+            sandbox home could not be created. Every grant already made is
+            reverted first.
     """
     grants: list[WriteGrant] = []
     try:
+        grants.extend(_prepare_home(launch))
         grants.extend(_GRANTS.acquire(directory, existing=launch.write_existing) for directory in launch.writable)
-        Path(launch.temp_dir).mkdir(exist_ok=True)
     except OSError as exc:
         release_write_confinement(tuple(grants))
-        message = f"cannot create the sandbox temporary directory {launch.temp_dir}: {exc}"
+        message = f"cannot create the sandbox home {launch.home.root if launch.home is not None else launch.temp_dir}: {exc}"
         raise McpConfigError(message) from exc
     except McpConfigError:
         release_write_confinement(tuple(grants))
         raise
     return tuple(grants)
+
+
+def _prepare_home(launch: SandboxedLaunch) -> tuple[WriteGrant, ...]:
+    """Create a launch's sandbox home and make it writable to the child throughout.
+
+    A launch built without a home gets its temporary directory created and nothing granted, since it lies inside a directory that is.
+    A directory that cannot be created propagates :class:`OSError`, and one that cannot be labelled :class:`McpConfigError` from
+    :meth:`WriteGrantLedger.acquire`.
+
+    Args:
+        launch: The planned launch.
+
+    Returns:
+        tuple[WriteGrant, ...]: The grant on the home, or nothing.
+    """
+    home = launch.home
+    if home is None:
+        Path(launch.temp_dir).mkdir(parents=True, exist_ok=True)
+        return ()
+    home.create()
+    return (_GRANTS.acquire(str(Path(home.root).resolve()), existing=True),)
 
 
 def release_write_confinement(grants: Sequence[WriteGrant]) -> None:
@@ -1779,32 +1997,81 @@ def _create_suspended_process(launch: SandboxedLaunch, token: int, pipes: _Child
     return information
 
 
-def _confine_and_resume(information: _ProcessInformation, job: int) -> None:
+class SandboxConfinementError(OSError):
+    """A step of confining a newly created server process failed.
+
+    Attributes:
+        step: The Win32 call that failed, such as ``ResumeThread``.
+        error: The last error read after it failed, zero when Windows gave none.
+    """
+
+    step: str
+    error: int
+
+    def __init__(self, step: str, error: int) -> None:
+        """Describe the failed step.
+
+        Args:
+            step: The Win32 call that failed.
+            error: The last error read after it failed, possibly zero.
+        """
+        if error:
+            super().__init__(0, f"{step} failed with Windows error {error}", None, error)
+        else:
+            super().__init__(f"{step} failed without reporting a reason")
+        self.step = step
+        self.error = error
+
+
+def check_resumed(previous_suspend_count: int, error: int) -> None:
+    """Confirm that ``ResumeThread`` let a suspended server run.
+
+    The failure is decided by the call's own result, never by the error
+    code: Windows does not promise a non-zero last error for every failure,
+    and a failed resume taken for success would leave the server suspended
+    forever while its connection waited on it.
+
+    Args:
+        previous_suspend_count: What ``ResumeThread`` returned.
+        error: The last error read straight after the call.
+
+    Raises:
+        SandboxConfinementError: If the call failed, whatever ``error`` reads.
+    """
+    if previous_suspend_count == _RESUME_FAILED:
+        step = "ResumeThread"
+        raise SandboxConfinementError(step, error)
+
+
+def _confine_and_resume(information: _ProcessInformation, job: SandboxedJob) -> None:
     """Place a suspended process in its job, then let it run.
 
     A process that cannot be confined is terminated before it ever runs.
 
     Args:
         information: The suspended process and its thread.
-        job: The open job handle.
+        job: The open job.
 
     Raises:
-        ctypes.WinError: If the assignment or the resume failed.
+        OSError: If the process could not be placed in the job, or its
+            thread could not be resumed, whatever the last error read; the
+            latter arrives as :class:`SandboxConfinementError` from
+            :func:`check_resumed`.
+        McpConfigError: If the job was not open.
     """
     kernel32 = _kernel32()
-    error = 0
-    if (
-        not kernel32.AssignProcessToJobObject(wintypes.HANDLE(job), information.hProcess)
-        or kernel32.ResumeThread(information.hThread) == _RESUME_FAILED
-    ):
-        error = ctypes.get_last_error()
-    _ = kernel32.CloseHandle(information.hThread)
-    if error:
+    try:
+        job.adopt(int(information.dwProcessId))
+        previous = kernel32.ResumeThread(information.hThread)
+        check_resumed(previous, ctypes.get_last_error())
+    except (OSError, McpConfigError):
         _ = kernel32.TerminateProcess(information.hProcess, 1)
-        raise ctypes.WinError(error)
+        raise
+    finally:
+        _ = kernel32.CloseHandle(information.hThread)
 
 
-def spawn_confined_process(launch: SandboxedLaunch, job: int, token: int, errlog: TextIO) -> ConfinedProcess:
+def spawn_confined_process(launch: SandboxedLaunch, job: SandboxedJob, token: int, errlog: TextIO) -> ConfinedProcess:
     """Create a server process suspended, place it in its job, and resume it.
 
     The process is created with the restricted token, a handle list that
@@ -1812,6 +2079,11 @@ def spawn_confined_process(launch: SandboxedLaunch, job: int, token: int, errlog
     complete environment. It is assigned to the job before its first thread
     is resumed, so it can never run outside the job and neither can any
     process it starts.
+
+    The child's pipe ends are inheritable only while
+    :data:`~intellicrack.core.handle_inheritance.INHERITANCE_LOCK` is held,
+    from before they are marked until after they are closed, so no other
+    spawn in the process can hand them to a child of its own.
 
     A platform with no sandbox propagates :class:`McpConfigError` from
     :func:`_kernel32`. A failure to create the process propagates
@@ -1821,7 +2093,7 @@ def spawn_confined_process(launch: SandboxedLaunch, job: int, token: int, errlog
 
     Args:
         launch: The planned launch.
-        job: The open job handle.
+        job: The open job.
         token: The restricted primary token.
         errlog: Where the child's standard error is written.
 
@@ -1831,15 +2103,18 @@ def spawn_confined_process(launch: SandboxedLaunch, job: int, token: int, errlog
     Raises:
         OSError: If the process could not be created or confined. The
             parent's pipe ends are closed before it is raised.
+        McpConfigError: If the job was not open. The process has been
+            terminated and its pipe ends closed.
     """
     pipes = _ChildPipes.open(errlog)
-    try:
-        information = _create_suspended_process(launch, token, pipes)
-    except OSError:
-        pipes.close_parent_ends()
-        raise
-    finally:
-        pipes.close_child_ends()
+    with INHERITANCE_LOCK:
+        try:
+            information = _create_suspended_process(launch, token, pipes)
+        except OSError:
+            pipes.close_parent_ends()
+            raise
+        finally:
+            pipes.close_child_ends()
     process = ConfinedProcess(
         pid=int(information.dwProcessId),
         handle=int(information.hProcess or 0),
@@ -1848,7 +2123,7 @@ def spawn_confined_process(launch: SandboxedLaunch, job: int, token: int, errlog
     )
     try:
         _confine_and_resume(information, job)
-    except OSError:
+    except (OSError, McpConfigError):
         process.close()
         raise
     _logger.info("mcp_sandbox_process_started", pid=process.pid, application=launch.application)
@@ -2047,8 +2322,10 @@ async def confined_stdio_client(
     Teardown closes standard input, waits out the grace period, and then
     terminates the job, which takes every descendant with it; only then are
     the write paths' labels reverted, so nothing in the job can write to
-    them while they change back. Labelling and reverting run on a worker
-    thread, so a large tree never stalls the event loop.
+    them while they change back. Labelling, reverting and the spawn itself
+    run on a worker thread, so neither a large tree nor a spawn waiting on
+    :data:`~intellicrack.core.handle_inheritance.INHERITANCE_LOCK` stalls the
+    event loop.
 
     A job, token or process that cannot be created propagates
     :class:`OSError` from :class:`SandboxedJob`,
@@ -2079,7 +2356,7 @@ async def confined_stdio_client(
         try:
             token = create_restricted_token()
             try:
-                process = spawn_confined_process(launch, job_handle, token, errlog)
+                process = await anyio.to_thread.run_sync(spawn_confined_process, launch, job, token, errlog)
             finally:
                 _ = _kernel32().CloseHandle(wintypes.HANDLE(token))
             try:

@@ -37,8 +37,8 @@ from intellicrack.mcp.config import McpSandboxSpec, StdioServerSpec
 from intellicrack.mcp.errors import McpConfigError, McpConnectionError
 from intellicrack.mcp.sandbox_launch import (
     CREATE_SUSPENDED,
-    SANDBOX_TEMP_DIRNAME,
     JobLimits,
+    SandboxHome,
     build_sandboxed_startup,
     environment_block,
     pipe_session_streams,
@@ -94,6 +94,18 @@ def _inherited(bin_dir: Path) -> dict[str, str]:
     }
 
 
+def _home(tmp_path: Path) -> SandboxHome:
+    """Place a server's sandbox home in the test's own directory.
+
+    Args:
+        tmp_path: Per-test directory.
+
+    Returns:
+        SandboxHome: The home, not created.
+    """
+    return SandboxHome(str(tmp_path / "home"))
+
+
 def _sandbox(*writable: Path, domains: tuple[str, ...] = ()) -> McpSandboxSpec:
     """Build an enabled sandbox.
 
@@ -111,7 +123,7 @@ class TestEnvironmentAllowlist:
     """The confined child's environment is exactly the allowlist plus its own entries."""
 
     def test_environment_is_the_allowlist_and_nothing_else(self, tmp_path: Path) -> None:
-        """Credentials, profile paths and the operator's TEMP do not reach the child.
+        """Credentials, the operator's profile paths and the operator's TEMP do not reach the child; its own home does.
 
         Args:
             tmp_path: Pytest-provided temporary directory.
@@ -122,17 +134,17 @@ class TestEnvironmentAllowlist:
         work.mkdir()
         _ = _program(bin_dir, "server.exe")
         spec = StdioServerSpec(command="server")
-        launch = plan_sandboxed_launch(spec, _sandbox(work), {"SERVER_FLAG": "1"}, _inherited(bin_dir))
-        temp = str(work.resolve() / SANDBOX_TEMP_DIRNAME)
+        home = _home(tmp_path)
+        launch = plan_sandboxed_launch(spec, _sandbox(work), {"SERVER_FLAG": "1"}, _inherited(bin_dir), home=home)
         assert dict(launch.env) == {
             "PATH": str(bin_dir),
             "PATHEXT": ".COM;.EXE;.BAT;.CMD",
             "SystemRoot": _WINDOWS_ROOT,
-            "TEMP": temp,
-            "TMP": temp,
+            **home.environment(),
             "SERVER_FLAG": "1",
         }
-        assert launch.temp_dir == temp
+        assert launch.temp_dir == home.temp
+        assert launch.env["TEMP"] == launch.env["TMP"] == home.temp
 
     def test_environment_block_is_sorted_and_terminated(self) -> None:
         """The Win32 block is sorted case-insensitively and double-NUL terminated."""
@@ -160,7 +172,7 @@ class TestProgramResolution:
         work.mkdir()
         program = _program(bin_dir, "server.exe")
         spec = StdioServerSpec(command="server", args=("--port", "a b", 'say "hi"'))
-        launch = plan_sandboxed_launch(spec, _sandbox(work), {}, _inherited(bin_dir))
+        launch = plan_sandboxed_launch(spec, _sandbox(work), {}, _inherited(bin_dir), home=_home(tmp_path))
         assert launch.command == str(program.resolve())
         assert launch.application == launch.command
         assert launch.creation_flags & CREATE_SUSPENDED
@@ -181,7 +193,7 @@ class TestProgramResolution:
         shim = _program(bin_dir, "npx.cmd")
         spec = StdioServerSpec(command="npx", args=("-y", "@scope/server & calc"))
         inherited = _inherited(bin_dir) | {"COMSPEC": "C:\\attacker\\cmd.exe"}
-        launch = plan_sandboxed_launch(spec, _sandbox(work), {}, inherited)
+        launch = plan_sandboxed_launch(spec, _sandbox(work), {}, inherited, home=_home(tmp_path))
         interpreter = "C:\\Windows\\System32\\cmd.exe"
         assert launch.is_batch_script
         assert launch.command == str(shim.resolve())
@@ -207,7 +219,7 @@ class TestProgramResolution:
         work = tmp_path / "work"
         work.mkdir()
         with pytest.raises(McpConfigError, match="cannot find"):
-            _ = plan_sandboxed_launch(StdioServerSpec(command="absent"), _sandbox(work), {}, _inherited(tmp_path))
+            _ = plan_sandboxed_launch(StdioServerSpec(command="absent"), _sandbox(work), {}, _inherited(tmp_path), home=_home(tmp_path))
 
     @pytest.mark.parametrize(
         "argument",
@@ -288,7 +300,7 @@ class TestRefusedOffWindows:
             tmp_path: Pytest-provided temporary directory.
         """
         with pytest.raises(McpConfigError, match="not available on this platform"):
-            _ = build_sandboxed_startup(StdioServerSpec(command=sys.executable), _sandbox(tmp_path), {})
+            _ = build_sandboxed_startup(StdioServerSpec(command=sys.executable), _sandbox(tmp_path), {}, server_id="refused")
 
     def test_sandboxed_connection_starts_nothing(self, tmp_path: Path) -> None:
         """The connection refuses before any process is spawned.
@@ -476,7 +488,7 @@ class TestWindowsTokenAndWrites:
         assert not (outside / "outside.txt").exists()
 
     def test_server_environment_is_the_allowlist(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Nothing outside the allowlist reaches the server, not even the SDK's defaults.
+        """Nothing outside the allowlist and the server's own home reaches the server, not even the SDK's defaults.
 
         Args:
             tmp_path: Pytest-provided temporary directory.
@@ -496,4 +508,5 @@ class TestWindowsTokenAndWrites:
 
         names = asyncio.run(body())
         assert _SECRET_NAME not in names
-        assert not names & {"USERPROFILE", "APPDATA", "LOCALAPPDATA", "USERNAME", "HOMEPATH"}
+        assert not names & {"USERNAME", "HOMEPATH", "HOMEDRIVE", "USERDOMAIN"}
+        assert {"USERPROFILE", "APPDATA", "LOCALAPPDATA", "TEMP"} <= names

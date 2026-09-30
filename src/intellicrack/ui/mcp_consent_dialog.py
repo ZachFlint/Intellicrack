@@ -30,7 +30,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.mcp.config import sandbox_limitations
+from intellicrack.mcp.config import launcher_notes, sandbox_limitations
 from intellicrack.mcp.consent import describe_launch, scan_command_for_dangerous_patterns
 from intellicrack.ui.resources.font_manager import FontManager
 
@@ -270,7 +270,7 @@ class McpServerConsentDialog(QDialog):
         layout.addLayout(button_layout)
 
     def _sandbox_summary(self) -> str:
-        """Say in one paragraph whether the server runs confined, and what that leaves open.
+        """Say in one paragraph whether the server runs confined, what that leaves open, and what its launcher needs.
 
         Returns:
             str: The summary.
@@ -280,7 +280,10 @@ class McpServerConsentDialog(QDialog):
             return "Sandbox: OFF. This program runs with your own account and your full privileges."
         writable = ", ".join(sandbox.allow_write) or "none"
         limitations = " ".join(sandbox_limitations(sandbox))
-        return f"Sandbox: ON. It runs at Low integrity and can write only to: {writable}. {limitations}"
+        summary = f"Sandbox: ON. It runs at Low integrity and can write only to: {writable} and its own sandbox home. {limitations}"
+        spec = self._config.stdio
+        notes = " ".join(launcher_notes(spec.command)) if spec is not None else ""
+        return f"{summary} {notes}" if notes else summary
 
     def make_decision(self, *, approved: bool, blocked: bool = False) -> None:
         """Apply an answer and finalise the dialog.

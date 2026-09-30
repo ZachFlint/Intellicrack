@@ -19,7 +19,7 @@ import enum
 import json
 import re
 from dataclasses import dataclass, field, replace
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import parse_qsl, urlsplit
 
@@ -575,6 +575,79 @@ def sandbox_limitations(sandbox: McpSandboxSpec) -> tuple[str, ...]:
         "Reads are not restricted: the server can read any file your account can read.",
         "Locations Windows labels low-integrity, such as AppData\\LocalLow, stay writable to the server.",
     )
+
+
+_NPM_NOTE: Final[str] = (
+    "npm keeps this server's packages and cache in the server's own sandbox home, so the first start downloads them again, and settings "
+    "in your own .npmrc, such as a private registry or a proxy, are not seen. Add NPM_CONFIG_REGISTRY or HTTPS_PROXY under Extra "
+    "inherited variables, or set them in the server's environment."
+)
+_NODE_NOTE: Final[str] = (
+    "Node reports the server's sandbox home as its home and temporary directory. Files the server needs from your own profile must be "
+    "passed to it by path, and a folder it writes to must be added under Writable folders."
+)
+_UV_NOTE: Final[str] = (
+    "uv keeps its cache, its tools and any Python it downloads in the server's sandbox home, so the first start downloads them again, "
+    "and a uv.toml in your own profile is not seen. Set UV_PYTHON in the server's environment to an installed interpreter to avoid "
+    "downloading one."
+)
+_PIPX_NOTE: Final[str] = (
+    "pipx installs into the server's sandbox home, so the first start downloads the package again, and pipx settings in your own "
+    "profile are not seen."
+)
+_PYTHON_NOTE: Final[str] = (
+    "Python can import what is already installed but cannot install into your own environment; pip installs go to the server's sandbox "
+    "home. A virtual environment the server changes must be under Writable folders."
+)
+_DOCKER_NOTE: Final[str] = (
+    "The container engine's pipe does not accept Low integrity clients, so a sandboxed container client cannot start containers. Turn "
+    "this server's sandbox off and rely on the container's own isolation, or run the server without a container."
+)
+
+LAUNCHER_NOTES: Final[dict[str, tuple[str, ...]]] = {
+    "npx": (_NPM_NOTE, _NODE_NOTE),
+    "npm": (_NPM_NOTE, _NODE_NOTE),
+    "pnpm": (_NODE_NOTE,),
+    "node": (_NODE_NOTE,),
+    "uvx": (_UV_NOTE,),
+    "uv": (_UV_NOTE,),
+    "pipx": (_PIPX_NOTE, _PYTHON_NOTE),
+    "python": (_PYTHON_NOTE,),
+    "py": (_PYTHON_NOTE,),
+    "docker": (_DOCKER_NOTE,),
+    "podman": (_DOCKER_NOTE,),
+}
+"""What a sandboxed server started by each common launcher needs the operator to know, keyed by the launcher's name."""
+
+_LAUNCHER_SUFFIXES: Final[frozenset[str]] = frozenset({".exe", ".cmd", ".bat", ".ps1", ".com"})
+
+
+def launcher_name(command: str) -> str:
+    """Reduce a launch command to the name of the launcher it runs.
+
+    Args:
+        command: The configured command, a bare name or a path, with or without a suffix.
+
+    Returns:
+        str: The launcher's lower-case name, with a version such as the one in ``python3.13`` reduced to ``python``.
+    """
+    name = PureWindowsPath(command.strip().replace("/", "\\")).name.lower()
+    stem, dot, suffix = name.rpartition(".")
+    if dot and f".{suffix}" in _LAUNCHER_SUFFIXES:
+        name = stem
+    return re.sub(r"[\d.]+$", "", name) if name.startswith("python") else name
+
+
+def launcher_notes(command: str) -> tuple[str, ...]:
+    """State what a sandboxed server needs the operator to change or know, for the launcher that starts it.
+
+    Args:
+        command: The server's launch command.
+
+    Returns:
+        tuple[str, ...]: One sentence group per note, empty for a launcher with nothing to say.
+    """
+    return LAUNCHER_NOTES.get(launcher_name(command), ())
 
 
 @dataclass(frozen=True, slots=True)

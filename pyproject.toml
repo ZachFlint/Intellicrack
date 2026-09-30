@@ -944,6 +944,9 @@ faker = ">=40.39.0, <41"
 # File-backed keyring the credential and OAuth gates store real secrets in, so no test touches the
 # operating system's own keyring (tests/_helpers/private_keyring.py).
 keyrings-alt = ">=5.0.2, <6"
+# Launchers the sandboxed-launch gates run a confined server through (tests/mcp/test_fix_r2_sandbox_launchers.py).
+uv = ">=0.9, <1"
+pipx = ">=1.8, <2"
 
 # Documentation build.
 [tool.pixi.feature.docs.pypi-dependencies]

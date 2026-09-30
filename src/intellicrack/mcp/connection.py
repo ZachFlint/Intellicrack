@@ -54,7 +54,13 @@ from intellicrack.mcp.config import McpConfigStore, McpServerConfig, McpTranspor
 from intellicrack.mcp.consent import McpConsentStoreError
 from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
 from intellicrack.mcp.operator_wait import OperatorWaitClock
-from intellicrack.mcp.sandbox_launch import build_sandboxed_startup, confined_stdio_client, revert_stale_write_grants, sandbox_supported
+from intellicrack.mcp.sandbox_launch import (
+    build_sandboxed_startup,
+    confined_stdio_client,
+    revert_stale_write_grants,
+    sandbox_access_guidance,
+    sandbox_supported,
+)
 from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, open_http_transport, sign_in_before_handshake
 
 
@@ -137,6 +143,9 @@ once, because its output stream ends.
 
 LISTEN_RETRY_S: Final[float] = 5.0
 """Delay before a change subscription the server ended is opened again."""
+
+_GUIDANCE_STDERR_LINES: Final[int] = 200
+"""How much of a sandboxed server's last stderr is searched for a refused access when it fails."""
 
 _FAILURE_TEXT_LIMIT: Final[int] = 4096
 """Longest failure text kept in a message or a log record."""
@@ -813,7 +822,7 @@ class McpConnection:
         )
         try:
             if sandbox.enabled:
-                launch = build_sandboxed_startup(launch_spec, sandbox, env)
+                launch = build_sandboxed_startup(launch_spec, sandbox, env, server_id=self.server_id)
                 async with (
                     confined_stdio_client(launch, sandbox, errlog) as streams,
                     self._build_client(streams, on_closed) as client,
@@ -1213,6 +1222,8 @@ class McpConnection:
                 self._client = None
                 self._failure = failure
                 self._last_error = str(failure) if isinstance(failure, McpError) else f"{type(failure).__name__}: {failure_text(failure)}"
+                if self._config.sandbox.enabled and (guidance := sandbox_access_guidance(self._stderr.tail(_GUIDANCE_STDERR_LINES))):
+                    self._last_error = f"{self._last_error} {guidance}"
                 self._health = McpHealth.FAILED
                 self._settled.set()
                 _logger.warning(
