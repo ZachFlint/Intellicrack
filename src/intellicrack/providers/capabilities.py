@@ -290,6 +290,10 @@ class ModelCapabilities:
             output is available.
         supports_temperature: Whether the model accepts a temperature other
             than 1. Current OpenAI reasoning families reject one.
+        supports_forced_tool_choice: Whether the model accepts a tool choice
+            that forces a tool call, such as Anthropic's ``any`` and
+            ``tool``. Claude Fable 5.1 and Opus 5.5 refuse one outright, and
+            every Claude model refuses one while thinking.
         reasoning: The model's reasoning surface.
         tool_search: The model's native large-toolset surface.
         context_window: Total context length in tokens, or ``None`` when the
@@ -314,6 +318,7 @@ class ModelCapabilities:
     supports_prompt_cache_key: bool = False
     supports_structured_outputs: bool = False
     supports_temperature: bool = True
+    supports_forced_tool_choice: bool = True
     reasoning: ReasoningSupport = field(default_factory=ReasoningSupport)
     tool_search: ToolSearchSupport = field(default_factory=ToolSearchSupport)
     context_window: int | None = None
@@ -351,6 +356,8 @@ class CapabilityOverride:
             :attr:`ModelCapabilities.supports_structured_outputs`.
         supports_temperature: Override for
             :attr:`ModelCapabilities.supports_temperature`.
+        supports_forced_tool_choice: Override for
+            :attr:`ModelCapabilities.supports_forced_tool_choice`.
         reasoning: Whole-record override for
             :attr:`ModelCapabilities.reasoning`.
         tool_search: Whole-record override for
@@ -381,6 +388,7 @@ class CapabilityOverride:
     supports_prompt_cache_key: bool | None = None
     supports_structured_outputs: bool | None = None
     supports_temperature: bool | None = None
+    supports_forced_tool_choice: bool | None = None
     reasoning: ReasoningSupport | None = None
     tool_search: ToolSearchSupport | None = None
     context_window: int | None = None
@@ -460,6 +468,7 @@ _OVERRIDE_FIELD_NAMES: Final[tuple[str, ...]] = (
     "supports_prompt_cache_key",
     "supports_structured_outputs",
     "supports_temperature",
+    "supports_forced_tool_choice",
     "reasoning",
     "tool_search",
     "context_window",
@@ -481,6 +490,7 @@ _BOOL_OVERRIDE_FIELDS: Final[frozenset[str]] = frozenset({
     "supports_prompt_cache_key",
     "supports_structured_outputs",
     "supports_temperature",
+    "supports_forced_tool_choice",
 })
 
 _INT_OVERRIDE_FIELDS: Final[frozenset[str]] = frozenset({

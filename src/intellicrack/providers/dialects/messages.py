@@ -354,7 +354,9 @@ class MessagesAdapter(DialectAdapter):
             body["tools"] = tools
 
         if request.tool_choice is not None and tools:
-            self._apply_tool_choice(body, request.tool_choice, name_style=request.tool_name_style)
+            thinking_on = request.thinking is not None and request.thinking.enabled and capabilities.reasoning.supported
+            forcing_allowed = capabilities.supports_forced_tool_choice and not thinking_on
+            self._apply_tool_choice(body, request.tool_choice, name_style=request.tool_name_style, forcing_allowed=forcing_allowed)
 
         thinking = request.thinking
         if thinking is not None and thinking.enabled:
@@ -379,24 +381,39 @@ class MessagesAdapter(DialectAdapter):
         tool_choice: ToolChoice,
         *,
         name_style: ToolNameStyle,
+        forcing_allowed: bool = True,
     ) -> None:
         """Write the Anthropic ``tool_choice`` field, or withdraw the tools.
 
         Anthropic has no ``"none"`` choice: the way to forbid tool use is to
         send no tools at all, which is what :data:`ToolChoiceMode.NONE` does
-        here.
+        here. A model that refuses a forced choice -- any Claude model while
+        it thinks, and Fable 5.1 and Opus 5.5 always -- is sent ``auto``
+        instead, and a choice of one specific tool keeps only that tool in
+        the request, so the model can still call nothing else.
 
         Args:
             body: The request body, mutated in place.
             tool_choice: The tool choice configuration.
             name_style: How canonical dotted names are written onto the wire.
+            forcing_allowed: Whether this model, in this thinking state,
+                accepts ``any`` and ``tool``.
         """
-        if tool_choice.mode == ToolChoiceMode.AUTO:
+        forced = tool_choice.mode == ToolChoiceMode.REQUIRED or (
+            tool_choice.mode == ToolChoiceMode.SPECIFIC and bool(tool_choice.function_name)
+        )
+        if tool_choice.mode == ToolChoiceMode.NONE:
+            body.pop("tools", None)
+        elif forced and not forcing_allowed:
+            _logger.debug("messages_forced_tool_choice_relaxed", model=body.get("model"), mode=tool_choice.mode.value)
+            if tool_choice.mode == ToolChoiceMode.SPECIFIC and tool_choice.function_name:
+                wanted = wire_function_name(tool_choice.function_name, name_style)
+                body["tools"] = [tool for tool in body.get("tools", []) if tool.get("name") == wanted] or body.get("tools", [])
+            body["tool_choice"] = {"type": "auto"}
+        elif tool_choice.mode == ToolChoiceMode.AUTO:
             body["tool_choice"] = {"type": "auto"}
         elif tool_choice.mode == ToolChoiceMode.REQUIRED:
             body["tool_choice"] = {"type": "any"}
-        elif tool_choice.mode == ToolChoiceMode.NONE:
-            body.pop("tools", None)
         elif tool_choice.mode == ToolChoiceMode.SPECIFIC and tool_choice.function_name:
             body["tool_choice"] = {"type": "tool", "name": wire_function_name(tool_choice.function_name, name_style)}
 

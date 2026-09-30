@@ -182,6 +182,10 @@ _ANTHROPIC_BUDGET_REASONING = ReasoningSupport(
 
 ANTHROPIC_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
     ModelPreset(
+        prefixes=("claude-fable-5", "claude-opus-5"),
+        capabilities=CapabilityOverride(supports_forced_tool_choice=False),
+    ),
+    ModelPreset(
         prefixes=("claude-opus-4-6", "claude-sonnet-4-6"),
         capabilities=CapabilityOverride(reasoning=_ANTHROPIC_46_REASONING, context_window=ANTHROPIC_CONTEXT_WINDOW),
     ),
@@ -207,7 +211,8 @@ thinking with ``output_config.effort`` up to ``xhigh`` and a 1M window -- so a
 Claude model released after this table was written resolves to the surface it
 most likely has. The families listed here are the closed set that predates it:
 Opus 4.6 and Sonnet 4.6, which take adaptive thinking but no ``xhigh``, and
-every earlier model, which only takes a ``budget_tokens`` thinking budget.
+every earlier model, which only takes a ``budget_tokens`` thinking budget. Fable 5.1
+and Opus 5.5 share the current surface but refuse a forced tool choice.
 """
 
 _GEMINI_REASONING = ReasoningSupport(
