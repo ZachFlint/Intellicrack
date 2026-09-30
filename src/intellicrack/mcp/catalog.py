@@ -14,22 +14,25 @@ and has to ask again.
 Everything a server sends is untrusted. Descriptions are truncated, the tool
 count is capped, an oversized input schema drops its tool rather than the
 whole listing, and a malformed name is refused. What survives is stored
-verbatim -- in particular the input schema, which reaches the provider
-boundary byte-identical so a ``$ref``-bearing schema is not silently
-flattened.
+verbatim -- in particular the input schema, whose structure reaches the
+provider boundary intact so a ``$ref``-bearing schema is not silently
+flattened. What the model is shown is the entry's advertised schema: the same
+structure with every piece of the server's text cleaned, and every unsafe
+identifier replaced by an alias that is mapped back before a call is sent.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final
 
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.config import TOOL_NAME_PATTERN, to_canonical_name
 from intellicrack.mcp.errors import McpProtocolError
+from intellicrack.mcp.untrusted_schema import SanitizedSchema, sanitize_input_schema
 
 
 if TYPE_CHECKING:
@@ -81,6 +84,9 @@ class McpToolEntry:
         annotations: The server's behavioural hints, or ``None``. These are
             untrusted unless the server is trusted, which is why
             classification consults the trust store before reading them.
+        advertised_schema: ``input_schema`` rewritten to be safe in front
+            of a model, with the aliases that map a call's arguments back.
+            Derived from ``input_schema`` when the entry is built.
     """
 
     name: str
@@ -90,6 +96,11 @@ class McpToolEntry:
     input_schema: dict[str, Any]
     output_schema: dict[str, Any] | None
     annotations: ToolAnnotations | None
+    advertised_schema: SanitizedSchema = field(init=False, compare=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Derive the schema the model is shown from the one the server published."""
+        object.__setattr__(self, "advertised_schema", sanitize_input_schema(self.input_schema))
 
     @property
     def display_name(self) -> str:

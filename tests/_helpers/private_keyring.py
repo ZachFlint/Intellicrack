@@ -4,9 +4,10 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real file-backed keyrings confined to a test's own directory.
 
-The suite's configured backend is ``keyrings.alt``'s plaintext file keyring, which normally writes to one file shared by every test and
-every xdist worker. These helpers give a test its own file, install it as the process keyring for the test's duration, and restore the
-previous backend afterwards. Nothing is simulated: reads and writes go through the real backend to a real file.
+The backend is ``keyrings.alt``'s plaintext file keyring, declared as a dependency of the pixi ``test`` feature. Left to itself it writes
+to one file under the user's data directory, shared by every test and every xdist worker; these helpers point it at a file the test owns,
+install it as the process keyring for the test's duration, and restore the previous backend afterwards, so a test that stores a secret
+never touches the operating system's own keyring. Nothing is simulated: reads and writes go through the real backend to a real file.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
 
 
 PLAINTEXT_FILE_KEYRING = "keyrings.alt.file.PlaintextKeyring"
-"""The file-backed keyring the suite is configured with."""
+"""The file-backed keyring every private keyring is built from."""
 
 CRED_MAX_CREDENTIAL_BLOB_SIZE = 5 * 512
 """Windows ``CRED_MAX_CREDENTIAL_BLOB_SIZE``: the largest generic credential blob ``CredWrite`` accepts."""

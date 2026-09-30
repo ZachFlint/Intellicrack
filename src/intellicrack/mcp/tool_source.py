@@ -30,11 +30,12 @@ they are bounded and fenced before they get there.
 from __future__ import annotations
 
 import json
-import unicodedata
+from itertools import starmap
 from typing import TYPE_CHECKING, Any, Final
 
-from intellicrack.core.json_payload import is_json_object
+from intellicrack.core.json_payload import is_json_array, is_json_object, map_json_strings
 from intellicrack.core.logging import get_logger
+from intellicrack.core.result_parts import inspect_image
 from intellicrack.core.types import (
     AudioResultPart,
     EmbeddedResourcePart,
@@ -48,7 +49,16 @@ from intellicrack.core.types import (
     ToolOutput,
     ToolResultPart,
 )
+from intellicrack.core.untrusted_text import (
+    DEFAULT_UNTRUSTED_LIMIT,
+    UNTRUSTED_BLOCK_END,
+    UNTRUSTED_BLOCK_START,
+    clean_untrusted_label,
+    sanitize_untrusted_text,
+    strip_control_characters,
+)
 from intellicrack.mcp.config import NAMESPACE_PREFIX, from_canonical_name, is_mcp_namespace, to_canonical_name
+from intellicrack.mcp.consent import approval_binding, server_identity
 from intellicrack.mcp.errors import McpConfigError, McpConnectionError, McpError, McpProtocolError
 from intellicrack.mcp.policy import ToolCost, enabled_entries, estimate_tool_cost
 from intellicrack.mcp.validation import validate_against_schema
@@ -68,62 +78,28 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 
-UNTRUSTED_BLOCK_START: Final[str] = "<<<UNTRUSTED_MCP_SERVER_TEXT>>>"
-"""Opening fence around text an external server supplied."""
-
-UNTRUSTED_BLOCK_END: Final[str] = "<<<END_UNTRUSTED_MCP_SERVER_TEXT>>>"
-"""Closing fence around text an external server supplied."""
-
 MAX_RESULT_BYTES: Final[int] = 1024 * 1024
-"""Largest tool result kept, measured across every part."""
+"""Largest tool result kept, measured across every part except images."""
 
 MAX_TEXT_PART_CHARS: Final[int] = 128 * 1024
 """Longest single text part kept intact."""
 
-DEFAULT_UNTRUSTED_LIMIT: Final[int] = 4096
-"""Default bound applied to one piece of fenced server text."""
+MAX_IMAGES_PER_RESULT: Final[int] = 8
+"""Most images one tool result may carry; the rest are described instead."""
 
-_TRUNCATION_NOTE: Final[str] = "\n... [Intellicrack truncated {omitted} more characters]"
+MAX_IMAGE_BYTES_PER_RESULT: Final[int] = 4 * 1024 * 1024
+"""Most decoded image bytes one tool result may carry; images past it are described instead."""
+
+_LABEL_LIMIT: Final[int] = 256
+"""Bound on a server-supplied name or media type."""
+
+_URI_LIMIT: Final[int] = 2048
+"""Bound on a server-supplied URI."""
 
 _SOURCE_PREFIX: Final[str] = "[MCP server {server_id!r}] "
 
 _SEARCH_FUNCTION_HINT: Final[str] = "tools.search(query)"
 """How the prompt names the discovery meta-tool when pointing at MCP tools."""
-
-
-def strip_control_characters(text: str) -> str:
-    """Drop every control and format character except newline and tab.
-
-    Args:
-        text: Text an external server supplied.
-
-    Returns:
-        str: The text with terminal escapes, bidirectional overrides and
-        other invisible control code points removed.
-    """
-    return "".join(character for character in text if character in {"\n", "\t"} or unicodedata.category(character)[0] != "C")
-
-
-def sanitize_untrusted_text(text: str, *, limit: int = DEFAULT_UNTRUSTED_LIMIT) -> str:
-    """Bound and fence a piece of text an external server supplied.
-
-    Control characters are dropped so a server cannot smuggle terminal escape
-    sequences into a log or a prompt. Any attempt to write the fence markers
-    is defanged, so the text cannot close its own block and continue as
-    trusted instruction. What remains is truncated and wrapped.
-
-    Args:
-        text: The server's text.
-        limit: Longest run of text kept before truncation.
-
-    Returns:
-        str: The fenced, bounded text.
-    """
-    cleaned = strip_control_characters(text)
-    cleaned = cleaned.replace(UNTRUSTED_BLOCK_START, "[fence]").replace(UNTRUSTED_BLOCK_END, "[fence]")
-    if len(cleaned) > limit:
-        cleaned = f"{cleaned[:limit]}{_TRUNCATION_NOTE.format(omitted=len(cleaned) - limit)}"
-    return f"{UNTRUSTED_BLOCK_START}\n{cleaned}\n{UNTRUSTED_BLOCK_END}"
 
 
 def source_label(canonical_name: str) -> str:
@@ -146,10 +122,11 @@ def source_label(canonical_name: str) -> str:
 def map_tool_to_function(entry: McpToolEntry) -> ToolFunction:
     """Convert a catalog entry into the tool definition the model sees.
 
-    The raw input schema is carried through verbatim on
-    ``ToolFunction.input_schema``, which the schema layer treats as
-    authoritative, so ``parameters`` is deliberately left empty rather than
-    being a lossy second description of the same thing.
+    The entry's advertised schema is carried on ``ToolFunction.input_schema``,
+    which the schema layer treats as authoritative, so ``parameters`` is
+    deliberately left empty rather than being a lossy second description of
+    the same thing. It keeps the structure the server published and carries
+    none of the server's text unsanitized.
 
     The server's own description is fenced here, once, so every place the
     description travels -- the system prompt, ``tools.search`` results and
@@ -176,7 +153,7 @@ def map_tool_to_function(entry: McpToolEntry) -> ToolFunction:
         description=f"{prefix}{description}",
         parameters=[],
         returns=returns,
-        input_schema=entry.input_schema,
+        input_schema=entry.advertised_schema.schema,
     )
 
 
@@ -198,16 +175,17 @@ def _text_from_resource(resource: object) -> tuple[str, str | None, str | None, 
     return uri, text if isinstance(text, str) else None, blob if isinstance(blob, str) else None, mime_type
 
 
-def _optional_clean(value: object) -> str | None:
-    """Strip control characters from an optional server-supplied label.
+def _optional_clean(value: object, *, limit: int = _LABEL_LIMIT) -> str | None:
+    """Clean an optional server-supplied label.
 
     Args:
         value: A name, media type or similar short field, or ``None``.
+        limit: Longest label kept.
 
     Returns:
         str | None: The cleaned text, or ``None`` when the field was absent.
     """
-    return None if value is None else strip_control_characters(str(value))
+    return None if value is None else clean_untrusted_label(str(value), limit=limit)
 
 
 def _optional_fenced(value: object) -> str | None:
@@ -221,6 +199,24 @@ def _optional_fenced(value: object) -> str | None:
         empty.
     """
     return sanitize_untrusted_text(str(value)) if value else None
+
+
+def _map_image(block: object) -> ToolResultPart:
+    """Convert an image block, refusing one that is not the image it claims to be.
+
+    Args:
+        block: The server's image content block.
+
+    Returns:
+        ToolResultPart: The image, normalized and typed by its own bytes, or a
+        text part saying why it was refused.
+    """
+    declared = clean_untrusted_label(str(getattr(block, "mime_type", "")), limit=_LABEL_LIMIT)
+    inspection = inspect_image(str(getattr(block, "data", "")), declared)
+    if inspection.problem is not None:
+        _logger.warning("mcp_result_image_rejected", mime_type=declared, problem=inspection.problem)
+        return TextResultPart(text=f"[the server sent an image declared as {declared!r} that was not used: {inspection.problem}]")
+    return ImageResultPart(data=inspection.data, mime_type=inspection.mime_type)
 
 
 def _map_content_block(block: object) -> ToolResultPart | None:
@@ -237,18 +233,15 @@ def _map_content_block(block: object) -> ToolResultPart | None:
     if kind == "text":
         return TextResultPart(text=sanitize_untrusted_text(str(getattr(block, "text", "")), limit=MAX_TEXT_PART_CHARS))
     if kind == "image":
-        return ImageResultPart(
-            data=str(getattr(block, "data", "")),
-            mime_type=strip_control_characters(str(getattr(block, "mime_type", ""))),
-        )
+        return _map_image(block)
     if kind == "audio":
         return AudioResultPart(
-            data=str(getattr(block, "data", "")),
-            mime_type=strip_control_characters(str(getattr(block, "mime_type", ""))),
+            data="".join(str(getattr(block, "data", "")).split()),
+            mime_type=clean_untrusted_label(str(getattr(block, "mime_type", "")), limit=_LABEL_LIMIT),
         )
     if kind == "resource_link":
         return ResourceLinkPart(
-            uri=strip_control_characters(str(getattr(block, "uri", ""))),
+            uri=clean_untrusted_label(str(getattr(block, "uri", "")), limit=_URI_LIMIT),
             name=_optional_clean(getattr(block, "name", None)),
             mime_type=_optional_clean(getattr(block, "mime_type", None)),
             description=_optional_fenced(getattr(block, "description", None)),
@@ -256,12 +249,12 @@ def _map_content_block(block: object) -> ToolResultPart | None:
     if kind == "resource":
         uri, text, data, mime_type = _text_from_resource(getattr(block, "resource", None))
         return EmbeddedResourcePart(
-            uri=strip_control_characters(uri),
+            uri=clean_untrusted_label(uri, limit=_URI_LIMIT),
             text=None if text is None else sanitize_untrusted_text(text, limit=MAX_TEXT_PART_CHARS),
             data=data,
             mime_type=_optional_clean(mime_type),
         )
-    _logger.warning("mcp_result_block_unsupported", block_type=str(kind))
+    _logger.warning("mcp_result_block_unsupported", block_type=clean_untrusted_label(str(kind), limit=_LABEL_LIMIT))
     return None
 
 
@@ -281,8 +274,107 @@ def _part_size(part: ToolResultPart) -> int:
     if isinstance(part, EmbeddedResourcePart):
         return len((part.text or "").encode("utf-8", errors="ignore")) + len(part.data or "")
     if isinstance(part, StructuredResultPart):
-        return len(json.dumps(part.content, default=str).encode("utf-8", errors="ignore"))
+        return len(json.dumps(part.content, ensure_ascii=False).encode("utf-8", errors="ignore"))
     return len(part.uri.encode("utf-8", errors="ignore"))
+
+
+def sanitize_structured_content(content: Mapping[str, Any]) -> dict[str, Any]:
+    """Clean every key and string of a server's structured output.
+
+    Structured output reaches the model as data -- natively as JSON on
+    dialects that take it, as fenced JSON text on the rest -- so every string
+    in it is cleaned exactly as a label is: invisible characters removed and
+    forged fence markers defanged. Numbers, booleans and ``null`` are
+    untouched.
+
+    Args:
+        content: The server's structured content.
+
+    Returns:
+        dict[str, Any]: A cleaned copy.
+    """
+    cleaned = map_json_strings(dict(content), lambda text: clean_untrusted_label(text, limit=MAX_TEXT_PART_CHARS))
+    return cleaned if is_json_object(cleaned) else {}
+
+
+def _canonical(value: object) -> str | None:
+    """Render a JSON value so two values compare the way JSON compares them.
+
+    Args:
+        value: A decoded JSON value.
+
+    Returns:
+        str | None: Its canonical encoding, or ``None`` when it cannot be
+        encoded.
+    """
+    try:
+        return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    except (TypeError, ValueError, RecursionError):
+        return None
+
+
+def _text_restates(text: str, value: object) -> bool:
+    """Report whether a text block carries exactly one JSON value.
+
+    Args:
+        text: The server's text, before it was fenced.
+        value: The value it may restate.
+
+    Returns:
+        bool: ``True`` when the text is the value itself (for a string) or its
+        JSON encoding.
+    """
+    if isinstance(value, str) and text == value:
+        return True
+    try:
+        decoded: object = json.loads(text)
+    except (ValueError, RecursionError):
+        return False
+    expected = _canonical(value)
+    return expected is not None and _canonical(decoded) == expected
+
+
+def mirrored_text_indices(texts: list[str], structured: Mapping[str, Any]) -> set[int]:
+    """Find the text blocks that only restate a result's structured content.
+
+    Servers built on the Python SDK repeat their structured output as text
+    for clients that cannot read it: the object's JSON, or -- for a tool whose
+    output schema wraps a non-object in ``{"result": ...}`` -- the wrapped
+    value, one block per item when it is a list.
+
+    Args:
+        texts: The raw text of each text block, in order.
+        structured: The structured content, as the server sent it.
+
+    Returns:
+        set[int]: Indices into ``texts`` of the blocks that restate it.
+    """
+    for position, text in enumerate(texts):
+        if _text_restates(text, structured):
+            return {position}
+    if set(structured) != {"result"}:
+        return set()
+    wrapped: object = structured["result"]
+    for position, text in enumerate(texts):
+        if _text_restates(text, wrapped):
+            return {position}
+    items: list[Any] = wrapped if is_json_array(wrapped) else []
+    if items and len(texts) == len(items) and all(starmap(_text_restates, zip(texts, items, strict=True))):
+        return set(range(len(texts)))
+    return set()
+
+
+def _describe_dropped_image(part: ImageResultPart, reason: str) -> TextResultPart:
+    """Describe an image that is kept out of the result.
+
+    Args:
+        part: The image.
+        reason: Why it was kept out.
+
+    Returns:
+        TextResultPart: A note the model can read instead.
+    """
+    return TextResultPart(text=f"[image {part.mime_type}, {len(part.data)} base64 characters, not included: {reason}]")
 
 
 def map_result(result: CallToolResult) -> tuple[list[ToolResultPart], bool]:
@@ -291,9 +383,16 @@ def map_result(result: CallToolResult) -> tuple[list[ToolResultPart], bool]:
     Parts keep the order the server sent them, and structured content becomes
     a final structured part. Every piece of server prose is stripped of
     control characters and fenced as untrusted data; a text part longer than
-    :data:`MAX_TEXT_PART_CHARS` is truncated inside its fence. Binary parts
-    are never truncated, because half a base64 payload is not a smaller
-    payload, it is a corrupt one. The whole result is bounded: once
+    :data:`MAX_TEXT_PART_CHARS` is truncated inside its fence. Structured
+    content is cleaned string by string, and a text block that merely restates
+    it is marked, so a dialect sends one representation rather than both.
+
+    Images are checked: a payload that is not valid base64, or whose bytes
+    are not the image type declared, is replaced by a note saying why. At most
+    :data:`MAX_IMAGES_PER_RESULT` images and :data:`MAX_IMAGE_BYTES_PER_RESULT`
+    decoded bytes of them are kept; the rest are described. Binary parts are
+    never truncated, because half a base64 payload is not a smaller payload,
+    it is a corrupt one. Everything else is bounded together: once
     :data:`MAX_RESULT_BYTES` is reached the remaining parts are replaced by a
     note saying how many were dropped, so a server cannot flood the context
     window with one call.
@@ -305,14 +404,36 @@ def map_result(result: CallToolResult) -> tuple[list[ToolResultPart], bool]:
         tuple[list[ToolResultPart], bool]: The mapped parts and whether the
         server reported the call as an error.
     """
+    structured: object = result.structured_content
+    raw_texts = [str(getattr(block, "text", "")) for block in result.content if getattr(block, "type", None) == "text"]
+    mirrored = mirrored_text_indices(raw_texts, structured) if is_json_object(structured) else set[int]()
+
     parts: list[ToolResultPart] = []
     budget = MAX_RESULT_BYTES
     dropped = 0
+    images = 0
+    image_bytes = 0
+    text_position = 0
 
     for block in result.content:
         mapped = _map_content_block(block)
         if mapped is None:
             continue
+        if getattr(block, "type", None) == "text" and isinstance(mapped, TextResultPart):
+            if text_position in mirrored:
+                mapped = TextResultPart(text=mapped.text, mirrors_structured=True)
+            text_position += 1
+        if isinstance(mapped, ImageResultPart):
+            decoded_size = len(mapped.data) * 3 // 4
+            if images >= MAX_IMAGES_PER_RESULT:
+                mapped = _describe_dropped_image(mapped, f"a result may carry at most {MAX_IMAGES_PER_RESULT} images")
+            elif image_bytes + decoded_size > MAX_IMAGE_BYTES_PER_RESULT:
+                mapped = _describe_dropped_image(mapped, f"a result may carry at most {MAX_IMAGE_BYTES_PER_RESULT} bytes of images")
+            else:
+                images += 1
+                image_bytes += decoded_size
+                parts.append(mapped)
+                continue
         size = _part_size(mapped)
         if size > budget:
             dropped += 1
@@ -320,13 +441,14 @@ def map_result(result: CallToolResult) -> tuple[list[ToolResultPart], bool]:
         budget -= size
         parts.append(mapped)
 
-    structured: object = result.structured_content
     if is_json_object(structured):
-        encoded = json.dumps(structured, default=str)
+        cleaned = sanitize_structured_content(structured)
+        encoded = json.dumps(cleaned, ensure_ascii=False)
         if len(encoded.encode("utf-8", errors="ignore")) <= budget:
-            parts.append(StructuredResultPart(content=dict(structured)))
+            parts.append(StructuredResultPart(content=cleaned))
         else:
             dropped += 1
+            parts = [TextResultPart(text=part.text) if isinstance(part, TextResultPart) else part for part in parts]
 
     if dropped:
         _logger.warning("mcp_result_truncated", dropped_parts=dropped, limit_bytes=MAX_RESULT_BYTES)
@@ -595,6 +717,26 @@ class McpToolSource:
         catalog = connection.catalog if connection is not None else None
         return catalog.generation if catalog is not None else None
 
+    def approval_key_for(self, canonical_name: str) -> str | None:
+        """Build the key an operator's answer about a call is remembered under.
+
+        Args:
+            canonical_name: ``mcp-<serverId>.<toolName>``.
+
+        Returns:
+            str | None: The :func:`~intellicrack.mcp.consent.approval_binding`
+            of the server's tool-listing generation and its identity, or
+            ``None`` when the server is not connected or not configured.
+        """
+        generation = self.generation_for(canonical_name)
+        if generation is None:
+            return None
+        server_id, _ = from_canonical_name(canonical_name)
+        config = self._manager.document.server(server_id)
+        if config is None:
+            return None
+        return approval_binding(generation, server_identity(config))
+
     def is_read_only(self, canonical_name: str) -> bool:
         """Decide whether a call may skip destructive-operation confirmation.
 
@@ -669,9 +811,10 @@ class McpToolSource:
                 server_id=server_id,
                 function_name=function_name,
                 error_type=type(exc).__name__,
-                error=str(exc),
+                error=strip_control_characters(str(exc)),
             )
-            raise ToolError(str(exc), tool_name=f"{NAMESPACE_PREFIX}{server_id}") from exc
+            message = f"MCP server '{server_id}' did not complete the call: {sanitize_untrusted_text(str(exc))}"
+            raise ToolError(message, tool_name=f"{NAMESPACE_PREFIX}{server_id}") from exc
 
     async def _call_tool(self, server_id: str, function_name: str, arguments: dict[str, Any]) -> ToolOutput:
         """Deliver one call and map the server's answer.
@@ -698,10 +841,11 @@ class McpToolSource:
             message = f"tool {tool_name!r} on MCP server '{server_id}' is switched off"
             raise McpConnectionError(message)
 
-        result = await connection.call_tool(tool_name, arguments)
+        entry = self.entry_for(function_name)
+        delivered = entry.advertised_schema.restore_arguments(arguments) if entry is not None else dict(arguments)
+        result = await connection.call_tool(tool_name, delivered)
         parts, is_error = map_result(result)
 
-        entry = self.entry_for(function_name)
         structured: object = result.structured_content
         if entry is not None and not is_error and is_json_object(structured):
             validate_structured_content(entry, structured)
@@ -746,6 +890,8 @@ class McpToolSource:
 
 __all__ = [
     "DEFAULT_UNTRUSTED_LIMIT",
+    "MAX_IMAGES_PER_RESULT",
+    "MAX_IMAGE_BYTES_PER_RESULT",
     "MAX_RESULT_BYTES",
     "MAX_TEXT_PART_CHARS",
     "NAMESPACE_PREFIX",
@@ -757,6 +903,8 @@ __all__ = [
     "is_mcp_namespace",
     "map_result",
     "map_tool_to_function",
+    "mirrored_text_indices",
+    "sanitize_structured_content",
     "sanitize_untrusted_text",
     "source_label",
     "strip_control_characters",

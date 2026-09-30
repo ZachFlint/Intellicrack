@@ -95,6 +95,7 @@ class _GuiThreadRelay(QObject):
     """
 
     generation_changed = pyqtSignal(str, str)
+    identity_changed = pyqtSignal(str)
     server_state_changed = pyqtSignal(object)
     sign_in_opened = pyqtSignal(str, str)
 
@@ -129,6 +130,7 @@ class McpService:
         self._approvals = ApprovalStore()
         self._relay = _GuiThreadRelay(parent)
         _ = self._relay.generation_changed.connect(self._apply_generation_change)
+        _ = self._relay.identity_changed.connect(self._apply_identity_change)
         _ = self._relay.server_state_changed.connect(self._apply_server_state)
         _ = self._relay.sign_in_opened.connect(self._show_sign_in_notice)
         self._prompts = QtMcpPrompts(parent)
@@ -136,6 +138,7 @@ class McpService:
             self._trust,
             self._prompts.request_launch_consent,
             self._on_generation_change,
+            self._on_identity_change,
         )
         self._manager = McpConnectionManager(
             self._store,
@@ -346,6 +349,29 @@ class McpService:
         ToolConfirmationDialog.clear_decisions_for_source(key)
         _logger.warning("mcp_approvals_reset_after_change", server_id=server_id, generation=generation)
 
+    def _on_identity_change(self, server_id: str) -> None:
+        """Hand a server whose identity changed to the GUI thread.
+
+        Called by the consent gate, from whichever thread noticed the change.
+
+        Args:
+            server_id: The server whose program, endpoint or reach changed.
+        """
+        self._relay.identity_changed.emit(server_id)
+
+    def _apply_identity_change(self, server_id: str) -> None:
+        """Discard remembered approvals for a server that is no longer the one judged.
+
+        Runs on the GUI thread.
+
+        Args:
+            server_id: The server whose program, endpoint or reach changed.
+        """
+        config = self._manager.document.server(server_id)
+        namespace = config.namespace if config is not None else f"mcp-{server_id}"
+        ToolConfirmationDialog.clear_decisions_for_source(namespace)
+        _logger.warning("mcp_approvals_reset_after_identity_change", server_id=server_id)
+
     def _on_server_changed(self, server_id: str) -> None:
         """Hand a server's new state to the GUI thread.
 
@@ -405,17 +431,21 @@ class McpService:
         _logger.debug("mcp_session_state_recorded", session_id=session.id)
 
     def generation_for(self, call: ToolCall) -> str | None:
-        """Read the tool-listing generation a call belongs to.
+        """Read the key an answer about a call is remembered under.
+
+        For a server's tool this binds the server's tool-listing generation to
+        its identity, so an answer is never replayed against changed tools or
+        against a different program or endpoint under the same id.
 
         Args:
             call: The tool call about to be confirmed.
 
         Returns:
-            str | None: The generation, or ``None`` for a bridge tool.
+            str | None: The approval key, or ``None`` for a bridge tool.
         """
         if not is_mcp_namespace(call.tool_name.strip().lower()):
             return None
-        return self._source.generation_for(call.function_name)
+        return self._source.approval_key_for(call.function_name)
 
     @staticmethod
     def source_label_for(call: ToolCall) -> str | None:

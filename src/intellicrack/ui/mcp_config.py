@@ -51,6 +51,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import Message, ToolResultPart
+from intellicrack.core.untrusted_text import clean_untrusted_label
 from intellicrack.mcp.auth import has_stored_credentials, issuer_for, sign_out
 from intellicrack.mcp.config import (
     SERVER_ID_PATTERN,
@@ -972,9 +973,10 @@ class McpConfigDialog(QDialog):
             """
             summaries = [entry for entry in _as_object_list(result) if isinstance(entry, PromptSummary)]
             for summary in summaries:
-                item = QListWidgetItem(summary.title or summary.name)
+                label = summary.title or clean_untrusted_label(summary.name)
+                item = QListWidgetItem(label)
                 item.setData(Qt.ItemDataRole.UserRole, summary)
-                item.setToolTip(plain_tooltip(summary.description or summary.name))
+                item.setToolTip(plain_tooltip(summary.description or label))
                 self._prompt_list.addItem(item)
             if not summaries:
                 show_info(self, "Prompts", "This server offers no prompts.")
@@ -1339,9 +1341,10 @@ class McpConfigDialog(QDialog):
             """
             summaries = [entry for entry in _as_object_list(result) if isinstance(entry, ResourceSummary)]
             for summary in summaries:
-                item = QListWidgetItem(f"{summary.title or summary.name} - {summary.uri}")
+                shown_uri = clean_untrusted_label(summary.uri)
+                item = QListWidgetItem(f"{summary.title or summary.name} - {shown_uri}")
                 item.setData(Qt.ItemDataRole.UserRole, summary.uri)
-                item.setToolTip(plain_tooltip(summary.description or summary.uri))
+                item.setToolTip(plain_tooltip(summary.description or shown_uri))
                 self._resource_list.addItem(item)
             if not summaries:
                 show_info(self, "Resources", "This server offers no resources.")

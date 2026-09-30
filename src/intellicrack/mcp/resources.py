@@ -10,8 +10,11 @@ prepared message templates it suggests. Neither is a tool call: nothing here
 runs on the operator's behalf, it only fetches what a server is already
 offering.
 
-Everything a server returns is still untrusted, so text arrives bounded and
-fenced, exactly as tool output does.
+Everything a server returns is still untrusted. Listings and resource text are
+cleaned of invisible characters and forged fence markers as they arrive, and
+bounded; whatever reaches the model as prose is fenced, exactly as tool output
+is. A resource URI and a prompt name are kept exactly as the server wrote them
+where the server needs them back to serve a read or a fetch.
 
 Every request here catches transport failures and re-raises them as
 :class:`~intellicrack.mcp.errors.McpConnectionError`.
@@ -33,9 +36,9 @@ from intellicrack.core.types import (
     TextResultPart,
     ToolResultPart,
 )
-from intellicrack.mcp.connection import TRANSPORT_FAILURES, representative_failure
+from intellicrack.core.untrusted_text import clean_untrusted_label, sanitize_untrusted_text
+from intellicrack.mcp.connection import TRANSPORT_FAILURES, failure_text, representative_failure
 from intellicrack.mcp.errors import McpConnectionError
-from intellicrack.mcp.tool_source import sanitize_untrusted_text
 
 
 if TYPE_CHECKING:
@@ -58,14 +61,40 @@ MAX_ENTRIES: Final[int] = 2048
 MAX_PROMPT_TEXT_CHARS: Final[int] = 32768
 """Longest piece of prompt text kept from one message."""
 
+MAX_RESOURCE_TEXT_CHARS: Final[int] = 128 * 1024
+"""Longest piece of resource text kept from one read."""
+
+_LABEL_CHARS: Final[int] = 256
+"""Longest name, title or media type kept from a listing."""
+
+_URI_CHARS: Final[int] = 2048
+"""Longest URI kept from a listing."""
+
+_DESCRIPTION_CHARS: Final[int] = 2048
+"""Longest description kept from a listing."""
+
+
+def _label(value: str | None, limit: int = _LABEL_CHARS) -> str | None:
+    """Clean an optional server-supplied label.
+
+    Args:
+        value: The server's text, or ``None``.
+        limit: Longest text kept.
+
+    Returns:
+        str | None: The cleaned text, or ``None`` when absent.
+    """
+    return None if value is None else clean_untrusted_label(value, limit=limit)
+
 
 @dataclass(frozen=True, slots=True)
 class ResourceSummary:
     """One resource a server offers.
 
     Attributes:
-        uri: The resource URI, used to read it.
-        name: The server's own name for it.
+        uri: The resource URI exactly as the server wrote it, which is what
+            a read has to send back. Clean it before showing it.
+        name: The server's own name for it, cleaned.
         title: The server's display title, or ``None``.
         description: The server's description, or ``None``.
         mime_type: The resource's media type, or ``None``.
@@ -85,7 +114,8 @@ class PromptSummary:
     """One prompt template a server offers.
 
     Attributes:
-        name: The server's own name for it, used to fetch it.
+        name: The server's own name for it exactly as written, which is what
+            a fetch has to send back. Clean it before showing it.
         title: The server's display title, or ``None``.
         description: The server's description, or ``None``.
         arguments: Names of the arguments it accepts, in server order.
@@ -140,15 +170,15 @@ async def list_resources(connection: McpConnection) -> list[ResourceSummary]:
             result = await client.list_resources(cursor=cursor)
         except TRANSPORT_FAILURES as exc:
             failure = representative_failure(exc)
-            message = f"server '{connection.server_id}': cannot list resources: {failure}"
+            message = f"server '{connection.server_id}': cannot list resources: {failure_text(failure)}"
             raise McpConnectionError(message) from failure
         summaries.extend(
             ResourceSummary(
                 uri=str(resource.uri),
-                name=resource.name,
-                title=resource.title,
-                description=resource.description,
-                mime_type=resource.mime_type,
+                name=clean_untrusted_label(resource.name, limit=_LABEL_CHARS),
+                title=_label(resource.title),
+                description=_label(resource.description, _DESCRIPTION_CHARS),
+                mime_type=_label(resource.mime_type),
                 size=resource.size,
             )
             for resource in result.resources
@@ -179,7 +209,7 @@ async def read_resource(connection: McpConnection, uri: str) -> list[ToolResultP
         result = await client.read_resource(uri)
     except TRANSPORT_FAILURES as exc:
         failure = representative_failure(exc)
-        message = f"server '{connection.server_id}': cannot read {uri!r}: {failure}"
+        message = f"server '{connection.server_id}': cannot read {uri!r}: {failure_text(failure)}"
         raise McpConnectionError(message) from failure
 
     parts: list[ToolResultPart] = []
@@ -188,10 +218,10 @@ async def read_resource(connection: McpConnection, uri: str) -> list[ToolResultP
         blob = getattr(contents, "blob", None)
         parts.append(
             EmbeddedResourcePart(
-                uri=str(contents.uri),
-                text=text if isinstance(text, str) else None,
-                data=blob if isinstance(blob, str) else None,
-                mime_type=contents.mime_type,
+                uri=clean_untrusted_label(str(contents.uri), limit=_URI_CHARS),
+                text=clean_untrusted_label(text, limit=MAX_RESOURCE_TEXT_CHARS) if isinstance(text, str) else None,
+                data="".join(blob.split()) if isinstance(blob, str) else None,
+                mime_type=_label(contents.mime_type),
             ),
         )
     _logger.info("mcp_resource_read", server_id=connection.server_id, uri=uri, part_count=len(parts))
@@ -220,7 +250,7 @@ async def list_prompts(connection: McpConnection) -> list[PromptSummary]:
             result = await client.list_prompts(cursor=cursor)
         except TRANSPORT_FAILURES as exc:
             failure = representative_failure(exc)
-            message = f"server '{connection.server_id}': cannot list prompts: {failure}"
+            message = f"server '{connection.server_id}': cannot list prompts: {failure_text(failure)}"
             raise McpConnectionError(message) from failure
         for prompt in result.prompts:
             arguments = tuple(argument.name for argument in prompt.arguments or ())
@@ -228,8 +258,8 @@ async def list_prompts(connection: McpConnection) -> list[PromptSummary]:
             summaries.append(
                 PromptSummary(
                     name=prompt.name,
-                    title=prompt.title,
-                    description=prompt.description,
+                    title=_label(prompt.title),
+                    description=_label(prompt.description, _DESCRIPTION_CHARS),
                     arguments=arguments,
                     required_arguments=required,
                 ),
@@ -295,7 +325,7 @@ async def get_prompt(connection: McpConnection, name: str, arguments: Mapping[st
         result = await client.get_prompt(name, dict(arguments))
     except TRANSPORT_FAILURES as exc:
         failure = representative_failure(exc)
-        message = f"server '{connection.server_id}': cannot fetch prompt {name!r}: {failure}"
+        message = f"server '{connection.server_id}': cannot fetch prompt {name!r}: {failure_text(failure)}"
         raise McpConnectionError(message) from failure
 
     messages: list[Message] = []

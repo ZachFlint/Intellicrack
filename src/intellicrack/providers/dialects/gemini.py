@@ -10,7 +10,7 @@ by call id -- so the layer has to remember which name each call used.
 
 Two Gemini-specific pieces of state matter for multi-turn tool use. Gemini 3.x signs each function call with a ``thought_signature`` that
 must be echoed back verbatim or the next request fails with ``Function call is missing a thought_signature``; and
-``functionResponse.response`` takes structured JSON natively, so a structured tool-result part survives here without degrading to text.
+``functionResponse.response.output`` takes structured JSON natively, so a structured tool-result part survives here without degrading to text.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
     ReasoningItem,
     ReasoningKind,
+    StructuredResultPart,
     ToolCall,
     ToolChoiceMode,
 )
@@ -39,6 +40,7 @@ from intellicrack.providers.capabilities import (
     TokenLimitField,
 )
 from intellicrack.providers.dialects.base import (
+    GEMINI_IMAGE_POLICY,
     DialectAdapter,
     DialectRequest,
     DialectResponse,
@@ -46,11 +48,11 @@ from intellicrack.providers.dialects.base import (
     ToolCallFragment,
     ToolNameStyle,
     UsageInfo,
-    image_parts,
+    image_refusal_for,
     parse_tool_call,
     render_parts_as_text,
-    structured_parts,
-    tool_result_text,
+    representation_parts,
+    sendable_image_parts,
     wire_function_name,
 )
 
@@ -58,6 +60,7 @@ from intellicrack.providers.dialects.base import (
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from intellicrack.core.result_parts import ImagePolicy
     from intellicrack.core.types import Message, ToolChoice, ToolDefinition, ToolResult
 
 
@@ -75,8 +78,17 @@ _LOCAL_CALL_ID_PREFIX: Final[str] = "gemini_call_"
 """Prefix of a call id minted locally for a function call Gemini sent without one."""
 
 
-_NARRATIVE_KEY: Final[str] = "content"
-"""Reserved ``functionResponse.response`` key carrying the non-structured parts."""
+_OUTPUT_KEY: Final[str] = "output"
+"""``functionResponse.response`` key Gemini reads a function's output from."""
+
+_ERROR_KEY: Final[str] = "error"
+"""``functionResponse.response`` key Gemini reads a function's error details from."""
+
+_STRUCTURED_KEY: Final[str] = "structured"
+"""Key, inside ``output``, of a result's structured data when the result also carries prose."""
+
+_TEXT_KEY: Final[str] = "text"
+"""Key, inside ``output``, of a result's prose when the result also carries structured data."""
 
 
 class GeminiAdapter(DialectAdapter):
@@ -84,9 +96,12 @@ class GeminiAdapter(DialectAdapter):
 
     Attributes:
         dialect: Always :data:`ApiDialect.GEMINI`.
+        image_policy: Which images the endpoint accepts natively,
+            :data:`~intellicrack.providers.dialects.base.GEMINI_IMAGE_POLICY`.
     """
 
     dialect: ClassVar[ApiDialect] = ApiDialect.GEMINI
+    image_policy: ClassVar[ImagePolicy] = GEMINI_IMAGE_POLICY
 
     @override
     def default_capabilities(self) -> ModelCapabilities:
@@ -440,15 +455,21 @@ class GeminiAdapter(DialectAdapter):
     ) -> list[dict[str, Any]]:
         """Render a tool result as a Gemini ``functionResponse`` part.
 
-        ``functionResponse.response`` takes structured JSON natively, so a
-        structured part is passed through rather than serialized to text. A
-        result that mixes structured output with text or resource parts keeps
-        both: the structured fields at the top level and the rest rendered
-        into a reserved key, because discarding them would hand the model a
-        JSON object and silently drop everything the tool said in prose.
+        Gemini reads a function's result from ``response.output`` and its
+        failure from ``response.error``, so the result is placed under those
+        keys rather than spread over ``response`` itself: a tool's structured
+        output may well have fields named ``content`` or ``error`` of its own,
+        and they must neither be overwritten nor be mistaken for Gemini's.
+        ``output`` takes JSON natively, so structured output is sent as an
+        object rather than as text. A result that carries both structured
+        output and prose sends both, as ``output.structured`` and
+        ``output.text``; a text block that only restated the structured output
+        is dropped (see
+        :func:`~intellicrack.providers.dialects.base.representation_parts`).
         Images ride as ``inlineData`` parts in the same user content when the
-        model reports vision, and degrade to the shared deterministic text
-        description when it does not.
+        model reports vision and the image is one Gemini accepts (see
+        :data:`~intellicrack.providers.dialects.base.GEMINI_IMAGE_POLICY`),
+        and degrade to the shared deterministic text description otherwise.
 
         Args:
             result: The tool result to render.
@@ -462,18 +483,25 @@ class GeminiAdapter(DialectAdapter):
             list[dict[str, Any]]: The response part, followed by any image
             parts.
         """
-        if structured := structured_parts(result):
-            response: dict[str, Any] = {}
+        response: dict[str, Any] = {}
+        refusal = image_refusal_for(capabilities, self.image_policy)
+        if result.content:
+            chosen = representation_parts(result.content, prefer_structured=True)
+            structured = [part for part in chosen if isinstance(part, StructuredResultPart)]
+            narrative = render_parts_as_text([part for part in chosen if not isinstance(part, StructuredResultPart)], image_refusal=refusal)
+            merged: dict[str, Any] = {}
             for part in structured:
-                response |= part.content
-            if narrative := render_parts_as_text([part for part in result.content or () if part not in structured]):
-                response[_NARRATIVE_KEY] = narrative
-        elif result.content:
-            response = {"result": tool_result_text(result)}
+                merged |= part.content
+            if structured and narrative:
+                response[_OUTPUT_KEY] = {_STRUCTURED_KEY: merged, _TEXT_KEY: narrative}
+            elif structured:
+                response[_OUTPUT_KEY] = merged
+            else:
+                response[_OUTPUT_KEY] = narrative
         else:
-            response = {"result": result.result}
+            response[_OUTPUT_KEY] = result.result
         if result.is_error or not result.success:
-            response["error"] = result.error or "tool reported an error"
+            response[_ERROR_KEY] = result.error or "tool reported an error"
 
         parts: list[dict[str, Any]] = [
             {
@@ -483,9 +511,10 @@ class GeminiAdapter(DialectAdapter):
                 },
             },
         ]
-        images = image_parts(result)
-        if images and capabilities.supports_vision:
-            parts.extend({"inline_data": {"mime_type": part.mime_type, "data": part.data}} for part in images)
+        parts.extend(
+            {"inline_data": {"mime_type": part.mime_type, "data": part.data}}
+            for part in sendable_image_parts(result, capabilities, self.image_policy)
+        )
         return parts
 
     @override

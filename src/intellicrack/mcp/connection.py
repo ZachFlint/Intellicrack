@@ -48,8 +48,10 @@ from mcp_types.version import MODERN_PROTOCOL_VERSIONS
 
 from intellicrack._metadata import __version__
 from intellicrack.core.logging import get_logger
+from intellicrack.core.untrusted_text import clean_untrusted_label
 from intellicrack.mcp.catalog import McpToolCatalog, fetch_catalog
 from intellicrack.mcp.config import McpConfigStore, McpServerConfig, McpTransportKind
+from intellicrack.mcp.consent import McpConsentStoreError
 from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
 from intellicrack.mcp.operator_wait import OperatorWaitClock
 from intellicrack.mcp.sandbox_launch import build_sandboxed_startup, confined_stdio_client, sandbox_supported
@@ -134,6 +136,9 @@ once, because its output stream ends.
 LISTEN_RETRY_S: Final[float] = 5.0
 """Delay before a change subscription the server ended is opened again."""
 
+_FAILURE_TEXT_LIMIT: Final[int] = 4096
+"""Longest failure text kept in a message or a log record."""
+
 TRANSPORT_FAILURES: Final[tuple[type[BaseException], ...]] = (
     OSError,
     RuntimeError,
@@ -184,6 +189,21 @@ def representative_failure(exc: BaseException) -> BaseException:
     if leaves := failure_leaves(exc):
         return next((leaf for leaf in leaves if isinstance(leaf, McpError | MCPError)), leaves[0])
     return exc
+
+
+def failure_text(failure: BaseException) -> str:
+    """Render a failure for a message or a log, cleaned of what a server could hide in it.
+
+    A protocol error carries the server's own message, which may hold
+    terminal escapes, bidirectional overrides or a forged fence marker.
+
+    Args:
+        failure: The failure.
+
+    Returns:
+        str: Its text, cleaned and bounded.
+    """
+    return clean_untrusted_label(str(failure), limit=_FAILURE_TEXT_LIMIT)
 
 
 def fatal_leaf(exc: BaseException) -> BaseException | None:
@@ -1027,7 +1047,7 @@ class McpConnection:
             raise McpConnectionError(message) from exc
         except TRANSPORT_FAILURES as exc:
             failure = representative_failure(exc)
-            message = f"server '{self.server_id}' stopped responding: {failure}"
+            message = f"server '{self.server_id}' stopped responding: {failure_text(failure)}"
             raise McpConnectionError(message) from failure
         return True
 
@@ -1081,7 +1101,7 @@ class McpConnection:
                 failure = representative_failure(exc)
                 self._client = None
                 self._failure = failure
-                self._last_error = str(failure) if isinstance(failure, McpError) else f"{type(failure).__name__}: {failure}"
+                self._last_error = str(failure) if isinstance(failure, McpError) else f"{type(failure).__name__}: {failure_text(failure)}"
                 self._health = McpHealth.FAILED
                 self._settled.set()
                 _logger.warning(
@@ -1268,7 +1288,7 @@ class McpConnection:
             raise
         except TRANSPORT_FAILURES as exc:
             failure = representative_failure(exc)
-            message = f"server '{self.server_id}': cannot list tools: {failure}"
+            message = f"server '{self.server_id}': cannot list tools: {failure_text(failure)}"
             raise McpConnectionError(message) from failure
         previous = self._catalog
         self._catalog = catalog
@@ -1320,8 +1340,8 @@ class McpConnection:
         except TRANSPORT_FAILURES as exc:
             failure = representative_failure(exc)
             if is_connection_loss(failure) and self._client is client:
-                self._mark_dropped(f"call to {tool_name!r} found the connection closed: {failure}")
-            message = f"server '{self.server_id}': call to {tool_name!r} failed: {failure}"
+                self._mark_dropped(f"call to {tool_name!r} found the connection closed: {failure_text(failure)}")
+            message = f"server '{self.server_id}': call to {tool_name!r} failed: {failure_text(failure)}"
             raise McpConnectionError(message) from failure
 
     async def listen_for_changes(self, on_change: Callable[[str], None]) -> None:
@@ -1714,6 +1734,11 @@ class McpConnectionManager:
         existing = self._connections.get(server_id)
         if existing is not None:
             await existing.disconnect()
+
+        try:
+            _ = self._consent.note_identity(config)
+        except McpConsentStoreError as exc:
+            _logger.warning("mcp_identity_check_unsaved", server_id=server_id, error=str(exc))
 
         connection = McpConnection(
             config,

@@ -44,6 +44,7 @@ from intellicrack.providers.capabilities import (
     effort_for_thinking_budget,
 )
 from intellicrack.providers.dialects.base import (
+    MESSAGES_IMAGE_POLICY,
     DialectAdapter,
     DialectRequest,
     DialectResponse,
@@ -51,8 +52,9 @@ from intellicrack.providers.dialects.base import (
     ToolCallFragment,
     ToolNameStyle,
     UsageInfo,
-    image_parts,
+    image_refusal_for,
     parse_tool_call,
+    sendable_image_parts,
     tool_result_text,
     wire_function_name,
 )
@@ -61,6 +63,7 @@ from intellicrack.providers.dialects.base import (
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from intellicrack.core.result_parts import ImagePolicy
     from intellicrack.core.types import Message, ToolChoice, ToolDefinition, ToolResult
 
 
@@ -103,9 +106,12 @@ class MessagesAdapter(DialectAdapter):
 
     Attributes:
         dialect: Always :data:`ApiDialect.MESSAGES`.
+        image_policy: Which images the endpoint accepts natively,
+            :data:`~intellicrack.providers.dialects.base.MESSAGES_IMAGE_POLICY`.
     """
 
     dialect: ClassVar[ApiDialect] = ApiDialect.MESSAGES
+    image_policy: ClassVar[ImagePolicy] = MESSAGES_IMAGE_POLICY
 
     def __init__(self) -> None:
         """Initialize the adapter's per-stream block and usage state."""
@@ -729,8 +735,12 @@ class MessagesAdapter(DialectAdapter):
         """Render a tool result as an Anthropic ``tool_result`` block.
 
         Text and images both ride inside the block natively, and the failure
-        state travels as ``is_error`` rather than as a text prefix. A resource
-        link degrades to the shared deterministic text description.
+        state travels as ``is_error`` rather than as a text prefix. An image
+        rides natively only when the model reports vision and the image is one
+        Anthropic accepts (see
+        :data:`~intellicrack.providers.dialects.base.MESSAGES_IMAGE_POLICY`);
+        any other image, and a resource link, degrades to the shared
+        deterministic text description.
 
         Args:
             result: The tool result to render.
@@ -741,9 +751,9 @@ class MessagesAdapter(DialectAdapter):
             list[dict[str, Any]]: A single ``tool_result`` block.
         """
         del function_name
-        text = tool_result_text(result)
-        images = image_parts(result)
-        if images and capabilities.supports_vision:
+        text = tool_result_text(result, image_refusal=image_refusal_for(capabilities, self.image_policy))
+        images = sendable_image_parts(result, capabilities, self.image_policy)
+        if images:
             blocks: list[dict[str, Any]] = []
             if text:
                 blocks.append({"type": "text", "text": text})

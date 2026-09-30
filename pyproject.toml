@@ -774,6 +774,9 @@ pypi-dependencies.keyring = ">=25.7.0, <26"
 pypi-dependencies.psutil = ">=7.2.2, <8"
 pypi-dependencies.pyghidra = ">=2.2.1, <3"
 pypi-dependencies.yara-python = ">=4.5.4, <5"
+# Imported by mcp/validation.py for ECMA-262 pattern checks; declared rather than left to arrive
+# through tiktoken.
+pypi-dependencies.regex = ">=2026.5.9, <2027"
 # Transitive / environment packages (kept bounded; runtime-side).
 pypi-dependencies.networkx = ">=3.7, <4"
 pypi-dependencies.anyio = ">=4.15.1, <5"
@@ -938,6 +941,9 @@ coverage = ">=7.16.1, <8"
 freezegun = ">=1.5.5, <2"
 responses = ">=0.26.3, <0.27"
 faker = ">=40.39.0, <41"
+# File-backed keyring the credential and OAuth gates store real secrets in, so no test touches the
+# operating system's own keyring (tests/_helpers/private_keyring.py).
+keyrings-alt = ">=5.0.2, <6"
 
 # Documentation build.
 [tool.pixi.feature.docs.pypi-dependencies]

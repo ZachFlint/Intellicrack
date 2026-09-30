@@ -29,6 +29,15 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.result_parts import (
+    IMAGE_MIME_GIF,
+    IMAGE_MIME_HEIC,
+    IMAGE_MIME_HEIF,
+    IMAGE_MIME_JPEG,
+    IMAGE_MIME_PNG,
+    IMAGE_MIME_WEBP,
+    ImagePolicy,
+)
 from intellicrack.core.types import (
     AudioResultPart,
     EmbeddedResourcePart,
@@ -38,12 +47,13 @@ from intellicrack.core.types import (
     TextResultPart,
     ToolCall,
 )
+from intellicrack.core.untrusted_text import sanitize_untrusted_text
 from intellicrack.providers.capabilities import ApiDialect, ModelCapabilities
 from intellicrack.providers.tool_names import from_wire_name, rehydrate_wire_names, to_wire_name
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
 
     from intellicrack.core.types import (
         Message,
@@ -73,6 +83,26 @@ two conflicting credentials. This follows VS Code rather than Zed, which forbids
 
 PROTOCOL_HEADER_NAMES: Final[frozenset[str]] = frozenset({"host", "content-length", "transfer-encoding", "connection"})
 """Headers a caller may never set, because doing so breaks the HTTP transport."""
+
+
+MESSAGES_IMAGE_POLICY: Final[ImagePolicy] = ImagePolicy(
+    mime_types=frozenset({IMAGE_MIME_JPEG, IMAGE_MIME_PNG, IMAGE_MIME_GIF, IMAGE_MIME_WEBP}),
+    max_edge=8000,
+    max_bytes=5 * 1024 * 1024,
+)
+"""Images Anthropic Messages accepts: JPEG, PNG, GIF and WebP, at most 8000 pixels on a side and 5 MB each."""
+
+OPENAI_IMAGE_POLICY: Final[ImagePolicy] = ImagePolicy(
+    mime_types=frozenset({IMAGE_MIME_JPEG, IMAGE_MIME_PNG, IMAGE_MIME_GIF, IMAGE_MIME_WEBP}),
+    max_bytes=20 * 1024 * 1024,
+)
+"""Images OpenAI Chat Completions and Responses accept: JPEG, PNG, GIF and WebP, at most 20 MB each."""
+
+GEMINI_IMAGE_POLICY: Final[ImagePolicy] = ImagePolicy(
+    mime_types=frozenset({IMAGE_MIME_JPEG, IMAGE_MIME_PNG, IMAGE_MIME_WEBP, IMAGE_MIME_HEIC, IMAGE_MIME_HEIF}),
+    max_bytes=20 * 1024 * 1024,
+)
+"""Images Gemini accepts inline: JPEG, PNG, WebP, HEIC and HEIF within its 20 MB inline request limit; not GIF."""
 
 
 class ToolNameStyle(enum.Enum):
@@ -258,7 +288,27 @@ def serialize_tool_result(result: object) -> str:
     return result if isinstance(result, str) else json.dumps(result)
 
 
-def describe_tool_result_part(part: ToolResultPart) -> str:
+_NO_VISION: Final[str] = "this model does not accept images"
+
+
+def _structured_text(content: Mapping[str, Any]) -> str:
+    """Render structured output as fenced JSON text.
+
+    Structured output is a tool's own data -- for an MCP tool, a server's --
+    so where it travels as text it travels inside the untrusted-text fence,
+    exactly as the tool's prose does.
+
+    Args:
+        content: The structured payload.
+
+    Returns:
+        str: The fenced JSON encoding.
+    """
+    encoded = json.dumps(content, sort_keys=True)
+    return sanitize_untrusted_text(encoded, limit=len(encoded))
+
+
+def describe_tool_result_part(part: ToolResultPart, *, image_refusal: str | None = None) -> str:
     """Render one tool-result part as deterministic text.
 
     This is the single degradation path every dialect shares: a part a dialect
@@ -268,6 +318,7 @@ def describe_tool_result_part(part: ToolResultPart) -> str:
 
     Args:
         part: The part to describe.
+        image_refusal: For an image the endpoint will not receive, why not.
 
     Returns:
         str: A deterministic textual description of ``part``.
@@ -275,6 +326,8 @@ def describe_tool_result_part(part: ToolResultPart) -> str:
     if isinstance(part, TextResultPart):
         return part.text
     if isinstance(part, ImageResultPart):
+        if image_refusal is not None:
+            return f"[image {part.mime_type}, {len(part.data)} base64 chars, not shown: {image_refusal}]"
         return f"[image {part.mime_type}, {len(part.data)} base64 chars]"
     if isinstance(part, AudioResultPart):
         return f"[audio {part.mime_type}, {len(part.data)} base64 chars]"
@@ -292,27 +345,72 @@ def describe_tool_result_part(part: ToolResultPart) -> str:
             return part.text
         length = len(part.data) if part.data is not None else 0
         return f"[resource {part.uri} {part.mime_type or 'application/octet-stream'}, {length} base64 chars]"
-    return json.dumps(part.content, sort_keys=True)
+    return _structured_text(part.content)
 
 
 _TOOL_ERROR_PREFIX: Final[str] = "Tool call failed: "
 """Prefix marking a failed tool result on dialects with no native error flag."""
 
 
-def render_parts_as_text(parts: Iterable[ToolResultPart]) -> str:
+def representation_parts(parts: Sequence[ToolResultPart], *, prefer_structured: bool) -> list[ToolResultPart]:
+    """Choose one representation of a result that states its data twice.
+
+    A server that returns structured output often restates it as a text
+    block for clients that cannot read structured content. Sending both
+    doubles what the result costs and tells the model nothing more, so only
+    one is kept: the structured part where the dialect carries structured
+    output natively, the text where it does not. A text block that says
+    anything beyond the structured content is never marked as a restatement,
+    so it is always kept.
+
+    Args:
+        parts: The result's parts, in order.
+        prefer_structured: Whether the dialect takes structured output
+            natively.
+
+    Returns:
+        list[ToolResultPart]: The parts to render, in order.
+    """
+    has_structured = any(isinstance(part, StructuredResultPart) for part in parts)
+    has_mirror = any(isinstance(part, TextResultPart) and part.mirrors_structured for part in parts)
+    if not (has_structured and has_mirror):
+        return list(parts)
+    if prefer_structured:
+        return [part for part in parts if not (isinstance(part, TextResultPart) and part.mirrors_structured)]
+    return [part for part in parts if not isinstance(part, StructuredResultPart)]
+
+
+def render_parts_as_text(
+    parts: Iterable[ToolResultPart],
+    *,
+    image_refusal: Callable[[ImageResultPart], str | None] | None = None,
+) -> str:
     """Join every part's deterministic description into one text block.
 
     Args:
         parts: The parts to render.
+        image_refusal: Says why the endpoint will not receive an image, so
+            its description can say so; ``None`` describes every image plainly.
 
     Returns:
         str: The joined description, blank-line separated.
     """
-    rendered = [describe_tool_result_part(part) for part in parts]
+    rendered = [
+        describe_tool_result_part(
+            part,
+            image_refusal=image_refusal(part) if image_refusal is not None and isinstance(part, ImageResultPart) else None,
+        )
+        for part in parts
+    ]
     return "\n\n".join(chunk for chunk in rendered if chunk)
 
 
-def tool_result_text(result: ToolResult) -> str:
+def tool_result_text(
+    result: ToolResult,
+    *,
+    prefer_structured: bool = False,
+    image_refusal: Callable[[ImageResultPart], str | None] | None = None,
+) -> str:
     """Resolve the authoritative text form of a tool result.
 
     Multi-part content wins when present, because an externally-sourced tool
@@ -329,17 +427,59 @@ def tool_result_text(result: ToolResult) -> str:
 
     Args:
         result: The tool result to render.
+        prefer_structured: Whether the caller carries structured output
+            natively, which decides which of two restatements of the same
+            data is kept (see :func:`representation_parts`).
+        image_refusal: Says why the endpoint will not receive an image.
 
     Returns:
         str: The text a dialect sends when it cannot carry the parts natively.
     """
     if result.content:
-        return render_parts_as_text(result.content)
+        return render_parts_as_text(
+            representation_parts(result.content, prefer_structured=prefer_structured),
+            image_refusal=image_refusal,
+        )
     if not result.success and result.error:
         if result.result is None:
             return f"{_TOOL_ERROR_PREFIX}{result.error}"
         return f"{_TOOL_ERROR_PREFIX}{result.error}\n\n{serialize_tool_result(result.result)}"
     return serialize_tool_result(result.result)
+
+
+def image_refusal_for(capabilities: ModelCapabilities, policy: ImagePolicy) -> Callable[[ImageResultPart], str | None]:
+    """Build the check that says why one endpoint cannot take an image.
+
+    Args:
+        capabilities: The resolved capability record for the target model.
+        policy: The dialect's image policy.
+
+    Returns:
+        Callable[[ImageResultPart], str | None]: The check.
+    """
+    if not capabilities.supports_vision:
+        return lambda _part: _NO_VISION
+    return policy.refusal
+
+
+def sendable_image_parts(result: ToolResult, capabilities: ModelCapabilities, policy: ImagePolicy) -> list[ImageResultPart]:
+    """Collect the image parts one endpoint can take natively, in order.
+
+    Every image is checked again here, not only when the tool returned it: a
+    conversation restored from disk may hold an image recorded before the
+    check existed, and an endpoint that receives one it cannot decode rejects
+    the whole request.
+
+    Args:
+        result: The tool result to scan.
+        capabilities: The resolved capability record for the target model.
+        policy: The dialect's image policy.
+
+    Returns:
+        list[ImageResultPart]: The images to send natively.
+    """
+    refusal = image_refusal_for(capabilities, policy)
+    return [part for part in image_parts(result) if refusal(part) is None]
 
 
 def image_parts(result: ToolResult) -> list[ImageResultPart]:
@@ -517,9 +657,12 @@ class DialectAdapter(ABC):
 
     Attributes:
         dialect: The wire format this adapter implements.
+        image_policy: Which images the endpoint accepts natively; any other
+            image degrades to a text description.
     """
 
     dialect: ClassVar[ApiDialect]
+    image_policy: ClassVar[ImagePolicy]
 
     @abstractmethod
     def default_capabilities(self) -> ModelCapabilities:
@@ -784,6 +927,9 @@ class DialectAdapter(ABC):
 __all__ = [
     "API_KEY_PLACEHOLDER",
     "AUTH_HEADER_NAMES",
+    "GEMINI_IMAGE_POLICY",
+    "MESSAGES_IMAGE_POLICY",
+    "OPENAI_IMAGE_POLICY",
     "PROTOCOL_HEADER_NAMES",
     "ApiDialect",
     "DialectAdapter",
@@ -797,10 +943,13 @@ __all__ = [
     "describe_tool_result_part",
     "headers_receiving_api_key",
     "image_parts",
+    "image_refusal_for",
     "interpolate_headers",
     "merge_auth_headers",
     "parse_tool_call",
     "render_parts_as_text",
+    "representation_parts",
+    "sendable_image_parts",
     "serialize_tool_result",
     "structured_parts",
     "tool_result_text",

@@ -18,6 +18,7 @@ import binascii
 import json
 import math
 import struct
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from intellicrack.core.types import (
@@ -27,6 +28,7 @@ from intellicrack.core.types import (
     TextResultPart,
     ToolResultPart,
 )
+from intellicrack.core.untrusted_text import UNTRUSTED_BLOCK_END, UNTRUSTED_BLOCK_START
 
 
 if TYPE_CHECKING:
@@ -185,6 +187,170 @@ def image_dimensions(data: str) -> tuple[int, int] | None:
     return None
 
 
+IMAGE_MIME_PNG: Final[str] = "image/png"
+IMAGE_MIME_JPEG: Final[str] = "image/jpeg"
+IMAGE_MIME_GIF: Final[str] = "image/gif"
+IMAGE_MIME_WEBP: Final[str] = "image/webp"
+IMAGE_MIME_BMP: Final[str] = "image/bmp"
+IMAGE_MIME_TIFF: Final[str] = "image/tiff"
+IMAGE_MIME_HEIC: Final[str] = "image/heic"
+IMAGE_MIME_HEIF: Final[str] = "image/heif"
+IMAGE_MIME_AVIF: Final[str] = "image/avif"
+
+_MIME_ALIASES: Final[dict[str, str]] = {"image/jpg": IMAGE_MIME_JPEG, "image/pjpeg": IMAGE_MIME_JPEG, "image/x-png": IMAGE_MIME_PNG}
+
+_ISO_BMFF_BRANDS: Final[dict[bytes, str]] = {
+    b"heic": IMAGE_MIME_HEIC,
+    b"heix": IMAGE_MIME_HEIC,
+    b"hevc": IMAGE_MIME_HEIC,
+    b"heim": IMAGE_MIME_HEIC,
+    b"heis": IMAGE_MIME_HEIC,
+    b"mif1": IMAGE_MIME_HEIF,
+    b"msf1": IMAGE_MIME_HEIF,
+    b"avif": IMAGE_MIME_AVIF,
+    b"avis": IMAGE_MIME_AVIF,
+}
+
+_RIFF_HEADER_LEN: Final[int] = 12
+_ISO_BMFF_HEADER_LEN: Final[int] = 12
+
+
+def normalize_image_mime(mime_type: str) -> str:
+    """Bring a declared image media type to its canonical spelling.
+
+    Args:
+        mime_type: The media type a tool declared.
+
+    Returns:
+        str: The lower-cased type without parameters, with common aliases
+        such as ``image/jpg`` mapped to their registered name.
+    """
+    bare = mime_type.split(";", maxsplit=1)[0].strip().lower()
+    return _MIME_ALIASES.get(bare, bare)
+
+
+def sniff_image_mime(header: bytes) -> str | None:
+    """Identify an image format from its leading bytes.
+
+    Args:
+        header: The decoded image's leading bytes.
+
+    Returns:
+        str | None: The media type the signature belongs to, or ``None`` when
+        no known signature matches.
+    """
+    if header.startswith(_PNG_SIGNATURE):
+        return IMAGE_MIME_PNG
+    if header.startswith(_JPEG_SOI):
+        return IMAGE_MIME_JPEG
+    if header[:6] in _GIF_SIGNATURES:
+        return IMAGE_MIME_GIF
+    if len(header) >= _RIFF_HEADER_LEN and header[:4] == b"RIFF" and header[8:12] == b"WEBP":
+        return IMAGE_MIME_WEBP
+    if header.startswith(b"BM"):
+        return IMAGE_MIME_BMP
+    if header[:4] in {b"II*\x00", b"MM\x00*"}:
+        return IMAGE_MIME_TIFF
+    if len(header) >= _ISO_BMFF_HEADER_LEN and header[4:8] == b"ftyp":
+        return _ISO_BMFF_BRANDS.get(header[8:12])
+    return None
+
+
+@dataclass(frozen=True, slots=True)
+class ImageInspection:
+    """What an image payload turned out to be.
+
+    Attributes:
+        data: The base64 payload with any whitespace removed, which is the
+            form every provider accepts.
+        mime_type: The media type to send it as: the one its bytes prove
+            when they carry a known signature, else the declared one.
+        byte_count: Size of the decoded image.
+        dimensions: Width and height in pixels, when the header gives them.
+        problem: Why the payload is not a usable image, or ``None`` when it
+            is one.
+    """
+
+    data: str
+    mime_type: str
+    byte_count: int
+    dimensions: tuple[int, int] | None
+    problem: str | None
+
+
+def inspect_image(data: str, declared_mime: str) -> ImageInspection:
+    """Check that a payload is the image it claims to be.
+
+    The whole payload is decoded, strictly: a stray character anywhere makes
+    it invalid, because a provider that receives it rejects the request and
+    every later request that replays it. A payload whose bytes carry a known
+    image signature is sent under the type the bytes prove, whatever was
+    declared, so a server that mislabels a JPEG as PNG does not poison the
+    conversation.
+
+    Args:
+        data: The base64-encoded image.
+        declared_mime: The media type the tool declared.
+
+    Returns:
+        ImageInspection: The verdict and the normalized payload.
+    """
+    declared = normalize_image_mime(declared_mime)
+    compact = "".join(data.split())
+    try:
+        decoded = base64.b64decode(compact, validate=True)
+    except (binascii.Error, ValueError):
+        return ImageInspection(compact, declared, 0, None, "the payload is not valid base64")
+    if not decoded:
+        return ImageInspection(compact, declared, 0, None, "the payload is empty")
+    sniffed = sniff_image_mime(decoded[:_HEADER_BYTES])
+    dimensions = image_dimensions(compact)
+    if sniffed is not None:
+        return ImageInspection(compact, sniffed, len(decoded), dimensions, None)
+    if not declared.startswith("image/"):
+        return ImageInspection(compact, declared, len(decoded), None, f"the declared type {declared!r} is not an image type")
+    if declared in {IMAGE_MIME_PNG, IMAGE_MIME_JPEG, IMAGE_MIME_GIF, IMAGE_MIME_WEBP}:
+        return ImageInspection(compact, declared, len(decoded), None, f"the bytes are not a {declared} image")
+    return ImageInspection(compact, declared, len(decoded), dimensions, None)
+
+
+@dataclass(frozen=True, slots=True)
+class ImagePolicy:
+    """Which images one endpoint accepts.
+
+    Attributes:
+        mime_types: The media types it accepts.
+        max_edge: Longest image edge in pixels it accepts, or ``None``.
+        max_bytes: Largest decoded image it accepts, or ``None``.
+    """
+
+    mime_types: frozenset[str]
+    max_edge: int | None = None
+    max_bytes: int | None = None
+
+    def refusal(self, part: ImageResultPart) -> str | None:
+        """Say why this endpoint would reject an image, if it would.
+
+        Args:
+            part: The image.
+
+        Returns:
+            str | None: The reason, or ``None`` when the image can be sent.
+        """
+        inspection = inspect_image(part.data, part.mime_type)
+        if inspection.problem is not None:
+            return inspection.problem
+        if inspection.mime_type not in self.mime_types:
+            accepted = ", ".join(sorted(self.mime_types))
+            return f"this endpoint accepts only {accepted}"
+        if self.max_bytes is not None and inspection.byte_count > self.max_bytes:
+            return f"it is {inspection.byte_count} bytes, over this endpoint's {self.max_bytes}-byte limit"
+        dimensions = inspection.dimensions
+        if self.max_edge is not None and dimensions is not None and max(dimensions) > self.max_edge:
+            return f"it is {dimensions[0]}x{dimensions[1]} pixels, over this endpoint's {self.max_edge}-pixel edge limit"
+        return None
+
+
 def estimate_image_tokens(part: ImageResultPart) -> int:
     """Estimate how much of the context window one image occupies.
 
@@ -263,8 +429,7 @@ def bound_result_parts(parts: Iterable[ToolResultPart], max_chars: int) -> list[
             remaining -= len(text)
             bounded.append(part)
             continue
-        kept = text[: max(remaining, 0)]
-        truncated = f"{kept}{_TRUNCATION_NOTE.format(omitted=len(text) - len(kept))}"
+        truncated = _truncate_keeping_fence(text, max(remaining, 0), fence=isinstance(part, StructuredResultPart))
         remaining = 0
         if isinstance(part, EmbeddedResourcePart):
             bounded.append(EmbeddedResourcePart(uri=part.uri, text=truncated, data=part.data, mime_type=part.mime_type))
@@ -273,11 +438,49 @@ def bound_result_parts(parts: Iterable[ToolResultPart], max_chars: int) -> list[
     return bounded
 
 
+def _truncate_keeping_fence(text: str, keep: int, *, fence: bool) -> str:
+    """Cut text to a budget without leaving an untrusted block unclosed.
+
+    Text already wrapped in the untrusted-text fence is cut inside the fence
+    and closed again; a structured part, whose JSON is the server's own data,
+    is fenced as it is cut.
+
+    Args:
+        text: The text to cut.
+        keep: How many characters of content to keep.
+        fence: Whether to fence text that is not fenced yet.
+
+    Returns:
+        str: The truncated text, with a note saying how much was dropped.
+    """
+    opening = f"{UNTRUSTED_BLOCK_START}\n"
+    closing = f"\n{UNTRUSTED_BLOCK_END}"
+    fenced = text.startswith(opening) and text.endswith(closing)
+    body = text[len(opening) : len(text) - len(closing)] if fenced else text
+    kept = body[:keep]
+    truncated = f"{kept}{_TRUNCATION_NOTE.format(omitted=len(body) - len(kept))}"
+    return f"{opening}{truncated}{closing}" if fenced or fence else truncated
+
+
 __all__ = [
     "IMAGE_MAX_LONG_EDGE",
     "IMAGE_MAX_TOKENS",
+    "IMAGE_MIME_AVIF",
+    "IMAGE_MIME_BMP",
+    "IMAGE_MIME_GIF",
+    "IMAGE_MIME_HEIC",
+    "IMAGE_MIME_HEIF",
+    "IMAGE_MIME_JPEG",
+    "IMAGE_MIME_PNG",
+    "IMAGE_MIME_TIFF",
+    "IMAGE_MIME_WEBP",
     "IMAGE_PATCH_PIXELS",
+    "ImageInspection",
+    "ImagePolicy",
     "bound_result_parts",
     "estimate_image_tokens",
     "image_dimensions",
+    "inspect_image",
+    "normalize_image_mime",
+    "sniff_image_mime",
 ]

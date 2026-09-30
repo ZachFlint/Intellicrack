@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, runtime_checkable
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.untrusted_text import clean_untrusted_label
 
 
 if TYPE_CHECKING:
@@ -395,9 +396,14 @@ class TextResultPart:
 
     Attributes:
         text: The text content.
+        mirrors_structured: Whether this text restates the result's structured
+            part, as a server does when it serializes its structured output
+            into a text block for older clients. A dialect sends one of the two
+            representations, never both.
     """
 
     text: str
+    mirrors_structured: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -1755,27 +1761,32 @@ def _schema_type_label(schema: object, depth: int = 0) -> str:
     node = cast("dict[str, object]", schema)
     reference = node.get("$ref")
     if isinstance(reference, str):
-        return reference.rsplit("/", 1)[-1] or "any"
+        return clean_untrusted_label(reference.rsplit("/", 1)[-1]) or "any"
     for combinator in ("anyOf", "oneOf"):
         options = node.get(combinator)
         if isinstance(options, list):
             labels = dict.fromkeys(_schema_type_label(option, depth + 1) for option in cast("list[object]", options))
             return "|".join(labels) or "any"
     if "const" in node:
-        return json.dumps(node["const"])
+        return clean_untrusted_label(json.dumps(node["const"]))
     enum_values = node.get("enum")
     if isinstance(enum_values, list):
-        return "|".join(json.dumps(value) for value in cast("list[object]", enum_values)) or "any"
+        return clean_untrusted_label("|".join(json.dumps(value) for value in cast("list[object]", enum_values))) or "any"
     declared = node.get("type")
     if isinstance(declared, list):
-        return "|".join(str(item) for item in cast("list[object]", declared)) or "any"
+        return clean_untrusted_label("|".join(str(item) for item in cast("list[object]", declared))) or "any"
     if declared == "array":
         return f"array[{_schema_type_label(node.get('items'), depth + 1)}]"
-    return declared if isinstance(declared, str) else "any"
+    return clean_untrusted_label(declared) if isinstance(declared, str) else "any"
 
 
 def render_schema_parameters(schema: dict[str, Any]) -> str:
     """Render an object schema's properties as a one-line argument list.
+
+    Every name and value is read from the schema, which for an
+    externally-sourced tool is the server's own text, so each one is cleaned
+    of invisible characters and forged fence markers before it is written
+    into the prompt.
 
     Args:
         schema: The JSON Schema of a function's arguments.
@@ -1792,7 +1803,7 @@ def render_schema_parameters(schema: dict[str, Any]) -> str:
     rendered: list[str] = []
     for name, subschema in cast("dict[object, object]", properties).items():
         marker = "" if name in required else "?"
-        rendered.append(f"{name}{marker}: {_schema_type_label(subschema)}")
+        rendered.append(f"{clean_untrusted_label(str(name))}{marker}: {_schema_type_label(subschema)}")
     return ", ".join(rendered)
 
 

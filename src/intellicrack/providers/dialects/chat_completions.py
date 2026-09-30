@@ -34,6 +34,7 @@ from intellicrack.providers.capabilities import (
     TokenLimitField,
 )
 from intellicrack.providers.dialects.base import (
+    OPENAI_IMAGE_POLICY,
     DialectAdapter,
     DialectRequest,
     DialectResponse,
@@ -41,8 +42,9 @@ from intellicrack.providers.dialects.base import (
     ToolCallFragment,
     ToolNameStyle,
     UsageInfo,
-    image_parts,
+    image_refusal_for,
     parse_tool_call,
+    sendable_image_parts,
     tool_result_text,
     wire_function_name,
 )
@@ -51,6 +53,7 @@ from intellicrack.providers.dialects.base import (
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from intellicrack.core.result_parts import ImagePolicy
     from intellicrack.core.types import Message, ToolChoice, ToolDefinition, ToolResult
 
 
@@ -71,9 +74,12 @@ class ChatCompletionsAdapter(DialectAdapter):
 
     Attributes:
         dialect: Always :data:`ApiDialect.CHAT_COMPLETIONS`.
+        image_policy: Which images the endpoint accepts natively,
+            :data:`~intellicrack.providers.dialects.base.OPENAI_IMAGE_POLICY`.
     """
 
     dialect: ClassVar[ApiDialect] = ApiDialect.CHAT_COMPLETIONS
+    image_policy: ClassVar[ImagePolicy] = OPENAI_IMAGE_POLICY
 
     def __init__(
         self,
@@ -514,9 +520,11 @@ class ChatCompletionsAdapter(DialectAdapter):
 
         Chat Completions carries text only in a tool message. An image part
         therefore rides in a ``user`` message as an ``image_url`` data URI,
-        labelled with the call it answers, when the model reports vision, and
-        degrades to the shared deterministic text description when it does
-        not. :meth:`build_messages` places that ``user`` message after the
+        labelled with the call it answers, when the model reports vision and
+        the image is one the endpoint accepts (see
+        :data:`~intellicrack.providers.dialects.base.OPENAI_IMAGE_POLICY`);
+        any other image degrades to the shared deterministic text description,
+        which says why it was not sent. :meth:`build_messages` places that ``user`` message after the
         whole run of tool messages, which the endpoint requires to be
         contiguous.
 
@@ -530,7 +538,7 @@ class ChatCompletionsAdapter(DialectAdapter):
             user message carrying the images.
         """
         del function_name
-        text = tool_result_text(result)
+        text = tool_result_text(result, image_refusal=image_refusal_for(capabilities, self.image_policy))
         if result.is_error and result.success:
             text = f"[tool reported an error]\n{text}"
         rendered: list[dict[str, Any]] = [
@@ -540,8 +548,8 @@ class ChatCompletionsAdapter(DialectAdapter):
                 "content": text,
             },
         ]
-        images = image_parts(result)
-        if images and capabilities.supports_vision:
+        images = sendable_image_parts(result, capabilities, self.image_policy)
+        if images:
             content: list[dict[str, Any]] = [{"type": "text", "text": f"Images returned by tool call {result.call_id}:"}]
             content.extend(
                 {

@@ -198,6 +198,19 @@ def _name_looks_secret(name: str) -> bool:
     return any(part in _SECRET_NAME_TOKENS for part in parts)
 
 
+def name_looks_secret(name: str) -> bool:
+    """Decide whether a variable, header or parameter name marks its value as a credential.
+
+    Args:
+        name: The name.
+
+    Returns:
+        bool: ``True`` when the name names a credential, such as
+        ``GITHUB_TOKEN`` or ``x-api-key``.
+    """
+    return _name_looks_secret(name)
+
+
 def _is_path(value: str) -> bool:
     """Decide whether a value is written as a filesystem path.
 
@@ -517,14 +530,43 @@ class McpSandboxSpec:
         allowed_domains: Hostnames the operator expects the child to reach.
             Recorded and logged only: it is not enforced, and a sandboxed
             server can still connect to any host.
+        inherit_env: Names of further variables from Intellicrack's own
+            environment the child keeps, beyond the fixed allowlist in
+            :mod:`intellicrack.mcp.sandbox_launch`. Nothing is inherited by
+            default that could carry a credential; a name listed here is the
+            operator's deliberate choice.
     """
 
     enabled: bool = False
     allow_write: tuple[str, ...] = ()
     allowed_domains: tuple[str, ...] = ()
+    inherit_env: tuple[str, ...] = ()
 
 
 _DEFAULT_SANDBOX: Final[McpSandboxSpec] = McpSandboxSpec()
+
+
+def sandbox_limitations(sandbox: McpSandboxSpec) -> tuple[str, ...]:
+    """State plainly what a server's sandbox does not protect against.
+
+    Args:
+        sandbox: The server's sandbox settings.
+
+    Returns:
+        tuple[str, ...]: One sentence per limitation, empty when the sandbox
+        is disabled and so claims nothing.
+    """
+    if not sandbox.enabled:
+        return ()
+    network = "Network access is not restricted: the server can connect to any host."
+    if sandbox.allowed_domains:
+        listed = ", ".join(sandbox.allowed_domains)
+        network = f"Network access is not restricted: allowedDomains ({listed}) is recorded only and is not enforced."
+    return (
+        network,
+        "Reads are not restricted: the server can read any file your account can read.",
+        "Locations Windows labels low-integrity, such as AppData\\LocalLow, stay writable to the server.",
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1041,6 +1083,7 @@ def _parse_sandbox(data: Mapping[str, Any], *, server_id: str) -> McpSandboxSpec
         enabled=_optional_bool(raw, "enabled", server_id=server_id, default=False),
         allow_write=_str_sequence(raw, "allowWrite", server_id=server_id),
         allowed_domains=_str_sequence(raw, "allowedDomains", server_id=server_id),
+        inherit_env=_str_sequence(raw, "inheritEnv", server_id=server_id),
     )
 
 
@@ -1219,6 +1262,8 @@ def _serialize_server(config: McpServerConfig) -> dict[str, Any]:
             sandbox["allowWrite"] = list(config.sandbox.allow_write)
         if config.sandbox.allowed_domains:
             sandbox["allowedDomains"] = list(config.sandbox.allowed_domains)
+        if config.sandbox.inherit_env:
+            sandbox["inheritEnv"] = list(config.sandbox.inherit_env)
         data["sandbox"] = sandbox
     if config.request_timeout_s != DEFAULT_REQUEST_TIMEOUT_S:
         data["requestTimeout"] = config.request_timeout_s

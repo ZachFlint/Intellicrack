@@ -152,7 +152,10 @@ def _serialize_result_part(part: ToolResultPart) -> dict[str, Any]:
         dict[str, Any]: JSON-compatible record tagged with the part kind.
     """
     if isinstance(part, TextResultPart):
-        return {"type": _PART_TYPE_TEXT, "text": part.text}
+        record: dict[str, Any] = {"type": _PART_TYPE_TEXT, "text": part.text}
+        if part.mirrors_structured:
+            record["mirrors_structured"] = True
+        return record
     if isinstance(part, ImageResultPart):
         return {"type": _PART_TYPE_IMAGE, "data": part.data, "mime_type": part.mime_type}
     if isinstance(part, AudioResultPart):
@@ -221,7 +224,7 @@ def _deserialize_result_part(data: dict[str, Any]) -> ToolResultPart:
     """
     part_type = str(data.get("type", ""))
     if part_type == _PART_TYPE_TEXT:
-        return TextResultPart(text=str(data.get("text", "")))
+        return TextResultPart(text=str(data.get("text", "")), mirrors_structured=data.get("mirrors_structured") is True)
     if part_type == _PART_TYPE_STRUCTURED:
         content = data.get("content")
         return StructuredResultPart(content=dict(content) if is_json_object(content) else {})

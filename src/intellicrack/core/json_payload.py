@@ -15,7 +15,11 @@ and nothing downstream is unknown.
 
 from __future__ import annotations
 
-from typing import Any, TypeIs
+from typing import TYPE_CHECKING, Any, TypeIs
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 JsonObject = dict[str, Any]
@@ -123,6 +127,47 @@ def json_str_at(container: JsonObject, key: str) -> str | None:
     return value if isinstance(value, str) else None
 
 
+def map_json_strings(value: object, rename: Callable[[str], str]) -> object:
+    """Apply a string mapping to every object key and every string in a JSON value.
+
+    The walk is iterative, so a value nested far deeper than the interpreter's
+    recursion limit is mapped as surely as a flat one.
+
+    Args:
+        value: The JSON value to map.
+        rename: Maps one string, key or member, to its replacement.
+
+    Returns:
+        object: A new value of the same shape. When two keys of one object map
+        to the same string, the later member wins at the earlier position.
+    """
+    root: list[object] = [None]
+    pending: list[tuple[object, dict[str, object] | list[object], str | int]] = [(value, root, 0)]
+    while pending:
+        source, target, slot = pending.pop()
+        mapped: object
+        if isinstance(source, str):
+            mapped = rename(source)
+        elif is_json_object(source):
+            members: dict[str, object] = {}
+            for key, member in source.items():
+                renamed = rename(key)
+                members[renamed] = None
+                pending.append((member, members, renamed))
+            mapped = members
+        elif is_json_array(source):
+            items: list[object] = [None] * len(source)
+            pending.extend((member, items, index) for index, member in enumerate(source))
+            mapped = items
+        else:
+            mapped = source
+        if isinstance(target, dict):
+            target[str(slot)] = mapped
+        else:
+            target[int(slot)] = mapped
+    return root[0]
+
+
 __all__ = [
     "JsonArray",
     "JsonObject",
@@ -133,4 +178,5 @@ __all__ = [
     "json_array_at",
     "json_object_at",
     "json_str_at",
+    "map_json_strings",
 ]

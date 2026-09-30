@@ -52,6 +52,7 @@ from anyio.streams.file import FileReadStream, FileWriteStream
 from mcp.shared.message import SessionMessage
 
 from intellicrack.core.logging import get_logger
+from intellicrack.mcp.config import sandbox_limitations
 from intellicrack.mcp.errors import McpConfigError
 
 
@@ -384,29 +385,6 @@ def sandbox_supported() -> bool:
         bool: ``True`` only on Windows.
     """
     return IS_WIN32
-
-
-def sandbox_limitations(sandbox: McpSandboxSpec) -> tuple[str, ...]:
-    """State plainly what a server's sandbox does not protect against.
-
-    Args:
-        sandbox: The server's sandbox settings.
-
-    Returns:
-        tuple[str, ...]: One sentence per limitation, empty when the sandbox
-        is disabled and so claims nothing.
-    """
-    if not sandbox.enabled:
-        return ()
-    network = "Network access is not restricted: the server can connect to any host."
-    if sandbox.allowed_domains:
-        listed = ", ".join(sandbox.allowed_domains)
-        network = f"Network access is not restricted: allowedDomains ({listed}) is recorded only and is not enforced."
-    return (
-        network,
-        "Reads are not restricted: the server can read any file your account can read.",
-        "Locations Windows labels low-integrity, such as AppData\\LocalLow, stay writable to the server.",
-    )
 
 
 def build_environment_allowlist(env: Mapping[str, str], inherited: Mapping[str, str], temp_dir: str) -> dict[str, str]:
