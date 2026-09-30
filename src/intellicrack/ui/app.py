@@ -72,6 +72,7 @@ from intellicrack.credentials.provider_settings import (
     coerce_timeout_seconds,
     resolve_session_credentials,
     saved_model_overrides,
+    saved_reasoning_summary_mode,
 )
 from intellicrack.mcp.errors import McpError
 from intellicrack.providers.configurable import ConfigurableProvider
@@ -2968,6 +2969,8 @@ class MainWindow(QMainWindow):
             existing_provider, stale_provider = self._current_instance_provider(pname)
             if stale_provider is not None and stale_provider.is_connected:
                 stale_providers.append(stale_provider)
+            if existing_provider is not None:
+                existing_provider.set_reasoning_summary_mode(saved_reasoning_summary_mode(provider_settings))
 
             if not enabled or (not api_key and not self._api_key_optional(pname)):
                 if existing_provider is not None and existing_provider.is_connected:

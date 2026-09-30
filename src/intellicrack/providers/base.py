@@ -33,6 +33,7 @@ from intellicrack.core.types import (
     ProviderError,
     RateLimitError,
     ReasoningItem,
+    ReasoningSummaryRefusedError,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
@@ -43,6 +44,7 @@ from intellicrack.providers.capabilities import (
     ApiDialect,
     CapabilityOverride,
     ModelCapabilities,
+    ReasoningSummaryMode,
     ToolSearchStyle,
     merge_capabilities,
 )
@@ -60,12 +62,13 @@ from intellicrack.providers.dialects.base import (
     serialize_tool_result,
     tool_result_text,
 )
+from intellicrack.providers.dialects.responses import without_reasoning_summary
 from intellicrack.providers.presets import preset_capabilities
 from intellicrack.providers.tool_names import to_wire_name
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Awaitable, Callable, Generator
+    from collections.abc import AsyncIterator, Awaitable, Callable, Generator, Mapping
 
     import structlog
     from openai.types.chat.chat_completion_message import ChatCompletionMessage
@@ -357,6 +360,8 @@ class LLMProviderBase(ABC):
         self._model_capabilities: dict[str, ModelCapabilities] = {}
         self._capability_overrides: dict[str, CapabilityOverride] = {}
         self._last_sent_tools: SentToolReport = SentToolReport()
+        self._reasoning_summary_mode: ReasoningSummaryMode = ReasoningSummaryMode.AUTO
+        self._reasoning_summary_refused: bool = False
         self._logger = get_logger(__name__)
         self._logger.info("provider_base_initialized")
 
@@ -428,6 +433,89 @@ class LLMProviderBase(ABC):
             self._capability_overrides.pop(model, None)
             return
         self._capability_overrides[model] = override
+
+    @property
+    def reasoning_summary_mode(self) -> ReasoningSummaryMode:
+        """Whether Responses requests from this instance ask for reasoning summaries.
+
+        Returns:
+            ReasoningSummaryMode: The configured mode.
+        """
+        return self._reasoning_summary_mode
+
+    def set_reasoning_summary_mode(self, mode: ReasoningSummaryMode) -> None:
+        """Choose whether Responses requests ask for reasoning summaries.
+
+        Choosing a different mode forgets an earlier refusal, so switching
+        back to :attr:`ReasoningSummaryMode.AUTO` after the organization is
+        verified asks again; choosing the mode already in use keeps it.
+
+        Args:
+            mode: The mode to use.
+        """
+        if mode is self._reasoning_summary_mode:
+            return
+        self._reasoning_summary_mode = mode
+        self._reasoning_summary_refused = False
+
+    @property
+    def requests_reasoning_summaries(self) -> bool:
+        """Whether the next Responses request asks for a reasoning summary.
+
+        Returns:
+            bool: ``True`` when the mode is on, or automatic and the endpoint
+            has not refused a summary to this instance.
+        """
+        mode = self._reasoning_summary_mode
+        return mode is ReasoningSummaryMode.ON or (mode is ReasoningSummaryMode.AUTO and not self._reasoning_summary_refused)
+
+    def _accept_reasoning_summary_refusal(self, body: Mapping[str, Any]) -> dict[str, Any] | None:
+        """Record that the endpoint refused a reasoning summary, and give the body to retry with.
+
+        Only the automatic mode falls back: with summaries switched on the
+        refusal is the operator's to see.
+
+        Args:
+            body: The refused Responses request body.
+
+        Returns:
+            dict[str, Any] | None: The body without ``reasoning.summary``, or
+            ``None`` when no retry should be made.
+        """
+        retry = without_reasoning_summary(body)
+        if self._reasoning_summary_mode is not ReasoningSummaryMode.AUTO or retry is None:
+            return None
+        if not self._reasoning_summary_refused:
+            self._logger.warning("reasoning_summary_refused", provider=self.name, remembered=True)
+        self._reasoning_summary_refused = True
+        return retry
+
+    async def _send_with_summary_fallback[R](
+        self,
+        send: Callable[[dict[str, Any]], Awaitable[R]],
+        body: dict[str, Any],
+    ) -> tuple[R, dict[str, Any]]:
+        """Send a Responses request, retrying once without ``reasoning.summary`` when the endpoint refuses it.
+
+        Args:
+            send: Sends one body and returns what the endpoint answered.
+            body: The request body.
+
+        Returns:
+            tuple[R, dict[str, Any]]: The answer, and the body that earned it.
+
+        Raises:
+            ReasoningSummaryRefusedError: When the refusal cannot be retried
+                around, because summaries are switched on or the body asked
+                for none.
+        """
+        try:
+            return await send(body), body
+        except ReasoningSummaryRefusedError:
+            retry = self._accept_reasoning_summary_refusal(body)
+            if retry is None:
+                raise
+        return await send(retry), retry
 
     def capability_overrides(self) -> dict[str, CapabilityOverride]:
         """Return every per-model override currently configured.

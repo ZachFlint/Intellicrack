@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     from intellicrack.credentials.env_loader import CredentialLoader
     from intellicrack.credentials.provider_settings import ProviderConnectPolicy, ProviderSettingsStore
     from intellicrack.providers.base import LLMProviderBase
-    from intellicrack.providers.capabilities import CapabilityOverride
+    from intellicrack.providers.capabilities import CapabilityOverride, ReasoningSummaryMode
     from intellicrack.providers.configurable import ConfigurableProvider
     from intellicrack.providers.discovery import ModelDiscovery
     from intellicrack.providers.registry import ProviderRegistry
@@ -687,11 +687,12 @@ def _apply_saved_capability_overrides(
     provider_name: str,
     logger: BoundLogger,
 ) -> None:
-    """Load this provider's saved per-model capability overrides.
+    """Load this provider's saved per-model capability overrides and reasoning-summary mode.
 
     The override is the top layer of the capability merge and the only one a
     user controls, so it has to be in place before the first request rather
-    than only after the settings dialog is opened.
+    than only after the settings dialog is opened. The same holds for whether
+    Responses requests ask for reasoning summaries.
 
     Args:
         provider: The constructed provider instance.
@@ -707,8 +708,13 @@ def _apply_saved_capability_overrides(
         "Callable[[dict[str, object]], dict[str, object]]",
         settings_mod.saved_model_overrides,
     )
+    read_summary_mode = cast(
+        "Callable[[dict[str, object]], ReasoningSummaryMode]",
+        settings_mod.saved_reasoning_summary_mode,
+    )
 
     section = store_cls(settings_path).section(provider_name)
+    provider.set_reasoning_summary_mode(read_summary_mode(section))
     overrides = read_overrides(section)
     for model_id, override in overrides.items():
         provider.set_capability_override(model_id, cast("CapabilityOverride", override))

@@ -205,6 +205,7 @@ __all__: list[str] = [
     "RateLimitError",
     "ReasoningItem",
     "ReasoningKind",
+    "ReasoningSummaryRefusedError",
     "RegisterState",
     "RelocationInfo",
     "ResourceInfo",
@@ -2109,6 +2110,14 @@ class ModelNotFoundError(ProviderError):
         super().__init__(message, provider_name, status_code, response_body, error_code, details)
         self.model_name = model_name
         self.available_models = available_models or []
+
+
+class ReasoningSummaryRefusedError(ProviderError):
+    """The endpoint refused to generate a reasoning summary for this organization.
+
+    OpenAI generates reasoning summaries only for verified organizations and
+    answers any other organization's request for one with ``400``.
+    """
 
 
 class UnsafeCheckpointError(ProviderError):

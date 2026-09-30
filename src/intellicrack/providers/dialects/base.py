@@ -242,6 +242,8 @@ class DialectRequest:
         tool_name_style: How canonical dotted tool names are written.
         system: System instruction override. When ``None`` the adapter derives
             it from the ``system``-role messages.
+        reasoning_summary: Whether a Responses request asks for a readable
+            reasoning summary alongside the effort.
     """
 
     model: str
@@ -259,6 +261,7 @@ class DialectRequest:
     drop_params: frozenset[str] = frozenset()
     tool_name_style: ToolNameStyle = ToolNameStyle.DOUBLE_UNDERSCORE
     system: str | None = None
+    reasoning_summary: bool = True
 
 
 @dataclass(frozen=True, slots=True)

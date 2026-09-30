@@ -39,6 +39,7 @@ from intellicrack.core.types import (
     ProviderCredentials,
     ProviderError,
     RateLimitError,
+    ReasoningSummaryRefusedError,
 )
 from intellicrack.providers.base import (
     HttpErrorMessages,
@@ -49,6 +50,7 @@ from intellicrack.providers.base import (
 from intellicrack.providers.capabilities import ApiDialect, merge_capabilities
 from intellicrack.providers.dialects import adapter_for
 from intellicrack.providers.dialects.base import DialectRequest, UsageInfo
+from intellicrack.providers.dialects.responses import refuses_reasoning_summary
 from intellicrack.providers.model_metadata import ingest_models
 
 
@@ -412,11 +414,19 @@ class ConfigurableProvider(LLMProviderBase):
             ProviderError: For a permanent quota exhaustion or any status
                 without a dedicated typed error.
             RateLimitError: For a transient ``429``.
+            ReasoningSummaryRefusedError: For a ``400`` refusing the
+                request's ``reasoning.summary``.
         """
         response = exc.response
         status = response.status_code
         body = _safe_body(response)
         detail = self._http_error_detail(exc, body)
+        if refuses_reasoning_summary(status, _decoded_error_body(body)):
+            raise ReasoningSummaryRefusedError(
+                _ERR_REQUEST_FAILED % (self.name, detail),
+                provider_name=self.name,
+                status_code=status,
+            ) from exc
         if status == _HTTP_TOO_MANY_REQUESTS:
             retry_after = _retry_after_seconds(response.headers.get("retry-after"), body)
             if retry_after is None and is_permanent_quota_error(detail):
@@ -483,6 +493,7 @@ class ConfigurableProvider(LLMProviderBase):
                 extra_body=self.instance.extra_body,
                 drop_params=self.instance.drop_params,
                 tool_name_style=self.instance.tool_name_style,
+                reasoning_summary=self.requests_reasoning_summaries,
             ),
         )
         return body, capabilities
@@ -553,9 +564,12 @@ class ConfigurableProvider(LLMProviderBase):
         reasoning: list[ReasoningItem] = []
         tool_calls: list[ToolCall] = []
         for continuation in range(MAX_PAUSED_TURN_CONTINUATIONS + 1):
-            payload = await self._retry_with_backoff(
-                functools.partial(self._post_json, client, path, body),
-                max_delay=_MAX_RETRY_WAIT_SECONDS,
+            payload, body = await self._send_with_summary_fallback(
+                lambda attempt: self._retry_with_backoff(
+                    functools.partial(self._post_json, client, path, attempt),
+                    max_delay=_MAX_RETRY_WAIT_SECONDS,
+                ),
+                body,
             )
             parsed = self._adapter.parse_response(payload, capabilities=capabilities)
             content += parsed.content
@@ -721,9 +735,12 @@ class ConfigurableProvider(LLMProviderBase):
         for continuation in range(MAX_PAUSED_TURN_CONTINUATIONS + 1):
             finish: str | None = None
             round_usage: UsageInfo | None = None
-            stack, response = await self._retry_with_backoff(
-                functools.partial(self._open_stream_response, client, path, body),
-                max_delay=_MAX_RETRY_WAIT_SECONDS,
+            (stack, response), body = await self._send_with_summary_fallback(
+                lambda attempt: self._retry_with_backoff(
+                    functools.partial(self._open_stream_response, client, path, attempt),
+                    max_delay=_MAX_RETRY_WAIT_SECONDS,
+                ),
+                body,
             )
             events = self._stream_events(stack, response)
             try:
@@ -1088,6 +1105,22 @@ def _sum_usage(total: UsageInfo | None, addition: UsageInfo | None) -> UsageInfo
         cache_creation_tokens=total.cache_creation_tokens + addition.cache_creation_tokens,
         reasoning_tokens=total.reasoning_tokens + addition.reasoning_tokens,
     )
+
+
+def _decoded_error_body(body: str) -> object:
+    """Decode an error response body, when it is JSON.
+
+    Args:
+        body: The body text.
+
+    Returns:
+        object: The decoded value, or ``None`` when it is not JSON.
+    """
+    try:
+        decoded: object = json.loads(body)
+    except ValueError:
+        return None
+    return decoded
 
 
 def _safe_body(response: httpx.Response) -> str:

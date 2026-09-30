@@ -88,6 +88,25 @@ class TokenLimitField(enum.Enum):
     MAX_OUTPUT_TOKENS = "max_output_tokens"
 
 
+class ReasoningSummaryMode(enum.StrEnum):
+    """Whether a Responses request asks for a readable summary of the model's reasoning.
+
+    OpenAI generates reasoning summaries only for organizations that have
+    completed verification; any other organization's thinking-enabled request
+    is refused with a ``400`` naming ``reasoning.summary``.
+
+    Attributes:
+        AUTO: Ask for a summary until the endpoint refuses one, then stop
+            asking for the rest of the session.
+        ON: Always ask, so a refusal surfaces as an error.
+        OFF: Never ask; reasoning still runs but is not shown.
+    """
+
+    AUTO = "auto"
+    ON = "on"
+    OFF = "off"
+
+
 class ReasoningEffortFormat(enum.Enum):
     """How a model's reasoning knob is expressed on the wire.
 
