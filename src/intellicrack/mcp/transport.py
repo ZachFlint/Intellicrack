@@ -16,11 +16,13 @@ silently truncated.
 
 from __future__ import annotations
 
+import ipaddress
+import re
 import webbrowser
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Protocol, runtime_checkable
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, unquote, urlencode, urlsplit, urlunsplit
 
 import httpx2
 from mcp.client.sse import sse_client
@@ -60,6 +62,98 @@ _ERR_EMPTY_COMMAND = "the launch command is empty"
 WEB_URL_SCHEMES: Final[frozenset[str]] = frozenset({"http", "https"})
 """Schemes a URL from a server may be handed to the operator's browser."""
 
+_HOST_LABEL: Final[re.Pattern[str]] = re.compile(r"[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?")
+_MAX_HOST_CHARS: Final[int] = 253
+_STRAY_PERCENT: Final[re.Pattern[str]] = re.compile(r"%(?![0-9A-Fa-f]{2})")
+_USERINFO_SAFE: Final[str] = "!$&'()*+,;="
+_PATH_SAFE: Final[str] = "!$&'()*+,;=:@/%"
+_QUERY_SAFE: Final[str] = "!$&'()*+,;=:@/?%"
+
+
+def _web_host(hostname: str | None) -> str | None:
+    """Render a URL's host the way a web URL spells it, or refuse it.
+
+    Args:
+        hostname: The host ``urlsplit`` found, lower-cased and unbracketed.
+
+    Returns:
+        str | None: An IP literal (bracketed for IPv6) or an ASCII host name
+        of valid labels, or ``None`` when the host is empty or holds anything
+        else, such as the backslashes of a UNC path.
+    """
+    if not hostname:
+        return None
+    try:
+        address = ipaddress.ip_address(hostname)
+    except ValueError:
+        pass
+    else:
+        return f"[{address.compressed}]" if isinstance(address, ipaddress.IPv6Address) else address.compressed
+    try:
+        ascii_host = hostname.encode("idna").decode("ascii").lower()
+    except UnicodeError:
+        return None
+    labels = ascii_host.removesuffix(".").split(".")
+    if len(ascii_host) > _MAX_HOST_CHARS or not all(_HOST_LABEL.fullmatch(label) for label in labels):
+        return None
+    return ascii_host
+
+
+def _requote(text: str, safe: str) -> str:
+    """Percent-encode everything a URL component may not hold literally, keeping its existing escapes.
+
+    Args:
+        text: The component.
+        safe: Characters it may hold as they are, besides the unreserved ones.
+
+    Returns:
+        str: The component, safe to hand to the platform as part of a URL.
+    """
+    return _STRAY_PERCENT.sub("%25", quote(text, safe=safe))
+
+
+def normalize_web_url(url: str) -> str | None:
+    """Parse a URL from a server and write it back out as the web URL it names.
+
+    ``urlsplit`` is lenient: it drops leading control characters and spaces,
+    and tabs and line breaks anywhere, and it takes whatever sits between
+    ``//`` and the path as the host. The URL returned here is rebuilt from
+    the parts, so what reaches the platform's URL handler is exactly what was
+    checked: a lower-case ``http`` or ``https`` scheme, a host that is an IP
+    literal or a name of valid labels, a valid port, and a path, query and
+    fragment with every character that may not appear literally
+    percent-encoded.
+
+    Args:
+        url: The URL a server supplied.
+
+    Returns:
+        str | None: The rebuilt URL, or ``None`` when it is not a web URL
+        naming a valid host.
+    """
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError:
+        return None
+    scheme = parts.scheme.lower()
+    host = _web_host(parts.hostname)
+    if scheme not in WEB_URL_SCHEMES or host is None:
+        return None
+    netloc = host if port is None else f"{host}:{port}"
+    if parts.username is not None:
+        userinfo = quote(unquote(parts.username), safe=_USERINFO_SAFE)
+        if parts.password is not None:
+            userinfo = f"{userinfo}:{quote(unquote(parts.password), safe=_USERINFO_SAFE)}"
+        netloc = f"{userinfo}@{netloc}"
+    return urlunsplit((
+        scheme,
+        netloc,
+        _requote(parts.path, _PATH_SAFE),
+        _requote(parts.query, _QUERY_SAFE),
+        _requote(parts.fragment, _QUERY_SAFE),
+    ))
+
 
 def is_web_url(url: str) -> bool:
     """Report whether a URL is safe to hand to the platform's URL handler.
@@ -68,13 +162,10 @@ def is_web_url(url: str) -> bool:
         url: The URL to test.
 
     Returns:
-        bool: ``True`` for an ``http`` or ``https`` URL that names a host.
+        bool: ``True`` for an ``http`` or ``https`` URL that names a valid
+        host, as :func:`normalize_web_url` reads it.
     """
-    try:
-        parts = urlsplit(url)
-    except ValueError:
-        return False
-    return parts.scheme.lower() in WEB_URL_SCHEMES and bool(parts.netloc)
+    return normalize_web_url(url) is not None
 
 
 def open_web_url(url: str) -> bool:
@@ -86,8 +177,10 @@ def open_web_url(url: str) -> bool:
     which on Windows is ``ShellExecute``: it launches whatever the shell
     associates with the string, so a ``file://`` URL naming an executable, a
     UNC path, or a scheme some installed program registered would start a
-    program rather than open a page. Restricting the scheme is what keeps a
-    single click on a dialog from doing that.
+    program rather than open a page. Restricting the scheme, and handing the
+    platform only the URL :func:`normalize_web_url` rebuilt from its parts
+    rather than the string the server sent, is what keeps a single click on
+    a dialog from doing that.
 
     Args:
         url: The URL to open.
@@ -96,10 +189,13 @@ def open_web_url(url: str) -> bool:
         bool: ``True`` when the URL was handed to the browser, ``False``
         when it was refused or no browser could be launched.
     """
-    if not is_web_url(url):
+    normalized = normalize_web_url(url)
+    if normalized is None:
         _logger.warning("mcp_url_open_refused", scheme=_url_scheme(url))
         return False
-    return webbrowser.open(url)
+    if normalized != url:
+        _logger.info("mcp_url_normalized", scheme=_url_scheme(normalized))
+    return webbrowser.open(normalized)
 
 
 def _url_scheme(url: str) -> str:
