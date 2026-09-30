@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING, Any, Final
 from intellicrack.core.json_payload import is_json_array, is_json_object, map_json_strings
 from intellicrack.core.logging import get_logger
 from intellicrack.core.result_parts import inspect_image
+from intellicrack.core.tool_progress import current_progress_reporter
 from intellicrack.core.types import (
     AudioResultPart,
     EmbeddedResourcePart,
@@ -70,9 +71,11 @@ if TYPE_CHECKING:
 
     from mcp_types import CallToolResult
 
+    from intellicrack.core.tool_progress import ToolProgressReporter
     from intellicrack.core.tools import ToolRegistry
     from intellicrack.mcp.catalog import McpToolEntry
     from intellicrack.mcp.connection import McpConnectionManager
+    from intellicrack.mcp.progress import McpProgress, ProgressFn
 
 
 _logger = get_logger(__name__)
@@ -503,6 +506,27 @@ def validate_structured_content(entry: McpToolEntry, content: Mapping[str, Any])
     raise McpProtocolError(message)
 
 
+def _forwarding(reporter: ToolProgressReporter) -> ProgressFn:
+    """Hand a server's progress on a call to the call's reporter.
+
+    Args:
+        reporter: The reporter bound for the call.
+
+    Returns:
+        ProgressFn: Forwards each notice's amount, total and cleaned message.
+    """
+
+    def _forward(progress: McpProgress) -> None:
+        """Forward one notice.
+
+        Args:
+            progress: The notice.
+        """
+        reporter(progress.progress, progress.total, progress.message)
+
+    return _forward
+
+
 class McpToolSource:
     """Registers every connected server's tools into the tool registry.
 
@@ -819,6 +843,9 @@ class McpToolSource:
     async def _call_tool(self, server_id: str, function_name: str, arguments: dict[str, Any]) -> ToolOutput:
         """Deliver one call and map the server's answer.
 
+        The server's progress on the call goes to the reporter the
+        orchestrator bound for it, if any.
+
         Args:
             server_id: The server that owns the tool.
             function_name: Canonical dotted function name.
@@ -843,7 +870,8 @@ class McpToolSource:
 
         entry = self.entry_for(function_name)
         delivered = entry.advertised_schema.restore_arguments(arguments) if entry is not None else dict(arguments)
-        result = await connection.call_tool(tool_name, delivered)
+        reporter = current_progress_reporter()
+        result = await connection.call_tool(tool_name, delivered, on_progress=_forwarding(reporter) if reporter is not None else None)
         parts, is_error = map_result(result)
 
         structured: object = result.structured_content

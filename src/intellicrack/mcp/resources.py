@@ -41,14 +41,17 @@ from intellicrack.core.types import (
 )
 from intellicrack.core.untrusted_text import clean_untrusted_label, sanitize_untrusted_text
 from intellicrack.mcp.errors import McpConnectionError
+from intellicrack.mcp.progress import ProgressKind
 
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from mcp import Client
+    from mcp_types import GetPromptResult, ReadResourceResult, RequestParamsMeta
 
     from intellicrack.mcp.connection import McpConnection
+    from intellicrack.mcp.progress import ProgressFn
 
 
 _logger = get_logger(__name__)
@@ -188,23 +191,38 @@ async def list_resources(connection: McpConnection) -> list[ResourceSummary]:
     return summaries[:MAX_ENTRIES]
 
 
-async def read_resource(connection: McpConnection, uri: str) -> list[ToolResultPart]:
+async def read_resource(connection: McpConnection, uri: str, *, on_progress: ProgressFn | None = None) -> list[ToolResultPart]:
     """Fetch one resource's contents.
 
-    A server that is not connected propagates
-    :class:`~intellicrack.mcp.errors.McpConnectionError` from the connection
-    check, and a request that times out or fails propagates the same from
-    :meth:`~intellicrack.mcp.connection.McpConnection.request`.
+    The read asks the server to report its progress, which renews its
+    deadline as a tool call's does. A server that is not connected
+    propagates :class:`~intellicrack.mcp.errors.McpConnectionError` from the
+    connection check, and a request that times out or fails propagates the
+    same from
+    :meth:`~intellicrack.mcp.connection.McpConnection.request_with_progress`.
 
     Args:
         connection: The connected server.
         uri: The resource URI, as the listing reported it.
+        on_progress: Receives each progress notice, or ``None``.
 
     Returns:
         list[ToolResultPart]: One part per content block the server returned.
     """
     client = _require_client(connection)
-    result = await connection.request(f"read {uri!r}", partial(client.read_resource, uri))
+
+    async def _read(meta: RequestParamsMeta | None) -> ReadResourceResult:
+        """Read the resource.
+
+        Args:
+            meta: The ``_meta`` the request carries.
+
+        Returns:
+            ReadResourceResult: The server's answer.
+        """
+        return await client.read_resource(uri, meta=meta)
+
+    result = await connection.request_with_progress(f"read {uri!r}", ProgressKind.RESOURCE, uri, _read, on_progress)
 
     parts: list[ToolResultPart] = []
     for contents in result.contents:
@@ -292,27 +310,49 @@ def _render_prompt_content(content: object) -> str:
     return "[unsupported prompt content]"
 
 
-async def get_prompt(connection: McpConnection, name: str, arguments: Mapping[str, str]) -> list[Message]:
+async def get_prompt(
+    connection: McpConnection,
+    name: str,
+    arguments: Mapping[str, str],
+    *,
+    on_progress: ProgressFn | None = None,
+) -> list[Message]:
     """Fetch one prompt template, filled in with the supplied arguments.
 
     The messages a server returns are its own words, not Intellicrack's, so
     each one is fenced before it can reach the model as conversation.
 
-    A server that is not connected propagates
-    :class:`~intellicrack.mcp.errors.McpConnectionError` from the connection
-    check, and a request that times out or fails propagates the same from
-    :meth:`~intellicrack.mcp.connection.McpConnection.request`.
+    The fetch asks the server to report its progress, which renews its
+    deadline as a tool call's does. A server that is not connected
+    propagates :class:`~intellicrack.mcp.errors.McpConnectionError` from the
+    connection check, and a request that times out or fails propagates the
+    same from
+    :meth:`~intellicrack.mcp.connection.McpConnection.request_with_progress`.
 
     Args:
         connection: The connected server.
         name: The prompt name, as the listing reported it.
         arguments: Argument values to fill the template with.
+        on_progress: Receives each progress notice, or ``None``.
 
     Returns:
         list[Message]: The rendered conversation messages.
     """
     client = _require_client(connection)
-    result = await connection.request(f"fetch prompt {name!r}", partial(client.get_prompt, name, dict(arguments)))
+    values = dict(arguments)
+
+    async def _get(meta: RequestParamsMeta | None) -> GetPromptResult:
+        """Fetch the prompt.
+
+        Args:
+            meta: The ``_meta`` the request carries.
+
+        Returns:
+            GetPromptResult: The server's answer.
+        """
+        return await client.get_prompt(name, values, meta=meta)
+
+    result = await connection.request_with_progress(f"fetch prompt {name!r}", ProgressKind.PROMPT, name, _get, on_progress)
 
     messages: list[Message] = []
     for entry in result.messages:

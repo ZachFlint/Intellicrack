@@ -18,7 +18,8 @@ import time
 from collections import deque
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal, Protocol, cast
+from functools import partial
+from typing import TYPE_CHECKING, Final, Literal, Protocol, cast
 from uuid import uuid4
 
 import lief
@@ -32,6 +33,7 @@ from intellicrack.core.analysis_aggregator import AnalysisAggregator
 from intellicrack.core.logging import get_logger, log_analysis_operation
 from intellicrack.core.result_parts import bound_result_parts, estimate_image_tokens
 from intellicrack.core.token_encoding import OFF_GUI_THREAD_WAIT_S, estimate_tokens_without_encoder, get_token_encoder
+from intellicrack.core.tool_progress import RunningToolCalls, ToolCallCancelledError
 from intellicrack.core.tool_search import ToolSearchIndex
 from intellicrack.core.types import (
     BinaryInfo,
@@ -120,6 +122,9 @@ A tool result (for example a full hex-dump or memory read) is bounded to this si
 large payload cannot balloon token usage. The truncated preview carries an explicit marker so the model knows to request a narrower range
 for full detail (audit F2).
 """
+
+OPERATOR_CANCELLED_ERROR: Final[str] = "Cancelled by the operator"
+"""The error a tool call the operator cancelled ends with."""
 
 _ANALYSIS_PROMPT_SAMPLE: int = 15
 """Maximum number of strings/imports/functions/sections sampled into the prompt."""
@@ -946,6 +951,8 @@ class Orchestrator:
         self._on_message: Callable[[Message], None] | None = None
         self._on_tool_call: Callable[[ToolCall], None] | None = None
         self._on_tool_result: Callable[[ToolResult], None] | None = None
+        self.tool_calls = RunningToolCalls()
+        """The tool calls running now; the operator can cancel one and see each one's progress."""
         self._on_stream_chunk: Callable[[str], None] | None = None
         self._on_bridge_analysis: Callable[[BridgeAnalysisSummary], None] | None = None
         self._confirmation_callback: Callable[[ToolCall], bool] | None = None
@@ -3072,9 +3079,11 @@ class Orchestrator:
                         duration_ms=0,
                     )
                     results.append(result)
+                    if self._on_tool_result:
+                        self._on_tool_result(result)
                     continue
 
-            result = await self._execute_single_tool_call(call)
+            result = await self._run_cancellable(call)
             results.append(result)
 
             if self._on_tool_result:
@@ -3191,6 +3200,34 @@ class Orchestrator:
             content=parts,
             is_error=output.is_error,
         )
+
+    async def _run_cancellable(self, call: ToolCall) -> ToolResult:
+        """Run one tool call as a task the operator can cancel on its own.
+
+        A call the operator cancels through :attr:`tool_calls` ends with a
+        failed result and the turn goes on; cancelling the turn itself
+        cancels the call with it, as before.
+
+        Args:
+            call: The tool call.
+
+        Returns:
+            ToolResult: The call's result, or a failure saying the operator
+            cancelled it.
+        """
+        started = time.time()
+        try:
+            return await self.tool_calls.run(call.id, partial(self._execute_single_tool_call, call))
+        except ToolCallCancelledError:
+            self._stats.failed_tool_calls += 1
+            _logger.info("tool_call_cancelled_by_operator", tool=call.tool_name, function=call.function_name)
+            return ToolResult(
+                call_id=call.id,
+                success=False,
+                result=None,
+                error=OPERATOR_CANCELLED_ERROR,
+                duration_ms=(time.time() - started) * 1000,
+            )
 
     async def _execute_single_tool_call(self, call: ToolCall) -> ToolResult:
         """Execute a single tool call.
@@ -3415,8 +3452,9 @@ class Orchestrator:
     async def cancel(self) -> None:
         """Cancel the current operation and marshal pending confirmations.
 
-        Sets the cancel event, requests provider-side cancellation, then
-        cancels every outstanding confirmation future tracked in
+        Sets the cancel event, requests provider-side cancellation, cancels
+        any tool call still running, then cancels every outstanding
+        confirmation future tracked in
         :attr:`_pending_confirmations`. ``future.cancel()`` propagates an
         :class:`asyncio.CancelledError` to any awaiting
         :meth:`_request_confirmation`, which translates it back into a
@@ -3445,6 +3483,7 @@ class Orchestrator:
                 _logger.warning("cancel_provider_request_failed", provider=provider_name, error=str(exc))
 
         self._marshal_pending_confirmations(reason="cancel")
+        self.tool_calls.cancel_all()
 
     def _marshal_pending_confirmations(self, *, reason: str) -> None:
         """Cancel every outstanding confirmation future.

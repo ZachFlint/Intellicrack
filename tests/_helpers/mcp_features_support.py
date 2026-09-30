@@ -79,7 +79,14 @@ def approve_every_launch(_config: McpServerConfig, _rendered: str, _findings: li
     return True
 
 
-def features_config(era: Era, *, server_id: str = "features", port: int | None = None, log_level: str | None = None) -> McpServerConfig:
+def features_config(
+    era: Era,
+    *,
+    server_id: str = "features",
+    port: int | None = None,
+    log_level: str | None = None,
+    request_timeout_s: float = 60.0,
+) -> McpServerConfig:
     """Configure the fixture server for one protocol generation.
 
     Args:
@@ -87,6 +94,7 @@ def features_config(era: Era, *, server_id: str = "features", port: int | None =
         server_id: The configured id.
         port: The SSE port, for the legacy generation.
         log_level: The log level to ask for.
+        request_timeout_s: The per-request timeout.
 
     Returns:
         McpServerConfig: The configuration.
@@ -98,7 +106,7 @@ def features_config(era: Era, *, server_id: str = "features", port: int | None =
             kind=McpTransportKind.STDIO,
             stdio=spec,
             enabled=True,
-            request_timeout_s=60.0,
+            request_timeout_s=request_timeout_s,
             log_level=log_level,
         )
     http = HttpServerSpec(url=f"http://127.0.0.1:{port}/sse")
@@ -107,7 +115,7 @@ def features_config(era: Era, *, server_id: str = "features", port: int | None =
         kind=McpTransportKind.SSE,
         http=http,
         enabled=True,
-        request_timeout_s=60.0,
+        request_timeout_s=request_timeout_s,
         log_level=log_level,
     )
 
@@ -133,6 +141,7 @@ async def features_connection(
     log_level: str | None = None,
     server_id: str = "features",
     elicitation: ElicitationFnT | None = None,
+    request_timeout_s: float = 60.0,
 ) -> AsyncGenerator[McpConnection]:
     """Connect to the fixture server on one protocol generation, and disconnect afterwards.
 
@@ -143,13 +152,14 @@ async def features_connection(
         log_level: The log level to ask for.
         server_id: The configured id.
         elicitation: Answers the server's elicitation requests.
+        request_timeout_s: The per-request timeout.
 
     Yields:
         McpConnection: The connected connection, on the requested generation.
     """
     async with AsyncExitStack() as stack:
         port = stack.enter_context(running_server(FEATURES_SERVER_SCRIPT, "--transport", "sse")) if era is Era.LEGACY else None
-        config = features_config(era, server_id=server_id, port=port, log_level=log_level)
+        config = features_config(era, server_id=server_id, port=port, log_level=log_level, request_timeout_s=request_timeout_s)
         connection = McpConnection(
             config,
             private_resolver(directory),

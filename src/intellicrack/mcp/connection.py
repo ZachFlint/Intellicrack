@@ -28,6 +28,7 @@ import asyncio
 import enum
 import os
 import threading
+import uuid
 from collections import deque
 from collections.abc import Awaitable, Callable
 from contextlib import AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager, suppress
@@ -48,6 +49,8 @@ from mcp_types import (
     METHOD_NOT_FOUND,
     EmptyResult,
     Implementation,
+    ProgressNotification,
+    ProgressNotificationParams,
     RootsListChangedNotification,
     SetLevelRequest,
     SetLevelRequestParams,
@@ -64,7 +67,8 @@ from intellicrack.mcp.client_session import McpClient, PreciseClientSession, des
 from intellicrack.mcp.config import SERVER_LOG_LEVELS, McpConfigStore, McpServerConfig, McpTransportKind
 from intellicrack.mcp.consent import McpConsentStoreError
 from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
-from intellicrack.mcp.operator_wait import OperatorWaitClock
+from intellicrack.mcp.operator_wait import OperatorWaitClock, RequestDeadline
+from intellicrack.mcp.progress import McpProgress, ProgressFn, ProgressKind
 from intellicrack.mcp.sandbox_launch import (
     build_sandboxed_startup,
     confined_stdio_client,
@@ -295,6 +299,59 @@ class McpServerStatus:
     protocol_version: str | None = None
     server_capabilities: tuple[str, ...] = ()
     client_capabilities: tuple[str, ...] = ()
+
+
+class _ProgressTracker:
+    """Follows the progress notices for one request.
+
+    A notice that reports more progress than any before it renews the
+    request's deadline; every notice is handed on to whoever is showing it.
+    """
+
+    def __init__(
+        self,
+        server_id: str,
+        kind: ProgressKind,
+        subject: str,
+        deadline: RequestDeadline,
+        on_progress: ProgressFn | None,
+    ) -> None:
+        """Start following one request.
+
+        Args:
+            server_id: The server the request went to.
+            kind: The kind of request.
+            subject: What the request is for.
+            deadline: The request's deadline.
+            on_progress: Receives each notice, or ``None``.
+        """
+        self._server_id = server_id
+        self._kind = kind
+        self._subject = subject
+        self._deadline = deadline
+        self._on_progress = on_progress
+        self._last: float | None = None
+
+    def receive(self, params: ProgressNotificationParams) -> None:
+        """Take one progress notice.
+
+        Args:
+            params: The notice's parameters.
+        """
+        if self._last is None or params.progress > self._last:
+            self._last = params.progress
+            _ = self._deadline.renew()
+        if self._on_progress is not None:
+            self._on_progress(
+                McpProgress.from_wire(
+                    self._server_id,
+                    self._kind,
+                    self._subject,
+                    progress=params.progress,
+                    total=params.total,
+                    message=params.message,
+                ),
+            )
 
 
 @dataclass
@@ -619,6 +676,7 @@ class McpConnection:
         self._ready_since: float | None = None
         self._follow_changes = False
         self._change_notice = asyncio.Event()
+        self._progress: dict[str, _ProgressTracker] = {}
 
     @property
     def config(self) -> McpServerConfig:
@@ -955,7 +1013,7 @@ class McpConnection:
         if context.callback_handler is not None:
             context.callback_handler = self._operator_wait.pause_while(context.callback_handler)
 
-    def request_deadline(self, budget_s: float | None = None) -> AbstractAsyncContextManager[None]:
+    def request_deadline(self, budget_s: float | None = None) -> AbstractAsyncContextManager[RequestDeadline]:
         """Bound one request to this server by the server's time alone.
 
         Time spent waiting on the operator -- a question the server asked in
@@ -966,8 +1024,9 @@ class McpConnection:
                 server's configured per-request timeout.
 
         Returns:
-            AbstractAsyncContextManager[None]: A context that interrupts its
-            block with :class:`TimeoutError` once the budget is spent.
+            AbstractAsyncContextManager[RequestDeadline]: A context that
+            interrupts its block with :class:`TimeoutError` once the budget
+            is spent, yielding the deadline so progress can renew it.
         """
         return self._operator_wait.deadline(budget_s if budget_s is not None else self._config.request_timeout_s)
 
@@ -994,6 +1053,52 @@ class McpConnection:
                 return await send()
         except TimeoutError as exc:
             message = f"server '{self.server_id}': {operation} exceeded {budget:.0f}s"
+            raise McpConnectionError(message) from exc
+        except asyncio.CancelledError:
+            raise
+        except TRANSPORT_FAILURES as exc:
+            failure = representative_failure(exc)
+            message = f"server '{self.server_id}': cannot {operation}: {failure_text(failure)}"
+            raise McpConnectionError(message) from failure
+
+    async def request_with_progress(
+        self,
+        operation: str,
+        kind: ProgressKind,
+        subject: str,
+        send: Callable[[RequestParamsMeta | None], Awaitable[_T]],
+        on_progress: ProgressFn | None = None,
+    ) -> _T:
+        """Send one request that asks the server to report its progress.
+
+        The request carries a ``progressToken``; each notice that reports more
+        progress than before renews the request's deadline, as
+        :mod:`intellicrack.mcp.operator_wait` sets out, and every notice is
+        handed to ``on_progress``.
+
+        Args:
+            operation: What the request does, for the error message.
+            kind: The kind of request.
+            subject: What it is for.
+            send: Sends the request with the ``_meta`` it is given.
+            on_progress: Receives each progress notice, or ``None``.
+
+        Returns:
+            _T: What ``send`` returned.
+
+        Raises:
+            McpConnectionError: If the server went a whole budget without
+                reporting progress, not counting time spent waiting on the
+                operator, ran past the cap progress can stretch it to, or the
+                transport failed.
+            asyncio.CancelledError: If the caller is cancelled mid-request.
+        """
+        budget = self._config.request_timeout_s
+        try:
+            async with self._tracked(kind, subject, budget, on_progress) as meta:
+                return await send(meta)
+        except TimeoutError as exc:
+            message = f"server '{self.server_id}': {operation} exceeded {budget:.0f}s without progress, or its progress limit"
             raise McpConnectionError(message) from exc
         except asyncio.CancelledError:
             raise
@@ -1102,21 +1207,56 @@ class McpConnection:
 
         return _receive
 
-    def _request_meta(self) -> RequestParamsMeta | None:
-        """Build the ``_meta`` a request carries to opt in to the server's log messages.
+    def _request_meta(self, progress_token: str | None = None) -> RequestParamsMeta | None:
+        """Build the ``_meta`` a request carries.
 
         On a 2026-07-28 connection a server logs only for requests that carry
         a ``logLevel``; the client stamps the level it was built with, and
         this stamps the current one, so a level chosen since the connection
-        opened applies to the next request.
+        opened applies to the next request. A request that wants progress
+        carries its ``progressToken``.
+
+        Args:
+            progress_token: The token the server reports progress under, or
+                ``None``.
 
         Returns:
-            RequestParamsMeta | None: The meta, or ``None`` when no level is
-            asked for or the connection predates the opt-in.
+            RequestParamsMeta | None: The meta, or ``None`` when there is
+            nothing to carry.
         """
-        if self._log_level is None or not self._is_modern(self._client):
-            return None
-        return cast("RequestParamsMeta", {LOG_LEVEL_META_KEY: self._log_level})
+        meta: dict[str, object] = {}
+        if self._log_level is not None and self._is_modern(self._client):
+            meta[LOG_LEVEL_META_KEY] = self._log_level
+        if progress_token is not None:
+            meta["progressToken"] = progress_token
+        return cast("RequestParamsMeta", meta) if meta else None
+
+    @asynccontextmanager
+    async def _tracked(
+        self,
+        kind: ProgressKind,
+        subject: str,
+        budget_s: float,
+        on_progress: ProgressFn | None,
+    ) -> AsyncGenerator[RequestParamsMeta | None]:
+        """Run one request under its deadline, following the progress the server reports on it.
+
+        Args:
+            kind: The kind of request.
+            subject: What the request is for.
+            budget_s: The request's budget.
+            on_progress: Receives each progress notice, or ``None``.
+
+        Yields:
+            RequestParamsMeta | None: The ``_meta`` the request must carry.
+        """
+        token = f"intellicrack-{uuid.uuid4().hex}"
+        async with self._operator_wait.deadline(budget_s) as deadline:
+            self._progress[token] = _ProgressTracker(self.server_id, kind, subject, deadline, on_progress)
+            try:
+                yield self._request_meta(progress_token=token)
+            finally:
+                _ = self._progress.pop(token, None)
 
     async def _apply_log_level(self, client: Client) -> None:
         """Ask a handshake-era server for its log messages at the chosen level.
@@ -1209,8 +1349,10 @@ class McpConnection:
 
         An exception means the transport faulted, which wakes the supervisor
         immediately instead of waiting for the next heartbeat. A
-        ``notifications/tools/list_changed`` on a handshake-era connection,
-        which has no subscription stream, is queued for a real re-list.
+        ``notifications/progress`` goes to the request it names, if that
+        request is still running. A ``notifications/tools/list_changed`` on a
+        handshake-era connection, which has no subscription stream, is queued
+        for a real re-list.
 
         Args:
             message: A server notification, or the exception the transport
@@ -1218,6 +1360,11 @@ class McpConnection:
         """
         if isinstance(message, Exception):
             self._mark_dropped(f"{type(message).__name__}: {message}")
+            return
+        if isinstance(message, ProgressNotification):
+            tracker = self._progress.get(str(message.params.progress_token))
+            if tracker is not None:
+                tracker.receive(message.params)
             return
         if isinstance(message, ToolListChangedNotification) and not self._is_modern(self._client):
             _logger.info("mcp_tools_list_changed_notice", server_id=self.server_id)
@@ -1641,14 +1788,22 @@ class McpConnection:
         arguments: dict[str, Any],
         *,
         timeout_s: float | None = None,
+        on_progress: ProgressFn | None = None,
     ) -> CallToolResult:
         """Invoke one tool on the server.
+
+        The call asks the server to report its progress. Each notice that
+        reports more progress than before gives the call its full timeout
+        again, up to the cap :mod:`intellicrack.mcp.operator_wait` sets, and
+        every notice is handed to ``on_progress``. Cancelling the caller
+        cancels the call on the server too.
 
         Args:
             tool_name: The server's own tool name, without the namespace.
             arguments: Parsed arguments for the call.
             timeout_s: Per-call timeout, defaulting to the server's
                 configured one.
+            on_progress: Receives each progress notice, or ``None``.
 
         Returns:
             CallToolResult: The server's result, error results included. A
@@ -1669,10 +1824,10 @@ class McpConnection:
             raise McpConnectionError(message)
         budget = timeout_s if timeout_s is not None else self._config.request_timeout_s
         try:
-            async with self._operator_wait.deadline(budget):
-                return await client.call_tool(tool_name, arguments, meta=self._request_meta())
+            async with self._tracked(ProgressKind.TOOL, tool_name, budget, on_progress) as meta:
+                return await client.call_tool(tool_name, arguments, meta=meta)
         except TimeoutError as exc:
-            message = f"server '{self.server_id}': call to {tool_name!r} exceeded {budget:.0f}s"
+            message = f"server '{self.server_id}': call to {tool_name!r} exceeded {budget:.0f}s without progress, or its progress limit"
             raise McpConnectionError(message) from exc
         except asyncio.CancelledError:
             raise

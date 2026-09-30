@@ -400,7 +400,7 @@ async def fetch_catalog(
     server_id: str,
     *,
     cache_mode: CacheMode = "use",
-    request_deadline: Callable[[], AbstractAsyncContextManager[None]] = nullcontext,
+    request_deadline: Callable[[], AbstractAsyncContextManager[object]] = nullcontext,
 ) -> McpToolCatalog:
     """Retrieve a server's complete tool listing.
 

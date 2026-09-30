@@ -44,6 +44,7 @@ from intellicrack.core.types import (
 from intellicrack.mcp.config import is_mcp_namespace
 from intellicrack.mcp.tool_source import source_label
 from intellicrack.ui.resources.font_manager import FontManager
+from intellicrack.ui.tool_activity import ToolActivityPanel
 
 
 if TYPE_CHECKING:
@@ -669,9 +670,12 @@ class ChatPanel(QFrame):
 
     Attributes:
         message_submitted: Qt signal for message submitted.
+        tool_activity: The tool calls running now, with their progress and
+            a way to cancel each one.
     """
 
     message_submitted = pyqtSignal(str)
+    tool_activity: ToolActivityPanel
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the ChatPanel widget.
@@ -722,6 +726,9 @@ class ChatPanel(QFrame):
 
         self._scroll_area.setWidget(self._messages_container)
         layout.addWidget(self._scroll_area)
+
+        self.tool_activity = ToolActivityPanel()
+        layout.addWidget(self.tool_activity)
 
         self._input = ChatInput()
         self._input.message_submitted.connect(self.message_submitted.emit)

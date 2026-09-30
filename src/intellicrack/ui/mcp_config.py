@@ -72,6 +72,7 @@ from intellicrack.mcp.connection import McpConnection, McpHealth, McpServerStatu
 from intellicrack.mcp.consent import ConsentAnswer, TrustState, server_identity
 from intellicrack.mcp.errors import McpError
 from intellicrack.mcp.policy import enabled_entries, total_cost
+from intellicrack.mcp.progress import McpProgress
 from intellicrack.mcp.resources import (
     PromptSummary,
     ResourceSummary,
@@ -902,6 +903,7 @@ class McpConfigDialog(QDialog):
     resource_attached = pyqtSignal(str)
     prompt_attached = pyqtSignal(str)
     _server_log_arrived = pyqtSignal(object)
+    _request_progressed = pyqtSignal(object)
 
     def __init__(
         self,
@@ -941,6 +943,7 @@ class McpConfigDialog(QDialog):
         self._roots = roots
         self._session_folders: tuple[str, ...] = roots.folders if roots is not None else ()
         self._server_log_arrived.connect(self._on_server_log)
+        self._request_progressed.connect(self._on_request_progress)
         if log_book is not None:
             log_book.add_listener(self._server_log_arrived.emit)
         self._document: McpConfigDocument = manager.document
@@ -971,6 +974,11 @@ class McpConfigDialog(QDialog):
         layout.addWidget(splitter)
 
         layout.addLayout(self._build_action_row())
+
+        self._request_progress_label = QLabel("")
+        self._request_progress_label.setObjectName("mcp_request_progress")
+        self._request_progress_label.setTextFormat(Qt.TextFormat.PlainText)
+        layout.addWidget(self._request_progress_label)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Close)
         buttons.accepted.connect(self._on_save)
@@ -1231,7 +1239,12 @@ class McpConfigDialog(QDialog):
             """
             on_text(_render_prompt_messages(_as_object_list(result)))
 
-        self._start_worker(get_prompt(connection, summary.name, arguments), _fetched, self._on_worker_error)
+        self._request_progress_label.setText(f"Fetching {summary.name}...")
+        self._start_worker(
+            get_prompt(connection, summary.name, arguments, on_progress=self._request_progressed.emit),
+            _fetched,
+            self._on_worker_error,
+        )
 
     def _on_preview_prompt(self) -> None:
         """Fetch the selected prompt into the preview."""
@@ -1573,7 +1586,8 @@ class McpConfigDialog(QDialog):
             parts = [entry for entry in _as_object_list(result) if isinstance(entry, ToolResultPart)]
             on_text(summarize_parts(parts))
 
-        self._start_worker(read_resource(connection, uri), _read, self._on_worker_error)
+        self._request_progress_label.setText(f"Reading {uri}...")
+        self._start_worker(read_resource(connection, uri, on_progress=self._request_progressed.emit), _read, self._on_worker_error)
 
     def _on_read_resource(self) -> None:
         """Read the selected resource into the preview."""
@@ -1898,6 +1912,15 @@ class McpConfigDialog(QDialog):
         self._document = self._document.with_server(replace(config, log_level=level))
         self._dirty = True
         self._start_worker(self._manager.set_log_level(config.server_id, level), lambda _result: None, self._on_worker_error)
+
+    def _on_request_progress(self, progress: object) -> None:
+        """Show how far a resource read or prompt fetch has got.
+
+        Args:
+            progress: The :class:`~intellicrack.mcp.progress.McpProgress`.
+        """
+        if isinstance(progress, McpProgress):
+            self._request_progress_label.setText(f"{progress.subject}: {progress.describe()}")
 
     def _on_server_log(self, record: object) -> None:
         """Append a newly received log message when it is the selected server's.

@@ -14,6 +14,15 @@ A :class:`OperatorWaitClock` belongs to one server connection. Deadlines
 entered through :meth:`OperatorWaitClock.deadline` are suspended for as long
 as any question from that server is open, and resume with the budget they had
 left once the last one is answered.
+
+A request that reports progress may run past its budget. Each time the server
+reports more progress than before, :meth:`RequestDeadline.renew` gives the
+request its full budget again from that moment, so a long call that keeps
+moving is not cut off while a call that stops moving still fails one budget
+after its last step. Renewals never carry a request past
+:data:`PROGRESS_RENEWAL_FACTOR` times its budget from when it started, so a
+server that reports progress forever cannot hold a request open forever.
+Operator time counts toward neither the budget nor that cap.
 """
 
 from __future__ import annotations
@@ -21,7 +30,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Final, ParamSpec, TypeVar
 
 
 if TYPE_CHECKING:
@@ -42,18 +51,50 @@ _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
 
+PROGRESS_RENEWAL_FACTOR: Final[float] = 10.0
+"""How many budgets, in all, progress can stretch one request to."""
+
+
 @dataclass(eq=False, slots=True)
 class _Deadline:
     """One running deadline and the budget it had left when suspended.
 
     Attributes:
         timeout: The timeout context enforcing the deadline.
+        budget_s: The request's budget, which a renewal restores.
+        cap_at: The loop time past which no renewal carries the request,
+            moved later by every stretch spent waiting for the operator.
         remaining_s: Seconds left when the deadline was suspended, or
             ``None`` while it is running.
     """
 
     timeout: asyncio.Timeout
+    budget_s: float
+    cap_at: float
     remaining_s: float | None = None
+
+
+class RequestDeadline:
+    """The deadline of one request, which progress from the server can renew."""
+
+    def __init__(self, clock: OperatorWaitClock, entry: _Deadline) -> None:
+        """Bind the handle to its clock and deadline.
+
+        Args:
+            clock: The clock the deadline runs on.
+            entry: The deadline.
+        """
+        self._clock = clock
+        self._entry = entry
+
+    def renew(self) -> bool:
+        """Give the request its full budget again from now, within its cap.
+
+        Returns:
+            bool: Whether the deadline moved later; ``False`` once the cap is
+            reached, or when the request has already timed out.
+        """
+        return self._clock.renew(self._entry)
 
 
 class OperatorWaitClock:
@@ -63,6 +104,7 @@ class OperatorWaitClock:
         """Initialize a clock with no deadlines and no open questions."""
         self._open_questions = 0
         self._deadlines: list[_Deadline] = []
+        self._paused_at: float | None = None
 
     @property
     def waiting(self) -> bool:
@@ -74,7 +116,7 @@ class OperatorWaitClock:
         return self._open_questions > 0
 
     @asynccontextmanager
-    async def deadline(self, budget_s: float) -> AsyncGenerator[None]:
+    async def deadline(self, budget_s: float) -> AsyncGenerator[RequestDeadline]:
         """Enforce a deadline that does not run while the operator is being asked.
 
         Args:
@@ -85,18 +127,49 @@ class OperatorWaitClock:
         :class:`TimeoutError` :func:`asyncio.timeout` raises.
 
         Yields:
-            None: Control passes to the guarded block.
+            RequestDeadline: The deadline, which progress can renew.
         """
+        loop = asyncio.get_running_loop()
         async with asyncio.timeout(budget_s) as timeout:
-            entry = _Deadline(timeout)
+            entry = _Deadline(timeout, budget_s, loop.time() + budget_s * PROGRESS_RENEWAL_FACTOR)
             if self.waiting:
                 entry.remaining_s = budget_s
                 timeout.reschedule(None)
             self._deadlines.append(entry)
             try:
-                yield
+                yield RequestDeadline(self, entry)
             finally:
                 self._deadlines.remove(entry)
+
+    def renew(self, entry: _Deadline) -> bool:
+        """Restore one deadline's full budget from now, never past its cap.
+
+        While the operator is being asked, the deadline is suspended; the
+        renewal then restores the budget it resumes with, bounded by what is
+        left of its cap as of the moment the wait began.
+
+        Args:
+            entry: The deadline.
+
+        Returns:
+            bool: Whether the deadline moved later.
+        """
+        if entry.timeout.expired():
+            return False
+        now = asyncio.get_running_loop().time()
+        paused_at = self._paused_at
+        if entry.remaining_s is not None and paused_at is not None:
+            renewed = min(entry.budget_s, max(0.0, entry.cap_at - paused_at))
+            if renewed <= entry.remaining_s:
+                return False
+            entry.remaining_s = renewed
+            return True
+        target = min(now + entry.budget_s, entry.cap_at)
+        current = entry.timeout.when()
+        if current is not None and target <= current:
+            return False
+        entry.timeout.reschedule(target)
+        return True
 
     @asynccontextmanager
     async def operator_turn(self) -> AsyncGenerator[None]:
@@ -109,6 +182,7 @@ class OperatorWaitClock:
         self._open_questions += 1
         if self._open_questions == 1:
             now = loop.time()
+            self._paused_at = now
             for entry in self._deadlines:
                 when = entry.timeout.when()
                 if when is not None:
@@ -120,7 +194,10 @@ class OperatorWaitClock:
             self._open_questions -= 1
             if self._open_questions == 0:
                 now = loop.time()
+                paused_for = now - (self._paused_at if self._paused_at is not None else now)
+                self._paused_at = None
                 for entry in self._deadlines:
+                    entry.cap_at += paused_for
                     if entry.remaining_s is not None and not entry.timeout.expired():
                         entry.timeout.reschedule(now + entry.remaining_s)
                     entry.remaining_s = None

@@ -62,6 +62,18 @@ ROOTS_CHANGES_TOOL: Final[str] = "roots_changes"
 CAPABILITIES_TOOL: Final[str] = "capabilities_seen"
 """Reports the capabilities the client declared for the request, as JSON."""
 
+SLOW_TOOL: Final[str] = "slow"
+"""Reports progress ``steps`` times, ``delay`` seconds apart, then answers; with ``stuck`` its progress never advances."""
+
+CANCELLATIONS_TOOL: Final[str] = "cancellations"
+"""Reports how many slow calls were cancelled before they finished."""
+
+SLOW_RESOURCE: Final[str] = "features://slow/report"
+"""A resource whose read reports progress twice."""
+
+SLOW_PROMPT: Final[str] = "slow_prompt"
+"""A prompt whose fetch reports progress once."""
+
 
 _LEVELS: Final[tuple[str, ...]] = ("debug", "info", "notice", "warning", "error", "critical", "alert", "emergency")
 
@@ -72,10 +84,12 @@ class _LegacyLogLevel:
     Attributes:
         level: The level asked for with ``logging/setLevel``, or ``None`` before the client asked.
         roots_changes: How many ``notifications/roots/list_changed`` arrived.
+        cancellations: How many slow calls were cancelled before they finished.
     """
 
     level: str | None = None
     roots_changes: int = 0
+    cancellations: int = 0
 
 
 _legacy = _LegacyLogLevel()
@@ -226,6 +240,68 @@ def capabilities_seen(ctx: Context) -> str:
     return json.dumps(None if declared is None else declared.model_dump(mode="json", by_alias=True, exclude_none=True))
 
 
+async def slow(steps: int, delay: float, ctx: Context, *, stuck: bool = False) -> str:
+    """Report progress step by step, pausing between steps; a call stopped before its last step is counted as cancelled.
+
+    Args:
+        steps: How many steps to report.
+        delay: Seconds between steps.
+        ctx: The request context.
+        stuck: Whether to report the same progress every time.
+
+    Returns:
+        str: How many steps were taken.
+    """
+    finished = False
+    try:
+        for index in range(steps):
+            await ctx.report_progress(0 if stuck else index + 1, steps, f"step {index + 1}{HIDDEN_MARK}")
+            await anyio.sleep(delay)
+        finished = True
+    finally:
+        if not finished:
+            _legacy.cancellations += 1
+    return f"took {steps} steps"
+
+
+def cancellations() -> int:
+    """Report how many slow calls were cancelled.
+
+    Returns:
+        int: The count.
+    """
+    return _legacy.cancellations
+
+
+async def slow_report(name: str, ctx: Context) -> str:
+    """Read a report, reporting progress as it goes.
+
+    Args:
+        name: The report's name.
+        ctx: The request context.
+
+    Returns:
+        str: The report.
+    """
+    await ctx.report_progress(1, 2, "reading")
+    await anyio.sleep(0.05)
+    await ctx.report_progress(2, 2, "read")
+    return f"report {name}"
+
+
+async def slow_prompt(ctx: Context) -> str:
+    """Build a prompt, reporting progress once.
+
+    Args:
+        ctx: The request context.
+
+    Returns:
+        str: The prompt text.
+    """
+    await ctx.report_progress(1, 1, "building")
+    return "a slow prompt"
+
+
 def build_server() -> MCPServer:
     """Build the server.
 
@@ -240,6 +316,10 @@ def build_server() -> MCPServer:
     server.add_tool(roots_seen, name=ROOTS_TOOL, description="Report the client's roots.")
     server.add_tool(roots_changes, name=ROOTS_CHANGES_TOOL, description="Count the client's roots-changed notices.")
     server.add_tool(capabilities_seen, name=CAPABILITIES_TOOL, description="Report the client's declared capabilities.")
+    server.add_tool(slow, name=SLOW_TOOL, description="Report progress step by step.")
+    server.add_tool(cancellations, name=CANCELLATIONS_TOOL, description="Count cancelled slow calls.")
+    _ = server.resource("features://slow/{name}")(slow_report)
+    _ = server.prompt(SLOW_PROMPT)(slow_prompt)
     return server
 
 

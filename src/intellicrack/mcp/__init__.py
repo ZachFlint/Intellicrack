@@ -101,6 +101,7 @@ if TYPE_CHECKING:
         McpHealth,
         McpServerStatus,
     )
+    from intellicrack.mcp.progress import McpProgress, ProgressKind
     from intellicrack.mcp.resources import (
         PromptSummary,
         ResourceSummary,
@@ -158,6 +159,8 @@ def __getattr__(name: str) -> object:
         "list_prompts": "intellicrack.mcp.resources",
         "list_resources": "intellicrack.mcp.resources",
         "read_resource": "intellicrack.mcp.resources",
+        "McpProgress": "intellicrack.mcp.progress",
+        "ProgressKind": "intellicrack.mcp.progress",
         "McpRoot": "intellicrack.mcp.roots",
         "McpRootSet": "intellicrack.mcp.roots",
         "RootSource": "intellicrack.mcp.roots",
@@ -212,6 +215,7 @@ __all__ = [
     "McpHooksFactory",
     "McpInputSpec",
     "McpLogRecord",
+    "McpProgress",
     "McpProtocolError",
     "McpRoot",
     "McpRootSet",
@@ -225,6 +229,7 @@ __all__ = [
     "McpToolEntry",
     "McpToolSource",
     "McpTransportKind",
+    "ProgressKind",
     "PromptSummary",
     "ResourceSummary",
     "RootSource",

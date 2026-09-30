@@ -50,6 +50,7 @@ from intellicrack.core.logging import get_logger, log_tool_call
 from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.script_gen import ScriptGenerator, ScriptManager
 from intellicrack.core.session import Session
+from intellicrack.core.tool_progress import ToolProgress
 from intellicrack.core.types import (
     BinaryInfo,
     BridgeAnalysisSummary,
@@ -203,6 +204,8 @@ class MainWindow(QMainWindow):
         message_received: Qt signal for message received.
         tool_call_received: Qt signal for tool call received.
         tool_result_received: Qt signal for tool result received.
+        tool_progress_received: Qt signal carrying a running tool call's
+            :class:`~intellicrack.core.tool_progress.ToolProgress`.
         stream_chunk_received: Qt signal for stream chunk received.
         status_update: Qt signal for status update.
         bridge_analysis_received: Qt signal for bridge analysis received.
@@ -212,6 +215,7 @@ class MainWindow(QMainWindow):
     message_received = pyqtSignal(Message)
     tool_call_received = pyqtSignal(ToolCall)
     tool_result_received = pyqtSignal(ToolResult)
+    tool_progress_received = pyqtSignal(object)
     stream_chunk_received = pyqtSignal(str)
     status_update = pyqtSignal(str)
     bridge_analysis_received = pyqtSignal(object)
@@ -235,6 +239,7 @@ class MainWindow(QMainWindow):
         self._config = config
         self._orchestrator = orchestrator
         self._mcp_service: McpService | None = None
+        self._running_call_names: dict[str, str] = {}
         self._stream_append: Callable[[str], None] | None = None
         self.sandbox_manager = SandboxManager()
         self.model_refresh_worker: ModelRefreshWorker | None = None
@@ -1380,6 +1385,8 @@ class MainWindow(QMainWindow):
         self.message_received.connect(self._on_message_received)
         self.tool_call_received.connect(self._on_tool_call)
         self.tool_result_received.connect(self._on_tool_result)
+        self.tool_progress_received.connect(self._on_tool_progress)
+        self._chat_panel.tool_activity.cancel_requested.connect(self._on_cancel_tool_call)
         self.stream_chunk_received.connect(self._on_stream_chunk)
         self.status_update.connect(self._update_status)
         self.tool_panel.address_clicked.connect(self._on_address_clicked)
@@ -1413,6 +1420,7 @@ class MainWindow(QMainWindow):
         self._orchestrator.set_message_callback(self.message_received.emit)
         self._orchestrator.set_tool_call_callback(self.tool_call_received.emit)
         self._orchestrator.set_tool_result_callback(self.tool_result_received.emit)
+        self._orchestrator.tool_calls.set_progress_callback(self.tool_progress_received.emit)
         self._orchestrator.set_stream_callback(self.stream_chunk_received.emit)
         self._orchestrator.set_async_confirmation_callback(self._request_tool_confirmation)
         self._orchestrator.set_bridge_analysis_callback(self._on_bridge_analysis_received)
@@ -1913,11 +1921,39 @@ class MainWindow(QMainWindow):
         Args:
             call: The tool call being executed.
         """
+        self._running_call_names[call.id] = f"{call.tool_name}.{call.function_name}"
+        self._chat_panel.tool_activity.started(call)
         self.status_update.emit(f"Running: {call.tool_name}.{call.function_name}")
         log_tool_call(
             call.tool_name,
             call.function_name,
             dict(getattr(call, "arguments", {})),
+        )
+
+    def _on_tool_progress(self, progress: object) -> None:
+        """Show a running tool call's progress beside the chat and in the status bar.
+
+        Args:
+            progress: The :class:`~intellicrack.core.tool_progress.ToolProgress`.
+        """
+        if not isinstance(progress, ToolProgress):
+            return
+        self._chat_panel.tool_activity.progressed(progress)
+        name = self._running_call_names.get(progress.call_id)
+        if name is not None:
+            self.status_update.emit(f"Running: {name} ({progress.describe()})")
+
+    def _on_cancel_tool_call(self, call_id: str) -> None:
+        """Cancel one running tool call, leaving the rest of the turn to go on.
+
+        Args:
+            call_id: The call the operator cancelled.
+        """
+        _logger.info("tool_call_cancel_requested", call_id=call_id)
+        run_bridge_coroutine_async(
+            self._orchestrator.tool_calls.cancel(call_id),
+            on_success=lambda stopped: _logger.info("tool_call_cancel_done", call_id=call_id, stopped=stopped),
+            on_error=lambda error: _logger.warning("tool_call_cancel_failed", call_id=call_id, error=str(error)),
         )
 
     def _on_tool_result(self, result: ToolResult) -> None:
@@ -1926,6 +1962,8 @@ class MainWindow(QMainWindow):
         Args:
             result: The tool execution result.
         """
+        _ = self._running_call_names.pop(result.call_id, None)
+        self._chat_panel.tool_activity.finished(result)
         tool_name = getattr(result, "tool_name", "")
         if result.success:
             _logger.info(
@@ -2039,6 +2077,8 @@ class MainWindow(QMainWindow):
         """
         del result
         self._chat_panel.set_input_enabled(enabled=True)
+        self._chat_panel.tool_activity.clear()
+        self._running_call_names.clear()
         self._stream_append = None
         self._sync_mcp_session_state()
         self.status_update.emit("Ready")
@@ -2050,6 +2090,8 @@ class MainWindow(QMainWindow):
             error: The exception object emitted by the bridge worker.
         """
         self._chat_panel.set_input_enabled(enabled=True)
+        self._chat_panel.tool_activity.clear()
+        self._running_call_names.clear()
         self._stream_append = None
         self.status_update.emit("Error")
         message = str(error) if isinstance(error, BaseException) else repr(error)
