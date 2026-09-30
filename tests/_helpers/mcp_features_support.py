@@ -31,6 +31,8 @@ from tests._helpers.mcp_http_process import running_server
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from mcp.client.session import ElicitationFnT
+
     from intellicrack.mcp.client_hooks import McpClientHooks
     from intellicrack.mcp.consent import DangerousPattern
 
@@ -130,6 +132,7 @@ async def features_connection(
     hooks: McpClientHooks | None = None,
     log_level: str | None = None,
     server_id: str = "features",
+    elicitation: ElicitationFnT | None = None,
 ) -> AsyncGenerator[McpConnection]:
     """Connect to the fixture server on one protocol generation, and disconnect afterwards.
 
@@ -139,6 +142,7 @@ async def features_connection(
         hooks: The client-side features to offer.
         log_level: The log level to ask for.
         server_id: The configured id.
+        elicitation: Answers the server's elicitation requests.
 
     Yields:
         McpConnection: The connected connection, on the requested generation.
@@ -151,6 +155,7 @@ async def features_connection(
             private_resolver(directory),
             consent=McpConsentGate(TrustStore(directory / "trust.json"), approve_every_launch),
             hooks=hooks,
+            elicitation_callback=elicitation,
         )
         await connection.connect()
         try:

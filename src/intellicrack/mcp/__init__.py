@@ -94,6 +94,7 @@ if TYPE_CHECKING:
         resolve_client_identity,
         sign_out,
     )
+    from intellicrack.mcp.client_session import McpClient, describe_capabilities
     from intellicrack.mcp.connection import (
         McpConnection,
         McpConnectionManager,
@@ -145,6 +146,8 @@ def __getattr__(name: str) -> object:
         "legacy_issuers_for": "intellicrack.mcp.auth",
         "resolve_client_identity": "intellicrack.mcp.auth",
         "sign_out": "intellicrack.mcp.auth",
+        "McpClient": "intellicrack.mcp.client_session",
+        "describe_capabilities": "intellicrack.mcp.client_session",
         "McpConnection": "intellicrack.mcp.connection",
         "McpConnectionManager": "intellicrack.mcp.connection",
         "McpHealth": "intellicrack.mcp.connection",
@@ -194,6 +197,7 @@ __all__ = [
     "JobLimits",
     "KeyringTokenStorage",
     "McpAuthError",
+    "McpClient",
     "McpClientHooks",
     "McpConfigDocument",
     "McpConfigError",
@@ -236,6 +240,7 @@ __all__ = [
     "build_sandboxed_startup",
     "compute_generation",
     "deny_all_launches",
+    "describe_capabilities",
     "describe_launch",
     "enabled_entries",
     "estimate_tool_cost",

@@ -38,7 +38,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Protocol, Self, TextIO, TypeVar, cast
 
 import anyio
-from mcp import Client
 from mcp.client.auth import OAuthClientProvider
 from mcp.client.stdio import stdio_client
 from mcp.client.subscriptions import ListenNotSupportedError, SubscriptionLost
@@ -61,6 +60,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.untrusted_text import clean_untrusted_label
 from intellicrack.mcp.catalog import McpToolCatalog, fetch_catalog
 from intellicrack.mcp.client_hooks import McpClientHooks
+from intellicrack.mcp.client_session import McpClient, PreciseClientSession, describe_capabilities
 from intellicrack.mcp.config import SERVER_LOG_LEVELS, McpConfigStore, McpServerConfig, McpTransportKind
 from intellicrack.mcp.consent import McpConsentStoreError
 from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
@@ -80,6 +80,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable
 
     import httpx2
+    from mcp import Client
     from mcp.client.session import ElicitationFnT, LoggingFnT
     from mcp.shared.message import SessionMessage
     from mcp_types import CallToolResult, LoggingLevel, LoggingMessageNotificationParams, RequestParamsMeta
@@ -276,6 +277,13 @@ class McpServerStatus:
         last_error: Why the last attempt failed, or ``None``.
         connected_at: When the current connection was established, or
             ``None``.
+        protocol_version: The protocol version the current connection
+            negotiated, or ``None`` when not connected.
+        server_capabilities: What the server declared it offers, one line
+            per capability, empty when not connected.
+        client_capabilities: What Intellicrack declared to the server on the
+            negotiated version, one line per capability, empty when not
+            connected.
     """
 
     server_id: str
@@ -284,6 +292,9 @@ class McpServerStatus:
     generation: str | None = None
     last_error: str | None = None
     connected_at: datetime | None = None
+    protocol_version: str | None = None
+    server_capabilities: tuple[str, ...] = ()
+    client_capabilities: tuple[str, ...] = ()
 
 
 @dataclass
@@ -643,6 +654,9 @@ class McpConnection:
         Returns:
             McpServerStatus: The snapshot.
         """
+        client = self._client if self._health is McpHealth.READY else None
+        session = client.session if client is not None else None
+        declared = session.declared_capabilities() if isinstance(session, PreciseClientSession) else None
         return McpServerStatus(
             server_id=self._config.server_id,
             health=self._health,
@@ -650,6 +664,9 @@ class McpConnection:
             generation=self._catalog.generation if self._catalog is not None else None,
             last_error=self._last_error,
             connected_at=self._connected_at,
+            protocol_version=client.protocol_version if client is not None else None,
+            server_capabilities=describe_capabilities(client.server_capabilities) if client is not None else (),
+            client_capabilities=describe_capabilities(declared) if declared is not None else (),
         )
 
     @property
@@ -773,7 +790,7 @@ class McpConnection:
             Client: The client, not yet entered.
         """
         hooks = self._hooks
-        return Client(
+        return McpClient(
             _StreamPairTransport(streams, on_closed),
             client_info=self._client_info,
             elicitation_callback=self._elicitation_callback,

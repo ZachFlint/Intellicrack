@@ -1828,6 +1828,12 @@ class McpConfigDialog(QDialog):
             lines.append(f"Tool listing generation: {status.generation}")
         if status.connected_at is not None:
             lines.append(f"Connected at {status.connected_at.isoformat(timespec='seconds')}")
+        if status.protocol_version is not None:
+            lines.extend((
+                f"Protocol version: {status.protocol_version}",
+                f"Server offers: {'; '.join(status.server_capabilities) or 'nothing beyond the basics'}",
+                f"Intellicrack declared: {'; '.join(status.client_capabilities) or 'no client capabilities'}",
+            ))
         if status.last_error:
             lines.append(f"Last error: {status.last_error}")
         if undeclared := missing_input_ids(self._document, [config]):
