@@ -36,11 +36,13 @@ from PyQt6.QtWidgets import QMessageBox
 from intellicrack.core.logging import get_logger
 from intellicrack.core.session import McpServerState
 from intellicrack.mcp.auth import KeyringTokenStorage, build_oauth_provider, issuer_for, legacy_issuers_for, open_authorization_page
+from intellicrack.mcp.client_hooks import McpClientHooks
 from intellicrack.mcp.config import McpConfigStore, is_mcp_namespace
 from intellicrack.mcp.connection import McpConnectionManager
 from intellicrack.mcp.consent import ApprovalStore, McpConsentGate, TrustStore, deny_all_launches
 from intellicrack.mcp.errors import McpError
 from intellicrack.mcp.secrets import McpSecretResolver
+from intellicrack.mcp.server_logs import McpServerLogBook
 from intellicrack.mcp.tool_source import McpToolSource, source_label
 from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
 from intellicrack.ui.mcp_bridge import QtMcpPrompts, elicitation_factory
@@ -142,12 +144,14 @@ class McpService:
             self._on_generation_change,
             self._on_identity_change,
         )
+        self._log_book = McpServerLogBook()
         self._manager = McpConnectionManager(
             self._store,
             self._resolver,
             self._gate,
             elicitation_factory=elicitation_factory(self._prompts),
             auth_factory=self._build_auth,
+            hooks_factory=self._client_hooks,
         )
         self._gate.set_config_lookup(self._configured_server)
         self._source = McpToolSource(self._manager, tool_registry)
@@ -532,6 +536,26 @@ class McpService:
         self._relay.approvals_released.emit()
         _logger.info("mcp_service_stopped")
 
+    @property
+    def log_book(self) -> McpServerLogBook:
+        """Where every server's own log messages are kept.
+
+        Returns:
+            McpServerLogBook: The log book.
+        """
+        return self._log_book
+
+    def _client_hooks(self, config: McpServerConfig) -> McpClientHooks:
+        """Build the client-side features one server is offered.
+
+        Args:
+            config: The server.
+
+        Returns:
+            McpClientHooks: The callbacks its connection installs.
+        """
+        return McpClientHooks(logging=self._log_book.callback_for(config.server_id))
+
     def _release_approvals(self) -> None:
         """Withdraw the persistent approval store from the confirmation dialog.
 
@@ -570,6 +594,7 @@ class McpService:
             parent if parent is not None else self._parent,
             approvals=self._approvals,
             tool_source=self._source,
+            log_book=self._log_book,
         )
         handler = self._attachment_handler
         if handler is not None:

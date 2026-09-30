@@ -27,8 +27,15 @@ from typing import TYPE_CHECKING, ParamSpec, TypeVar
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable
 
-    from mcp.client.session import ClientRequestContext, ElicitationFnT
-    from mcp_types import ElicitRequestParams, ElicitResult, ErrorData
+    from mcp.client.session import ClientRequestContext, ElicitationFnT, SamplingFnT
+    from mcp_types import (
+        CreateMessageRequestParams,
+        CreateMessageResult,
+        CreateMessageResultWithTools,
+        ElicitRequestParams,
+        ElicitResult,
+        ErrorData,
+    )
 
 
 _P = ParamSpec("_P")
@@ -170,3 +177,36 @@ class OperatorWaitClock:
                 return await callback(context, params)
 
         return _answer
+
+    def pause_sampling(self, callback: SamplingFnT) -> SamplingFnT:
+        """Wrap a sampling handler so the operator's approval and the model's answer are not charged to any call.
+
+        A server that samples in the middle of ``tools/call`` is waiting on
+        the operator and then on a model; neither is the server's time.
+
+        Args:
+            callback: The handler that approves and runs the sampling request.
+
+        Returns:
+            SamplingFnT: A handler that suspends this clock's deadlines while
+            the wrapped one runs.
+        """
+
+        async def _sample(
+            context: ClientRequestContext,
+            params: CreateMessageRequestParams,
+        ) -> CreateMessageResult | CreateMessageResultWithTools | ErrorData:
+            """Sample with every deadline on this server suspended.
+
+            Args:
+                context: The SDK's request context.
+                params: The request the server sent.
+
+            Returns:
+                CreateMessageResult | CreateMessageResultWithTools | ErrorData:
+                What the wrapped handler answered.
+            """
+            async with self.operator_turn():
+                return await callback(context, params)
+
+        return _sample

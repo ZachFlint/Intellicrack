@@ -59,6 +59,9 @@ INPUT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.
 INPUT_REFERENCE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\$\{input:([A-Za-z0-9][A-Za-z0-9_.-]{0,63})}")
 """Matches one ``${input:<id>}`` reference inside a configuration value."""
 
+SERVER_LOG_LEVELS: Final[tuple[str, ...]] = ("debug", "info", "notice", "warning", "error", "critical", "alert", "emergency")
+"""The protocol's log severities, lowest first (RFC 5424's, as MCP ``LoggingLevel`` names them)."""
+
 DEFAULT_REQUEST_TIMEOUT_S: Final[float] = 60.0
 """Per-call timeout applied when a server declares none."""
 
@@ -841,6 +844,10 @@ class McpServerConfig:
             withheld from the model even while the server is enabled.
         sandbox: Confinement applied to a local server process.
         request_timeout_s: Per-call timeout in seconds.
+        log_level: The lowest severity of the server's own log messages
+            Intellicrack asks for, one of :data:`SERVER_LOG_LEVELS`, or
+            ``None`` to ask for none on a 2026-07-28 connection and leave the
+            server's default on an earlier one.
     """
 
     server_id: str
@@ -851,6 +858,7 @@ class McpServerConfig:
     disabled_tools: frozenset[str] = frozenset()
     sandbox: McpSandboxSpec = _DEFAULT_SANDBOX
     request_timeout_s: float = DEFAULT_REQUEST_TIMEOUT_S
+    log_level: str | None = None
 
     @property
     def namespace(self) -> str:
@@ -889,6 +897,10 @@ class McpServerConfig:
 
         if not (0 < self.request_timeout_s <= MAX_REQUEST_TIMEOUT_S):
             message = f"server '{self.server_id}': request timeout must be greater than 0 and at most {MAX_REQUEST_TIMEOUT_S} seconds"
+            raise McpConfigError(message)
+
+        if self.log_level is not None and self.log_level not in SERVER_LOG_LEVELS:
+            message = f"server '{self.server_id}': log level {self.log_level!r} is not one of {', '.join(SERVER_LOG_LEVELS)}"
             raise McpConfigError(message)
 
         if self.kind is McpTransportKind.STDIO:
@@ -1395,6 +1407,7 @@ def _parse_server(server_id: str, raw: object) -> McpServerConfig:
         disabled_tools=frozenset(_str_sequence(data, "disabledTools", server_id=server_id)),
         sandbox=_parse_sandbox(data, server_id=server_id),
         request_timeout_s=_optional_timeout(data, server_id=server_id),
+        log_level=_optional_str(data, "logLevel", server_id=server_id),
     )
     config.validate()
     return config
@@ -1530,6 +1543,8 @@ def _serialize_server(config: McpServerConfig) -> dict[str, Any]:
         data["sandbox"] = sandbox
     if config.request_timeout_s != DEFAULT_REQUEST_TIMEOUT_S:
         data["requestTimeout"] = config.request_timeout_s
+    if config.log_level is not None:
+        data["logLevel"] = config.log_level
     return data
 
 

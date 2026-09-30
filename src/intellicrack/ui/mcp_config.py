@@ -24,7 +24,7 @@ import contextlib
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Final, TypeGuard, cast, override
 
-from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt, pyqtSignal
+from PyQt6.QtCore import QAbstractListModel, QModelIndex, QSignalBlocker, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -57,6 +57,7 @@ from intellicrack.core.untrusted_text import clean_untrusted_label
 from intellicrack.mcp.auth import has_stored_credentials, issuer_for, legacy_issuers_for, sign_out
 from intellicrack.mcp.config import (
     SERVER_ID_PATTERN,
+    SERVER_LOG_LEVELS,
     HttpServerSpec,
     McpConfigDocument,
     McpInputSpec,
@@ -81,6 +82,7 @@ from intellicrack.mcp.resources import (
     summarize_parts,
 )
 from intellicrack.mcp.sandbox_launch import sandbox_supported
+from intellicrack.mcp.server_logs import McpLogRecord
 from intellicrack.mcp.tool_source import estimate_entry_costs
 from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
 from intellicrack.ui.dialogs_helpers import plain_tooltip, show_error, show_info, show_warning
@@ -100,6 +102,7 @@ if TYPE_CHECKING:
     from intellicrack.mcp.consent import ApprovalStore
     from intellicrack.mcp.policy import ToolCost
     from intellicrack.mcp.secrets import McpSecretResolver
+    from intellicrack.mcp.server_logs import McpServerLogBook
     from intellicrack.mcp.tool_source import McpToolSource
 
 
@@ -740,13 +743,14 @@ class McpServerEditor(QWidget):
                 oauth_client_id=self._client_id_edit.text().strip() or None,
                 oauth_metadata_url=self._metadata_url_edit.text().strip() or None,
             )
-        return McpServerConfig(
+        base = existing if existing is not None else McpServerConfig(server_id="", kind=kind)
+        return replace(
+            base,
             server_id=self._id_edit.text().strip(),
             kind=kind,
             stdio=stdio,
             http=http,
             enabled=self._enabled_box.isChecked(),
-            disabled_tools=existing.disabled_tools if existing is not None else frozenset(),
             sandbox=self.build_sandbox(),
             request_timeout_s=float(self._timeout_spin.value()),
         )
@@ -894,6 +898,7 @@ class McpConfigDialog(QDialog):
 
     resource_attached = pyqtSignal(str)
     prompt_attached = pyqtSignal(str)
+    _server_log_arrived = pyqtSignal(object)
 
     def __init__(
         self,
@@ -903,6 +908,7 @@ class McpConfigDialog(QDialog):
         *,
         approvals: ApprovalStore | None = None,
         tool_source: McpToolSource | None = None,
+        log_book: McpServerLogBook | None = None,
     ) -> None:
         """Initialize the settings dialog.
 
@@ -916,12 +922,18 @@ class McpConfigDialog(QDialog):
             tool_source: The tool source advertising these servers' tools to
                 the model, which prices each tool as it is advertised.
                 ``None`` prices the tools from the catalog directly.
+            log_book: Where the servers' own log messages are kept; the
+                status tab shows the selected server's and follows new ones.
         """
         super().__init__(parent)
         self._manager = manager
         self._resolver = resolver
         self._approvals = approvals
         self._tool_source = tool_source
+        self._log_book = log_book
+        self._server_log_arrived.connect(self._on_server_log)
+        if log_book is not None:
+            log_book.add_listener(self._server_log_arrived.emit)
         self._document: McpConfigDocument = manager.document
         self._current_id: str | None = None
         self._workers: list[BridgeCallWorker] = []
@@ -1023,6 +1035,30 @@ class McpConfigDialog(QDialog):
         self._status_label.setWordWrap(True)
         log_column.addWidget(self._status_label)
 
+        level_row = QHBoxLayout()
+        level_row.addWidget(QLabel("Server log level:"))
+        self._log_level_combo = QComboBox()
+        self._log_level_combo.setObjectName("mcp_log_level_combo")
+        self._log_level_combo.addItem("None requested", None)
+        for level in SERVER_LOG_LEVELS:
+            self._log_level_combo.addItem(level.capitalize(), level)
+        self._log_level_combo.setToolTip(
+            "The lowest severity of the server's own log messages to ask for. They are shown below and in the log viewer.",
+        )
+        self._log_level_combo.currentIndexChanged.connect(self._on_log_level_chosen)
+        level_row.addWidget(self._log_level_combo)
+        level_row.addStretch(1)
+        log_column.addLayout(level_row)
+
+        log_column.addWidget(QLabel("Server log messages:"))
+        self._server_log_view = QPlainTextEdit()
+        self._server_log_view.setObjectName("mcp_server_log_view")
+        self._server_log_view.setReadOnly(True)
+        self._server_log_view.setMinimumHeight(_LOG_MIN_HEIGHT)
+        self._server_log_view.setFont(FontManager.get_instance().get_code_font(_CODE_FONT_POINT_SIZE))
+        log_column.addWidget(self._server_log_view)
+
+        log_column.addWidget(QLabel("Captured stderr:"))
         self._log_view = QPlainTextEdit()
         self._log_view.setObjectName("mcp_stderr_view")
         self._log_view.setReadOnly(True)
@@ -1620,6 +1656,8 @@ class McpConfigDialog(QDialog):
         are disconnected so nothing calls back into a dialog that is going
         away.
         """
+        if self._log_book is not None:
+            self._log_book.remove_listener(self._server_log_arrived.emit)
         for worker in self._workers:
             if worker_is_running(worker):
                 with contextlib.suppress(RuntimeError, TypeError):
@@ -1783,13 +1821,73 @@ class McpConfigDialog(QDialog):
         self._status_label.setText("\n".join(lines))
 
     def _refresh_log(self) -> None:
-        """Refresh the captured stderr for the selected server."""
+        """Refresh the selected server's log level, its log messages and its captured stderr."""
         config = self._selected_config()
         if config is None:
             self._log_view.setPlainText("")
+            self._server_log_view.setPlainText("")
             return
+        self._show_log_level(config.log_level)
+        self._server_log_view.setPlainText(self._server_log_text(config.server_id))
         lines = self._manager.stderr_tail(config.server_id, _STDERR_TAIL_LINES)
         self._log_view.setPlainText("\n".join(lines) if lines else "(no output captured)")
+
+    def _server_log_text(self, server_id: str) -> str:
+        """Render one server's kept log messages.
+
+        Args:
+            server_id: The server.
+
+        Returns:
+            str: One line per message, with a note of any held back by the
+            server's rate limit.
+        """
+        if self._log_book is None:
+            return "(server log messages are not collected)"
+        lines = [record.render() for record in self._log_book.records(server_id)]
+        if held := self._log_book.suppressed(server_id):
+            lines.append(f"({held} further messages held back: the server is logging faster than its limit)")
+        return "\n".join(lines) if lines else "(no log messages received)"
+
+    def _show_log_level(self, level: str | None) -> None:
+        """Show a server's saved log level without treating it as a choice.
+
+        Args:
+            level: The level, or ``None``.
+        """
+        index = self._log_level_combo.findData(level)
+        with QSignalBlocker(self._log_level_combo):
+            self._log_level_combo.setCurrentIndex(max(index, 0))
+
+    def _on_log_level_chosen(self, index: int) -> None:
+        """Apply the log level the operator chose to the selected server.
+
+        The level takes effect on the running server at once and is saved
+        with the rest of the configuration.
+
+        Args:
+            index: The chosen row.
+        """
+        config = self._selected_config()
+        if config is None:
+            return
+        raw: object = self._log_level_combo.itemData(index)
+        level = raw if isinstance(raw, str) else None
+        if level == config.log_level:
+            return
+        self._document = self._document.with_server(replace(config, log_level=level))
+        self._dirty = True
+        self._start_worker(self._manager.set_log_level(config.server_id, level), lambda _result: None, self._on_worker_error)
+
+    def _on_server_log(self, record: object) -> None:
+        """Append a newly received log message when it is the selected server's.
+
+        Args:
+            record: The :class:`~intellicrack.mcp.server_logs.McpLogRecord`.
+        """
+        config = self._selected_config()
+        if isinstance(record, McpLogRecord) and config is not None and record.server_id == config.server_id:
+            self._server_log_view.setPlainText(self._server_log_text(config.server_id))
 
     def _on_editor_changed(self) -> None:
         """Record that the editor has unsaved changes."""
@@ -1800,16 +1898,7 @@ class McpConfigDialog(QDialog):
         config = self._selected_config()
         if config is None:
             return
-        updated = McpServerConfig(
-            server_id=config.server_id,
-            kind=config.kind,
-            stdio=config.stdio,
-            http=config.http,
-            enabled=config.enabled,
-            disabled_tools=self._tool_view.disabled_tools(),
-            sandbox=config.sandbox,
-            request_timeout_s=config.request_timeout_s,
-        )
+        updated = replace(config, disabled_tools=self._tool_view.disabled_tools())
         self._document = self._document.with_server(updated)
         self._dirty = True
         self._refresh_tools(updated)

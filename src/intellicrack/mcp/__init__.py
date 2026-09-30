@@ -27,10 +27,12 @@ from intellicrack.mcp.catalog import (
     compute_generation,
     fetch_catalog,
 )
+from intellicrack.mcp.client_hooks import McpClientHooks, McpHooksFactory
 from intellicrack.mcp.config import (
     MCP_CONFIG_FILENAME,
     NAMESPACE_PREFIX,
     SERVER_ID_PATTERN,
+    SERVER_LOG_LEVELS,
     HttpServerSpec,
     McpConfigDocument,
     McpConfigStore,
@@ -67,6 +69,7 @@ from intellicrack.mcp.errors import (
 )
 from intellicrack.mcp.policy import ToolCost, enabled_entries, estimate_tool_cost
 from intellicrack.mcp.secrets import MCP_SECRET_NAMESPACE, McpSecretResolver
+from intellicrack.mcp.server_logs import McpLogRecord, McpServerLogBook
 from intellicrack.mcp.tool_source import (
     UNTRUSTED_BLOCK_END,
     UNTRUSTED_BLOCK_START,
@@ -173,6 +176,7 @@ __all__ = [
     "MCP_SECRET_NAMESPACE",
     "NAMESPACE_PREFIX",
     "SERVER_ID_PATTERN",
+    "SERVER_LOG_LEVELS",
     "UNTRUSTED_BLOCK_END",
     "UNTRUSTED_BLOCK_START",
     "ApprovalRecord",
@@ -184,6 +188,7 @@ __all__ = [
     "JobLimits",
     "KeyringTokenStorage",
     "McpAuthError",
+    "McpClientHooks",
     "McpConfigDocument",
     "McpConfigError",
     "McpConfigStore",
@@ -194,11 +199,14 @@ __all__ = [
     "McpConsentGate",
     "McpError",
     "McpHealth",
+    "McpHooksFactory",
     "McpInputSpec",
+    "McpLogRecord",
     "McpProtocolError",
     "McpSandboxSpec",
     "McpSecretResolver",
     "McpServerConfig",
+    "McpServerLogBook",
     "McpServerStatus",
     "McpToolCatalog",
     "McpToolEntry",

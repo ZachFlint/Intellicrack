@@ -43,14 +43,24 @@ from mcp.client.auth import OAuthClientProvider
 from mcp.client.stdio import stdio_client
 from mcp.client.subscriptions import ListenNotSupportedError, SubscriptionLost
 from mcp.shared.exceptions import MCPError
-from mcp_types import CONNECTION_CLOSED, METHOD_NOT_FOUND, Implementation, ToolListChangedNotification
+from mcp_types import (
+    CONNECTION_CLOSED,
+    LOG_LEVEL_META_KEY,
+    METHOD_NOT_FOUND,
+    EmptyResult,
+    Implementation,
+    SetLevelRequest,
+    SetLevelRequestParams,
+    ToolListChangedNotification,
+)
 from mcp_types.version import MODERN_PROTOCOL_VERSIONS
 
 from intellicrack._metadata import __version__
 from intellicrack.core.logging import get_logger
 from intellicrack.core.untrusted_text import clean_untrusted_label
 from intellicrack.mcp.catalog import McpToolCatalog, fetch_catalog
-from intellicrack.mcp.config import McpConfigStore, McpServerConfig, McpTransportKind
+from intellicrack.mcp.client_hooks import McpClientHooks
+from intellicrack.mcp.config import SERVER_LOG_LEVELS, McpConfigStore, McpServerConfig, McpTransportKind
 from intellicrack.mcp.consent import McpConsentStoreError
 from intellicrack.mcp.errors import McpConnectionError, McpConsentDeniedError, McpError
 from intellicrack.mcp.operator_wait import OperatorWaitClock
@@ -69,10 +79,11 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     import httpx2
-    from mcp.client.session import ElicitationFnT
+    from mcp.client.session import ElicitationFnT, LoggingFnT
     from mcp.shared.message import SessionMessage
-    from mcp_types import CallToolResult
+    from mcp_types import CallToolResult, LoggingLevel, LoggingMessageNotificationParams, RequestParamsMeta
 
+    from intellicrack.mcp.client_hooks import McpHooksFactory
     from intellicrack.mcp.config import McpConfigDocument
     from intellicrack.mcp.consent import McpConsentGate
     from intellicrack.mcp.secrets import McpSecretResolver
@@ -549,6 +560,7 @@ class McpConnection:
         elicitation_callback: ElicitationFnT | None = None,
         consent: McpConsentGate | None = None,
         auth_factory: AuthFactory | None = None,
+        hooks: McpClientHooks | None = None,
     ) -> None:
         """Initialize the connection.
 
@@ -563,12 +575,16 @@ class McpConnection:
                 one, a local server is never started.
             auth_factory: Builds the ``httpx2`` authentication handler for an
                 HTTP server, or ``None`` for unauthenticated access.
+            hooks: The sampling, roots and logging callbacks this server is
+                offered; each one left out is not advertised.
         """
         self._config = config
         self._resolver = resolver
         self._client_info = client_info if client_info is not None else build_client_info()
         self._operator_wait = OperatorWaitClock()
         self._elicitation_callback = self._operator_wait.pause_during(elicitation_callback) if elicitation_callback is not None else None
+        self._hooks = hooks if hooks is not None else McpClientHooks()
+        self._log_level: LoggingLevel | None = cast("LoggingLevel | None", config.log_level)
         self._consent = consent
         self._auth_factory = auth_factory
 
@@ -755,10 +771,16 @@ class McpConnection:
         Returns:
             Client: The client, not yet entered.
         """
+        hooks = self._hooks
         return Client(
             _StreamPairTransport(streams, on_closed),
             client_info=self._client_info,
             elicitation_callback=self._elicitation_callback,
+            sampling_callback=self._operator_wait.pause_sampling(hooks.sampling) if hooks.sampling is not None else None,
+            sampling_capabilities=hooks.sampling_capabilities,
+            list_roots_callback=hooks.list_roots,
+            logging_callback=self._filtered_logging() if hooks.logging is not None else None,
+            log_level=self._log_level,
             message_handler=self._on_incoming,
             read_timeout_seconds=None,
             mode="legacy" if legacy else "auto",
@@ -868,21 +890,7 @@ class McpConnection:
 
         headers = await self._resolver.resolve_mapping(spec.headers)
         query = await self._resolver.resolve_mapping(spec.query)
-        resolved = McpServerConfig(
-            server_id=self._config.server_id,
-            kind=self._config.kind,
-            http=type(spec)(
-                url=spec.url,
-                headers=headers,
-                query=query,
-                oauth_client_id=spec.oauth_client_id,
-                oauth_metadata_url=spec.oauth_metadata_url,
-            ),
-            enabled=self._config.enabled,
-            disabled_tools=self._config.disabled_tools,
-            sandbox=self._config.sandbox,
-            request_timeout_s=self._config.request_timeout_s,
-        )
+        resolved = replace(self._config, http=replace(spec, headers=headers, query=query))
         auth = self._auth_factory(resolved) if self._auth_factory is not None else None
         if isinstance(auth, OAuthClientProvider):
             self._track_operator_steps(auth)
@@ -1004,6 +1012,7 @@ class McpConnection:
                 raise McpConnectionError(message) from exc
             self._client = client
             self._catalog = catalog
+            await self._apply_log_level(client)
             self._connected_at = datetime.now(tz=UTC)
             self._ready_since = asyncio.get_running_loop().time()
             self._last_error = None
@@ -1023,6 +1032,116 @@ class McpConnection:
             finally:
                 self._client = None
                 await self._stop_follower()
+
+    @property
+    def log_level(self) -> str | None:
+        """The lowest severity of the server's log messages this connection asks for.
+
+        Returns:
+            str | None: The level, or ``None`` when none is asked for.
+        """
+        return self._log_level
+
+    def _admits_log(self, level: str) -> bool:
+        """Decide whether a log message the server sent is one this connection asked for.
+
+        A 2025-11-25 server built on the SDK logs at every level whatever
+        ``logging/setLevel`` said, and a 2026-07-28 server may ignore the
+        opt-in, so the level is enforced here as well. With no level chosen,
+        a 2026-07-28 connection asked for nothing, while an earlier one keeps
+        the server's own default.
+
+        Args:
+            level: The message's level.
+
+        Returns:
+            bool: ``True`` when the message is at or above the chosen level;
+            a level the protocol does not define is let through.
+        """
+        wanted = self._log_level
+        if wanted is None:
+            return not self._is_modern(self._client)
+        if level not in SERVER_LOG_LEVELS:
+            return True
+        return SERVER_LOG_LEVELS.index(level) >= SERVER_LOG_LEVELS.index(wanted)
+
+    def _filtered_logging(self) -> LoggingFnT:
+        """Wrap the logging hook so it only receives the messages this connection asked for.
+
+        Returns:
+            LoggingFnT: The filtering callback.
+        """
+        inner = self._hooks.logging
+
+        async def _receive(params: LoggingMessageNotificationParams) -> None:
+            """Pass one log message on when it is at or above the chosen level.
+
+            Args:
+                params: The notification's parameters.
+            """
+            if inner is not None and self._admits_log(params.level):
+                await inner(params)
+
+        return _receive
+
+    def _request_meta(self) -> RequestParamsMeta | None:
+        """Build the ``_meta`` a request carries to opt in to the server's log messages.
+
+        On a 2026-07-28 connection a server logs only for requests that carry
+        a ``logLevel``; the client stamps the level it was built with, and
+        this stamps the current one, so a level chosen since the connection
+        opened applies to the next request.
+
+        Returns:
+            RequestParamsMeta | None: The meta, or ``None`` when no level is
+            asked for or the connection predates the opt-in.
+        """
+        if self._log_level is None or not self._is_modern(self._client):
+            return None
+        return cast("RequestParamsMeta", {LOG_LEVEL_META_KEY: self._log_level})
+
+    async def _apply_log_level(self, client: Client) -> None:
+        """Ask a handshake-era server for its log messages at the chosen level.
+
+        A 2025-11-25 connection is governed by ``logging/setLevel`` instead of
+        a per-request opt-in. A server that does not offer logging is not
+        asked, and one that refuses is logged, not treated as a failed
+        connection.
+
+        Args:
+            client: The connected client.
+        """
+        capabilities = client.server_capabilities
+        if self._log_level is None or self._is_modern(client) or capabilities.logging is None:
+            return
+        try:
+            async with self.request_deadline():
+                request = SetLevelRequest(params=SetLevelRequestParams(level=self._log_level))
+                _ = await client.session.send_request(request, EmptyResult)
+        except TimeoutError:
+            _logger.warning("mcp_log_level_timed_out", server_id=self.server_id, level=self._log_level)
+        except MCPError as exc:
+            _logger.warning("mcp_log_level_refused", server_id=self.server_id, level=self._log_level, error=clean_untrusted_label(str(exc)))
+
+    async def set_log_level(self, level: str | None) -> None:
+        """Change the lowest severity of the server's log messages this connection asks for.
+
+        The level applies at once: a handshake-era server is sent
+        ``logging/setLevel``, and on a 2026-07-28 connection every later
+        request carries the new level. ``None`` stops asking on a 2026-07-28
+        connection; a handshake-era server keeps the last level it was sent,
+        since the protocol has no way to switch its logging off.
+
+        Args:
+            level: One of :data:`~intellicrack.mcp.config.SERVER_LOG_LEVELS`,
+                or ``None``.
+        """
+        self._log_level = cast("LoggingLevel | None", level)
+        self._config = replace(self._config, log_level=level)
+        client = self._client
+        if client is not None and self._health is McpHealth.READY:
+            await self._apply_log_level(client)
+        _logger.info("mcp_log_level_set", server_id=self.server_id, level=level)
 
     def _on_stream_closed(self, attempt: int) -> None:
         """Record that one attempt's transport stopped delivering messages.
@@ -1512,7 +1631,7 @@ class McpConnection:
         budget = timeout_s if timeout_s is not None else self._config.request_timeout_s
         try:
             async with self._operator_wait.deadline(budget):
-                return await client.call_tool(tool_name, arguments)
+                return await client.call_tool(tool_name, arguments, meta=self._request_meta())
         except TimeoutError as exc:
             message = f"server '{self.server_id}': call to {tool_name!r} exceeded {budget:.0f}s"
             raise McpConnectionError(message) from exc
@@ -1729,6 +1848,7 @@ class McpConnectionManager:
         *,
         elicitation_factory: Callable[[str], ElicitationFnT] | None = None,
         auth_factory: AuthFactory | None = None,
+        hooks_factory: McpHooksFactory | None = None,
     ) -> None:
         """Initialize the manager.
 
@@ -1742,12 +1862,15 @@ class McpConnectionManager:
                 protocol callback itself does not carry that.
             auth_factory: Builds the authentication handler for an HTTP
                 server.
+            hooks_factory: Builds the sampling, roots and logging callbacks
+                one server is offered. Without one, none are offered.
         """
         self._store = store
         self._resolver = resolver
         self._consent = consent
         self._elicitation_factory = elicitation_factory
         self._auth_factory = auth_factory
+        self._hooks_factory = hooks_factory
         self._document: McpConfigDocument = McpConfigStore.parse_document({})
         self._connections: dict[str, McpConnection] = {}
         self._order: list[str] = []
@@ -1818,6 +1941,32 @@ class McpConnectionManager:
         if self._elicitation_factory is None:
             return None
         return self._elicitation_factory(server_id)
+
+    def _hooks_for(self, config: McpServerConfig) -> McpClientHooks | None:
+        """Build the client-side callbacks one server is offered.
+
+        Args:
+            config: The server.
+
+        Returns:
+            McpClientHooks | None: The callbacks, or ``None`` when no factory
+            is installed.
+        """
+        return self._hooks_factory(config) if self._hooks_factory is not None else None
+
+    async def set_log_level(self, server_id: str, level: str | None) -> None:
+        """Change the log level a running server is asked for.
+
+        The saved configuration is the caller's to update; this applies the
+        level to the live connection, if there is one.
+
+        Args:
+            server_id: The server.
+            level: The level, or ``None``.
+        """
+        connection = self._connections.get(server_id)
+        if connection is not None:
+            await connection.set_log_level(level)
 
     def set_change_listener(self, listener: Callable[[str], None]) -> None:
         """Install the callback invoked when any server's state moves.
@@ -1973,6 +2122,7 @@ class McpConnectionManager:
             elicitation_callback=self._elicitation_for(server_id),
             consent=self._consent,
             auth_factory=self._auth_factory,
+            hooks=self._hooks_for(config),
         )
         connection.set_change_listener(self._on_connection_changed)
         self._connections[server_id] = connection
@@ -2034,20 +2184,12 @@ class McpConnectionManager:
         """
         config.validate()
         probe = McpConnection(
-            McpServerConfig(
-                server_id=config.server_id,
-                kind=config.kind,
-                stdio=config.stdio,
-                http=config.http,
-                enabled=True,
-                disabled_tools=config.disabled_tools,
-                sandbox=config.sandbox,
-                request_timeout_s=config.request_timeout_s,
-            ),
+            replace(config, enabled=True),
             self._resolver,
             elicitation_callback=self._elicitation_for(config.server_id),
             consent=self._consent,
             auth_factory=self._auth_factory,
+            hooks=self._hooks_for(config),
         )
         try:
             await probe.connect()
