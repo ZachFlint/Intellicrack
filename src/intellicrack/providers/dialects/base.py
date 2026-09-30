@@ -23,6 +23,7 @@ protocol headers hard-denied) and the normalized usage and streaming records.
 from __future__ import annotations
 
 import enum
+import hashlib
 import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -288,6 +289,35 @@ class DialectResponse:
     usage: UsageInfo | None = None
     finish_reason: str | None = None
     turn_blocks: tuple[ReasoningItem, ...] = ()
+
+
+PROMPT_CACHE_KEY_PREFIX: Final[str] = "intellicrack-"
+
+
+def conversation_cache_key(messages: Sequence[Message], model: str) -> str:
+    """Name the prompt cache one conversation's requests share.
+
+    The key is a digest of the model and the conversation's first
+    non-system message -- its role, timestamp and text -- which stays the
+    same for every turn of one conversation and differs between two
+    conversations, even two that open with the same words. Requests that
+    share the key are routed to the same cache, so every turn of a long
+    session reuses the prefix the earlier turns built, without one
+    conversation's traffic crowding out another's.
+
+    Args:
+        messages: The conversation, oldest first.
+        model: The model the request goes to.
+
+    Returns:
+        str: The key; the model id alone when the conversation holds no
+        message but the system prompt.
+    """
+    opening = next((message for message in messages if message.role != "system"), None)
+    if opening is None:
+        return model
+    material = f"{model}\n{opening.role}\n{opening.timestamp.isoformat()}\n{opening.content}"
+    return PROMPT_CACHE_KEY_PREFIX + hashlib.sha256(material.encode("utf-8", errors="surrogatepass")).hexdigest()[:32]
 
 
 def serialize_tool_result(result: object) -> str:

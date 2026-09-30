@@ -50,6 +50,7 @@ from intellicrack.providers.dialects.base import (
     ToolCallFragment,
     ToolNameStyle,
     UsageInfo,
+    conversation_cache_key,
     image_refusal_for,
     parse_tool_call,
     sendable_image_parts,
@@ -436,7 +437,7 @@ class ResponsesAdapter(DialectAdapter):
             body["stream"] = True
 
         if request.enable_cache and capabilities.supports_prompt_cache_key:
-            body["prompt_cache_key"] = request.model
+            body["prompt_cache_key"] = conversation_cache_key(request.messages, request.model)
 
         return self.apply_body_overrides(body, request)
 
