@@ -49,6 +49,7 @@ from mcp_types import (
     METHOD_NOT_FOUND,
     EmptyResult,
     Implementation,
+    RootsListChangedNotification,
     SetLevelRequest,
     SetLevelRequestParams,
     ToolListChangedNotification,
@@ -76,7 +77,7 @@ from intellicrack.mcp.transport import build_stdio_parameters, load_env_file, op
 
 if TYPE_CHECKING:
     import contextvars
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Iterable
 
     import httpx2
     from mcp.client.session import ElicitationFnT, LoggingFnT
@@ -1143,6 +1144,27 @@ class McpConnection:
             await self._apply_log_level(client)
         _logger.info("mcp_log_level_set", server_id=self.server_id, level=level)
 
+    async def announce_roots_changed(self) -> bool:
+        """Tell a 2025-11-25 server that the roots it was given have changed.
+
+        A 2026-07-28 server asks for roots with each request that needs
+        them, so it always has the current set and has nothing to be told;
+        a server this connection offers no roots is not told either.
+
+        Returns:
+            bool: Whether ``notifications/roots/list_changed`` was sent.
+        """
+        client = self._client
+        if client is None or self._health is not McpHealth.READY or self._hooks.list_roots is None or self._is_modern(client):
+            return False
+        try:
+            await client.session.send_notification(RootsListChangedNotification())
+        except TRANSPORT_FAILURES as exc:
+            _logger.warning("mcp_roots_change_not_sent", server_id=self.server_id, error=failure_text(representative_failure(exc)))
+            return False
+        _logger.info("mcp_roots_change_sent", server_id=self.server_id)
+        return True
+
     def _on_stream_closed(self, attempt: int) -> None:
         """Record that one attempt's transport stopped delivering messages.
 
@@ -1967,6 +1989,24 @@ class McpConnectionManager:
         connection = self._connections.get(server_id)
         if connection is not None:
             await connection.set_log_level(level)
+
+    async def announce_roots_changed(self, server_ids: Iterable[str]) -> list[str]:
+        """Tell running servers that their roots have changed.
+
+        Args:
+            server_ids: The servers whose roots moved.
+
+        Returns:
+            list[str]: The servers that were sent
+            ``notifications/roots/list_changed``; one on 2026-07-28 needs no
+            notice, and one that is not running has nobody to tell.
+        """
+        told: list[str] = []
+        for server_id in server_ids:
+            connection = self._connections.get(server_id)
+            if connection is not None and await connection.announce_roots_changed():
+                told.append(server_id)
+        return told
 
     def set_change_listener(self, listener: Callable[[str], None]) -> None:
         """Install the callback invoked when any server's state moves.

@@ -41,6 +41,7 @@ from intellicrack.mcp.config import McpConfigStore, is_mcp_namespace
 from intellicrack.mcp.connection import McpConnectionManager
 from intellicrack.mcp.consent import ApprovalStore, McpConsentGate, TrustStore, deny_all_launches
 from intellicrack.mcp.errors import McpError
+from intellicrack.mcp.roots import McpRootSet
 from intellicrack.mcp.secrets import McpSecretResolver
 from intellicrack.mcp.server_logs import McpServerLogBook
 from intellicrack.mcp.tool_source import McpToolSource, source_label
@@ -63,6 +64,7 @@ if TYPE_CHECKING:
     from intellicrack.credentials.store import CredentialStore
     from intellicrack.mcp.config import McpServerConfig
     from intellicrack.mcp.connection import McpServerStatus
+    from intellicrack.mcp.roots import McpRoot
 
 
 _logger = get_logger(__name__)
@@ -145,6 +147,8 @@ class McpService:
             self._on_identity_change,
         )
         self._log_book = McpServerLogBook()
+        self._roots = McpRootSet()
+        self._roots.add_listener(self._on_roots_changed)
         self._manager = McpConnectionManager(
             self._store,
             self._resolver,
@@ -429,11 +433,64 @@ class McpService:
         carried from the run that saved it; the session already being kept
         up to date is left alone.
         """
+        self.sync_roots()
         session = self._orchestrator.current_session
         if session is None or session is self._recorded_session:
             return
         self.record_session_state(session)
         _logger.debug("mcp_session_state_recorded", session_id=session.id)
+
+    @property
+    def roots(self) -> McpRootSet:
+        """The active session's roots, which servers are offered.
+
+        Returns:
+            McpRootSet: The root set.
+        """
+        return self._roots
+
+    def sync_roots(self) -> None:
+        """Offer servers the active session's folders as roots.
+
+        Called on the GUI thread whenever the session, its binaries or its
+        folders may have changed. The target binary's folder, the other
+        binaries' folders and the operator's folders become the session's
+        roots, and every 2025-11-25 server whose own roots moved is told.
+        """
+        session = self._orchestrator.current_session
+        if session is None:
+            _ = self._roots.set_session(target=None, binaries=(), folders=())
+            return
+        active = session.active_binary
+        _ = self._roots.set_session(
+            target=str(active.path) if active is not None else None,
+            binaries=[str(binary.path) for binary in session.binaries],
+            folders=session.root_folders,
+        )
+
+    def _on_roots_changed(self, before: tuple[McpRoot, ...], after: tuple[McpRoot, ...]) -> None:
+        """Keep the operator's folders on the session and tell servers their roots moved.
+
+        Args:
+            before: The session's roots before.
+            after: The session's roots after.
+        """
+        del before, after
+        session = self._orchestrator.current_session
+        if session is not None:
+            _ = session.set_root_folders(list(self._roots.folders))
+        self.announce_stale_roots()
+
+    def announce_stale_roots(self) -> None:
+        """Tell every running server whose roots moved since it last learned them."""
+        stale = self._roots.stale(self._manager.document.servers)
+        if not stale:
+            return
+        run_bridge_coroutine_async(
+            self._manager.announce_roots_changed(stale),
+            on_success=lambda told: _logger.info("mcp_roots_changes_announced", servers=told),
+            on_error=lambda error: _logger.warning("mcp_roots_change_announce_failed", error=str(error)),
+        )
 
     def generation_for(self, call: ToolCall) -> str | None:
         """Read the key an answer about a call is remembered under.
@@ -554,7 +611,10 @@ class McpService:
         Returns:
             McpClientHooks: The callbacks its connection installs.
         """
-        return McpClientHooks(logging=self._log_book.callback_for(config.server_id))
+        return McpClientHooks(
+            list_roots=self._roots.callback_for(config, self._configured_server) if config.roots.enabled else None,
+            logging=self._log_book.callback_for(config.server_id),
+        )
 
     def _release_approvals(self) -> None:
         """Withdraw the persistent approval store from the confirmation dialog.
@@ -595,6 +655,7 @@ class McpService:
             approvals=self._approvals,
             tool_source=self._source,
             log_book=self._log_book,
+            roots=self._roots,
         )
         handler = self._attachment_handler
         if handler is not None:
@@ -605,6 +666,7 @@ class McpService:
             _ = dialog.exec()
         finally:
             dialog.deleteLater()
+        self.announce_stale_roots()
         run_bridge_coroutine_async(
             self.refresh_tool_registration(),
             on_error=lambda error: _logger.warning("mcp_tool_registration_refresh_failed", error=str(error)),

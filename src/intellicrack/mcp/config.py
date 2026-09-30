@@ -731,6 +731,33 @@ class McpSandboxSpec:
 _DEFAULT_SANDBOX: Final[McpSandboxSpec] = McpSandboxSpec()
 
 
+@dataclass(frozen=True, slots=True)
+class McpRootsSpec:
+    """Which folders a server is told it may work in, answered to ``roots/list``.
+
+    How the roots are put together is set out in :mod:`intellicrack.mcp.roots`.
+
+    Attributes:
+        enabled: Whether the server is offered roots at all. Off withdraws
+            the ``roots`` capability, so the server is never asked.
+        include_session: Whether the active session's folders -- the target
+            binary's, the other binaries', and those the operator added --
+            are among them.
+        folders: Absolute folders offered to this server only.
+        exclude: Absolute session folders this server is not told about.
+            A sandboxed server is always told about its ``allowWrite``
+            directories, whatever this says.
+    """
+
+    enabled: bool = True
+    include_session: bool = True
+    folders: tuple[str, ...] = ()
+    exclude: tuple[str, ...] = ()
+
+
+_DEFAULT_ROOTS: Final[McpRootsSpec] = McpRootsSpec()
+
+
 def sandbox_limitations(sandbox: McpSandboxSpec) -> tuple[str, ...]:
     """State plainly what a server's sandbox does not protect against.
 
@@ -848,6 +875,7 @@ class McpServerConfig:
             Intellicrack asks for, one of :data:`SERVER_LOG_LEVELS`, or
             ``None`` to ask for none on a 2026-07-28 connection and leave the
             server's default on an earlier one.
+        roots: The folders the server is told it may work in.
     """
 
     server_id: str
@@ -859,6 +887,7 @@ class McpServerConfig:
     sandbox: McpSandboxSpec = _DEFAULT_SANDBOX
     request_timeout_s: float = DEFAULT_REQUEST_TIMEOUT_S
     log_level: str | None = None
+    roots: McpRootsSpec = _DEFAULT_ROOTS
 
     @property
     def namespace(self) -> str:
@@ -911,6 +940,11 @@ class McpServerConfig:
         for path in self.sandbox.allow_write:
             if not Path(path).is_absolute():
                 message = f"server '{self.server_id}': sandbox write path {path!r} must be absolute"
+                raise McpConfigError(message)
+
+        for path in (*self.roots.folders, *self.roots.exclude):
+            if not Path(path).is_absolute():
+                message = f"server '{self.server_id}': root folder {path!r} must be absolute"
                 raise McpConfigError(message)
 
     def _validate_stdio(self) -> None:
@@ -1355,6 +1389,33 @@ def _parse_sandbox(data: Mapping[str, Any], *, server_id: str) -> McpSandboxSpec
     )
 
 
+def _parse_roots(data: Mapping[str, Any], *, server_id: str) -> McpRootsSpec:
+    """Parse the optional roots block of a server entry.
+
+    Args:
+        data: The server entry.
+        server_id: Server id used in the error message.
+
+    Returns:
+        McpRootsSpec: The parsed block, or the default when absent.
+
+    Raises:
+        McpConfigError: If the block is present but is not an object.
+    """
+    raw = data.get("roots")
+    if raw is None:
+        return _DEFAULT_ROOTS
+    if not is_json_object(raw):
+        message = f"server '{server_id}': field 'roots' must be an object"
+        raise McpConfigError(message)
+    return McpRootsSpec(
+        enabled=_optional_bool(raw, "enabled", server_id=server_id, default=True),
+        include_session=_optional_bool(raw, "includeSession", server_id=server_id, default=True),
+        folders=_str_sequence(raw, "folders", server_id=server_id),
+        exclude=_str_sequence(raw, "exclude", server_id=server_id),
+    )
+
+
 def _parse_server(server_id: str, raw: object) -> McpServerConfig:
     """Parse one entry of the ``servers`` object.
 
@@ -1408,6 +1469,7 @@ def _parse_server(server_id: str, raw: object) -> McpServerConfig:
         sandbox=_parse_sandbox(data, server_id=server_id),
         request_timeout_s=_optional_timeout(data, server_id=server_id),
         log_level=_optional_str(data, "logLevel", server_id=server_id),
+        roots=_parse_roots(data, server_id=server_id),
     )
     config.validate()
     return config
@@ -1545,6 +1607,13 @@ def _serialize_server(config: McpServerConfig) -> dict[str, Any]:
         data["requestTimeout"] = config.request_timeout_s
     if config.log_level is not None:
         data["logLevel"] = config.log_level
+    if config.roots != _DEFAULT_ROOTS:
+        roots: dict[str, Any] = {"enabled": config.roots.enabled, "includeSession": config.roots.include_session}
+        if config.roots.folders:
+            roots["folders"] = list(config.roots.folders)
+        if config.roots.exclude:
+            roots["exclude"] = list(config.roots.exclude)
+        data["roots"] = roots
     return data
 
 

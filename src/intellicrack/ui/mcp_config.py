@@ -81,12 +81,14 @@ from intellicrack.mcp.resources import (
     read_resource,
     summarize_parts,
 )
+from intellicrack.mcp.roots import server_roots
 from intellicrack.mcp.sandbox_launch import sandbox_supported
 from intellicrack.mcp.server_logs import McpLogRecord
 from intellicrack.mcp.tool_source import estimate_entry_costs
 from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
 from intellicrack.ui.dialogs_helpers import plain_tooltip, show_error, show_info, show_warning
 from intellicrack.ui.mcp_consent_dialog import McpServerConsentDialog
+from intellicrack.ui.mcp_roots_view import McpRootsView
 from intellicrack.ui.panels.async_bridge import BridgeCallWorker, discard_worker, worker_is_running
 from intellicrack.ui.resources.font_manager import FontManager
 
@@ -101,6 +103,7 @@ if TYPE_CHECKING:
     from intellicrack.mcp.connection import McpConnectionManager
     from intellicrack.mcp.consent import ApprovalStore
     from intellicrack.mcp.policy import ToolCost
+    from intellicrack.mcp.roots import McpRoot, McpRootSet
     from intellicrack.mcp.secrets import McpSecretResolver
     from intellicrack.mcp.server_logs import McpServerLogBook
     from intellicrack.mcp.tool_source import McpToolSource
@@ -909,6 +912,7 @@ class McpConfigDialog(QDialog):
         approvals: ApprovalStore | None = None,
         tool_source: McpToolSource | None = None,
         log_book: McpServerLogBook | None = None,
+        roots: McpRootSet | None = None,
     ) -> None:
         """Initialize the settings dialog.
 
@@ -924,6 +928,9 @@ class McpConfigDialog(QDialog):
                 ``None`` prices the tools from the catalog directly.
             log_book: Where the servers' own log messages are kept; the
                 status tab shows the selected server's and follows new ones.
+            roots: The active session's roots; the roots tab edits the
+                session's own folders and shows what each server is offered.
+                ``None`` edits only the servers' own roots settings.
         """
         super().__init__(parent)
         self._manager = manager
@@ -931,6 +938,8 @@ class McpConfigDialog(QDialog):
         self._approvals = approvals
         self._tool_source = tool_source
         self._log_book = log_book
+        self._roots = roots
+        self._session_folders: tuple[str, ...] = roots.folders if roots is not None else ()
         self._server_log_arrived.connect(self._on_server_log)
         if log_book is not None:
             log_book.add_listener(self._server_log_arrived.emit)
@@ -1023,6 +1032,10 @@ class McpConfigDialog(QDialog):
         self._tool_view = McpToolToggleView()
         self._tool_view.toggled.connect(self._on_tools_toggled)
         self._tabs.addTab(self._tool_view, "Tools")
+
+        self._roots_view = McpRootsView()
+        self._roots_view.changed.connect(self._on_roots_edited)
+        self._tabs.addTab(self._roots_view, "Roots")
 
         log_pane = QWidget()
         log_column = QVBoxLayout(log_pane)
@@ -1778,6 +1791,7 @@ class McpConfigDialog(QDialog):
             if not (self._editor.modified and self._editor.loaded_server_id == config.server_id):
                 self._editor.load(config)
             self._refresh_tools(config)
+            self._refresh_roots(config)
             self._refresh_status(config)
             self._refresh_log()
         self._refresh_trust()
@@ -1889,9 +1903,53 @@ class McpConfigDialog(QDialog):
         if isinstance(record, McpLogRecord) and config is not None and record.server_id == config.server_id:
             self._server_log_view.setPlainText(self._server_log_text(config.server_id))
 
-    def _on_editor_changed(self) -> None:
-        """Record that the editor has unsaved changes."""
+    def _session_roots(self) -> tuple[McpRoot, ...]:
+        """Work out the session's roots with the folders being edited.
+
+        Returns:
+            tuple[McpRoot, ...]: The roots.
+        """
+        return self._roots.preview(self._session_folders) if self._roots is not None else ()
+
+    def _refresh_roots(self, config: McpServerConfig) -> None:
+        """Show one server's roots settings and what it is offered.
+
+        Args:
+            config: The server.
+        """
+        self._roots_view.load(config.roots, self._session_roots(), self._session_folders)
+        self._show_offered_roots(config)
+
+    def _show_offered_roots(self, config: McpServerConfig) -> None:
+        """List what one server is offered, with the sandbox the editor describes.
+
+        Args:
+            config: The server as the document holds it.
+        """
+        if self._editor.loaded_server_id == config.server_id:
+            config = replace(config, sandbox=self._editor.build_sandbox())
+        self._roots_view.show_effective(server_roots(config, self._session_roots()))
+
+    def _on_roots_edited(self) -> None:
+        """Apply a roots edit to the in-memory document."""
+        config = self._selected_config()
+        if config is None:
+            return
+        folders = self._roots_view.session_folders()
+        if folders != self._session_folders:
+            self._session_folders = folders
+            self._roots_view.show_session(self._session_roots())
+        updated = replace(config, roots=self._roots_view.spec())
+        self._document = self._document.with_server(updated)
         self._dirty = True
+        self._show_offered_roots(updated)
+
+    def _on_editor_changed(self) -> None:
+        """Record that the editor has unsaved changes, and show the roots its sandbox implies."""
+        self._dirty = True
+        config = self._selected_config()
+        if config is not None:
+            self._show_offered_roots(config)
 
     def _on_tools_toggled(self) -> None:
         """Apply a per-tool switch to the in-memory document."""
@@ -2115,6 +2173,8 @@ class McpConfigDialog(QDialog):
             return False
         if not self._persist():
             return False
+        if self._roots is not None and self._session_folders != self._roots.folders:
+            _ = self._roots.set_folders(self._session_folders)
         drafts = [config for config in self._document.servers if config.server_id in self._last_unsaved]
         self._document = self._manager.reload()
         for draft in drafts:

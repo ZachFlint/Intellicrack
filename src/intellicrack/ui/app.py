@@ -1482,10 +1482,12 @@ class MainWindow(QMainWindow):
         )
 
     def _sync_mcp_session_state(self) -> None:
-        """Record every MCP server's state onto a session that has just become active.
+        """Bring MCP up to date with the active session.
 
         A new or restored session otherwise carries no MCP record, or the
-        stale one saved with it, until some server happens to change state.
+        stale one saved with it, until some server happens to change state;
+        and servers are offered the session's folders, including a binary
+        just loaded, as their roots.
         """
         service = self._mcp_service
         if service is not None:
@@ -2195,6 +2197,7 @@ class MainWindow(QMainWindow):
         self.tool_panel.open_in_hex_editor(str(binary_info.path))
         _logger.info("binary_loaded", path=str(binary_info.path), binary_name=binary_info.name)
         self.status_update.emit(f"Loaded {binary_info.name}")
+        self._sync_mcp_session_state()
 
     def _on_binary_load_failed(self, error: object) -> None:
         """Roll back optimistic UI when the async load chain fails.

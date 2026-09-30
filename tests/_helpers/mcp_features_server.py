@@ -14,18 +14,22 @@ Run it as ``python mcp_features_server.py [--transport stdio|http|sse] [--port N
 from __future__ import annotations
 
 import argparse
+import json
 import sys
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Annotated, Any, Final
 
 import anyio.lowlevel
 import uvicorn
 from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.mcpserver.resolve import ListRoots, Resolve
 from mcp_types import (
     LOG_LEVEL_META_KEY,
     EmptyResult,
+    ListRootsResult,
     LoggingLevel,
     LoggingMessageNotification,
     LoggingMessageNotificationParams,
+    NotificationParams,
     SetLevelRequestParams,
 )
 from mcp_types.version import MODERN_PROTOCOL_VERSIONS
@@ -49,18 +53,29 @@ HIDDEN_MARK: Final[str] = chr(0x200B)
 LOG_LEVEL_SEEN_TOOL: Final[str] = "log_level_seen"
 """Reports the level the last ``logging/setLevel`` asked for, or ``none``."""
 
+ROOTS_TOOL: Final[str] = "roots_seen"
+"""Asks the client for its roots and reports them as a JSON list of ``{"uri", "name"}``."""
+
+ROOTS_CHANGES_TOOL: Final[str] = "roots_changes"
+"""Reports how many ``notifications/roots/list_changed`` the client has sent."""
+
+CAPABILITIES_TOOL: Final[str] = "capabilities_seen"
+"""Reports the capabilities the client declared for the request, as JSON."""
+
 
 _LEVELS: Final[tuple[str, ...]] = ("debug", "info", "notice", "warning", "error", "critical", "alert", "emergency")
 
 
 class _LegacyLogLevel:
-    """The level a 2025-11-25 client asked for with ``logging/setLevel``.
+    """What a 2025-11-25 client has told the server outside any request.
 
     Attributes:
-        level: The level, or ``None`` before the client asked.
+        level: The level asked for with ``logging/setLevel``, or ``None`` before the client asked.
+        roots_changes: How many ``notifications/roots/list_changed`` arrived.
     """
 
     level: str | None = None
+    roots_changes: int = 0
 
 
 _legacy = _LegacyLogLevel()
@@ -81,12 +96,27 @@ async def _set_level(_ctx: ServerRequestContext[Any, Any], params: SetLevelReque
     return EmptyResult()
 
 
+async def _roots_changed(_ctx: ServerRequestContext[Any, Any], _params: NotificationParams) -> None:
+    """Count a 2025-11-25 client's notice that its roots changed.
+
+    Args:
+        _ctx: The notification context.
+        _params: The notification's parameters.
+    """
+    _legacy.roots_changes += 1
+    await anyio.lowlevel.checkpoint()
+
+
 class FeaturesServer(MCPServer):
     """The fixture server, which also serves ``logging/setLevel`` to 2025-11-25 clients."""
 
     def serve_log_level(self) -> None:
         """Register the ``logging/setLevel`` handler, which is also what advertises the ``logging`` capability."""
         self._lowlevel_server.add_request_handler("logging/setLevel", SetLevelRequestParams, _set_level)
+
+    def count_roots_changes(self) -> None:
+        """Register the ``notifications/roots/list_changed`` handler."""
+        self._lowlevel_server.add_notification_handler("notifications/roots/list_changed", NotificationParams, _roots_changed)
 
 
 def _requested(ctx: Context, level: LoggingLevel) -> bool:
@@ -153,6 +183,49 @@ def log_level_seen() -> str:
     return _legacy.level or "none"
 
 
+def roots_changes() -> int:
+    """Report how many roots-changed notices the client has sent.
+
+    Returns:
+        int: The count.
+    """
+    return _legacy.roots_changes
+
+
+def _ask_for_roots() -> ListRoots:
+    """Ask the client for its roots.
+
+    Returns:
+        ListRoots: The request marker.
+    """
+    return ListRoots()
+
+
+def roots_seen(roots: Annotated[ListRootsResult, Resolve(_ask_for_roots)]) -> str:
+    """Report the client's roots.
+
+    Args:
+        roots: The client's answer to ``roots/list``.
+
+    Returns:
+        str: The roots, as a JSON list of ``{"uri", "name"}``.
+    """
+    return json.dumps([{"uri": str(root.uri), "name": root.name} for root in roots.roots])
+
+
+def capabilities_seen(ctx: Context) -> str:
+    """Report the capabilities the client declared.
+
+    Args:
+        ctx: The request context.
+
+    Returns:
+        str: The capabilities as they arrived on the wire, or ``null``.
+    """
+    declared = ctx.client_capabilities
+    return json.dumps(None if declared is None else declared.model_dump(mode="json", by_alias=True, exclude_none=True))
+
+
 def build_server() -> MCPServer:
     """Build the server.
 
@@ -161,8 +234,12 @@ def build_server() -> MCPServer:
     """
     server = FeaturesServer(name="intellicrack-features-fixture")
     server.serve_log_level()
+    server.count_roots_changes()
     server.add_tool(chatter, name=CHATTER_TOOL, description="Log messages at several levels.")
     server.add_tool(log_level_seen, name=LOG_LEVEL_SEEN_TOOL, description="Report the requested log level.")
+    server.add_tool(roots_seen, name=ROOTS_TOOL, description="Report the client's roots.")
+    server.add_tool(roots_changes, name=ROOTS_CHANGES_TOOL, description="Count the client's roots-changed notices.")
+    server.add_tool(capabilities_seen, name=CAPABILITIES_TOOL, description="Report the client's declared capabilities.")
     return server
 
 
