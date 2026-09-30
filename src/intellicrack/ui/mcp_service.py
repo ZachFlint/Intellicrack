@@ -35,7 +35,7 @@ from PyQt6.QtWidgets import QMessageBox
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.session import McpServerState
-from intellicrack.mcp.auth import KeyringTokenStorage, build_oauth_provider, issuer_for, open_authorization_page
+from intellicrack.mcp.auth import KeyringTokenStorage, build_oauth_provider, issuer_for, legacy_issuers_for, open_authorization_page
 from intellicrack.mcp.config import McpConfigStore, is_mcp_namespace
 from intellicrack.mcp.connection import McpConnectionManager
 from intellicrack.mcp.consent import ApprovalStore, McpConsentGate, TrustStore, deny_all_launches
@@ -240,8 +240,7 @@ class McpService:
         if any(name.lower() == _AUTHORIZATION_HEADER for name in spec.headers):
             _logger.debug("mcp_oauth_skipped_static_header", server_id=config.server_id)
             return None
-        issuer = issuer_for(spec)
-        storage = KeyringTokenStorage(self._resolver.store, config.server_id, issuer)
+        storage = KeyringTokenStorage(self._resolver.store, config.server_id, issuer_for(spec), legacy_issuers=legacy_issuers_for(spec))
         try:
             return build_oauth_provider(spec, storage, redirect_handler=self.sign_in_redirect(config.server_id))
         except McpError as exc:

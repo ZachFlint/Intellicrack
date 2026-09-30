@@ -86,6 +86,7 @@ if TYPE_CHECKING:
         build_oauth_provider,
         has_stored_credentials,
         issuer_for,
+        legacy_issuers_for,
         resolve_client_identity,
         sign_out,
     )
@@ -136,6 +137,7 @@ def __getattr__(name: str) -> object:
         "build_oauth_provider": "intellicrack.mcp.auth",
         "has_stored_credentials": "intellicrack.mcp.auth",
         "issuer_for": "intellicrack.mcp.auth",
+        "legacy_issuers_for": "intellicrack.mcp.auth",
         "resolve_client_identity": "intellicrack.mcp.auth",
         "sign_out": "intellicrack.mcp.auth",
         "McpConnection": "intellicrack.mcp.connection",
@@ -225,6 +227,7 @@ __all__ = [
     "has_stored_credentials",
     "is_mcp_namespace",
     "issuer_for",
+    "legacy_issuers_for",
     "list_prompts",
     "list_resources",
     "map_result",

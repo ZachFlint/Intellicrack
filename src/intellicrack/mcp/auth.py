@@ -50,7 +50,7 @@ from intellicrack.mcp.transport import is_web_url, open_web_url
 
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Sequence
 
     from intellicrack.credentials.store import CredentialStore
     from intellicrack.mcp.config import HttpServerSpec
@@ -130,12 +130,44 @@ def issuer_for(spec: HttpServerSpec) -> str:
             return str(_ORIGIN_URL.validate_python(f"{parsed.scheme}://{parsed.netloc}"))
         except ValidationError:
             _logger.debug("mcp_oauth_origin_unparsable", url=spec.url)
-    remainder = spec.url.split("://", maxsplit=1)
+    return _authority_origin(spec.url)
+
+
+def _authority_origin(url: str) -> str:
+    """Render a URL's origin as its scheme and authority, lower-cased and otherwise as written.
+
+    Args:
+        url: The configured endpoint.
+
+    Returns:
+        str: ``scheme://authority``, or the URL itself when it has no scheme.
+    """
+    remainder = url.split("://", maxsplit=1)
     if len(remainder) != _URL_PARTS:
-        return spec.url
+        return url
     scheme, rest = remainder
     authority = rest.split("/", maxsplit=1)[0]
     return f"{scheme.lower()}://{authority.lower()}"
+
+
+def legacy_issuers_for(spec: HttpServerSpec) -> tuple[str, ...]:
+    """List the origins earlier releases filed this server's OAuth artefacts under.
+
+    Before the origin followed the SDK's rendering, it was the configured
+    URL's scheme and authority lower-cased as written, so an explicit default
+    port such as ``https://host:443`` gave a different key from
+    ``https://host``. Artefacts found under such a key are moved to the
+    current one the first time they are read.
+
+    Args:
+        spec: The server's endpoint configuration.
+
+    Returns:
+        tuple[str, ...]: The earlier origins that differ from
+        :func:`issuer_for`'s, oldest rendering first.
+    """
+    legacy = _authority_origin(spec.url)
+    return () if legacy == issuer_for(spec) else (legacy,)
 
 
 def credential_key(server_id: str, issuer: str, suffix: str) -> str:
@@ -234,17 +266,21 @@ class KeyringTokenStorage(TokenStorage):
     the one its tokens were last obtained from is refused rather than returned.
     """
 
-    def __init__(self, store: CredentialStore, server_id: str, issuer: str) -> None:
+    def __init__(self, store: CredentialStore, server_id: str, issuer: str, *, legacy_issuers: Sequence[str] = ()) -> None:
         """Initialize the storage.
 
         Args:
             store: The credential store holding the artefacts.
             server_id: The server the artefacts belong to.
             issuer: The origin from :func:`issuer_for` they are filed under.
+            legacy_issuers: Origins from :func:`legacy_issuers_for` that
+                earlier releases filed them under; an artefact found only
+                there is moved under ``issuer`` when first read.
         """
         self._store = store
         self._server_id = server_id
         self._issuer = issuer
+        self._legacy_issuers = tuple(legacy for legacy in legacy_issuers if legacy != issuer)
         self._metadata_url: str | None = None
         self._authorization_server_source: Callable[[], OAuthMetadata | None] | None = None
         self._loaded: StoredTokens | None = None
@@ -288,9 +324,36 @@ class KeyringTokenStorage(TokenStorage):
         self._authorization_server_source = source
 
     async def _read(self, suffix: str) -> str | None:
-        """Read one stored artefact.
+        """Read one stored artefact, moving it from an earlier release's key when only that key holds it.
 
         Args:
+            suffix: Which artefact, ``tokens`` or ``client``.
+
+        Returns:
+            str | None: The stored JSON, or ``None`` when absent.
+
+        An unusable keyring, or one that holds the artefact but cannot read
+        it, propagates :class:`McpAuthError`.
+        """
+        payload = await self._read_key(credential_key(self._server_id, self._issuer, suffix), suffix)
+        if payload is not None:
+            return payload
+        for legacy in self._legacy_issuers:
+            legacy_key = credential_key(self._server_id, legacy, suffix)
+            payload = await self._read_key(legacy_key, suffix)
+            if payload is None:
+                continue
+            await self._write(suffix, payload)
+            await self._delete_key(legacy_key, suffix)
+            _logger.info("mcp_oauth_artefact_migrated", server_id=self._server_id, artefact=suffix, issuer=self._issuer)
+            return payload
+        return None
+
+    async def _read_key(self, key: str, suffix: str) -> str | None:
+        """Read one stored artefact from one key.
+
+        Args:
+            key: The credential-store key.
             suffix: Which artefact, ``tokens`` or ``client``.
 
         Returns:
@@ -300,13 +363,31 @@ class KeyringTokenStorage(TokenStorage):
             McpAuthError: If the keyring is unusable or holds the artefact but
                 cannot read it.
         """
-        key = credential_key(self._server_id, self._issuer, suffix)
         try:
             credentials = await self._store.get_secret(key)
         except CredentialStoreError as exc:
             message = f"cannot read OAuth {suffix} for MCP server '{self._server_id}': {exc}"
             raise McpAuthError(message) from exc
         return credentials.api_key if credentials is not None and credentials.api_key else None
+
+    async def _delete_key(self, key: str, suffix: str) -> bool:
+        """Remove one stored artefact from one key.
+
+        Args:
+            key: The credential-store key.
+            suffix: Which artefact, ``tokens`` or ``client``.
+
+        Returns:
+            bool: ``True`` when something was removed.
+
+        Raises:
+            McpAuthError: If the keyring is unusable.
+        """
+        try:
+            return await self._store.delete(key)
+        except CredentialStoreError as exc:
+            message = f"cannot remove OAuth {suffix} for MCP server '{self._server_id}': {exc}"
+            raise McpAuthError(message) from exc
 
     async def _write(self, suffix: str, payload: str) -> None:
         """Store one artefact.
@@ -435,21 +516,21 @@ class KeyringTokenStorage(TokenStorage):
         await self._write(_CLIENT_SUFFIX, client_info.model_dump_json(exclude_none=True))
         _logger.info("mcp_oauth_client_stored", server_id=self._server_id, client_id=client_info.client_id, issuer=client_info.issuer)
 
-    async def clear(self) -> None:
-        """Remove every artefact stored for this server.
+    async def clear(self) -> bool:
+        """Remove every artefact stored for this server, under its current origin and any earlier one.
 
-        Raises:
-            McpAuthError: If the keyring is unusable.
+        Returns:
+            bool: ``True`` when anything was removed.
+
+        An unusable keyring propagates :class:`McpAuthError` from the delete.
         """
-        for suffix in (_TOKENS_SUFFIX, _CLIENT_SUFFIX):
-            key = credential_key(self._server_id, self._issuer, suffix)
-            try:
-                _ = await self._store.delete(key)
-            except CredentialStoreError as exc:
-                message = f"cannot remove OAuth {suffix} for MCP server '{self._server_id}': {exc}"
-                raise McpAuthError(message) from exc
+        removed = False
+        for issuer in (self._issuer, *self._legacy_issuers):
+            for suffix in (_TOKENS_SUFFIX, _CLIENT_SUFFIX):
+                removed = await self._delete_key(credential_key(self._server_id, issuer, suffix), suffix) or removed
         self._loaded = None
-        _logger.info("mcp_oauth_cleared", server_id=self._server_id, issuer=self._issuer)
+        _logger.info("mcp_oauth_cleared", server_id=self._server_id, issuer=self._issuer, removed=removed)
+        return removed
 
 
 async def resolve_client_identity(
@@ -459,11 +540,13 @@ async def resolve_client_identity(
 ) -> OAuthClientInformationFull | None:
     """Resolve the client identity to start a flow with, before discovery.
 
-    A registration already stored for this server wins, so a client that has
-    registered once does not register again. A configured pre-registered
-    client id comes next: it is the identity the operator arranged with the
-    authorization server, and using it means no registration happens at all.
-    Otherwise ``None`` is returned and the SDK decides once it holds the
+    A configured pre-registered client id wins: it is the identity the
+    operator arranged with the authorization server, so it replaces a
+    registration stored before it was configured, and it carries no issuer
+    binding for the SDK to discard it over. A registration already stored
+    for this server comes next, so a client that has registered once does
+    not register again. Otherwise ``None`` is returned and the SDK decides
+    once it holds the
     authorization server's metadata: a Client ID Metadata Document when one
     is configured and the server supports it, else dynamic client
     registration, which is deprecated.
@@ -487,13 +570,6 @@ async def resolve_client_identity(
         message = f"OAuth metadata URL {metadata_url!r} is not usable as a client id: it must be an HTTPS URL with a non-root path."
         raise McpAuthError(message)
 
-    if storage is not None:
-        storage.bind_metadata_url(metadata_url)
-        stored = await storage.get_client_info()
-        if stored is not None and stored.client_id:
-            _logger.debug("mcp_oauth_identity_stored", client_id=stored.client_id)
-            return stored
-
     if spec.oauth_client_id:
         _logger.info("mcp_oauth_identity_preregistered", client_id=spec.oauth_client_id)
         return OAuthClientInformationFull(
@@ -501,6 +577,13 @@ async def resolve_client_identity(
             token_endpoint_auth_method=_PUBLIC_CLIENT_AUTH,
             redirect_uris=[AnyUrl(redirect_uri())],
         )
+
+    if storage is not None:
+        storage.bind_metadata_url(metadata_url)
+        stored = await storage.get_client_info()
+        if stored is not None and stored.client_id:
+            _logger.debug("mcp_oauth_identity_stored", client_id=stored.client_id)
+            return stored
 
     if metadata_url is not None:
         _logger.info("mcp_oauth_identity_cimd_if_supported", metadata_url=metadata_url)
@@ -711,8 +794,26 @@ class McpOAuthClientProvider(OAuthClientProvider):
 
     @override
     async def _initialize(self) -> None:
-        """Load stored tokens, their expiry and issuer metadata, and the client identity."""
+        """Load stored tokens, their expiry and issuer metadata, and the client identity.
+
+        A configured ``oauthClientId`` replaces a registration stored before
+        it was configured. The stored registration and the tokens issued to
+        it are removed, since a refresh token is bound to the client it was
+        issued to; the operator signs in once with the configured client.
+        """
         await super()._initialize()
+        configured = self._spec.oauth_client_id
+        if configured:
+            stored_identity = self.context.client_info
+            if stored_identity is not None and stored_identity.client_id != configured:
+                _logger.info(
+                    "mcp_oauth_registration_replaced",
+                    stored_client_id=stored_identity.client_id,
+                    configured_client_id=configured,
+                )
+                _ = await self._storage.clear()
+                self.context.clear_tokens()
+            self.context.client_info = await resolve_client_identity(self._spec, self._spec.oauth_metadata_url)
         stored = self._storage.loaded
         if stored is not None and self.context.current_tokens is not None:
             self.context.token_expiry_time = stored.expires_at
@@ -800,7 +901,13 @@ def build_oauth_provider(
     )
 
 
-async def sign_out(store: CredentialStore, server_id: str, issuer: str | None = None) -> bool:
+async def sign_out(
+    store: CredentialStore,
+    server_id: str,
+    issuer: str | None = None,
+    *,
+    legacy_issuers: Sequence[str] = (),
+) -> bool:
     """Remove a server's stored OAuth credentials.
 
     Args:
@@ -809,6 +916,8 @@ async def sign_out(store: CredentialStore, server_id: str, issuer: str | None = 
         issuer: The origin from :func:`issuer_for` the credentials are filed
             under. When ``None``, nothing is removed, because a token can only
             be found under the origin it was filed against.
+        legacy_issuers: Origins from :func:`legacy_issuers_for` an earlier
+            release filed them under, cleared too.
 
     Returns:
         bool: ``True`` when a credential was removed.
@@ -819,19 +928,22 @@ async def sign_out(store: CredentialStore, server_id: str, issuer: str | None = 
     if issuer is None:
         _logger.warning("mcp_oauth_sign_out_without_issuer", server_id=server_id)
         return False
-    removed = False
-    for suffix in (_TOKENS_SUFFIX, _CLIENT_SUFFIX):
-        key = credential_key(server_id, issuer, suffix)
-        try:
-            removed = await store.delete(key) or removed
-        except CredentialStoreError as exc:
-            message = f"cannot sign out of MCP server '{server_id}': {exc}"
-            raise McpAuthError(message) from exc
+    try:
+        removed = await KeyringTokenStorage(store, server_id, issuer, legacy_issuers=legacy_issuers).clear()
+    except McpAuthError as exc:
+        message = f"cannot sign out of MCP server '{server_id}': {exc}"
+        raise McpAuthError(message) from exc
     _logger.info("mcp_oauth_signed_out", server_id=server_id, removed=removed)
     return removed
 
 
-async def has_stored_credentials(store: CredentialStore, server_id: str, issuer: str) -> bool:
+async def has_stored_credentials(
+    store: CredentialStore,
+    server_id: str,
+    issuer: str,
+    *,
+    legacy_issuers: Sequence[str] = (),
+) -> bool:
     """Report whether a server currently holds an access token.
 
     Args:
@@ -839,6 +951,9 @@ async def has_stored_credentials(store: CredentialStore, server_id: str, issuer:
         server_id: The server to check.
         issuer: The origin from :func:`issuer_for` the token would be filed
             under.
+        legacy_issuers: Origins from :func:`legacy_issuers_for` an earlier
+            release filed it under; a token found there is moved under
+            ``issuer``.
 
     Returns:
         bool: ``True`` when a token is stored.
@@ -847,15 +962,9 @@ async def has_stored_credentials(store: CredentialStore, server_id: str, issuer:
         McpAuthError: If the keyring is unusable or holds the token but cannot
             read it, so the answer is unknown.
     """
-    key = credential_key(server_id, issuer, _TOKENS_SUFFIX)
     try:
-        credentials = await store.get_secret(key)
-    except CredentialStoreError as exc:
+        stored = await KeyringTokenStorage(store, server_id, issuer, legacy_issuers=legacy_issuers).read_stored_tokens()
+    except McpAuthError as exc:
         message = f"cannot check OAuth state for MCP server '{server_id}': {exc}"
         raise McpAuthError(message) from exc
-    if credentials is None or not credentials.api_key:
-        return False
-    try:
-        return bool(_parse_token_record(credentials.api_key).token.access_token)
-    except (ValueError, ValidationError):
-        return False
+    return stored is not None and bool(stored.token.access_token)

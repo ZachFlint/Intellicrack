@@ -54,7 +54,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import Message, ToolResultPart
 from intellicrack.core.untrusted_text import clean_untrusted_label
-from intellicrack.mcp.auth import has_stored_credentials, issuer_for, sign_out
+from intellicrack.mcp.auth import has_stored_credentials, issuer_for, legacy_issuers_for, sign_out
 from intellicrack.mcp.config import (
     SERVER_ID_PATTERN,
     HttpServerSpec,
@@ -2203,7 +2203,7 @@ class McpConfigDialog(QDialog):
         if config is None or config.http is None:
             show_info(self, "Sign out", "Only a server reached over HTTP holds OAuth credentials.")
             return
-        issuer = issuer_for(config.http)
+        http = config.http
 
         def _done(result: object) -> None:
             """Report whether anything was removed.
@@ -2217,7 +2217,11 @@ class McpConfigDialog(QDialog):
             else:
                 show_info(self, "Sign out", f"No stored credentials were found for '{config.server_id}'.")
 
-        self._start_worker(sign_out(self._resolver.store, config.server_id, issuer), _done, self._on_worker_error)
+        self._start_worker(
+            sign_out(self._resolver.store, config.server_id, issuer_for(http), legacy_issuers=legacy_issuers_for(http)),
+            _done,
+            self._on_worker_error,
+        )
 
     def refresh_auth_state(self) -> None:
         """Update the sign-out button from what the keyring actually holds.
@@ -2241,7 +2245,12 @@ class McpConfigDialog(QDialog):
             self._sign_out_button.setEnabled(result is True and self._current_id == server_id)
 
         self._start_worker(
-            has_stored_credentials(self._resolver.store, config.server_id, issuer_for(config.http)),
+            has_stored_credentials(
+                self._resolver.store,
+                config.server_id,
+                issuer_for(config.http),
+                legacy_issuers=legacy_issuers_for(config.http),
+            ),
             _checked,
             self._on_worker_error,
         )
