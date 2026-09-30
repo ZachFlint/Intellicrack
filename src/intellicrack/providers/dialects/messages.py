@@ -510,6 +510,7 @@ class MessagesAdapter(DialectAdapter):
         text_parts: list[str] = []
         tool_calls: list[ToolCall] = []
         reasoning: list[ReasoningItem] = []
+        turn_blocks: list[ReasoningItem] = []
 
         for entry in blocks:
             if not is_json_object(entry):
@@ -520,8 +521,10 @@ class MessagesAdapter(DialectAdapter):
                 text = block.get("text")
                 if isinstance(text, str):
                     text_parts.append(text)
+                    turn_blocks.append(text_block_item(text))
             elif block_type in {"thinking", "redacted_thinking"}:
                 reasoning.append(parse_thinking_block(block))
+                turn_blocks.append(reasoning[-1])
             elif block_type == "tool_use":
                 call = _parse_tool_use(block)
                 if call is not None:
@@ -529,6 +532,7 @@ class MessagesAdapter(DialectAdapter):
             elif is_server_tool_block_type(block_type):
                 _logger.debug("messages_server_tool_block_observed", block_type=block_type, block_id=block.get("id"))
                 reasoning.append(server_tool_item(block))
+                turn_blocks.append(reasoning[-1])
 
         stop_reason = payload.get("stop_reason")
         return DialectResponse(
@@ -537,6 +541,7 @@ class MessagesAdapter(DialectAdapter):
             reasoning=tuple(reasoning),
             usage=parse_usage(payload.get("usage")),
             finish_reason=stop_reason if isinstance(stop_reason, str) else None,
+            turn_blocks=tuple(turn_blocks),
         )
 
     @override
@@ -801,7 +806,8 @@ class MessagesAdapter(DialectAdapter):
         unsigned: Anthropic rejects the request outright, and dropping the
         block only loses reasoning context that is already unusable. Server
         tool blocks are echoed exactly as they arrived, which is what lets a
-        deferred tool the search loaded stay callable.
+        deferred tool the search loaded stay callable, and so are the text
+        blocks a paused turn is resent with, in their places among them.
 
         Args:
             reasoning: Reasoning blocks captured from an earlier turn.
@@ -812,7 +818,8 @@ class MessagesAdapter(DialectAdapter):
         blocks: list[dict[str, Any]] = []
         for item in reasoning:
             if item.kind is ReasoningKind.PROVIDER_ITEM:
-                if item.payload is not None and is_server_tool_block_type(item.payload.get("type")):
+                block_type = item.payload.get("type") if item.payload is not None else None
+                if item.payload is not None and (is_server_tool_block_type(block_type) or block_type == "text"):
                     blocks.append(dict(item.payload))
             elif item.kind is ReasoningKind.REDACTED_THINKING and item.redacted_data is not None:
                 blocks.append({"type": "redacted_thinking", "data": item.redacted_data})
@@ -899,6 +906,18 @@ def is_server_tool_block_type(block_type: object) -> bool:
     if not isinstance(block_type, str):
         return False
     return block_type == SERVER_TOOL_USE_TYPE or (block_type.endswith(SERVER_TOOL_RESULT_SUFFIX) and block_type != "tool_result")
+
+
+def text_block_item(text: str) -> ReasoningItem:
+    """Hold one text block as a provider item, so a paused turn keeps it in its place.
+
+    Args:
+        text: The block's text.
+
+    Returns:
+        ReasoningItem: A provider item holding the ``text`` block.
+    """
+    return ReasoningItem(kind=ReasoningKind.PROVIDER_ITEM, payload={"type": "text", "text": text})
 
 
 def server_tool_item(block: Mapping[str, Any]) -> ReasoningItem:

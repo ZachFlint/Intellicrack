@@ -50,6 +50,7 @@ from intellicrack.providers.base import (
 from intellicrack.providers.capabilities import ApiDialect, merge_capabilities
 from intellicrack.providers.dialects import adapter_for
 from intellicrack.providers.dialects.base import DialectRequest, UsageInfo
+from intellicrack.providers.dialects.messages import text_block_item
 from intellicrack.providers.dialects.responses import refuses_reasoning_summary
 from intellicrack.providers.model_metadata import ingest_models
 
@@ -562,6 +563,7 @@ class ConfigurableProvider(LLMProviderBase):
         start_time = time.perf_counter()
         content = ""
         reasoning: list[ReasoningItem] = []
+        turn_blocks: list[ReasoningItem] = []
         tool_calls: list[ToolCall] = []
         for continuation in range(MAX_PAUSED_TURN_CONTINUATIONS + 1):
             payload, body = await self._send_with_summary_fallback(
@@ -574,12 +576,13 @@ class ConfigurableProvider(LLMProviderBase):
             parsed = self._adapter.parse_response(payload, capabilities=capabilities)
             content += parsed.content
             reasoning.extend(parsed.reasoning)
+            turn_blocks.extend(parsed.turn_blocks)
             tool_calls.extend(parsed.tool_calls)
             self._pending_usage = _sum_usage(self._pending_usage, parsed.usage)
             if not self._adapter.continues_turn(parsed.finish_reason) or continuation == MAX_PAUSED_TURN_CONTINUATIONS:
                 break
             body, capabilities = self._build_body(
-                messages=_paused_turn_history(messages, content, reasoning),
+                messages=_paused_turn_history(messages, turn_blocks),
                 model=model,
                 tools=tools,
                 temperature=temperature,
@@ -730,7 +733,8 @@ class ConfigurableProvider(LLMProviderBase):
         stream_adapter = adapter_for(self.instance.dialect)
         buffer = ToolCallBufferManager()
         reasoning: list[ReasoningItem] = []
-        streamed_text = ""
+        turn_blocks: list[ReasoningItem] = []
+        pending_text: list[str] = []
         completed_usage: UsageInfo | None = None
         for continuation in range(MAX_PAUSED_TURN_CONTINUATIONS + 1):
             finish: str | None = None
@@ -759,10 +763,12 @@ class ConfigurableProvider(LLMProviderBase):
                             finish = delta.finish
                         if delta.reasoning_item is not None:
                             reasoning.append(delta.reasoning_item)
+                            _flush_text(turn_blocks, pending_text)
+                            turn_blocks.append(delta.reasoning_item)
                         if delta.reasoning:
                             self._pending_thinking.append(delta.reasoning)
                         if delta.text:
-                            streamed_text += delta.text
+                            pending_text.append(delta.text)
                             yield delta.text
             finally:
                 await events.aclose()
@@ -770,7 +776,7 @@ class ConfigurableProvider(LLMProviderBase):
             if self._cancel_requested or not self._adapter.continues_turn(finish) or continuation == MAX_PAUSED_TURN_CONTINUATIONS:
                 break
             body, capabilities = self._build_body(
-                messages=_paused_turn_history(messages, streamed_text, reasoning),
+                messages=_paused_turn_history(messages, _flush_text(turn_blocks, pending_text)),
                 model=model,
                 tools=tools,
                 temperature=temperature,
@@ -1066,22 +1072,39 @@ def _google_retry_delay(body: str) -> float | None:
     return None
 
 
-def _paused_turn_history(messages: list[Message], content: str, reasoning: list[ReasoningItem]) -> list[Message]:
+def _flush_text(turn_blocks: list[ReasoningItem], pending_text: list[str]) -> list[ReasoningItem]:
+    """Close the streamed text block in progress, if any, in its place in the turn.
+
+    Args:
+        turn_blocks: The turn's blocks so far, in wire order. Extended in place.
+        pending_text: Text deltas of the block in progress. Emptied.
+
+    Returns:
+        list[ReasoningItem]: ``turn_blocks``.
+    """
+    if pending_text:
+        turn_blocks.append(text_block_item("".join(pending_text)))
+        pending_text.clear()
+    return turn_blocks
+
+
+def _paused_turn_history(messages: list[Message], turn_blocks: list[ReasoningItem]) -> list[Message]:
     """Build the history that resumes a paused turn.
 
-    The partial assistant turn -- its text and every reasoning and server
-    tool block so far -- goes back as the final message, which is how the
-    endpoint is told to continue it rather than start a new one.
+    The partial assistant turn goes back as the final message, which is how
+    the endpoint is told to continue it rather than start a new one. Its
+    text, reasoning and server tool blocks are resent in the order the model
+    produced them, since text written between two server tool calls belongs
+    between them.
 
     Args:
         messages: The conversation the paused request was built from.
-        content: The assistant text produced so far this turn.
-        reasoning: The reasoning and provider items produced so far this turn.
+        turn_blocks: The turn's blocks so far, in wire order.
 
     Returns:
         list[Message]: ``messages`` followed by the partial assistant turn.
     """
-    partial = Message(role="assistant", content=content, reasoning=list(reasoning) or None)
+    partial = Message(role="assistant", content="", reasoning=list(turn_blocks) or None)
     return [*messages, partial]
 
 

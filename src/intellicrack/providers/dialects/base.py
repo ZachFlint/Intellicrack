@@ -276,6 +276,10 @@ class DialectResponse:
             provider-opaque payload that must be echoed back verbatim.
         usage: Token usage, when reported.
         finish_reason: The provider's finish reason, when reported.
+        turn_blocks: Every text, reasoning and server tool block of the
+            turn, in wire order, with each text block held as a provider
+            item. A dialect whose endpoint can pause a turn fills it, so the
+            partial turn can be sent back exactly as it arrived.
     """
 
     content: str = ""
@@ -283,6 +287,7 @@ class DialectResponse:
     reasoning: tuple[ReasoningItem, ...] = ()
     usage: UsageInfo | None = None
     finish_reason: str | None = None
+    turn_blocks: tuple[ReasoningItem, ...] = ()
 
 
 def serialize_tool_result(result: object) -> str:
