@@ -141,8 +141,10 @@ class _StackedOperator:
         second = seen[1]
         if self._first.done and second.isVisible():
             self.first_heard_while_second_open = True
+            self._timer.stop()
             _approve(second)
         elif time.monotonic() - self.first_answered_at > _FIRST_ANSWER_BUDGET_S and second.isVisible():
+            self._timer.stop()
             _approve(second)
         elif time.monotonic() - self._started > _FORCE_CLOSE_AFTER_S:
             self._force()
@@ -150,6 +152,7 @@ class _StackedOperator:
     def _force(self) -> None:
         """Close every consent dialog still open, so a regression fails instead of hanging."""
         self.forced = True
+        self._timer.stop()
         for dialog in self.watcher.visible():
             dialog.reject()
 
