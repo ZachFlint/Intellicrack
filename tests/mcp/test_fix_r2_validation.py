@@ -5,15 +5,14 @@
 """Round 2, item 18: schema validation and reduction survive hostile shapes, run in linear time, and read patterns as ECMA-262.
 
 The gates feed the real validator and the real schema passes the shapes the audit broke them with: a pattern nesting hundreds of groups,
-an array of ten thousand items under ``uniqueItems``, a schema two thousand levels deep, a ``$ref`` inside ``dependencies``, a
+an array of ten thousand items under ``uniqueItems``, a schema six thousand levels deep, a ``$ref`` inside ``dependencies``, a
 ``$dynamicRef``, and a recursive definition reduced for Gemini. Patterns are checked against what ECMA-262 says they match.
 """
 
 from __future__ import annotations
 
-import json
 import time
-from typing import Any, Final
+from typing import Any, Final, cast
 
 import pytest
 from mcp_types import Tool
@@ -24,9 +23,28 @@ from intellicrack.mcp.catalog import build_catalog
 from intellicrack.mcp.validation import pattern_hazard, validate_against_schema
 
 
-_DEEP: Final[int] = 2000
+_DEEP: Final[int] = 6000
+_BEYOND_C_RECURSION: Final[int] = 12_000
 _UNIQUE_ITEMS: Final[int] = 10_000
 _UNIQUE_BUDGET_S: Final[float] = 1.0
+
+
+def _nested_arrays(levels: int) -> list[object]:
+    """Build an array nesting ``levels`` empty arrays, one inside the next.
+
+    Args:
+        levels: How many arrays to nest.
+
+    Returns:
+        list[object]: The outermost array.
+    """
+    outer: list[object] = []
+    cursor = outer
+    for _ in range(levels):
+        inner: list[object] = []
+        cursor.append(inner)
+        cursor = inner
+    return outer
 
 
 def _deep_schema(levels: int) -> dict[str, Any]:
@@ -54,7 +72,17 @@ def _has_key(value: object, key: str) -> bool:
     Returns:
         bool: ``True`` when some object in ``value`` has ``key``.
     """
-    return f'"{key}"' in json.dumps(value)
+    pending: list[object] = [value]
+    while pending:
+        current = pending.pop()
+        if isinstance(current, dict):
+            members = cast("dict[str, object]", current)
+            if key in members:
+                return True
+            pending.extend(members.values())
+        elif isinstance(current, list):
+            pending.extend(cast("list[object]", current))
+    return False
 
 
 class TestNestedPatternGroups:
@@ -109,15 +137,10 @@ class TestUniqueItems:
         assert bool(validate_against_schema(items, {"uniqueItems": True})) is duplicated
 
     def test_deeply_nested_items_are_compared(self) -> None:
-        """Two identical arrays nested five thousand deep are found equal without exhausting the recursion limit."""
-        deep: list[object] = []
-        cursor = deep
-        for _ in range(5000):
-            inner: list[object] = []
-            cursor.append(inner)
-            cursor = inner
-
-        assert validate_against_schema([deep, json.loads(json.dumps(deep))], {"uniqueItems": True}) != []
+        """Two identical arrays nested twelve thousand deep, past any platform's C recursion limit, are found equal."""
+        assert (
+            validate_against_schema([_nested_arrays(_BEYOND_C_RECURSION), _nested_arrays(_BEYOND_C_RECURSION)], {"uniqueItems": True}) != []
+        )
 
 
 class TestReferences:
@@ -157,17 +180,29 @@ class TestReferences:
 
 
 class TestDeepSchemas:
-    """A schema two thousand levels deep is handled by every pass, not a ``RecursionError``."""
+    """A schema six thousand levels deep, twelve thousand containers, is handled by every pass, not a ``RecursionError``.
+
+    Python 3.13 stops C recursion at 3000 levels on Windows and 10000 elsewhere, so the schema is deeper than any pass that recursed in
+    C, such as :func:`json.dumps`, could go on either.
+    """
 
     def test_every_pass_completes(self) -> None:
-        """Inlining, strict reduction, Gemini reduction, validation and the tool listing all finish."""
+        """Inlining, strict reduction, Gemini reduction and validation all finish."""
         schema = _deep_schema(_DEEP)
 
         assert _has_key(inline_refs(schema), "properties")
         assert to_strict_subset(schema)[1] is False
         assert to_gemini_subset(schema)["type"] == "OBJECT"
         assert validate_against_schema({"n": {"n": 1}}, schema) != []
-        catalog = build_catalog([Tool(name="deep", description="d", input_schema=schema)], "srv")
+
+    def test_the_tool_listing_completes(self) -> None:
+        """A tool whose schema nests twelve thousand objects, inside the size bound, is listed."""
+        nested: object = {}
+        for _ in range(_BEYOND_C_RECURSION):
+            nested = {"n": nested}
+
+        catalog = build_catalog([Tool(name="deep", description="d", input_schema={"type": "object", "properties": {"n": nested}})], "srv")
+
         assert catalog.tool_count == 1
 
 
