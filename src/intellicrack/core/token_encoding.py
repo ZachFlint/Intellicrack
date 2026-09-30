@@ -273,7 +273,7 @@ def _resolve_within(resolve: AddressResolver, host: str, port: int, timeout: flo
             done.set()
 
     threading.Thread(target=lookup, name=f"resolve-{host}", daemon=True).start()
-    if not done.wait(timeout):
+    if not done.wait(timeout) and timeout is not None:
         message = f"resolving {host} took longer than {timeout:g}s"
         raise httpcore.ConnectTimeout(message)
     if failures or not found:
@@ -322,10 +322,12 @@ class _BoundedResolutionBackend(httpcore.SyncBackend):
         started = time.monotonic()
         errors: list[str] = []
         for address in _resolve_within(self._resolve, host, port, timeout):
-            remaining = None if timeout is None else timeout - (time.monotonic() - started)
-            if remaining is not None and remaining <= 0:
-                message = f"connecting to {host}:{port} took longer than {timeout:g}s"
-                raise httpcore.ConnectTimeout(message)
+            remaining: float | None = None
+            if timeout is not None:
+                remaining = timeout - (time.monotonic() - started)
+                if remaining <= 0:
+                    message = f"connecting to {host}:{port} took longer than {timeout:g}s"
+                    raise httpcore.ConnectTimeout(message)
             try:
                 return super().connect_tcp(address, port, remaining, local_address, socket_options)
             except httpcore.ConnectError as exc:

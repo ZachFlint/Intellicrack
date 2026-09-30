@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
-_EXPRESSION: Final[re.Pattern[str]] = re.compile(r"\{([^{}]*)\}")
+_EXPRESSION: Final[re.Pattern[str]] = re.compile(r"\{([^{}]*)}")
 _VARIABLE: Final[re.Pattern[str]] = re.compile(r"^([A-Za-z0-9_.%]+)(?::(\d{1,4}))?(\*)?$")
 _RESERVED_SAFE: Final[str] = ":/?#[]@!$&'()*+,;="
 
