@@ -39,6 +39,7 @@ from PyQt6.QtWidgets import (
     QListView,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QSpinBox,
@@ -64,6 +65,7 @@ from intellicrack.mcp.config import (
     McpTransportKind,
     StdioServerSpec,
     missing_input_ids,
+    unique_server_id,
 )
 from intellicrack.mcp.connection import McpConnection, McpHealth, McpServerStatus
 from intellicrack.mcp.consent import ConsentAnswer, TrustState, server_identity
@@ -907,6 +909,7 @@ class McpConfigDialog(QDialog):
         self._dirty = False
         self._syncing_selection = False
         self._retired: set[str] = set()
+        self._last_unsaved: dict[str, str] = {}
         self._prompt_arguments: dict[str, QLineEdit] = {}
         self._prompt_required: frozenset[str] = frozenset()
 
@@ -1801,17 +1804,10 @@ class McpConfigDialog(QDialog):
         """
         existing = self._selected_config()
         candidate = self._editor.build(existing)
-        if not SERVER_ID_PATTERN.match(candidate.server_id):
-            show_warning(
-                self,
-                "Server id",
-                f"'{candidate.server_id}' is not a usable server id. Use lower-case letters, digits and hyphens, up to 32 characters.",
-            )
-            return None
-        try:
-            candidate.validate()
-        except McpError as exc:
-            show_warning(self, "Server settings", str(exc))
+        problem = self._candidate_problem(existing, candidate)
+        if problem is not None:
+            title, message = problem
+            show_warning(self, title, message)
             return None
         if existing is not None and existing.server_id != candidate.server_id:
             self._document = self._document.without_server(existing.server_id)
@@ -1821,6 +1817,47 @@ class McpConfigDialog(QDialog):
         self._current_id = candidate.server_id
         self._editor.load(candidate)
         return candidate
+
+    def _candidate_problem(self, existing: McpServerConfig | None, candidate: McpServerConfig) -> tuple[str, str] | None:
+        """Say why the editor's values cannot be folded into the document, if they cannot.
+
+        Args:
+            existing: The server being edited, or ``None`` for none.
+            candidate: What the editor's fields describe.
+
+        Returns:
+            tuple[str, str] | None: A title and message for the operator, or ``None`` when the candidate can be applied.
+        """
+        if not SERVER_ID_PATTERN.match(candidate.server_id):
+            return (
+                "Server id",
+                f"'{candidate.server_id}' is not a usable server id. Use lower-case letters, digits and hyphens, up to 32 characters.",
+            )
+        renamed = existing is None or existing.server_id != candidate.server_id
+        if renamed and self._document.server(candidate.server_id) is not None:
+            return (
+                "Server id",
+                f"A server named '{candidate.server_id}' already exists. Choose another id: keeping this one would replace that server.",
+            )
+        try:
+            candidate.validate()
+        except McpError as exc:
+            return "Server settings", str(exc)
+        return None
+
+    def _incomplete_servers(self) -> dict[str, str]:
+        """List the servers in the document that cannot be saved yet, such as one just added with no command.
+
+        Returns:
+            dict[str, str]: Each such server's id and why it cannot be saved.
+        """
+        problems: dict[str, str] = {}
+        for config in self._document.servers:
+            try:
+                config.validate()
+            except McpError as exc:
+                problems[config.server_id] = str(exc)
+        return problems
 
     def _persist(self) -> bool:
         """Save the document and bring running servers in line with it.
@@ -1832,11 +1869,20 @@ class McpConfigDialog(QDialog):
         that is now switched off is stopped too, so the list never shows a
         server running whose tools the model is not offered.
 
+        A server that cannot be saved yet -- one just added whose command is
+        still empty -- does not hold the others back: everything else is
+        saved, and it stays in the dialog, still unsaved, for the operator to
+        finish.
+
         Returns:
             bool: ``True`` when the document was saved.
         """
+        incomplete = self._incomplete_servers()
+        saved = self._document
+        for server_id in incomplete:
+            saved = saved.without_server(server_id)
         try:
-            self._manager.store.save(self._document)
+            self._manager.store.save(saved)
         except McpError as exc:
             show_error(self, "Save failed", str(exc))
             return False
@@ -1851,7 +1897,8 @@ class McpConfigDialog(QDialog):
             connection = self._manager.connection(config.server_id)
             if not config.enabled and connection is not None and connection.status.health in _LIVE_HEALTH:
                 self._start_worker(self._manager.stop_server(config.server_id), self._after_stop, self._on_worker_error)
-        self._dirty = False
+        self._dirty = bool(incomplete)
+        self._last_unsaved = incomplete
         return True
 
     def _after_stop(self, result: object) -> None:
@@ -1920,23 +1967,82 @@ class McpConfigDialog(QDialog):
         except McpError as exc:
             show_error(self, "Import failed", str(exc))
             return
-        for config in imported.servers:
-            self._document = self._document.with_server(config)
+        renamed: list[str] = []
+        for imported_config in imported.servers:
+            taken = {existing.server_id for existing in self._document.servers}
+            server_id = unique_server_id(imported_config.server_id, taken)
+            if server_id != imported_config.server_id:
+                renamed.append(f"'{imported_config.server_id}' as '{server_id}'")
+            self._document = self._document.with_server(replace(imported_config, server_id=server_id))
         for spec in imported.inputs:
             self._document = self._document.with_input(spec)
         self._dirty = True
         self._refresh_list()
-        show_info(self, "Imported", f"Imported {len(imported.servers)} server(s).")
+        note = f" Kept beside servers of the same name: {', '.join(renamed)}." if renamed else ""
+        show_info(self, "Imported", f"Imported {len(imported.servers)} server(s).{note}")
 
     def _on_save(self) -> None:
         """Persist the document and re-register it with the manager."""
-        if self._selected_config() is not None and self._editor.modified and self._apply_editor() is None:
+        if not self._save():
             return
-        if not self._persist():
+        if self._last_unsaved:
+            listed = "; ".join(f"'{server_id}': {reason}" for server_id, reason in self._last_unsaved.items())
+            show_warning(
+                self,
+                "Saved, with servers left unfinished",
+                f"Everything else was saved. These servers are not saved yet because they are incomplete, and are kept here for you "
+                f"to finish: {listed}",
+            )
             return
-        self._document = self._manager.reload()
-        self._refresh_list()
         show_info(self, "Saved", "MCP settings saved. Start or restart a server for the changes to take effect.")
+
+    def _save(self) -> bool:
+        """Fold the editor into the document and save everything that can be saved.
+
+        Returns:
+            bool: ``True`` when the editor's values were valid and the save went through.
+        """
+        if self._selected_config() is not None and self._editor.modified and self._apply_editor() is None:
+            return False
+        if not self._persist():
+            return False
+        drafts = [config for config in self._document.servers if config.server_id in self._last_unsaved]
+        self._document = self._manager.reload()
+        for draft in drafts:
+            self._document = self._document.with_server(draft)
+        self._refresh_list()
+        return True
+
+    def _has_unsaved_changes(self) -> bool:
+        """Report whether leaving now would lose anything the operator changed.
+
+        Returns:
+            bool: ``True`` when the document or the editor holds unsaved changes.
+        """
+        return self._dirty or (self._editor.modified and self._selected_config() is not None)
+
+    def _confirm_leave(self) -> bool:
+        """Ask what to do with unsaved changes before the dialog goes away.
+
+        Returns:
+            bool: ``True`` when the dialog may close: nothing was unsaved, the operator chose to discard it, or chose to save and the save
+            went through.
+        """
+        if not self._has_unsaved_changes():
+            return True
+        box = QMessageBox(
+            QMessageBox.Icon.Warning,
+            "Unsaved changes",
+            "Your MCP settings have changes that are not saved.",
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
+            self,
+        )
+        box.setObjectName("mcp_unsaved_changes")
+        box.setDefaultButton(QMessageBox.StandardButton.Save)
+        answer = box.exec()
+        if answer == QMessageBox.StandardButton.Save:
+            return self._save()
+        return answer == QMessageBox.StandardButton.Discard
 
     def _on_test_connection(self) -> None:
         """Connect once to the edited server and report what it published."""
@@ -2132,15 +2238,23 @@ class McpConfigDialog(QDialog):
 
     @override
     def closeEvent(self, a0: QCloseEvent | None) -> None:
-        """Release background workers and warn about unsaved edits.
+        """Close through :meth:`reject`, which asks about unsaved changes first.
+
+        Qt turns a window close into :meth:`reject`; a close the operator
+        cancels leaves the dialog open with its workers still attached.
 
         Args:
             a0: The close event.
         """
-        if self._dirty:
-            show_warning(self, "Unsaved changes", "Your MCP settings were not saved. Reopen the dialog and press Save to keep them.")
-        self._release_workers()
         super().closeEvent(a0)
+        if not self.isVisible():
+            self._release_workers()
+
+    @override
+    def reject(self) -> None:
+        """Ask about unsaved changes before Escape, Close or the window's close button dismiss the dialog."""
+        if self._confirm_leave():
+            super().reject()
 
     @override
     def done(self, a0: int) -> None:

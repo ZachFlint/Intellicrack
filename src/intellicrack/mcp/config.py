@@ -30,7 +30,7 @@ from intellicrack.mcp.errors import McpConfigError
 
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Collection, Mapping, Sequence
 
 
 _logger = get_logger(__name__)
@@ -106,7 +106,6 @@ _TRANSPORT_SEPARATORS: Final[re.Pattern[str]] = re.compile(r"[\s_-]+")
 
 
 _SECRET_NAME_TOKENS: Final[frozenset[str]] = frozenset({
-    "auth",
     "authorization",
     "credential",
     "credentials",
@@ -116,13 +115,55 @@ _SECRET_NAME_TOKENS: Final[frozenset[str]] = frozenset({
     "password",
     "passwd",
     "pat",
-    "private",
     "pwd",
     "secret",
-    "signature",
     "token",
 })
-"""Field-name words that mark a value as credential-bearing."""
+"""Field-name words that name a credential: any literal value under them is one."""
+
+_WEAK_SECRET_NAME_TOKENS: Final[frozenset[str]] = frozenset({"auth", "private", "signature"})
+"""Field-name words that often, but not always, name a credential: ``AUTH_TOKEN`` does, ``AUTH_MODE`` and ``PRIVATE_REPO`` do not.
+
+A value under one of them is refused only when it is itself shaped like a key.
+"""
+
+_SECRET_DESCRIPTOR_TOKENS: Final[frozenset[str]] = frozenset({
+    "algo",
+    "algorithm",
+    "alg",
+    "dir",
+    "enabled",
+    "enable",
+    "endpoint",
+    "expiry",
+    "file",
+    "format",
+    "header",
+    "host",
+    "id",
+    "kind",
+    "length",
+    "method",
+    "mode",
+    "name",
+    "path",
+    "provider",
+    "required",
+    "scheme",
+    "server",
+    "size",
+    "stdin",
+    "strategy",
+    "style",
+    "timeout",
+    "ttl",
+    "type",
+    "uri",
+    "url",
+    "version",
+})
+"""Final name words that describe a setting about a credential rather than the credential: ``TOKEN_TYPE``, ``SIGNATURE_ALGO``,
+``API_KEY_HEADER``. A name ending in one is treated like a weak one."""
 
 _SECRET_NAME_WORDS: Final[frozenset[str]] = frozenset({
     "accesstoken",
@@ -147,12 +188,12 @@ _SECRET_VALUE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"^ey[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}$"),
     re.compile(r"^[Bb]earer\s+[A-Za-z0-9._~+/-]{16,}=*$"),
     re.compile(r"^-----BEGIN [A-Z ]*PRIVATE KEY-----"),
-    re.compile(r"^[0-9a-f]{32,}$"),
 )
-"""Value shapes that are credentials regardless of the field they sit in.
+"""Value shapes that are credentials regardless of the field they sit in: each is a vendor's documented key or token format.
 
-A UUID is deliberately absent: tenant, project and workspace ids are UUIDs, and a UUID used as a key is still caught by the name of the
-field it sits in.
+Shapes that are merely random are deliberately absent. A 40-character hex git commit, a 32-character hex Notion page id, a Google Drive
+file id and a UUID look exactly like keys and are not; a random value used as a key is still caught by the name of the field or option it
+is given under.
 """
 
 _MIXED_ENTROPY_MIN_CHARS: Final[int] = 24
@@ -180,22 +221,58 @@ _OPAQUE_MIN_CHARS: Final[int] = 8
 _ASSIGNMENT_PATTERN: Final[re.Pattern[str]] = re.compile(r"^(-{0,2}[A-Za-z_][A-Za-z0-9_.-]*)=(.*)$", re.DOTALL)
 """A ``NAME=value`` or ``--name=value`` argument."""
 
+_EMBEDDED_ASSIGNMENT_PATTERN: Final[re.Pattern[str]] = re.compile(r"(?:^|[;&])\s*(-{0,2}[A-Za-z_][A-Za-z0-9_ .-]*?)\s*=\s*([^;&]*)")
+"""One ``name=value`` part of a connection string or option list, such as ``Password=...`` in ``Server=db;Password=...``."""
+
+_OPTION_P: Final[str] = "-p"
+"""The short option ``mysql``, ``sshpass`` and many others take a password with, and many more take a port or a path with."""
+
+_PASSWORD_MIN_CHARS: Final[int] = 8
+_CHARACTER_CLASSES: Final[int] = 3
+"""Upper case, lower case and digits: a value mixing all three and any symbol is password-shaped."""
+
+_FEWER_CLASSES: Final[int] = 2
+"""Two character classes suffice when the value also carries a symbol names and paths do not use."""
+_UNTELLING_SYMBOLS: Final[str] = "-_./:\\"
+"""Symbols common in names, paths and versions, which say nothing about whether a value is a password."""
+
+_WEAK: Final[int] = 1
+_STRONG: Final[int] = 2
+
+
+def _name_secret_strength(name: str) -> int:
+    """Rate how surely a field name marks its value as a credential.
+
+    Args:
+        name: The environment-variable, header, query-parameter or option name.
+
+    Returns:
+        int: ``0`` when it does not, :data:`_WEAK` when only a key-shaped value under it is one, :data:`_STRONG` when any literal value
+        under it is one.
+    """
+    lowered = name.lower()
+    glued = _NAME_SPLIT_PATTERN.sub("", lowered)
+    parts = [part for part in _NAME_SPLIT_PATTERN.split(lowered) if part]
+    strength = 0
+    if glued in _SECRET_NAME_WORDS or any(part in _SECRET_NAME_TOKENS for part in parts):
+        strength = _STRONG
+    elif any(part in _WEAK_SECRET_NAME_TOKENS for part in parts):
+        strength = _WEAK
+    if strength and parts and parts[-1] in _SECRET_DESCRIPTOR_TOKENS:
+        strength = _WEAK
+    return strength
+
 
 def _name_looks_secret(name: str) -> bool:
-    """Decide whether a field name marks its value as credential-bearing.
+    """Decide whether a field name may mark its value as credential-bearing.
 
     Args:
         name: The environment-variable, header, or query-parameter name.
 
     Returns:
-        bool: ``True`` when the name names a credential.
+        bool: ``True`` when the name names, or may name, a credential.
     """
-    lowered = name.lower()
-    glued = _NAME_SPLIT_PATTERN.sub("", lowered)
-    if glued in _SECRET_NAME_WORDS:
-        return True
-    parts = [part for part in _NAME_SPLIT_PATTERN.split(lowered) if part]
-    return any(part in _SECRET_NAME_TOKENS for part in parts)
+    return _name_secret_strength(name) > 0
 
 
 def name_looks_secret(name: str) -> bool:
@@ -244,17 +321,78 @@ def _url_carries_secret(url: str) -> bool:
         return False
     if password:
         return True
-    for name, value in parse_qsl(parts.query, keep_blank_values=True):
-        if value and (_name_looks_secret(name) or _value_looks_secret(value)):
-            return True
-    return False
+    return any(value and _named_value_is_secret(name, value) for name, value in parse_qsl(parts.query, keep_blank_values=True))
+
+
+def _named_value_is_secret(name: str, value: str) -> bool:
+    """Decide whether one literal value is a credential, given the name it is filed under.
+
+    Args:
+        name: The name the value sits under.
+        value: The literal value, with no ``${input:id}`` reference in it.
+
+    Returns:
+        bool: ``True`` when the value is shaped like a credential, or the name says it is one.
+    """
+    candidate = value.strip()
+    if not candidate or _URL_PATTERN.match(candidate) or _is_path(candidate):
+        return _value_looks_secret(candidate)
+    if _value_looks_secret(candidate):
+        return True
+    strength = _name_secret_strength(name)
+    return strength == _STRONG or (strength == _WEAK and _value_is_opaque(candidate))
+
+
+def _embedded_secret_name(value: str) -> str | None:
+    """Find a credential written as one part of a connection string or option list.
+
+    Args:
+        value: The literal value, with every ``${input:id}`` reference already removed.
+
+    Returns:
+        str | None: The name of the part that holds a credential, such as ``Password``, or ``None``.
+    """
+    if "=" not in value or not any(separator in value for separator in ";&"):
+        return None
+    for match in _EMBEDDED_ASSIGNMENT_PATTERN.finditer(value):
+        name, part = match.group(1).strip(), match.group(2)
+        if _named_value_is_secret(name, part):
+            return name
+    return None
+
+
+def _is_password_shaped(value: str) -> bool:
+    """Decide whether a value given to ``-p`` is a password rather than a port, path or name.
+
+    Args:
+        value: The option's value.
+
+    Returns:
+        bool: ``True`` for a value of password length mixing upper case, lower case, digits and a symbol, or three of those where the
+        symbol is not one names and paths use.
+    """
+    candidate = value.strip()
+    if len(candidate) < _PASSWORD_MIN_CHARS or any(char.isspace() for char in candidate):
+        return False
+    if _URL_PATTERN.match(candidate) or _is_path(candidate):
+        return False
+    symbols = {char for char in candidate if not char.isalnum()}
+    classes = sum((
+        any(char.isupper() for char in candidate),
+        any(char.islower() for char in candidate),
+        any(char.isdigit() for char in candidate),
+    ))
+    telling = symbols - set(_UNTELLING_SYMBOLS)
+    return (classes == _CHARACTER_CLASSES and bool(symbols)) or (classes >= _FEWER_CLASSES and bool(telling))
 
 
 def _value_looks_secret(value: str) -> bool:
-    """Decide whether a literal value is shaped like a credential.
+    """Decide whether a literal value is shaped like a credential whatever it is filed under.
 
-    URLs and filesystem paths are locations rather than credentials, so they
-    are judged only by whether they embed one.
+    Only a vendor's documented key format counts: a random-looking value
+    alone does not, since commit hashes and document ids look the same. URLs
+    and filesystem paths are locations rather than credentials, so they are
+    judged only by whether they embed one.
 
     Args:
         value: The literal value, with every ``${input:id}`` reference
@@ -270,16 +408,7 @@ def _value_looks_secret(value: str) -> bool:
         return _url_carries_secret(candidate)
     if _is_path(candidate):
         return False
-    if any(pattern.match(candidate) for pattern in _SECRET_VALUE_PATTERNS):
-        return True
-    if len(candidate) < _MIXED_ENTROPY_MIN_CHARS or not candidate.isascii():
-        return False
-    if not all(char.isalnum() or char in "+/=_-" for char in candidate):
-        return False
-    has_upper = any(char.isupper() for char in candidate)
-    has_lower = any(char.islower() for char in candidate)
-    has_digit = any(char.isdigit() for char in candidate)
-    return has_upper and has_lower and has_digit
+    return any(pattern.match(candidate) for pattern in _SECRET_VALUE_PATTERNS)
 
 
 def _value_is_opaque(value: str) -> bool:
@@ -334,7 +463,11 @@ def literal_secret_problem(name: str, value: str) -> str | None:
     secret from the keyring and is accepted even under a credential-shaped
     name, unless the literal text around the reference is itself shaped like
     a credential. A URL or path under a credential-shaped name is accepted
-    too: ``TOKEN_URL`` names an endpoint and ``KEY_FILE`` names a file.
+    too: ``TOKEN_URL`` names an endpoint and ``KEY_FILE`` names a file. A
+    name that only may name a credential -- ``AUTH_MODE``, ``PRIVATE_REPO``,
+    ``SIGNATURE_ALGO`` -- refuses only a key-shaped value. A connection
+    string or option list is judged part by part, so the ``Password`` in
+    ``Server=db;Password=...`` is found.
 
     Args:
         name: The field, variable or option name.
@@ -347,10 +480,11 @@ def literal_secret_problem(name: str, value: str) -> str | None:
     remainder = strip_input_references(value)
     if _value_looks_secret(remainder):
         return "holds a value shaped like a credential"
+    if (embedded := _embedded_secret_name(remainder)) is not None:
+        return f"carries a literal secret in its {embedded!r} part"
     if references:
         return None
-    candidate = remainder.strip()
-    if _name_looks_secret(name) and not _URL_PATTERN.match(candidate) and not _is_path(candidate):
+    if _named_value_is_secret(name, remainder):
         return "looks like a literal secret"
     return None
 
@@ -395,7 +529,10 @@ def _argument_secret_problem(args: Sequence[str], index: int) -> str | None:
 
     An argument is judged as ``--name=value`` or ``NAME=value`` when written
     that way, as the value of the option before it when that option has a
-    credential-shaped name, and otherwise by its shape alone.
+    credential-shaped name -- any value at all after ``--password``, a
+    key-shaped one after ``--auth`` -- as a password when it follows ``-p``
+    or is attached to it and mixes the character classes a password does,
+    and otherwise by its shape alone.
 
     Args:
         args: Every launch argument, in order.
@@ -408,12 +545,24 @@ def _argument_secret_problem(args: Sequence[str], index: int) -> str | None:
     assignment = _ASSIGNMENT_PATTERN.match(argument)
     if assignment is not None:
         return literal_secret_problem(assignment.group(1), assignment.group(2))
-    if _value_looks_secret(strip_input_references(argument)):
+    remainder = strip_input_references(argument)
+    if _value_looks_secret(remainder):
         return "holds a value shaped like a credential"
-    if index == 0 or referenced_input_ids(argument):
+    if (embedded := _embedded_secret_name(remainder)) is not None:
+        return f"carries a literal secret in its {embedded!r} part"
+    if argument.startswith(_OPTION_P) and len(argument) > len(_OPTION_P) and _is_password_shaped(argument[len(_OPTION_P) :]):
+        return f"passes a password attached to {_OPTION_P}"
+    if index == 0 or referenced_input_ids(argument) or argument.startswith("-"):
         return None
     option = args[index - 1]
-    if _FLAG_PATTERN.match(option) and _name_looks_secret(option) and _value_is_opaque(argument):
+    if option == _OPTION_P and _is_password_shaped(argument):
+        return f"is the value of {option} and looks like a password"
+    if not _FLAG_PATTERN.match(option):
+        return None
+    strength = _name_secret_strength(option)
+    if (strength == _STRONG and not _URL_PATTERN.match(argument) and not _is_path(argument)) or (
+        strength == _WEAK and _value_is_opaque(argument)
+    ):
         return f"is the value of {option} and looks like a literal secret"
     return None
 
@@ -451,6 +600,31 @@ def normalize_server_id(key: str) -> str | None:
     folded = _SERVER_ID_INVALID_RUN.sub("-", key.strip().lower()).strip("-")
     candidate = folded[:_SERVER_ID_MAX_CHARS].rstrip("-")
     return candidate if SERVER_ID_PATTERN.match(candidate) else None
+
+
+def unique_server_id(candidate: str, taken: Collection[str]) -> str:
+    """Make a server id unique among those already in use.
+
+    The id itself is kept when it is free; otherwise ``-2``, ``-3`` and so on
+    are appended, cutting the id short where needed so the result still fits
+    :data:`SERVER_ID_PATTERN`.
+
+    Args:
+        candidate: An id matching :data:`SERVER_ID_PATTERN`.
+        taken: The ids already in use.
+
+    Returns:
+        str: ``candidate``, or the first free numbered variant of it.
+    """
+    if candidate not in taken:
+        return candidate
+    number = 2
+    while True:
+        suffix = f"-{number}"
+        variant = f"{candidate[: _SERVER_ID_MAX_CHARS - len(suffix)].rstrip('-')}{suffix}"
+        if variant not in taken:
+            return variant
+        number += 1
 
 
 @dataclass(frozen=True, slots=True)
@@ -1233,10 +1407,16 @@ def _parse_servers(
 ) -> tuple[tuple[McpServerConfig, ...], tuple[McpRejectedServer, ...]]:
     """Parse every entry of the ``servers`` object, keeping the usable ones.
 
-    Keys are brought to the id shape with :func:`normalize_server_id`. An
-    entry that cannot be used -- its key has nothing to build an id from, it
-    normalizes to an id another entry already took, or it fails validation --
-    is set aside with its reason rather than failing the whole document.
+    Keys are brought to the id shape with :func:`normalize_server_id`. Two
+    keys that normalize to the same id -- ``GitHub`` and ``github``, or two
+    long keys alike in their first 32 characters -- are both kept, so neither
+    is lost when the document is saved: a key that already is a valid id
+    keeps it, and any other gets the next free numbered id from
+    :func:`unique_server_id`. An entry that cannot be used
+    -- its key has nothing to build an id from, or it fails validation -- is
+    set aside with its reason rather than failing the whole document, and
+    still holds its id, so a usable entry never takes the id it would be
+    written back under.
 
     Args:
         entries: The decoded ``servers`` object.
@@ -1248,21 +1428,20 @@ def _parse_servers(
     """
     servers: list[McpServerConfig] = []
     rejected: list[McpRejectedServer] = []
-    taken: dict[str, str] = {}
+    taken: set[str] = set(entries)
     for key, raw in entries.items():
-        server_id = normalize_server_id(key)
-        if server_id is None:
+        normalized = normalize_server_id(key)
+        if normalized is None:
             reason = f"invalid MCP server id {key!r}: it has no letter or digit to build an id from"
-        elif server_id in taken:
-            reason = f"server key {key!r} normalizes to '{server_id}', which the entry {taken[server_id]!r} already uses"
         else:
+            server_id = normalized if normalized == key else unique_server_id(normalized, taken)
+            taken.add(server_id)
             try:
                 config = _parse_server(server_id, raw)
             except McpConfigError as exc:
                 reason = exc.message if server_id == key else f"server key {key!r}: {exc.message}"
             else:
                 servers.append(config)
-                taken[server_id] = key
                 if server_id != key:
                     _logger.info("mcp_config_server_id_normalized", key=key, server_id=server_id)
                 continue
@@ -1536,7 +1715,9 @@ class McpConfigStore:
         """Render a configuration document to its JSON shape.
 
         Set-aside server entries marked as retained are written back exactly
-        as they were read, unless a usable server now holds the same id.
+        as they were read. One whose key a usable server now holds -- the
+        operator renamed a server onto it -- is written under the next free
+        numbered key instead, so neither overwrites the other.
 
         Args:
             document: The document to render.
@@ -1545,8 +1726,15 @@ class McpConfigStore:
             dict[str, Any]: The JSON root, always in the native ``servers``
             shape.
         """
-        servers: dict[str, Any] = {entry.key: entry.raw for entry in document.rejected if entry.retained}
-        servers.update({server.server_id: _serialize_server(server) for server in document.servers})
+        servers: dict[str, Any] = {server.server_id: _serialize_server(server) for server in document.servers}
+        for entry in document.rejected:
+            if not entry.retained:
+                continue
+            key = entry.key
+            if key in servers:
+                key = unique_server_id(normalize_server_id(key) or "server", servers)
+                _logger.warning("mcp_config_rejected_entry_rekeyed", key=entry.key, written_as=key)
+            servers[key] = entry.raw
         data: dict[str, Any] = {"servers": servers}
         if document.inputs:
             data["inputs"] = [
