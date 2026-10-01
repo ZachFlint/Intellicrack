@@ -119,6 +119,9 @@ class NoOpSandboxManager:
         """
         del args, kwargs
 
+    async def destroy_all(self) -> None:
+        """Destroy no sandboxes; awaited by the main window when it closes."""
+
     def __getattr__(self, name: str) -> Callable[..., None]:
         """Return a no-op callable for any attribute.
 
