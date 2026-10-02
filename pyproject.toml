@@ -1115,6 +1115,7 @@ format.max-line-length = 140
 
 [tool.pytest]
 ini_options.addopts = ["-ra", "--strict-markers"]
+ini_options.faulthandler_timeout = 300
 ini_options.markers = [
   "slow: Slow running tests",
   "integration: Integration tests",
