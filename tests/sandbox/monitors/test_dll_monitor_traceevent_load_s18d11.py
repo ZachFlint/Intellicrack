@@ -23,6 +23,7 @@ the script's own bytes resolve the type - not that a restatement of them would.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from pathlib import Path
 from typing import Final
@@ -86,11 +87,18 @@ def _run_loader(tmp_path: Path, script_text: str) -> str:
     staged = _stage_assembly(tmp_path)
     diag = tmp_path / "diag.log"
 
+    depth_match = re.search(r"\$script:TraceEventSearchDepth\s*=\s*(\d+)", script_text)
+    assert depth_match is not None, (
+        "dll_monitor.ps1 no longer sets $script:TraceEventSearchDepth at top level; the lifted loader needs it to bind Get-ChildItem -Depth"
+    )
+    search_depth = depth_match.group(1)
+
     lifted = [lift_function(script_text, name) for name in (*_LOADER_FUNCTIONS, _PROBE_FUNCTION)]
     harness = tmp_path / "harness.ps1"
     harness.write_text(
         "$ErrorActionPreference = 'Stop'\n"
         f"$script:DiagPath = '{diag}'\n"
+        f"$script:TraceEventSearchDepth = {search_depth}\n"
         "function Write-DllDiagnostic {\n"
         "    param([string]$Timestamp, [string]$Category, [string]$Detail)\n"
         '    Add-Content -LiteralPath $script:DiagPath -Value "$Timestamp|$Category|$Detail" -Encoding utf8\n'
