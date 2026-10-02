@@ -128,27 +128,21 @@ def _delivery_address() -> str:
 
     This stands in for the guest address SLIRP opens a forwarded connection to.
     What makes that address fatal to a loopback-bound listener is not that it is
-    routable - it is that it is a *different* local address, and a listener bound
-    to one address does not serve another. This machine's own non-loopback
-    address is used when it has one; a test container is started with
-    ``--network none`` and has only the loopback interface, so the second
-    loopback address is used there, which discriminates the two binds exactly
-    the same way. Measured in that container: a listener on the wildcard address
+    routable, it is that it is a *different* local address, and a listener bound
+    to one address does not serve another. The second loopback address
+    discriminates the two binds exactly: a listener on the wildcard address
     accepts a connection to it, and one bound to ``127.0.0.1`` refuses it with
-    ``WinError 10061``.
+    ``WinError 10061``. It is reachable on every Windows host, unlike a routable
+    interface address whose self-connection a hardened or multi-homed runner can
+    drop, which is why a non-loopback interface address is not used here.
 
-    Whichever is chosen is put through :func:`_local_address`, which fails the
-    test rather than let a gate read "not a local address" as a verdict on what
-    the agent bound.
+    The address is put through :func:`_local_address`, which fails the test
+    rather than let a gate read "not a local address" as a verdict on what the
+    agent bound.
 
     Returns:
         str: An address this machine answers on, other than ``127.0.0.1``.
     """
-    resolved = socket.getaddrinfo(socket.gethostname(), None, family=socket.AF_INET, type=socket.SOCK_STREAM)
-    for *_, sockaddr in resolved:
-        address = str(sockaddr[0])
-        if not ipaddress.ip_address(address).is_loopback:
-            return _local_address(address)
     return _local_address(_SECONDARY_LOOPBACK)
 
 
