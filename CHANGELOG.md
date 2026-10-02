@@ -275,6 +275,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Documentation
 
+- Add the round-2 MCP and provider fix brief (`60e873e`)
+
 - **notebooks:** Correct replace_bytes undo prose and cover the last 9 hexcore methods (`9a6a9b0`)
 
 - Add the cloud implementation brief for arbitrary AI provider support (`ade12a8`)
@@ -315,6 +317,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 
 ### Fixed
+
+- Isolate frida self-attach tests and rewrite sandbox argfiles (`e06bb28`)
 
 - **tests:** Report isolated Frida skips with the location tuple pytest requires (`29acf85`)
 
@@ -1085,8 +1089,6 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 - **hexcore:** Align .pyi stubs with PyO3 signatures (`c8c4fc4`)
 
 - **hexcore:** Record undo entries for swap_blocks, repair_pe_checksum, BPS/UPS imports (`ba163d0`)
-
-- Isolate frida self-attach tests and rewrite sandbox argfiles (``)
 
 
 ### Performance
