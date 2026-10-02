@@ -1547,18 +1547,21 @@ def _sid_to_string(sid: int) -> str:
         _ = _kernel32().LocalFree(out)
 
 
-def _user_object_dacl_sddl(handle: int) -> str:
-    """Render a window station or desktop's access list as SDDL for diagnostics.
+def _user_object_security_sddl(handle: int, information: int) -> str:
+    """Render part of a window station or desktop's security as SDDL for diagnostics.
 
     Args:
         handle: The window station or desktop to read.
+        information: The ``SECURITY_INFORMATION`` bits to read and render, such as
+            :data:`_DACL_SECURITY_INFORMATION` for the access list or
+            :data:`_LABEL_SECURITY_INFORMATION` for the mandatory integrity label.
 
     Returns:
-        str: The object's DACL in SDDL, or ``"<unreadable>"`` if its security could not be read.
+        str: The requested security in SDDL, or ``"<unreadable>"`` if it could not be read.
     """
     user32 = _user32()
     advapi32 = _advapi32()
-    info = wintypes.DWORD(_DACL_SECURITY_INFORMATION)
+    info = wintypes.DWORD(information)
     needed = wintypes.DWORD(0)
     _ = user32.GetUserObjectSecurity(wintypes.HANDLE(handle), ctypes.byref(info), None, 0, ctypes.byref(needed))
     if ctypes.get_last_error() != _ERROR_INSUFFICIENT_BUFFER or not needed.value:
@@ -1570,7 +1573,7 @@ def _user_object_dacl_sddl(handle: int) -> str:
     if not advapi32.ConvertSecurityDescriptorToStringSecurityDescriptorW(
         descriptor,
         _SDDL_REVISION_1,
-        _DACL_SECURITY_INFORMATION,
+        information,
         ctypes.byref(out),
         None,
     ):
@@ -1668,8 +1671,10 @@ def grant_window_station_and_desktop(token: int) -> None:
         "mcp_sandbox_station_desktop_before_grant",
         user_sid=_sid_to_string(user_sid),
         logon_sid=_sid_to_string(logon_sid) if logon_sid else None,
-        station_dacl=_user_object_dacl_sddl(int(station)),
-        desktop_dacl=_user_object_dacl_sddl(int(desktop)),
+        station_dacl=_user_object_security_sddl(int(station), _DACL_SECURITY_INFORMATION),
+        desktop_dacl=_user_object_security_sddl(int(desktop), _DACL_SECURITY_INFORMATION),
+        station_label=_user_object_security_sddl(int(station), _LABEL_SECURITY_INFORMATION),
+        desktop_label=_user_object_security_sddl(int(desktop), _LABEL_SECURITY_INFORMATION),
     )
     for sid in (user_sid, logon_sid):
         if not sid:
@@ -1678,8 +1683,8 @@ def grant_window_station_and_desktop(token: int) -> None:
         _grant_user_object_access(int(desktop), sid, _DESKTOP_ALL_ACCESS)
     _logger.debug(
         "mcp_sandbox_station_desktop_granted",
-        station_dacl=_user_object_dacl_sddl(int(station)),
-        desktop_dacl=_user_object_dacl_sddl(int(desktop)),
+        station_dacl=_user_object_security_sddl(int(station), _DACL_SECURITY_INFORMATION),
+        desktop_dacl=_user_object_security_sddl(int(desktop), _DACL_SECURITY_INFORMATION),
     )
 
 

@@ -19,6 +19,7 @@ child be refused on the hosted runner.
 from __future__ import annotations
 
 import ctypes
+import re
 import sys
 from ctypes import wintypes
 from typing import ClassVar
@@ -40,6 +41,7 @@ _TOKEN_GROUPS_CLASS = 2
 _SE_GROUP_LOGON_ID = 0xC0000000
 _ERROR_INSUFFICIENT_BUFFER = 122
 _EXPECTED_STATION_MASK = 0x37F | 0x000F0000
+_ACE_TRUSTEE_FIELDS = 6
 
 
 class _SidAndAttributes(ctypes.Structure):
@@ -74,6 +76,51 @@ def _sid_string(sid: int) -> str:
         return out.value or ""
     finally:
         ctypes.WinDLL("kernel32").LocalFree(out)
+
+
+def _canonical_sid(token: str) -> str:
+    """Canonicalize an SDDL trustee token to its ``S-1-...`` form.
+
+    An access-control entry names its trustee either by raw SID or by a
+    two-letter SDDL alias such as ``LA`` for the built-in Administrator, so a
+    string comparison against a raw SID misses an account the descriptor grants
+    under its alias. Converting the token to a SID and back renders both forms
+    the same way.
+
+    Args:
+        token: The trustee field of one SDDL access-control entry.
+
+    Returns:
+        str: The trustee's ``S-1-...`` form, or the token unchanged if it is not
+        a SID or alias this platform resolves.
+    """
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    sid = ctypes.c_void_p()
+    if not advapi32.ConvertStringSidToSidW(token, ctypes.byref(sid)):
+        return token
+    try:
+        return _sid_string(sid.value or 0)
+    finally:
+        ctypes.WinDLL("kernel32").LocalFree(sid)
+
+
+def _dacl_grants_sid(dacl_sddl: str, sid: str) -> bool:
+    """Report whether a DACL in SDDL grants ``sid``, matching aliases too.
+
+    Args:
+        dacl_sddl: A DACL rendered as SDDL.
+        sid: The security identifier to look for, in ``S-1-...`` form.
+
+    Returns:
+        bool: ``True`` if any allow entry names ``sid``, whether the descriptor
+        wrote it as a raw SID or as an SDDL alias.
+    """
+    trustees: list[str] = re.findall(r"\(([^)]*)\)", dacl_sddl)
+    for entry in trustees:
+        fields = entry.split(";")
+        if len(fields) >= _ACE_TRUSTEE_FIELDS and _canonical_sid(fields[5]) == sid:
+            return True
+    return False
 
 
 def _token_user_sid_string(token: int) -> str:
@@ -204,9 +251,9 @@ class TestWindowStationGrant:
         finally:
             kernel32.CloseHandle(wintypes.HANDLE(token))
 
-        assert user_sid in station_dacl, f"account SID {user_sid} not granted on the station: {station_dacl}"
-        assert logon_sid in station_dacl, f"logon SID {logon_sid} not granted on the station: {station_dacl}"
-        assert user_sid in desktop_dacl, f"account SID {user_sid} not granted on the desktop: {desktop_dacl}"
-        assert logon_sid in desktop_dacl, f"logon SID {logon_sid} not granted on the desktop: {desktop_dacl}"
+        assert _dacl_grants_sid(station_dacl, user_sid), f"account SID {user_sid} not granted on the station: {station_dacl}"
+        assert _dacl_grants_sid(station_dacl, logon_sid), f"logon SID {logon_sid} not granted on the station: {station_dacl}"
+        assert _dacl_grants_sid(desktop_dacl, user_sid), f"account SID {user_sid} not granted on the desktop: {desktop_dacl}"
+        assert _dacl_grants_sid(desktop_dacl, logon_sid), f"logon SID {logon_sid} not granted on the desktop: {desktop_dacl}"
         expected_ace = f"(A;;0x{_EXPECTED_STATION_MASK:x};;;{logon_sid})"
         assert expected_ace in station_dacl, f"station grant for the logon SID lacks the standard rights: {station_dacl}"
