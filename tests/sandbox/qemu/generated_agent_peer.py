@@ -34,6 +34,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 POWERSHELL: Final[str] = "powershell.exe"
+PEER_READY_MARKER: Final[str] = "PEER_LISTENING"
+"""Line the peer writes to standard output once its listener is accepting, so a caller need not race its startup."""
+_PEER_READY_TIMEOUT: Final[float] = 60.0
 """Interpreter the guest starts ``agent.ps1`` with, and this harness with it."""
 
 AGENT_SCRIPT_NAME: Final[str] = "agent.ps1"
@@ -258,6 +261,8 @@ def build_peer_script(agent_script: str, *, listener_statement: str) -> str:
                 script_function(agent_script, INVOKE_FUNCTION),
                 listener_statement,
                 "$listener.Start()",
+                f"[Console]::Out.WriteLine('{PEER_READY_MARKER}')",
+                "[Console]::Out.Flush()",
                 "$client = $listener.AcceptTcpClient()",
                 "$stream = $client.GetStream()",
                 "$reader = New-Object System.IO.StreamReader($stream)",
@@ -300,7 +305,17 @@ class GeneratedAgentPeer:
         self._process: asyncio.subprocess.Process | None = None
 
     async def start(self) -> None:
-        """Launch the peer process."""
+        """Launch the peer process and wait until its listener is accepting.
+
+        The peer writes :data:`PEER_READY_MARKER` to standard output once
+        ``$listener.Start()`` returns, so this waits for that line rather than
+        letting the caller race the peer's cold start: a connection attempted
+        before the listener binds is refused, which under load reads like the
+        agent never answering. If the peer dies first, its standard output ends
+        and the wait returns so the caller's own connect reports the failure. The
+        wait propagates :class:`AssertionError` from :meth:`_await_listening` if
+        the peer never reports ready.
+        """
         self._process = await asyncio.create_subprocess_exec(
             POWERSHELL,
             "-NoProfile",
@@ -313,6 +328,33 @@ class GeneratedAgentPeer:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
+        await self._await_listening()
+
+    async def _await_listening(self) -> None:
+        """Read the peer's standard output until it reports its listener ready.
+
+        Raises:
+            AssertionError: If the readiness marker does not arrive within the
+                startup budget.
+        """
+        process = self._process
+        if process is None or process.stdout is None:
+            return
+        deadline = asyncio.get_running_loop().time() + _PEER_READY_TIMEOUT
+        while True:
+            remaining = deadline - asyncio.get_running_loop().time()
+            if remaining <= 0:
+                message = f"the generated-agent peer did not report its listener ready within {_PEER_READY_TIMEOUT:.0f}s"
+                raise AssertionError(message)
+            try:
+                line = await asyncio.wait_for(process.stdout.readline(), timeout=remaining)
+            except TimeoutError:
+                message = f"the generated-agent peer did not report its listener ready within {_PEER_READY_TIMEOUT:.0f}s"
+                raise AssertionError(message) from None
+            if not line:
+                return
+            if PEER_READY_MARKER in line.decode(errors="replace"):
+                return
 
     async def abandon(self) -> None:
         """Kill the peer without judging how it ended.
