@@ -17,8 +17,10 @@ of Win32 call sites.  The oracle for each assertion is the Win32 API itself
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import ctypes
 import os
+import subprocess
 import sys
 import threading
 from ctypes import wintypes
@@ -39,7 +41,10 @@ from intellicrack.core.types import ToolError
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Generator
+
+_CHILD_IDLE_SECONDS: int = 120
+_CHILD_STOP_TIMEOUT: int = 10
 
 pytestmark = [
     pytest.mark.skipif(sys.platform != "win32", reason="Windows only"),
@@ -77,6 +82,26 @@ async def attached_bridge(process_bridge: ProcessBridge) -> AsyncGenerator[Proce
     await process_bridge.open_process(os.getpid(), "all")
     yield process_bridge
     await process_bridge.close()
+
+
+@contextlib.contextmanager
+def _idle_child() -> Generator[int]:
+    """Run a short-lived child process and yield its pid.
+
+    Privilege removal sets ``SE_PRIVILEGE_REMOVED``, which cannot be undone
+    for the life of a process. Removing a privilege from the shared test
+    worker would poison every later test that expects it, so the destructive
+    removal is directed at a disposable child instead.
+
+    Yields:
+        int: The child process id, valid until the block exits.
+    """
+    child = subprocess.Popen([sys.executable, "-c", f"import time; time.sleep({_CHILD_IDLE_SECONDS})"])
+    try:
+        yield child.pid
+    finally:
+        child.kill()
+        child.wait(timeout=_CHILD_STOP_TIMEOUT)
 
 
 class TestAdjustTokenPrivilegeSuccess:
@@ -143,15 +168,14 @@ class TestAdjustTokenPrivilegeSuccess:
 class TestRemovePrivilegePostState:
     """Verify remove_privilege marks the privilege absent or disabled in the token.
 
-    After remove_privilege, we call get_token_privileges on the modified
-    process.  We cannot remove privileges from other processes without admin,
-    so we use a child process trick: create a duplicate of our own token and
-    verify the privilege state there, or skip when not admin.
+    The removal is directed at a disposable child process, not the shared
+    test worker: ``remove_privilege`` sets ``SE_PRIVILEGE_REMOVED``, which
+    cannot be undone for the life of a process, so removing it from the worker
+    would poison every later test that expects the privilege. The child is our
+    own, so ``PROCESS_QUERY_INFORMATION`` and token adjustment both succeed
+    against it.
 
-    Because remove_privilege requires PROCESS_QUERY_INFORMATION on an external
-    PID, we target our own PID.
-
-    Oracle: get_token_privileges() re-reads the token after modification.
+    Oracle: get_token_privileges() re-reads the child's token after modification.
 
     Mutation caught: if remove_privilege does not set SE_PRIVILEGE_REMOVED,
     the privilege would remain with its original attributes, and the assertion
@@ -168,9 +192,9 @@ class TestRemovePrivilegePostState:
             process_bridge: Initialized ProcessBridge.
         """
         priv_name = "SeChangeNotifyPrivilege"
-        await process_bridge.remove_privilege(os.getpid(), priv_name)
-
-        privs = await process_bridge.get_token_privileges(os.getpid())
+        with _idle_child() as child_pid:
+            await process_bridge.remove_privilege(child_pid, priv_name)
+            privs = await process_bridge.get_token_privileges(child_pid)
         if matches := [p for p in privs if p.get("name") == priv_name]:
             entry = matches[0]
             attrs = entry.get("attributes", 0)
