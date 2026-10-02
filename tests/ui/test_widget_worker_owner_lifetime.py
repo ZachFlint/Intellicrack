@@ -29,6 +29,7 @@ import ast
 import inspect
 import json
 import socket
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -227,6 +228,32 @@ def _build_requirements_worker(_tmp_path: Path, owner: QWidget) -> RetainedWorke
         RetainedWorker: The constructed, unstarted worker.
     """
     return _REQUIREMENTS_WORKER(owner=owner)
+
+
+@pytest.mark.usefixtures("qapp")
+def test_the_requirements_worker_reports_a_probe_timeout() -> None:
+    """A GPU-probe timeout reaches the GUI through ``check_failed``, never as an unhandled exception.
+
+    ``subprocess.TimeoutExpired`` is a :class:`subprocess.SubprocessError`, not
+    an ``OSError``, so a worker that caught only ``RuntimeError``/``OSError``
+    let it escape into the Qt event loop on a host whose GPU query ran long.
+    """
+    expired = subprocess.TimeoutExpired(cmd=["pwsh"], timeout=10.0)
+
+    def _time_out() -> tuple[bool, tuple[str, ...]]:
+        raise expired
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(xpu_status, "check_windows_requirements", _time_out)
+        worker = _REQUIREMENTS_WORKER(owner=None)
+        failures: list[str] = []
+        results: list[object] = []
+        getattr(worker, "check_failed").connect(failures.append)
+        getattr(worker, "result_ready").connect(results.append)
+        worker.run()
+
+    assert results == []
+    assert failures == [str(expired)]
 
 
 def _build_sandbox_test_worker(_tmp_path: Path, owner: QWidget) -> RetainedWorker:

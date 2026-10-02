@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.subprocess_compat import SubprocessError
 from intellicrack.ui.panels.async_bridge import RetainedWorker
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
@@ -137,15 +138,19 @@ class _RequirementsCheckWorker(RetainedWorker):
     def run(self) -> None:
         """Execute the Windows requirements probe and emit the result.
 
-        Catches :class:`RuntimeError` / :class:`OSError` raised by subprocess invocation or PCI BAR enumeration so the GUI thread always
-        receives exactly one terminal signal regardless of failure mode.
+        Catches :class:`RuntimeError`, :class:`OSError` and
+        :class:`subprocess.SubprocessError` raised by subprocess invocation or
+        PCI BAR enumeration so the GUI thread always receives exactly one
+        terminal signal regardless of failure mode. A slow host where the GPU
+        query exceeds its timeout raises :class:`subprocess.TimeoutExpired`,
+        which is a :class:`subprocess.SubprocessError`, not an ``OSError``.
         """
         if check_windows_requirements is None:
             self.check_failed.emit("Requirements check is not available in this build")
             return
         try:
             all_met, warnings = check_windows_requirements()
-        except (RuntimeError, OSError) as exc:
+        except (RuntimeError, OSError, SubprocessError) as exc:
             _logger.exception("requirements_check_failed_in_thread")
             self.check_failed.emit(str(exc))
             return
