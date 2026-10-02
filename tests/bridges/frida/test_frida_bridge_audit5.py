@@ -220,7 +220,6 @@ class _FakeSession:
 
         Args:
             _source: Ignored JavaScript source.
-            **_: Ignored keyword arguments.
 
         Returns:
             _FakeScript: Newly registered fake script.
@@ -917,7 +916,6 @@ def test_f0023_attach_propagates_frida_error_details() -> None:
 
             Args:
                 _pid: Ignored target PID.
-                **_: Ignored options.
 
             Returns:
                 object: Never returns; always raises.

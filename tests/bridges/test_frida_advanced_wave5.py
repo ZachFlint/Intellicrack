@@ -201,7 +201,6 @@ class _FakeSessionW5:
 
         Args:
             source: JavaScript source the bridge is injecting.
-            **_: Ignored keyword arguments.
 
         Returns:
             _FakeScriptW5: Newly created fake script.
@@ -437,7 +436,6 @@ class _StalkerSession:
 
         Args:
             source: JavaScript source the bridge is injecting.
-            **_: Ignored keyword arguments.
 
         Returns:
             _StalkerInjectScript: Inject script for deterministic event delivery.
