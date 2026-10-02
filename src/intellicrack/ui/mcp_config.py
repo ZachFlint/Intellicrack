@@ -90,7 +90,7 @@ from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
 from intellicrack.ui.dialogs_helpers import plain_tooltip, show_error, show_info, show_warning
 from intellicrack.ui.mcp_consent_dialog import McpServerConsentDialog
 from intellicrack.ui.mcp_roots_view import McpRootsView
-from intellicrack.ui.panels.async_bridge import BridgeCallWorker, discard_worker, worker_is_running
+from intellicrack.ui.panels.async_bridge import BridgeCallWorker, discard_worker, guarded_delivery, worker_is_running
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -1664,12 +1664,14 @@ class McpConfigDialog(QDialog):
 
         Args:
             coro: The coroutine to run.
-            on_success: Called on the GUI thread with the result.
-            on_error: Called on the GUI thread with the exception.
+            on_success: Called on the GUI thread with the result, unless the
+                dialog has been destroyed by then.
+            on_error: Called on the GUI thread with the exception, unless the
+                dialog has been destroyed by then.
         """
         worker = BridgeCallWorker(coro, owner=self)
-        _ = worker.call_finished.connect(on_success)
-        _ = worker.call_error.connect(on_error)
+        _ = worker.call_finished.connect(guarded_delivery(on_success, self, "success"))
+        _ = worker.call_error.connect(guarded_delivery(on_error, self, "error"))
         self._workers.append(worker)
         worker.start()
 

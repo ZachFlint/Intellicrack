@@ -16,9 +16,9 @@ import asyncio
 from typing import TYPE_CHECKING
 
 import pytest
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtGui import QKeyEvent
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QApplication, QWidget
 
 from intellicrack.credentials.store import CredentialStore
 from intellicrack.mcp.config import McpConfigStore
@@ -67,6 +67,16 @@ def _dialog(tmp_path: Path, parent: QWidget) -> McpConfigDialog:
     resolver = McpSecretResolver(CredentialStore())
     manager = McpConnectionManager(store, resolver, McpConsentGate(trust, prompt))
     return McpConfigDialog(manager, resolver, parent)
+
+
+async def _quick_work() -> bool:
+    """Finish at once, so the worker's result is queued before the dialog goes.
+
+    Returns:
+        bool: Always ``True``.
+    """
+    await asyncio.sleep(0)
+    return True
 
 
 async def _slow_work() -> str:
@@ -151,3 +161,34 @@ class TestWorkerLifetimeOnDismissal:
         dialog.keyPressEvent(event)
 
         assert dialog._workers == [], "Escape left a running worker attached to the dialog"
+
+
+class TestLateResultsAfterDestruction:
+    """A result queued for a dialog that has since been destroyed is dropped."""
+
+    def test_a_queued_result_never_reaches_a_destroyed_dialog(self, tmp_path: Path, qapp: QApplication) -> None:
+        """A worker that finished just before the dialog was destroyed does not call back into it.
+
+        The worker's ``call_finished`` crosses threads, so it waits in the GUI
+        thread's queue. Destroying the dialog before that queue runs is what
+        closing the dialog just as a sign-in check completes does; the
+        callback then touched a deleted button and raised out of a Qt slot.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory.
+            qapp: The shared application, whose queue delivers the result.
+        """
+        parent = QWidget()
+        dialog = _dialog(tmp_path, parent)
+        delivered: list[object] = []
+        dialog._start_worker(_quick_work(), delivered.append, delivered.append)
+        worker = dialog._workers[0]
+        assert worker.wait(int(_WORKER_SECONDS * 1000)), "the worker did not finish"
+
+        dialog.deleteLater()
+        qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+        qapp.processEvents()
+        parent.deleteLater()
+        qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+
+        assert delivered == [], "a result reached the dialog after it was destroyed"
