@@ -38,10 +38,22 @@ _DESKTOP_READOBJECTS = 0x0001
 _CHILD_WAIT_SECONDS = 30.0
 
 _REPORT_DESKTOP_CHILD = (
-    "import sys\n"
-    "from intellicrack.core.win32_desktop_process import get_thread_desktop_name\n"
+    "import ctypes, sys\n"
+    "from ctypes import wintypes\n"
+    "user32 = ctypes.WinDLL('user32', use_last_error=True)\n"
+    "kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)\n"
+    "user32.GetThreadDesktop.restype = wintypes.HANDLE\n"
+    "user32.GetThreadDesktop.argtypes = [wintypes.DWORD]\n"
+    "user32.GetUserObjectInformationW.argtypes = "
+    "[wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]\n"
+    "kernel32.GetCurrentThreadId.restype = wintypes.DWORD\n"
+    "hdesk = user32.GetThreadDesktop(kernel32.GetCurrentThreadId())\n"
+    "needed = wintypes.DWORD(0)\n"
+    "user32.GetUserObjectInformationW(hdesk, 2, None, 0, ctypes.byref(needed))\n"
+    "buffer = ctypes.create_unicode_buffer((needed.value // ctypes.sizeof(ctypes.c_wchar)) + 1)\n"
+    "user32.GetUserObjectInformationW(hdesk, 2, buffer, ctypes.sizeof(buffer), ctypes.byref(needed))\n"
     "with open(sys.argv[1], 'w', encoding='utf-8') as fh:\n"
-    "    fh.write(get_thread_desktop_name())\n"
+    "    fh.write(buffer.value)\n"
 )
 
 _REPORT_ENV_CHILD = (
