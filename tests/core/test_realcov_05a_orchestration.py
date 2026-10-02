@@ -353,13 +353,13 @@ class _ScriptedProvider(LLMProviderBase):
         if any(message.role == "tool" for message in messages):
             self.observed_tool_result_message = True
         if self.chat_call_count == 1:
-            assistant = Message(role="assistant", content="I will inspect the binary now.")
             call = ToolCall(
                 id="realcov-05a-call-1",
                 tool_name="process",
                 function_name=_INSPECT_FUNCTION,
                 arguments={"binary_path": self._binary_path},
             )
+            assistant = Message(role="assistant", content="I will inspect the binary now.", tool_calls=[call])
             return assistant, [call]
         return Message(role="assistant", content=_FINAL_TEXT), None
 
@@ -546,7 +546,16 @@ async def test_process_user_input_dispatches_real_tool_call_to_real_bridge(
     """
     bridge = _RealBinaryAnalysisBridge()
     provider = _ScriptedProvider(binary_path=str(real_pe_dll))
-    orch, session_manager = _build_orchestrator(tmp_path, provider=provider, bridge=bridge)
+    orch, session_manager = _build_orchestrator(
+        tmp_path,
+        provider=provider,
+        bridge=bridge,
+        config=OrchestratorConfig(
+            stream_responses=False,
+            confirmation_level=ConfirmationLevel.NONE,
+            core_tools=frozenset({_INSPECT_FUNCTION}),
+        ),
+    )
 
     captured_results: list[ToolResult] = []
     captured_calls: list[ToolCall] = []
