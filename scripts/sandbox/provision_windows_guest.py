@@ -1132,6 +1132,9 @@ def verify_media_contents(path: Path) -> MediaContent:
     root = mount_disk_image(path)
     try:
         content = classify_media_root(root)
+    except OSError as exc:
+        message = f"{path} mounted but its contents could not be read as a recognized file system: {exc}"
+        raise ProvisioningError(message) from exc
     finally:
         dismount_disk_image(path)
     if not content.is_windows_install_media:
