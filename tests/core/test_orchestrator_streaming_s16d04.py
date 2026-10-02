@@ -450,6 +450,7 @@ class TestStreamedToolsOnTurnEmitsChunks:
             stream_responses=True,
             stream_mode="auto",
             confirmation_level=ConfirmationLevel.NONE,
+            enable_dynamic_loading=False,
         )
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
 

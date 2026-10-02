@@ -248,7 +248,7 @@ async def test_streamed_server_tool_blocks_are_captured_with_their_input() -> No
 
 @pytest.mark.asyncio
 async def test_pause_turn_is_resent_and_the_turn_completes() -> None:
-    """``pause_turn`` resends the partial turn, server blocks included, and the call returns the finished turn."""
+    """``pause_turn`` resends the partial turn in the order it arrived, server blocks included, and the call returns the finished turn."""
     paused = _message([{"type": "text", "text": "Looking. "}, _SERVER_TOOL_USE, _TOOL_SEARCH_RESULT], "pause_turn")
     finished = _message([{"type": "text", "text": "Found it."}], "end_turn")
     with ScriptedHttpEndpoint([json_reply(paused), json_reply(finished)]) as endpoint:
@@ -260,7 +260,7 @@ async def test_pause_turn_is_resent_and_the_turn_completes() -> None:
     assert len(endpoint.requests) == 2
     resent = endpoint.requests[1].body["messages"]
     assert [message["role"] for message in resent] == ["user", "assistant"]
-    assert [block["type"] for block in resent[1]["content"]] == ["server_tool_use", "tool_search_tool_result", "text"]
+    assert [block["type"] for block in resent[1]["content"]] == ["text", "server_tool_use", "tool_search_tool_result"]
     assert assistant.content == "Looking. Found it."
     assert calls is None
     assert assistant.reasoning is not None
@@ -285,10 +285,75 @@ async def test_streamed_pause_turn_is_resent_and_streams_the_continuation() -> N
     assert len(endpoint.requests) == 2
     resent = endpoint.requests[1].body["messages"][-1]
     assert resent["role"] == "assistant"
-    assert resent["content"][0] == _SERVER_TOOL_USE
-    assert resent["content"][1] == _TOOL_SEARCH_RESULT
+    assert resent["content"] == [{"type": "text", "text": "Looking. "}, _SERVER_TOOL_USE, _TOOL_SEARCH_RESULT]
     assert usage is not None
     assert (usage.prompt_tokens, usage.completion_tokens) == (100, 20)
+
+
+_THINKING: Final[dict[str, Any]] = {"type": "thinking", "thinking": "Search for a spawner first.", "signature": "EqQBCkYIAxgCsig"}
+_SECOND_SEARCH: Final[dict[str, Any]] = {**_SERVER_TOOL_USE, "id": "srvtoolu_02DEF456", "input": {"pattern": "attach", "limit": 5}}
+_SECOND_RESULT: Final[dict[str, Any]] = {**_TOOL_SEARCH_RESULT, "tool_use_id": "srvtoolu_02DEF456"}
+_INTERLEAVED: Final[list[dict[str, Any]]] = [
+    _THINKING,
+    {"type": "text", "text": "Looking for a spawner. "},
+    _SERVER_TOOL_USE,
+    _TOOL_SEARCH_RESULT,
+    {"type": "text", "text": "Now an attacher. "},
+    _SECOND_SEARCH,
+    _SECOND_RESULT,
+]
+
+
+def _block_events(index: int, block: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build the events that stream one content block of :data:`_INTERLEAVED`.
+
+    Args:
+        index: The block index.
+        block: The block.
+
+    Returns:
+        list[dict[str, Any]]: The block's events.
+    """
+    if block["type"] == "text":
+        return _text_events(index, str(block["text"]))
+    if block["type"] == "thinking":
+        return [
+            {"type": "content_block_start", "index": index, "content_block": {"type": "thinking", "thinking": ""}},
+            {"type": "content_block_delta", "index": index, "delta": {"type": "thinking_delta", "thinking": block["thinking"]}},
+            {"type": "content_block_delta", "index": index, "delta": {"type": "signature_delta", "signature": block["signature"]}},
+            {"type": "content_block_stop", "index": index},
+        ]
+    return [{"type": "content_block_start", "index": index, "content_block": block}, {"type": "content_block_stop", "index": index}]
+
+
+@pytest.mark.asyncio
+async def test_paused_turn_keeps_the_models_own_interleaving() -> None:
+    """Thinking, text and two tool searches are resent exactly in the order the model wrote them, not reasoning first."""
+    finished = _message([{"type": "text", "text": "Found both."}], "end_turn")
+    with ScriptedHttpEndpoint([json_reply(_message(_INTERLEAVED, "pause_turn")), json_reply(finished)]) as endpoint:
+        provider = await connect_provider(endpoint, ApiDialect.MESSAGES, model=_MODEL, overrides=_TOOL_SEARCH_OVERRIDE)
+        assistant, _ = await provider.chat([Message(role="user", content="find tools")], _MODEL, tools=_tools())
+        await provider.disconnect()
+
+    assert endpoint.requests[1].body["messages"][-1] == {"role": "assistant", "content": _INTERLEAVED}
+    assert assistant.content == "Looking for a spawner. Now an attacher. Found both."
+
+
+@pytest.mark.asyncio
+async def test_streamed_paused_turn_keeps_the_models_own_interleaving() -> None:
+    """A streamed paused turn is resent in the order its blocks streamed."""
+    paused = [_message_start({"input_tokens": 40, "output_tokens": 1})]
+    for index, block in enumerate(_INTERLEAVED):
+        paused += _block_events(index, block)
+    paused += _message_end("pause_turn", 12)
+    finished = [_message_start({"input_tokens": 60, "output_tokens": 1}), *_text_events(0, "Found both."), *_message_end("end_turn", 8)]
+    with ScriptedHttpEndpoint([sse_reply(paused), sse_reply(finished)]) as endpoint:
+        provider = await connect_provider(endpoint, ApiDialect.MESSAGES, model=_MODEL, overrides=_TOOL_SEARCH_OVERRIDE)
+        text = await collect(provider.chat_stream([Message(role="user", content="find tools")], _MODEL, tools=_tools()))
+        await provider.disconnect()
+
+    assert text == "Looking for a spawner. Now an attacher. Found both."
+    assert endpoint.requests[1].body["messages"][-1] == {"role": "assistant", "content": _INTERLEAVED}
 
 
 @pytest.mark.asyncio

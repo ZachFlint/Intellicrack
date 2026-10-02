@@ -53,6 +53,7 @@ to do, which is exactly how the defect survived.
 from __future__ import annotations
 
 import asyncio
+import sys
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Final
 
@@ -202,6 +203,7 @@ async def _guest_session(tmp_path: Path) -> AsyncGenerator[tuple[_QuotingTestSan
         await peer.stop()
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="the Windows guest command line is parsed by a real powershell.exe and cmd.exe")
 @pytest.mark.asyncio
 class TestArgumentsSurviveTheGuestCommandLine:
     """Every argument the caller sends must arrive as the argument it sent."""

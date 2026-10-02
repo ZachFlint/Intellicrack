@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import os
-from collections.abc import Callable, Coroutine, Iterator
+from collections.abc import Callable, Coroutine, Generator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, cast
 
@@ -505,7 +505,7 @@ _MOD = "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async"
 
 
 @contextmanager
-def _dispatcher_replaced(runner: Callable[..., None]) -> Iterator[None]:
+def _dispatcher_replaced(runner: Callable[..., None]) -> Generator[None]:
     """Swap ``run_bridge_coroutine_async`` for ``runner`` for the duration of the block.
 
     Args:

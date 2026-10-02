@@ -50,7 +50,7 @@ from intellicrack.providers.base import (
 )
 from intellicrack.providers.capabilities import ApiDialect, CapabilityOverride, ReasoningSupport, merge_capabilities
 from intellicrack.providers.dialects.base import ToolNameStyle
-from intellicrack.providers.dialects.gemini import GeminiAdapter
+from intellicrack.providers.dialects.gemini import GeminiAdapter, gemini_thinking_config
 from intellicrack.providers.presets import GEMINI_CONTEXT_WINDOW
 from intellicrack.providers.tool_names import from_wire_name, to_wire_name
 
@@ -501,6 +501,7 @@ class GoogleProvider(LLMProviderBase):
             system_instruction,
             tool_choice=tool_choice,
             thinking=thinking,
+            reasoning=self.capabilities_for(model).reasoning,
         )
 
         client = self.client
@@ -717,6 +718,7 @@ class GoogleProvider(LLMProviderBase):
             system_instruction,
             tool_choice=tool_choice,
             thinking=thinking,
+            reasoning=self.capabilities_for(model).reasoning,
         )
 
         client = self.client
@@ -931,6 +933,7 @@ class GoogleProvider(LLMProviderBase):
         system_instruction: str | None = None,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        reasoning: ReasoningSupport | None = None,
     ) -> types.GenerateContentConfig:
         """Create a GenerateContentConfig with the given parameters.
 
@@ -945,6 +948,9 @@ class GoogleProvider(LLMProviderBase):
                 requested ``thinking_budget`` and ``include_thoughts``
                 so reasoning summaries flow back through
                 ``self._pending_thinking``.
+            reasoning: The model's reasoning surface. A Gemini 3 model is
+                sent a ``thinking_level`` instead of the budget; ``None``
+                sends the budget.
 
         Returns:
             types.GenerateContentConfig: Configured GenerateContentConfig instance.
@@ -973,9 +979,12 @@ class GoogleProvider(LLMProviderBase):
 
         thinking_config: types.ThinkingConfig | None = None
         if thinking is not None and thinking.enabled:
-            thinking_config = types.ThinkingConfig(
-                thinking_budget=thinking.budget_tokens,
-                include_thoughts=True,
+            wire = gemini_thinking_config(thinking.budget_tokens, reasoning or ReasoningSupport(supported=True))
+            level = wire.get("thinkingLevel")
+            thinking_config = (
+                types.ThinkingConfig(thinking_level=types.ThinkingLevel(str(level).upper()), include_thoughts=True)
+                if level is not None
+                else types.ThinkingConfig(thinking_budget=thinking.budget_tokens, include_thoughts=True)
             )
 
         return types.GenerateContentConfig(

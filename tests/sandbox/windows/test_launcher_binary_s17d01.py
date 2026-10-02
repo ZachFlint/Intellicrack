@@ -33,6 +33,7 @@ That behaviour drives four regressions gated here:
 from __future__ import annotations
 
 import asyncio
+import sys
 from typing import TYPE_CHECKING, cast
 
 import pytest
@@ -194,6 +195,7 @@ class TestLauncherSelection:
         assert asyncio.run(sandbox.resolve_launcher()) is None
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows where.exe PATH probe resolving cmd.exe for the Windows Sandbox launcher")
 class TestExeOnPathIsReal:
     """The PATH probe must genuinely consult the OS, not always answer True."""
 

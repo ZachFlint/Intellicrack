@@ -31,6 +31,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -42,6 +43,11 @@ _STAGE_PS1 = _REPO_ROOT / "packaging" / "stage.ps1"
 # robocopy reports success as a bitmask; only >= 8 is a genuine failure (1 == files
 # copied, 2 == extra files/dirs present, 3 == both). Anything below 8 is success.
 _ROBOCOPY_FAILURE_FLOOR = 8
+
+_ROBOCOPY = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="stage.ps1 mirrors the runtime with robocopy, the Windows system copier",
+)
 
 
 def _folded_script() -> str:
@@ -111,6 +117,7 @@ def _run_robocopy(source: Path, dest: Path, exclude_dirs: list[str], exclude_fil
     )
 
 
+@_ROBOCOPY
 def test_runtime_stage_excludes_pixi_trash(tmp_path: Path) -> None:
     """The runtime mirror must drop the pixi ``.trash`` quarantine but keep binaries.
 
@@ -140,6 +147,7 @@ def test_runtime_stage_excludes_pixi_trash(tmp_path: Path) -> None:
     assert (dest / "python.exe").is_file(), "payload runtime binary was wrongly excluded"
 
 
+@_ROBOCOPY
 def test_hexbench_stage_excludes_dev_tooling(tmp_path: Path) -> None:
     """The hexbench mirror must drop its test suite and dev scripts, keep the GUI.
 

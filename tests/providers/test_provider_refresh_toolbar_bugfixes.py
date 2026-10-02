@@ -127,18 +127,25 @@ class _RecordingModelRefreshWorker:
         api_key: str,
         api_base: str | None = None,
         provider: object | None = None,
-        parent: object | None = None,
+        *,
+        owner: object | None = None,
+        insecure_transport_acknowledged: bool | None = None,
     ) -> None:
         """Record the constructor arguments the call site supplied.
+
+        The keyword-only parameters mirror ``ModelRefreshWorker.__init__`` so a
+        call site that passes them is accepted exactly as the real worker
+        accepts it.
 
         Args:
             provider_id: Identifier of the provider to refresh models for.
             api_key: API key resolved by the call site.
             api_base: Optional custom API base URL.
             provider: Already-connected provider instance, if any.
-            parent: Parent widget (unused; recorded implicitly by construction).
+            owner: Widget that started the refresh (unused by the double).
+            insecure_transport_acknowledged: Plain-HTTP acknowledgement (unused by the double).
         """
-        del parent
+        del owner, insecure_transport_acknowledged
         type(self).last_provider_id = provider_id
         type(self).last_api_key = api_key
         type(self).last_api_base = api_base

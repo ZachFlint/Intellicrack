@@ -39,8 +39,11 @@ from __future__ import annotations
 import importlib
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Final
+
+import pytest
 
 
 _VERSION_RE: Final[re.Pattern[str]] = re.compile(r"^\d+\.\d+\.\d+$")
@@ -80,6 +83,10 @@ def test_pyqt6_qtwidgets_constructs_a_real_application_and_widget() -> None:
     assert label.text() == "intellicrack"
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason=r"Qt6Core.dll loading icuuc.dll from PyQt6\Qt6\bin is the Windows wheel's DLL layout",
+)
 def test_qt6core_dll_resolves_icuuc_next_to_itself() -> None:
     r"""``Qt6Core.dll``'s own directory must carry a working ``icuuc.dll``.
 

@@ -65,6 +65,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
     from pathlib import Path
 
+    from PyQt6.QtCore import QObject
     from pytestqt.qtbot import QtBot
 
     from intellicrack.ui.panels.async_bridge import GenericCallableWorker
@@ -315,11 +316,14 @@ def test_m2_save_all_write_executes_on_background_worker_thread(
 
     monkeypatch.setattr("intellicrack.ui.log_viewer.window._write_records_jsonl", _tracking_write)
 
-    dispatched: list[GenericCallableWorker] = []
+    dispatched: list[tuple[bool, QObject | None, QObject | None]] = []
     real_dispatch = log_viewer_window.run_callable_async
 
     def _tracking_dispatch(func: Callable[..., object], /, *args: object, **kwargs: object) -> GenericCallableWorker:
         """Dispatch through the real helper and record the worker it started.
+
+        The worker deletes itself once its thread finishes, so its type, Qt
+        parent and owner are recorded here, while it is still alive.
 
         Args:
             func: Callable the window handed to the dispatcher.
@@ -330,7 +334,7 @@ def test_m2_save_all_write_executes_on_background_worker_thread(
             GenericCallableWorker: The worker the real dispatcher started.
         """
         worker = real_dispatch(func, *args, **kwargs)
-        dispatched.append(worker)
+        dispatched.append((isinstance(worker, QThread), worker.parent(), worker.owner()))
         return worker
 
     monkeypatch.setattr("intellicrack.ui.log_viewer.window.run_callable_async", _tracking_dispatch)
@@ -341,10 +345,10 @@ def test_m2_save_all_write_executes_on_background_worker_thread(
     qtbot.waitUntil(target.exists, timeout=_WAIT_TIMEOUT_MS)
 
     assert len(dispatched) == 1, f"expected exactly one worker to be dispatched, got {len(dispatched)}"
-    worker = dispatched[0]
-    assert isinstance(worker, QThread), "_save_records did not dispatch a real QThread-backed worker"
-    assert worker.parent() is None, "the save worker is a Qt child of the window, which destroys it mid-write"
-    assert worker.owner() is window, "the window is not the save worker's recorded owner"
+    is_qthread, worker_parent, worker_owner = dispatched[0]
+    assert is_qthread, "_save_records did not dispatch a real QThread-backed worker"
+    assert worker_parent is None, "the save worker is a Qt child of the window, which destroys it mid-write"
+    assert worker_owner is window, "the window is not the save worker's recorded owner"
     assert write_thread_ids[0] != gui_thread_id, (
         "_write_records_jsonl executed on the GUI thread instead of the worker's background OS thread"
     )

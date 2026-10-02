@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
-_EXPECTED_TOOL_FUNC_COUNT: Final[int] = 95
+_EXPECTED_TOOL_FUNC_COUNT: Final[int] = 120
 _TEST_ADDRESS: Final[int] = 0x401000
 _MIN_DESC_LEN: Final[int] = 5
 

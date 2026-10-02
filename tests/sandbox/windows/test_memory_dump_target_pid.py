@@ -43,6 +43,7 @@ from __future__ import annotations
 import asyncio
 import re
 import struct
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -57,6 +58,11 @@ from intellicrack.sandbox.windows import WindowsSandbox
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+
+pytestmark = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="WindowsSandbox.dump_memory: a MiniDumpWriteDump of the target PID through PowerShell, refused off Windows",
+)
 
 # ---------------------------------------------------------------------------
 # Constants derived independently from the production source for verification.

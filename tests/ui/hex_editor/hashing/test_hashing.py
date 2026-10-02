@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import struct
 import tracemalloc
+import zlib
 from typing import TYPE_CHECKING, Any, cast
 
 import pefile
@@ -937,15 +938,7 @@ class TestCustomCrcOffloaded:
         raw_args: object = getattr(blocker, "args", None)
         crc_value: object = cast("list[object]", raw_args)[0] if isinstance(raw_args, list) and raw_args else None
         assert isinstance(crc_value, int)
-        assert crc_value == compute_custom_crc(
-            body,
-            _CRC32_WIDTH,
-            _CRC32_POLY,
-            _CRC32_INIT,
-            ref_in=True,
-            ref_out=True,
-            xor_out=_CRC32_XOR_OUT,
-        )
+        assert crc_value == zlib.crc32(body) & 0xFFFFFFFF
 
         diff = snapshot_during.compare_to(snapshot_before, "lineno")
         ui_growth: int = sum(stat.size_diff for stat in diff if stat.size_diff > 0)

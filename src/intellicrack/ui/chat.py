@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+from collections import deque
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final, override
 
@@ -44,6 +45,7 @@ from intellicrack.core.types import (
 from intellicrack.mcp.config import is_mcp_namespace
 from intellicrack.mcp.tool_source import source_label
 from intellicrack.ui.resources.font_manager import FontManager
+from intellicrack.ui.tool_activity import ToolActivityPanel
 
 
 if TYPE_CHECKING:
@@ -63,6 +65,7 @@ _INPUT_MAX_HEIGHT: Final[int] = 100
 _SEND_BTN_WIDTH: Final[int] = 80
 _SEND_BTN_HEIGHT: Final[int] = 40
 _HEADER_HEIGHT: Final[int] = 40
+_NOTICE_LINES: Final[int] = 5
 _HEADER_MARGIN_H: Final[int] = 12
 _MSG_AREA_MARGIN: Final[int] = 12
 _MAX_RESULT_DISPLAY_LEN = 200
@@ -669,9 +672,15 @@ class ChatPanel(QFrame):
 
     Attributes:
         message_submitted: Qt signal for message submitted.
+        context_requested: Qt signal asking to browse the MCP servers'
+            resources and prompts.
+        tool_activity: The tool calls running now, with their progress and
+            a way to cancel each one.
     """
 
     message_submitted = pyqtSignal(str)
+    context_requested = pyqtSignal()
+    tool_activity: ToolActivityPanel
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the ChatPanel widget.
@@ -702,6 +711,12 @@ class ChatPanel(QFrame):
         header_layout.addWidget(title)
         header_layout.addStretch()
 
+        self._context_button = QPushButton("Resources and prompts...")
+        self._context_button.setObjectName("chat_mcp_context")
+        self._context_button.setToolTip("Browse the running MCP servers' resources and prompts and insert them into your message.")
+        self._context_button.clicked.connect(self.context_requested.emit)
+        header_layout.addWidget(self._context_button)
+
         self._clear_button = QPushButton("Clear")
         self._clear_button.setObjectName("secondary_button")
         self._clear_button.clicked.connect(self.clear_messages)
@@ -722,6 +737,17 @@ class ChatPanel(QFrame):
 
         self._scroll_area.setWidget(self._messages_container)
         layout.addWidget(self._scroll_area)
+
+        self._notices: deque[str] = deque(maxlen=_NOTICE_LINES)
+        self._notice = QLabel("")
+        self._notice.setObjectName("chat_notice")
+        self._notice.setTextFormat(Qt.TextFormat.PlainText)
+        self._notice.setWordWrap(True)
+        self._notice.setVisible(False)
+        layout.addWidget(self._notice)
+
+        self.tool_activity = ToolActivityPanel()
+        layout.addWidget(self.tool_activity)
 
         self._input = ChatInput()
         self._input.message_submitted.connect(self.message_submitted.emit)
@@ -865,6 +891,28 @@ class ChatPanel(QFrame):
                 widget = item.widget()
                 if widget is not None:
                     widget.deleteLater()
+
+    def show_notice(self, text: str) -> None:
+        """Add a short notice above the message input, such as a server's resource changing.
+
+        The most recent few are shown, newest last, so one notice is not
+        hidden by others that arrive with it.
+
+        Args:
+            text: The notice, already cleaned.
+        """
+        self._notices.append(text)
+        self._notice.setText("\n".join(self._notices))
+        self._notice.setVisible(True)
+
+    @property
+    def notice(self) -> str:
+        """The notices shown now.
+
+        Returns:
+            str: The notices, one per line, or an empty string.
+        """
+        return self._notice.text() if not self._notice.isHidden() else ""
 
     def set_input_enabled(self, *, enabled: bool) -> None:
         """Enable or disable the input widget.

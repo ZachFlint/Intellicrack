@@ -22,6 +22,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Final
+from urllib.parse import urlsplit
 
 from intellicrack.core import subprocess_compat
 from intellicrack.core.config import get_env_file, get_project_root
@@ -418,6 +419,9 @@ class ProviderCredentialMapping:
         default_api_base: Endpoint the provider uses when no base URL is saved.
             A saved base URL equal to it is not an override and is never
             persisted.
+        retired_api_hosts: Hosts the provider's service has retired. A saved
+            base URL on one of them is removed from ``.env`` when the file is
+            loaded, so the provider falls back to ``default_api_base``.
     """
 
     api_key_var: str
@@ -426,6 +430,7 @@ class ProviderCredentialMapping:
     project_var: str | None = None
     api_key_aliases: tuple[str, ...] = ()
     default_api_base: str | None = None
+    retired_api_hosts: frozenset[str] = frozenset()
 
     def env_var_for(self, field: CredentialField) -> str | None:
         """Return the primary environment variable backing a credential field.
@@ -719,6 +724,8 @@ class CredentialLoader:
         provider_ids.HUGGINGFACE: ProviderCredentialMapping(
             api_key_var="HUGGINGFACE_API_TOKEN",
             api_base_var="HUGGINGFACE_API_BASE",
+            default_api_base="https://router.huggingface.co",
+            retired_api_hosts=frozenset({"api-inference.huggingface.co"}),
         ),
         provider_ids.GROK: ProviderCredentialMapping(
             api_key_var="XAI_API_KEY",
@@ -802,6 +809,29 @@ class CredentialLoader:
             path=str(self.env_path),
             count=len(parsed),
         )
+        self._migrate_retired_api_bases()
+
+    def _migrate_retired_api_bases(self) -> None:
+        """Remove saved base URLs on hosts a provider's service has retired.
+
+        HuggingFace retired ``api-inference.huggingface.co`` for its router,
+        so a base URL saved there would send every request to a host that no
+        longer serves them. The variable is removed from ``.env``, and the
+        provider uses its default endpoint. When the file cannot be rewritten
+        the value is still dropped for this session.
+        """
+        for provider, mapping in self.PROVIDER_MAPPINGS.items():
+            name = mapping.api_base_var
+            saved = self._env_vars.get(name) if name else None
+            if name is None or not saved or urlsplit(saved.strip()).hostname not in mapping.retired_api_hosts:
+                continue
+            try:
+                _ = self.remove_from_env_file(name)
+            except OSError as exc:
+                _logger.warning("env_retired_api_base_not_rewritten", provider=provider, variable=name, error=str(exc))
+                _ = self._env_vars.pop(name, None)
+                _ENVIRONMENT_OVERLAY.revert(name)
+            _logger.info("env_retired_api_base_migrated", provider=provider, variable=name, default=mapping.default_api_base)
 
     def reload(self) -> None:
         """Reload credentials from the .env file.

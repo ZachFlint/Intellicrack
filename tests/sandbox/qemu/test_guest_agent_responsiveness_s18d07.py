@@ -50,6 +50,7 @@ import asyncio
 import contextlib
 import json
 import re
+import sys
 import time
 from typing import TYPE_CHECKING, Any, Final, cast
 
@@ -326,6 +327,10 @@ async def agent(tmp_path: Path) -> AsyncGenerator[_RunningAgent]:
         await running.stop()
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="the generated Windows guest agent channel is PowerShell and is driven here by a real powershell.exe",
+)
 class TestAbandonedConnectionsDoNotDelayTheLiveOne:
     """What the host gave up on must not queue ahead of what it is waiting for."""
 
@@ -372,6 +377,10 @@ class TestAbandonedConnectionsDoNotDelayTheLiveOne:
             assert elapsed is not None, f"handshake {attempt} went unanswered within {_PROMPT_TIME_LIMIT}s"
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="the generated Windows guest agent channel is PowerShell and is driven here by a real powershell.exe",
+)
 class TestOneClientCannotLockTheChannel:
     """A peer that connects and says nothing must not deny the channel."""
 
@@ -401,6 +410,10 @@ class TestOneClientCannotLockTheChannel:
             await _close(idle_writer)
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="the generated Windows guest agent channel is PowerShell and is driven here by a real powershell.exe",
+)
 class TestTheChannelStillRunsCommands:
     """Moving the channel off the telemetry loop must not change what it does."""
 

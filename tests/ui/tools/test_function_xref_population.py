@@ -24,6 +24,7 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+import re
 from typing import TYPE_CHECKING, Final, cast, override
 
 import pytest
@@ -49,6 +50,7 @@ if TYPE_CHECKING:
 
 
 _ADDR_MAIN: Final[int] = 0x401000
+_RESULT_VARIABLE: Final[re.Pattern[str]] = re.compile(r"\b(_intellicrack_ghidra_result_\d+)\s*=")
 _ADDR_HELPER: Final[int] = 0x402000
 _ADDR_LIBC: Final[int] = 0x403000
 
@@ -448,10 +450,12 @@ class _FakeGhidraXrefRemote:
     ``tests/bridges/test_ghidra_wave2a_xrefs.py``: records every script
     dispatched via ``remote_exec`` and returns a pre-scripted dict list via
     ``remote_eval``, so ``GhidraBridge.get_xrefs_to``/``get_xrefs_from`` run
-    their real parsing/framing logic unmodified. Dispatches the canned
-    response on whether the most recently executed script queries
-    ``getReferencesTo`` or ``getReferencesFrom`` so a single fake can answer
-    both queries ``populate_xrefs_for_address`` issues with distinct data.
+    their real parsing/framing logic unmodified. Like a real Ghidra
+    interpreter, it answers each readback from the result variable that
+    script assigned, choosing the canned response by whether that script
+    queries ``getReferencesTo`` or ``getReferencesFrom``. The panel issues
+    both queries at once, so keying on the most recent script instead would
+    hand one query the other's data whenever their calls interleave.
     """
 
     def __init__(
@@ -471,6 +475,7 @@ class _FakeGhidraXrefRemote:
         self.eval_calls: list[str] = []
         self._to_result = to_result
         self._from_result = from_result
+        self._results: dict[str, list[dict[str, object]]] = {}
 
     def remote_exec(self, code: str) -> None:
         """Record the dispatched Jython script.
@@ -480,6 +485,9 @@ class _FakeGhidraXrefRemote:
                 ``prepare_remote_script`` has rewritten the script.
         """
         self.exec_calls.append(code)
+        result = self._to_result if "getReferencesTo" in code else self._from_result
+        for sentinel in _RESULT_VARIABLE.findall(code):
+            self._results[sentinel] = result
 
     def remote_eval(self, expr: str) -> object:
         """Record the sentinel readback and return the matching scripted result.
@@ -488,12 +496,11 @@ class _FakeGhidraXrefRemote:
             expr: Sentinel variable name produced by ``prepare_remote_script``.
 
         Returns:
-            object: ``to_result`` when the most recent script queried
-            ``getReferencesTo``, otherwise ``from_result``.
+            object: ``to_result`` when the script that assigned ``expr``
+            queried ``getReferencesTo``, otherwise ``from_result``.
         """
         self.eval_calls.append(expr)
-        last_exec = self.exec_calls[-1]
-        return self._to_result if "getReferencesTo" in last_exec else self._from_result
+        return self._results[expr]
 
 
 @pytest.mark.usefixtures("qapp")

@@ -58,6 +58,8 @@ _HUGGINGFACE_OAUTH_EXCHANGE_URL: Final = "https://huggingface.co/oauth/token"
 _HTTP_OK: Final = 200
 _HTTP_UNAUTHORIZED: Final = 401
 _HTTP_FORBIDDEN: Final = 403
+_LOOPBACK_REDIRECT_HOSTS: Final[frozenset[str]] = frozenset({"localhost", "127.0.0.1"})
+_HTTP_DEFAULT_PORT: Final = 80
 
 
 class OAuthError(IntellicrackError):
@@ -1484,15 +1486,21 @@ class OAuthManager:
         """Run a complete authorization code flow.
 
         Opens browser, waits for callback, and exchanges code for tokens.
-        The local callback server is always shut down and its socket closed
-        in the ``finally`` block so the bind port is released even if the
-        user cancels or the callback times out.
+        The local callback server listens on the port and path the redirect
+        URI names, so a provider registered with any loopback redirect path
+        completes. It is always shut down and its socket closed in the
+        ``finally`` block so the bind port is released even if the user
+        cancels or the callback times out.
 
         Args:
             config: OAuth configuration.
 
         Returns:
             OAuthToken: The obtained OAuthToken.
+
+        Raises:
+            OAuthCallbackError: If the redirect URI is not an ``http`` address on
+                ``localhost`` or ``127.0.0.1``, where the callback server listens.
         """
         callback_config = config
         if config.redirect_uri == "http://localhost:8080/callback":
@@ -1508,14 +1516,28 @@ class OAuthManager:
                 revoke_url=config.revoke_url,
             )
 
+        redirect = urllib.parse.urlsplit(callback_config.redirect_uri)
+        try:
+            redirect_port = redirect.port or _HTTP_DEFAULT_PORT
+        except ValueError as exc:
+            message = f"OAuth redirect URI {callback_config.redirect_uri!r} names an invalid port"
+            raise OAuthCallbackError(message) from exc
+        if redirect.scheme != "http" or redirect.hostname not in _LOOPBACK_REDIRECT_HOSTS:
+            message = (
+                f"OAuth redirect URI {callback_config.redirect_uri!r} is not an http loopback address, so the authorization "
+                f"response could never reach Intellicrack"
+            )
+            raise OAuthCallbackError(message)
+
         auth_url, oauth_state = await self.start_authorization_flow(
             callback_config,
             open_browser=False,
         )
 
         server = OAuthCallbackServer(
-            port=self._callback_port,
+            port=redirect_port,
             expected_state=oauth_state.state,
+            callback_path=redirect.path or "/",
         )
         server.start()
 

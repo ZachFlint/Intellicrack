@@ -7,7 +7,7 @@
 
 Tests validate:
 - Bridge instantiation and capability reporting
-- Tool definition completeness for all 81 tool functions
+- Tool definition completeness for all 109 tool functions
 - String injection safety in generated Jython code, driven end-to-end through set_label
 - Method existence and signatures for all bridge methods
 - Error handling when Ghidra is not connected
@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import ast
 import importlib
+import inspect
+import json
 import sys
 import types
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -33,7 +35,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
 
-_EXPECTED_TOOL_COUNT: Final[int] = 85
+_EXPECTED_TOOL_COUNT: Final[int] = 109
 _GHIDRA_DEFAULT_PORT: Final[int] = 4768
 _TEST_ADDRESS: Final[int] = 0x401000
 _TEST_RADIUS: Final[int] = 0x100
@@ -243,7 +245,12 @@ def test_tool_functions_have_descriptions(bridge: GhidraBridge) -> None:
 
 
 def test_tool_functions_have_matching_methods(bridge: GhidraBridge) -> None:
-    """Verify every tool function has a matching method on the bridge.
+    """Verify every tool function dispatches to a compatible coroutine handler.
+
+    ``ToolManager.execute_tool_call`` resolves ``ghidra.<name>`` to the bridge
+    attribute ``<name>`` and awaits it with the declared parameters as keyword
+    arguments, so each handler must exist, be a coroutine function, accept
+    every declared parameter, and require nothing the declaration omits.
 
     Args:
         bridge: GhidraBridge fixture.
@@ -254,6 +261,18 @@ def test_tool_functions_have_matching_methods(bridge: GhidraBridge) -> None:
         method = getattr(bridge, method_name, None)
         assert method is not None, f"Missing method for tool {func.name}: {method_name}"
         assert callable(method), f"Method {method_name} is not callable"
+        assert inspect.iscoroutinefunction(method), f"Method {method_name} is not a coroutine function"
+        signature = inspect.signature(method)
+        declared = {param.name for param in func.parameters}
+        assert declared <= set(signature.parameters), (
+            f"{func.name} declares parameters its handler does not accept: {sorted(declared - set(signature.parameters))}"
+        )
+        required = {
+            name
+            for name, param in signature.parameters.items()
+            if param.default is inspect.Parameter.empty and param.kind in {param.POSITIONAL_OR_KEYWORD, param.KEYWORD_ONLY}
+        }
+        assert required <= declared, f"{func.name} handler requires undeclared parameters: {sorted(required - declared)}"
 
 
 def test_tool_function_parameters_typed(bridge: GhidraBridge) -> None:
@@ -279,12 +298,37 @@ class _InjectionRecorder:
     the ground-truth value that survived the bridge's escaping. It also
     exposes a ``breached`` flag that an injected statement would flip if the
     escaping ever failed and the malicious payload escaped its string literal.
+
+    Like Ghidra's ``SymbolTable``, it refuses to create a label outside an
+    open program transaction. Labels created inside a transaction stay
+    pending until the transaction ends: a commit makes them visible to
+    ``getSymbols`` and a rollback discards them, so a readback only observes
+    labels whose write was actually committed.
     """
 
     def __init__(self) -> None:
         """Initialise empty capture state and an un-breached injection flag."""
         self.created_names: list[str] = []
+        self.pending_names: list[str] = []
+        self.committed_names: list[str] = []
+        self.in_transaction: bool = False
         self.breached: bool = False
+
+    def begin_transaction(self) -> None:
+        """Mark a program transaction as open so labels may be created."""
+        self.in_transaction = True
+
+    def finish_transaction(self, *, commit: bool) -> None:
+        """Close the open transaction, keeping or discarding pending labels.
+
+        Args:
+            commit: ``True`` to keep the pending labels, ``False`` to roll
+                them back.
+        """
+        if commit:
+            self.committed_names.extend(self.pending_names)
+        self.pending_names.clear()
+        self.in_transaction = False
 
     def create_label(self, _addr: object, name: object, _source: object) -> _RecordedSymbol:
         """Capture the name argument exactly as the interpreter bound it.
@@ -295,24 +339,32 @@ class _InjectionRecorder:
             _source: Ghidra ``SourceType`` token (ignored by the recorder).
 
         Returns:
-            _RecordedSymbol: A symbol double whose ``getName`` returns ``name``
-            so the bridge's readback verification observes the requested label.
+            _RecordedSymbol: A symbol double whose ``getName`` returns ``name``.
+
+        Raises:
+            RuntimeError: If no program transaction is open, mirroring
+                Ghidra's refusal to modify a program outside a transaction.
         """
+        if not self.in_transaction:
+            error_message = "createLabel called outside a program transaction"
+            raise RuntimeError(error_message)
         captured = str(name)
         self.created_names.append(captured)
+        self.pending_names.append(captured)
         return _RecordedSymbol(captured)
 
     def get_symbols(self, _addr: object) -> list[_RecordedSymbol]:
-        """Return symbol doubles for every label created so far.
+        """Return symbol doubles for every committed label.
 
         Args:
             _addr: Address double supplied by the readback script (ignored;
                 a single address is used throughout each test).
 
         Returns:
-            list[_RecordedSymbol]: One symbol per captured ``createLabel`` call.
+            list[_RecordedSymbol]: One symbol per label whose transaction
+            committed.
         """
-        return [_RecordedSymbol(name) for name in self.created_names]
+        return [_RecordedSymbol(name) for name in self.committed_names]
 
 
 setattr(_InjectionRecorder, "createLabel", _InjectionRecorder.create_label)
@@ -354,7 +406,13 @@ class _InjectionAddr:
 
 
 class _InjectionProgram:
-    """Program double exposing the recorder as the symbol table."""
+    """Program double exposing the recorder as the symbol table.
+
+    Implements Ghidra's ``startTransaction``/``endTransaction`` contract:
+    each started transaction gets a fresh id, ending an id that is not open
+    raises, and every ended transaction is recorded with whether it was
+    committed or rolled back.
+    """
 
     def __init__(self, recorder: _InjectionRecorder) -> None:
         """Store the recorder used as the symbol table.
@@ -363,6 +421,41 @@ class _InjectionProgram:
             recorder: Symbol-table recorder to expose via ``getSymbolTable``.
         """
         self._recorder = recorder
+        self._next_tx_id = 1
+        self._open: dict[int, str] = {}
+        self.transactions: list[tuple[str, bool]] = []
+
+    def start_transaction(self, description: str) -> int:
+        """Open a named transaction and return its id.
+
+        Args:
+            description: Transaction description supplied by the script.
+
+        Returns:
+            int: Identifier the script passes back to ``endTransaction``.
+        """
+        tx_id = self._next_tx_id
+        self._next_tx_id += 1
+        self._open[tx_id] = description
+        self._recorder.begin_transaction()
+        return tx_id
+
+    def end_transaction(self, tx_id: int, commit: object) -> None:
+        """Close transaction ``tx_id``, committing or rolling it back.
+
+        Args:
+            tx_id: Identifier returned by :meth:`start_transaction`.
+            commit: Commit flag as the script passed it; truthy commits.
+
+        Raises:
+            RuntimeError: If ``tx_id`` does not name an open transaction.
+        """
+        if tx_id not in self._open:
+            error_message = f"endTransaction called for unknown transaction id {tx_id}"
+            raise RuntimeError(error_message)
+        committed = bool(commit)
+        self.transactions.append((self._open.pop(tx_id), committed))
+        self._recorder.finish_transaction(commit=committed)
 
     def get_symbol_table(self) -> _InjectionRecorder:
         """Return the recorder standing in for the Ghidra symbol table.
@@ -374,6 +467,8 @@ class _InjectionProgram:
 
 
 setattr(_InjectionProgram, "getSymbolTable", _InjectionProgram.get_symbol_table)
+setattr(_InjectionProgram, "startTransaction", _InjectionProgram.start_transaction)
+setattr(_InjectionProgram, "endTransaction", _InjectionProgram.end_transaction)
 
 
 class _InjectionFakeClient:
@@ -398,8 +493,9 @@ class _InjectionFakeClient:
         self.exec_payloads: list[str] = []
         self.eval_payloads: list[str] = []
         self._recorder = recorder
+        self.program = _InjectionProgram(recorder)
         self.globals: dict[str, Any] = {
-            "currentProgram": _InjectionProgram(recorder),
+            "currentProgram": self.program,
             "toAddr": _InjectionAddr,
         }
 
@@ -473,6 +569,31 @@ def injection_source_type() -> Iterator[None]:
             sys.modules.pop(mod_name, None)
 
 
+def _created_label_argument(source: str) -> object:
+    """Return the value the generated source passes as ``createLabel``'s name.
+
+    Parses the script the bridge emitted and locates its single
+    ``createLabel`` call. The name argument must be one string constant;
+    any escaping defect that let the payload leak into code would split it
+    into other expressions and fail the constant check.
+
+    Args:
+        source: Generated Jython source sent through ``remote_exec``.
+
+    Returns:
+        object: The literal value bound as the label name.
+    """
+    calls = [
+        node
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "createLabel"
+    ]
+    assert len(calls) == 1, f"expected exactly one createLabel call, found {len(calls)}"
+    name_arg = calls[0].args[1]
+    assert isinstance(name_arg, ast.Constant), f"createLabel name argument is not a literal: {ast.dump(name_arg)}"
+    return name_arg.value
+
+
 class TestStringInjectionPrevention:
     """Verify the bridge's generated Jython neutralises injection via escaping.
 
@@ -481,8 +602,11 @@ class TestStringInjectionPrevention:
     genuinely compiles and runs the generated script, so the independent
     oracle is the Python interpreter itself plus an independently recomputed
     escaped literal: a hostile label name must reach ``createLabel`` as a
-    byte-for-byte data string with no side effect, and the generated source
-    must contain the value only in its ``ast.unparse``-normalised escaped form.
+    byte-for-byte data string with no side effect, the generated source must
+    carry the value as its JSON-escaped literal (the escaping ``set_label``
+    applies), and parsing the source must show ``createLabel`` receiving that
+    value as a single string constant. Each write must also land in a
+    committed ``intellicrack.set_label`` transaction.
     """
 
     @pytest.mark.asyncio
@@ -508,7 +632,10 @@ class TestStringInjectionPrevention:
         assert recorder.breached is False
         assert recorder.created_names == [malicious]
         assert result["success"] is True
-        assert ast.unparse(ast.Constant(value=malicious)) in client.exec_payloads[0]
+        assert json.dumps(malicious) in client.exec_payloads[0]
+        assert _created_label_argument(client.exec_payloads[0]) == malicious
+        assert client.program.transactions == [("intellicrack.set_label", True)]
+        assert recorder.committed_names == [malicious]
 
     @pytest.mark.asyncio
     @pytest.mark.usefixtures("injection_source_type")
@@ -517,7 +644,7 @@ class TestStringInjectionPrevention:
 
         An unescaped backslash before a quote would corrupt the literal; the
         recorder confirms the exact path reached ``createLabel`` and the
-        generated source doubles every backslash exactly as ``ast.unparse`` produces.
+        generated source doubles every backslash exactly as ``json.dumps`` produces.
         """
         bridge = GhidraBridge()
         recorder = _InjectionRecorder()
@@ -529,7 +656,10 @@ class TestStringInjectionPrevention:
 
         assert recorder.created_names == [path_name]
         assert result["name"] == path_name
-        assert ast.unparse(ast.Constant(value=path_name)) in client.exec_payloads[0]
+        assert json.dumps(path_name) in client.exec_payloads[0]
+        assert _created_label_argument(client.exec_payloads[0]) == path_name
+        assert client.program.transactions == [("intellicrack.set_label", True)]
+        assert recorder.committed_names == [path_name]
 
     @pytest.mark.asyncio
     @pytest.mark.usefixtures("injection_source_type")
@@ -551,7 +681,10 @@ class TestStringInjectionPrevention:
         assert recorder.breached is False
         assert recorder.created_names == [multiline]
         assert result["success"] is True
-        assert ast.unparse(ast.Constant(value=multiline)) in client.exec_payloads[0]
+        assert json.dumps(multiline) in client.exec_payloads[0]
+        assert _created_label_argument(client.exec_payloads[0]) == multiline
+        assert client.program.transactions == [("intellicrack.set_label", True)]
+        assert recorder.committed_names == [multiline]
 
     @pytest.mark.asyncio
     @pytest.mark.usefixtures("injection_source_type")
@@ -559,9 +692,10 @@ class TestStringInjectionPrevention:
         """NUL and other control characters must be escaped, not dropped.
 
         Control bytes injected into a raw literal would either break parsing
-        or be silently lost; the escaping defence encodes them as hex escape
-        sequences via ``ast.unparse``, and the recorder confirms the bridge
-        reconstructs them exactly.
+        or be silently lost; the escaping defence encodes them as Unicode
+        escape sequences via ``json.dumps``, no raw control byte reaches the
+        generated source, and the recorder confirms the bridge reconstructs
+        them exactly.
         """
         bridge = GhidraBridge()
         recorder = _InjectionRecorder()
@@ -573,8 +707,12 @@ class TestStringInjectionPrevention:
 
         assert recorder.created_names == [control_name]
         assert result["name"] == control_name
-        assert ast.unparse(ast.Constant(value=control_name)) in client.exec_payloads[0]
-        assert "\\x00" in client.exec_payloads[0]
+        assert json.dumps(control_name) in client.exec_payloads[0]
+        assert _created_label_argument(client.exec_payloads[0]) == control_name
+        assert "\\u0000" in client.exec_payloads[0]
+        assert "\x00" not in client.exec_payloads[0]
+        assert client.program.transactions == [("intellicrack.set_label", True)]
+        assert recorder.committed_names == [control_name]
 
 
 class TestMutatingMethodsRequireConnection:

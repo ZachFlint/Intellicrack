@@ -530,11 +530,12 @@ def test_script_context_to_prompt_full_structure_exact_layout() -> None:
     Frida API-reference footer -- any silent reordering, dropped section, or
     formatting drift in the rich output is caught.
     """
+    binary_path = Path("C:/bin/app.exe")
     ctx = ScriptContext(
         binary_name="app.exe",
         architecture="x64",
         platform="windows",
-        binary_path=Path("C:/bin/app.exe"),
+        binary_path=binary_path,
         module_base=_MODULE_BASE,
         target_functions=[{"name": "checkLicense", "address": _FUNC_ADDR, "strategy": "return_true"}],
         identified_protections=["VMProtect", "Themida"],
@@ -552,7 +553,7 @@ def test_script_context_to_prompt_full_structure_exact_layout() -> None:
         "Binary: app.exe",
         "Architecture: x64",
         "Platform: windows",
-        "Path: C:\\bin\\app.exe",
+        f"Path: {binary_path}",
         "Module Base: 0x400000",
         "",
         "Target Functions:",

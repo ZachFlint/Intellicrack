@@ -27,14 +27,17 @@ from intellicrack.mcp.catalog import (
     compute_generation,
     fetch_catalog,
 )
+from intellicrack.mcp.client_hooks import McpClientHooks, McpHooksFactory
 from intellicrack.mcp.config import (
     MCP_CONFIG_FILENAME,
     NAMESPACE_PREFIX,
     SERVER_ID_PATTERN,
+    SERVER_LOG_LEVELS,
     HttpServerSpec,
     McpConfigDocument,
     McpConfigStore,
     McpInputSpec,
+    McpRootsSpec,
     McpSandboxSpec,
     McpServerConfig,
     McpTransportKind,
@@ -57,6 +60,8 @@ from intellicrack.mcp.consent import (
     scan_command_for_dangerous_patterns,
     server_identity,
 )
+from intellicrack.mcp.context_events import McpContextChange, McpContextEvent, McpContextListener
+from intellicrack.mcp.context_tools import ContextTool, run_context_tool
 from intellicrack.mcp.errors import (
     McpAuthError,
     McpConfigError,
@@ -67,6 +72,7 @@ from intellicrack.mcp.errors import (
 )
 from intellicrack.mcp.policy import ToolCost, enabled_entries, estimate_tool_cost
 from intellicrack.mcp.secrets import MCP_SECRET_NAMESPACE, McpSecretResolver
+from intellicrack.mcp.server_logs import McpLogRecord, McpServerLogBook
 from intellicrack.mcp.tool_source import (
     UNTRUSTED_BLOCK_END,
     UNTRUSTED_BLOCK_START,
@@ -77,6 +83,7 @@ from intellicrack.mcp.tool_source import (
     source_label,
     validate_structured_content,
 )
+from intellicrack.mcp.uri_template import expand_uri_template, template_variables
 from intellicrack.mcp.validation import SchemaViolation, validate_against_schema
 
 
@@ -86,15 +93,18 @@ if TYPE_CHECKING:
         build_oauth_provider,
         has_stored_credentials,
         issuer_for,
+        legacy_issuers_for,
         resolve_client_identity,
         sign_out,
     )
+    from intellicrack.mcp.client_session import McpClient, describe_capabilities
     from intellicrack.mcp.connection import (
         McpConnection,
         McpConnectionManager,
         McpHealth,
         McpServerStatus,
     )
+    from intellicrack.mcp.progress import McpProgress, ProgressKind
     from intellicrack.mcp.resources import (
         PromptSummary,
         ResourceSummary,
@@ -103,6 +113,7 @@ if TYPE_CHECKING:
         list_resources,
         read_resource,
     )
+    from intellicrack.mcp.roots import McpRoot, McpRootSet, RootSource, root_uri
     from intellicrack.mcp.sandbox_launch import (
         ENVIRONMENT_ALLOWLIST,
         JobLimits,
@@ -136,8 +147,11 @@ def __getattr__(name: str) -> object:
         "build_oauth_provider": "intellicrack.mcp.auth",
         "has_stored_credentials": "intellicrack.mcp.auth",
         "issuer_for": "intellicrack.mcp.auth",
+        "legacy_issuers_for": "intellicrack.mcp.auth",
         "resolve_client_identity": "intellicrack.mcp.auth",
         "sign_out": "intellicrack.mcp.auth",
+        "McpClient": "intellicrack.mcp.client_session",
+        "describe_capabilities": "intellicrack.mcp.client_session",
         "McpConnection": "intellicrack.mcp.connection",
         "McpConnectionManager": "intellicrack.mcp.connection",
         "McpHealth": "intellicrack.mcp.connection",
@@ -148,6 +162,12 @@ def __getattr__(name: str) -> object:
         "list_prompts": "intellicrack.mcp.resources",
         "list_resources": "intellicrack.mcp.resources",
         "read_resource": "intellicrack.mcp.resources",
+        "McpProgress": "intellicrack.mcp.progress",
+        "ProgressKind": "intellicrack.mcp.progress",
+        "McpRoot": "intellicrack.mcp.roots",
+        "McpRootSet": "intellicrack.mcp.roots",
+        "RootSource": "intellicrack.mcp.roots",
+        "root_uri": "intellicrack.mcp.roots",
         "ENVIRONMENT_ALLOWLIST": "intellicrack.mcp.sandbox_launch",
         "JobLimits": "intellicrack.mcp.sandbox_launch",
         "SandboxedJob": "intellicrack.mcp.sandbox_launch",
@@ -171,17 +191,21 @@ __all__ = [
     "MCP_SECRET_NAMESPACE",
     "NAMESPACE_PREFIX",
     "SERVER_ID_PATTERN",
+    "SERVER_LOG_LEVELS",
     "UNTRUSTED_BLOCK_END",
     "UNTRUSTED_BLOCK_START",
     "ApprovalRecord",
     "ApprovalScope",
     "ApprovalStore",
     "ConsentAnswer",
+    "ContextTool",
     "DangerousPattern",
     "HttpServerSpec",
     "JobLimits",
     "KeyringTokenStorage",
     "McpAuthError",
+    "McpClient",
+    "McpClientHooks",
     "McpConfigDocument",
     "McpConfigError",
     "McpConfigStore",
@@ -190,20 +214,32 @@ __all__ = [
     "McpConnectionManager",
     "McpConsentDeniedError",
     "McpConsentGate",
+    "McpContextChange",
+    "McpContextEvent",
+    "McpContextListener",
     "McpError",
     "McpHealth",
+    "McpHooksFactory",
     "McpInputSpec",
+    "McpLogRecord",
+    "McpProgress",
     "McpProtocolError",
+    "McpRoot",
+    "McpRootSet",
+    "McpRootsSpec",
     "McpSandboxSpec",
     "McpSecretResolver",
     "McpServerConfig",
+    "McpServerLogBook",
     "McpServerStatus",
     "McpToolCatalog",
     "McpToolEntry",
     "McpToolSource",
     "McpTransportKind",
+    "ProgressKind",
     "PromptSummary",
     "ResourceSummary",
+    "RootSource",
     "SandboxedJob",
     "SandboxedLaunch",
     "SchemaViolation",
@@ -216,27 +252,33 @@ __all__ = [
     "build_sandboxed_startup",
     "compute_generation",
     "deny_all_launches",
+    "describe_capabilities",
     "describe_launch",
     "enabled_entries",
     "estimate_tool_cost",
+    "expand_uri_template",
     "fetch_catalog",
     "from_canonical_name",
     "get_prompt",
     "has_stored_credentials",
     "is_mcp_namespace",
     "issuer_for",
+    "legacy_issuers_for",
     "list_prompts",
     "list_resources",
     "map_result",
     "map_tool_to_function",
     "read_resource",
     "resolve_client_identity",
+    "root_uri",
+    "run_context_tool",
     "sandbox_supported",
     "sanitize_untrusted_text",
     "scan_command_for_dangerous_patterns",
     "server_identity",
     "sign_out",
     "source_label",
+    "template_variables",
     "to_canonical_name",
     "validate_against_schema",
     "validate_structured_content",

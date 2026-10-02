@@ -81,13 +81,12 @@ class TestServerKeys:
         assert set(reasons) == {"broken", "!!!"}
         assert "carrier-pigeon" in reasons["broken"]
 
-    def test_keys_that_collide_after_normalizing_keep_the_first(self) -> None:
-        """``my_server`` and ``my-server`` cannot both be ``my-server``; the second is reported."""
+    def test_keys_that_collide_after_normalizing_are_both_kept(self) -> None:
+        """``my_server`` and ``my-server`` cannot both be ``my-server``; the one not already an id gets a numbered id."""
         parsed = McpConfigStore.parse_document({"servers": {"my_server": {"command": "a"}, "my-server": {"command": "b"}}})
-        assert [server.server_id for server in parsed.servers] == ["my-server"]
-        assert parsed.servers[0].stdio is not None
-        assert parsed.servers[0].stdio.command == "a"
-        assert [entry.key for entry in parsed.rejected] == ["my-server"]
+        commands = {server.server_id: server.stdio.command for server in parsed.servers if server.stdio is not None}
+        assert commands == {"my-server-2": "a", "my-server": "b"}
+        assert parsed.rejected == ()
 
     def test_import_with_nothing_usable_is_an_error(self) -> None:
         """Pasting a document where no server can be used says why instead of importing nothing."""

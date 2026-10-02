@@ -355,15 +355,20 @@ def _make_qemu_sandbox(pidfile: Path) -> QEMUSandbox:
     return sandbox
 
 
-def _install_fast_retry(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Shrink the production retry delay/count so real-loop tests run quickly.
+def _install_fast_pidfile_polling(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Select the pidfile branch and shrink its retry delay/count.
 
-    Patches the module-level constants the production ``_resolve_qemu_pid``
-    loop actually reads, leaving its real polling logic intact.
+    ``_resolve_qemu_pid`` polls the pidfile only where QEMU daemonizes; on a
+    Windows host it returns the retained foreground child's PID instead, which
+    ``tests/sandbox/qemu/test_windows_launch_s17d16.py`` covers. The host
+    platform constant is redirected so the real polling loop runs on every
+    host, and the module-level constants that loop reads are shrunk so these
+    tests run quickly, leaving its polling logic intact.
 
     Args:
         monkeypatch: Pytest monkeypatch fixture used to set the constants.
     """
+    monkeypatch.setattr(qemu_module, "_IS_WINDOWS", False)
     monkeypatch.setattr(qemu_module, "_PIDFILE_RETRY_DELAY", _FAST_RETRY_DELAY)
     monkeypatch.setattr(qemu_module, "_PIDFILE_MAX_RETRIES", _FAST_MAX_RETRIES)
 
@@ -389,7 +394,7 @@ async def test_qemu_resolve_pid_uses_real_retry_constants(
     assert qemu_module.PIDFILE_RETRY_DELAY >= _MIN_RETRY_DELAY
     assert qemu_module.PIDFILE_MAX_RETRIES * qemu_module.PIDFILE_RETRY_DELAY >= _MIN_TOTAL_WAIT
 
-    _install_fast_retry(monkeypatch)
+    _install_fast_pidfile_polling(monkeypatch)
     pidfile = tmp_path / "qemu.pid"
     _ = pidfile.write_text(str(_EXPECTED_PID_IMMEDIATE))
 
@@ -415,7 +420,7 @@ async def test_qemu_pidfile_retry_reads_immediate_file(
         tmp_path: Pytest temporary directory for the test.
         monkeypatch: Pytest monkeypatch fixture used to speed up the loop.
     """
-    _install_fast_retry(monkeypatch)
+    _install_fast_pidfile_polling(monkeypatch)
     pidfile = tmp_path / "qemu.pid"
     _ = pidfile.write_text(str(_EXPECTED_PID_IMMEDIATE))
 
@@ -441,7 +446,7 @@ async def test_qemu_pidfile_retry_reads_delayed_file(
         tmp_path: Pytest temporary directory for the test.
         monkeypatch: Pytest monkeypatch fixture used to speed up the loop.
     """
-    _install_fast_retry(monkeypatch)
+    _install_fast_pidfile_polling(monkeypatch)
     pidfile = tmp_path / "qemu.pid"
 
     async def write_pidfile_after_delay() -> None:
@@ -476,7 +481,7 @@ async def test_qemu_pidfile_retry_exhausted_raises_sandbox_error(
         tmp_path: Pytest temporary directory for the test.
         monkeypatch: Pytest monkeypatch fixture used to speed up the loop.
     """
-    _install_fast_retry(monkeypatch)
+    _install_fast_pidfile_polling(monkeypatch)
     pidfile = tmp_path / "nonexistent_qemu.pid"
 
     sandbox = _make_qemu_sandbox(pidfile)
@@ -507,7 +512,7 @@ async def test_qemu_pidfile_retry_handles_corrupt_content(
         tmp_path: Pytest temporary directory for the test.
         monkeypatch: Pytest monkeypatch fixture used to speed up the loop.
     """
-    _install_fast_retry(monkeypatch)
+    _install_fast_pidfile_polling(monkeypatch)
     pidfile = tmp_path / "qemu.pid"
     _ = pidfile.write_text("not_a_number\n")
 

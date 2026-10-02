@@ -18,7 +18,7 @@ from __future__ import annotations
 import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QScrollArea, QSplitter, QTabWidget, QToolButton
+from PyQt6.QtWidgets import QApplication, QScrollArea, QSplitter, QTabWidget, QToolButton
 
 from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.sandbox_panel import SandboxPanel
@@ -26,6 +26,7 @@ from intellicrack.ui.panels.sandbox_panel import SandboxPanel
 
 _MIN_SPIN_WIDTH = 110
 _MIN_FIELD_WIDTH = 160
+_THEME_SPIN_SHEET = "QSpinBox { border: 1px solid #b4bcc6; padding: 4px 8px; min-width: 90px; }"
 
 
 @pytest.mark.usefixtures("qapp")
@@ -81,6 +82,35 @@ class TestSandboxInputMinimumWidths:
         panel = SandboxPanel()
         assert panel._timeout_spin.minimumWidth() >= _MIN_SPIN_WIDTH
         assert panel._memory_limit_spin.minimumWidth() >= _MIN_SPIN_WIDTH
+
+    @staticmethod
+    def test_spinbox_minimum_width_survives_theme_stylesheet(qapp: QApplication) -> None:
+        """A theme stylesheet's narrower spin-box ``min-width`` must not override the panel's floor.
+
+        Every bundled theme declares ``QSpinBox { min-width: 90px; }`` with
+        padding and a border, which polishes a spin box to a 108px minimum.
+        That must neither override the floor of a panel built under the theme
+        nor of one already on screen when the theme is switched.
+
+        Args:
+            qapp: The shared offscreen QApplication fixture.
+        """
+        previous_sheet = qapp.styleSheet()
+        live_panel = SandboxPanel()
+        live_panel.show()
+        try:
+            qapp.setStyleSheet(_THEME_SPIN_SHEET)
+            qapp.processEvents()
+            built_panel = SandboxPanel()
+            built_panel.show()
+            qapp.processEvents()
+            for panel in (live_panel, built_panel):
+                assert panel._timeout_spin.minimumWidth() >= _MIN_SPIN_WIDTH
+                assert panel._memory_limit_spin.minimumWidth() >= _MIN_SPIN_WIDTH
+            built_panel.close()
+        finally:
+            live_panel.close()
+            qapp.setStyleSheet(previous_sheet)
 
     @staticmethod
     def test_text_fields_have_minimum_width() -> None:

@@ -16,6 +16,14 @@ command, and blocking the loop for that time would stall every other server's
 heartbeat, every in-flight tool call, and any connection being established
 alongside it.
 
+The dialogs themselves are not run with ``exec()``. Several servers starting
+together can have several questions open at once, and a dialog run with
+``exec()`` inside another's event loop cannot return until the inner one does:
+the operator's answer to the first would wait for the second to close, and
+could by then have timed out and been thrown away. Each dialog is opened
+without blocking instead, and an answer is sent to the asker the moment it is
+given, whatever else is on the screen.
+
 When no answer arrives, the answer is no. A consent request that times out
 refuses the launch and an elicitation that times out declines, because the
 alternative -- proceeding as though the operator had agreed -- is the one
@@ -76,6 +84,9 @@ class PendingPrompt:
             dialog is shown.
         dialog: The dialog currently showing the question. Touched only on
             the GUI thread.
+        answered: Whether an answer, the operator's or the one given when the
+            dialog closed without one, has been sent. Touched only on the GUI
+            thread.
     """
 
     loop: asyncio.AbstractEventLoop
@@ -83,6 +94,7 @@ class PendingPrompt:
     refusal: object
     withdrawn: threading.Event = field(default_factory=threading.Event)
     dialog: QDialog | None = None
+    answered: bool = False
 
 
 class QtMcpPrompts(QObject):
@@ -206,12 +218,12 @@ class QtMcpPrompts(QObject):
             dialog.reject()
 
     def _show_consent_dialog(self, payload: object) -> None:
-        """Show the consent dialog and deliver the operator's answer.
+        """Show the consent dialog; its answer is delivered as soon as it is given.
 
-        The answer is taken from the dialog's ``decision_made`` signal. A
-        dialog closed any other way -- the window's close button, or being
-        withdrawn -- produced no decision, and is delivered as a refusal
-        unless nobody is waiting for it.
+        The answer is taken from the dialog's ``decision_made`` signal and
+        sent to the asker at once. A dialog closed any other way -- the
+        window's close button, or being withdrawn -- produced no decision,
+        and is delivered as a refusal unless nobody is waiting for it.
 
         Args:
             payload: Tuple of ``(pending, config, description, findings)``
@@ -224,7 +236,6 @@ class QtMcpPrompts(QObject):
         if pending.withdrawn.is_set():
             _logger.info("mcp_consent_prompt_skipped_withdrawn", server_id=config.server_id)
             return
-        decisions: list[ConsentAnswer] = []
         try:
             dialog = McpServerConsentDialog(config, description, findings, self._parent_widget)
         except (RuntimeError, OSError, ValueError) as exc:
@@ -233,21 +244,18 @@ class QtMcpPrompts(QObject):
             return
 
         def _record(approved: object, trusted: object, blocked: object) -> None:
-            """Keep the decision the dialog reported.
+            """Send the decision the dialog reported to the asker.
 
             Args:
                 approved: Whether the launch was approved.
                 trusted: Whether the trust box was ticked.
                 blocked: Whether the operator asked never to be asked again.
             """
-            decisions.append(ConsentAnswer(approved=approved is True, trusted=trusted is True, blocked=blocked is True))
+            answer = ConsentAnswer(approved=approved is True, trusted=trusted is True, blocked=blocked is True)
+            _deliver(pending, answer, what=f"consent for '{config.server_id}'")
 
         _ = dialog.decision_made.connect(_record)
-        self._run_dialog(pending, dialog)
-        if pending.withdrawn.is_set():
-            _logger.warning("mcp_consent_late_answer_discarded", server_id=config.server_id)
-            return
-        _resolve_future(pending, decisions[-1] if decisions else ConsentAnswer(approved=False))
+        self._run_dialog(pending, dialog, ConsentAnswer(approved=False))
 
     def elicitation_for(self, server_id: str) -> ElicitationFnT:
         """Build the elicitation handler for one server.
@@ -303,11 +311,11 @@ class QtMcpPrompts(QObject):
             self._open.discard(pending)
 
     def _show_elicitation_dialog(self, payload: object) -> None:
-        """Show the elicitation dialog and deliver the operator's answer.
+        """Show the elicitation dialog; its answer is delivered as soon as it is given.
 
-        The answer is taken from the dialog's ``answered`` signal. A dialog
-        closed without one is delivered as a cancellation unless nobody is
-        waiting for it any more.
+        The answer is taken from the dialog's ``answered`` signal and sent to
+        the asker at once. A dialog closed without one is delivered as a
+        cancellation unless nobody is waiting for it any more.
 
         Args:
             payload: Tuple of ``(pending, server_id, params)`` emitted by
@@ -317,7 +325,6 @@ class QtMcpPrompts(QObject):
         if pending.withdrawn.is_set():
             _logger.info("mcp_elicitation_prompt_skipped_withdrawn", server_id=server_id)
             return
-        results: list[ElicitResult] = []
         try:
             dialog = McpElicitationDialog(server_id, params, self._parent_widget)
         except (RuntimeError, OSError, ValueError) as exc:
@@ -326,35 +333,68 @@ class QtMcpPrompts(QObject):
             return
 
         def _record(action: str) -> None:
-            """Keep the answer the dialog reported.
+            """Send the answer the dialog reported to the asker.
 
             Args:
                 action: ``accept``, ``decline`` or ``cancel``.
             """
             del action
-            results.append(dialog.to_result())
+            _deliver(pending, dialog.to_result(), what=f"elicitation from '{server_id}'")
 
         _ = dialog.answered.connect(_record)
-        self._run_dialog(pending, dialog)
-        if pending.withdrawn.is_set():
-            _logger.warning("mcp_elicitation_late_answer_discarded", server_id=server_id)
-            return
-        _resolve_future(pending, results[-1] if results else ElicitResult(action="cancel"))
+        self._run_dialog(pending, dialog, ElicitResult(action="cancel"))
 
     @staticmethod
-    def _run_dialog(pending: PendingPrompt, dialog: QDialog) -> None:
-        """Show one question's dialog modally, tracking it so it can be withdrawn.
+    def _run_dialog(pending: PendingPrompt, dialog: QDialog, unanswered: object) -> None:
+        """Open one question's dialog without blocking, tracking it so it can be withdrawn.
+
+        The dialog is modal to its window but does not run an event loop of
+        its own, so another question's dialog opening on top of it never
+        holds its answer back. Closing without an answer sends ``unanswered``
+        unless nobody is waiting any more.
 
         Args:
             pending: The question being shown.
             dialog: The dialog showing it.
+            unanswered: What the asker receives if the dialog closes without
+                an answer.
         """
         pending.dialog = dialog
-        try:
-            _ = dialog.exec()
-        finally:
+
+        def _closed(result: int) -> None:
+            """Forget the dialog once it is gone, answering for it if the operator did not.
+
+            Args:
+                result: The dialog's result code, unused: the answer came from
+                    its signal, or there was none.
+            """
+            del result
             pending.dialog = None
+            if not pending.answered and not pending.withdrawn.is_set():
+                _deliver(pending, unanswered, what="an unanswered question")
             dialog.deleteLater()
+
+        _ = dialog.finished.connect(_closed)
+        dialog.open()
+
+
+def _deliver(pending: PendingPrompt, value: object, *, what: str) -> None:
+    """Send an answer to the asker at once, unless it was given up on or already answered.
+
+    Runs on the GUI thread, from the dialog's own signal.
+
+    Args:
+        pending: The question being answered.
+        value: The answer.
+        what: What was answered, for the log.
+    """
+    if pending.withdrawn.is_set():
+        _logger.warning("mcp_prompt_late_answer_discarded", question=what)
+        return
+    if pending.answered:
+        return
+    pending.answered = True
+    _resolve_future(pending, value)
 
 
 def _resolve_future(pending: PendingPrompt, value: object) -> None:

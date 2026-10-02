@@ -178,28 +178,29 @@ public class LicenseAnalyzer extends GhidraScript {
             "display": "Cutter",
             "extension": ".r2",
             "language": "r2cmd",
-            "template": """# Cutter/Rizin script for license analysis # Target: {target}
+            "template": """# Cutter/Rizin script for license analysis
+# Target: {target}
 
-                        # Analyze all
-                        aaa
+# Analyze all
+aaa
 
-                        # Find license-related strings
-                        iz~licen
-                        iz~serial
-                        iz~regist
+# Find license-related strings
+iz~licen
+iz~serial
+iz~regist
 
-                        # Find crypto function references
-                        axt sym.imp.CryptAcquireContextW
+# Find crypto function references
+axt sym.imp.CryptAcquireContextW
 
-                        # Seek to main
-                        s main
+# Seek to main
+s main
 
-                        # Print disassembly
-                        pdf
+# Print disassembly
+pdf
 
-                        # Find comparison operations
-                        /c cmp
-                        """,
+# Find comparison operations
+/c cmp
+""",
         },
         "x64dbg": {
             "display": "x64dbg",

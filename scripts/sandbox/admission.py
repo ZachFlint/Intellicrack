@@ -36,13 +36,17 @@ against real files and real concurrent processes.
 from __future__ import annotations
 
 import math
-import msvcrt
 import os
 import sys
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+
+if sys.platform == "win32":
+    import msvcrt
+else:
+    import fcntl
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -415,7 +419,10 @@ class _CrossProcessLock:
         """
         try:
             handle.seek(0)
-            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            if sys.platform == "win32":
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError:
             return False
         return True
@@ -431,7 +438,10 @@ class _CrossProcessLock:
         self._handle = None
         try:
             handle.seek(0)
-            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            if sys.platform == "win32":
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
         finally:
             handle.close()
 

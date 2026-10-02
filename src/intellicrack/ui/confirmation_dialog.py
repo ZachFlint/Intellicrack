@@ -138,6 +138,16 @@ class ToolConfirmationDialog(QDialog):
         """
         _store_holder.instance = store
 
+    @classmethod
+    def release_approval_store(cls, store: ApprovalStore) -> None:
+        """Remove an installed store, unless another has replaced it since.
+
+        Args:
+            store: The store its owner is withdrawing.
+        """
+        if _store_holder.instance is store:
+            _store_holder.instance = None
+
     @staticmethod
     def _generation_key(generation: str | None) -> str | None:
         """Normalize a generation into its remembered-key component.

@@ -29,6 +29,7 @@ independent oracles:
 from __future__ import annotations
 
 import asyncio
+import sys
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import pytest
@@ -48,6 +49,10 @@ _NOP_FILL_SIZE: Final[int] = 8
 _TARGET_PID: Final[int] = 9999
 _OEP: Final[int] = 0x401000
 _OUTPUT_PATH: Final[str] = "C:\\dump\\target_fixed.exe"
+_WIN32_READBACK_REASON: Final[str] = (
+    "patch verification reads memory back through the Windows-only ReadProcessMemory path; "
+    "off Windows the bridge skips verification and reports verified=False"
+)
 _MODULE_NAME: Final[str] = "target.dll"
 _PEB_ADDR_HEX: Final[str] = "0x7ffe0000"
 _PEB_BEING_DEBUGGED: Final[int] = 1
@@ -234,6 +239,7 @@ class TestPatchInstructionFraming:
         assert result["verified"] is False
         assert result["patched_bytes"] is None
 
+    @pytest.mark.skipif(sys.platform != "win32", reason=_WIN32_READBACK_REASON)
     async def test_verified_true_when_bytes_change(
         self,
         bridge: X64DbgBridge,
@@ -278,6 +284,7 @@ class TestPatchInstructionFraming:
         assert result["patched_bytes"] == patched_bytes.hex()
         assert ("assemble", {"address": hex(_PATCH_ADDR), "instruction": "nop"}) in fake.sent
 
+    @pytest.mark.skipif(sys.platform != "win32", reason=_WIN32_READBACK_REASON)
     async def test_raises_when_bytes_unchanged(
         self,
         bridge: X64DbgBridge,
@@ -356,6 +363,7 @@ class TestNopRangeFraming:
         assert result["size"] == _NOP_FILL_SIZE
         assert result["verified"] is False
 
+    @pytest.mark.skipif(sys.platform != "win32", reason=_WIN32_READBACK_REASON)
     async def test_verified_true_when_all_nop_bytes(
         self,
         bridge: X64DbgBridge,
@@ -394,6 +402,7 @@ class TestNopRangeFraming:
         assert result["verified"] is True
         assert result["bytes_filled"] == _NOP_FILL_SIZE
 
+    @pytest.mark.skipif(sys.platform != "win32", reason=_WIN32_READBACK_REASON)
     async def test_raises_when_non_nop_byte_present(
         self,
         bridge: X64DbgBridge,

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import intellicrack.ui.panels.async_bridge as async_bridge_mod
 import intellicrack.ui.panels.vnc_widget as vnc_widget_mod
 from intellicrack.ui.panels.vnc_widget import VNCWidget
 
@@ -38,6 +39,10 @@ class TestConnectDispatch:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """connect_to_server must call run_bridge_coroutine_logged, never the blocking runner.
+
+        The widget module no longer imports the blocking ``run_bridge_coroutine``
+        at all; the blocking runner is patched at its source module so a
+        reintroduced call through any import path is still caught.
 
         Args:
             qapp: Session QApplication fixture (ensures a Qt app exists).
@@ -80,12 +85,13 @@ class TestConnectDispatch:
             blocking_calls.append(True)
 
         monkeypatch.setattr(vnc_widget_mod, "run_bridge_coroutine_logged", _fake_logged)
-        monkeypatch.setattr(vnc_widget_mod, "run_bridge_coroutine", _fake_blocking)
+        monkeypatch.setattr(async_bridge_mod, "run_bridge_coroutine", _fake_blocking)
 
         widget.connect_to_server("127.0.0.1", 5900, password=None)
 
         assert len(logged_calls) == 1
         assert not blocking_calls
+        assert "run_bridge_coroutine" not in vars(vnc_widget_mod), "the VNC widget imports the blocking bridge runner"
 
     @staticmethod
     def test_connect_success_starts_pump_and_emits_true(

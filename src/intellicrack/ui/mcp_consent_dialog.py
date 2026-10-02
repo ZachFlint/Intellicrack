@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.mcp.config import launcher_notes, sandbox_limitations
 from intellicrack.mcp.consent import describe_launch, scan_command_for_dangerous_patterns
 from intellicrack.ui.resources.font_manager import FontManager
 
@@ -166,7 +167,7 @@ class McpServerConsentDialog(QDialog):
             raise ValueError(message)
         return cls(
             config,
-            describe_launch(config.stdio, env),
+            describe_launch(config.stdio, env, config.sandbox),
             scan_command_for_dangerous_patterns(config.stdio.command, config.stdio.args),
             parent,
         )
@@ -212,6 +213,11 @@ class McpServerConsentDialog(QDialog):
         header.setObjectName("mcp_consent_header")
         header.setWordWrap(True)
         layout.addWidget(header)
+
+        sandbox_label = QLabel(self._sandbox_summary())
+        sandbox_label.setObjectName("mcp_consent_sandbox")
+        sandbox_label.setWordWrap(True)
+        layout.addWidget(sandbox_label)
 
         if self._findings:
             warning = QLabel(
@@ -262,6 +268,22 @@ class McpServerConsentDialog(QDialog):
         button_layout.addWidget(approve_button)
 
         layout.addLayout(button_layout)
+
+    def _sandbox_summary(self) -> str:
+        """Say in one paragraph whether the server runs confined, what that leaves open, and what its launcher needs.
+
+        Returns:
+            str: The summary.
+        """
+        sandbox = self._config.sandbox
+        if not sandbox.enabled:
+            return "Sandbox: OFF. This program runs with your own account and your full privileges."
+        writable = ", ".join(sandbox.allow_write) or "none"
+        limitations = " ".join(sandbox_limitations(sandbox))
+        summary = f"Sandbox: ON. It runs at Low integrity and can write only to: {writable} and its own sandbox home. {limitations}"
+        spec = self._config.stdio
+        notes = " ".join(launcher_notes(spec.command)) if spec is not None else ""
+        return f"{summary} {notes}" if notes else summary
 
     def make_decision(self, *, approved: bool, blocked: bool = False) -> None:
         """Apply an answer and finalise the dialog.

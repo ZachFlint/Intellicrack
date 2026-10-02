@@ -56,6 +56,11 @@ _HEXBENCH_PKG: Final[Path] = _REPO_ROOT / "src" / "hexbench"
 
 _CHILD_TIMEOUT: Final[float] = 120.0
 
+_WINDOWS_CREATION_FLAGS = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="the launcher spawns the editor with CREATE_NO_WINDOW, a Windows process creation flag",
+)
+
 
 def _load_launcher() -> ModuleType:
     """Load ``packaging/launcher/hexbench_launcher.py`` from its file path.
@@ -155,6 +160,7 @@ def _captured_command(monkeypatch: pytest.MonkeyPatch, install: Path, argv: list
     return commands[0], keywords[0]
 
 
+@_WINDOWS_CREATION_FLAGS
 def test_launcher_spawns_the_console_interpreter_not_pythonw(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Real gate: the child is ``python.exe`` running ``-m hexbench``.
 
@@ -178,6 +184,7 @@ def test_launcher_spawns_the_console_interpreter_not_pythonw(tmp_path: Path, mon
     assert kwargs["cwd"] == str(install)
 
 
+@_WINDOWS_CREATION_FLAGS
 def test_launcher_uses_create_no_window_and_never_detaches(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Real gate: the spawn flag is exactly ``CREATE_NO_WINDOW``.
 
@@ -277,9 +284,10 @@ def test_child_env_preserves_an_existing_pythonpath(tmp_path: Path, monkeypatch:
         monkeypatch: Fixture used to set the inherited environment variable.
     """
     install = _make_fake_install(tmp_path / "app")
-    monkeypatch.setenv("PYTHONPATH", r"C:\existing")
+    existing = str(tmp_path / "existing")
+    monkeypatch.setenv("PYTHONPATH", existing)
     env = hexbench_launcher.build_child_env(install)
-    assert env["PYTHONPATH"].split(os.pathsep) == [str(install), r"C:\existing"]
+    assert env["PYTHONPATH"].split(os.pathsep) == [str(install), existing]
 
 
 def test_child_env_prepends_only_runtime_directories_that_exist(tmp_path: Path) -> None:

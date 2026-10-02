@@ -257,7 +257,7 @@ class TestH8NonBlockingDispatch:
         completed = _pump_until(qapp, lambda: harness._hex_widget.update_count == 1)
         assert completed, "the arithmetic chain never completed on the background loop"
         assert harness.data_changed_count == 1
-        assert bridge.select_calls == [(_SELECT_START, _SELECT_END - 1)]
+        assert bridge.select_calls == [(_SELECT_START, _SELECT_END)]
         assert bridge.apply_calls == [("xor", _ARITH_KEY_HEX, _ARITH_COUNT)]
 
     @staticmethod
@@ -389,7 +389,7 @@ class TestH8ErrorSurfacesWarning:
         warned = _pump_until(qapp, lambda: bool(warnings))
         assert warned, "apply_arithmetic_to_selection failure never surfaced a warning dialog"
         assert "native transform failed" in warnings[0][2]
-        assert bridge.select_calls == [(_SELECT_START, _SELECT_END - 1)]
+        assert bridge.select_calls == [(_SELECT_START, _SELECT_END)]
         assert bridge.apply_calls == [("xor", _ARITH_KEY_HEX, _ARITH_COUNT)]
         assert harness._hex_widget.update_count == 0, "a failed apply must not refresh the widget"
         assert harness.data_changed_count == 0
@@ -489,7 +489,7 @@ class TestH8SingleDispatchWiring:
         assert call.event == "hex_editor_apply_arithmetic"
         assert call.context.get("operation") == "xor"
         assert call.context.get("selection_start") == _SELECT_START
-        assert call.context.get("selection_end") == _SELECT_END - 1
+        assert call.context.get("selection_end") == _SELECT_END
         assert call.on_success is not None
         assert call.on_error is not None
         assert harness._hex_widget.update_count == 0, "the widget must not refresh before the dispatched coroutine runs"

@@ -22,6 +22,8 @@ Every assertion names the production mutation it would catch.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from PyQt6.QtGui import QFont, QTextDocument
 from PyQt6.QtWidgets import QApplication, QComboBox, QTableWidget, QWidget
@@ -42,13 +44,9 @@ from intellicrack.ui.panels.stack_viewer import (
 )
 
 
-_KEYWORD_COLOR: str = "#569CD6"
-_TYPE_COLOR: str = "#4EC9B0"
-_STRING_COLOR: str = "#CE9178"
-_NUMBER_COLOR: str = "#B5CEA8"
-_COMMENT_COLOR: str = "#6A9955"
-_REGISTER_COLOR: str = "#9CDCFE"
-_ANNOTATION_COLOR: str = "#D7BA7D"
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 _BOLD = QFont.Weight.Bold
 
@@ -56,6 +54,30 @@ _BLOCK_STATE_NORMAL: int = 0
 _BLOCK_STATE_IN_MULTILINE: int = 1
 _BLOCK_STATE_TRIPLE_DOUBLE: int = 1
 _BLOCK_STATE_TRIPLE_SINGLE: int = 2
+
+
+type _Highlighter = (
+    AssemblySyntaxHighlighter | CSyntaxHighlighter | HexPatSyntaxHighlighter | JavaScriptSyntaxHighlighter | PythonSyntaxHighlighter
+)
+
+_TOKEN_ROLES: tuple[str, ...] = ("keyword", "type", "string", "number", "comment", "variable")
+
+
+def _role_color(highlighter: _Highlighter, role: str) -> str:
+    """Return the active theme's foreground color for a semantic token role.
+
+    The highlighters resolve every token color from the active theme, so the
+    expected color is read from the highlighter's theme-resolved palette
+    rather than pinned to one theme's hex values.
+
+    Args:
+        highlighter: Highlighter whose theme-resolved palette is consulted.
+        role: Semantic token role such as ``"keyword"`` or ``"comment"``.
+
+    Returns:
+        str: Uppercase hex color such as ``'#569CD6'``.
+    """
+    return highlighter.token_color(role).name().upper()
 
 
 def _color_at(doc: QTextDocument, block_num: int, char_pos: int) -> str | None:
@@ -368,7 +390,7 @@ class TestCSyntaxHighlighter:
     def test_keyword_int_has_keyword_color() -> None:
         """The keyword 'int' at position 0 must receive the keyword foreground color.
 
-        Oracle: _KEYWORD_COLOR = '#569CD6' (hardcoded in _create_format call).
+        Oracle: the active theme's ``keyword`` role color.
 
         Mutation caught: removing 'int' from KEYWORDS or changing the keyword color.
         """
@@ -377,7 +399,8 @@ class TestCSyntaxHighlighter:
         doc.setPlainText("int x = 0;")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _KEYWORD_COLOR, f"Expected keyword color {_KEYWORD_COLOR!r} at 'int'[0], got {color!r}"
+        expected = _role_color(hl, "keyword")
+        assert color == expected, f"Expected keyword color {expected!r} at 'int'[0], got {color!r}"
 
     @staticmethod
     def test_keyword_is_bold() -> None:
@@ -395,7 +418,7 @@ class TestCSyntaxHighlighter:
     def test_hex_number_has_number_color() -> None:
         """A hex literal '0x1A' must receive the number foreground color.
 
-        Oracle: _NUMBER_COLOR = '#B5CEA8'.
+        Oracle: the active theme's ``number`` role color.
 
         Mutation caught: removing the hex-number rule from _setup_rules.
         """
@@ -404,7 +427,8 @@ class TestCSyntaxHighlighter:
         doc.setPlainText("0x1A")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _NUMBER_COLOR, f"Expected number color {_NUMBER_COLOR!r} at '0x1A'[0], got {color!r}"
+        expected = _role_color(hl, "number")
+        assert color == expected, f"Expected number color {expected!r} at '0x1A'[0], got {color!r}"
 
     @staticmethod
     def test_single_line_comment_is_italic() -> None:
@@ -449,7 +473,8 @@ class TestCSyntaxHighlighter:
         doc.setPlainText("x /* start\nmiddle\nend */ y")
         hl.rehighlight()
         middle_color = _color_at(doc, 1, 0)
-        assert middle_color == _COMMENT_COLOR, f"Expected comment color {_COMMENT_COLOR!r} at middle-line[0], got {middle_color!r}"
+        expected = _role_color(hl, "comment")
+        assert middle_color == expected, f"Expected comment color {expected!r} at middle-line[0], got {middle_color!r}"
 
     @staticmethod
     def test_multiline_comment_state_resets_after_close() -> None:
@@ -476,7 +501,7 @@ class TestAssemblySyntaxHighlighter:
     def test_instruction_mnemonic_has_instruction_color() -> None:
         """The mnemonic 'mov' must receive the instruction foreground color.
 
-        Oracle: _KEYWORD_COLOR = '#569CD6' (shared with keyword color).
+        Oracle: the active theme's ``keyword`` role color (instructions use the keyword role).
 
         Mutation caught: removing 'mov' from INSTRUCTIONS.
         """
@@ -485,7 +510,8 @@ class TestAssemblySyntaxHighlighter:
         doc.setPlainText("mov rax, 0")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _KEYWORD_COLOR, f"Expected instruction color {_KEYWORD_COLOR!r} at 'mov'[0], got {color!r}"
+        expected = _role_color(hl, "keyword")
+        assert color == expected, f"Expected instruction color {expected!r} at 'mov'[0], got {color!r}"
 
     @staticmethod
     def test_instruction_is_bold() -> None:
@@ -503,7 +529,7 @@ class TestAssemblySyntaxHighlighter:
     def test_register_has_register_color() -> None:
         """The register 'rax' must receive the register foreground color.
 
-        Oracle: _REGISTER_COLOR = '#9CDCFE'.
+        Oracle: the active theme's ``variable`` role color (registers use the variable role).
 
         Mutation caught: removing 'rax' from REGISTERS or changing register color.
         """
@@ -512,7 +538,8 @@ class TestAssemblySyntaxHighlighter:
         doc.setPlainText("mov rax, 0")
         hl.rehighlight()
         color = _color_at(doc, 0, 4)
-        assert color == _REGISTER_COLOR, f"Expected register color {_REGISTER_COLOR!r} at 'rax'[0] (pos 4), got {color!r}"
+        expected = _role_color(hl, "variable")
+        assert color == expected, f"Expected register color {expected!r} at 'rax'[0] (pos 4), got {color!r}"
 
     @staticmethod
     def test_semicolon_comment_is_italic() -> None:
@@ -542,13 +569,14 @@ class TestPythonSyntaxHighlighter:
         doc.setPlainText("def foo():")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _KEYWORD_COLOR, f"Expected keyword color {_KEYWORD_COLOR!r} at 'def'[0], got {color!r}"
+        expected = _role_color(hl, "keyword")
+        assert color == expected, f"Expected keyword color {expected!r} at 'def'[0], got {color!r}"
 
     @staticmethod
     def test_builtin_len_has_type_color() -> None:
         """The builtin 'len' must receive the builtin foreground color.
 
-        Oracle: _TYPE_COLOR = '#4EC9B0' (shared builtin/type color in Python highlighter).
+        Oracle: the active theme's ``type`` role color (Python builtins use the type role).
 
         Mutation caught: removing 'len' from BUILTINS.
         """
@@ -557,7 +585,8 @@ class TestPythonSyntaxHighlighter:
         doc.setPlainText("n = len(x)")
         hl.rehighlight()
         color = _color_at(doc, 0, 4)
-        assert color == _TYPE_COLOR, f"Expected builtin color {_TYPE_COLOR!r} at 'len'[0] (pos 4), got {color!r}"
+        expected = _role_color(hl, "type")
+        assert color == expected, f"Expected builtin color {expected!r} at 'len'[0] (pos 4), got {color!r}"
 
     @staticmethod
     def test_triple_double_quote_sets_block_state() -> None:
@@ -590,7 +619,8 @@ class TestPythonSyntaxHighlighter:
         doc.setPlainText('x = """open\nmiddle\nend"""')
         hl.rehighlight()
         color = _color_at(doc, 1, 0)
-        assert color == _STRING_COLOR, f"Expected string color {_STRING_COLOR!r} at middle-line[0], got {color!r}"
+        expected = _role_color(hl, "string")
+        assert color == expected, f"Expected string color {expected!r} at middle-line[0], got {color!r}"
 
     @staticmethod
     def test_triple_quote_state_resets_after_close() -> None:
@@ -637,13 +667,14 @@ class TestHexPatSyntaxHighlighter:
         doc.setPlainText("struct MyStruct {")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _KEYWORD_COLOR, f"Expected keyword color {_KEYWORD_COLOR!r} at 'struct'[0], got {color!r}"
+        expected = _role_color(hl, "keyword")
+        assert color == expected, f"Expected keyword color {expected!r} at 'struct'[0], got {color!r}"
 
     @staticmethod
     def test_type_u8_has_type_color() -> None:
         """The primitive type 'u8' must receive the type foreground color.
 
-        Oracle: _TYPE_COLOR = '#4EC9B0'.
+        Oracle: the active theme's ``type`` role color.
 
         Mutation caught: removing 'u8' from HexPatSyntaxHighlighter.TYPES.
         """
@@ -652,7 +683,8 @@ class TestHexPatSyntaxHighlighter:
         doc.setPlainText("u8 field;")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _TYPE_COLOR, f"Expected type color {_TYPE_COLOR!r} at 'u8'[0], got {color!r}"
+        expected = _role_color(hl, "type")
+        assert color == expected, f"Expected type color {expected!r} at 'u8'[0], got {color!r}"
 
     @staticmethod
     def test_multiline_comment_sets_block_state_1() -> None:
@@ -679,7 +711,8 @@ class TestHexPatSyntaxHighlighter:
         doc.setPlainText("u8 x; /* open\nmiddle\nend */ u16 y;")
         hl.rehighlight()
         color = _color_at(doc, 1, 0)
-        assert color == _COMMENT_COLOR, f"Expected comment color at middle-line[0], got {color!r}"
+        expected = _role_color(hl, "comment")
+        assert color == expected, f"Expected comment color {expected!r} at middle-line[0], got {color!r}"
 
 
 @pytest.mark.usefixtures("qapp")
@@ -697,13 +730,14 @@ class TestJavaScriptSyntaxHighlighter:
         doc.setPlainText("const x = 1;")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _KEYWORD_COLOR, f"Expected keyword color {_KEYWORD_COLOR!r} at 'const'[0], got {color!r}"
+        expected = _role_color(hl, "keyword")
+        assert color == expected, f"Expected keyword color {expected!r} at 'const'[0], got {color!r}"
 
     @staticmethod
     def test_frida_global_process_has_frida_color() -> None:
         """The Frida global 'Process' must receive the type/frida foreground color.
 
-        Oracle: _TYPE_COLOR = '#4EC9B0' (Frida globals use the same color as types).
+        Oracle: the active theme's ``type`` role color (Frida globals use the type role).
 
         Mutation caught: removing 'Process' from FRIDA_GLOBALS.
         """
@@ -712,7 +746,8 @@ class TestJavaScriptSyntaxHighlighter:
         doc.setPlainText("Process.enumerate()")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _TYPE_COLOR, f"Expected Frida global color {_TYPE_COLOR!r} at 'Process'[0], got {color!r}"
+        expected = _role_color(hl, "type")
+        assert color == expected, f"Expected Frida global color {expected!r} at 'Process'[0], got {color!r}"
 
     @staticmethod
     def test_multiline_comment_js_sets_block_state_1() -> None:
@@ -739,7 +774,41 @@ class TestJavaScriptSyntaxHighlighter:
         doc.setPlainText("let x; /* open\ncontinuation\nend */")
         hl.rehighlight()
         color = _color_at(doc, 1, 0)
-        assert color == _COMMENT_COLOR, f"Expected comment color at continuation-line[0], got {color!r}"
+        expected = _role_color(hl, "comment")
+        assert color == expected, f"Expected comment color {expected!r} at continuation-line[0], got {color!r}"
+
+
+@pytest.mark.usefixtures("qapp")
+class TestTokenRolePalette:
+    """Gate tests keeping the role-based colour assertions above discriminating."""
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "highlighter_cls",
+        [
+            AssemblySyntaxHighlighter,
+            CSyntaxHighlighter,
+            HexPatSyntaxHighlighter,
+            JavaScriptSyntaxHighlighter,
+            PythonSyntaxHighlighter,
+        ],
+    )
+    def test_token_roles_resolve_to_distinct_colors(highlighter_cls: Callable[[QTextDocument], _Highlighter]) -> None:
+        """Every asserted token role must have its own color in the active theme.
+
+        The colour assertions compare a token against its role's theme color,
+        so two roles sharing one color would let a token highlighted with the
+        wrong role pass unnoticed.
+
+        Mutation caught: mapping two token roles onto the same theme color.
+
+        Args:
+            highlighter_cls: Highlighter class under test.
+        """
+        doc = QTextDocument()
+        hl = highlighter_cls(doc)
+        colors = {role: _role_color(hl, role) for role in _TOKEN_ROLES}
+        assert len(set(colors.values())) == len(_TOKEN_ROLES), f"Token roles share a theme color: {colors!r}"
 
 
 @pytest.mark.usefixtures("qapp")

@@ -12,6 +12,7 @@ Closes findings #1, #2, #12, #13, #15, #17, #18, #20, #24, #31, #32,
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import http.client
 import http.server
 import json
@@ -1615,7 +1616,10 @@ def test_run_authorization_flow_returns_token_from_fake_server(
         monkeypatch: Pytest fixture used to suppress webbrowser.open.
     """
     callback_port = _find_free_port()
-    config = _minimal_config(mock_200_server, use_pkce=False)
+    config = dataclasses.replace(
+        _minimal_config(mock_200_server, use_pkce=False),
+        redirect_uri=f"http://127.0.0.1:{callback_port}/callback",
+    )
     manager = OAuthManager(credential_store=None, callback_port=callback_port)
 
     def _fake_browser(url: str) -> None:

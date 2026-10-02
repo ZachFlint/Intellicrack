@@ -273,7 +273,8 @@ class TestBlockClickNavigation:
         panel._cfg_view.block_clicked.emit(0x401234)
 
         assert bridge.disassemble_calls == [0x401234], "block click must disassemble the block address"
-        assert panel._code_tabs.currentWidget() is panel._disasm_view, "block click must show the disassembly tab"
+        assert panel._code_tabs.currentWidget() is panel._disasm_tab, "block click must show the disassembly tab"
+        assert panel._disasm_tab.isAncestorOf(panel._disasm_view), "the disassembly tab must host the disassembly view"
 
     @staticmethod
     def test_cutter_block_click_seeks_and_switches_tab(monkeypatch: pytest.MonkeyPatch) -> None:

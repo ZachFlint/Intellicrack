@@ -58,7 +58,7 @@ def _bubble_texts(panel: ChatPanel) -> list[str]:
     Returns:
         list[str]: Content-label text for each rendered bubble.
     """
-    return [bubble.content_label.text() for bubble in panel.findChildren(MessageBubble)]
+    return [bubble.content_label.toPlainText() for bubble in panel.findChildren(MessageBubble)]
 
 
 def test_send_button_emits_typed_text(qtbot: QtBot) -> None:

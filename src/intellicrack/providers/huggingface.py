@@ -619,6 +619,7 @@ class HuggingFaceProvider(LLMProviderBase):
         messages: list[Message],
         tools: list[ToolDefinition] | None,
         tool_choice: ToolChoice | None,
+        model: str,
     ) -> tuple[
         list[dict[str, Any] | ChatCompletionInputMessage],
         list[ChatCompletionInputTool] | None,
@@ -630,6 +631,7 @@ class HuggingFaceProvider(LLMProviderBase):
             messages: Conversation history.
             tools: Tool definitions, or ``None``.
             tool_choice: Tool-selection policy, or ``None``.
+            model: The model the request is for, whose capability record says whether it accepts images.
 
         Returns:
             tuple[list[dict[str, Any] | ChatCompletionInputMessage], list[ChatCompletionInputTool] | None, ChatCompletionInputToolChoiceClass | Literal["auto", "none", "required"] | None]:
@@ -638,7 +640,7 @@ class HuggingFaceProvider(LLMProviderBase):
         """
         hf_messages = cast(
             "list[dict[str, Any] | ChatCompletionInputMessage]",
-            self.convert_messages_to_provider_format(messages),
+            self._openai_format_for_model(messages, model),
         )
         hf_tools: list[ChatCompletionInputTool] | None = None
         if tools:
@@ -704,6 +706,7 @@ class HuggingFaceProvider(LLMProviderBase):
             messages,
             tools,
             tool_choice,
+            model,
         )
 
         log_provider_request(
@@ -910,6 +913,7 @@ class HuggingFaceProvider(LLMProviderBase):
             messages,
             tools,
             tool_choice,
+            model,
         )
 
         self._logger.info(

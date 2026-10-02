@@ -5,21 +5,28 @@
 """A real MCP server that asks its client things, run as a subprocess by the gates.
 
 Built on the SDK's own :class:`~mcp.server.mcpserver.MCPServer` and spoken to
-over a real stdio pipe. Its tool pauses mid-call to elicit an answer from the
+over a real stdio pipe, or over loopback Streamable HTTP or legacy SSE. Its tool pauses mid-call to elicit an answer from the
 operator, and it publishes a prompt template with a required argument, which
 together exercise every path by which a server reaches the operator rather
 than the model.
 
-Run it as ``python mcp_interactive_server.py``.
+Run it as ``python mcp_interactive_server.py [--transport stdio|http|sse] [--port N]``.
 """
 
 from __future__ import annotations
 
+import argparse
 import sys
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
+import anyio
+import uvicorn
 from mcp.server.mcpserver import Elicit, ElicitationResult, MCPServer, Resolve
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 ASK_TOOL_NAME = "ask_name"
@@ -27,6 +34,9 @@ ASK_TOOL_NAME = "ask_name"
 
 GREETING_TOOL_NAME = "greet"
 """A tool that answers immediately."""
+
+NAP_TOOL_NAME = "nap"
+"""A tool that takes as long as it is asked to before answering, without asking anyone anything."""
 
 REVIEW_PROMPT_NAME = "review"
 """A prompt template taking one required and one optional argument."""
@@ -65,8 +75,11 @@ def ask_name(answer: Annotated[ElicitationResult[NameAnswer], Resolve(ask)]) -> 
     return f"operator answered {answer.action}"
 
 
-def build_server() -> MCPServer:
+def build_server(*, with_nap: bool = False) -> MCPServer:
     """Build the interactive server.
+
+    Args:
+        with_nap: Whether to also publish the tool that only waits, for gates that need a server slower than its timeout.
 
     Returns:
         MCPServer: A server publishing an eliciting tool and a prompt.
@@ -84,6 +97,18 @@ def build_server() -> MCPServer:
         """
         return f"hello {name}"
 
+    async def nap(seconds: float) -> str:
+        """Wait, then answer.
+
+        Args:
+            seconds: How long to wait.
+
+        Returns:
+            str: ``rested``.
+        """
+        await anyio.sleep(seconds)
+        return "rested"
+
     def review(target: str, focus: str = "everything") -> str:
         """Build a review request.
 
@@ -98,17 +123,33 @@ def build_server() -> MCPServer:
 
     server.add_tool(ask_name, name=ASK_TOOL_NAME, description="Ask the operator for a name.")
     server.add_tool(greet, name=GREETING_TOOL_NAME, description="Greet someone.")
+    if with_nap:
+        server.add_tool(nap, name=NAP_TOOL_NAME, description="Wait, then answer.")
     _ = server.prompt(name=REVIEW_PROMPT_NAME, title="Review", description="Ask for a review.")(review)
     return server
 
 
-def main() -> int:
-    """Serve the interactive server over stdio.
+def main(argv: Sequence[str] | None = None) -> int:
+    """Serve the interactive server over stdio, Streamable HTTP or legacy SSE.
+
+    Args:
+        argv: Command-line arguments, defaulting to ``sys.argv[1:]``.
 
     Returns:
         int: Process exit status.
     """
-    build_server().run(transport="stdio")
+    parser = argparse.ArgumentParser(description="An MCP server that asks its client things.")
+    parser.add_argument("--transport", choices=("stdio", "http", "sse"), default="stdio")
+    parser.add_argument("--port", type=int, default=0)
+    parser.add_argument("--with-nap", action="store_true", help="Also publish the tool that only waits.")
+    arguments = parser.parse_args(argv)
+    server = build_server(with_nap=arguments.with_nap)
+    if arguments.transport == "http":
+        uvicorn.run(server.streamable_http_app(), host="127.0.0.1", port=arguments.port, log_level="error")
+    elif arguments.transport == "sse":
+        uvicorn.run(server.sse_app(), host="127.0.0.1", port=arguments.port, log_level="error")
+    else:
+        server.run(transport="stdio")
     return 0
 
 

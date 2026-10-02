@@ -23,15 +23,18 @@ from urllib.parse import parse_qs, urlparse
 import httpx2
 import pytest
 from mcp.shared.auth import AuthorizationCodeResult
+from mcp_types.version import LATEST_MODERN_VERSION
 
+from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.credentials.store import CredentialStore
 from intellicrack.mcp import connection as connection_module
-from intellicrack.mcp.auth import KeyringTokenStorage, build_oauth_provider, issuer_for, sign_out
+from intellicrack.mcp.auth import KeyringTokenStorage, build_oauth_provider, issuer_for
 from intellicrack.mcp.config import HttpServerSpec, McpServerConfig, McpTransportKind
 from intellicrack.mcp.connection import McpConnection
 from intellicrack.mcp.errors import McpConnectionError
 from intellicrack.mcp.secrets import McpSecretResolver
 from tests._helpers.mcp_lifecycle_support import approving_gate, connection_for, free_port, stdio_config, stop_process
+from tests._helpers.private_keyring import installed_keyring, private_file_keyring
 
 
 if TYPE_CHECKING:
@@ -42,9 +45,15 @@ _CONNECT_BUDGET_S = 8.0
 """The connect timeout the gates run under, generous for a loaded machine."""
 
 _OPERATOR_PAUSE_S = 11.0
-"""How long the operator takes, longer than the whole budget."""
+"""How long the operator takes to answer the consent prompt, longer than the whole budget."""
 
-_OUTER_TIMEOUT_S = 120.0
+_SIGN_IN_PAUSE_S = 65.0
+"""How long the operator takes to sign in: past the budget, the SDK's ten-second discovery cap and the per-request timeout alike."""
+
+_REQUEST_TIMEOUT_S = 30.0
+"""The per-request timeout the OAuth server is configured with, shorter than the sign-in."""
+
+_OUTER_TIMEOUT_S = 180.0
 _TEARDOWN_TIMEOUT_S = 30.0
 _BOOT_TIMEOUT_S = 60.0
 
@@ -89,12 +98,18 @@ class _SlowSignIn:
     Attributes:
         code: The authorization code the server issued.
         state: The state value it echoed back.
+        took_s: How long the operator took to finish signing in.
     """
+
+    code: str | None
+    state: str | None
+    took_s: float
 
     def __init__(self) -> None:
         """Start with nothing captured."""
-        self.code: str | None = None
-        self.state: str | None = None
+        self.code = None
+        self.state = None
+        self.took_s = 0.0
 
     async def redirect(self, authorization_url: str) -> None:
         """Visit the authorization URL the way a browser would.
@@ -117,7 +132,9 @@ class _SlowSignIn:
         Raises:
             RuntimeError: If the server issued no code.
         """
-        await asyncio.sleep(_OPERATOR_PAUSE_S)
+        started = time.monotonic()
+        await asyncio.sleep(_SIGN_IN_PAUSE_S)
+        self.took_s = time.monotonic() - started
         if self.code is None:
             message = "the authorization server issued no code"
             raise RuntimeError(message)
@@ -147,17 +164,28 @@ class TestOperatorTimeIsExcluded:
 
         assert asyncio.run(asyncio.wait_for(body(), timeout=_OUTER_TIMEOUT_S))
 
-    def test_slow_oauth_sign_in_does_not_time_out(self, authorization_server: int, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The sign-in takes longer than the budget and the server still connects.
+    def test_slow_oauth_sign_in_does_not_time_out(self, authorization_server: int, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A sign-in taking over a minute still ends in a 2026-07-28 connection, not a downgrade or a failure.
+
+        The sign-in outlasts the connect budget, the SDK's ten-second ``server/discover`` cap and the per-request timeout. The server
+        speaks 2026-07-28, so a connection that fell back to the legacy handshake because discovery timed out during the sign-in would
+        report 2025-11-25. The tokens go to a keyring file and an ``.env`` the test owns.
 
         Args:
             authorization_server: Port of the OAuth-protected server.
+            tmp_path: Per-test directory holding the private keyring and ``.env``.
             monkeypatch: Pytest fixture used to shorten the connect budget.
         """
         monkeypatch.setattr(connection_module, "CONNECT_TIMEOUT_S", _CONNECT_BUDGET_S)
-        store = CredentialStore()
+        store = CredentialStore(fallback_loader=CredentialLoader(env_path=tmp_path / ".env"))
         spec = HttpServerSpec(url=f"http://127.0.0.1:{authorization_server}/mcp")
-        config = McpServerConfig(server_id="slow-oauth", kind=McpTransportKind.HTTP, http=spec, enabled=True, request_timeout_s=30.0)
+        config = McpServerConfig(
+            server_id="slow-oauth",
+            kind=McpTransportKind.HTTP,
+            http=spec,
+            enabled=True,
+            request_timeout_s=_REQUEST_TIMEOUT_S,
+        )
         storage = KeyringTokenStorage(store, "slow-oauth", issuer_for(spec))
         sign_in = _SlowSignIn()
 
@@ -174,16 +202,21 @@ class TestOperatorTimeIsExcluded:
 
         connection = McpConnection(config, McpSecretResolver(store), auth_factory=factory)
 
-        async def body() -> int:
+        async def body() -> tuple[int, str | None]:
             await connection.connect()
             try:
                 catalog = connection.catalog
-                return catalog.tool_count if catalog is not None else 0
+                client = connection.client
+                return (catalog.tool_count if catalog is not None else 0), (client.protocol_version if client is not None else None)
             finally:
                 await asyncio.wait_for(connection.disconnect(), timeout=_TEARDOWN_TIMEOUT_S)
-                _ = await sign_out(store, "slow-oauth", issuer_for(spec))
 
-        assert asyncio.run(asyncio.wait_for(body(), timeout=_OUTER_TIMEOUT_S)) > 0
+        with installed_keyring(private_file_keyring(tmp_path / "keyring.cfg")):
+            tool_count, version = asyncio.run(asyncio.wait_for(body(), timeout=_OUTER_TIMEOUT_S))
+
+        assert sign_in.took_s >= _SIGN_IN_PAUSE_S
+        assert tool_count > 0
+        assert version == LATEST_MODERN_VERSION
 
 
 class TestServerTimeIsStillBounded:

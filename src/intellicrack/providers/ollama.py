@@ -19,6 +19,7 @@ import time
 from contextlib import AsyncExitStack
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, TypedDict, cast, override
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -304,7 +305,18 @@ class OllamaProvider(LLMProviderBase):
         self.connected = True
 
     async def _connect_local(self) -> None:
-        """Probe the local Ollama ``/api/tags`` endpoint and record availability."""
+        """Probe the local Ollama ``/api/tags`` endpoint and record availability.
+
+        A local URL whose port cannot be used at all -- out of range or not a
+        number -- marks the local source unavailable without a probe, since no
+        request to it can be sent.
+        """
+        try:
+            _ = urlsplit(self._local_url).port
+        except ValueError as e:
+            self._local_available = False
+            self._logger.warning("local_ollama_url_invalid", url=self._local_url, error=str(e))
+            return
         try:
             self._local_client = self._build_local_client()
             response = await self._local_client.get(f"{self._local_url}/api/tags")
@@ -1060,9 +1072,15 @@ class OllamaProvider(LLMProviderBase):
             self._logger.debug("ollama_cache_ignored")
 
         client, base_url, actual_model = self._get_client_and_model(model)
-        ollama_messages = self.convert_messages_to_provider_format(messages)
         endpoint = self._chat_endpoint(base_url)
         is_cloud = self._is_cloud_endpoint(base_url)
+        ollama_messages = self._openai_format_for_model(
+            messages,
+            model,
+            serialize_tool_arguments=False,
+            include_tool_call_type=False,
+            ollama_images=not is_cloud,
+        )
 
         log_provider_request(
             provider="ollama",
@@ -1398,9 +1416,15 @@ class OllamaProvider(LLMProviderBase):
             self._logger.debug("ollama_cache_ignored")
 
         client, base_url, actual_model = self._get_client_and_model(model)
-        ollama_messages = self.convert_messages_to_provider_format(messages)
         endpoint = self._chat_endpoint(base_url)
         is_cloud = self._is_cloud_endpoint(base_url)
+        ollama_messages = self._openai_format_for_model(
+            messages,
+            model,
+            serialize_tool_arguments=False,
+            include_tool_call_type=False,
+            ollama_images=not is_cloud,
+        )
 
         request_body: dict[str, object]
         if is_cloud:

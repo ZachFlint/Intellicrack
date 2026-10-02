@@ -34,6 +34,7 @@ import threading
 from ctypes import wintypes
 from typing import TYPE_CHECKING, ClassVar, Self
 
+from intellicrack.core.handle_inheritance import INHERITANCE_LOCK
 from intellicrack.core.logging import get_logger
 from intellicrack.core.subprocess_compat import list2cmdline
 
@@ -569,6 +570,11 @@ def spawn_on_hidden_desktop(
     Standard handles are wired to ``NUL`` so a GUI child that writes diagnostics
     cannot deadlock on an undrained pipe.
 
+    The child inherits every inheritable handle, so the spawn holds
+    :data:`~intellicrack.core.handle_inheritance.INHERITANCE_LOCK` throughout:
+    no other spawn's handles are inheritable while it runs, and its own
+    ``NUL`` handle is closed before the lock is released.
+
     Args:
         executable: Absolute path to the executable to launch.
         args: Command-line arguments to pass after the executable.
@@ -586,47 +592,48 @@ def spawn_on_hidden_desktop(
     nul_handle = 0
     launched = False
     info = _ProcessInformation()
-    try:
-        inherit_sa = _SecurityAttributes(
-            nLength=ctypes.sizeof(_SecurityAttributes),
-            lpSecurityDescriptor=None,
-            bInheritHandle=_INHERIT_HANDLES,
-        )
-        nul_handle = _open_nul_handle(inherit_sa)
+    with INHERITANCE_LOCK:
+        try:
+            inherit_sa = _SecurityAttributes(
+                nLength=ctypes.sizeof(_SecurityAttributes),
+                lpSecurityDescriptor=None,
+                bInheritHandle=_INHERIT_HANDLES,
+            )
+            nul_handle = _open_nul_handle(inherit_sa)
 
-        command_line = list2cmdline([str(executable), *(args or ())])
-        cmd_buffer = ctypes.create_unicode_buffer(command_line)
+            command_line = list2cmdline([str(executable), *(args or ())])
+            cmd_buffer = ctypes.create_unicode_buffer(command_line)
 
-        startup = _StartupInfoW()
-        startup.cb = ctypes.sizeof(_StartupInfoW)
-        startup.lpDesktop = desktop.name
-        startup.dwFlags = _STARTF_USESHOWWINDOW | _STARTF_USESTDHANDLES
-        startup.wShowWindow = _SW_HIDE
-        startup.hStdInput = nul_handle
-        startup.hStdOutput = nul_handle
-        startup.hStdError = nul_handle
+            startup = _StartupInfoW()
+            startup.cb = ctypes.sizeof(_StartupInfoW)
+            startup.lpDesktop = desktop.name
+            startup.dwFlags = _STARTF_USESHOWWINDOW | _STARTF_USESTDHANDLES
+            startup.wShowWindow = _SW_HIDE
+            startup.hStdInput = nul_handle
+            startup.hStdOutput = nul_handle
+            startup.hStdError = nul_handle
 
-        env_block = _build_environment_block(env if env is not None else dict(os.environ))
-        created = api.create_process(
-            str(executable),
-            cmd_buffer,
-            None,
-            None,
-            _INHERIT_HANDLES,
-            _CREATE_UNICODE_ENVIRONMENT | _CREATE_NO_WINDOW,
-            ctypes.cast(env_block, wintypes.LPVOID),
-            None,
-            ctypes.byref(startup),
-            ctypes.byref(info),
-        )
-        if not created:
-            raise OSError(*_win32_error(f"CreateProcessW({executable})"))
-        launched = True
-    finally:
-        if nul_handle:
-            api.close_handle(wintypes.HANDLE(nul_handle))
-        if not launched:
-            desktop.close()
+            env_block = _build_environment_block(env if env is not None else dict(os.environ))
+            created = api.create_process(
+                str(executable),
+                cmd_buffer,
+                None,
+                None,
+                _INHERIT_HANDLES,
+                _CREATE_UNICODE_ENVIRONMENT | _CREATE_NO_WINDOW,
+                ctypes.cast(env_block, wintypes.LPVOID),
+                None,
+                ctypes.byref(startup),
+                ctypes.byref(info),
+            )
+            if not created:
+                raise OSError(*_win32_error(f"CreateProcessW({executable})"))
+            launched = True
+        finally:
+            if nul_handle:
+                api.close_handle(wintypes.HANDLE(nul_handle))
+            if not launched:
+                desktop.close()
 
     _logger.info(
         "process_spawned_on_hidden_desktop",

@@ -25,14 +25,18 @@ Sandbox isolation itself is handled by the Docker-based harness at
 
 from __future__ import annotations
 
+import os
+import sys
 import threading
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Final, cast
 
 import httpx
 import pytest
 import structlog
+from PyQt6.QtCore import QEvent
+from PyQt6.QtWidgets import QApplication, QWidget
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials
@@ -285,18 +289,31 @@ def process_per_test_orphan_killer(request: pytest.FixtureRequest) -> Generator[
             )
 
 
+def _uncache_module_loggers() -> None:
+    """Make every module-level structlog proxy resolve its logger afresh.
+
+    With ``cache_logger_on_first_use`` a proxy's first ``bind`` replaces the
+    proxy's own ``bind`` with one tied to the configuration of that moment, and
+    :func:`structlog.reset_defaults` does not undo it.
+    """
+    proxy_type: type[object] = type(cast("object", structlog.get_logger()))
+    for module in list(sys.modules.values()):
+        namespace: dict[str, object] = getattr(module, "__dict__", {})
+        for value in list(namespace.values()):
+            if isinstance(value, proxy_type):
+                _ = vars(value).pop("bind", None)
+
+
 @pytest.fixture(autouse=True)
 def reset_structlog_configuration() -> Generator[None]:
     """Reset structlog to its unconfigured defaults around every test.
 
     ``intellicrack.core.logging`` configures structlog with
-    ``cache_logger_on_first_use=True``. Once any test triggers that
-    configuration, the cached bound loggers bypass
-    :func:`structlog.testing.capture_logs`, so a later test's log-capturing
-    assertions silently capture nothing and fail depending on execution order.
-    Resetting before and after each test clears both the configuration and the
-    first-use cache, keeping ``capture_logs`` deterministic regardless of the
-    order in which tests run.
+    ``cache_logger_on_first_use=True``. A module-level logger used while that
+    configuration is active keeps it after :func:`structlog.reset_defaults`, so
+    :func:`structlog.testing.capture_logs` in a later test captures nothing from
+    that module and its assertions fail depending on execution order. After a
+    test that left caching on, every module-level proxy is uncached as well.
 
     Yields:
         None: Yields control to the test.
@@ -305,7 +322,67 @@ def reset_structlog_configuration() -> Generator[None]:
     try:
         yield
     finally:
+        if structlog.get_config()["cache_logger_on_first_use"]:
+            _uncache_module_loggers()
         structlog.reset_defaults()
+
+
+_PYTEST_CURRENT_TEST: Final[str] = "PYTEST_CURRENT_TEST"
+
+
+@pytest.fixture(autouse=True)
+def restore_process_environment() -> Generator[None]:
+    """Put the process environment back the way each test found it.
+
+    ``CredentialLoader`` copies every entry of a ``.env`` it loads into
+    ``os.environ`` so provider SDKs see the same values, and the copy outlives
+    the test. A test that loads a ``.env`` holding a deliberately fake key
+    therefore handed that key to every later test in the same process, and a
+    live-provider test then saw a key, called the real service with it and
+    failed instead of skipping. Under xdist the order that exposes this is
+    routine. ``PYTEST_CURRENT_TEST`` is pytest's own and is left to it.
+
+    Yields:
+        None: Yields control to the test.
+    """
+    saved = dict(os.environ)
+    try:
+        yield
+    finally:
+        for name in set(os.environ) - set(saved):
+            if name != _PYTEST_CURRENT_TEST:
+                del os.environ[name]
+        for name, value in saved.items():
+            if name != _PYTEST_CURRENT_TEST and os.environ.get(name) != value:
+                os.environ[name] = value
+
+
+@pytest.fixture(autouse=True)
+def delete_top_level_widgets_left_by_the_test() -> Generator[None]:
+    """Close and delete every top-level widget a test leaves alive.
+
+    A widget a test never closes stays in the application for the rest of the
+    worker's session. Every stylesheet change re-polishes every live widget, so
+    thousands of leftovers made each theme switch in a later test take minutes
+    on the Windows runner. Widgets that existed before the test, such as those
+    of module- or session-scoped fixtures, are left alone.
+
+    Yields:
+        None: Yields control to the test.
+    """
+    app = QApplication.instance()
+    before: set[QWidget] = set(QApplication.topLevelWidgets()) if isinstance(app, QApplication) else set()
+    try:
+        yield
+    finally:
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            leaked = [widget for widget in QApplication.topLevelWidgets() if widget not in before]
+            for widget in leaked:
+                widget.close()
+                widget.deleteLater()
+            if leaked:
+                app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
 
 
 @pytest.fixture(scope="session")
@@ -323,25 +400,31 @@ def project_root() -> Path:
 
 
 @pytest.fixture(scope="session")
-def env_file_path(project_root: Path) -> Path:
-    """Get the path to the .env file.
+def env_file_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Get the path to a private, initially empty ``.env`` file for the session.
+
+    The developer's real ``.env`` is never read or written by the suite; this
+    file lives in the session's own temporary directory.
 
     Args:
-        project_root: The project root directory.
+        tmp_path_factory: Session-scoped temporary directory factory.
 
     Returns:
-        Path: Path to the .env file.
+        Path: Path to the private .env file.
     """
-    return project_root / ".env"
+    env_file = tmp_path_factory.mktemp("credentials") / ".env"
+    _ = env_file.write_text("", encoding="utf-8")
+    return env_file
 
 
 @pytest.fixture(scope="session")
 def credential_loader(env_file_path: Path) -> CredentialLoader:
     """Create a CredentialLoader instance.
 
-    This fixture loads credentials from the project's .env file.
-    Tests should use this to check credential availability and
-    obtain credentials for provider connections.
+    This fixture loads the session's private ``.env`` file, so provider keys
+    reach it only through the process environment, which the loader falls back
+    to. Tests should use this to check credential availability and obtain
+    credentials for provider connections.
 
     Args:
         env_file_path: Path to the .env file.

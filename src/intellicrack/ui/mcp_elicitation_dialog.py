@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import enum
+import math
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -70,6 +71,31 @@ _MAX_FIELDS: Final[int] = 32
 _MAX_CHOICES: Final[int] = 256
 _CHOICE_LIST_MAX_HEIGHT: Final[int] = 160
 _EMAIL_PATTERN: Final[re.Pattern[str]] = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+
+_JSON_INTEGER: Final[re.Pattern[str]] = re.compile(r"-?(?:0|[1-9][0-9]*)")
+"""An integer as JSON writes it: no sign but minus, no leading zeros, no separators, no whitespace."""
+
+_JSON_NUMBER: Final[re.Pattern[str]] = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
+"""A number as JSON writes it, which has no ``nan`` and no ``inf``."""
+
+_FULL_DATE: Final[re.Pattern[str]] = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
+"""RFC 3339 ``full-date``: ``YYYY-MM-DD``, dashes required."""
+
+_DATE_TIME: Final[re.Pattern[str]] = re.compile(
+    r"[0-9]{4}-[0-9]{2}-[0-9]{2}[Tt][0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:[Zz]|[+-][0-9]{2}:[0-9]{2})",
+)
+"""RFC 3339 ``date-time``: a full date, ``T``, a time with seconds, and a time-zone offset."""
+
+_URI_SCHEME: Final[re.Pattern[str]] = re.compile(r"[A-Za-z][A-Za-z0-9+.-]+")
+"""An RFC 3986 scheme of two or more characters; one letter before a colon is a Windows drive, not a scheme."""
+
+_URI_CHARACTERS: Final[re.Pattern[str]] = re.compile(r"(?:[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=]|%[0-9A-Fa-f]{2})+")
+"""The characters RFC 3986 allows in a URI, with every ``%`` starting a valid escape."""
+
+_PATH_ONLY_SCHEMES: Final[frozenset[str]] = frozenset({"data", "geo", "magnet", "mailto", "news", "sip", "sips", "tel", "urn"})
+"""Schemes whose URIs have no ``//`` authority: ``mailto:someone@example.com``, ``urn:isbn:...``."""
+
+_NO_ANSWER: Final[str] = "(no answer)"
 
 
 class _FieldKind(enum.Enum):
@@ -203,7 +229,11 @@ def _field_kind(definition: Mapping[str, Any]) -> _FieldKind:
 
 
 def _format_problem(value: str, declared_format: object) -> str | None:
-    """Check a text answer against the schema's ``format``.
+    """Check a text answer against the schema's ``format``, as the formats' own specifications define them.
+
+    ``date`` and ``date-time`` are RFC 3339's ``full-date`` and ``date-time``:
+    the dashes are required, and a date-time needs its seconds and its
+    time-zone offset. ``uri`` is an absolute RFC 3986 URI.
 
     Args:
         value: The answer.
@@ -214,21 +244,69 @@ def _format_problem(value: str, declared_format: object) -> str | None:
     """
     if declared_format == "email" and _EMAIL_PATTERN.fullmatch(value) is None:
         return "must be an email address"
-    if declared_format == "uri":
-        parts = urlsplit(value)
-        if not parts.scheme or not (parts.netloc or parts.path):
-            return "must be a full address, including its scheme"
-    if declared_format == "date":
-        try:
-            _ = date.fromisoformat(value)
-        except ValueError:
-            return "must be a date written as YYYY-MM-DD"
-    if declared_format == "date-time":
-        try:
-            _ = datetime.fromisoformat(value)
-        except ValueError:
-            return "must be a date and time written as YYYY-MM-DDTHH:MM:SS"
+    if declared_format == "uri" and not _is_absolute_uri(value):
+        return "must be a full address, including its scheme, such as https://example.com/page"
+    if declared_format == "date" and not _is_full_date(value):
+        return "must be a date written as YYYY-MM-DD"
+    if declared_format == "date-time" and not _is_date_time(value):
+        return "must be a date and time written as YYYY-MM-DDTHH:MM:SS with a time zone, such as 2026-01-31T10:00:00Z"
     return None
+
+
+def _is_full_date(value: str) -> bool:
+    """Decide whether a value is an RFC 3339 ``full-date`` naming a real day.
+
+    Args:
+        value: The answer.
+
+    Returns:
+        bool: ``True`` for ``YYYY-MM-DD`` naming a day that exists.
+    """
+    if _FULL_DATE.fullmatch(value) is None:
+        return False
+    try:
+        _ = date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _is_date_time(value: str) -> bool:
+    """Decide whether a value is an RFC 3339 ``date-time`` naming a real moment.
+
+    Args:
+        value: The answer.
+
+    Returns:
+        bool: ``True`` for a full date, ``T``, a time with seconds, and a time-zone offset, all in range.
+    """
+    if _DATE_TIME.fullmatch(value) is None:
+        return False
+    try:
+        _ = datetime.fromisoformat(value.upper())
+    except ValueError:
+        return False
+    return True
+
+
+def _is_absolute_uri(value: str) -> bool:
+    """Decide whether a value is an absolute RFC 3986 URI.
+
+    Args:
+        value: The answer.
+
+    Returns:
+        bool: ``True`` for a scheme of two or more characters followed by a ``//`` authority naming a host, or, for a scheme that has no
+        authority such as ``mailto``, by a non-empty path; every character allowed and every ``%`` escape valid.
+    """
+    if _URI_CHARACTERS.fullmatch(value) is None:
+        return False
+    scheme, colon, rest = value.partition(":")
+    if not colon or _URI_SCHEME.fullmatch(scheme) is None:
+        return False
+    if scheme.lower() in _PATH_ONLY_SCHEMES:
+        return bool(rest) and not rest.startswith("/")
+    return rest.startswith("//") and bool(urlsplit(value).hostname)
 
 
 def _is_number(value: object) -> bool:
@@ -266,6 +344,9 @@ def _range_hint(definition: Mapping[str, Any]) -> str:
 def _parse_number(text: str, kind: _FieldKind) -> int | float | None:
     """Read a numeric answer as the type its field declares.
 
+    Only what JSON can carry is a number: ``nan``, ``inf``, ``1_000`` and a
+    number too large to represent are not, since the server receives JSON.
+
     Args:
         text: The text the operator entered.
         kind: :attr:`_FieldKind.INTEGER` or :attr:`_FieldKind.NUMBER`.
@@ -273,19 +354,12 @@ def _parse_number(text: str, kind: _FieldKind) -> int | float | None:
     Returns:
         int | float | None: The number, or ``None`` when the text is not one.
     """
-    if kind is _FieldKind.INTEGER:
-        try:
-            return int(text)
-        except ValueError:
-            return None
-    try:
+    if _JSON_INTEGER.fullmatch(text) is not None:
         return int(text)
-    except ValueError:
-        pass
-    try:
-        return float(text)
-    except ValueError:
+    if kind is _FieldKind.INTEGER or _JSON_NUMBER.fullmatch(text) is None:
         return None
+    number = float(text)
+    return number if math.isfinite(number) else None
 
 
 class McpElicitationDialog(QDialog):
@@ -522,8 +596,11 @@ class McpElicitationDialog(QDialog):
 
         Returns:
             QWidget: A list of check boxes for a multi-select, a combo box
-            for a single-select, a check box for a boolean, and a line edit
-            for text and numbers, pre-filled from the schema's default.
+            for a single-select, a check box for a required boolean, a Yes /
+            No / no-answer choice for an optional one -- a check box has no
+            way to say "not answered", and an optional field left alone must
+            be omitted rather than sent as ``false`` -- and a line edit for
+            text and numbers, pre-filled from the schema's default.
         """
         default = definition.get("default")
         if kind is _FieldKind.MULTI_CHOICE:
@@ -545,6 +622,14 @@ class McpElicitationDialog(QDialog):
             if isinstance(default, str) and (index := combo.findData(default)) >= 0:
                 combo.setCurrentIndex(index)
             return combo
+        if kind is _FieldKind.BOOLEAN and not required:
+            answer = QComboBox()
+            answer.addItem(_NO_ANSWER, None)
+            for caption, choice in (("Yes", True), ("No", False)):
+                answer.addItem(caption, choice)
+            if isinstance(default, bool):
+                answer.setCurrentIndex(answer.findData(default))
+            return answer
         if kind is _FieldKind.BOOLEAN:
             box = QCheckBox()
             box.setChecked(default is True)
@@ -632,7 +717,7 @@ class McpElicitationDialog(QDialog):
             return bool(chosen) or field.required, chosen, None
         if isinstance(editor, QComboBox):
             data: object = editor.currentData()
-            return (True, data, None) if isinstance(data, str) else (False, None, None)
+            return (True, data, None) if isinstance(data, str | bool) else (False, None, None)
         if isinstance(editor, QCheckBox):
             return True, editor.isChecked(), None
         text = editor.text() if isinstance(editor, QLineEdit) else ""

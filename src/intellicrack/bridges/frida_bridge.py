@@ -5032,13 +5032,12 @@ class _FridaBridgeBase(InstrumentationBridge):
                 s = cast("dict[str, object]", raw_sym)
                 addr_str = str(s.get("address", "0"))
                 addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                sym_name = s.get("name")
                 mod_name = s.get("moduleName")
                 file_name = s.get("fileName")
                 line_num = s.get("lineNumber")
                 symbols.append(
                     SymbolInfo(
-                        name=str(sym_name) if sym_name else name,
+                        name=name,
                         address=addr,
                         module_name=str(mod_name) if mod_name else None,
                         file_name=str(file_name) if file_name else None,

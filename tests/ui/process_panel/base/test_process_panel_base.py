@@ -400,11 +400,8 @@ class TestF0001ArchLabelUpdatesOnAttach:
 
         success = _process_events_until(qapp, lambda: bridge.arch_calls != [])
         assert success
-        success = _process_events_until(
-            qapp,
-            lambda: getattr(panel, "_status_arch").text() in {"Arch: Unknown", "Arch: --"},
-        )
-        assert success
+        success = _process_events_until(qapp, lambda: getattr(panel, "_status_arch").text() != "Arch: --")
+        assert success, "Arch label was not updated after the bridge failed to detect the architecture"
         assert getattr(panel, "_status_arch").text() == "Arch: Unknown"
 
     def test_arch_bridge_called_with_attached_pid(

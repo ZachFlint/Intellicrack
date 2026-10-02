@@ -30,21 +30,26 @@ import contextlib
 import functools
 from typing import TYPE_CHECKING, cast
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QMessageBox
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.session import McpServerState
-from intellicrack.mcp.auth import KeyringTokenStorage, build_oauth_provider, issuer_for, open_authorization_page
+from intellicrack.mcp.auth import KeyringTokenStorage, build_oauth_provider, issuer_for, legacy_issuers_for, open_authorization_page
+from intellicrack.mcp.client_hooks import McpClientHooks
 from intellicrack.mcp.config import McpConfigStore, is_mcp_namespace
 from intellicrack.mcp.connection import McpConnectionManager
 from intellicrack.mcp.consent import ApprovalStore, McpConsentGate, TrustStore, deny_all_launches
+from intellicrack.mcp.context_events import McpContextEvent
 from intellicrack.mcp.errors import McpError
+from intellicrack.mcp.roots import McpRootSet
 from intellicrack.mcp.secrets import McpSecretResolver
+from intellicrack.mcp.server_logs import McpServerLogBook
 from intellicrack.mcp.tool_source import McpToolSource, source_label
 from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
 from intellicrack.ui.mcp_bridge import QtMcpPrompts, elicitation_factory
 from intellicrack.ui.mcp_config import McpConfigDialog
+from intellicrack.ui.mcp_context_browser import McpContextBrowser
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
 
 
@@ -61,6 +66,7 @@ if TYPE_CHECKING:
     from intellicrack.credentials.store import CredentialStore
     from intellicrack.mcp.config import McpServerConfig
     from intellicrack.mcp.connection import McpServerStatus
+    from intellicrack.mcp.roots import McpRoot
 
 
 _logger = get_logger(__name__)
@@ -95,8 +101,11 @@ class _GuiThreadRelay(QObject):
     """
 
     generation_changed = pyqtSignal(str, str)
+    identity_changed = pyqtSignal(str)
     server_state_changed = pyqtSignal(object)
     sign_in_opened = pyqtSignal(str, str)
+    approvals_released = pyqtSignal()
+    context_changed = pyqtSignal(object)
 
 
 class McpService:
@@ -129,24 +138,34 @@ class McpService:
         self._approvals = ApprovalStore()
         self._relay = _GuiThreadRelay(parent)
         _ = self._relay.generation_changed.connect(self._apply_generation_change)
+        _ = self._relay.identity_changed.connect(self._apply_identity_change)
         _ = self._relay.server_state_changed.connect(self._apply_server_state)
         _ = self._relay.sign_in_opened.connect(self._show_sign_in_notice)
+        _ = self._relay.approvals_released.connect(self._release_approvals)
         self._prompts = QtMcpPrompts(parent)
         self._gate = McpConsentGate(
             self._trust,
             self._prompts.request_launch_consent,
             self._on_generation_change,
+            self._on_identity_change,
         )
+        self._log_book = McpServerLogBook()
+        self._roots = McpRootSet()
+        self._roots.add_listener(self._on_roots_changed)
         self._manager = McpConnectionManager(
             self._store,
             self._resolver,
             self._gate,
             elicitation_factory=elicitation_factory(self._prompts),
             auth_factory=self._build_auth,
+            hooks_factory=self._client_hooks,
         )
         self._gate.set_config_lookup(self._configured_server)
         self._source = McpToolSource(self._manager, tool_registry)
         self._manager.set_change_listener(self._on_server_changed)
+        self._manager.set_context_listener(self._on_context_event)
+        _ = self._relay.context_changed.connect(self._apply_context_event)
+        self._context_notice_handler: Callable[[McpContextEvent], None] | None = None
         self._attachment_handler: Callable[[str], None] | None = None
         self._recorded_session: Session | None = None
         self._start_task: asyncio.Task[None] | None = None
@@ -235,8 +254,7 @@ class McpService:
         if any(name.lower() == _AUTHORIZATION_HEADER for name in spec.headers):
             _logger.debug("mcp_oauth_skipped_static_header", server_id=config.server_id)
             return None
-        issuer = issuer_for(spec)
-        storage = KeyringTokenStorage(self._resolver.store, config.server_id, issuer)
+        storage = KeyringTokenStorage(self._resolver.store, config.server_id, issuer_for(spec), legacy_issuers=legacy_issuers_for(spec))
         try:
             return build_oauth_provider(spec, storage, redirect_handler=self.sign_in_redirect(config.server_id))
         except McpError as exc:
@@ -346,6 +364,29 @@ class McpService:
         ToolConfirmationDialog.clear_decisions_for_source(key)
         _logger.warning("mcp_approvals_reset_after_change", server_id=server_id, generation=generation)
 
+    def _on_identity_change(self, server_id: str) -> None:
+        """Hand a server whose identity changed to the GUI thread.
+
+        Called by the consent gate, from whichever thread noticed the change.
+
+        Args:
+            server_id: The server whose program, endpoint or reach changed.
+        """
+        self._relay.identity_changed.emit(server_id)
+
+    def _apply_identity_change(self, server_id: str) -> None:
+        """Discard remembered approvals for a server that is no longer the one judged.
+
+        Runs on the GUI thread.
+
+        Args:
+            server_id: The server whose program, endpoint or reach changed.
+        """
+        config = self._manager.document.server(server_id)
+        namespace = config.namespace if config is not None else f"mcp-{server_id}"
+        ToolConfirmationDialog.clear_decisions_for_source(namespace)
+        _logger.warning("mcp_approvals_reset_after_identity_change", server_id=server_id)
+
     def _on_server_changed(self, server_id: str) -> None:
         """Hand a server's new state to the GUI thread.
 
@@ -398,24 +439,81 @@ class McpService:
         carried from the run that saved it; the session already being kept
         up to date is left alone.
         """
+        self.sync_roots()
         session = self._orchestrator.current_session
         if session is None or session is self._recorded_session:
             return
         self.record_session_state(session)
         _logger.debug("mcp_session_state_recorded", session_id=session.id)
 
+    @property
+    def roots(self) -> McpRootSet:
+        """The active session's roots, which servers are offered.
+
+        Returns:
+            McpRootSet: The root set.
+        """
+        return self._roots
+
+    def sync_roots(self) -> None:
+        """Offer servers the active session's folders as roots.
+
+        Called on the GUI thread whenever the session, its binaries or its
+        folders may have changed. The target binary's folder, the other
+        binaries' folders and the operator's folders become the session's
+        roots, and every 2025-11-25 server whose own roots moved is told.
+        """
+        session = self._orchestrator.current_session
+        if session is None:
+            _ = self._roots.set_session(target=None, binaries=(), folders=())
+            return
+        active = session.active_binary
+        _ = self._roots.set_session(
+            target=str(active.path) if active is not None else None,
+            binaries=[str(binary.path) for binary in session.binaries],
+            folders=session.root_folders,
+        )
+
+    def _on_roots_changed(self, before: tuple[McpRoot, ...], after: tuple[McpRoot, ...]) -> None:
+        """Keep the operator's folders on the session and tell servers their roots moved.
+
+        Args:
+            before: The session's roots before.
+            after: The session's roots after.
+        """
+        del before, after
+        session = self._orchestrator.current_session
+        if session is not None:
+            _ = session.set_root_folders(list(self._roots.folders))
+        self.announce_stale_roots()
+
+    def announce_stale_roots(self) -> None:
+        """Tell every running server whose roots moved since it last learned them."""
+        stale = self._roots.stale(self._manager.document.servers)
+        if not stale:
+            return
+        run_bridge_coroutine_async(
+            self._manager.announce_roots_changed(stale),
+            on_success=lambda told: _logger.info("mcp_roots_changes_announced", servers=told),
+            on_error=lambda error: _logger.warning("mcp_roots_change_announce_failed", error=str(error)),
+        )
+
     def generation_for(self, call: ToolCall) -> str | None:
-        """Read the tool-listing generation a call belongs to.
+        """Read the key an answer about a call is remembered under.
+
+        For a server's tool this binds the server's tool-listing generation to
+        its identity, so an answer is never replayed against changed tools or
+        against a different program or endpoint under the same id.
 
         Args:
             call: The tool call about to be confirmed.
 
         Returns:
-            str | None: The generation, or ``None`` for a bridge tool.
+            str | None: The approval key, or ``None`` for a bridge tool.
         """
         if not is_mcp_namespace(call.tool_name.strip().lower()):
             return None
-        return self._source.generation_for(call.function_name)
+        return self._source.approval_key_for(call.function_name)
 
     @staticmethod
     def source_label_for(call: ToolCall) -> str | None:
@@ -498,8 +596,96 @@ class McpService:
         self._orchestrator.set_mcp_tool_source(None)
         with contextlib.suppress(McpError):
             await self._manager.stop()
-        ToolConfirmationDialog.set_approval_store(None)
+        self._relay.approvals_released.emit()
         _logger.info("mcp_service_stopped")
+
+    @property
+    def log_book(self) -> McpServerLogBook:
+        """Where every server's own log messages are kept.
+
+        Returns:
+            McpServerLogBook: The log book.
+        """
+        return self._log_book
+
+    def _client_hooks(self, config: McpServerConfig) -> McpClientHooks:
+        """Build the client-side features one server is offered.
+
+        Args:
+            config: The server.
+
+        Returns:
+            McpClientHooks: The callbacks its connection installs.
+        """
+        return McpClientHooks(
+            list_roots=self._roots.callback_for(config, self._configured_server) if config.roots.enabled else None,
+            logging=self._log_book.callback_for(config.server_id),
+        )
+
+    def _release_approvals(self) -> None:
+        """Withdraw the persistent approval store from the confirmation dialog.
+
+        Runs on the GUI thread, the thread every confirmation dialog reads the
+        store from, so a dialog being answered never sees it vanish between
+        offering ``always`` and writing the answer. A store another service
+        has installed since is left in place.
+        """
+        ToolConfirmationDialog.release_approval_store(self._approvals)
+
+    def _on_context_event(self, event: McpContextEvent) -> None:
+        """Take a change a server announced to its resources or prompts.
+
+        Runs on the background loop: the tool source remembers an updated
+        resource for the model's next turn, and the change is carried to the
+        GUI thread.
+
+        Args:
+            event: What changed.
+        """
+        self._source.note_context_event(event)
+        self._relay.context_changed.emit(event)
+
+    def _apply_context_event(self, payload: object) -> None:
+        """Tell the operator about a change a server announced.
+
+        Runs on the GUI thread.
+
+        Args:
+            payload: The :class:`~intellicrack.mcp.context_events.McpContextEvent`.
+        """
+        handler = self._context_notice_handler
+        if handler is not None and isinstance(payload, McpContextEvent):
+            handler(payload)
+
+    def set_context_notice_handler(self, handler: Callable[[McpContextEvent], None] | None) -> None:
+        """Install what tells the operator a server's resources or prompts changed.
+
+        Args:
+            handler: Called on the GUI thread with each change, or ``None``.
+        """
+        self._context_notice_handler = handler
+
+    def open_context_browser(self, parent: QWidget | None = None) -> McpContextBrowser:
+        """Open the browser of running servers' resources and prompts beside the chat.
+
+        What the operator inserts goes where attachments go. The browser
+        follows the servers' own announcements, re-listing when a server's
+        resources or prompts change.
+
+        Args:
+            parent: Widget to parent it to, defaulting to the service's own.
+
+        Returns:
+            McpContextBrowser: The open browser, which deletes itself when closed.
+        """
+        browser = McpContextBrowser(self._manager, parent if parent is not None else self._parent)
+        browser.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        handler = self._attachment_handler
+        if handler is not None:
+            _ = browser.inserted.connect(handler)
+        _ = self._relay.context_changed.connect(browser.on_context_event)
+        browser.open()
+        return browser
 
     def set_attachment_handler(self, handler: Callable[[str], None] | None) -> None:
         """Install what happens when the operator attaches a server resource or prompt.
@@ -528,6 +714,9 @@ class McpService:
             self._resolver,
             parent if parent is not None else self._parent,
             approvals=self._approvals,
+            tool_source=self._source,
+            log_book=self._log_book,
+            roots=self._roots,
         )
         handler = self._attachment_handler
         if handler is not None:
@@ -538,6 +727,7 @@ class McpService:
             _ = dialog.exec()
         finally:
             dialog.deleteLater()
+        self.announce_stale_roots()
         run_bridge_coroutine_async(
             self.refresh_tool_registration(),
             on_error=lambda error: _logger.warning("mcp_tool_registration_refresh_failed", error=str(error)),

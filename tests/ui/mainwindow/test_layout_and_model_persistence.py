@@ -44,16 +44,12 @@ _TEST_ORG = "IntellicrackTest"
 _TEST_APP = "LayoutModelPersist"
 
 
-def _make_test_settings(*_args: object) -> QSettings:
+def _make_test_settings() -> QSettings:
     """Return a ``QSettings`` bound to the isolated test store.
 
-    Substituted for ``intellicrack.ui.app.QSettings`` so every settings access
-    inside ``MainWindow`` -- regardless of the organisation/application names it
-    passes -- resolves to the same temporary store the tests can seed and
-    inspect.
-
-    Args:
-        *_args: The organisation/application names the caller passed (ignored).
+    Substituted for ``intellicrack.ui.app._main_window_settings`` so every
+    settings access inside ``MainWindow`` resolves to the same temporary store
+    the tests can seed and inspect.
 
     Returns:
         QSettings: A settings instance for the test store.
@@ -90,7 +86,7 @@ def persist_settings(monkeypatch: pytest.MonkeyPatch) -> QSettings:
     store = QSettings(_TEST_ORG, _TEST_APP)
     store.clear()
     store.sync()
-    monkeypatch.setattr(app_module, "QSettings", _make_test_settings)
+    monkeypatch.setattr(app_module, "_main_window_settings", _make_test_settings)
     return store
 
 

@@ -10,10 +10,15 @@ prepared message templates it suggests. Neither is a tool call: nothing here
 runs on the operator's behalf, it only fetches what a server is already
 offering.
 
-Everything a server returns is still untrusted, so text arrives bounded and
-fenced, exactly as tool output does.
+Everything a server returns is still untrusted. Listings and resource text are
+cleaned of invisible characters and forged fence markers as they arrive, and
+bounded; whatever reaches the model as prose is fenced, exactly as tool output
+is. A resource URI and a prompt name are kept exactly as the server wrote them
+where the server needs them back to serve a read or a fetch.
 
-Every request here catches transport failures and re-raises them as
+Every request here goes through :meth:`~intellicrack.mcp.connection.McpConnection.request`,
+which bounds it by the server's per-request timeout, not counting time spent
+waiting on the operator, and re-raises a timeout or a transport failure as
 :class:`~intellicrack.mcp.errors.McpConnectionError`.
 :class:`asyncio.CancelledError` is deliberately not among them: it propagates
 untouched, so cancelling a caller mid-request unwinds rather than being
@@ -23,6 +28,7 @@ recorded as a server fault.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 from typing import TYPE_CHECKING, Final
 
 from intellicrack.core.logging import get_logger
@@ -33,17 +39,19 @@ from intellicrack.core.types import (
     TextResultPart,
     ToolResultPart,
 )
-from intellicrack.mcp.connection import TRANSPORT_FAILURES, representative_failure
+from intellicrack.core.untrusted_text import clean_untrusted_label, sanitize_untrusted_text
 from intellicrack.mcp.errors import McpConnectionError
-from intellicrack.mcp.tool_source import sanitize_untrusted_text
+from intellicrack.mcp.progress import ProgressKind
 
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from mcp import Client
+    from mcp_types import GetPromptResult, ReadResourceResult, RequestParamsMeta
 
     from intellicrack.mcp.connection import McpConnection
+    from intellicrack.mcp.progress import ProgressFn
 
 
 _logger = get_logger(__name__)
@@ -58,14 +66,43 @@ MAX_ENTRIES: Final[int] = 2048
 MAX_PROMPT_TEXT_CHARS: Final[int] = 32768
 """Longest piece of prompt text kept from one message."""
 
+MAX_RESOURCE_TEXT_CHARS: Final[int] = 128 * 1024
+"""Longest piece of resource text kept from one read."""
+
+_LABEL_CHARS: Final[int] = 256
+"""Longest name, title or media type kept from a listing."""
+
+_URI_CHARS: Final[int] = 2048
+"""Longest URI kept from a listing."""
+
+_DESCRIPTION_CHARS: Final[int] = 2048
+"""Longest description kept from a listing."""
+
+MAX_COMPLETION_VALUES: Final[int] = 100
+"""Most completion suggestions kept, the protocol's own limit."""
+
+
+def _label(value: str | None, limit: int = _LABEL_CHARS) -> str | None:
+    """Clean an optional server-supplied label.
+
+    Args:
+        value: The server's text, or ``None``.
+        limit: Longest text kept.
+
+    Returns:
+        str | None: The cleaned text, or ``None`` when absent.
+    """
+    return None if value is None else clean_untrusted_label(value, limit=limit)
+
 
 @dataclass(frozen=True, slots=True)
 class ResourceSummary:
     """One resource a server offers.
 
     Attributes:
-        uri: The resource URI, used to read it.
-        name: The server's own name for it.
+        uri: The resource URI exactly as the server wrote it, which is what
+            a read has to send back. Clean it before showing it.
+        name: The server's own name for it, cleaned.
         title: The server's display title, or ``None``.
         description: The server's description, or ``None``.
         mime_type: The resource's media type, or ``None``.
@@ -85,7 +122,8 @@ class PromptSummary:
     """One prompt template a server offers.
 
     Attributes:
-        name: The server's own name for it, used to fetch it.
+        name: The server's own name for it exactly as written, which is what
+            a fetch has to send back. Clean it before showing it.
         title: The server's display title, or ``None``.
         description: The server's description, or ``None``.
         arguments: Names of the arguments it accepts, in server order.
@@ -97,6 +135,55 @@ class PromptSummary:
     description: str | None = None
     arguments: tuple[str, ...] = ()
     required_arguments: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True, slots=True)
+class ResourceTemplateSummary:
+    """One resource template a server offers.
+
+    Attributes:
+        uri_template: The RFC 6570 template exactly as the server wrote it,
+            which is what completion requests refer to. Clean it before
+            showing it.
+        name: The server's own name for it, cleaned.
+        title: The server's display title, or ``None``.
+        description: The server's description, or ``None``.
+        mime_type: The media type of what it addresses, or ``None``.
+    """
+
+    uri_template: str
+    name: str
+    title: str | None = None
+    description: str | None = None
+    mime_type: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Page[T]:
+    """One page of a listing.
+
+    Attributes:
+        entries: The page's entries.
+        next_cursor: Where the next page starts, or ``None`` on the last.
+    """
+
+    entries: tuple[T, ...]
+    next_cursor: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CompletionSummary:
+    """A server's suggestions for one argument.
+
+    Attributes:
+        values: The suggestions, cleaned, at most :data:`MAX_COMPLETION_VALUES`.
+        total: How many suggestions there are in all, or ``None``.
+        has_more: Whether there are more than were sent.
+    """
+
+    values: tuple[str, ...]
+    total: int | None = None
+    has_more: bool = False
 
 
 def _require_client(connection: McpConnection) -> Client:
@@ -118,8 +205,39 @@ def _require_client(connection: McpConnection) -> Client:
     return client
 
 
+async def list_resource_page(connection: McpConnection, cursor: str | None = None) -> Page[ResourceSummary]:
+    """List one page of the resources a server offers.
+
+    A server that is not connected propagates
+    :class:`~intellicrack.mcp.errors.McpConnectionError` from the connection
+    check, and a request that times out or fails propagates the same from
+    :meth:`~intellicrack.mcp.connection.McpConnection.request`.
+
+    Args:
+        connection: The connected server.
+        cursor: Where the page starts, or ``None`` for the first.
+
+    Returns:
+        Page[ResourceSummary]: The page, capped at :data:`MAX_ENTRIES`.
+    """
+    client = _require_client(connection)
+    result = await connection.request("list resources", partial(client.list_resources, cursor=cursor))
+    entries = tuple(
+        ResourceSummary(
+            uri=str(resource.uri),
+            name=clean_untrusted_label(resource.name, limit=_LABEL_CHARS),
+            title=_label(resource.title),
+            description=_label(resource.description, _DESCRIPTION_CHARS),
+            mime_type=_label(resource.mime_type),
+            size=resource.size,
+        )
+        for resource in result.resources[:MAX_ENTRIES]
+    )
+    return Page(entries=entries, next_cursor=result.next_cursor)
+
+
 async def list_resources(connection: McpConnection) -> list[ResourceSummary]:
-    """List every resource a server offers.
+    """List every resource a server offers, following its pages.
 
     Args:
         connection: The connected server.
@@ -127,60 +245,97 @@ async def list_resources(connection: McpConnection) -> list[ResourceSummary]:
     Returns:
         list[ResourceSummary]: The resources, in server order, capped at
         :data:`MAX_ENTRIES`.
-
-    Raises:
-        McpConnectionError: If the server is not connected, or the listing
-            could not be retrieved.
     """
-    client = _require_client(connection)
     summaries: list[ResourceSummary] = []
     cursor: str | None = None
     for _ in range(MAX_LIST_PAGES):
-        try:
-            result = await client.list_resources(cursor=cursor)
-        except TRANSPORT_FAILURES as exc:
-            failure = representative_failure(exc)
-            message = f"server '{connection.server_id}': cannot list resources: {failure}"
-            raise McpConnectionError(message) from failure
-        summaries.extend(
-            ResourceSummary(
-                uri=str(resource.uri),
-                name=resource.name,
-                title=resource.title,
-                description=resource.description,
-                mime_type=resource.mime_type,
-                size=resource.size,
-            )
-            for resource in result.resources
-        )
-        cursor = result.next_cursor
+        page = await list_resource_page(connection, cursor)
+        summaries.extend(page.entries)
+        cursor = page.next_cursor
         if cursor is None or len(summaries) >= MAX_ENTRIES:
             break
     _logger.debug("mcp_resources_listed", server_id=connection.server_id, count=len(summaries))
     return summaries[:MAX_ENTRIES]
 
 
-async def read_resource(connection: McpConnection, uri: str) -> list[ToolResultPart]:
+async def list_resource_template_page(connection: McpConnection, cursor: str | None = None) -> Page[ResourceTemplateSummary]:
+    """List one page of the resource templates a server offers.
+
+    Args:
+        connection: The connected server.
+        cursor: Where the page starts, or ``None`` for the first.
+
+    Returns:
+        Page[ResourceTemplateSummary]: The page, capped at :data:`MAX_ENTRIES`.
+    """
+    client = _require_client(connection)
+    result = await connection.request("list resource templates", partial(client.list_resource_templates, cursor=cursor))
+    entries = tuple(
+        ResourceTemplateSummary(
+            uri_template=template.uri_template,
+            name=clean_untrusted_label(template.name, limit=_LABEL_CHARS),
+            title=_label(template.title),
+            description=_label(template.description, _DESCRIPTION_CHARS),
+            mime_type=_label(template.mime_type),
+        )
+        for template in result.resource_templates[:MAX_ENTRIES]
+    )
+    return Page(entries=entries, next_cursor=result.next_cursor)
+
+
+async def list_resource_templates(connection: McpConnection) -> list[ResourceTemplateSummary]:
+    """List every resource template a server offers, following its pages.
+
+    Args:
+        connection: The connected server.
+
+    Returns:
+        list[ResourceTemplateSummary]: The templates, in server order, capped
+        at :data:`MAX_ENTRIES`.
+    """
+    summaries: list[ResourceTemplateSummary] = []
+    cursor: str | None = None
+    for _ in range(MAX_LIST_PAGES):
+        page = await list_resource_template_page(connection, cursor)
+        summaries.extend(page.entries)
+        cursor = page.next_cursor
+        if cursor is None or len(summaries) >= MAX_ENTRIES:
+            break
+    return summaries[:MAX_ENTRIES]
+
+
+async def read_resource(connection: McpConnection, uri: str, *, on_progress: ProgressFn | None = None) -> list[ToolResultPart]:
     """Fetch one resource's contents.
+
+    The read asks the server to report its progress, which renews its
+    deadline as a tool call's does. A server that is not connected
+    propagates :class:`~intellicrack.mcp.errors.McpConnectionError` from the
+    connection check, and a request that times out or fails propagates the
+    same from
+    :meth:`~intellicrack.mcp.connection.McpConnection.request_with_progress`.
 
     Args:
         connection: The connected server.
         uri: The resource URI, as the listing reported it.
+        on_progress: Receives each progress notice, or ``None``.
 
     Returns:
         list[ToolResultPart]: One part per content block the server returned.
-
-    Raises:
-        McpConnectionError: If the server is not connected, or the read
-            failed.
     """
     client = _require_client(connection)
-    try:
-        result = await client.read_resource(uri)
-    except TRANSPORT_FAILURES as exc:
-        failure = representative_failure(exc)
-        message = f"server '{connection.server_id}': cannot read {uri!r}: {failure}"
-        raise McpConnectionError(message) from failure
+
+    async def _read(meta: RequestParamsMeta | None) -> ReadResourceResult:
+        """Read the resource.
+
+        Args:
+            meta: The ``_meta`` the request carries.
+
+        Returns:
+            ReadResourceResult: The server's answer.
+        """
+        return await client.read_resource(uri, meta=meta)
+
+    result = await connection.request_with_progress(f"read {uri!r}", ProgressKind.RESOURCE, uri, _read, on_progress)
 
     parts: list[ToolResultPart] = []
     for contents in result.contents:
@@ -188,18 +343,48 @@ async def read_resource(connection: McpConnection, uri: str) -> list[ToolResultP
         blob = getattr(contents, "blob", None)
         parts.append(
             EmbeddedResourcePart(
-                uri=str(contents.uri),
-                text=text if isinstance(text, str) else None,
-                data=blob if isinstance(blob, str) else None,
-                mime_type=contents.mime_type,
+                uri=clean_untrusted_label(str(contents.uri), limit=_URI_CHARS),
+                text=clean_untrusted_label(text, limit=MAX_RESOURCE_TEXT_CHARS) if isinstance(text, str) else None,
+                data="".join(blob.split()) if isinstance(blob, str) else None,
+                mime_type=_label(contents.mime_type),
             ),
         )
     _logger.info("mcp_resource_read", server_id=connection.server_id, uri=uri, part_count=len(parts))
     return parts
 
 
+async def list_prompt_page(connection: McpConnection, cursor: str | None = None) -> Page[PromptSummary]:
+    """List one page of the prompt templates a server offers.
+
+    A server that is not connected propagates
+    :class:`~intellicrack.mcp.errors.McpConnectionError` from the connection
+    check, and a request that times out or fails propagates the same from
+    :meth:`~intellicrack.mcp.connection.McpConnection.request`.
+
+    Args:
+        connection: The connected server.
+        cursor: Where the page starts, or ``None`` for the first.
+
+    Returns:
+        Page[PromptSummary]: The page, capped at :data:`MAX_ENTRIES`.
+    """
+    client = _require_client(connection)
+    result = await connection.request("list prompts", partial(client.list_prompts, cursor=cursor))
+    entries = tuple(
+        PromptSummary(
+            name=prompt.name,
+            title=_label(prompt.title),
+            description=_label(prompt.description, _DESCRIPTION_CHARS),
+            arguments=tuple(argument.name for argument in prompt.arguments or ()),
+            required_arguments=frozenset(argument.name for argument in prompt.arguments or () if argument.required),
+        )
+        for prompt in result.prompts[:MAX_ENTRIES]
+    )
+    return Page(entries=entries, next_cursor=result.next_cursor)
+
+
 async def list_prompts(connection: McpConnection) -> list[PromptSummary]:
-    """List every prompt template a server offers.
+    """List every prompt template a server offers, following its pages.
 
     Args:
         connection: The connected server.
@@ -207,38 +392,49 @@ async def list_prompts(connection: McpConnection) -> list[PromptSummary]:
     Returns:
         list[PromptSummary]: The prompts, in server order, capped at
         :data:`MAX_ENTRIES`.
-
-    Raises:
-        McpConnectionError: If the server is not connected, or the listing
-            could not be retrieved.
     """
-    client = _require_client(connection)
     summaries: list[PromptSummary] = []
     cursor: str | None = None
     for _ in range(MAX_LIST_PAGES):
-        try:
-            result = await client.list_prompts(cursor=cursor)
-        except TRANSPORT_FAILURES as exc:
-            failure = representative_failure(exc)
-            message = f"server '{connection.server_id}': cannot list prompts: {failure}"
-            raise McpConnectionError(message) from failure
-        for prompt in result.prompts:
-            arguments = tuple(argument.name for argument in prompt.arguments or ())
-            required = frozenset(argument.name for argument in prompt.arguments or () if argument.required)
-            summaries.append(
-                PromptSummary(
-                    name=prompt.name,
-                    title=prompt.title,
-                    description=prompt.description,
-                    arguments=arguments,
-                    required_arguments=required,
-                ),
-            )
-        cursor = result.next_cursor
+        page = await list_prompt_page(connection, cursor)
+        summaries.extend(page.entries)
+        cursor = page.next_cursor
         if cursor is None or len(summaries) >= MAX_ENTRIES:
             break
     _logger.debug("mcp_prompts_listed", server_id=connection.server_id, count=len(summaries))
     return summaries[:MAX_ENTRIES]
+
+
+async def complete_argument(
+    connection: McpConnection,
+    *,
+    prompt: bool,
+    reference: str,
+    argument: str,
+    value: str,
+    context: Mapping[str, str] | None = None,
+) -> CompletionSummary:
+    """Ask a server to suggest values for one argument of a prompt or a resource template.
+
+    Args:
+        connection: The connected server.
+        prompt: Whether the argument is a prompt's rather than a template's.
+        reference: The prompt's name, or the template's URI template.
+        argument: The argument.
+        value: What has been typed of it so far.
+        context: The values already chosen for the other arguments.
+
+    Returns:
+        CompletionSummary: The suggestions, cleaned.
+    """
+    _ = _require_client(connection)
+    result = await connection.complete(prompt=prompt, reference=reference, argument=argument, value=value, context=context)
+    completion = result.completion
+    return CompletionSummary(
+        values=tuple(clean_untrusted_label(entry, limit=_LABEL_CHARS) for entry in completion.values[:MAX_COMPLETION_VALUES]),
+        total=completion.total,
+        has_more=bool(completion.has_more),
+    )
 
 
 def _render_prompt_content(content: object) -> str:
@@ -272,31 +468,49 @@ def _render_prompt_content(content: object) -> str:
     return "[unsupported prompt content]"
 
 
-async def get_prompt(connection: McpConnection, name: str, arguments: Mapping[str, str]) -> list[Message]:
+async def get_prompt(
+    connection: McpConnection,
+    name: str,
+    arguments: Mapping[str, str],
+    *,
+    on_progress: ProgressFn | None = None,
+) -> list[Message]:
     """Fetch one prompt template, filled in with the supplied arguments.
 
     The messages a server returns are its own words, not Intellicrack's, so
     each one is fenced before it can reach the model as conversation.
 
+    The fetch asks the server to report its progress, which renews its
+    deadline as a tool call's does. A server that is not connected
+    propagates :class:`~intellicrack.mcp.errors.McpConnectionError` from the
+    connection check, and a request that times out or fails propagates the
+    same from
+    :meth:`~intellicrack.mcp.connection.McpConnection.request_with_progress`.
+
     Args:
         connection: The connected server.
         name: The prompt name, as the listing reported it.
         arguments: Argument values to fill the template with.
+        on_progress: Receives each progress notice, or ``None``.
 
     Returns:
         list[Message]: The rendered conversation messages.
-
-    Raises:
-        McpConnectionError: If the server is not connected, or the prompt
-            could not be fetched.
     """
     client = _require_client(connection)
-    try:
-        result = await client.get_prompt(name, dict(arguments))
-    except TRANSPORT_FAILURES as exc:
-        failure = representative_failure(exc)
-        message = f"server '{connection.server_id}': cannot fetch prompt {name!r}: {failure}"
-        raise McpConnectionError(message) from failure
+    values = dict(arguments)
+
+    async def _get(meta: RequestParamsMeta | None) -> GetPromptResult:
+        """Fetch the prompt.
+
+        Args:
+            meta: The ``_meta`` the request carries.
+
+        Returns:
+            GetPromptResult: The server's answer.
+        """
+        return await client.get_prompt(name, values, meta=meta)
+
+    result = await connection.request_with_progress(f"fetch prompt {name!r}", ProgressKind.PROMPT, name, _get, on_progress)
 
     messages: list[Message] = []
     for entry in result.messages:

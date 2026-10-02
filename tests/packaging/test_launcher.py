@@ -27,6 +27,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
@@ -38,6 +39,11 @@ if TYPE_CHECKING:
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[2]
 _LAUNCHER_PATH: Final[Path] = _REPO_ROOT / "packaging" / "launcher" / "launcher.py"
+
+_WINDOWS_CREATION_FLAGS = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="DETACHED_PROCESS and CREATE_NEW_PROCESS_GROUP are Windows process creation flags",
+)
 
 
 def _load_launcher() -> ModuleType:
@@ -108,7 +114,7 @@ def _install_recording_message_box(monkeypatch: pytest.MonkeyPatch) -> _Recordin
     def _fake_windll(_name: str) -> _FakeUser32:
         return _FakeUser32(recorder)
 
-    monkeypatch.setattr(launcher.ctypes, "WinDLL", _fake_windll)
+    monkeypatch.setattr(launcher.ctypes, "WinDLL", _fake_windll, raising=False)
     return recorder
 
 
@@ -174,6 +180,7 @@ def test_report_error_writes_to_stderr_when_present(monkeypatch: pytest.MonkeyPa
 # --- Child spawn configuration ------------------------------------------------
 
 
+@_WINDOWS_CREATION_FLAGS
 def test_creation_flags_detach_and_suppress_the_console() -> None:
     """The GUI child is detached with a new process group and no console window."""
     expected = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
@@ -365,6 +372,7 @@ def test_launch_reports_and_fails_when_the_state_dir_cannot_be_created(tmp_path:
     assert "environment" in reported[0].lower(), f"the reported message does not name the failure: {reported[0]!r}"
 
 
+@_WINDOWS_CREATION_FLAGS
 def test_launch_spawns_pythonw_detached(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A well-formed install spawns ``pythonw.exe -m intellicrack`` detached.
 

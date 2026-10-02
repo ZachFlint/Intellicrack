@@ -17,7 +17,7 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 from uuid import uuid4
 
 from .json_payload import is_json_array, is_json_object
@@ -152,7 +152,10 @@ def _serialize_result_part(part: ToolResultPart) -> dict[str, Any]:
         dict[str, Any]: JSON-compatible record tagged with the part kind.
     """
     if isinstance(part, TextResultPart):
-        return {"type": _PART_TYPE_TEXT, "text": part.text}
+        record: dict[str, Any] = {"type": _PART_TYPE_TEXT, "text": part.text}
+        if part.mirrors_structured:
+            record["mirrors_structured"] = True
+        return record
     if isinstance(part, ImageResultPart):
         return {"type": _PART_TYPE_IMAGE, "data": part.data, "mime_type": part.mime_type}
     if isinstance(part, AudioResultPart):
@@ -221,7 +224,7 @@ def _deserialize_result_part(data: dict[str, Any]) -> ToolResultPart:
     """
     part_type = str(data.get("type", ""))
     if part_type == _PART_TYPE_TEXT:
-        return TextResultPart(text=str(data.get("text", "")))
+        return TextResultPart(text=str(data.get("text", "")), mirrors_structured=data.get("mirrors_structured") is True)
     if part_type == _PART_TYPE_STRUCTURED:
         content = data.get("content")
         return StructuredResultPart(content=dict(content) if is_json_object(content) else {})
@@ -360,6 +363,9 @@ class Session:
             part in this session, keyed by server id. Absent from a session
             file written before MCP support existed, which loads as an empty
             mapping.
+        root_folders: Folders the operator added to the session for MCP
+            servers to work in, offered to them as roots alongside the loaded
+            binaries' folders.
     """
 
     id: str
@@ -378,6 +384,22 @@ class Session:
     tags: list[str] = field(default_factory=list)
     loaded_tools: list[str] = field(default_factory=list)
     mcp_servers: dict[str, McpServerState] = field(default_factory=dict)
+    root_folders: list[str] = field(default_factory=list)
+
+    def set_root_folders(self, folders: list[str]) -> bool:
+        """Replace the folders the operator added for MCP servers to work in.
+
+        Args:
+            folders: The folders, in the order they are offered.
+
+        Returns:
+            bool: ``True`` when they changed.
+        """
+        if folders == self.root_folders:
+            return False
+        self.root_folders = list(folders)
+        self.updated_at = datetime.now(tz=UTC)
+        return True
 
     def add_loaded_tool(self, canonical_name: str) -> bool:
         """Record a discovered tool-function name, skipping duplicates.
@@ -749,6 +771,7 @@ class SessionStore:
             "bridge_analyses": {name: self._serialize_bridge_analysis(analysis) for name, analysis in session.bridge_analyses.items()},
             "loaded_tools": list(session.loaded_tools),
             "mcp_servers": {key: self._serialize_mcp_server(value) for key, value in session.mcp_servers.items()},
+            "root_folders": list(session.root_folders),
         }
         encoded = json.dumps(session_data)
 
@@ -808,6 +831,7 @@ class SessionStore:
                 bridge_analyses={name: self._deserialize_bridge_analysis(value) for name, value in data.get("bridge_analyses", {}).items()},
                 loaded_tools=list(data.get("loaded_tools", [])),
                 mcp_servers=self._deserialize_mcp_servers(data.get("mcp_servers", {})),
+                root_folders=self._deserialize_root_folders(data.get("root_folders", [])),
             )
 
             _logger.debug("session_loaded", session_id=session_id)
@@ -1135,6 +1159,22 @@ class SessionStore:
         return states
 
     @staticmethod
+    def _deserialize_root_folders(data: object) -> list[str]:
+        """Rebuild the operator's root folders, skipping any entry that is not a path.
+
+        Args:
+            data: The stored list, absent from a session saved before roots
+                existed.
+
+        Returns:
+            list[str]: The folders.
+        """
+        if not isinstance(data, list):
+            return []
+        entries = cast("list[object]", data)
+        return [entry for entry in entries if isinstance(entry, str) and entry]
+
+    @staticmethod
     def _serialize_patch(patch: PatchInfo) -> dict[str, Any]:
         """Serialize PatchInfo to dictionary.
 
@@ -1289,6 +1329,7 @@ class SessionStore:
                 "bridge_analyses": {name: self._serialize_bridge_analysis(analysis) for name, analysis in session.bridge_analyses.items()},
                 "loaded_tools": list(session.loaded_tools),
                 "mcp_servers": {key: self._serialize_mcp_server(value) for key, value in session.mcp_servers.items()},
+                "root_folders": list(session.root_folders),
             },
         }
 
@@ -1354,6 +1395,7 @@ class SessionStore:
             },
             loaded_tools=list(session_data.get("loaded_tools", [])),
             mcp_servers=self._deserialize_mcp_servers(session_data.get("mcp_servers", {})),
+            root_folders=self._deserialize_root_folders(session_data.get("root_folders", [])),
         )
 
         _logger.info("session_imported", session_id=session.id, path=str(path))

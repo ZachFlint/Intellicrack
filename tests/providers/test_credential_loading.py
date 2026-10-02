@@ -126,38 +126,63 @@ def _assert_get_credentials_value(env_path: Path, known_key: str, monkeypatch: p
     assert absent_creds is None, "get_credentials must return None for a provider not present in the controlled env file"
 
 
+_DISCOVERY_VAR = "INTELLICRACK_TEST_ENV_DISCOVERY"
+_DISCOVERY_VALUE = "value-from-discovered-env-file"
+
+
 class TestCredentialLoaderInitialization:
     """Tests for CredentialLoader initialization."""
 
     @staticmethod
-    def test_loader_initializes_with_env_path(
-        env_file_path: Path,
-    ) -> None:
+    def test_loader_initializes_with_env_path(tmp_path: Path) -> None:
         """Test CredentialLoader can be initialized with explicit path.
 
         Args:
-            env_file_path: Path to the .env file used for credential loading.
+            tmp_path: Per-test directory holding the private .env file.
         """
-        loader = CredentialLoader(env_path=env_file_path)
-        assert loader.env_path == env_file_path
+        env_file = tmp_path / ".env"
+        _ = env_file.write_text("", encoding="utf-8")
+        loader = CredentialLoader(env_path=env_file)
+        assert loader.env_path == env_file
 
     @staticmethod
-    def test_loader_initializes_without_path() -> None:
-        """Test CredentialLoader can be initialized without explicit path."""
+    def test_loader_initializes_without_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test CredentialLoader can be initialized without explicit path.
+
+        The working directory, searched first, holds a private ``.env``, so the
+        search stops there and the developer's real ``.env`` is never read.
+
+        Args:
+            tmp_path: Per-test directory used as the working directory.
+            monkeypatch: Fixture that changes the working directory.
+        """
+        _ = (tmp_path / ".env").write_text("", encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
         loader = CredentialLoader()
         assert loader.env_path is not None
 
     @staticmethod
-    def test_loader_finds_env_file(
-        env_file_path: Path,
-    ) -> None:
-        """Test loader finds .env file when it exists.
+    def test_loader_finds_env_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test loader discovers the working directory's .env file and loads it.
+
+        The working directory is searched before the project root and the home
+        directory, so a ``.env`` placed there is found without an explicit path
+        and the developer's real ``.env`` is never read.
 
         Args:
-            env_file_path: Path to the .env file used for credential loading.
+            tmp_path: Per-test directory used as the working directory.
+            monkeypatch: Fixture that changes the working directory and restores
+                the discovery variable after the test.
         """
-        loader = CredentialLoader(env_path=env_file_path)
-        assert loader.env_path.exists()
+        env_file = tmp_path / ".env"
+        _ = env_file.write_text(f"{_DISCOVERY_VAR}={_DISCOVERY_VALUE}\n", encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv(_DISCOVERY_VAR, "value-from-process-environment")
+
+        loader = CredentialLoader()
+
+        assert loader.env_path.samefile(env_file)
+        assert loader.get_saved_var(_DISCOVERY_VAR) == _DISCOVERY_VALUE
 
 
 _EXPECTED_TUPLE_LENGTH = 2

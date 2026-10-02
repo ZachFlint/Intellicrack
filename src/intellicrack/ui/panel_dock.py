@@ -34,6 +34,20 @@ _DEFAULT_DOCK_WIDTH: Final[int] = 800
 _DEFAULT_DOCK_HEIGHT: Final[int] = 600
 
 
+def _detached_panels_settings() -> QSettings:
+    """Open the detached panel windows' user-scope settings store.
+
+    The store uses the process-wide default settings format, which is
+    ``NativeFormat`` (the registry on Windows) unless a host relocates it with
+    :meth:`QSettings.setDefaultFormat` and :meth:`QSettings.setPath`, as the
+    test suite does to keep the user's real settings untouched.
+
+    Returns:
+        QSettings: The ``Intellicrack/DetachedPanels`` settings handle.
+    """
+    return QSettings(QSettings.defaultFormat(), QSettings.Scope.UserScope, "Intellicrack", "DetachedPanels")
+
+
 class DetachedPanelWindow(QMainWindow):
     """Floating window wrapper for a detached tool panel.
 
@@ -117,13 +131,13 @@ class DetachedPanelWindow(QMainWindow):
 
     def _save_geometry(self) -> None:
         """Persist this window's geometry to QSettings."""
-        settings = QSettings("Intellicrack", "DetachedPanels")
+        settings = _detached_panels_settings()
         settings.setValue(f"{self._settings_key}/geometry", self.saveGeometry())
         _logger.debug("panel_dock_geometry_saved", key=self._settings_key)
 
     def _restore_geometry(self) -> None:
         """Restore this window's geometry from QSettings."""
-        settings = QSettings("Intellicrack", "DetachedPanels")
+        settings = _detached_panels_settings()
         geometry = settings.value(f"{self._settings_key}/geometry")
         if isinstance(geometry, QByteArray):
             self.restoreGeometry(geometry)

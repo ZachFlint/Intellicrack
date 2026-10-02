@@ -175,15 +175,20 @@ class _RaceDocument:
     reproducing the exact race M9 describes.
 
     Attributes:
+        first_call_started: Event set once the first call is in flight, so a
+            test can start the second scan only after the first one holds
+            the blocked call.
         release_first_call: Event the test sets to unblock the first call.
     """
 
+    first_call_started: threading.Event
     release_first_call: threading.Event
 
     def __init__(self) -> None:
         """Initialise the call counter and the first-call release gate."""
         self._call_count = 0
         self._lock = threading.Lock()
+        self.first_call_started = threading.Event()
         self.release_first_call = threading.Event()
 
     def extract_strings(
@@ -213,6 +218,7 @@ class _RaceDocument:
             call_index = self._call_count
             self._call_count += 1
         if call_index == 0:
+            self.first_call_started.set()
             self.release_first_call.wait(timeout=10.0)
             return [{"offset": 0, "text": "STALE-RESULT"}]
         return [{"offset": 0, "text": "FRESH-RESULT"}]
@@ -271,6 +277,7 @@ def test_m9_superseded_slower_worker_does_not_overwrite_fresher_result(
     host._populate_strings()
     worker_a = host._strings_worker
     assert isinstance(worker_a, GenericCallableWorker)
+    assert document.first_call_started.wait(5.0), "the first scan's worker never reached extract_strings"
 
     host._populate_strings()
     worker_b = host._strings_worker

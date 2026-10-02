@@ -45,8 +45,6 @@ _NTDLL_PATH: Final[str] = r"C:\Windows\System32\ntdll.dll"
 _TEXT_CHARACTERISTICS_EXPECTED: Final[str] = "0x60000020"
 _NTDLL_TEXT_MIN_VIRTUAL_SIZE: Final[int] = 0x100000
 _NTDLL_MIN_EXPORT_COUNT: Final[int] = 2000
-_NT_CREATE_FILE_ORDINAL: Final[int] = 297
-_RTL_ALLOC_HEAP_ORDINAL: Final[int] = 754
 _EXPECTED_NEW_TOOL_COUNT: Final[int] = 104
 
 
@@ -524,13 +522,21 @@ class TestPEParsing:
     async def test_get_module_exports_real(self, attached_bridge: X64DbgBridge) -> None:
         """Test parsing PE exports from ntdll.dll with count, structure, and specific-export validation.
 
-        Oracle: pefile parses ntdll.dll on disk.  The bridge reads the in-memory export table.
-        Invariants that hold for every Windows 10/11 ntdll build:
+        Oracle: the bridge reads the in-memory export table via the Windows
+        Toolhelp/ReadProcessMemory path.  Invariants that hold for every
+        Windows 10/11/Server ntdll build:
         - At least 2000 named exports (typically 2516+).
-        - Export ordinal 297 is NtCreateFile.
-        - Export ordinal 754 is RtlAllocateHeap.
+        - NtCreateFile is exported, with a non-zero address and a positive
+          PE ordinal.
+        - RtlAllocateHeap is exported, with a non-zero address and a positive
+          PE ordinal.
         - No duplicate export names.
         - Every record has 'name', 'ordinal', 'address', 'truncated' keys.
+
+        The specific PE ordinal *numbers* assigned to each export are not
+        asserted: ntdll's export ordinals shift between Windows builds, so a
+        name-to-ordinal mapping is not a stable invariant.  The export is
+        located by name and its structural fields are validated instead.
 
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
@@ -550,20 +556,25 @@ class TestPEParsing:
             f"Duplicate export names found; duplicates: {[n for n in export_names if export_names.count(n) > 1][:10]}"
         )
 
-        by_ordinal: dict[int, dict[str, object]] = {e["ordinal"]: e for e in exports}
+        by_name: dict[str, dict[str, object]] = {str(e["name"]): e for e in exports if e.get("name")}
 
-        nt_create = by_ordinal.get(_NT_CREATE_FILE_ORDINAL)
-        assert nt_create is not None, f"Ordinal {_NT_CREATE_FILE_ORDINAL} (NtCreateFile) not found in exports"
-        assert nt_create["name"] == "NtCreateFile", f"Ordinal {_NT_CREATE_FILE_ORDINAL} name={nt_create['name']!r}, expected 'NtCreateFile'"
+        nt_create = by_name.get("NtCreateFile")
+        assert nt_create is not None, "NtCreateFile not found in ntdll exports"
+        nt_ordinal = nt_create["ordinal"]
+        assert isinstance(nt_ordinal, int), f"NtCreateFile ordinal must be an int, got {nt_ordinal!r}"
+        assert nt_ordinal > 0, f"NtCreateFile ordinal must be positive, got {nt_ordinal}"
         assert isinstance(nt_create["address"], str), f"NtCreateFile address must be str, got {type(nt_create['address'])}"
         assert str(nt_create["address"]).startswith("0x"), f"NtCreateFile address {nt_create['address']!r} must start with '0x'"
         assert int(str(nt_create["address"]), 16) > 0, "NtCreateFile address must be non-zero"
 
-        rtl_alloc = by_ordinal.get(_RTL_ALLOC_HEAP_ORDINAL)
-        assert rtl_alloc is not None, f"Ordinal {_RTL_ALLOC_HEAP_ORDINAL} (RtlAllocateHeap) not found in exports"
-        assert rtl_alloc["name"] == "RtlAllocateHeap", (
-            f"Ordinal {_RTL_ALLOC_HEAP_ORDINAL} name={rtl_alloc['name']!r}, expected 'RtlAllocateHeap'"
-        )
+        rtl_alloc = by_name.get("RtlAllocateHeap")
+        assert rtl_alloc is not None, "RtlAllocateHeap not found in ntdll exports"
+        rtl_ordinal = rtl_alloc["ordinal"]
+        assert isinstance(rtl_ordinal, int), f"RtlAllocateHeap ordinal must be an int, got {rtl_ordinal!r}"
+        assert rtl_ordinal > 0, f"RtlAllocateHeap ordinal must be positive, got {rtl_ordinal}"
+        assert isinstance(rtl_alloc["address"], str), f"RtlAllocateHeap address must be str, got {type(rtl_alloc['address'])}"
+        assert str(rtl_alloc["address"]).startswith("0x"), f"RtlAllocateHeap address {rtl_alloc['address']!r} must start with '0x'"
+        assert int(str(rtl_alloc["address"]), 16) > 0, "RtlAllocateHeap address must be non-zero"
 
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
     async def test_module_not_found(self, attached_bridge: X64DbgBridge) -> None:

@@ -165,9 +165,16 @@ class TestRuntimeDependenciesAreLean:
 
     @staticmethod
     def test_runtime_deps_are_modest_in_size() -> None:
-        """Runtime dependency count must be far below the pre-fix bloat (<= 25)."""
+        """Runtime dependency count must be far below the pre-fix bloat (<= 40).
+
+        The ceiling matches ``tests/core/config/test_runtime_deps.py``: the
+        runtime list must also name every distribution ``src/intellicrack``
+        imports at module scope (``tests/packaging/test_project_runtime_dependencies.py``),
+        which is more than two dozen packages, so the budget leaves room for
+        those while still failing on a return of the 95+ entry dev bloat.
+        """
         runtime = _runtime_dependencies()
-        assert len(runtime) <= 25, (
+        assert len(runtime) <= 40, (
             f"runtime dependency count {len(runtime)} exceeds the lean budget; "
             "audit found 95+ packages incorrectly declared as runtime — confirm extras moved cleanly. "
             f"Current runtime deps: {sorted(runtime)}"

@@ -32,7 +32,7 @@ from intellicrack.ui.win32_embed import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
 
 
 NONEXISTENT_PID = 999999999
@@ -123,7 +123,7 @@ def _pump_until_visible(qapp: QApplication, widget: QWidget, timeout_sec: float)
 
 
 @contextlib.contextmanager
-def _shown_window(qapp: QApplication, title: str, width: int, height: int) -> Iterator[QWidget]:
+def _shown_window(qapp: QApplication, title: str, width: int, height: int) -> Generator[QWidget]:
     """Create, show, and reliably close a real top-level Qt window.
 
     Args:

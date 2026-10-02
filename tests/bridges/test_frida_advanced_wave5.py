@@ -141,6 +141,7 @@ class _FakeScriptW5:
         self.load_calls: int = 0
         self.unload_calls: int = 0
         self.eternalize_calls: int = 0
+        self.is_destroyed: bool = False
         self.posts: list[dict[str, object]] = []
         self._handler: Callable[..., None] | None = None
 
@@ -200,7 +201,6 @@ class _FakeSessionW5:
 
         Args:
             source: JavaScript source the bridge is injecting.
-            **_: Ignored keyword arguments.
 
         Returns:
             _FakeScriptW5: Newly created fake script.
@@ -364,6 +364,7 @@ class _StalkerInjectScript:
         self.batch = batch
         self.load_calls: int = 0
         self.unload_calls: int = 0
+        self.is_destroyed: bool = False
         self.posts: list[dict[str, object]] = []
         self._handler: Callable[..., None] | None = None
 
@@ -435,7 +436,6 @@ class _StalkerSession:
 
         Args:
             source: JavaScript source the bridge is injecting.
-            **_: Ignored keyword arguments.
 
         Returns:
             _StalkerInjectScript: Inject script for deterministic event delivery.

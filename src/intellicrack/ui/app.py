@@ -50,6 +50,7 @@ from intellicrack.core.logging import get_logger, log_tool_call
 from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.script_gen import ScriptGenerator, ScriptManager
 from intellicrack.core.session import Session
+from intellicrack.core.tool_progress import ToolProgress
 from intellicrack.core.types import (
     BinaryInfo,
     BridgeAnalysisSummary,
@@ -64,6 +65,7 @@ from intellicrack.core.types import (
     ToolName,
     ToolResult,
 )
+from intellicrack.core.untrusted_text import clean_untrusted_label
 from intellicrack.credentials import get_credentials
 from intellicrack.credentials.env_loader import CredentialField, get_credential_loader
 from intellicrack.credentials.provider_settings import (
@@ -72,7 +74,9 @@ from intellicrack.credentials.provider_settings import (
     coerce_timeout_seconds,
     resolve_session_credentials,
     saved_model_overrides,
+    saved_reasoning_summary_mode,
 )
+from intellicrack.mcp.context_events import McpContextChange, McpContextEvent
 from intellicrack.mcp.errors import McpError
 from intellicrack.providers.configurable import ConfigurableProvider
 from intellicrack.providers.discovery import ModelDiscovery, format_discovery_status
@@ -106,6 +110,21 @@ _logger = get_logger(__name__)
 
 _MCP_SHUTDOWN_TIMEOUT_S: Final[float] = 15.0
 """How long MCP teardown may take before the shared loop is stopped anyway."""
+
+
+def _main_window_settings() -> QSettings:
+    """Open the main window's user-scope settings store.
+
+    The store uses the process-wide default settings format, which is
+    ``NativeFormat`` (the registry on Windows) unless a host relocates it with
+    :meth:`QSettings.setDefaultFormat` and :meth:`QSettings.setPath`, as the
+    test suite does to keep the user's real settings untouched.
+
+    Returns:
+        QSettings: The ``Intellicrack/MainWindow`` settings handle.
+    """
+    return QSettings(QSettings.defaultFormat(), QSettings.Scope.UserScope, "Intellicrack", "MainWindow")
+
 
 try:
     from intellicrack.providers.model_loader import get_global_model_cache, set_global_cache_size
@@ -202,6 +221,8 @@ class MainWindow(QMainWindow):
         message_received: Qt signal for message received.
         tool_call_received: Qt signal for tool call received.
         tool_result_received: Qt signal for tool result received.
+        tool_progress_received: Qt signal carrying a running tool call's
+            :class:`~intellicrack.core.tool_progress.ToolProgress`.
         stream_chunk_received: Qt signal for stream chunk received.
         status_update: Qt signal for status update.
         bridge_analysis_received: Qt signal for bridge analysis received.
@@ -211,6 +232,7 @@ class MainWindow(QMainWindow):
     message_received = pyqtSignal(Message)
     tool_call_received = pyqtSignal(ToolCall)
     tool_result_received = pyqtSignal(ToolResult)
+    tool_progress_received = pyqtSignal(object)
     stream_chunk_received = pyqtSignal(str)
     status_update = pyqtSignal(str)
     bridge_analysis_received = pyqtSignal(object)
@@ -234,6 +256,7 @@ class MainWindow(QMainWindow):
         self._config = config
         self._orchestrator = orchestrator
         self._mcp_service: McpService | None = None
+        self._running_call_names: dict[str, str] = {}
         self._stream_append: Callable[[str], None] | None = None
         self.sandbox_manager = SandboxManager()
         self.model_refresh_worker: ModelRefreshWorker | None = None
@@ -447,7 +470,7 @@ class MainWindow(QMainWindow):
 
     def _save_window_state(self) -> None:
         """Persist window geometry, splitter sizes, tab state, and detached panels to QSettings."""
-        settings = QSettings("Intellicrack", "MainWindow")
+        settings = _main_window_settings()
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("splitter_sizes", self._splitter.sizes())
 
@@ -472,7 +495,7 @@ class MainWindow(QMainWindow):
             _logger.debug("window_state_restore_skipped_layout_reset")
             return
 
-        settings = QSettings("Intellicrack", "MainWindow")
+        settings = _main_window_settings()
 
         geometry = settings.value("geometry")
         if isinstance(geometry, QByteArray):
@@ -588,7 +611,7 @@ class MainWindow(QMainWindow):
             str | None: The instance id stored under ``last_provider`` on the
             last selection, or ``None`` when nothing valid is stored.
         """
-        raw: object = QSettings("Intellicrack", "MainWindow").value("last_provider")
+        raw: object = _main_window_settings().value("last_provider")
         if isinstance(raw, str) and is_valid_provider_id(raw):
             return normalize_provider_id(raw)
         if isinstance(raw, str):
@@ -606,7 +629,7 @@ class MainWindow(QMainWindow):
             str: The remembered model id stored under
             ``last_model/<provider>``, or ``""`` when none is stored.
         """
-        raw: object = QSettings("Intellicrack", "MainWindow").value(f"last_model/{provider}")
+        raw: object = _main_window_settings().value(f"last_model/{provider}")
         return raw.strip() if isinstance(raw, str) else ""
 
     @staticmethod
@@ -616,7 +639,7 @@ class MainWindow(QMainWindow):
         Args:
             provider: The provider the user just activated.
         """
-        QSettings("Intellicrack", "MainWindow").setValue("last_provider", provider)
+        _main_window_settings().setValue("last_provider", provider)
 
     def _persist_current_model(self) -> None:
         """Persist the toolbar's current provider and model to QSettings.
@@ -631,7 +654,7 @@ class MainWindow(QMainWindow):
         model = self.model_combo.currentText().strip()
         if not model:
             return
-        settings = QSettings("Intellicrack", "MainWindow")
+        settings = _main_window_settings()
         settings.setValue(f"last_model/{provider_data}", model)
         settings.setValue("last_provider", provider_data)
         _logger.debug("model_selection_persisted", provider=provider_data, model=model)
@@ -1179,7 +1202,7 @@ class MainWindow(QMainWindow):
         self._auto_approve_btn = QPushButton("Auto-approve: OFF")
         self._auto_approve_btn.setCheckable(True)
         self._auto_approve_btn.setObjectName("toggle_button")
-        saved_auto_approve_raw: object = QSettings("Intellicrack", "MainWindow").value("auto_approve", defaultValue=False)
+        saved_auto_approve_raw: object = _main_window_settings().value("auto_approve", defaultValue=False)
         initial_auto_approve: bool = (
             bool(saved_auto_approve_raw)
             if isinstance(saved_auto_approve_raw, bool)
@@ -1379,6 +1402,9 @@ class MainWindow(QMainWindow):
         self.message_received.connect(self._on_message_received)
         self.tool_call_received.connect(self._on_tool_call)
         self.tool_result_received.connect(self._on_tool_result)
+        self.tool_progress_received.connect(self._on_tool_progress)
+        self._chat_panel.tool_activity.cancel_requested.connect(self._on_cancel_tool_call)
+        self._chat_panel.context_requested.connect(self._on_browse_mcp_context)
         self.stream_chunk_received.connect(self._on_stream_chunk)
         self.status_update.connect(self._update_status)
         self.tool_panel.address_clicked.connect(self._on_address_clicked)
@@ -1412,6 +1438,7 @@ class MainWindow(QMainWindow):
         self._orchestrator.set_message_callback(self.message_received.emit)
         self._orchestrator.set_tool_call_callback(self.tool_call_received.emit)
         self._orchestrator.set_tool_result_callback(self.tool_result_received.emit)
+        self._orchestrator.tool_calls.set_progress_callback(self.tool_progress_received.emit)
         self._orchestrator.set_stream_callback(self.stream_chunk_received.emit)
         self._orchestrator.set_async_confirmation_callback(self._request_tool_confirmation)
         self._orchestrator.set_bridge_analysis_callback(self._on_bridge_analysis_received)
@@ -1473,6 +1500,7 @@ class MainWindow(QMainWindow):
             return
         self._mcp_service = service
         service.set_attachment_handler(self._chat_panel.insert_context_text)
+        service.set_context_notice_handler(self._on_mcp_context_changed)
         run_bridge_coroutine_async(
             service.start(),
             on_success=lambda _result: _logger.info("mcp_service_ready"),
@@ -1481,10 +1509,12 @@ class MainWindow(QMainWindow):
         )
 
     def _sync_mcp_session_state(self) -> None:
-        """Record every MCP server's state onto a session that has just become active.
+        """Bring MCP up to date with the active session.
 
         A new or restored session otherwise carries no MCP record, or the
-        stale one saved with it, until some server happens to change state.
+        stale one saved with it, until some server happens to change state;
+        and servers are offered the session's folders, including a binary
+        just loaded, as their roots.
         """
         service = self._mcp_service
         if service is not None:
@@ -1668,13 +1698,47 @@ class MainWindow(QMainWindow):
     def _show_confirmation_dialog(self, payload: object) -> None:
         """Show the tool-confirmation dialog on the GUI thread and resolve the future.
 
+        The answer is delivered from the dialog's ``decision_made`` signal, so
+        the waiting call is released the moment the operator decides (or a
+        remembered answer is replayed) rather than once the dialog has
+        finished closing. A dialog dismissed without a decision, or one that
+        failed to open, delivers a denial.
+
         Args:
             payload: Tuple of ``(ToolCall, asyncio.Future[bool],
                 asyncio.AbstractEventLoop)`` emitted by
                 :meth:`_request_tool_confirmation`.
         """
         call, future, loop = cast("tuple[ToolCall, asyncio.Future[bool], asyncio.AbstractEventLoop]", payload)
-        approved = False
+        delivered: list[bool] = []
+
+        def _deliver(*, approved: bool) -> None:
+            """Hand the operator's answer to the orchestrator and the waiting future, once.
+
+            Args:
+                approved: Whether the call was approved.
+            """
+            if delivered:
+                return
+            delivered.append(approved)
+            self._orchestrator.resolve_confirmation(approved=approved)
+
+            def _resolve() -> None:
+                """Deliver the dialog approval result onto the waiting asyncio future."""
+                if not future.done():
+                    future.set_result(approved)
+
+            loop.call_soon_threadsafe(_resolve)
+
+        def _on_decision(*decision: bool) -> None:
+            """Deliver the answer the dialog's ``decision_made`` signal carries.
+
+            Args:
+                *decision: Whether the call was approved, then whether the
+                    answer outlives this call (already stored by the dialog).
+            """
+            _deliver(approved=decision[0])
+
         try:
             confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
             service = self._mcp_service
@@ -1687,17 +1751,10 @@ class MainWindow(QMainWindow):
                 except McpError as exc:
                     _logger.warning("mcp_confirmation_source_unresolved", tool=call.tool_name, error=str(exc))
             dialog = confirmation_module.ToolConfirmationDialog(call, self, generation=generation, source_label=origin)
+            _ = dialog.decision_made.connect(_on_decision)
             dialog.exec()
-            approved = bool(dialog.approved)
         finally:
-            self._orchestrator.resolve_confirmation(approved=approved)
-
-            def _resolve() -> None:
-                """Deliver the dialog approval result onto the waiting asyncio future."""
-                if not future.done():
-                    future.set_result(approved)
-
-            loop.call_soon_threadsafe(_resolve)
+            _deliver(approved=False)
 
     def _on_user_message(self, text: str) -> None:
         """Handle user message submission.
@@ -1883,11 +1940,67 @@ class MainWindow(QMainWindow):
         Args:
             call: The tool call being executed.
         """
+        self._running_call_names[call.id] = f"{call.tool_name}.{call.function_name}"
+        self._chat_panel.tool_activity.started(call)
         self.status_update.emit(f"Running: {call.tool_name}.{call.function_name}")
         log_tool_call(
             call.tool_name,
             call.function_name,
             dict(getattr(call, "arguments", {})),
+        )
+
+    def _on_tool_progress(self, progress: object) -> None:
+        """Show a running tool call's progress beside the chat and in the status bar.
+
+        Args:
+            progress: The :class:`~intellicrack.core.tool_progress.ToolProgress`.
+        """
+        if not isinstance(progress, ToolProgress):
+            return
+        self._chat_panel.tool_activity.progressed(progress)
+        name = self._running_call_names.get(progress.call_id)
+        if name is not None:
+            self.status_update.emit(f"Running: {name} ({progress.describe()})")
+
+    def _on_browse_mcp_context(self) -> None:
+        """Open the browser of the MCP servers' resources and prompts."""
+        service = self._mcp_service
+        if service is None:
+            QMessageBox.information(
+                self,
+                "MCP resources and prompts",
+                "The MCP client is not available in this session. Check the log for why it could not start.",
+            )
+            return
+        _ = service.open_context_browser(self)
+
+    def _on_mcp_context_changed(self, event: McpContextEvent) -> None:
+        """Tell the operator a server's resources or prompts changed.
+
+        Args:
+            event: What changed.
+        """
+        server = clean_untrusted_label(event.server_id)
+        match event.change:
+            case McpContextChange.RESOURCE_UPDATED:
+                text = f"MCP server '{server}' says {clean_untrusted_label(event.uri or '')} changed."
+            case McpContextChange.RESOURCES_LISTED:
+                text = f"MCP server '{server}' changed its list of resources."
+            case McpContextChange.PROMPTS_LISTED:
+                text = f"MCP server '{server}' changed its list of prompts."
+        self._chat_panel.show_notice(text)
+
+    def _on_cancel_tool_call(self, call_id: str) -> None:
+        """Cancel one running tool call, leaving the rest of the turn to go on.
+
+        Args:
+            call_id: The call the operator cancelled.
+        """
+        _logger.info("tool_call_cancel_requested", call_id=call_id)
+        run_bridge_coroutine_async(
+            self._orchestrator.tool_calls.cancel(call_id),
+            on_success=lambda stopped: _logger.info("tool_call_cancel_done", call_id=call_id, stopped=stopped),
+            on_error=lambda error: _logger.warning("tool_call_cancel_failed", call_id=call_id, error=str(error)),
         )
 
     def _on_tool_result(self, result: ToolResult) -> None:
@@ -1896,6 +2009,8 @@ class MainWindow(QMainWindow):
         Args:
             result: The tool execution result.
         """
+        _ = self._running_call_names.pop(result.call_id, None)
+        self._chat_panel.tool_activity.finished(result)
         tool_name = getattr(result, "tool_name", "")
         if result.success:
             _logger.info(
@@ -2009,6 +2124,8 @@ class MainWindow(QMainWindow):
         """
         del result
         self._chat_panel.set_input_enabled(enabled=True)
+        self._chat_panel.tool_activity.clear()
+        self._running_call_names.clear()
         self._stream_append = None
         self._sync_mcp_session_state()
         self.status_update.emit("Ready")
@@ -2020,6 +2137,8 @@ class MainWindow(QMainWindow):
             error: The exception object emitted by the bridge worker.
         """
         self._chat_panel.set_input_enabled(enabled=True)
+        self._chat_panel.tool_activity.clear()
+        self._running_call_names.clear()
         self._stream_append = None
         self.status_update.emit("Error")
         message = str(error) if isinstance(error, BaseException) else repr(error)
@@ -2167,6 +2286,7 @@ class MainWindow(QMainWindow):
         self.tool_panel.open_in_hex_editor(str(binary_info.path))
         _logger.info("binary_loaded", path=str(binary_info.path), binary_name=binary_info.name)
         self.status_update.emit(f"Loaded {binary_info.name}")
+        self._sync_mcp_session_state()
 
     def _on_binary_load_failed(self, error: object) -> None:
         """Roll back optimistic UI when the async load chain fails.
@@ -2941,6 +3061,8 @@ class MainWindow(QMainWindow):
             existing_provider, stale_provider = self._current_instance_provider(pname)
             if stale_provider is not None and stale_provider.is_connected:
                 stale_providers.append(stale_provider)
+            if existing_provider is not None:
+                existing_provider.set_reasoning_summary_mode(saved_reasoning_summary_mode(provider_settings))
 
             if not enabled or (not api_key and not self._api_key_optional(pname)):
                 if existing_provider is not None and existing_provider.is_connected:
@@ -4456,7 +4578,7 @@ class MainWindow(QMainWindow):
                 f"Auto-approve disabled - confirmation level: {self._config.confirmation_level.value}",
             )
 
-        QSettings("Intellicrack", "MainWindow").setValue("auto_approve", checked)
+        _main_window_settings().setValue("auto_approve", checked)
 
     def _on_cancel(self) -> None:
         """Handle cancel button click."""

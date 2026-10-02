@@ -120,6 +120,28 @@ def _get_attr(target: object, name: str) -> object:
     return getattr(target, name)
 
 
+class _ScanChunkExports:
+    """``Script.exports_sync`` substitute recording ``scan_chunk`` RPC calls."""
+
+    def __init__(self) -> None:
+        """Initialize with an empty call record."""
+        self.scan_chunk_calls: list[tuple[str, int, str]] = []
+
+    def scan_chunk(self, base: str, size: int, hex_pattern: str) -> list[dict[str, object]]:
+        """Record a chunk scan request and report no matches.
+
+        Args:
+            base: Hex string chunk start address.
+            size: Chunk size in bytes.
+            hex_pattern: Normalised hex pattern forwarded by the bridge.
+
+        Returns:
+            list[dict[str, object]]: Always empty; no matches.
+        """
+        self.scan_chunk_calls.append((base, size, hex_pattern))
+        return []
+
+
 class _FakeScript:
     """Minimal in-memory ``frida.core.Script`` substitute.
 
@@ -134,6 +156,8 @@ class _FakeScript:
         self.posts: list[dict[str, object]] = []
         self.unload_calls: int = 0
         self.load_calls: int = 0
+        self.is_destroyed: bool = False
+        self.exports_sync: _ScanChunkExports = _ScanChunkExports()
         self._handler: Callable[..., None] | None = None
         self.unload_should_raise: BaseException | None = None
 
@@ -196,7 +220,6 @@ class _FakeSession:
 
         Args:
             _source: Ignored JavaScript source.
-            **_: Ignored keyword arguments.
 
         Returns:
             _FakeScript: Newly registered fake script.
@@ -325,18 +348,24 @@ def test_f0005_hook_function_no_default_console_log() -> None:
 
 
 def test_f0006_scan_memory_accepts_hex_string_with_wildcards() -> None:
-    """F-0006: scan_memory tool accepts the same hex pattern the JSON tool advertises."""
-    bridge, _, _ = _build_attached_bridge()
-    captured = _patch_execute_script(bridge, {"data": []})
+    """F-0006: scan_memory tool accepts the same hex pattern the JSON tool advertises.
+
+    Range enumeration reports one readable range, so the bridge must load the
+    persistent scan agent and forward the normalised wildcard pattern to its
+    ``scan_chunk`` export for that range.
+    """
+    bridge, session, _ = _build_attached_bridge()
+    captured = _patch_execute_script(bridge, {"data": [{"base": "0x10000", "size": 0x100, "protection": "r-x"}]})
 
     async def driver() -> list[object]:
         return cast("list[object]", await bridge.scan_memory("48 8B ?? ??"))
 
     matches = _run(driver())
     assert matches == []
-    assert captured, "execute_script was never called"
-    # The hex pattern must be normalised and embedded into the JS source.
-    assert "48 8b ?? ??" in captured[0], captured[0]
+    assert captured, "range enumeration script was never executed"
+    assert len(session.scripts) == 1, "scan agent script was not created"
+    scan_calls = session.scripts[0].exports_sync.scan_chunk_calls
+    assert scan_calls == [("0x10000", 0x100, "48 8b ?? ??")], scan_calls
 
 
 def test_f0006_scan_memory_rejects_malformed_hex_pattern() -> None:
@@ -887,7 +916,6 @@ def test_f0023_attach_propagates_frida_error_details() -> None:
 
             Args:
                 _pid: Ignored target PID.
-                **_: Ignored options.
 
             Returns:
                 object: Never returns; always raises.
