@@ -32,6 +32,7 @@ import ntpath
 import os
 import posixpath
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
@@ -42,7 +43,7 @@ from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
+    from collections.abc import Iterable, Sequence
 
     from mcp.client.session import ClientRequestContext, ListRootsFnT
 

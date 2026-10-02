@@ -17,14 +17,11 @@ from __future__ import annotations
 
 import enum
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final
+from typing import Final
 
 from intellicrack.core.untrusted_text import clean_untrusted_label
-
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 PROGRESS_MESSAGE_LIMIT: Final[int] = 300

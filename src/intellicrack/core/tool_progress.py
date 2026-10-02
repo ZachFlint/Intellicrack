@@ -15,6 +15,7 @@ hands it to the UI, which shows it beside the running call.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -23,7 +24,7 @@ from typing import TYPE_CHECKING, TypeVar, cast
 
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Generator
+    from collections.abc import Awaitable, Generator
 
 
 _T = TypeVar("_T")

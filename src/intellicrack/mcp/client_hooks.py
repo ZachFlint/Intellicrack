@@ -12,17 +12,16 @@ has switched on for that server, and nothing else.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from intellicrack.mcp.config import McpServerConfig
+
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from mcp.client.session import ListRootsFnT, LoggingFnT, SamplingFnT
     from mcp_types import SamplingCapability
-
-    from intellicrack.mcp.config import McpServerConfig
 
 
 @dataclass(frozen=True, slots=True)

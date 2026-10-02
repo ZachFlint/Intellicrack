@@ -33,6 +33,7 @@ import time
 import types
 import urllib.request
 import uuid
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
@@ -49,7 +50,7 @@ from intellicrack.core.logging import get_logger
 
 if TYPE_CHECKING:
     import ssl
-    from collections.abc import Callable, Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Mapping
 
     from httpcore import NetworkStream
     from httpcore._backends.base import SOCKET_OPTION

@@ -13,12 +13,8 @@ resource subscriptions in its filter. Either way a connection hands each one on 
 from __future__ import annotations
 
 import enum
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 class McpContextChange(enum.StrEnum):
