@@ -43,13 +43,13 @@ urls.Changelog = "https://github.com/ZachFlint/Intellicrack/blob/main/CHANGELOG.
 scripts.intellicrack = "intellicrack.main:main"
 gui-scripts.intellicrack-gui = "intellicrack.main:main"
 dependencies = [
-  "anthropic>=1.8.0,<2",
+  "anthropic>=1.11.0,<2",
   "anyio>=4.15.1,<5",
   "capstone>=5.0.9,<6",
-  "cryptography>=50.0.1,<51",
-  "frida>=17.19.0,<18",
+  "cryptography>=50.0.2,<51",
+  "frida>=17.20.0,<18",
   "ghidra-bridge>=1.0.0,<2",
-  "google-genai>=2.25.0,<3",
+  "google-genai>=2.27.0,<3",
   "httpcore>=1.0.9,<2",
   "httpx>=0.28.1,<0.29",
   "httpx2>=2.13.1,<3",
@@ -60,7 +60,7 @@ dependencies = [
   "lief>=1.0.0,<2",
   "mcp>=2.2.0,<3",
   "mcp-types>=2.2.0,<3",
-  "openai>=3.19.2,<4",
+  "openai>=3.23.0,<4",
   "pefile>=2024.8.26,<2025",
   "psutil>=7.2.2,<8",
   "pydantic>=2.13.5,<3",
@@ -763,15 +763,15 @@ pypi-dependencies.pefile = ">=2024.8.26, <2025"
 pypi-dependencies.lief = ">=1.0.0, <2"
 pypi-dependencies.capstone = "*"
 pypi-dependencies.keystone-engine = ">=0.9.2, <0.10"
-pypi-dependencies.frida = ">=17.19.0, <18"
+pypi-dependencies.frida = ">=17.20.0, <18"
 pypi-dependencies.frida-tools = ">=14.10.4, <15"
 pypi-dependencies.r2pipe = ">=1.9.8, <2"
 pypi-dependencies.rzpipe = ">=0.6.2, <0.7"
 pypi-dependencies.ghidra-bridge = ">=1.0.0, <2"
-pypi-dependencies.anthropic = ">=1.8.0, <2"
-pypi-dependencies.openai = ">=3.19.2, <4"
+pypi-dependencies.anthropic = ">=1.11.0, <2"
+pypi-dependencies.openai = ">=3.23.0, <4"
 pypi-dependencies.tiktoken = ">=0.14.0, <0.15"
-pypi-dependencies.google-genai = ">=2.25.0, <3"
+pypi-dependencies.google-genai = ">=2.27.0, <3"
 pypi-dependencies.httpx = ">=0.28.1, <0.29"
 pypi-dependencies.httpcore = ">=1.0.9, <2"
 pypi-dependencies.structlog = ">=26.1.0, <27"
@@ -799,7 +799,7 @@ pypi-dependencies.httpcore2 = ">=2.13.1, <3"
 # yara-python -> core/yara_scanner.py, huggingface-hub -> providers/huggingface.py)
 # or loaded by the shipped interpreter (pyghidra/jpype1 -> bridges/ghidra.py runs
 # `python -m pyghidra.ghidra_launch` against this very runtime).
-pypi-dependencies.cryptography = ">=50.0.1, <51"
+pypi-dependencies.cryptography = ">=50.0.2, <51"
 pypi-dependencies.huggingface-hub = ">=1.33.0, <2"
 pypi-dependencies.jpype1 = ">=1.7.1, <2"
 pypi-dependencies.keyring = ">=25.7.0, <26"
@@ -814,22 +814,22 @@ pypi-dependencies.networkx = ">=3.7, <4"
 pypi-dependencies.anyio = ">=4.15.1, <5"
 pypi-dependencies.markdown-it-py = ">=4.2.0, <5"
 pypi-dependencies.rich = ">=15.0.0, <16"
-pypi-dependencies.python-dotenv = ">=1.2.3, <2"
+pypi-dependencies.python-dotenv = ">=1.2.4, <2"
 pypi-dependencies.aiofiles = ">=25.1.0, <26"
 pypi-dependencies.aiosqlite = ">=0.22.1, <0.23"
 pypi-dependencies.mcp = ">=2.2.0, <3"
 pypi-dependencies.mcp-types = ">=2.2.0, <3"
-pypi-dependencies.ollama = ">=0.6.2, <0.7"
+pypi-dependencies.ollama = ">=0.6.3, <0.7"
 pypi-dependencies.cxxfilt = ">=0.3.0, <0.4"
 pypi-dependencies.dulwich = ">=1.2.15, <2"
-pypi-dependencies.msgpack = ">=1.2.2, <2"
+pypi-dependencies.msgpack = ">=1.2.3, <2"
 pypi-dependencies.python-multipart = ">=0.0.32, <0.0.33"
 pypi-dependencies.starlette = ">=1.7.0, <2"
 pypi-dependencies.tornado = ">=6.5.10, <7"
 pypi-dependencies.pydantic-settings = ">=2.15.0, <3"
 # ML runtime stack.
 pypi-dependencies.torch = "*"
-pypi-dependencies.transformers = ">=5.17.0, <6"
+pypi-dependencies.transformers = ">=5.18.0, <6"
 pypi-dependencies.accelerate = ">=1.15.0, <2"
 pypi-dependencies.bitsandbytes = ">=0.50.2, <0.51"
 pypi-dependencies.sentencepiece = ">=0.2.2, <0.3"
@@ -873,12 +873,12 @@ pyinstaller = ">=6.22.3, <7"
 
 # Developer CLI tooling (conda).
 [tool.pixi.feature.tooling.dependencies]
-git = ">=2.55.0,<3"
+git = ">=2.56.0,<3"
 just = ">=1.58.0,<2"
 shellcheck = ">=0.11.0,<0.12"
 nodejs = ">=26.10.0,<26.11"
 yarn = ">=4.18.1,<5"
-tombi = ">=1.5.5,<2"
+tombi = ">=1.7.0,<2"
 git-cliff = ">=2.14.2,<3"
 yamlfmt = ">=0.21.0,<0.22"
 pixi-pycharm = ">=0.0.12,<0.0.13"
@@ -891,30 +891,30 @@ pixi = ">=0.81.0,<0.82"
 [tool.pixi.feature.dev.pypi-dependencies]
 intellicrack = { path = ".", editable = true, extras = ["dev", "test", "docs", "profile", "ml"] }
 validate-pyproject = ">=0.26, <0.27"
-validate-pyproject-schema-store = ">=2026.9.25, <2027"
+validate-pyproject-schema-store = ">=2026.9.30, <2027"
 types-requests = ">=2.33.0.20260906, <3"
 types-pyyaml = ">=6.0.12.20260906, <7"
-mypy = ">=2.3.1, <3"
+mypy = ">=2.4.0, <3"
 black = ">=26.5.1, <27"
-pylint = ">=4.0.9, <5"
+pylint = ">=4.1.1, <5"
 autopep8 = ">=2.3.2, <3"
 flake8 = ">=7.4.1, <8"
-ruff = ">=0.16.9, <0.17"
-isort = ">=9.0.1, <10"
+ruff = ">=0.16.10, <0.17"
+isort = ">=9.0.2, <10"
 pycodestyle = ">=2.15.0, <3"
 bandit = ">=1.9.4, <2"
 # Security floor for the transitive GitPython pulled by bandit, wily, and
 # pygount; >=3.1.58 clears the GitPython git-option-injection / config-injection
 # / env-exfiltration advisories. Confined to the dev feature so it never enters
 # the shipped runtime environment.
-gitpython = ">=3.1.62, <4"
+gitpython = ">=3.2.0, <4"
 blinter = ">=1.1.31, <2"
 vulture = ">=2.16, <3"
 pyupgrade = ">=3.21.2, <4"
 pydocstyle = ">=6.3.0, <7"
 sourcery = ">=1.46.0, <2"
 wemake-python-styleguide = ">=1.8.1, <2"
-pydoclint = ">=0.9.1, <0.10"
+pydoclint = ">=0.10.1, <0.11"
 pyroma = ">=5.0.1, <6"
 mypy-extensions = ">=1.1.0, <2"
 dead = ">=2.1.0, <3"
@@ -955,7 +955,7 @@ flake8-pyproject = ">=1.2.4, <2"
 pytest = ">=9.1.1, <10"
 pytest-deadfixtures = ">=3.1.0, <4"
 pytest-cov = ">=7.1.0, <8"
-pytest-mock = ">=3.15.1, <4"
+pytest-mock = ">=3.16.0, <4"
 pytest-asyncio = ">=1.4.0, <2"
 pytest-xdist = ">=3.8.0, <4"
 pytest-timeout = ">=2.4.0, <3"
@@ -966,13 +966,13 @@ pytest-randomly = ">=5.0.0, <6"
 pytest-sugar = ">=1.1.1, <2"
 pytest-env = ">=1.7.1, <2"
 pytest-instafail = ">=0.5.0, <0.6"
-hypothesis = ">=6.168.1, <7"
-tox = ">=4.64.3, <5"
+hypothesis = ">=6.168.3, <7"
+tox = ">=4.64.7, <5"
 nox = ">=2026.8.17, <2027"
-coverage = ">=7.16.1, <8"
+coverage = ">=7.16.2, <8"
 freezegun = ">=1.5.5, <2"
 responses = ">=0.26.3, <0.27"
-faker = ">=40.39.0, <41"
+faker = ">=40.40.0, <41"
 # File-backed keyring the credential and OAuth gates store real secrets in, so no test touches the
 # operating system's own keyring (tests/_helpers/private_keyring.py).
 keyrings-alt = ">=5.0.2, <6"
@@ -984,7 +984,7 @@ pipx = ">=1.8, <2"
 [tool.pixi.feature.docs.pypi-dependencies]
 sphinx = ">=9.1.0, <10"
 sphinx-rtd-theme = ">=3.1.0, <4"
-sphinx-autodoc-typehints = ">=3.13.7, <4"
+sphinx-autodoc-typehints = ">=3.13.8, <4"
 sphinx-copybutton = ">=0.5.2, <0.6"
 sphinx-tabs = ">=3.5.0, <4"
 sphinxcontrib-mermaid = ">=2.1.1, <3"
