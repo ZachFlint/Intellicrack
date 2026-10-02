@@ -394,6 +394,10 @@ _ENV_POINTER_OFFSET_X86 = 0x48
 _ENV_SIZE_OFFSET_X86 = 0x290
 _PARAMS_READ_SIZE_X64 = 0x400
 _PARAMS_READ_SIZE_X86 = 0x2A0
+_ENV_READ_CHUNK = 0x2000
+"""Bytes read per pass when walking the environment block to its terminator."""
+_ENV_READ_MAX = 0x200000
+"""Ceiling on a single environment block read, so a corrupt size cannot drive an unbounded allocation."""
 
 _ERR_WOW64_UNAVAILABLE = "WOW64 detection unavailable"
 _ERR_ACCESS_HANDLE_OPEN = "token open failed"
@@ -8065,25 +8069,94 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         if env_ptr == 0:
             return {}
 
-        read_size = env_size if env_size > 0 else 0x8000
-        env_buffer = ctypes.create_string_buffer(read_size)
-        if not self._kernel32.ReadProcessMemory(
-            proc_handle,
-            ctypes.c_void_p(env_ptr),
-            env_buffer,
-            read_size,
-            ctypes.byref(bytes_read),
-        ):
+        env_bytes = self._read_env_bytes(proc_handle, env_ptr)
+        if not env_bytes:
             return {}
 
-        env_str = env_buffer.raw[: bytes_read.value].decode("utf-16-le", errors="ignore")
+        env_str = env_bytes.decode("utf-16-le", errors="ignore")
         env_vars: dict[str, str] = {}
         for line in env_str.split("\x00"):
             if "=" in line and not line.startswith("="):
                 key, _, value = line.partition("=")
                 env_vars[key] = value
 
+        _logger.debug("process_read_env_block_completed", env_size=env_size, bytes_read=len(env_bytes), var_count=len(env_vars))
         return env_vars
+
+    def _read_env_bytes(self, proc_handle: int, env_ptr: int) -> bytes:
+        """Read a process's environment block up to its terminating wide null.
+
+        The block is read in chunks rather than one span, and the double
+        wide-null that closes it is the authoritative end, not the
+        ``EnvironmentSize`` field, which can read low or zero. A chunk that
+        straddles the end of the committed region returns the readable prefix
+        with ``ReadProcessMemory`` reporting failure, which a single large read
+        would discard entirely; here each chunk's bytes are kept and the walk
+        stops at the terminator, at the first chunk that returns nothing, or at
+        :data:`_ENV_READ_MAX`, so the whole block is returned without
+        over-reading into unmapped pages.
+
+        Args:
+            proc_handle: Open process handle with VM_READ access.
+            env_ptr: Virtual address of the environment block.
+
+        Returns:
+            bytes: The block up to but excluding its terminating wide null, or
+            empty when nothing could be read.
+
+        Raises:
+            ToolError: If kernel32 is not available.
+        """
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+        collected = bytearray()
+        chunk_buffer = ctypes.create_string_buffer(_ENV_READ_CHUNK)
+        chunk_read = ctypes.c_size_t()
+        while len(collected) < _ENV_READ_MAX:
+            to_read = min(_ENV_READ_CHUNK, _ENV_READ_MAX - len(collected))
+            ok = self._kernel32.ReadProcessMemory(
+                proc_handle,
+                ctypes.c_void_p(env_ptr + len(collected)),
+                chunk_buffer,
+                to_read,
+                ctypes.byref(chunk_read),
+            )
+            if chunk_read.value == 0:
+                break
+            collected += chunk_buffer.raw[: chunk_read.value]
+            terminator = self._find_wide_null_terminator(collected)
+            if terminator is not None:
+                del collected[terminator:]
+                return bytes(collected)
+            if not ok:
+                break
+        return bytes(collected)
+
+    @staticmethod
+    def _find_wide_null_terminator(data: bytearray) -> int | None:
+        """Return the offset of the double wide-null that closes an environment block.
+
+        Variables are separated by a single UTF-16 null and the block ends with
+        an extra one, so two adjacent wide nulls -- four zero bytes on an even
+        offset -- mark the end. Environment values hold no null characters, so
+        the first such run is the terminator and nothing before it is mistaken
+        for one.
+
+        Args:
+            data: The bytes read from the environment block so far.
+
+        Returns:
+            int | None: The offset of the terminator, or ``None`` if it has not
+            been read yet.
+        """
+        start = 0
+        while True:
+            index = data.find(b"\x00\x00\x00\x00", start)
+            if index == -1:
+                return None
+            if index % 2 == 0:
+                return index
+            start = index + 1
 
     @staticmethod
     def _extract_env_pointer(

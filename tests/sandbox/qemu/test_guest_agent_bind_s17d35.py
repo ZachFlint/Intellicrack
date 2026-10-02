@@ -285,6 +285,50 @@ def _forwarded_guest_port(command: list[str], host_port: int) -> int:
     raise AssertionError(_ERR_NO_AGENT_HOSTFWD.format(port=host_port, netdev=netdev))
 
 
+def _free_host_port() -> int:
+    """Return a port this host will bind, for the peer to listen on.
+
+    The generated agent listens on its guest-side port, which the host need not
+    be able to bind: a Windows CI host reserves port ranges that refuse a bind
+    while nothing listens on them. Binding an ephemeral port and reading it back
+    is the host's own answer to which port it will accept, so the peer runs on a
+    port the host can serve rather than the guest-side literal.
+
+    Returns:
+        int: A port the host bound a moment ago, free to hand to the peer.
+    """
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as probe:
+        probe.bind((_SECONDARY_LOOPBACK, 0))
+        return int(probe.getsockname()[1])
+
+
+def _listener_on_host_free_port(agent_script: str) -> str:
+    """Return the generated agent's listener statement with its port bound to ``$Port``.
+
+    The address expression is left exactly as the agent constructs it -- that is
+    the property under test, whether it binds the wildcard address or loopback --
+    while the guest-side port literal is replaced by the peer's ``-Port``
+    parameter, so the peer can listen on a port the host will actually bind.
+
+    Args:
+        agent_script: Full text of the generated ``agent.ps1``.
+
+    Returns:
+        str: The listener statement, its port replaced by ``$Port``.
+
+    Raises:
+        AssertionError: If the statement constructs no ``TcpListener``.
+    """
+    statement = script_line(agent_script, LISTENER_LINE)
+    parameterized, count = _LISTENER_CONSTRUCTION.subn(
+        lambda match: f"[System.Net.Sockets.TcpListener]::new({match['address']}, $Port)",
+        statement,
+    )
+    if count != 1:
+        raise AssertionError(_ERR_NO_CONSTRUCTION.format(statement=statement))
+    return parameterized
+
+
 def _assert_reachable_at(bind_address: str, target_address: str) -> None:
     """Bind a real socket and require a real connection to ``target_address``.
 
@@ -410,12 +454,15 @@ class TestTheGeneratedWindowsAgentListensWhereTheForwardDelivers:
     ) -> None:
         """The generated listener must serve the address SLIRP delivers to.
 
-        The peer runs the generated agent's own listener statement, unedited,
-        under a real ``powershell.exe``. The production client then connects to
-        a local address other than ``127.0.0.1`` and completes the readiness
-        handshake against the generated ping branch, retrying while the peer
-        starts up, which is the same retry loop production uses on a booting
-        guest. A listener bound to
+        The peer runs the generated agent's own listener statement under a real
+        ``powershell.exe``, its address expression exactly as the agent
+        constructs it and only its port rebound to one the host will bind -- the
+        guest-side port the agent names need not be bindable on the host, which
+        reserves port ranges, and the port it binds is gated separately. The
+        production client then connects to a local address other than
+        ``127.0.0.1`` and completes the readiness handshake against the generated
+        ping branch, retrying while the peer starts up, which is the same retry
+        loop production uses on a booting guest. A listener whose address is
         ``127.0.0.1`` - what the agent used to construct - refuses that
         connection, which is exactly what a real guest did to every command the
         host ever dispatched to a Windows guest.
@@ -424,15 +471,15 @@ class TestTheGeneratedWindowsAgentListensWhereTheForwardDelivers:
             tmp_path: Directory the share and the peer script are created under.
         """
         target = _delivery_address()
+        port = _free_host_port()
         share = tmp_path / _SHARE_DIRECTORY
         sandbox = _sandbox(GuestOS.WINDOWS)
         agent_script = await sandbox.generate_agent_script(share, AGENT_SCRIPT_NAME)
-        _, port = _windows_listener_endpoint(agent_script)
 
         peer_path = share / MONITOR_DIRECTORY / _PEER_SCRIPT_NAME
         await asyncio.to_thread(
             peer_path.write_text,
-            build_peer_script(agent_script, listener_statement=script_line(agent_script, LISTENER_LINE)),
+            build_peer_script(agent_script, listener_statement=_listener_on_host_free_port(agent_script)),
             encoding="utf-8",
         )
 
