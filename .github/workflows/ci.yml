@@ -202,7 +202,7 @@ jobs:
     needs: [setup, changes]
     if: (success() || failure()) && (needs.changes.outputs.python == 'true' || github.event_name == 'workflow_dispatch')
     continue-on-error: true
-    timeout-minutes: 60
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
