@@ -1411,6 +1411,18 @@ class TestEntryPointBug:
         assert entry == 4198400
 
 
+def _resolved_path(path: str) -> str:
+    """Resolve a path to its absolute long form off the event loop.
+
+    Args:
+        path: The path to resolve.
+
+    Returns:
+        str: The resolved absolute path.
+    """
+    return str(Path(path).resolve())
+
+
 class TestSaveBinary:
     """Verify save_binary sends wtf command (Bug 3 fix)."""
 
@@ -1432,7 +1444,7 @@ class TestSaveBinary:
         b.r2 = _as_r2pipe(recorder)
         await b.analyze()
         recorder.commands.clear()
-        output_path = f"{tempfile.gettempdir()}/output.exe"
+        output_path = await asyncio.to_thread(_resolved_path, str(Path(tempfile.gettempdir(), "output.exe")))
         result = await b.save_binary(output_path)
         assert result is True
         wcf_cmds = [c for c in recorder.commands if c.startswith("wcf")]

@@ -717,7 +717,7 @@ class TestXPUStatusDialogRequirements:
         plain = xpu_dialog.requirements_text.toPlainText()
         html = xpu_dialog.requirements_text.toHtml()
         all_met = plain.strip() == "All system requirements met."
-        has_ul_warnings = "<ul>" in html and "<li>" in html
+        has_ul_warnings = "<ul" in html and "<li" in html
         check_failed = plain.startswith("Failed to check requirements:")
         unavailable = plain.strip() == "Requirements check not available."
         assert all_met or has_ul_warnings or check_failed or unavailable, (
