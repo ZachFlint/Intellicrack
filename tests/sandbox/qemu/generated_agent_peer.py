@@ -23,6 +23,7 @@ loopback listener on a free port so several protocol cases can run at once.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import re
 from typing import TYPE_CHECKING, Final
 
@@ -325,7 +326,9 @@ class GeneratedAgentPeer:
         if process is None:
             return
         self._process = None
-        process.kill()
+        if process.returncode is None:
+            with contextlib.suppress(ProcessLookupError):
+                process.kill()
         await process.communicate()
 
     async def stop(self) -> None:
