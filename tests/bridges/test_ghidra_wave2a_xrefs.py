@@ -23,10 +23,16 @@ The seam: ``_FakeGhidraRemote`` captures every snippet the bridge sends via
 returns ``eval_response`` as the deserialized remote result.  This mirrors the
 ``FakeGhidraBridge`` contract used in ``test_ghidra_audit6.py`` but is kept
 self-contained — no cross-file fixture imports.
+
+``search_symbols`` is gated through ``_ExecutingGhidraRemote`` instead: it runs
+the emitted script against a Ghidra-shaped symbol table so the wildcard
+matching the script performs is checked by its results.
 """
 
 from __future__ import annotations
 
+from itertools import starmap
+from types import SimpleNamespace
 from typing import Any, Final
 
 import pytest
@@ -106,6 +112,135 @@ def _make_bridge(response: object) -> tuple[GhidraBridge, _FakeGhidraRemote]:
     fake = _FakeGhidraRemote(response)
     bridge.attach_remote_bridge(fake)
     return bridge, fake
+
+
+class _ExecutingGhidraRemote:
+    """In-process ``ghidra_bridge`` double that really runs the emitted script.
+
+    ``remote_exec`` executes the script against a shared globals namespace
+    and ``remote_eval`` evaluates an expression against the same namespace,
+    the boundary the real client crosses.
+    """
+
+    def __init__(self, program: SimpleNamespace) -> None:
+        """Seed the remote namespace with ``currentProgram``.
+
+        Args:
+            program: Program double exposed to the script as ``currentProgram``.
+        """
+        self.globals: dict[str, Any] = {"currentProgram": program}
+        self.exec_calls: list[str] = []
+
+    def remote_exec(self, code: str) -> None:
+        """Execute ``code`` against the shared namespace.
+
+        Args:
+            code: Python source emitted by the bridge.
+        """
+        self.exec_calls.append(code)
+        exec(compile(code, "<remote_exec>", "exec"), self.globals)
+
+    def remote_eval(self, expr: str) -> object:
+        """Evaluate ``expr`` against the shared namespace.
+
+        Args:
+            expr: Python expression, normally the result sentinel name.
+
+        Returns:
+            object: Value of ``expr`` in the remote namespace.
+        """
+        wrapper_source = f"def _ic_test_eval():\n    return ({expr})\n"
+        local_namespace: dict[str, Any] = {}
+        exec(compile(wrapper_source, "<remote_eval>", "exec"), self.globals, local_namespace)
+        return local_namespace["_ic_test_eval"]()
+
+
+def _make_symbol(name: str, offset: int, symbol_type: str, namespace: str) -> SimpleNamespace:
+    """Build a Ghidra-shaped ``Symbol`` double.
+
+    Args:
+        name: Symbol name.
+        offset: Symbol address offset.
+        symbol_type: Text ``str(Symbol.getSymbolType())`` yields.
+        namespace: Name of the symbol's parent namespace.
+
+    Returns:
+        SimpleNamespace: Object exposing ``getName``, ``getAddress``,
+        ``getSymbolType`` and ``getParentNamespace``.
+    """
+    address = SimpleNamespace(getOffset=lambda: offset)
+    parent = SimpleNamespace(getName=lambda: namespace)
+    return SimpleNamespace(
+        getName=lambda: name,
+        getAddress=lambda: address,
+        getSymbolType=lambda: symbol_type,
+        getParentNamespace=lambda: parent,
+    )
+
+
+def _make_symbol_program(symbols: list[SimpleNamespace]) -> SimpleNamespace:
+    """Build a program double whose symbol table serves ``symbols``.
+
+    ``SymbolTable.getAllSymbols(includeDynamicSymbols)`` returns a Java-style
+    ``SymbolIterator``; each call yields a fresh iterator over ``symbols``.
+
+    Args:
+        symbols: Symbol doubles in table order.
+
+    Returns:
+        SimpleNamespace: Program double exposing ``getSymbolTable``.
+    """
+
+    def _get_all_symbols(_include_dynamic: object) -> SimpleNamespace:
+        """Return a ``hasNext``/``next`` iterator over every symbol.
+
+        Args:
+            _include_dynamic: Ghidra's include-dynamic-symbols flag.
+
+        Returns:
+            SimpleNamespace: Java-style iterator over ``symbols``.
+        """
+        pending = list(symbols)
+        return SimpleNamespace(hasNext=lambda: bool(pending), next=lambda: pending.pop(0))
+
+    table = SimpleNamespace(getAllSymbols=_get_all_symbols)
+    return SimpleNamespace(getSymbolTable=lambda: table)
+
+
+_SEARCH_SYMBOLS: Final[list[tuple[str, int, str, str]]] = [
+    ("main", 0x401000, "Function", "Global"),
+    ("MainLoop", 0x401100, "Function", "app"),
+    ("domain_check", 0x401200, "Label", "Global"),
+    ("init", 0x401300, "Function", "Global"),
+    ("mai_n", 0x401400, "Label", "Global"),
+]
+
+
+def _make_symbol_bridge() -> GhidraBridge:
+    """Wire a ``GhidraBridge`` to an executing remote over ``_SEARCH_SYMBOLS``.
+
+    Returns:
+        GhidraBridge: Connected bridge whose remote runs the emitted script.
+    """
+    program = _make_symbol_program(list(starmap(_make_symbol, _SEARCH_SYMBOLS)))
+    bridge = GhidraBridge()
+    bridge.attach_remote_bridge(_ExecutingGhidraRemote(program))
+    return bridge
+
+
+def _symbol_row(name: str, offset: int, symbol_type: str, namespace: str) -> dict[str, Any]:
+    """Return the dict ``search_symbols`` reports for one symbol.
+
+    Args:
+        name: Symbol name.
+        offset: Symbol address offset.
+        symbol_type: Symbol type text.
+        namespace: Parent namespace name.
+
+    Returns:
+        dict[str, Any]: Expected result row.
+    """
+    return {"name": name, "address": offset, "type": symbol_type, "namespace": namespace}
 
 
 @pytest.mark.asyncio
@@ -315,34 +450,56 @@ async def test_get_namespaces_raises_when_not_connected() -> None:
 
 @pytest.mark.asyncio
 async def test_search_symbols_parses_all_fields() -> None:
-    """``search_symbols`` must surface name, address, type, and namespace from the remote payload.
+    """A plain pattern must match case-insensitively anywhere in the name.
 
-    The remote script iterates ``st.getSymbolIterator(name, True)`` and
-    appends ``{'name': sym.getName(), 'address': sym.getAddress().getOffset(),
-    'type': str(sym.getSymbolType()), 'namespace':
-    sym.getParentNamespace().getName()}``.  The bridge must return those
-    values verbatim.
+    The script walks ``SymbolTable.getAllSymbols(True)`` and, when the pattern
+    has no ``*``/``?``, matches it as ``*pattern*`` case-insensitively with
+    :func:`fnmatch.fnmatch`. Each match is reported with its name, address,
+    type and parent namespace.
 
-    Mutation caught: search_symbols maps ``getAddress().getOffset()`` to the
-    wrong key ``addr`` instead of ``address``, so callers cannot read the
-    symbol address.
+    Independent oracle: of the five table symbols, ``main``, ``MainLoop`` and
+    ``domain_check`` contain ``main`` (ignoring case); ``init`` and ``mai_n``
+    do not. The three matches come back in table order with every field.
+
+    Mutation caught: an exact-name lookup (only ``main`` returned), a
+    case-sensitive match (``MainLoop`` dropped), or mapping the address to the
+    wrong key.
     """
-    canned: list[dict[str, Any]] = [
-        {"name": "main", "address": 0x401000, "type": "FUNCTION", "namespace": "Global"},
-    ]
-    bridge, fake = _make_bridge(canned)
+    bridge = _make_symbol_bridge()
+
     result = await bridge.search_symbols("main")
 
-    assert len(result) == 1
-    sym = result[0]
-    assert sym["name"] == "main"
-    assert sym["address"] == 0x401000
-    assert sym["type"] == "FUNCTION"
-    assert sym["namespace"] == "Global"
-    assert len(fake.exec_calls) == 1
-    payload = fake.exec_calls[0]
-    assert "getSymbolIterator" in payload
-    assert "main" in payload
+    assert result == [
+        _symbol_row("main", 0x401000, "Function", "Global"),
+        _symbol_row("MainLoop", 0x401100, "Function", "app"),
+        _symbol_row("domain_check", 0x401200, "Label", "Global"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_search_symbols_explicit_wildcard_is_anchored() -> None:
+    """A pattern containing ``*`` or ``?`` must be matched as written, anchored.
+
+    Independent oracle: ``main*`` matches names starting with ``main``
+    (``main``, ``MainLoop``) but not ``domain_check``, where ``main`` is not a
+    prefix. ``?ain`` matches exactly four-character names ending in ``ain``
+    (``main``) but not ``MainLoop``, nor ``mai_n``, whose fourth character is
+    not ``n``.
+
+    Mutation caught: wrapping an explicit wildcard in ``*...*`` as well (the
+    anchoring is lost and ``domain_check``/``MainLoop`` leak in), or treating
+    ``?`` as a literal character (nothing matches).
+    """
+    bridge = _make_symbol_bridge()
+
+    prefix_result = await bridge.search_symbols("main*")
+    single_char_result = await bridge.search_symbols("?ain")
+
+    assert prefix_result == [
+        _symbol_row("main", 0x401000, "Function", "Global"),
+        _symbol_row("MainLoop", 0x401100, "Function", "app"),
+    ]
+    assert single_char_result == [_symbol_row("main", 0x401000, "Function", "Global")]
 
 
 @pytest.mark.asyncio

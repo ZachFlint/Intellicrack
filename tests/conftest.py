@@ -323,25 +323,31 @@ def project_root() -> Path:
 
 
 @pytest.fixture(scope="session")
-def env_file_path(project_root: Path) -> Path:
-    """Get the path to the .env file.
+def env_file_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Get the path to a private, initially empty ``.env`` file for the session.
+
+    The developer's real ``.env`` is never read or written by the suite; this
+    file lives in the session's own temporary directory.
 
     Args:
-        project_root: The project root directory.
+        tmp_path_factory: Session-scoped temporary directory factory.
 
     Returns:
-        Path: Path to the .env file.
+        Path: Path to the private .env file.
     """
-    return project_root / ".env"
+    env_file = tmp_path_factory.mktemp("credentials") / ".env"
+    _ = env_file.write_text("", encoding="utf-8")
+    return env_file
 
 
 @pytest.fixture(scope="session")
 def credential_loader(env_file_path: Path) -> CredentialLoader:
     """Create a CredentialLoader instance.
 
-    This fixture loads credentials from the project's .env file.
-    Tests should use this to check credential availability and
-    obtain credentials for provider connections.
+    This fixture loads the session's private ``.env`` file, so provider keys
+    reach it only through the process environment, which the loader falls back
+    to. Tests should use this to check credential availability and obtain
+    credentials for provider connections.
 
     Args:
         env_file_path: Path to the .env file.

@@ -564,10 +564,13 @@ class TestScriptAbort:
     """Gate ``script_abort`` — exec + eval round-trips and verified flag."""
 
     async def test_sends_scriptabort_command_and_queries_script_iserror(self) -> None:
-        """``script_abort`` sends exec then eval RPC and returns ``verified=True``.
+        """``script_abort`` sends the plugin RPC then eval RPC and returns ``verified=True``.
 
-        Oracle: x64dbg.py:8134 ``await self._send_command("scriptabort")``;
-        x64dbg.py:8135 ``error_flag = await self._query_script_error()``.
+        Oracle: ``script_abort`` dispatches the plugin's ``script_abort`` RPC
+        (``await self._send_pipe_command("script_abort")``) -- x64dbg registers
+        no ``scriptabort`` console command, so the old ``exec`` path was dropped
+        in audit7 F-0001 -- then queries the ``script.iserror()`` register via
+        ``self._query_script_error()``.
         Mutation caught: omitting the eval query → assertion fails.
         """
 
@@ -579,7 +582,7 @@ class TestScriptAbort:
 
         result: dict[str, Any] = await bridge.script_abort()
 
-        assert ("exec", {"command": "scriptabort"}) in fake.sent
+        assert ("script_abort", None) in fake.sent
         assert ("eval", {"expression": "script.iserror()"}) in fake.sent
         assert result["success"] is True
         assert result["verified"] is True

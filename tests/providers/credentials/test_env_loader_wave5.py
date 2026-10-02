@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import pathlib
 import stat
+import sys
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
@@ -217,15 +218,20 @@ def test_save_to_env_file_read_error_propagates(
         loader.save_to_env_file("ANTHROPIC_API_KEY", "sk-ant-api03-test")
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Windows refuses to replace a read-only .env file; POSIX os.replace swaps it in through the directory",
+)
 def test_save_to_env_file_write_error_propagates(
     tmp_path: pathlib.Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """save_to_env_file propagates OSError when the .env file cannot be written.
 
-    Making the .env file read-only allows the read phase (which only opens for
-    'r') to succeed while the write phase (which opens for 'w') raises
-    PermissionError, a subclass of OSError.  The except block re-raises.
+    Making the .env file read-only allows the read phase to succeed while the
+    write phase's atomic replace of the file raises PermissionError, a
+    subclass of OSError, because Windows will not replace a read-only file.
+    The except block re-raises.
 
     Mutation: replacing the bare ``raise`` in the write except block with
     ``return`` would swallow the error; the pytest.raises context would see no

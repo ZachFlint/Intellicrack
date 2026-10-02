@@ -43,6 +43,7 @@ from intellicrack.core.subprocess_compat import (
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
 _SCRIPT_PATH: Final[Path] = _REPO_ROOT / "src" / "intellicrack" / "sandbox" / "scripts" / "dll_monitor.ps1"
+_TRACE_EVENT_DIR: Final[Path] = _REPO_ROOT / "vendor" / "traceevent"
 _PWSH_LAUNCH_TIMEOUT_SEC: Final[float] = 4.0
 _PWSH_KILL_GRACE_SEC: Final[float] = 3.0
 _LOG_NAME: Final[str] = "dll_monitor.log"
@@ -485,7 +486,9 @@ def test_etw_load_event_is_captured_when_admin(tmp_path: Path) -> None:
     payload format is unexpected for this Windows build, a
     ``dll_event_unparsed`` diagnostic. A completely empty log directory
     (no main log, no diagnostic log) would indicate F-0019 has
-    regressed.
+    regressed. The script is pointed at the vendored TraceEvent assemblies
+    through ``TRACE_EVENT_DLL_DIR``, the way a guest has them staged beside
+    it, so the realtime path is what runs.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
@@ -497,7 +500,7 @@ def test_etw_load_event_is_captured_when_admin(tmp_path: Path) -> None:
     log_dir = tmp_path / "etw_logs"
     log_dir.mkdir()
 
-    proc = _start_script(log_dir, pwsh)
+    proc = _start_script(log_dir, pwsh, extra_env={"TRACE_EVENT_DLL_DIR": str(_TRACE_EVENT_DIR)})
     helper: Popen[str] | None = None
     try:
         time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)

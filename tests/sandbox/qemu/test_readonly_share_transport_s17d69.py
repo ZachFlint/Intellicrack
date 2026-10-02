@@ -615,6 +615,10 @@ class TestTheHostCollectsTheGuestsLogsOverTheAgent:
 class TestLogGrowthIsMeasuredWhereTheGuestWrites:
     """Readiness must watch the logs the guest is really appending to."""
 
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="a Windows host carries a Linux guest's share on read-only vvfat, so the running guest and not the share is read",
+    )
     @pytest.mark.asyncio
     async def test_the_sizes_come_from_the_guest_not_the_host_side_of_the_share(
         self,
@@ -659,6 +663,10 @@ class TestLogGrowthIsMeasuredWhereTheGuestWrites:
 class TestASandboxReadPrefersTheGuestOverTheShare:
     """The running guest, not the stale host directory, is the source of truth."""
 
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="a Windows host carries a Linux guest's share on read-only vvfat, so the running guest and not the share is read",
+    )
     @pytest.mark.asyncio
     async def test_the_guest_bytes_win_over_a_host_side_copy(self, tmp_path: Path, agent_server: GuestAgentProtocolServer) -> None:
         """``copy_from_sandbox`` returns what the guest holds, not the share.

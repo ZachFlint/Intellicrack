@@ -19,6 +19,7 @@ they cover named in the reason.
 from __future__ import annotations
 
 import asyncio
+import csv
 import ctypes
 import os
 import subprocess
@@ -56,6 +57,7 @@ _SECRET_NAME = "INTELLICRACK_SANDBOX_TEST_SECRET"
 _CONNECT_TIMEOUT_S = 120.0
 _TEARDOWN_TIMEOUT_S = 30.0
 _GONE_TIMEOUT_S = 15.0
+_ICACLS_TIMEOUT_S = 60.0
 
 
 def _program(directory: Path, name: str) -> Path:
@@ -288,6 +290,52 @@ class TestPipeBridge:
         assert after == "Connection closed"
         assert stopped == [0]
 
+    def test_a_server_that_leaves_is_told_from_one_that_is_stopped(self) -> None:
+        """The end of a server's output is reported while the session is open, and not when teardown stops the server."""
+        left = self._output_ends(quit_first=True)
+        stopped = self._output_ends(quit_first=False)
+
+        assert left == ["ended"]
+        assert stopped == []
+
+    @staticmethod
+    def _output_ends(*, quit_first: bool) -> list[str]:
+        """Run one real server over the bridge and record each end of its output the bridge reports.
+
+        Args:
+            quit_first: Ask the server to exit while the session is still open, rather than letting teardown stop it.
+
+        Returns:
+            list[str]: One entry per reported end of output.
+        """
+        process = subprocess.Popen(
+            [sys.executable, str(SERVER_SCRIPT)],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=0,
+        )
+        stdin, stdout = process.stdin, process.stdout
+        assert stdin is not None
+        assert stdout is not None
+        ends: list[str] = []
+
+        async def shutdown() -> None:
+            if process.poll() is None:
+                process.terminate()
+            _ = await asyncio.to_thread(process.wait, 10)
+
+        async def body() -> None:
+            bridge = pipe_session_streams(FileReadStream(stdout), FileWriteStream(stdin), shutdown, lambda: ends.append("ended"))
+            async with Client(bridge) as client:
+                _ = await client.call_tool("whoami", {})
+                if quit_first:
+                    _ = await client.call_tool("quit", {})
+                    await asyncio.sleep(1.5)
+
+        asyncio.run(asyncio.wait_for(body(), timeout=_CONNECT_TIMEOUT_S))
+        return ends
+
 
 @pytest.mark.skipif(sys.platform == "win32", reason="the refusal applies only where Windows confinement is unavailable")
 class TestRefusedOffWindows:
@@ -383,7 +431,79 @@ async def _run_confined(server_id: str, tmp_path: Path, command: str, args: tupl
         await asyncio.wait_for(connection.disconnect(), timeout=_TEARDOWN_TIMEOUT_S)
 
 
+def _system_tool(name: str) -> str:
+    """Locate a program in the Windows system directory.
+
+    Args:
+        name: The program's name without its suffix.
+
+    Returns:
+        str: Its full path.
+    """
+    return str(Path(os.environ.get("SYSTEMROOT", _WINDOWS_ROOT), "System32", f"{name}.exe"))
+
+
+def _account_sid() -> str:
+    """Read the security identifier of the account the tests run as.
+
+    Returns:
+        str: The SID, such as ``S-1-5-21-...``.
+    """
+    completed = subprocess.run(
+        [_system_tool("whoami"), "/user", "/fo", "csv", "/nh"],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=_ICACLS_TIMEOUT_S,
+    )
+    [row] = list(csv.reader(completed.stdout.splitlines()))
+    return row[1]
+
+
+def _grant(path: Path, permission: str) -> None:
+    """Add one access entry to a directory with ``icacls``.
+
+    Args:
+        path: The directory.
+        permission: The ``icacls`` grant, such as ``*S-1-5-21-...:(OI)(CI)F``.
+    """
+    _ = subprocess.run(
+        [_system_tool("icacls"), str(path), "/grant", permission],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=_ICACLS_TIMEOUT_S,
+    )
+
+
+@pytest.fixture
+def account_reachable_tmp_path(tmp_path: Path, tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Give the test's directory the access a directory the operator owns has: the operator's own account can use it.
+
+    pytest creates its temporary directories with mode ``0o700``, which Python on Windows turns into a protected access list granting only
+    SYSTEM, Administrators and the directory's owner. Under an elevated runner the owner is the Administrators group, which the sandbox
+    token holds deny-only, so the account a confined server runs as could not even open its own working directory, unlike any directory
+    the operator really owns. The account is granted full access below the test's directory and listing on the directories above it that
+    pytest locked the same way.
+
+    Args:
+        tmp_path: Per-test directory.
+        tmp_path_factory: Locates the session's base temporary directory.
+
+    Returns:
+        Path: The test's directory.
+    """
+    sid = _account_sid()
+    basetemp = tmp_path_factory.getbasetemp()
+    _grant(tmp_path, f"*{sid}:(OI)(CI)F")
+    for ancestor in tmp_path.parents:
+        if ancestor == basetemp.parent or ancestor.is_relative_to(basetemp):
+            _grant(ancestor, f"*{sid}:(RX)")
+    return tmp_path
+
+
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows job object: process created suspended inside its job, tree killed on close")
+@pytest.mark.usefixtures("account_reachable_tmp_path")
 class TestWindowsJobConfinement:
     """The server and everything it starts are inside the job from creation."""
 
@@ -457,6 +577,7 @@ class TestWindowsJobConfinement:
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows restricted Low integrity token and allowWrite write confinement")
+@pytest.mark.usefixtures("account_reachable_tmp_path")
 class TestWindowsTokenAndWrites:
     """The server's token confines its writes and its environment."""
 

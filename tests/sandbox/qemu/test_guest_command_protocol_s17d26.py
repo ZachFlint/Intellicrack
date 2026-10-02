@@ -54,6 +54,7 @@ Two properties of the pipeline are asserted:
 from __future__ import annotations
 
 import asyncio
+import sys
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Final
 
@@ -188,6 +189,10 @@ async def _guest_session(tmp_path: Path) -> AsyncGenerator[_ProtocolTestSandbox]
         await peer.stop()
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="the generated Windows guest agent runs a cmd.exe command line and is driven here by a real powershell.exe",
+)
 class TestShellCommandLineReachesTheGuestInterpreter:
     """A command line dispatched by ``run_command`` must run as a command line."""
 

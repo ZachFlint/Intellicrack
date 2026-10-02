@@ -26,6 +26,7 @@ from __future__ import annotations
 import asyncio
 import sys
 import types
+from itertools import starmap
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import pytest
@@ -686,19 +687,28 @@ def test_get_callers_non_call_ref_excluded(
 def test_get_properties_returns_address_and_properties_map(
     bridge_with_fake: tuple[GhidraBridge, _FakeBridgeClient],
 ) -> None:
-    """get_properties must include the queried address and a populated properties map.
+    """get_properties must report every user property set at the address, and only those.
 
-    Independent oracle: the fake property manager has one named property with
-    a known object value at the test address.
+    The script walks ``UsrPropertyManager.propertyManagers()`` (Ghidra's
+    iterator of property-map names), asks each ``PropertyMap`` whether it has
+    a value at the address, and stringifies what ``PropertyMap.get`` returns.
+    The stand-in manager holds a string property and an integer property at
+    the address, a void (flag) property whose ``get`` yields ``None`` there,
+    and a property set only at a different address.
 
-    Mutation caught: dropping the ``address`` key from the result dict, or
-    using ``prop_value`` instead of the property name as the key in the nested
-    ``properties`` dict.
+    Independent oracle: the properties map must contain exactly the three
+    properties present at the address, with non-null values stringified and
+    the void property mapped to ``None``.
+
+    Mutation caught: dropping the ``hasProperty`` check (the other-address
+    property leaks in), dropping the ``str`` conversion (the integer stays an
+    int), keying by value instead of property name, or dropping ``address``.
 
     Args:
         bridge_with_fake: Fixture providing a live bridge plus a fake client.
     """
     bridge, fake = bridge_with_fake
+    other_address: int = _TEST_ADDRESS + 0x40
 
     class _FakeAddr:
         """Fake address."""
@@ -713,21 +723,32 @@ def test_get_properties_returns_address_and_properties_map(
             self.getOffset = lambda: self._off
 
     class _FakePropMap:
-        """Fake property map that returns a known string value."""
+        """Fake ``PropertyMap`` holding values keyed by address offset."""
 
-        def __init__(self) -> None:
-            """Initialise."""
-            self.hasProperty: Callable[[object], bool] = lambda _addr: True
-            self.getObject: Callable[[object], str] = lambda _addr: "advanced"
+        def __init__(self, values: dict[int, object]) -> None:
+            """Initialise.
+
+            Args:
+                values: Property values keyed by address offset; a ``None``
+                    value models a void (flag) property that is present.
+            """
+            self._values = values
+            self.hasProperty: Callable[[_FakeAddr], bool] = lambda addr: addr.getOffset() in self._values
+            self.get: Callable[[_FakeAddr], object] = lambda addr: self._values.get(addr.getOffset())
 
     class _FakeUsrPropertyManager:
-        """Fake user property manager with one property."""
+        """Fake ``PropertyMapManager`` exposing ``propertyManagers`` and ``getPropertyMap``."""
 
         def __init__(self) -> None:
             """Initialise."""
-            self._prop_map = _FakePropMap()
-            self.propertyNames = lambda: ["analysis.level"]
-            self.getPropertyMap: Callable[[object], _FakePropMap] = lambda _name: self._prop_map
+            self._maps: dict[str, _FakePropMap] = {
+                "analysis.level": _FakePropMap({_TEST_ADDRESS: "advanced"}),
+                "pass.count": _FakePropMap({_TEST_ADDRESS: 3}),
+                "flagged": _FakePropMap({_TEST_ADDRESS: None}),
+                "reviewed": _FakePropMap({other_address: "yes"}),
+            }
+            self.propertyManagers = lambda: _FakeIterator([*self._maps])
+            self.getPropertyMap: Callable[[object], _FakePropMap | None] = lambda name: self._maps.get(str(name))
 
     class _FakeProgram:
         """Fake currentProgram."""
@@ -741,15 +762,10 @@ def test_get_properties_returns_address_and_properties_map(
 
     result = _run(bridge.get_properties(_TEST_ADDRESS))
 
-    assert isinstance(result, dict)
-    payload = cast("dict[str, Any]", result)
-    assert payload["address"] == _TEST_ADDRESS
-    props = cast("dict[str, Any]", payload["properties"])
-    assert props["analysis.level"] == "advanced"
-
-    exec_src = fake.exec_payloads[0]
-    assert "getUsrPropertyManager" in exec_src
-    assert "propertyNames" in exec_src
+    assert result == {
+        "address": _TEST_ADDRESS,
+        "properties": {"analysis.level": "advanced", "pass.count": "3", "flagged": None},
+    }
 
 
 def test_get_pcode_returns_known_pcode_ops(
@@ -1007,25 +1023,34 @@ def test_get_pcode_function_not_found_returns_empty_ops(
 def test_get_basic_blocks_returns_block_structure(
     bridge_with_fake: tuple[GhidraBridge, _FakeBridgeClient],
 ) -> None:
-    """get_basic_blocks must map each block to start/end/sources/destinations.
+    """get_basic_blocks must map each distinct block to its start/end, edges and flow kinds.
 
-    Independent oracle: the fake block model returns one basic block with
-    known start (``_TEST_ADDRESS``), end (``_TEST_ADDRESS + 0x0f``),
-    sources ``[0x400ff0]``, and destinations ``[0x401020]``.
+    The script iterates ``BasicBlockModel.getCodeBlocksContaining``, takes each
+    block's start from ``CodeBlock.getFirstStartAddress`` and its end from
+    ``getMaxAddress``, and reads predecessors and successors (with each
+    successor's ``FlowType``). The stand-in model yields block A twice, as an
+    overlapping-body iteration can, followed by block B.
 
-    Mutation caught: swapping ``sources`` and ``destinations`` in the returned
-    block dict, or using ``block.getStart()`` instead of ``block.getMinAddress()``
-    for the start offset.
+    Independent oracle: exactly two blocks in iteration order, each with its
+    known start/end, source list, destination list, and per-destination
+    conditional/fall-through/call flags.
+
+    Mutation caught: swapping ``sources`` and ``destinations``, dropping the
+    duplicate-start guard (block A appears twice), or reading the wrong flow
+    predicate for a destination edge.
 
     Args:
         bridge_with_fake: Fixture providing a live bridge plus a fake client.
     """
     bridge, fake = bridge_with_fake
 
-    block_start: int = _TEST_ADDRESS
-    block_end: int = _TEST_ADDRESS + 0x0F
-    source_addr: int = 0x400FF0
-    dest_addr: int = 0x401020
+    block_a_start: int = _TEST_ADDRESS
+    block_a_end: int = _TEST_ADDRESS + 0x0F
+    block_b_start: int = _TEST_ADDRESS + 0x10
+    block_b_end: int = _TEST_ADDRESS + 0x1F
+    entry_source: int = 0x400FF0
+    branch_target: int = _TEST_ADDRESS + 0x20
+    call_target: int = 0x402000
 
     class _FakeAddr:
         """Fake Ghidra address."""
@@ -1039,56 +1064,96 @@ def test_get_basic_blocks_returns_block_structure(
             self._off: int = off
             self.getOffset = lambda: self._off
 
+    class _FakeFlowType:
+        """Fake ``FlowType`` exposing the three predicates the bridge reads."""
+
+        def __init__(self, *, conditional: bool, fallthrough: bool, call: bool) -> None:
+            """Initialise.
+
+            Args:
+                conditional: Value of ``isConditional``.
+                fallthrough: Value of ``isFallthrough``.
+                call: Value of ``isCall``.
+            """
+            self.isConditional = lambda: conditional
+            self.isFallthrough = lambda: fallthrough
+            self.isCall = lambda: call
+
     class _FakeSourceRef:
         """Fake block source reference."""
 
-        def __init__(self) -> None:
-            """Initialise."""
-            self._src_addr = _FakeAddr(source_addr)
+        def __init__(self, source: int) -> None:
+            """Initialise.
+
+            Args:
+                source: Offset of the predecessor block.
+            """
+            self._src_addr = _FakeAddr(source)
             self.getSourceAddress = lambda: self._src_addr
 
     class _FakeDestRef:
-        """Fake block destination reference."""
+        """Fake block destination reference carrying its flow type."""
 
-        def __init__(self) -> None:
-            """Initialise."""
-            self._dst_addr = _FakeAddr(dest_addr)
+        def __init__(self, destination: int, flow: _FakeFlowType) -> None:
+            """Initialise.
+
+            Args:
+                destination: Offset of the successor block.
+                flow: Flow type of the edge to that successor.
+            """
+            self._dst_addr = _FakeAddr(destination)
             self.getDestinationAddress = lambda: self._dst_addr
+            self.getFlowType = lambda: flow
 
     class _FakeBlock:
-        """Fake basic block with one source and one destination."""
+        """Fake ``CodeBlock`` exposing ``getFirstStartAddress`` and its edges."""
 
-        def __init__(self) -> None:
-            """Initialise."""
-            self._min = _FakeAddr(block_start)
-            self._max = _FakeAddr(block_end)
-            self.getMinAddress = lambda: self._min
+        def __init__(
+            self,
+            start: int,
+            end: int,
+            sources: list[int],
+            destinations: list[tuple[int, _FakeFlowType]],
+        ) -> None:
+            """Initialise.
+
+            Args:
+                start: Block entry offset returned by ``getFirstStartAddress``.
+                end: Last offset of the block.
+                sources: Predecessor block offsets.
+                destinations: Successor offsets paired with their flow types.
+            """
+            self._start = _FakeAddr(start)
+            self._max = _FakeAddr(end)
+            self.getFirstStartAddress = lambda: self._start
             self.getMaxAddress = lambda: self._max
-            self.getSources: Callable[[object], _FakeIterator] = lambda _mon: _FakeIterator([_FakeSourceRef()])
-            self.getDestinations: Callable[[object], _FakeIterator] = lambda _mon: _FakeIterator([_FakeDestRef()])
+            self.getSources: Callable[[object], _FakeIterator] = lambda _mon: _FakeIterator([_FakeSourceRef(src) for src in sources])
+            self.getDestinations: Callable[[object], _FakeIterator] = lambda _mon: _FakeIterator(
+                [*starmap(_FakeDestRef, destinations)],
+            )
 
-    class _FakeAddrRange:
-        """Fake address range covering the test block."""
-
-        def __init__(self) -> None:
-            """Initialise."""
-            self._min = _FakeAddr(block_start)
-            self.getMinAddress = lambda: self._min
-
-    class _FakeFuncBody:
-        """Fake function body yielding one address range."""
-
-        def __init__(self) -> None:
-            """Initialise."""
-            self._range = _FakeAddrRange()
-            self.getAddressRanges = lambda: _FakeIterator([self._range])
+    block_a = _FakeBlock(
+        block_a_start,
+        block_a_end,
+        [entry_source],
+        [
+            (block_b_start, _FakeFlowType(conditional=False, fallthrough=True, call=False)),
+            (branch_target, _FakeFlowType(conditional=True, fallthrough=False, call=False)),
+        ],
+    )
+    block_b = _FakeBlock(
+        block_b_start,
+        block_b_end,
+        [block_a_start],
+        [(call_target, _FakeFlowType(conditional=False, fallthrough=False, call=True))],
+    )
 
     class _FakeFunction:
         """Fake function with a body and a name."""
 
         def __init__(self) -> None:
             """Initialise."""
-            self._body = _FakeFuncBody()
+            self._body = object()
             self.getName = lambda: "block_fn"
             self.getBody = lambda: self._body
 
@@ -1101,8 +1166,9 @@ def test_get_basic_blocks_returns_block_structure(
             Args:
                 _prog: Ghidra program (ignored by this test double).
             """
-            self._block = _FakeBlock()
-            self.getCodeBlocksContaining: Callable[[object, object], _FakeIterator] = lambda _addr, _mon: _FakeIterator([self._block])
+            self.getCodeBlocksContaining: Callable[[object, object], _FakeIterator] = lambda _body, _mon: _FakeIterator(
+                [block_a, block_a, block_b],
+            )
 
     block_mod = types.ModuleType("ghidra.program.model.block")
     setattr(block_mod, "BasicBlockModel", _FakeBasicBlockModel)
@@ -1127,22 +1193,30 @@ def test_get_basic_blocks_returns_block_structure(
         sys.modules.pop("ghidra.program", None)
         sys.modules.pop("ghidra", None)
 
-    assert isinstance(result, dict)
-    payload = cast("dict[str, Any]", result)
-    assert payload["function"] == "block_fn"
-    blocks = cast("list[dict[str, Any]]", payload["blocks"])
-    assert len(blocks) == 1
-    blk = blocks[0]
-    assert blk["start"] == block_start
-    assert blk["end"] == block_end
-    assert blk["sources"] == [source_addr]
-    assert blk["destinations"] == [dest_addr]
-
-    exec_src = fake.exec_payloads[0]
-    assert "BasicBlockModel" in exec_src
-    assert "getMinAddress" in exec_src
-    assert "getSources" in exec_src
-    assert "getDestinations" in exec_src
+    assert result == {
+        "function": "block_fn",
+        "blocks": [
+            {
+                "start": block_a_start,
+                "end": block_a_end,
+                "sources": [entry_source],
+                "destinations": [block_b_start, branch_target],
+                "destination_edges": [
+                    {"address": block_b_start, "is_conditional": False, "is_fallthrough": True, "is_call": False},
+                    {"address": branch_target, "is_conditional": True, "is_fallthrough": False, "is_call": False},
+                ],
+            },
+            {
+                "start": block_b_start,
+                "end": block_b_end,
+                "sources": [block_a_start],
+                "destinations": [call_target],
+                "destination_edges": [
+                    {"address": call_target, "is_conditional": False, "is_fallthrough": False, "is_call": True},
+                ],
+            },
+        ],
+    }
 
 
 def test_get_slice_backward_returns_known_ops(

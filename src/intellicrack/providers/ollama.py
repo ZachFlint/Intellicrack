@@ -19,6 +19,7 @@ import time
 from contextlib import AsyncExitStack
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, TypedDict, cast, override
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -304,7 +305,18 @@ class OllamaProvider(LLMProviderBase):
         self.connected = True
 
     async def _connect_local(self) -> None:
-        """Probe the local Ollama ``/api/tags`` endpoint and record availability."""
+        """Probe the local Ollama ``/api/tags`` endpoint and record availability.
+
+        A local URL whose port cannot be used at all -- out of range or not a
+        number -- marks the local source unavailable without a probe, since no
+        request to it can be sent.
+        """
+        try:
+            _ = urlsplit(self._local_url).port
+        except ValueError as e:
+            self._local_available = False
+            self._logger.warning("local_ollama_url_invalid", url=self._local_url, error=str(e))
+            return
         try:
             self._local_client = self._build_local_client()
             response = await self._local_client.get(f"{self._local_url}/api/tags")

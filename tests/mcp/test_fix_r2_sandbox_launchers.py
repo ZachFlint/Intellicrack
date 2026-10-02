@@ -18,8 +18,11 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import csv
 import hashlib
 import json
+import os
+import subprocess
 import sys
 import threading
 import zipfile
@@ -37,14 +40,19 @@ from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.credentials.store import CredentialStore
 from intellicrack.mcp.config import McpSandboxSpec, StdioServerSpec, launcher_name, launcher_notes
 from intellicrack.mcp.connection import McpConnection
-from intellicrack.mcp.errors import McpConnectionError
+from intellicrack.mcp.errors import McpConfigError, McpConnectionError
 from intellicrack.mcp.sandbox_launch import (
     SANDBOX_HOME_LAYOUT,
+    STDERR_TAIL_LINE_CHARS,
+    STDERR_TAIL_LINES,
     SandboxConfinementError,
+    SandboxedServerExitedError,
     SandboxHome,
+    StderrTee,
     build_sandboxed_startup,
     check_resumed,
     confined_stdio_client,
+    describe_exit_code,
     plan_sandboxed_launch,
     render_command_line,
     sandbox_access_guidance,
@@ -65,6 +73,15 @@ _PROBE_TIMEOUT_S: Final[float] = 300.0
 _CONNECT_TIMEOUT_S: Final[float] = 120.0
 _TEARDOWN_TIMEOUT_S: Final[float] = 30.0
 _LOCK_HELD_S: Final[float] = 3.0
+_ICACLS_TIMEOUT_S: Final[float] = 60.0
+_DLL_NOT_FOUND: Final[int] = 0xC0000135
+_DLL_NOT_FOUND_SIGNED: Final[int] = _DLL_NOT_FOUND - (1 << 32)
+_UNNAMED_STATUS: Final[int] = 0xC0001234
+_DIES_EXIT_CODE: Final[int] = 3
+_DIES_MARKER: Final[str] = "confined-server-said-goodbye"
+_DIES_SCRIPT: Final[str] = (
+    f"import sys; sys.stderr.write('first line\\n{_DIES_MARKER}\\n'); sys.stderr.flush(); sys.exit({_DIES_EXIT_CODE})"
+)
 
 
 def _msvc_argv(command_line: str) -> list[str]:
@@ -319,6 +336,92 @@ class TestResumeFailure:
         check_resumed(1, 0)
 
 
+class TestExitCodeDescription:
+    """An exit code reads as an ordinary exit or as the Windows status a server died with."""
+
+    def test_an_ordinary_exit_code_is_shown_in_decimal(self) -> None:
+        """A code the program chose is shown as it is."""
+        assert describe_exit_code(_DIES_EXIT_CODE) == f"exit code {_DIES_EXIT_CODE}"
+
+    def test_a_known_status_is_named_and_explained(self) -> None:
+        """A loader failure is shown in hexadecimal with its name, however the code arrived signed."""
+        described = describe_exit_code(_DLL_NOT_FOUND)
+
+        assert described.startswith("exit code 0xc0000135 (STATUS_DLL_NOT_FOUND: ")
+        assert describe_exit_code(_DLL_NOT_FOUND_SIGNED) == described
+
+    def test_an_unknown_status_is_still_shown_in_hexadecimal(self) -> None:
+        """A status with no entry is not mistaken for an ordinary exit."""
+        assert describe_exit_code(_UNNAMED_STATUS) == "exit code 0xc0001234"
+
+
+class TestServerExitedError:
+    """The error raised for a server that died says how it exited and what it last wrote."""
+
+    def test_the_message_carries_the_exit_and_the_last_lines(self) -> None:
+        """The pid, the described exit code and the cleaned standard error lines are all in the message."""
+        error = SandboxedServerExitedError(4242, _DLL_NOT_FOUND, ["first", "second\x1b[31m"])
+
+        assert isinstance(error, McpConnectionError)
+        assert error.exit_code == _DLL_NOT_FOUND
+        assert error.stderr_tail == ("first", "second[31m")
+        assert "process 4242" in str(error)
+        assert describe_exit_code(_DLL_NOT_FOUND) in str(error)
+        assert str(error).endswith("its last standard error output was: first | second[31m")
+
+    def test_a_silent_server_without_its_own_exit_code_says_so(self) -> None:
+        """A server terminated by the sandbox after leaving, having written nothing, is described as such."""
+        message = str(SandboxedServerExitedError(7, None, []))
+
+        assert "stopped without an exit code of its own" in message
+        assert message.endswith("it wrote nothing to standard error")
+
+
+class TestStderrTee:
+    """A real child's standard error reaches the log unchanged while its last lines are kept."""
+
+    def test_output_is_forwarded_and_the_last_lines_kept(self, tmp_path: Path) -> None:
+        """Every byte reaches the log, and the tail holds the most recent lines, the unterminated last one included.
+
+        Args:
+            tmp_path: Per-test directory.
+        """
+        script = (
+            "import sys\n"
+            f"for index in range({STDERR_TAIL_LINES + 5}):\n"
+            "    sys.stderr.buffer.write(f'line {index}\\r\\n'.encode())\n"
+            f"sys.stderr.buffer.write(b'x' * {STDERR_TAIL_LINE_CHARS * 3})\n"
+        )
+        log_path = tmp_path / "server.stderr"
+        with log_path.open("w+", encoding="utf-8") as errlog:
+            tee = StderrTee.open(errlog)
+            try:
+                completed = subprocess.run([sys.executable, "-c", script], stderr=tee.writer, check=False, timeout=_PROBE_TIMEOUT_S)
+            finally:
+                tee.finish()
+
+        assert completed.returncode == 0
+        expected_lines = [f"line {index}" for index in range(STDERR_TAIL_LINES + 5)]
+        assert log_path.read_bytes() == ("".join(f"{line}\r\n" for line in expected_lines) + "x" * STDERR_TAIL_LINE_CHARS * 3).encode()
+        tail = tee.tail()
+        assert len(tail) == STDERR_TAIL_LINES
+        assert tail[:-1] == expected_lines[-(STDERR_TAIL_LINES - 1) :]
+        assert tail[-1] == "x" * STDERR_TAIL_LINE_CHARS
+
+    def test_the_writer_cannot_be_handed_out_once_closed(self, tmp_path: Path) -> None:
+        """After the tee lets go of its write end it refuses to hand one to another child.
+
+        Args:
+            tmp_path: Per-test directory.
+        """
+        with (tmp_path / "server.stderr").open("w+", encoding="utf-8") as errlog:
+            tee = StderrTee.open(errlog)
+            tee.finish()
+            with pytest.raises(McpConfigError, match="already closed"):
+                _ = tee.writer
+        assert tee.tail() == []
+
+
 _PYTHON_PROBE: Final[str] = """
 import json, os, pathlib, sys, tempfile
 
@@ -449,18 +552,89 @@ def _assert_confined_home(report: JsonObject, tmp_path: Path, server_id: str) ->
     assert report["home_written"] is True
 
 
+def _system_tool(name: str) -> str:
+    """Locate a program in the Windows system directory.
+
+    Args:
+        name: The program's name without its suffix.
+
+    Returns:
+        str: Its full path.
+    """
+    return str(Path(os.environ.get("SYSTEMROOT", "C:\\Windows"), "System32", f"{name}.exe"))
+
+
+def _account_sid() -> str:
+    """Read the security identifier of the account the tests run as.
+
+    Returns:
+        str: The SID, such as ``S-1-5-21-...``.
+    """
+    completed = subprocess.run(
+        [_system_tool("whoami"), "/user", "/fo", "csv", "/nh"],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=_ICACLS_TIMEOUT_S,
+    )
+    [row] = list(csv.reader(completed.stdout.splitlines()))
+    return row[1]
+
+
+def _grant(path: Path, permission: str) -> None:
+    """Add one access entry to a directory with ``icacls``.
+
+    Args:
+        path: The directory.
+        permission: The ``icacls`` grant, such as ``*S-1-5-21-...:(OI)(CI)F``.
+    """
+    _ = subprocess.run(
+        [_system_tool("icacls"), str(path), "/grant", permission],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=_ICACLS_TIMEOUT_S,
+    )
+
+
 @pytest.fixture
-def private_state_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def account_reachable_tmp_path(tmp_path: Path, tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Give the test's directory the access a directory the operator owns has: the operator's own account can use it.
+
+    pytest creates its temporary directories with mode ``0o700``, which Python on Windows turns into a protected access list granting only
+    SYSTEM, Administrators and the directory's owner. Under an elevated runner the owner is the Administrators group, which the sandbox
+    token holds deny-only, so the account a confined server runs as could not even open its own working directory, unlike any directory
+    the operator really owns. The account is granted full access below the test's directory and listing on the directories above it that
+    pytest locked the same way.
+
+    Args:
+        tmp_path: Per-test directory.
+        tmp_path_factory: Locates the session's base temporary directory.
+
+    Returns:
+        Path: The test's directory.
+    """
+    sid = _account_sid()
+    basetemp = tmp_path_factory.getbasetemp()
+    _grant(tmp_path, f"*{sid}:(OI)(CI)F")
+    for ancestor in tmp_path.parents:
+        if ancestor == basetemp.parent or ancestor.is_relative_to(basetemp):
+            _grant(ancestor, f"*{sid}:(RX)")
+    return tmp_path
+
+
+@pytest.fixture
+def private_state_dir(account_reachable_tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Point Intellicrack's state directory, and so every sandbox home, at the test's own directory.
 
     Args:
-        tmp_path: Per-test directory, which Windows places under the user's local application data.
+        account_reachable_tmp_path: Per-test directory, which Windows places under the user's local application data.
         monkeypatch: Restores the environment afterwards.
 
     Returns:
         Path: The state directory.
     """
-    state = tmp_path / "state"
+    state = account_reachable_tmp_path / "state"
     state.mkdir()
     monkeypatch.setenv("INTELLICRACK_STATE_DIR", str(state))
     return state
@@ -655,3 +829,58 @@ class TestSandboxedServers:
 
         assert not ready_while_held
         assert ready
+
+
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Windows confined server: its exit code and last standard error lines explain its death",
+)
+@pytest.mark.usefixtures("private_state_dir")
+class TestAConfinedServerThatDiesSaysWhy:
+    """A confined server that exits before its session ends is reported with its exit code and what it last wrote."""
+
+    def test_the_launcher_reports_the_exit_code_and_the_stderr_tail(self, tmp_path: Path) -> None:
+        """The launcher raises the server's own exit code and its last standard error lines instead of a bare end of stream.
+
+        Args:
+            tmp_path: Per-test directory.
+        """
+        work = tmp_path / "work"
+        work.mkdir()
+        sandbox = McpSandboxSpec(enabled=True, allow_write=(str(work),))
+        launch = build_sandboxed_startup(StdioServerSpec(command=sys.executable, args=("-c", _DIES_SCRIPT)), sandbox, {}, server_id="dies")
+
+        async def body() -> None:
+            with (tmp_path / "dies.stderr").open("w+", encoding="utf-8") as errlog:
+                async with confined_stdio_client(launch, sandbox, errlog) as (read_stream, _):
+                    with anyio.fail_after(_PROBE_TIMEOUT_S):
+                        _ = await read_stream.receive()
+
+        with pytest.raises(SandboxedServerExitedError) as caught:
+            asyncio.run(body())
+
+        assert caught.value.exit_code == _DIES_EXIT_CODE, str(caught.value)
+        assert caught.value.stderr_tail[-1] == _DIES_MARKER
+        assert _DIES_MARKER in (tmp_path / "dies.stderr").read_text(encoding="utf-8")
+
+    def test_the_connection_error_names_the_exit_code(self, tmp_path: Path) -> None:
+        """A connection to a server that dies at start fails with the server's exit code and its words, not only "Connection closed".
+
+        Args:
+            tmp_path: Per-test directory.
+        """
+        work = tmp_path / "work"
+        work.mkdir()
+        config = stdio_config(
+            "dies-at-start",
+            command=sys.executable,
+            args=("-c", _DIES_SCRIPT),
+            sandbox=McpSandboxSpec(enabled=True, allow_write=(str(work),)),
+        )
+        connection = _connection(tmp_path, config)
+
+        with pytest.raises(McpConnectionError) as caught:
+            asyncio.run(asyncio.wait_for(connection.connect(), timeout=_CONNECT_TIMEOUT_S))
+
+        assert f"exited with exit code {_DIES_EXIT_CODE} " in str(caught.value)
+        assert _DIES_MARKER in str(caught.value)

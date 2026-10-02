@@ -1279,8 +1279,18 @@ class TestRegistryCoversAllEnumMembers:
 
     @staticmethod
     def test_all_tool_names_in_registry() -> None:
-        """Every ToolName enum member has a registry entry (F-0037)."""
+        """Every installable ToolName enum member has a registry entry (F-0037).
+
+        ``ToolName.TOOLS`` is the synthetic orchestrator-built meta-tool that
+        names no installable bridge (no filesystem footprint, no installer, no
+        verification step), so it is deliberately absent from ``TOOL_REGISTRY``
+        and skipped here exactly as ``ToolInstaller.get_all_tool_status`` skips
+        it. Every other member must have a registry entry.
+        """
         for member in ToolName:
+            if member is ToolName.TOOLS:
+                assert member not in TOOL_REGISTRY, "synthetic ToolName.TOOLS must not have a TOOL_REGISTRY entry"
+                continue
             assert member in TOOL_REGISTRY, f"missing registry entry for {member}"
 
     @staticmethod

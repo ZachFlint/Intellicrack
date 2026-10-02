@@ -397,6 +397,13 @@ async def test_dispatch_unknown_function_rejected(tmp_path: Path) -> None:
 async def test_dispatch_x64dbg_tool_call(tmp_path: Path) -> None:
     """Verify execute_tool_call routes to x64dbg bridge methods.
 
+    No x64dbg is installed under the temporary tools directory, so the
+    bridge's ``get_breakpoints`` reports its plugin as unavailable rather than
+    masking a dead session with the local breakpoint cache. Oracle: the same
+    call made on the bridge directly; the dispatched call must fail with the
+    registry's ``call failed`` error raised from exactly that bridge error,
+    naming the ``bp_list`` command the bridge sent.
+
     Args:
         tmp_path: Pytest temporary directory.
     """
@@ -404,15 +411,23 @@ async def test_dispatch_x64dbg_tool_call(tmp_path: Path) -> None:
     tools_dir.mkdir()
     reg = ToolRegistry(tools_dir=tools_dir)
     await reg.initialize()
+    try:
+        x64dbg_bridge = reg.get_x64dbg_bridge()
+        assert x64dbg_bridge is not None
 
-    x64dbg_bridge = reg.get_x64dbg_bridge()
-    assert x64dbg_bridge is not None
+        with pytest.raises(ToolError) as direct:
+            await x64dbg_bridge.get_breakpoints()
+        with pytest.raises(ToolError, match=r"^call failed: ") as dispatched:
+            await reg.execute_tool_call("x64dbg", "get_breakpoints", {})
 
-    bps = await reg.execute_tool_call("x64dbg", "get_breakpoints", {})
-    assert isinstance(bps, list)
-    assert bps == []
-
-    await reg.shutdown()
+        cause = dispatched.value.__cause__
+        assert isinstance(cause, ToolError)
+        assert str(cause) == str(direct.value)
+        assert cause.tool_name == "x64dbg"
+        assert cause.details == direct.value.details
+        assert cause.details.get("command") == "bp_list"
+    finally:
+        await reg.shutdown()
 
 
 @pytest.mark.asyncio

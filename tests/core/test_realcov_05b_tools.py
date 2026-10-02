@@ -37,7 +37,7 @@ import pytest_asyncio
 from intellicrack.bridges.hex_editor import HexEditorBridge
 from intellicrack.core.session import Session
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import BreakpointInfo, ToolError, ToolName
+from intellicrack.core.types import ToolError, ToolName
 from intellicrack.providers import ids as provider_ids
 
 
@@ -49,6 +49,8 @@ if TYPE_CHECKING:
 _BRIDGE_COUNT_ALL: Final[int] = 7
 _MZ_MAGIC_HEX: Final[str] = "4D 5A"
 _PE_HEADER_READ_LEN: Final[int] = 2
+_CASE_PROBE_BYTES: Final[bytes] = bytes.fromhex("DEADBEEF")
+_CASE_PROBE_HEX: Final[str] = "DE AD BE EF"
 
 
 def _file_size(path: Path) -> int:
@@ -170,25 +172,38 @@ class TestExecuteToolCallRealDispatch:
     @pytest.mark.asyncio
     async def test_tool_name_is_case_insensitive(
         initialized_registry: ToolRegistry,
+        tmp_path: Path,
     ) -> None:
         """Uppercase and lowercase tool names both route to the same bridge.
 
         The registry lower-cases the caller-supplied name before resolving it
-        to a ``ToolName`` enum value, so ``"X64DBG"`` must reach the same
-        ``X64DbgBridge`` instance as ``"x64dbg"``.  Falsifiability oracle:
-        call the bridge directly and assert both dispatch results equal it.
+        to a ``ToolName`` enum value, so a file opened through ``"HEX_EDITOR"``
+        must be the document that a ``"hex_editor"`` read and the bridge itself
+        then see. A read through the lowercase name only returns the file's
+        bytes when both names reached the same ``HexEditorBridge`` instance.
+        Falsifiability oracle: read the same range from the bridge directly and
+        assert the dispatch result equals it and the bytes written.
 
         Args:
             initialized_registry: Fully initialized real ToolRegistry.
+            tmp_path: Pytest temporary directory holding the probe file.
         """
-        bridge = initialized_registry.get_x64dbg_bridge()
-        oracle: list[BreakpointInfo] = await bridge.get_breakpoints()
+        sample = tmp_path / "case_probe.bin"
+        _ = sample.write_bytes(_CASE_PROBE_BYTES)
+        bridge = initialized_registry.get_hex_editor_bridge()
 
-        result_upper: object = await initialized_registry.execute_tool_call("X64DBG", "get_breakpoints", {})
-        result_lower: object = await initialized_registry.execute_tool_call("x64dbg", "get_breakpoints", {})
+        opened = await initialized_registry.execute_tool_call("HEX_EDITOR", "open_file", {"path": str(sample)})
+        result_lower = await initialized_registry.execute_tool_call(
+            "hex_editor",
+            "read_bytes",
+            {"offset": 0, "length": len(_CASE_PROBE_BYTES)},
+        )
+        oracle = await bridge.read_bytes(0, len(_CASE_PROBE_BYTES))
 
-        assert result_upper == oracle, f"'X64DBG' dispatch returned {result_upper!r}, expected oracle {oracle!r}"
-        assert result_lower == oracle, f"'x64dbg' dispatch returned {result_lower!r}, expected oracle {oracle!r}"
+        assert isinstance(opened, dict)
+        assert opened["size"] == len(_CASE_PROBE_BYTES)
+        assert oracle == _CASE_PROBE_HEX
+        assert result_lower == oracle, f"'hex_editor' dispatch returned {result_lower!r}, expected oracle {oracle!r}"
 
 
 class TestExecuteToolCallCapabilityGate:

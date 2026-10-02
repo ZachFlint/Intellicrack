@@ -7,7 +7,7 @@
 Covers the 9 CutterBridge operations identified as NOT_RESOLVED in
 audit/verification/group-02-report.md (STILL OPEN § CutterBridge):
 
-- decompile(address)           — pdc / pdg command dispatch + C-code content
+- decompile(address)           — pdg / pdd command dispatch + C-code content
 - search_crypto_constants()    — /cj command + parsed result structure
 - search_magic()               — /mj command + parsed result structure
 - search_value(value, size)    — /vj{size} {value} size dispatch
@@ -104,28 +104,29 @@ def _set_analyzed(bridge: CutterBridge) -> None:
 
 
 class TestDecompile:
-    """Gate decompile: verify pdc command, C-code content, and pdg fallback."""
+    """Gate decompile: verify pdg command, C-code content, and failure handling."""
 
     @pytest.mark.asyncio
-    async def test_pdc_command_issued_and_c_token_in_result(self) -> None:
-        """Decompile must seek to address, issue pdc, and return the response text.
+    async def test_pdg_command_issued_and_c_token_in_result(self) -> None:
+        """Decompile must seek to address, issue pdg, and return the response text.
 
         Independent oracle: the recorder is pre-loaded to return a known C
-        pseudocode snippet for the ``pdc`` command.  The bridge must:
-        (a) emit ``s 0x1000`` to seek, (b) emit ``pdc`` to decompile, and
-        (c) return the text unmodified so that ``"int main"`` is present.
+        pseudocode snippet for the ``pdg`` command (rz-ghidra, the default
+        backend; rizin 0.9.1 ships no native ``pdc`` decompiler).  The bridge
+        must: (a) emit ``s 0x1000`` to seek, (b) emit ``pdg`` to decompile,
+        and (c) return the text unmodified so that ``"int main"`` is present.
 
-        Mutation caught: swapping ``pdc`` for ``pdf`` in the decompile body
-        would emit the wrong command and the ``pdc`` assertion would fail.
+        Mutation caught: swapping ``pdg`` for ``pdf`` in the decompile body
+        would emit the wrong command and the ``pdg`` assertion would fail.
         """
         c_code: str = "int main(int argc, char **argv) {\n  return 0;\n}"
-        rec = _CommandRecorder({f"s {_ADDR}": "", "pdc": c_code})
+        rec = _CommandRecorder({f"s {_ADDR}": "", "pdg": c_code})
         bridge = CutterBridge()
         bridge.r2 = _as_r2pipe(rec)
         _set_analyzed(bridge)
         result = await bridge.decompile(_ADDR)
         assert f"s {_ADDR}" in rec.commands
-        assert "pdc" in rec.commands
+        assert "pdg" in rec.commands
         assert "int main" in result
         assert "return 0" in result
 

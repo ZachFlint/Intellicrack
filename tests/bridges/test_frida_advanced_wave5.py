@@ -141,6 +141,7 @@ class _FakeScriptW5:
         self.load_calls: int = 0
         self.unload_calls: int = 0
         self.eternalize_calls: int = 0
+        self.is_destroyed: bool = False
         self.posts: list[dict[str, object]] = []
         self._handler: Callable[..., None] | None = None
 
@@ -364,6 +365,7 @@ class _StalkerInjectScript:
         self.batch = batch
         self.load_calls: int = 0
         self.unload_calls: int = 0
+        self.is_destroyed: bool = False
         self.posts: list[dict[str, object]] = []
         self._handler: Callable[..., None] | None = None
 

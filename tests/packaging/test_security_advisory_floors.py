@@ -193,6 +193,21 @@ def test_pyproject_declares_pyasn1_runtime_security_floor() -> None:
     assert not spec.contains(vulnerable), f"pyasn1 spec {spec} still admits the vulnerable {vulnerable} (CVE-2026-59884/59885/59886)"
 
 
+def _declared_lower_bound(spec: SpecifierSet) -> Version | None:
+    """Return the lowest version a specifier set can admit, from its lower-bounding clauses.
+
+    Args:
+        spec: The declared specifier set.
+
+    Returns:
+        Version | None: The highest version named by a ``>=``, ``>``, ``==``,
+            ``~=`` or ``===`` clause, which no admitted version is below, or
+            ``None`` when the set has no lower bound.
+    """
+    bounds = [Version(clause.version) for clause in spec if clause.operator in {">=", ">", "==", "~=", "==="}]
+    return max(bounds, default=None)
+
+
 def test_pyproject_declares_httpx_stack_runtime_security_floor() -> None:
     """httpx2 and httpcore2 must carry runtime floors that reject the vulnerable releases.
 
@@ -201,13 +216,25 @@ def test_pyproject_declares_httpx_stack_runtime_security_floor() -> None:
     openai and mcp clients. Weakening or dropping either would let the resolver
     fall back to a version covered by the WebSocket-TLS-bypass, SSE-DoS, header
     injection or decompression-amplification advisories.
+
+    Like the GitPython pin, each shipped floor tracks the locked release and may
+    be stricter than the advisory's first-patched version, so this asserts the
+    declared lower bound is *at least* the advisory floor, that a vulnerable
+    release is rejected, and that the version ``pixi.lock`` actually ships is
+    admitted.
     """
     for dist, cves in ((_HTTPX2, "CVE-2026-84378..84382"), (_HTTPCORE2, "CVE-2026-84381")):
         floor, vulnerable = _FLOORS[dist]
         spec = _declared_specifier(dist, "tool", "pixi", "pypi-dependencies")
         assert str(spec), f"{dist} is not declared in [tool.pixi].pypi-dependencies"
-        assert spec.contains(floor), f"{dist} spec {spec} excludes the patched floor {floor}"
+        lower_bound = _declared_lower_bound(spec)
+        assert lower_bound is not None, f"{dist} spec {spec} has no lower bound, so it admits every vulnerable release ({cves})"
+        assert lower_bound >= floor, f"{dist} spec {spec} admits releases below the patched floor {floor} ({cves})"
         assert not spec.contains(vulnerable), f"{dist} spec {spec} still admits the vulnerable {vulnerable} ({cves})"
+        shipped = _lock_versions(dist)
+        assert shipped, f"{dist} is not resolved in pixi.lock"
+        rejected = sorted(str(version) for version in shipped if not spec.contains(version))
+        assert not rejected, f"{dist} spec {spec} rejects the version pixi.lock ships: {rejected}"
 
 
 def test_pyproject_declares_gitpython_dev_security_floor() -> None:

@@ -76,7 +76,7 @@ _DURATION: Final[float] = 42.5
 _NOTEPAD_STARTUP_DELAY: Final[float] = 1.0
 _BRIDGE_SLEEP: Final[float] = 0.3
 _STALKER_SLEEP: Final[float] = 1.0
-_EXACT_FUNCTION_COUNT: Final[int] = 102
+_EXACT_FUNCTION_COUNT: Final[int] = 134
 _ALLOC_SIZE: Final[int] = 4096
 _SMALL_ALLOC: Final[int] = 256
 _STALKER_LIMIT: Final[int] = 500
@@ -835,7 +835,7 @@ def test_all_function_names_have_methods() -> None:
 
 
 def test_function_count_exact() -> None:
-    """Verify exact function count is 102 (the complete parity-plan implementation).
+    """Verify exact function count is 134 (the complete parity-plan implementation).
 
     Falsifiable: adding or removing any function from _FRIDA_FUNCTIONS changes
     the count and fails this test. Using >= would mask deletions.

@@ -560,6 +560,7 @@ class TestMaxIterationsGuard:
             max_iterations=3,
             stream_responses=False,
             confirmation_level=ConfirmationLevel.NONE,
+            enable_dynamic_loading=False,
         )
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
 
@@ -637,6 +638,7 @@ class TestTimeoutGuard:
             timeout_seconds=1,
             stream_responses=False,
             confirmation_level=ConfirmationLevel.NONE,
+            enable_dynamic_loading=False,
         )
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
 
@@ -671,6 +673,7 @@ class TestConfirmationGate:
             max_iterations=5,
             stream_responses=False,
             confirmation_level=ConfirmationLevel.DESTRUCTIVE,
+            enable_dynamic_loading=False,
         )
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
         orch.set_confirmation_callback(lambda _call: False)
@@ -697,6 +700,7 @@ class TestConfirmationGate:
             max_iterations=5,
             stream_responses=False,
             confirmation_level=ConfirmationLevel.DESTRUCTIVE,
+            enable_dynamic_loading=False,
         )
         orch = _build_orch(tmp_path, provider=provider, bridge=bridge, config=config)
         orch.set_confirmation_callback(lambda _call: True)

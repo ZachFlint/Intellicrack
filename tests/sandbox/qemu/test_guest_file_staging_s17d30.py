@@ -28,6 +28,7 @@ arrived on the far side of the channel, not on what the host intended to send.
 from __future__ import annotations
 
 import inspect
+import sys
 from typing import TYPE_CHECKING, Final
 
 import pytest
@@ -118,6 +119,10 @@ def _make_sandbox(share: Path, guest_os: GuestOS) -> _StagingSandbox:
 class TestStagedFileReachesTheRunningGuest:
     """What the host stages must exist inside the guest, byte for byte."""
 
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="a Windows host carries the share on read-only vvfat, so staging must reach the guest without writing to it",
+    )
     @pytest.mark.asyncio
     async def test_staged_bytes_arrive_at_the_in_guest_path(self, tmp_path: Path) -> None:
         """The staged file appears inside the guest with the source's bytes.

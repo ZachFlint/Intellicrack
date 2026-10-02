@@ -66,7 +66,7 @@ import tempfile
 import time
 from collections import deque
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import IO, TYPE_CHECKING, Final, cast
 
 from intellicrack.core.config import get_project_root
@@ -1063,7 +1063,7 @@ def mount_disk_image(path: Path) -> Path:
             command fails, or no drive letter is assigned.
     """
     if sys.platform != _WINDOWS_PLATFORM:
-        message = "mounting install media requires Windows"
+        message = f"cannot mount {path}: mounting install media requires Windows"
         raise ProvisioningError(message)
 
     script = (
@@ -1399,7 +1399,7 @@ def _stage_winpe_driver_files(
 
     origins: dict[str, str] = {}
     for package in packages:
-        for source in sorted((medium_root / package).iterdir()):
+        for source in sorted(medium_root.joinpath(*PureWindowsPath(package).parts).iterdir()):
             if not source.is_file():
                 continue
             previous = origins.get(source.name.casefold())

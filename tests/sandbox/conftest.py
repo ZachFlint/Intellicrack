@@ -45,6 +45,7 @@ from intellicrack.sandbox.base import (
     DllLoadEvent,
     ExecutionReport,
     FileChange,
+    GuestProcessInfo,
     InjectionEvent,
     KernelObjectActivity,
     NetworkActivity,
@@ -458,6 +459,19 @@ class InMemorySandbox(SandboxBase):
                 "rules_file": rules_path or "builtin",
                 "strings": ["MZ"],
             },
+        ]
+
+    async def list_processes(self) -> list[GuestProcessInfo]:
+        """List sample processes observed in the in-memory guest.
+
+        Returns:
+            list[GuestProcessInfo]: A fixed pair of guest process records so
+            callers can exercise the real enumeration path without a live
+            sandbox.
+        """
+        return [
+            GuestProcessInfo(pid=4, name="System", path=""),
+            GuestProcessInfo(pid=1337, name="sample.exe", path="C:\\Temp\\sample.exe"),
         ]
 
 

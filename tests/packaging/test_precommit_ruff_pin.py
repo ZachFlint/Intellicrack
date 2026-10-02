@@ -43,7 +43,8 @@ import yaml
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[2]
 _PRECOMMIT_CONFIG: Final[Path] = _REPO_ROOT / ".pre-commit-config.yaml"
 _GITATTRIBUTES: Final[Path] = _REPO_ROOT / ".gitattributes"
-_PIXI_RUFF: Final[Path] = _REPO_ROOT / ".pixi" / "envs" / "default" / "Scripts" / "ruff.exe"
+_PIXI_ENV: Final[Path] = _REPO_ROOT / ".pixi" / "envs" / "default"
+_PIXI_RUFF: Final[Path] = _PIXI_ENV / "Scripts" / "ruff.exe" if os.name == "nt" else _PIXI_ENV / "bin" / "ruff"
 # Any tracked, ruff-clean source file works; ruff must load pyproject.toml to
 # lint it, which is the behaviour under test.
 _PROBE_SOURCE: Final[Path] = Path("scripts") / "clean_nul.py"

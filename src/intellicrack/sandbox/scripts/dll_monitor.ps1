@@ -29,6 +29,7 @@ $script:LogWriterLock = [System.Object]::new()
 $script:LogWriteTimeoutMs = 3000
 $script:LogWriteRetryMs = 25
 $script:LogWriteDropped = 0
+$script:TraceEventSearchDepth = 4
 
 $script:ImagePathFieldNames = [System.Collections.Generic.List[string]]::new()
 foreach ($name in @('ImageName', 'FileName', 'ImageFileName', 'ImagePath', 'OriginalFileName')) {
@@ -243,7 +244,8 @@ function Import-TraceEventAssembly {
     foreach ($root in $searchRoots) {
         if (-not $root) { continue }
         if (-not (Test-Path -LiteralPath $root)) { continue }
-        $candidate = Get-ChildItem -Path $root -Filter 'Microsoft.Diagnostics.Tracing.TraceEvent.dll' -Recurse -ErrorAction SilentlyContinue |
+        $candidate = Get-ChildItem -Path $root -Filter 'Microsoft.Diagnostics.Tracing.TraceEvent.dll' -Recurse `
+            -Depth $script:TraceEventSearchDepth -ErrorAction SilentlyContinue |
             Select-Object -First 1
         if ($candidate) {
             $assemblyPath = $candidate.FullName
@@ -254,7 +256,7 @@ function Import-TraceEventAssembly {
     if (-not $assemblyPath) {
         $ts = Get-Date -Format 'o'
         Write-DllDiagnostic -Timestamp $ts -Category 'traceevent_dll_missing' `
-            -Detail "searched=$([string]::Join(';', $searchRoots))"
+            -Detail "searched=$([string]::Join(';', $searchRoots)) depth=$script:TraceEventSearchDepth"
         return $false
     }
 

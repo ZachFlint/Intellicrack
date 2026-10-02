@@ -284,6 +284,9 @@ def prepare_remote_script(code: str) -> tuple[str, str | None]:
         ast.fix_missing_locations(tree)
         return ast.unparse(tree), sentinel
 
+    if not isinstance(last_stmt, (ast.If, ast.Try)):
+        return dedented, None
+
     result_name = _find_trailing_result_name(tree.body)
     if result_name is None:
         return dedented, None

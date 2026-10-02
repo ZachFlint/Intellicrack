@@ -36,7 +36,7 @@ from __future__ import annotations
 import ast
 import importlib.util
 import re
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, Final
 
 import pytest
@@ -498,10 +498,10 @@ def test_wizard_preflight_still_parses_the_real_generator() -> None:
 
     assert selected_key, "the preflight never recovers the selected background key"
     icon, background_dir, _key, background_file = resolved
-    assert (_WIZARD_DIR / icon).resolve().is_file(), f"the generator's icon source does not exist: {icon}"
-    assert (_WIZARD_DIR / background_dir / background_file).is_file(), (
-        f"the selected background does not exist: {background_dir}/{background_file}"
-    )
+    icon_source = _WIZARD_DIR.joinpath(*PureWindowsPath(icon).parts)
+    background_source = _WIZARD_DIR.joinpath(*PureWindowsPath(background_dir).parts, background_file)
+    assert icon_source.resolve().is_file(), f"the generator's icon source does not exist: {icon}"
+    assert background_source.is_file(), f"the selected background does not exist: {background_dir}/{background_file}"
 
 
 def test_wizard_preflight_covers_every_image_the_installer_ships() -> None:

@@ -22,6 +22,7 @@ mutation it would catch.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Final, cast
 
 import pytest
@@ -76,6 +77,25 @@ class _CommandRecorder:
         """No-op quit matching the r2pipe.open interface."""
 
 
+class _ProjectWritingRecorder(_CommandRecorder):
+    """Recorder that emulates rizin writing the project file named by ``Ps``."""
+
+    def cmd(self, command: str) -> str:
+        """Record ``command`` and create the ``.rzdb`` file a ``Ps <path>`` targets.
+
+        Args:
+            command: Rizin command string issued by the bridge.
+
+        Returns:
+            str: Pre-configured response for the matching prefix, or an empty
+            string when no configured prefix matches.
+        """
+        response = super().cmd(command)
+        if command.startswith("Ps "):
+            Path(command.removeprefix("Ps ")).write_bytes(b"rzdb")
+        return response
+
+
 def _as_r2pipe(recorder: _CommandRecorder) -> r2pipe.open:
     """Cast ``_CommandRecorder`` to ``r2pipe.open`` for the bridge's type-checked setter.
 
@@ -89,21 +109,45 @@ def _as_r2pipe(recorder: _CommandRecorder) -> r2pipe.open:
 
 
 class TestSaveProject:
-    """Gate save_project: verify it issues exactly "Ps <name>" to rizin."""
+    """Gate save_project: verify it issues "Ps <dir.projects>/<name>.rzdb" and verifies the file."""
 
     @pytest.mark.asyncio
-    async def test_ps_command_exact_form(self) -> None:
-        """save_project must emit exactly "Ps myproject" to rizin and return True.
+    async def test_ps_command_exact_form(self, tmp_path: Path) -> None:
+        """save_project must emit "Ps <projects_dir>/myproject.rzdb" and return True.
+
+        Rizin's ``Ps`` silently writes nothing for a bare project name, so the
+        bridge resolves ``dir.projects`` and saves to an explicit ``.rzdb``
+        path, then checks the file landed on disk. The recorder emulates
+        rizin writing that file.
 
         Mutation caught: changing ``Ps`` to ``Po`` in the save_project body
-        would emit "Po myproject" instead, failing the command assertion.
+        would emit "Po ..." instead, failing the command assertion, and no
+        file would be written, failing the on-disk verification.
+
+        Args:
+            tmp_path: Pytest temporary directory used as ``dir.projects``.
         """
-        rec = _CommandRecorder()
+        expected_path = tmp_path / "myproject.rzdb"
+        rec = _ProjectWritingRecorder({"e dir.projects": str(tmp_path)})
         bridge = CutterBridge()
         bridge.r2 = _as_r2pipe(rec)
         result = await bridge.save_project("myproject")
         assert result is True
-        assert "Ps myproject" in rec.commands
+        assert f"Ps {expected_path}" in rec.commands
+        assert expected_path.is_file()
+
+    @pytest.mark.asyncio
+    async def test_raises_when_project_file_not_written(self, tmp_path: Path) -> None:
+        """save_project raises when rizin's ``Ps`` leaves no project file on disk.
+
+        Args:
+            tmp_path: Pytest temporary directory used as ``dir.projects``.
+        """
+        rec = _CommandRecorder({"e dir.projects": str(tmp_path)})
+        bridge = CutterBridge()
+        bridge.r2 = _as_r2pipe(rec)
+        with pytest.raises(ToolError, match="was not written"):
+            await bridge.save_project("myproject")
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -139,35 +183,44 @@ class TestOpenProject:
 
 
 class TestListProjects:
-    """Gate list_projects: verify it issues "Pl" and parses newline-delimited output."""
+    """Gate list_projects: verify it lists the ``.rzdb`` files in ``dir.projects``."""
 
     @pytest.mark.asyncio
-    async def test_pl_command_line_split_parsing(self) -> None:
-        r"""list_projects must split "Pl" output on newlines and return stripped names.
+    async def test_lists_rzdb_files_in_projects_dir(self, tmp_path: Path) -> None:
+        """list_projects returns the sorted stems of ``*.rzdb`` files in ``dir.projects``.
 
-        Independent oracle: the recorder returns "proj1\nproj2\n" for the "Pl"
-        command.  The bridge must parse that into exactly ["proj1", "proj2"] by
-        splitting on newlines and stripping each non-empty line.
+        Rizin 0.9.1 has no ``Pl`` command, so the bridge scans the resolved
+        ``dir.projects`` directory. Independent oracle: two real ``.rzdb``
+        files plus one unrelated file are created in ``tmp_path``.
 
-        Mutation caught: returning the raw response string instead of a list,
-        or failing to strip trailing whitespace, would produce a different value
-        and fail the exact-list assertion.
+        Mutation caught: dropping the ``*.rzdb`` filter would include
+        ``notes`` and fail the exact-list assertion; dropping the sort would
+        return ``proj2`` first.
+
+        Args:
+            tmp_path: Pytest temporary directory used as ``dir.projects``.
         """
-        rec = _CommandRecorder({"Pl": "proj1\nproj2\n"})
+        (tmp_path / "proj2.rzdb").write_bytes(b"rzdb")
+        (tmp_path / "proj1.rzdb").write_bytes(b"rzdb")
+        (tmp_path / "notes.txt").write_bytes(b"not a project")
+        rec = _CommandRecorder({"e dir.projects": str(tmp_path)})
         bridge = CutterBridge()
         bridge.r2 = _as_r2pipe(rec)
         result = await bridge.list_projects()
         assert result == ["proj1", "proj2"]
-        assert "Pl" in rec.commands
+        assert "Pl" not in rec.commands
 
     @pytest.mark.asyncio
-    async def test_empty_response_yields_empty_list(self) -> None:
-        """list_projects returns [] when rizin reports no projects.
+    async def test_empty_response_yields_empty_list(self, tmp_path: Path) -> None:
+        """list_projects returns [] when ``dir.projects`` holds no ``.rzdb`` files.
 
-        Mutation caught: returning a non-empty list for an empty response would
+        Mutation caught: returning a non-empty list for an empty directory would
         fail the exact-list assertion.
+
+        Args:
+            tmp_path: Empty pytest temporary directory used as ``dir.projects``.
         """
-        rec = _CommandRecorder({"Pl": ""})
+        rec = _CommandRecorder({"e dir.projects": str(tmp_path)})
         bridge = CutterBridge()
         bridge.r2 = _as_r2pipe(rec)
         result = await bridge.list_projects()

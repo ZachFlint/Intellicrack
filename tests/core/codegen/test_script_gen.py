@@ -342,7 +342,8 @@ def test_script_save_failure_logs_failure_not_success(tmp_path: Path) -> None:
     Drives a genuine :class:`OSError` from the filesystem rather than mocking
     the write that ``save`` performs: the save target is an existing directory,
     so ``Path.write_text`` raises a real :class:`PermissionError` (an
-    ``OSError`` subclass) on Windows. The production ``except OSError`` branch
+    ``OSError`` subclass) on Windows and :class:`IsADirectoryError` elsewhere.
+    The production ``except OSError`` branch
     must run, emitting ``script_file_write_failed`` (and never the success
     ``script_file_written``) and leaving ``saved_path`` untouched.
 
@@ -362,7 +363,7 @@ def test_script_save_failure_logs_failure_not_success(tmp_path: Path) -> None:
     with capture_logs() as records, pytest.raises(OSError, match="occupied") as exc_info:
         script.save(target)
 
-    assert exc_info.type is PermissionError
+    assert exc_info.type is (PermissionError if sys.platform == "win32" else IsADirectoryError)
     events = _event_names(records)
     assert "script_file_written" not in events
     assert "script_saved" not in events
@@ -478,6 +479,10 @@ def test_validate_javascript_reports_node_syntax_error_and_still_cleans_up() -> 
     assert "temp_file_unlink_failed" not in events
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Windows refuses to delete a read-only file; POSIX unlinks it, so no unlink failure occurs",
+)
 def test_validate_javascript_unlink_failure_suppresses_cleaned_log() -> None:
     """A real read-only temp file makes unlink fail; cleanup log is suppressed.
 

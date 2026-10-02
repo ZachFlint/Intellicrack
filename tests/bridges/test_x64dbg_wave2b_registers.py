@@ -175,6 +175,15 @@ class _FakePipe2B:
 class _StubProcess2B:
     """Sentinel satisfying ``self._process is not None`` guards in the bridge."""
 
+    def poll(self) -> int | None:
+        """Report process status the way :class:`subprocess.Popen.poll` does.
+
+        Returns:
+            int | None: Always ``None``, indicating the stand-in debugger
+            process is still running.
+        """
+        return None
+
 
 def _install_fake_2b(
     bridge: X64DbgBridge,
@@ -926,6 +935,10 @@ class TestGetHandles:
     """Real gates for ``get_handles``: not-attached guard and buffer parsing."""
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="get_handles reaches its not-attached guard only on Windows; elsewhere it raises its Windows-platform error first",
+    )
     async def test_raises_when_not_attached(self, bridge: X64DbgBridge) -> None:
         """``get_handles`` raises ``ToolError`` when no process is attached.
 

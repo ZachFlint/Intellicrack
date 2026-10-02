@@ -49,6 +49,7 @@ import os
 import re
 import sys
 import threading
+from collections import deque
 from contextlib import asynccontextmanager, suppress
 from ctypes import wintypes
 from dataclasses import dataclass, field
@@ -66,8 +67,9 @@ from intellicrack.core.handle_inheritance import INHERITANCE_LOCK
 from intellicrack.core.json_payload import JsonObject, is_json_object
 from intellicrack.core.locked_json import JsonDocumentError, LockedJsonFile
 from intellicrack.core.logging import get_logger
+from intellicrack.core.untrusted_text import clean_untrusted_label
 from intellicrack.mcp.config import launcher_notes, sandbox_limitations
-from intellicrack.mcp.errors import McpConfigError
+from intellicrack.mcp.errors import McpConfigError, McpConnectionError
 
 
 if sys.platform == "win32":
@@ -173,7 +175,40 @@ PROCESS_TERMINATION_GRACE_S: Final[float] = 2.0
 KILL_REAP_TIMEOUT_S: Final[float] = 2.0
 """How long to wait for the job's processes to die after the job is terminated."""
 
+STDERR_TAIL_LINES: Final[int] = 20
+"""How many of a confined server's last standard error lines are kept to explain why it exited."""
+
+STDERR_TAIL_LINE_CHARS: Final[int] = 400
+"""Longest standard error line kept whole in that tail; longer lines are cut."""
+
+STDERR_DRAIN_TIMEOUT_S: Final[float] = 2.0
+"""How long to wait for a confined server's standard error to be read to its end once the server has stopped."""
+
 _STDOUT_READ_BYTES: Final[int] = 65536
+_STDERR_READ_BYTES: Final[int] = 4096
+_NTSTATUS_ERROR_SEVERITY: Final[int] = 0xC0000000
+
+NTSTATUS_EXIT_CODES: Final[Mapping[int, tuple[str, str]]] = {
+    0xC0000005: ("STATUS_ACCESS_VIOLATION", "the program read or wrote memory it does not own"),
+    0xC0000017: ("STATUS_NO_MEMORY", "a memory allocation failed, which the job's memory ceilings can cause"),
+    0xC000001D: ("STATUS_ILLEGAL_INSTRUCTION", "the program ran an instruction this processor does not support"),
+    0xC0000022: ("STATUS_ACCESS_DENIED", "Windows refused the program access it needed while starting"),
+    0xC0000044: ("STATUS_QUOTA_EXCEEDED", "a quota was exceeded, which the job's limits can cause"),
+    0xC000007B: ("STATUS_INVALID_IMAGE_FORMAT", "the program or a DLL it loads is not a valid image for this machine"),
+    0xC00000FD: ("STATUS_STACK_OVERFLOW", "the program overflowed its stack"),
+    0xC000012D: ("STATUS_COMMITMENT_LIMIT", "the system or the job ran out of committable memory"),
+    0xC0000135: ("STATUS_DLL_NOT_FOUND", "a DLL the program needs could not be found or could not be opened with the sandbox's token"),
+    0xC0000139: ("STATUS_ENTRYPOINT_NOT_FOUND", "a DLL the program loaded lacks a function it imports"),
+    0xC000013A: ("STATUS_CONTROL_C_EXIT", "the program was ended by a console interrupt"),
+    0xC0000142: (
+        "STATUS_DLL_INIT_FAILED",
+        "a DLL failed to initialize, which happens when the program cannot open its window station, its desktop or its console",
+    ),
+    0xC0000374: ("STATUS_HEAP_CORRUPTION", "the program corrupted its heap"),
+    0xC0000409: ("STATUS_STACK_BUFFER_OVERRUN", "the program ended itself through a fail-fast check or an abort"),
+    0xC0000417: ("STATUS_INVALID_CRUNTIME_PARAMETER", "the C runtime ended the program on an invalid parameter"),
+}
+"""Exit codes that are Windows status values, each with its name and what it means for a server that has just started."""
 
 _JOB_OBJECT_LIMIT_ACTIVE_PROCESS: Final[int] = 0x00000008
 _JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION: Final[int] = 0x00000400
@@ -1776,6 +1811,224 @@ def environment_block(env: Mapping[str, str]) -> str:
     return "".join(entries) + "\0"
 
 
+def describe_exit_code(code: int) -> str:
+    """Render a process exit code so the operator can tell a crash from an ordinary exit.
+
+    A code with the Windows error severity bits set is a status value the
+    system or the loader ended the process with rather than one the program
+    chose, so it is shown in hexadecimal and, when it is one a confined
+    server commonly dies with, by name and meaning.
+
+    Args:
+        code: The exit code, as ``GetExitCodeProcess`` reports it.
+
+    Returns:
+        str: The description, such as ``exit code 3`` or
+        ``exit code 0xc0000135 (STATUS_DLL_NOT_FOUND: ...)``.
+    """
+    unsigned = code & 0xFFFFFFFF
+    if unsigned & _NTSTATUS_ERROR_SEVERITY != _NTSTATUS_ERROR_SEVERITY:
+        return f"exit code {unsigned}"
+    known = NTSTATUS_EXIT_CODES.get(unsigned)
+    if known is None:
+        return f"exit code {unsigned:#010x}"
+    name, meaning = known
+    return f"exit code {unsigned:#010x} ({name}: {meaning})"
+
+
+class SandboxedServerExitedError(McpConnectionError):
+    """A confined server's process ended while its session still needed it.
+
+    Without this the session reports only that the connection closed, which
+    says nothing about why: a server that could not load a DLL, open its
+    script, or reach a directory with the sandbox's token dies before it
+    writes a byte to standard output.
+
+    Attributes:
+        pid: The server's process id.
+        exit_code: What the process exited with, or ``None`` when it was
+            ended by the sandbox rather than by itself or its code could not
+            be read.
+        stderr_tail: The last lines the server wrote to standard error,
+            oldest first.
+    """
+
+    pid: int
+    exit_code: int | None
+    stderr_tail: tuple[str, ...]
+
+    def __init__(self, pid: int, exit_code: int | None, stderr_tail: Sequence[str]) -> None:
+        """Describe the exit.
+
+        Args:
+            pid: The server's process id.
+            exit_code: What the process exited with, or ``None`` when unknown.
+            stderr_tail: The last lines it wrote to standard error.
+        """
+        self.pid = pid
+        self.exit_code = exit_code
+        self.stderr_tail = tuple(clean_untrusted_label(line, limit=STDERR_TAIL_LINE_CHARS) for line in stderr_tail)
+        how = f"exited with {describe_exit_code(exit_code)}" if exit_code is not None else "stopped without an exit code of its own"
+        said = (
+            f"its last standard error output was: {' | '.join(self.stderr_tail)}"
+            if self.stderr_tail
+            else "it wrote nothing to standard error"
+        )
+        super().__init__(f"the sandboxed server process {pid} {how} before its session ended; {said}")
+
+
+class StderrTee:
+    """Carries a confined server's standard error to its log while keeping the last lines.
+
+    The child writes to a pipe of the tee's own; a reader thread forwards
+    every byte, unchanged and as it arrives, to the log the caller supplied,
+    and keeps the most recent lines so the reason a server died can be put
+    in the error that reports it. The thread ends when every process holding
+    the write end has closed it, which for a confined server is when its job
+    has ended.
+    """
+
+    def __init__(self, errlog: TextIO, read_fd: int, write_fd: int) -> None:
+        """Wrap an open pipe; use :meth:`open` to create one.
+
+        Args:
+            errlog: Where the server's standard error is forwarded.
+            read_fd: Read end, owned by the tee.
+            write_fd: Write end, owned by the tee until :meth:`close_writer`.
+        """
+        self._errlog_fd = errlog.fileno()
+        self._read_fd: int | None = read_fd
+        self._writer: TextIO | None = os.fdopen(write_fd, "w", encoding="utf-8")
+        self._lines: deque[str] = deque(maxlen=STDERR_TAIL_LINES)
+        self._partial = ""
+        self._lock = threading.Lock()
+        self._forwarding = True
+        self._thread = threading.Thread(target=self._drain, args=(read_fd,), name="mcp-sandbox-stderr", daemon=True)
+
+    @classmethod
+    def open(cls, errlog: TextIO) -> Self:
+        """Create the pipe and start reading it.
+
+        Args:
+            errlog: Where the server's standard error is forwarded.
+
+        Returns:
+            Self: The running tee.
+        """
+        errlog.flush()
+        read_fd, write_fd = os.pipe()
+        tee = cls(errlog, read_fd, write_fd)
+        tee._thread.start()
+        return tee
+
+    @property
+    def writer(self) -> TextIO:
+        """The write end to bind the child's standard error to.
+
+        Returns:
+            TextIO: The write end.
+
+        Raises:
+            McpConfigError: If :meth:`close_writer` already closed it.
+        """
+        if self._writer is None:
+            message = "the stderr capture's write end is already closed"
+            raise McpConfigError(message)
+        return self._writer
+
+    def close_writer(self) -> None:
+        """Close the tee's own copy of the write end, once the child holds its own."""
+        writer = self._writer
+        self._writer = None
+        if writer is not None:
+            with suppress(OSError, ValueError):
+                writer.close()
+
+    def tail(self) -> list[str]:
+        """Return the last lines read, the unterminated final one included.
+
+        Returns:
+            list[str]: Up to :data:`STDERR_TAIL_LINES` lines, oldest first.
+        """
+        with self._lock:
+            lines = [*self._lines, self._partial.rstrip("\r")] if self._partial else list(self._lines)
+        return lines[-STDERR_TAIL_LINES:]
+
+    def finish(self, timeout_s: float = STDERR_DRAIN_TIMEOUT_S) -> None:
+        """Wait for the server's standard error to end, then release the pipe.
+
+        A reader still running when the wait runs out stops forwarding, so it
+        never writes to a log its owner is about to close.
+
+        Args:
+            timeout_s: Longest wait for the reader to reach the end.
+        """
+        self.close_writer()
+        if self._thread.is_alive():
+            self._thread.join(timeout=timeout_s)
+        if self._thread.is_alive():
+            self._forwarding = False
+            _logger.warning("mcp_sandbox_stderr_still_open", timeout_s=timeout_s)
+            return
+        read_fd = self._read_fd
+        self._read_fd = None
+        if read_fd is not None:
+            with suppress(OSError):
+                os.close(read_fd)
+
+    def _drain(self, read_fd: int) -> None:
+        """Forward and record the pipe's contents until it ends.
+
+        Args:
+            read_fd: The read end.
+        """
+        decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+        while True:
+            try:
+                chunk = os.read(read_fd, _STDERR_READ_BYTES)
+            except OSError:
+                _logger.debug("mcp_sandbox_stderr_reader_closed")
+                break
+            if not chunk:
+                break
+            self._forward(chunk)
+            self._record(decoder.decode(chunk))
+        self._record(decoder.decode(b"", final=True))
+
+    def _forward(self, chunk: bytes) -> None:
+        """Write one chunk to the caller's log, stopping for good once the log is gone.
+
+        Args:
+            chunk: Bytes the server wrote.
+        """
+        if not self._forwarding:
+            return
+        view = memoryview(chunk)
+        try:
+            while view:
+                view = view[os.write(self._errlog_fd, view) :]
+        except OSError:
+            self._forwarding = False
+            _logger.debug("mcp_sandbox_stderr_log_closed")
+
+    def _record(self, text: str) -> None:
+        """Split decoded text into lines and keep the most recent ones, each cut to :data:`STDERR_TAIL_LINE_CHARS`.
+
+        Args:
+            text: The newly decoded text.
+        """
+        if not text:
+            return
+        with self._lock:
+            for index, piece in enumerate(text.split("\n")):
+                if index:
+                    self._lines.append(self._partial.rstrip("\r"))
+                    self._partial = ""
+                room = STDERR_TAIL_LINE_CHARS - len(self._partial)
+                if room > 0:
+                    self._partial += piece[:room]
+
+
 @dataclass(slots=True)
 class ConfinedProcess:
     """A server process created inside its job.
@@ -1799,6 +2052,21 @@ class ConfinedProcess:
             bool: ``True`` once it has.
         """
         return self._wait_blocking(0)
+
+    def exit_code(self) -> int | None:
+        """Read the code the process exited with.
+
+        Returns:
+            int | None: The exit code, or ``None`` while the process is still
+            running or once its handle is closed.
+        """
+        if not self.handle or not self.has_exited():
+            return None
+        code = wintypes.DWORD()
+        if not _kernel32().GetExitCodeProcess(wintypes.HANDLE(self.handle), ctypes.byref(code)):
+            _logger.warning("mcp_sandbox_exit_code_unreadable", pid=self.pid, error=ctypes.get_last_error())
+            return None
+        return int(code.value)
 
     def _wait_blocking(self, timeout_ms: int) -> bool:
         """Block the calling thread until the process exits or time runs out.
@@ -2233,13 +2501,15 @@ async def pipe_session_streams(
     stdout: FileReadStream,
     stdin: FileWriteStream,
     shutdown: Callable[[], Awaitable[None]],
+    on_output_end: Callable[[], None] | None = None,
 ) -> AsyncGenerator[tuple[Any, Any]]:
     """Bridge a server's standard pipes to the session's message streams.
 
     Standard output is split into lines and parsed; messages written to the
     session's write stream are serialized one per line onto standard input.
     When the server's output ends the read stream ends too, which is how the
-    session learns the server has gone.
+    session learns the server has gone, and ``on_output_end`` is told so
+    that the caller can tell a server that left from one it stopped.
 
     On exit the transport is wound down in order: traffic stops, standard
     input closes, and ``shutdown`` runs shielded so the server is stopped
@@ -2250,25 +2520,36 @@ async def pipe_session_streams(
         stdout: The server's standard output.
         stdin: The server's standard input.
         shutdown: Stops the server process once its input has closed.
+        on_output_end: Called when the server's standard output reaches its
+            end while the session is still open, before the read stream is
+            closed; an end reached during teardown is not reported.
 
     Yields:
         tuple[Any, Any]: The read stream and the write stream.
     """
     read_stream_writer, read_stream = anyio.create_memory_object_stream[SessionMessage | Exception](0)
+    stopping = False
     write_stream, write_stream_reader = anyio.create_memory_object_stream[SessionMessage](0)
 
-    async def read_output() -> None:
+    async def pump() -> None:
         decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
         buffer = ""
+        while True:
+            chunk = await stdout.receive(_STDOUT_READ_BYTES)
+            lines = (buffer + decoder.decode(chunk)).split("\n")
+            buffer = lines.pop()
+            for line in lines:
+                if line.strip():
+                    await read_stream_writer.send(parse_server_line(line))
+
+    async def read_output() -> None:
         async with read_stream_writer:
-            with suppress(anyio.EndOfStream, anyio.ClosedResourceError, anyio.BrokenResourceError):
-                while True:
-                    chunk = await stdout.receive(_STDOUT_READ_BYTES)
-                    lines = (buffer + decoder.decode(chunk)).split("\n")
-                    buffer = lines.pop()
-                    for line in lines:
-                        if line.strip():
-                            await read_stream_writer.send(parse_server_line(line))
+            with suppress(anyio.ClosedResourceError, anyio.BrokenResourceError):
+                try:
+                    await pump()
+                except anyio.EndOfStream:
+                    if on_output_end is not None and not stopping:
+                        on_output_end()
 
     async def write_input() -> None:
         async with write_stream_reader:
@@ -2284,6 +2565,7 @@ async def pipe_session_streams(
         try:
             yield read_stream, write_stream
         finally:
+            stopping = True
             with anyio.CancelScope(shield=True):
                 write_stream.close()
                 read_stream.close()
@@ -2294,18 +2576,111 @@ async def pipe_session_streams(
     await anyio.lowlevel.cancel_shielded_checkpoint()
 
 
-async def _stop_confined_process(process: ConfinedProcess, job: int) -> None:
+async def _stop_confined_process(process: ConfinedProcess, job: int) -> bool:
     """Give a confined server its grace period, then end its whole job.
 
     Args:
         process: The server process, whose standard input has closed.
         job: The job it runs in.
+
+    Returns:
+        bool: ``True`` when the server exited by itself within its grace
+        period, ``False`` when it had to be terminated with its job.
     """
-    if not await process.wait(PROCESS_TERMINATION_GRACE_S):
+    exited = await process.wait(PROCESS_TERMINATION_GRACE_S)
+    if not exited:
         _logger.info("mcp_sandbox_process_grace_expired", pid=process.pid)
     terminate_job(job)
     if not await process.wait(KILL_REAP_TIMEOUT_S):
         _logger.warning("mcp_sandbox_process_survived_termination", pid=process.pid)
+    return exited
+
+
+@dataclass(slots=True)
+class _ServerEnd:
+    """How a confined server's session came to an end.
+
+    Attributes:
+        output_ended: Whether the server's standard output reached its end
+            while the client still held its session, which is how a server
+            that left first is told from one that was stopped.
+        exited_by_itself: Whether the process exited within its grace period
+            rather than being terminated with its job.
+    """
+
+    output_ended: bool = False
+    exited_by_itself: bool = False
+
+    def mark_output_ended(self) -> None:
+        """Record that the server's standard output reached its end."""
+        self.output_ended = True
+
+    def own_exit_code(self, process: ConfinedProcess) -> int | None:
+        """Read the exit code the server chose or died with, never the one the sandbox gave it.
+
+        Args:
+            process: The server process.
+
+        Returns:
+            int | None: The exit code, or ``None`` when the process was
+            terminated with its job or its code could not be read.
+        """
+        return process.exit_code() if self.exited_by_itself else None
+
+
+def _log_server_end(process: ConfinedProcess, end: _ServerEnd) -> None:
+    """Log how a confined server's process ended.
+
+    Args:
+        process: The server process, stopped.
+        end: How its session ended.
+    """
+    code = end.own_exit_code(process)
+    log = _logger.warning if end.output_ended else _logger.info
+    log(
+        "mcp_sandbox_process_exited",
+        pid=process.pid,
+        exit=describe_exit_code(code) if code is not None else None,
+        left_before_client=end.output_ended,
+        exited_by_itself=end.exited_by_itself,
+    )
+
+
+@asynccontextmanager
+async def _confined_session(process: ConfinedProcess, job: int, stderr: StderrTee) -> AsyncGenerator[tuple[Any, Any]]:
+    """Bridge a running confined server to its session, and say why when the server goes first.
+
+    Args:
+        process: The running server.
+        job: The job it runs in.
+        stderr: The capture its standard error passes through.
+
+    Yields:
+        tuple[Any, Any]: The read stream and the write stream.
+
+    Raises:
+        ExceptionGroup: The session's own failure, unchanged, when the
+            server was still there as it failed.
+        SandboxedServerExitedError: If the server's process ended before
+            the client let go of a session that then failed.
+    """
+    end = _ServerEnd()
+
+    async def shutdown() -> None:
+        end.exited_by_itself = await _stop_confined_process(process, job)
+
+    session = pipe_session_streams(FileReadStream(process.stdout), FileWriteStream(process.stdin), shutdown, end.mark_output_ended)
+    try:
+        async with session as streams:
+            yield streams
+    except ExceptionGroup as failure:
+        if not end.output_ended:
+            raise
+        with anyio.CancelScope(shield=True):
+            await anyio.to_thread.run_sync(stderr.finish)
+        raise SandboxedServerExitedError(process.pid, end.own_exit_code(process), stderr.tail()) from failure
+    finally:
+        _log_server_end(process, end)
 
 
 @asynccontextmanager
@@ -2326,6 +2701,14 @@ async def confined_stdio_client(
     run on a worker thread, so neither a large tree nor a spawn waiting on
     :data:`~intellicrack.core.handle_inheritance.INHERITANCE_LOCK` stalls the
     event loop.
+
+    The child's standard error passes through a :class:`StderrTee` on its
+    way to ``errlog``. When the server goes before the client has let go of
+    its session and the session fails for it, the failure is reported as a
+    :class:`SandboxedServerExitedError` naming the server's exit code and
+    its last standard error lines, chained to what the session saw and
+    propagated from :func:`_confined_session`, because a dropped connection
+    alone does not say why a server died.
 
     A job, token or process that cannot be created propagates
     :class:`OSError` from :class:`SandboxedJob`,
@@ -2352,23 +2735,25 @@ async def confined_stdio_client(
         if job_handle is None:
             message = "the sandbox job is not open"
             raise McpConfigError(message)
-        grants = await anyio.to_thread.run_sync(apply_write_confinement, launch)
+        stderr = StderrTee.open(errlog)
         try:
-            token = create_restricted_token()
+            grants = await anyio.to_thread.run_sync(apply_write_confinement, launch)
             try:
-                process = await anyio.to_thread.run_sync(spawn_confined_process, launch, job, token, errlog)
+                token = create_restricted_token()
+                try:
+                    process = await anyio.to_thread.run_sync(spawn_confined_process, launch, job, token, stderr.writer)
+                finally:
+                    _ = _kernel32().CloseHandle(wintypes.HANDLE(token))
+                    stderr.close_writer()
+                try:
+                    async with _confined_session(process, job_handle, stderr) as streams:
+                        yield streams
+                finally:
+                    process.close()
             finally:
-                _ = _kernel32().CloseHandle(wintypes.HANDLE(token))
-            try:
-
-                async def shutdown() -> None:
-                    await _stop_confined_process(process, job_handle)
-
-                async with pipe_session_streams(FileReadStream(process.stdout), FileWriteStream(process.stdin), shutdown) as streams:
-                    yield streams
-            finally:
-                process.close()
+                with anyio.CancelScope(shield=True):
+                    terminate_job(job_handle)
+                    await anyio.to_thread.run_sync(release_write_confinement, grants)
         finally:
             with anyio.CancelScope(shield=True):
-                terminate_job(job_handle)
-                await anyio.to_thread.run_sync(release_write_confinement, grants)
+                await anyio.to_thread.run_sync(stderr.finish)
