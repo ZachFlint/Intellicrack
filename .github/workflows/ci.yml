@@ -253,7 +253,7 @@ jobs:
         run: pixi run fix-pyqt6-icu
       - name: Test with pytest
         run: |
-          pixi run pytest tests/ -v --cov=src/intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
+          pixi run pytest tests/ -v -n auto -m "not host_native" --cov=src/intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
         env:
           PYTHONDONTWRITEBYTECODE: 1
           PYTHONIOENCODING: utf-8
