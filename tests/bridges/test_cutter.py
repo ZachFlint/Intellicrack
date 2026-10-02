@@ -1413,15 +1413,15 @@ class TestEntryPointBug:
 
 
 def _resolved_path(path: str) -> str:
-    """Resolve a path to its absolute long form off the event loop.
+    """Resolve a path to its absolute long form, with forward slashes, off the event loop.
 
     Args:
         path: The path to resolve.
 
     Returns:
-        str: The resolved absolute path.
+        str: The resolved absolute path, using forward slashes, as the bridge forwards it to rizin.
     """
-    return str(Path(path).resolve())
+    return Path(path).resolve().as_posix()
 
 
 def _short_path(path: str) -> str:

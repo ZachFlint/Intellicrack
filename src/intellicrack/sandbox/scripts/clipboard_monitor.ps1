@@ -219,12 +219,23 @@ function Invoke-EventDrivenMonitor {
     $listener.Add_ClipboardChanged($eventHandler)
     $listener.Show()
     $listener.Hide()
+    $readyPayload = [ordered]@{ timestamp = (Get-Date).ToString('o'); event = 'monitor.ready' } | ConvertTo-Json -Compress
+    try {
+        Write-LogEntry -Line $readyPayload
+    } catch {
+        Write-StructuredError -Event 'event.ready_write_failed' -ErrorRecord $_
+    }
     [System.Windows.Forms.Application]::Run($listener)
+}
+
+$clipReferences = @('System.Windows.Forms', 'System.Drawing')
+if ($PSVersionTable.PSEdition -eq 'Core') {
+    $clipReferences += @('System.ComponentModel.Primitives', 'System.Windows.Forms.Primitives', 'System.Drawing.Primitives')
 }
 
 $useEventDriven = $false
 try {
-    Add-Type -TypeDefinition $clipSource -ReferencedAssemblies System.Windows.Forms, System.Drawing -Language CSharp
+    Add-Type -TypeDefinition $clipSource -ReferencedAssemblies $clipReferences -Language CSharp
     $useEventDriven = $true
 } catch {
     Write-StructuredError -Event 'init.add_type_failed' -ErrorRecord $_ -Extra @{ fallback = 'polling' }
