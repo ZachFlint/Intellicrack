@@ -323,11 +323,12 @@ def test_m12_apply_restored_auto_approve_sets_level() -> None:
 def _redirected_settings_store(store_dir: Path) -> Generator[QSettings]:
     """Point every ``QSettings`` built by production code at a temporary store.
 
-    The window constructs its own ``QSettings("Intellicrack", "MainWindow")``,
-    so the only way to drive the restore path from a known state without a
-    double is to relocate the backing store. The default format and the
-    user-scope search path are switched to an INI file beneath ``store_dir``
-    and restored afterwards, leaving the machine's real settings untouched.
+    The window opens its own ``Intellicrack/MainWindow`` store in the
+    process-wide default format, so the only way to drive the restore path
+    from a known state without a double is to relocate the backing store. The
+    default format and the user-scope search path are switched to an INI file
+    beneath ``store_dir`` and restored afterwards, leaving the machine's real
+    settings untouched.
 
     Args:
         store_dir: Directory to hold the temporary INI store.
@@ -340,7 +341,7 @@ def _redirected_settings_store(store_dir: Path) -> Generator[QSettings]:
     QSettings.setDefaultFormat(ini)
     QSettings.setPath(ini, QSettings.Scope.UserScope, str(store_dir))
     try:
-        yield QSettings("Intellicrack", "MainWindow")
+        yield QSettings(ini, QSettings.Scope.UserScope, "Intellicrack", "MainWindow")
     finally:
         QSettings.setDefaultFormat(previous_format)
 

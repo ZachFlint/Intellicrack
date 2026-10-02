@@ -1667,7 +1667,7 @@ class McpConfigDialog(QDialog):
             on_success: Called on the GUI thread with the result.
             on_error: Called on the GUI thread with the exception.
         """
-        worker = BridgeCallWorker(coro, self)
+        worker = BridgeCallWorker(coro, owner=self)
         _ = worker.call_finished.connect(on_success)
         _ = worker.call_error.connect(on_error)
         self._workers.append(worker)

@@ -78,7 +78,8 @@ def test_m55_long_error_text_wraps_within_bounded_width(qapp: QApplication) -> N
     wrap on, ``heightForWidth`` for a width narrower than the unwrapped text
     reports several line-heights; pre-fix (``wordWrap`` unset) a ``QLabel``
     is not height-for-width aware and the dialog could only grow wider or
-    clip the text.
+    clip the text. ``QLabel`` word wrap breaks at word boundaries, so the
+    message is built from words the way real error messages are.
 
     Args:
         qapp: The shared offscreen QApplication fixture.
@@ -87,7 +88,7 @@ def test_m55_long_error_text_wraps_within_bounded_width(qapp: QApplication) -> N
     dialog = _make_dialog()
     try:
         label = dialog._result_label
-        long_message = "Error: " + "x" * 400
+        long_message = "Error: " + "the CRC source file could not be read " * 12
         label.setText(long_message)
 
         bounded_width = 360

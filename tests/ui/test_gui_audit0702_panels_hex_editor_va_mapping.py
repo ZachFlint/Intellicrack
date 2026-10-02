@@ -603,14 +603,19 @@ def test_m13_on_open_performance_settings_returns_before_get_memory_usage_comple
     small fraction of the delay and the dialog is only constructed once the
     Qt event loop delivers the queued result.
 
+    The stand-in dialog accepts immediately, so presenting it also starts the
+    chunk-size/memory-budget apply chain. The test waits for that chain's
+    closing success dialog before it ends, so no round trip it started is
+    still in flight when the next test begins.
+
     Args:
         qapp: The shared offscreen QApplication fixture.
         dialog_recorder: Intercepts ``show_warning``/``show_info`` so no
-            real modal dialog is spawned; not expected to fire here.
+            real modal dialog is spawned; records the apply chain's closing
+            success dialog.
         stub_dialog_class: Non-modal stand-in installed in place of
             ``LargeFileSettingsDialog``.
     """
-    del dialog_recorder
     bridge = _DelayedVaBridge(_DELAY_S)
     host = _VaMappingHost()
     host._bridge = bridge
@@ -634,6 +639,10 @@ def test_m13_on_open_performance_settings_returns_before_get_memory_usage_comple
     presented = stub_dialog_class.instances[0]
     assert presented.current_chunk_kb == _CHUNK_BYTES // 1024
     assert presented.current_budget_mb == _BUDGET_BYTES // (1024 * 1024)
+
+    applied = _pump_until(qapp, lambda: bool(dialog_recorder.info_calls), timeout_s=2 * _DELAY_S + 8.0)
+    assert applied, "the accepted settings' apply chain never completed"
+    assert not dialog_recorder.warning_calls
 
 
 def test_m13_apply_chain_dispatches_chunk_then_budget_without_blocking(

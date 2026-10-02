@@ -236,16 +236,19 @@ class TestH18StopViaManagerAsyncDispatch:
 
 
 class TestM15SandboxTestWorkerLifecycle:
-    """M15: the sandbox test worker must be Qt-parented and cancelled on dialog teardown."""
+    """M15: the sandbox test worker must be owned by the dialog and cancelled on dialog teardown."""
 
     @staticmethod
-    def test_m15_test_worker_is_parented_to_the_dialog(qapp: QApplication, qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
-        """``_test_sandbox`` must construct ``SandboxTestWorker`` with the dialog as its Qt parent.
+    def test_m15_test_worker_is_owned_by_the_dialog(qapp: QApplication, qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
+        """``_test_sandbox`` must construct ``SandboxTestWorker`` owned by the dialog, without a Qt parent.
 
-        Pre-fix ``SandboxTestWorker(...)`` was constructed with no ``parent``
-        argument, so the QThread's only Qt-level owner was ``None`` and the
-        worker survived purely on the Python attribute reference. Post-fix
-        the worker's Qt ``parent()`` must be the dialog itself.
+        Pre-fix ``SandboxTestWorker(...)`` was constructed with no owner at
+        all, so the worker survived purely on the Python attribute reference
+        and could not be found for draining when the dialog went away. It
+        must not be the dialog's Qt child either: Qt destroys a parent's
+        children with it, and destroying a ``QThread`` whose OS thread is
+        still running aborts the process. The worker therefore records the
+        dialog as its owner and has no Qt parent.
 
         Args:
             qapp: Session QApplication fixture.
@@ -276,7 +279,8 @@ class TestM15SandboxTestWorkerLifecycle:
             dialog._test_sandbox()
             worker = dialog._test_worker
             assert worker is not None
-            assert worker.parent() is dialog, "SandboxTestWorker was not given the dialog as its Qt parent"
+            assert worker.owner() is dialog, "SandboxTestWorker does not record the dialog as its owner"
+            assert worker.parent() is None, "SandboxTestWorker is a Qt child of the dialog, which would destroy it mid-run"
 
             qtbot.waitUntil(lambda: not worker.isRunning(), timeout=5000)
         finally:
@@ -414,6 +418,7 @@ class TestM15SandboxTestWorkerLifecycle:
 
 
 @pytest.mark.usefixtures("qapp")
+@pytest.mark.skipif(sys.platform != "win32", reason="the sandbox stop runs taskkill only on Windows; elsewhere it sends SIGKILL directly")
 class TestM16TaskkillDispatchOffGuiThread:
     """M16: PID/name-based sandbox stop must not block the GUI thread on ``taskkill``."""
 

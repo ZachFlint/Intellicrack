@@ -18,6 +18,7 @@ import pytest
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QWidget
 
+from intellicrack.ui import sandbox_config
 from intellicrack.ui.tools import ToolOutputPanel
 
 
@@ -29,6 +30,17 @@ _SETTINGS_ORG: str = "IntellicrackTest"
 _SETTINGS_APP: str = "TestStateP"
 _TAB_A: str = "TabA"
 _TAB_B: str = "TabB"
+_REGISTERED_TAB_KEYS: tuple[str, ...] = (
+    "Hex Editor",
+    "Frida",
+    "Ghidra",
+    "Cutter",
+    "Process",
+    "Sandbox",
+    "Analysis",
+    "Scripts",
+    "Stack",
+)
 
 
 @pytest.fixture
@@ -139,26 +151,22 @@ class TestRestoreTabState:
         assert sizes != default_sizes or default_sizes == [400, 400]
 
     @staticmethod
-    def test_restore_tab_state_tab_openers_keys() -> None:
+    def test_restore_tab_state_tab_openers_keys(monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify restore_tab_state opens each registered panel with the correct title.
 
         Each key in tab_openers must map to a tab whose tabText equals that key exactly.
         Passing the keys through tab_names drives the real opener; asserting idx >= 0
         confirms the tab was actually created, and tabText(idx) == key confirms the
-        title was preserved faithfully.
+        title was preserved faithfully. The Sandbox tab only opens on a host where
+        Windows Sandbox is available, so the availability probe result is recorded
+        as available and the real ``SandboxPanel`` is built and titled.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
         """
+        monkeypatch.setattr(getattr(sandbox_config, "_AvailabilityCache"), "value", (True, ""))
         panel = ToolOutputPanel()
-        registered_keys: list[str] = [
-            "Hex Editor",
-            "Frida",
-            "Ghidra",
-            "Cutter",
-            "Process",
-            "Sandbox",
-            "Analysis",
-            "Scripts",
-            "Stack",
-        ]
+        registered_keys = list(_REGISTERED_TAB_KEYS)
 
         state: dict[str, object] = {
             "tab_names": registered_keys,
@@ -173,6 +181,37 @@ class TestRestoreTabState:
             assert panel.tab_widget.tabText(idx) == key, f"tabText({idx}) is {panel.tab_widget.tabText(idx)!r}, expected {key!r}"
 
         assert panel.tab_widget.count() >= len(registered_keys)
+
+    @staticmethod
+    def test_restore_tab_state_skips_sandbox_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify restore_tab_state skips the Sandbox tab on a host without Windows Sandbox.
+
+        Every other registered panel must still open with its exact title.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        monkeypatch.setattr(
+            getattr(sandbox_config, "_AvailabilityCache"),
+            "value",
+            (False, "Windows Sandbox is not enabled"),
+        )
+        panel = ToolOutputPanel()
+        state: dict[str, object] = {
+            "tab_names": list(_REGISTERED_TAB_KEYS),
+            "active_index": 0,
+            "splitter_sizes": [600, 200],
+        }
+        panel.restore_tab_state(state)
+
+        assert panel.find_tab_by_title("Sandbox") == -1, "Sandbox tab must not open when Windows Sandbox is unavailable"
+        assert panel.sandbox_panel is None
+        for key in _REGISTERED_TAB_KEYS:
+            if key == "Sandbox":
+                continue
+            idx = panel.find_tab_by_title(key)
+            assert idx >= 0, f"Tab '{key}' was not opened by restore_tab_state (index={idx})"
+            assert panel.tab_widget.tabText(idx) == key
 
 
 @pytest.mark.usefixtures("qapp")

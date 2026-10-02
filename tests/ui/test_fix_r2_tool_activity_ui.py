@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import QLabel, QPushButton
 
 from intellicrack.core.config import Config
 from intellicrack.core.orchestrator import OPERATOR_CANCELLED_ERROR
+from intellicrack.core.types import ConfirmationLevel
 from intellicrack.credentials import store as credential_store_module
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.credentials.store import CredentialStore
@@ -105,6 +106,9 @@ def _server_cancellations(agents: AgentStack) -> str:
 def test_chat_shows_progress_and_cancels_one_call(qtbot: QtBot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, era: Era) -> None:
     """The running call shows the server's progress; its Cancel button stops it on the server and the turn finishes.
 
+    The window is configured not to ask for confirmation, so the call starts at once instead of waiting on a modal
+    confirmation dialog that nothing in this test answers.
+
     Args:
         qtbot: The Qt test driver.
         tmp_path: Per-test directory.
@@ -124,7 +128,12 @@ def test_chat_shows_progress_and_cancels_one_call(qtbot: QtBot, tmp_path: Path, 
             async_stack.enter_async_context(agent_stack(tmp_path / "agent", _DIALECT, (features_config(era, port=port),), responses)),
             timeout_s=_BRIDGE_TIMEOUT_S,
         )
-        window = MainWindow(Config(tools_directory=tmp_path / "tools", data_directory=tmp_path / "data"), agents.orchestrator)
+        config = Config(
+            tools_directory=tmp_path / "tools",
+            data_directory=tmp_path / "data",
+            confirmation_level=ConfirmationLevel.NONE,
+        )
+        window = MainWindow(config, agents.orchestrator)
         qtbot.addWidget(window)
         agents.orchestrator.set_mcp_tool_source(agents.source)
         results: list[ToolResult] = []

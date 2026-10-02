@@ -390,7 +390,7 @@ class SectionsMixin:
         """Replace the strings tree contents with the extracted entries.
 
         Args:
-            results: Iterable of dict-like records with ``offset`` and ``text`` keys as
+            results: Iterable of dict-like records with ``offset`` and ``content`` keys as
                 returned by ``HexDocument.extract_strings``.
         """
         if self._strings_tree is None:
@@ -404,7 +404,7 @@ class SectionsMixin:
                 continue
             typed: dict[str, object] = cast("dict[str, object]", entry)
             offset_val = typed.get("offset")
-            text_val = typed.get("text") or typed.get("value")
+            text_val = typed.get("content") or typed.get("text") or typed.get("value")
             if offset_val is None or text_val is None:
                 continue
             try:

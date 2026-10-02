@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import time
 from typing import TYPE_CHECKING, Final
 
@@ -77,6 +78,12 @@ def _pump_until(qapp: QApplication, predicate: Callable[[], bool]) -> bool:
         qapp.processEvents()
         time.sleep(_POLL_INTERVAL_S)
     return bool(predicate())
+
+
+pytestmark = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="attaches to the live test process through the Win32 process API (kernel32), which ProcessBridge requires",
+)
 
 
 @pytest.fixture

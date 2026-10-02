@@ -107,15 +107,15 @@ def _bit_button_content_width(btn: QPushButton) -> int:
     return style.subElementRect(QStyle.SubElement.SE_PushButtonContents, opt, btn).width()
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(autouse=True)
 def _apply_production_dark_theme() -> None:
-    """Apply the real production dark-theme stylesheet for this module's tests.
+    """Apply the real production dark-theme stylesheet for each of this module's tests.
 
     D04 is a collision between the bit-button width and the application's
     real ``QPushButton { padding: 6px 16px; }`` rule, so the gate must run
     under that real stylesheet rather than an unstyled default ``QStyle``.
-    ``THEME_DARK`` is also the application's own default theme, so no
-    teardown restoration is needed.
+    The theme is applied per test so the UI suite's theme-restoring fixture
+    removes it again afterwards instead of it leaking into later modules.
     """
     ThemeManager.get_instance().apply_theme(THEME_DARK)
 

@@ -23,6 +23,8 @@ from intellicrack.ui.panels.hex_editor.base import PREVIEW_BYTES
 from intellicrack.ui.panels.hex_editor.transforms import TransformsMixin
 
 
+pytestmark = pytest.mark.usefixtures("qapp")
+
 _BlockFillDialogCls: type[QDialog] = getattr(_t_mod, "_BlockFillDialog")
 _BlockCopyMoveDialogCls: type[QDialog] = getattr(_t_mod, "_BlockCopyMoveDialog")
 _BlockSwapDialogCls: type[QDialog] = getattr(_t_mod, "_BlockSwapDialog")
@@ -295,7 +297,7 @@ class TestTransformApplyNotify:
         self,
         doc_state_events: tuple[_SpyDoc, HexDocumentState, list[tuple[int, int, str]]],
     ) -> None:
-        """Notify carries the actual selection start and length.
+        """Notify carries the selection start and the length of its inclusive extent.
 
         Args:
             doc_state_events: Fixture providing spy doc, state, and events.
@@ -306,7 +308,7 @@ class TestTransformApplyNotify:
         class _FakeWidget:
             _cursor_offset: int = 10
             _selection_start: int = 10
-            _selection_end: int = 30
+            _selection_end: int = 29
 
         mixin.set_hex_widget(_FakeWidget())
         mixin.apply_transform()
@@ -364,7 +366,7 @@ class TestPipelineExecuteNotify:
         self,
         doc_state_events: tuple[_SpyDoc, HexDocumentState, list[tuple[int, int, str]]],
     ) -> None:
-        """Notify fires with the correct offset and length after pipeline write.
+        """Notify fires with the inclusive selection extent after pipeline write.
 
         Args:
             doc_state_events: Fixture providing spy doc, state, and events.
@@ -392,7 +394,7 @@ class TestPipelineExecuteNotify:
         class _FakeWidget:
             _cursor_offset: int = 4
             _selection_start: int = 4
-            _selection_end: int = 20
+            _selection_end: int = 19
 
         mixin.set_hex_widget(_FakeWidget())
         mixin.execute_pipeline()

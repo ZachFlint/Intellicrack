@@ -195,9 +195,13 @@ def test_m10_statistics_worker_owned_by_widget(qtbot: QtBot) -> None:
     chain, since Qt would otherwise destroy the running thread along with
     the harness.
 
+    The worker is joined directly rather than through its ``call_finished``
+    signal: the computation over the small document double finishes before a
+    signal wait could connect, so waiting for the emission would miss it.
+
     Args:
-        qtbot: pytest-qt bot fixture used to wait on the worker's completion
-            signal so the background thread is drained before teardown.
+        qtbot: pytest-qt bot fixture used to deliver the worker's queued result
+            once its thread has been joined.
     """
     harness = _StatisticsHarness(_StatsDocument())
     try:
@@ -214,8 +218,8 @@ def test_m10_statistics_worker_owned_by_widget(qtbot: QtBot) -> None:
             "the statistics worker is a Qt child of the panel widget; deleting the panel mid-scan would destroy the running thread"
         )
 
-        with qtbot.waitSignal(worker.call_finished, timeout=_WAIT_TIMEOUT_MS):
-            pass
+        assert worker.wait(_WAIT_TIMEOUT_MS), "the statistics worker never finished"
+        qtbot.wait(0)
     finally:
         harness.deleteLater()
 

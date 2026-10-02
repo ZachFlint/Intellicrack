@@ -213,10 +213,13 @@ class TestL13WindowsClassNameColumn:
     """L13: the Windows tab's Class Name column resizes to contents and tooltips."""
 
     def test_l13_class_name_header_resize_mode(self, tab: SystemTab) -> None:
-        """Column 2 (Class Name) resizes to its content width.
+        """Columns 1 (Title) and 2 (Class Name) resize to their content width.
 
         Pre-fix there was no ``setSectionResizeMode`` call for column 2 at
-        all, so it stayed at the ``QHeaderView`` Interactive default.
+        all, so it stayed at the ``QHeaderView`` Interactive default. Title
+        sizes to its content too, with no stretched last section, so a long
+        title widens the table and its horizontal scrollbar reaches it instead
+        of a ``Stretch`` column squeezing it to the viewport.
 
         Args:
             tab: The ``SystemTab`` under test.
@@ -226,7 +229,10 @@ class TestL13WindowsClassNameColumn:
         assert header.sectionResizeMode(2) == QHeaderView.ResizeMode.ResizeToContents, (
             "Class Name column must resize to its content width, not stay at the Interactive default"
         )
-        assert header.sectionResizeMode(1) == QHeaderView.ResizeMode.Stretch, "Title column must still stretch"
+        assert header.sectionResizeMode(1) == QHeaderView.ResizeMode.ResizeToContents, (
+            "Title column must resize to its content width so long titles scroll instead of being squeezed"
+        )
+        assert not header.stretchLastSection(), "the last section must not stretch, or it can never overflow into the scrollbar"
 
     def test_l13_refresh_windows_sets_class_name_tooltip_matching_long_text(
         self,

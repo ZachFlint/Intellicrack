@@ -177,7 +177,9 @@ class _BookmarksHarness(BookmarksMixin, QWidget):
     The harness wires the mixin's required attributes to a real
     :class:`HexDocument`, a real :class:`HexDocumentState`, a stub hex
     widget reporting a fixed cursor offset, and an in-process
-    :class:`QTreeWidget` for the bookmarks list. The production handlers
+    :class:`QTreeWidget` for the bookmarks list. Like the panel for a document
+    opened from bytes, it has no ``file_path``, so no bookmark sidecar is
+    written. The production handlers
     :meth:`_on_add_bookmark` and :meth:`_on_remove_bookmark` are driven
     directly; only the two Qt modal dialogs in :meth:`_on_add_bookmark`
     are faked at the external GUI boundary.
@@ -204,6 +206,7 @@ class _BookmarksHarness(BookmarksMixin, QWidget):
         self.document: HexDocument = document
         self._document: HexDocument = document
         self.state_holder: HexDocumentState | None = state_holder
+        self.file_path: Path | None = None
         self._bookmarks_tree: QTreeWidget | None = QTreeWidget(self)
         self._bookmarks_tree.setColumnCount(3)
         self._hex_widget: _StubHexWidget = _StubHexWidget(cursor_offset)

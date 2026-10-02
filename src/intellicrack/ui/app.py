@@ -111,6 +111,21 @@ _logger = get_logger(__name__)
 _MCP_SHUTDOWN_TIMEOUT_S: Final[float] = 15.0
 """How long MCP teardown may take before the shared loop is stopped anyway."""
 
+
+def _main_window_settings() -> QSettings:
+    """Open the main window's user-scope settings store.
+
+    The store uses the process-wide default settings format, which is
+    ``NativeFormat`` (the registry on Windows) unless a host relocates it with
+    :meth:`QSettings.setDefaultFormat` and :meth:`QSettings.setPath`, as the
+    test suite does to keep the user's real settings untouched.
+
+    Returns:
+        QSettings: The ``Intellicrack/MainWindow`` settings handle.
+    """
+    return QSettings(QSettings.defaultFormat(), QSettings.Scope.UserScope, "Intellicrack", "MainWindow")
+
+
 try:
     from intellicrack.providers.model_loader import get_global_model_cache, set_global_cache_size
 except ImportError:
@@ -455,7 +470,7 @@ class MainWindow(QMainWindow):
 
     def _save_window_state(self) -> None:
         """Persist window geometry, splitter sizes, tab state, and detached panels to QSettings."""
-        settings = QSettings("Intellicrack", "MainWindow")
+        settings = _main_window_settings()
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("splitter_sizes", self._splitter.sizes())
 
@@ -480,7 +495,7 @@ class MainWindow(QMainWindow):
             _logger.debug("window_state_restore_skipped_layout_reset")
             return
 
-        settings = QSettings("Intellicrack", "MainWindow")
+        settings = _main_window_settings()
 
         geometry = settings.value("geometry")
         if isinstance(geometry, QByteArray):
@@ -596,7 +611,7 @@ class MainWindow(QMainWindow):
             str | None: The instance id stored under ``last_provider`` on the
             last selection, or ``None`` when nothing valid is stored.
         """
-        raw: object = QSettings("Intellicrack", "MainWindow").value("last_provider")
+        raw: object = _main_window_settings().value("last_provider")
         if isinstance(raw, str) and is_valid_provider_id(raw):
             return normalize_provider_id(raw)
         if isinstance(raw, str):
@@ -614,7 +629,7 @@ class MainWindow(QMainWindow):
             str: The remembered model id stored under
             ``last_model/<provider>``, or ``""`` when none is stored.
         """
-        raw: object = QSettings("Intellicrack", "MainWindow").value(f"last_model/{provider}")
+        raw: object = _main_window_settings().value(f"last_model/{provider}")
         return raw.strip() if isinstance(raw, str) else ""
 
     @staticmethod
@@ -624,7 +639,7 @@ class MainWindow(QMainWindow):
         Args:
             provider: The provider the user just activated.
         """
-        QSettings("Intellicrack", "MainWindow").setValue("last_provider", provider)
+        _main_window_settings().setValue("last_provider", provider)
 
     def _persist_current_model(self) -> None:
         """Persist the toolbar's current provider and model to QSettings.
@@ -639,7 +654,7 @@ class MainWindow(QMainWindow):
         model = self.model_combo.currentText().strip()
         if not model:
             return
-        settings = QSettings("Intellicrack", "MainWindow")
+        settings = _main_window_settings()
         settings.setValue(f"last_model/{provider_data}", model)
         settings.setValue("last_provider", provider_data)
         _logger.debug("model_selection_persisted", provider=provider_data, model=model)
@@ -1187,7 +1202,7 @@ class MainWindow(QMainWindow):
         self._auto_approve_btn = QPushButton("Auto-approve: OFF")
         self._auto_approve_btn.setCheckable(True)
         self._auto_approve_btn.setObjectName("toggle_button")
-        saved_auto_approve_raw: object = QSettings("Intellicrack", "MainWindow").value("auto_approve", defaultValue=False)
+        saved_auto_approve_raw: object = _main_window_settings().value("auto_approve", defaultValue=False)
         initial_auto_approve: bool = (
             bool(saved_auto_approve_raw)
             if isinstance(saved_auto_approve_raw, bool)
@@ -4563,7 +4578,7 @@ class MainWindow(QMainWindow):
                 f"Auto-approve disabled - confirmation level: {self._config.confirmation_level.value}",
             )
 
-        QSettings("Intellicrack", "MainWindow").setValue("auto_approve", checked)
+        _main_window_settings().setValue("auto_approve", checked)
 
     def _on_cancel(self) -> None:
         """Handle cancel button click."""
