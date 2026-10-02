@@ -444,26 +444,56 @@ def test_f0005_f0028_read_bytes_returns_real_payload(
     fake.globals["currentProgram"] = _FakeProgram()
     fake.globals["toAddr"] = _FakeAddr
 
-    def _zeros(length: int, _typecode: str) -> list[int]:
-        """Allocate a zero-filled list of the requested length.
+    class _FakeJByte:
+        """Stand-in for :class:`jpype.JByte`, the Java ``byte`` type token."""
 
-        Args:
-            length: Number of elements to allocate.
-            _typecode: Jython typecode (ignored by the test double).
+    class _FakeJArray:
+        """Stand-in for :func:`jpype.JArray`, the Java array constructor factory.
 
-        Returns:
-            list[int]: Zero-filled list with ``length`` elements.
+        ``jpype.JArray(jpype.JByte)`` yields a constructor bound to the Java
+        ``byte`` element type; calling that constructor with a length
+        allocates the backing array. The double mirrors this two-step
+        protocol, returning a plain mutable list that :class:`_FakeMemory`
+        fills in place.
         """
-        return [0] * length
 
-    jarray_module = types.ModuleType("jarray")
-    setattr(jarray_module, "zeros", _zeros)
-    sys.modules["jarray"] = jarray_module
+        def __call__(self, _element_type: object) -> Callable[[int], list[int]]:
+            """Return an allocator bound to the requested Java element type.
+
+            Args:
+                _element_type: Java element type token (ignored by the double).
+
+            Returns:
+                Callable[[int], list[int]]: Allocator producing a zero-filled
+                buffer of the requested length.
+            """
+
+            def _allocate(length: int) -> list[int]:
+                """Allocate a zero-filled buffer of ``length`` elements.
+
+                Args:
+                    length: Number of elements to allocate.
+
+                Returns:
+                    list[int]: Zero-filled list the fake memory fills in place.
+                """
+                return [0] * length
+
+            return _allocate
+
+    jpype_module = types.ModuleType("jpype")
+    setattr(jpype_module, "JByte", _FakeJByte)
+    setattr(jpype_module, "JArray", _FakeJArray())
+    original_jpype = sys.modules.get("jpype")
+    sys.modules["jpype"] = jpype_module
 
     try:
         result = _run(bridge.read_bytes(_TEST_ADDRESS, 4))
     finally:
-        sys.modules.pop("jarray", None)
+        if original_jpype is not None:
+            sys.modules["jpype"] = original_jpype
+        else:
+            sys.modules.pop("jpype", None)
 
     assert isinstance(result, dict)
     payload = cast("dict[str, Any]", result)

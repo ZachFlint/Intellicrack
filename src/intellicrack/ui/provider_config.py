@@ -69,13 +69,15 @@ from intellicrack.credentials.oauth import (
 from intellicrack.credentials.provider_settings import (
     MODEL_OVERRIDES_KEY,
     PROVIDER_SETTINGS_FILENAME,
+    REASONING_SUMMARIES_KEY,
     ProviderSettingsStore,
     build_settings_section,
+    saved_reasoning_summary_mode,
     saved_timeout_seconds,
 )
 from intellicrack.credentials.store import CredentialStore, get_credential_store
 from intellicrack.providers import ids as provider_ids
-from intellicrack.providers.capabilities import ApiDialect
+from intellicrack.providers.capabilities import ApiDialect, ReasoningSummaryMode
 from intellicrack.providers.configurable import ConfigurableProvider
 from intellicrack.providers.dialects import adapter_for
 from intellicrack.providers.dialects.base import headers_receiving_api_key
@@ -3462,6 +3464,24 @@ class ProviderSettingsWidget(QFrame):
         )
         model_layout.addRow("Context Window:", self._context_window_spin)
 
+        self._reasoning_summary_combo = QComboBox()
+        self._reasoning_summary_combo.setObjectName("reasoning_summary_combo")
+        for label, mode in (
+            ("Automatic", ReasoningSummaryMode.AUTO),
+            ("Always request", ReasoningSummaryMode.ON),
+            ("Never request", ReasoningSummaryMode.OFF),
+        ):
+            self._reasoning_summary_combo.addItem(label, mode.value)
+        self._reasoning_summary_combo.setToolTip(
+            "Whether Responses API requests ask for a readable summary of the model's reasoning. OpenAI only generates "
+            "summaries for verified organizations. 'Automatic' asks until the endpoint refuses, then keeps thinking on "
+            "without the summary for the rest of the session.",
+        )
+        summaries_apply = self.provider_id == provider_ids.OPENAI or self.is_custom_instance
+        self._reasoning_summary_combo.setVisible(summaries_apply)
+        if summaries_apply:
+            model_layout.addRow("Reasoning Summaries:", self._reasoning_summary_combo)
+
         model_group.setLayout(model_layout)
         layout.addWidget(model_group)
 
@@ -4292,6 +4312,8 @@ class ProviderSettingsWidget(QFrame):
         saved_model: str = saved_settings.get("default_model", "")
         self._pending_saved_model = saved_model
         self._context_window_spin.setValue(_saved_context_window(saved_settings, saved_model))
+        summary_index = self._reasoning_summary_combo.findData(saved_reasoning_summary_mode(saved_settings).value)
+        self._reasoning_summary_combo.setCurrentIndex(max(summary_index, 0))
         self._load_instance_fields()
         self._populate_default_models()
 
@@ -4648,6 +4670,9 @@ class ProviderSettingsWidget(QFrame):
 
         if self._org_id_input:
             settings["organization_id"] = self._org_id_input.text().strip()
+
+        if self.provider_id == provider_ids.OPENAI or self.is_custom_instance:
+            settings[REASONING_SUMMARIES_KEY] = str(self._reasoning_summary_combo.currentData())
 
         if self.provider_id == "local_transformers":
             prefer_cb: QCheckBox | None = getattr(self, "_prefer_xpu_cb", None)

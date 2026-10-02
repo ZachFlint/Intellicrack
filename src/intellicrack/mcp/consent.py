@@ -13,8 +13,13 @@ before they agree. The decision is bound to a digest of that exact launch, so ch
 Trust decides whether a server's own claims about its tools may be believed. An untrusted server's ``readOnlyHint`` buys it nothing: every
 call it offers is classified destructive and confirmed.
 
-Approval records per-tool answers under ``once``, ``session`` or ``always``, keyed by the server's tool-listing generation. A server that
-changes what its tools are produces a new generation, which invalidates what the operator approved of the old ones.
+Approval records per-tool answers under ``once``, ``session`` or ``always``, keyed by the server's tool-listing generation and by the
+server's identity. A server that changes what its tools are produces a new generation, and a server id that is repointed at another program
+or endpoint -- or whose sandbox, environment or headers change -- produces a new identity; either invalidates what the operator approved.
+
+Both records live in JSON files that the GUI thread and the background loop both write, so every change goes through
+:class:`~intellicrack.core.locked_json.LockedJsonFile`: serialized, written through a temporary file of its own, and never applied to a file
+that could not be read.
 """
 
 from __future__ import annotations
@@ -22,7 +27,7 @@ from __future__ import annotations
 import enum
 import hashlib
 import inspect
-import json
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,9 +35,11 @@ from typing import TYPE_CHECKING, Any, Final
 
 from intellicrack.core.config import get_config_file
 from intellicrack.core.json_payload import JsonObject, is_json_object
+from intellicrack.core.locked_json import JsonDocumentError, LockedJsonFile
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.catalog import canonical_json
-from intellicrack.mcp.errors import McpConsentDeniedError
+from intellicrack.mcp.config import McpSandboxSpec, name_looks_secret, sandbox_limitations
+from intellicrack.mcp.errors import McpConsentDeniedError, McpError
 
 
 if TYPE_CHECKING:
@@ -52,6 +59,8 @@ APPROVALS_FILENAME: Final[str] = "mcp_approvals.json"
 
 _LAUNCH_DIGEST_BYTES: Final[int] = 16
 
+_NO_SANDBOX: Final[McpSandboxSpec] = McpSandboxSpec()
+
 _HOME_MARKERS: Final[tuple[str, ...]] = ("~", "%userprofile%", "$home", "$env:userprofile")
 _SYSTEM_MARKERS: Final[tuple[str, ...]] = (
     "c:\\windows",
@@ -68,6 +77,18 @@ _CREDENTIAL_MARKERS: Final[tuple[str, ...]] = (".ssh", ".aws", ".gnupg", ".kube"
 
 _SHELL_FETCH_TOKENS: Final[frozenset[str]] = frozenset({"curl", "wget", "iwr", "invoke-webrequest", "certutil", "bitsadmin"})
 _SHELL_EXECUTE_TOKENS: Final[frozenset[str]] = frozenset({"sh", "bash", "zsh", "cmd", "powershell", "pwsh", "iex", "invoke-expression"})
+
+
+_APPROVAL_BINDING_SEPARATOR: Final[str] = "@"
+"""Separates a tool-listing generation from the server identity in an approval key."""
+
+
+class McpConsentStoreError(McpError):
+    """A trust or approval record could not be read or written.
+
+    Raised instead of guessing: a decision the operator made is never lost
+    silently, and a file that could not be read is never overwritten.
+    """
 
 
 class TrustState(enum.Enum):
@@ -211,25 +232,60 @@ def scan_command_for_dangerous_patterns(command: str, args: Sequence[str]) -> li
     return list(findings.values())
 
 
-def describe_launch(spec: StdioServerSpec, env: Mapping[str, str]) -> str:
+def describe_sandbox(sandbox: McpSandboxSpec) -> list[str]:
+    """Render what a server's sandbox will and will not do, for the operator.
+
+    Args:
+        sandbox: The server's sandbox settings.
+
+    Returns:
+        list[str]: The lines of the description.
+    """
+    if not sandbox.enabled:
+        return [
+            "Sandbox: OFF",
+            "  It will run with your own user account and your own privileges:",
+            "  anything you can read, write or delete, it can too.",
+        ]
+    lines = [
+        "Sandbox: ON",
+        "  It runs at Low integrity with every privilege removed, inside a job",
+        "  that ends it and everything it starts when Intellicrack stops it.",
+        "  It can change files already in these folders, and add new ones:"
+        if sandbox.write_existing
+        else "  It can add new files to these folders, but not change what is already there:",
+    ]
+    lines.extend(f"    {entry}" for entry in sandbox.allow_write)
+    if not sandbox.allow_write:
+        lines.append("    (none configured: the launch will be refused)")
+    lines.extend(f"  {limitation}" for limitation in sandbox_limitations(sandbox))
+    if sandbox.inherit_env:
+        lines.append(f"  It also keeps these variables from Intellicrack's environment: {', '.join(sandbox.inherit_env)}")
+    return lines
+
+
+def describe_launch(spec: StdioServerSpec, env: Mapping[str, str], sandbox: McpSandboxSpec | None = None) -> str:
     """Render exactly what will be run, for the operator to read before agreeing.
 
     Every argument appears in full: nothing is truncated, elided or
     reflowed, because an argument the operator cannot see is an argument
     they cannot refuse. Environment entries appear by name only -- their
-    values are resolved credentials and must never be displayed.
+    values are resolved credentials and must never be displayed. Whether
+    the program runs sandboxed, and what that does and does not stop, is
+    stated before anything else.
 
     Args:
         spec: The configured launch description.
         env: The fully resolved environment the child will receive.
+        sandbox: The server's sandbox settings, or ``None`` for none.
 
     Returns:
         str: A plain-text description suitable for a monospace, read-only view.
     """
     lines: list[str] = [
         "Intellicrack is about to start a local program on your computer.",
-        "It will run with your own user account and your own privileges:",
-        "anything you can read, write or delete, it can too.",
+        "",
+        *describe_sandbox(sandbox if sandbox is not None else _NO_SANDBOX),
         "",
         "Command:",
         f"  {spec.command}",
@@ -272,17 +328,64 @@ def describe_launch(spec: StdioServerSpec, env: Mapping[str, str]) -> str:
     return "\n".join(lines)
 
 
-def launch_digest(spec: StdioServerSpec, env: Mapping[str, str]) -> str:
-    """Digest the exact launch an operator is being asked to approve.
+def _sandbox_material(sandbox: McpSandboxSpec) -> dict[str, object]:
+    """Render the parts of a sandbox that decide what a server can reach.
 
-    Covers the command, every argument in order, the working directory and
-    the environment entry names -- but not their values, so rotating a
-    credential does not force a fresh consent prompt while changing what
-    runs does.
+    Args:
+        sandbox: The server's sandbox settings.
+
+    Returns:
+        dict[str, object]: The canonical material.
+    """
+    return {
+        "enabled": sandbox.enabled,
+        "allowWrite": [os.path.normcase(os.path.normpath(entry)) for entry in sandbox.allow_write],
+        "allowedDomains": sorted(domain.strip().lower() for domain in sandbox.allowed_domains),
+        "inheritEnv": sorted(name.upper() for name in sandbox.inherit_env),
+        "writeExisting": sandbox.write_existing,
+    }
+
+
+def _environment_material(spec: StdioServerSpec, env: Mapping[str, str]) -> dict[str, str | None]:
+    """Render the environment a launch receives, without any credential in it.
+
+    An entry configured inline contributes its configured value -- the text
+    in ``mcp.json``, where a credential can only appear as an
+    ``${input:id}`` reference, so the digest changes when what the program
+    is told changes and not when a stored secret is rotated. An entry that
+    comes only from the environment file contributes its value unless its
+    name marks it as a credential, in which case it contributes its name
+    alone. ``PATH`` and its like therefore count: they decide which program
+    a bare command name runs.
 
     Args:
         spec: The configured launch description.
         env: The resolved environment the child will receive.
+
+    Returns:
+        dict[str, str | None]: Each entry's contribution, by name.
+    """
+    material: dict[str, str | None] = {}
+    for name in sorted(env):
+        if name in spec.env:
+            material[name] = spec.env[name]
+        else:
+            material[name] = None if name_looks_secret(name) else env[name]
+    return material
+
+
+def launch_digest(spec: StdioServerSpec, env: Mapping[str, str], sandbox: McpSandboxSpec | None = None) -> str:
+    """Digest the exact launch an operator is being asked to approve.
+
+    Covers the command, every argument in order, the working directory, the
+    environment (see :func:`_environment_material`) and the sandbox, so
+    changing what runs, what it is told, or how it is confined asks again,
+    while rotating a stored credential does not.
+
+    Args:
+        spec: The configured launch description.
+        env: The resolved environment the child will receive.
+        sandbox: The server's sandbox settings, or ``None`` for none.
 
     Returns:
         str: A hexadecimal digest, stable across processes.
@@ -291,8 +394,9 @@ def launch_digest(spec: StdioServerSpec, env: Mapping[str, str]) -> str:
         "command": spec.command,
         "args": list(spec.args),
         "cwd": spec.cwd,
-        "envNames": sorted(env),
+        "env": _environment_material(spec, env),
         "envFile": spec.env_file,
+        "sandbox": _sandbox_material(sandbox if sandbox is not None else _NO_SANDBOX),
     })
     return hashlib.blake2b(material.encode("utf-8"), digest_size=_LAUNCH_DIGEST_BYTES).hexdigest()
 
@@ -300,13 +404,17 @@ def launch_digest(spec: StdioServerSpec, env: Mapping[str, str]) -> str:
 def server_identity(config: McpServerConfig) -> str:
     """Digest what makes a configured server the server the operator judged.
 
-    Trust, refusals and approved launches are filed under a server id, but an
-    id is only a name: removing a server and adding a different one under the
-    same id must not hand the newcomer the old one's standing. The identity
-    covers the transport and where it leads -- the launch command, its
-    arguments, working directory and environment file for a local server, the
-    endpoint and its query for a remote one -- so a record made about one
-    program or endpoint is never applied to another.
+    Trust, refusals, approved launches and remembered tool approvals are
+    filed under a server id, but an id is only a name: removing a server and
+    adding a different one under the same id must not hand the newcomer the
+    old one's standing, and neither may changing what the same entry is
+    allowed to do. The identity therefore covers where the transport leads
+    and everything that widens what the server can reach: for a local server
+    the launch command, its arguments, working directory, environment file,
+    the configured environment values and the sandbox; for a remote one the
+    endpoint, its query, its configured headers and its OAuth client. A
+    configured value can hold a credential only as an ``${input:id}``
+    reference, so no secret enters the digest.
 
     Args:
         config: The configured server.
@@ -321,54 +429,68 @@ def server_identity(config: McpServerConfig) -> str:
             "args": list(config.stdio.args),
             "cwd": config.stdio.cwd,
             "envFile": config.stdio.env_file,
+            "env": dict(sorted(config.stdio.env.items())),
+            "sandbox": _sandbox_material(config.sandbox),
         }
     if config.http is not None:
-        material |= {"url": config.http.url, "query": dict(config.http.query)}
+        material |= {
+            "url": config.http.url,
+            "query": dict(config.http.query),
+            "headers": {name.lower(): value for name, value in sorted(config.http.headers.items())},
+            "oauthClientId": config.http.oauth_client_id,
+            "oauthMetadataUrl": config.http.oauth_metadata_url,
+        }
     return hashlib.blake2b(canonical_json(material).encode("utf-8"), digest_size=_LAUNCH_DIGEST_BYTES).hexdigest()
 
 
-def _read_json_object(path: Path) -> JsonObject:
-    """Read a JSON object from disk, treating any fault as an empty document.
-
-    A consent record that cannot be read must not be guessed at. Returning
-    an empty document makes every server untrusted and every approval
-    absent, which is the safe direction to fail in.
+def approval_binding(generation: str, identity: str) -> str:
+    """Combine a tool-listing generation and a server identity into one approval key.
 
     Args:
-        path: File to read.
+        generation: The server's tool-listing generation.
+        identity: The server's :func:`server_identity`.
 
     Returns:
-        JsonObject: The decoded object, or an empty mapping.
+        str: The key an approval is remembered under.
     """
-    empty: JsonObject = {}
-    if not path.exists():
-        return empty
-    try:
-        decoded: object = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        _logger.warning("mcp_consent_store_unreadable", path=str(path), error=str(exc))
-        return empty
-    if not is_json_object(decoded):
-        _logger.warning("mcp_consent_store_malformed", path=str(path))
-        return empty
-    return decoded
+    return f"{generation}{_APPROVAL_BINDING_SEPARATOR}{identity}"
 
 
-def _write_json_object(path: Path, data: Mapping[str, Any]) -> None:
-    """Write a JSON object to disk atomically.
+def split_approval_binding(binding: str) -> tuple[str, str]:
+    """Split an approval key back into its generation and identity.
 
     Args:
-        path: File to write.
-        data: The object to store.
+        binding: A key from :func:`approval_binding`, or a bare generation
+            recorded before approvals were bound to identity.
+
+    Returns:
+        tuple[str, str]: The generation and the identity, the latter empty
+        for a key that carries none.
+    """
+    generation, _, identity = binding.partition(_APPROVAL_BINDING_SEPARATOR)
+    return generation, identity
+
+
+def _change(document: LockedJsonFile, change: Callable[[JsonObject], bool]) -> None:
+    """Apply one change to a consent record file, or say plainly why it could not be.
+
+    Args:
+        document: The record file.
+        change: Mutates the decoded document and reports whether it changed.
+
+    Raises:
+        McpConsentStoreError: If the file could not be read -- in which case
+            it is left untouched -- or the change could not be written.
     """
     try:
-        path = path.resolve()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_name(f"{path.name}.tmp")
-        _ = temporary.write_text(f"{json.dumps(data, indent=2, sort_keys=True)}\n", encoding="utf-8")
-        _ = temporary.replace(path)
-    except (OSError, RuntimeError) as exc:
-        _logger.warning("mcp_consent_store_unwritable", path=str(path), error=str(exc))
+        _ = document.update(change)
+    except JsonDocumentError as exc:
+        _logger.exception("mcp_consent_store_change_refused", path=str(document.path), error=str(exc))
+        message = (
+            f"cannot save the change to {document.path}: {exc}. The file was left as it was; "
+            f"fix or remove it, and the decision will be asked for again."
+        )
+        raise McpConsentStoreError(message) from exc
 
 
 class TrustStore:
@@ -386,6 +508,7 @@ class TrustStore:
                 ``<config_dir>/mcp_trust.json``.
         """
         self._path = path if path is not None else get_config_file(TRUST_FILENAME)
+        self._document = LockedJsonFile(self._path)
 
     @property
     def path(self) -> Path:
@@ -405,7 +528,7 @@ class TrustStore:
         Returns:
             JsonObject: The record, or an empty mapping.
         """
-        entry = _read_json_object(self._path).get(server_id)
+        entry = self._document.read_or_empty().get(server_id)
         return entry if is_json_object(entry) else {}
 
     def _update(self, server_id: str, changes: Mapping[str, Any]) -> None:
@@ -414,13 +537,27 @@ class TrustStore:
         Args:
             server_id: The server to update.
             changes: Fields to set.
+
+        A file that cannot be read or written propagates
+        :class:`McpConsentStoreError`, and is left untouched.
         """
-        data = _read_json_object(self._path)
-        entry = data.get(server_id)
-        merged: dict[str, Any] = dict(entry) if is_json_object(entry) else {}
-        merged |= changes
-        data[server_id] = merged
-        _write_json_object(self._path, data)
+
+        def _merge(data: JsonObject) -> bool:
+            """Merge the changes into the server's record.
+
+            Args:
+                data: The decoded trust file.
+
+            Returns:
+                bool: Always ``True``: the record is rewritten.
+            """
+            entry = data.get(server_id)
+            merged: dict[str, Any] = dict(entry) if is_json_object(entry) else {}
+            merged |= changes
+            data[server_id] = merged
+            return True
+
+        _change(self._document, _merge)
 
     def state(self, server_id: str) -> TrustState:
         """Read a server's trust state.
@@ -520,6 +657,15 @@ class TrustStore:
         """
         self._update(server_id, {"generation": generation})
 
+    def set_identity(self, server_id: str, identity: str) -> None:
+        """Bind a server's record to an identity without changing anything else.
+
+        Args:
+            server_id: The server to update.
+            identity: The :func:`server_identity` to bind to.
+        """
+        self._update(server_id, {"identity": identity})
+
     def launch_digest(self, server_id: str) -> str | None:
         """Read the launch an operator last approved for a server.
 
@@ -553,9 +699,22 @@ class TrustStore:
         Args:
             server_id: The server to forget.
         """
-        data = _read_json_object(self._path)
-        if data.pop(server_id, None) is not None:
-            _write_json_object(self._path, data)
+        removed: list[bool] = []
+
+        def _forget(data: JsonObject) -> bool:
+            """Drop the server's record.
+
+            Args:
+                data: The decoded trust file.
+
+            Returns:
+                bool: Whether a record was dropped.
+            """
+            removed.append(data.pop(server_id, None) is not None)
+            return removed[-1]
+
+        _change(self._document, _forget)
+        if any(removed):
             _logger.info("mcp_trust_reset", server_id=server_id)
 
 
@@ -566,9 +725,10 @@ class ApprovalRecord:
     Attributes:
         namespace: The tool namespace, e.g. ``mcp-files``.
         function_name: The canonical dotted function name.
-        generation: The tool-listing generation the answer was given about.
-            Empty for an answer recorded without one, which no longer
-            applies to anything.
+        generation: The key the answer was given about: for a server's
+            tool, the :func:`approval_binding` of its tool-listing generation
+            and its identity. Empty for an answer recorded without one, which
+            no longer applies to anything.
         approved: ``True`` for an approval, ``False`` for a refusal.
         scope: How long the answer lasts.
     """
@@ -578,6 +738,17 @@ class ApprovalRecord:
     generation: str
     approved: bool
     scope: ApprovalScope
+
+    @property
+    def identity(self) -> str:
+        """The server identity the answer is bound to.
+
+        Returns:
+            str: The identity, or an empty string for an answer recorded
+            before approvals were bound to identity, which no longer applies
+            to anything.
+        """
+        return split_approval_binding(self.generation)[1]
 
 
 def _split_approval_key(key: str) -> tuple[str, str, str] | None:
@@ -598,10 +769,11 @@ def _split_approval_key(key: str) -> tuple[str, str, str] | None:
 
 
 class ApprovalStore:
-    """Per-tool approvals, keyed by namespace, function name and generation.
+    """Per-tool approvals, keyed by namespace, function name and approval key.
 
-    ``session`` answers live in memory for the life of the process. ``always`` answers are persisted. Both are keyed by the generation of
-    the server's tool listing, so an answer never carries over to a tool whose definition has changed underneath it.
+    ``session`` answers live in memory for the life of the process. ``always`` answers are persisted. For a server's tool the key is the
+    :func:`approval_binding` of the server's tool-listing generation and its identity, so an answer never carries over to a tool whose
+    definition has changed underneath it, nor to a different program or endpoint that took over the server's id.
     """
 
     def __init__(self, path: Path | None = None) -> None:
@@ -612,6 +784,7 @@ class ApprovalStore:
                 ``<config_dir>/mcp_approvals.json``.
         """
         self._path = path if path is not None else get_config_file(APPROVALS_FILENAME)
+        self._document = LockedJsonFile(self._path)
         self._session: dict[str, bool] = {}
 
     @property
@@ -654,7 +827,7 @@ class ApprovalStore:
             return self._session[key]
         if not generation:
             return None
-        stored = _read_json_object(self._path).get(key)
+        stored = self._document.read_or_empty().get(key)
         return stored if isinstance(stored, bool) else None
 
     def remember(
@@ -679,6 +852,10 @@ class ApprovalStore:
             ValueError: If an ``always`` answer is given without a
                 generation. Such an answer could never be invalidated, so it
                 would outlive any change to what the tool does.
+
+        A file that cannot be read or written propagates
+        :class:`McpConsentStoreError`; the answer then lasts this session
+        only, and the file is left untouched.
         """
         if scope is ApprovalScope.ONCE:
             return
@@ -689,9 +866,20 @@ class ApprovalStore:
         if not generation:
             message = f"an 'always' answer for {namespace}.{function_name} needs a tool-listing generation"
             raise ValueError(message)
-        data = _read_json_object(self._path)
-        data[key] = approved
-        _write_json_object(self._path, data)
+
+        def _record(data: JsonObject) -> bool:
+            """Record the answer.
+
+            Args:
+                data: The decoded approvals file.
+
+            Returns:
+                bool: Always ``True``.
+            """
+            data[key] = approved
+            return True
+
+        _change(self._document, _record)
         _logger.info(
             "mcp_approval_persisted",
             namespace=namespace,
@@ -711,12 +899,23 @@ class ApprovalStore:
         prefix = f"{namespace}|"
         for key in [key for key in self._session if key.startswith(prefix)]:
             del self._session[key]
-        data = _read_json_object(self._path)
-        removed = [key for key in data if key.startswith(prefix)]
-        if removed:
+        removed: list[str] = []
+
+        def _drop(data: JsonObject) -> bool:
+            """Drop every answer about the namespace.
+
+            Args:
+                data: The decoded approvals file.
+
+            Returns:
+                bool: Whether anything was dropped.
+            """
+            removed.extend(key for key in data if key.startswith(prefix))
             for key in removed:
                 del data[key]
-            _write_json_object(self._path, data)
+            return bool(removed)
+
+        _change(self._document, _drop)
         _logger.info("mcp_approvals_invalidated", namespace=namespace, removed=len(removed))
 
     def clear_session(self) -> None:
@@ -733,7 +932,7 @@ class ApprovalStore:
         records: list[ApprovalRecord] = []
         for scope, source in (
             (ApprovalScope.SESSION, dict(self._session)),
-            (ApprovalScope.ALWAYS, _read_json_object(self._path)),
+            (ApprovalScope.ALWAYS, self._document.read_or_empty()),
         ):
             for key in sorted(source):
                 value = source[key]
@@ -757,10 +956,22 @@ class ApprovalStore:
         """
         key = self._key(namespace, function_name, generation)
         removed = self._session.pop(key, None) is not None
-        data = _read_json_object(self._path)
-        if data.pop(key, None) is not None:
-            _write_json_object(self._path, data)
-            removed = True
+        persisted: list[bool] = []
+
+        def _drop(data: JsonObject) -> bool:
+            """Drop the answer.
+
+            Args:
+                data: The decoded approvals file.
+
+            Returns:
+                bool: Whether it was present.
+            """
+            persisted.append(data.pop(key, None) is not None)
+            return persisted[-1]
+
+        _change(self._document, _drop)
+        removed = removed or any(persisted)
         if removed:
             _logger.info("mcp_approval_revoked", namespace=namespace, function_name=function_name)
         return removed
@@ -771,11 +982,24 @@ class ApprovalStore:
         Returns:
             int: How many answers were removed.
         """
-        data = _read_json_object(self._path)
-        count = len(self._session) + len(data)
+        persisted: list[int] = []
+
+        def _clear(data: JsonObject) -> bool:
+            """Drop every answer.
+
+            Args:
+                data: The decoded approvals file.
+
+            Returns:
+                bool: Whether anything was dropped.
+            """
+            persisted.append(len(data))
+            data.clear()
+            return persisted[-1] > 0
+
+        _change(self._document, _clear)
+        count = len(self._session) + sum(persisted)
         self._session.clear()
-        if data:
-            _write_json_object(self._path, {})
         _logger.info("mcp_approvals_revoked_all", removed=count)
         return count
 
@@ -835,6 +1059,7 @@ class McpConsentGate:
         trust: TrustStore,
         prompt: LaunchPrompt,
         on_generation_change: Callable[[str, str], None] | None = None,
+        on_identity_change: Callable[[str], None] | None = None,
     ) -> None:
         """Initialize the gate.
 
@@ -847,10 +1072,15 @@ class McpConsentGate:
                 where remembered per-tool approvals are discarded, so an
                 answer about the old definitions is never replayed against
                 the new ones.
+            on_identity_change: Invoked with the server id whenever the
+                program or endpoint a server id names, or what it may reach,
+                is no longer the one the operator judged. Remembered per-tool
+                approvals are discarded here too.
         """
         self._trust = trust
         self._prompt = prompt
         self._on_generation_change = on_generation_change
+        self._on_identity_change = on_identity_change
         self._config_lookup: Callable[[str], McpServerConfig | None] | None = None
 
     @property
@@ -901,9 +1131,7 @@ class McpConsentGate:
             message = f"server '{config.server_id}' has no launch command to consent to"
             raise McpConsentDeniedError(message)
 
-        if not self._trust.belongs_to(config):
-            _logger.warning("mcp_trust_record_for_other_server", server_id=config.server_id)
-            self._trust.reset(config.server_id)
+        _ = self.note_identity(config)
 
         if self._trust.state(config.server_id) is TrustState.DENIED:
             message = (
@@ -912,12 +1140,12 @@ class McpConsentGate:
             )
             raise McpConsentDeniedError(message)
 
-        digest = launch_digest(config.stdio, env)
+        digest = launch_digest(config.stdio, env, config.sandbox)
         if self._trust.launch_digest(config.server_id) == digest:
             _logger.debug("mcp_launch_consent_recorded", server_id=config.server_id)
             return
 
-        description = describe_launch(config.stdio, env)
+        description = describe_launch(config.stdio, env, config.sandbox)
         findings = scan_command_for_dangerous_patterns(config.stdio.command, config.stdio.args)
         _logger.info(
             "mcp_launch_consent_requested",
@@ -967,7 +1195,7 @@ class McpConsentGate:
             _logger.warning("mcp_launch_consent_refused", server_id=server_id)
             return False
 
-        digest = launch_digest(config.stdio, env)
+        digest = launch_digest(config.stdio, env, config.sandbox)
         previous = self._trust.launch_digest(server_id)
         if answer.trusted:
             self._trust.set_state(server_id, TrustState.TRUSTED, identity=identity)
@@ -978,6 +1206,41 @@ class McpConsentGate:
             self._trust.set_state(server_id, TrustState.UNTRUSTED, identity=identity)
         self._trust.set_launch_digest(server_id, digest, identity=identity)
         _logger.info("mcp_launch_consent_granted", server_id=server_id, trusted=answer.trusted)
+        return True
+
+    def note_identity(self, config: McpServerConfig) -> bool:
+        """Check that a server id still names the server the operator judged.
+
+        Runs before every connection, whatever the transport: a remote server
+        never passes through launch consent, and its headers or its OAuth
+        client can change as surely as a local server's command. A record
+        made about another identity is discarded -- trust, refusal, approved
+        launch and remembered tool approvals alike -- so the operator is
+        asked again. A server with no identity on record has it recorded, so
+        a later change is noticed.
+
+        Args:
+            config: The server as currently configured.
+
+        Returns:
+            bool: ``True`` when the identity had changed and the record was
+            discarded.
+
+        A trust file that cannot be read or written propagates
+        :class:`McpConsentStoreError`.
+        """
+        identity = server_identity(config)
+        recorded = self._trust.identity(config.server_id)
+        if recorded == identity:
+            return False
+        if recorded is None:
+            self._trust.set_identity(config.server_id, identity)
+            return False
+        _logger.warning("mcp_trust_record_for_other_server", server_id=config.server_id)
+        self._trust.reset(config.server_id)
+        self._trust.set_identity(config.server_id, identity)
+        if self._on_identity_change is not None:
+            self._on_identity_change(config.server_id)
         return True
 
     def note_generation(self, server_id: str, generation: str) -> bool:

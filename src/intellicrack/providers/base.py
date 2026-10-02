@@ -33,6 +33,7 @@ from intellicrack.core.types import (
     ProviderError,
     RateLimitError,
     ReasoningItem,
+    ReasoningSummaryRefusedError,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
@@ -43,28 +44,36 @@ from intellicrack.providers.capabilities import (
     ApiDialect,
     CapabilityOverride,
     ModelCapabilities,
+    ReasoningSummaryMode,
     ToolSearchStyle,
     merge_capabilities,
 )
 from intellicrack.providers.dialects import adapter_for
 from intellicrack.providers.dialects.base import (
+    OLLAMA_IMAGE_POLICY,
+    OPENAI_IMAGE_POLICY,
     DialectAdapter,
     StreamDelta,
     ToolCallFragment,
     UsageInfo,
+    image_refusal_for,
     parse_tool_call,
+    sendable_image_parts,
     serialize_tool_result,
     tool_result_text,
 )
-from intellicrack.providers.presets import preset_capabilities
+from intellicrack.providers.dialects.responses import without_reasoning_summary
+from intellicrack.providers.presets import dialect_model_capabilities, preset_capabilities, preset_for
 from intellicrack.providers.tool_names import to_wire_name
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Awaitable, Callable, Generator
+    from collections.abc import AsyncIterator, Awaitable, Callable, Generator, Mapping
 
     import structlog
     from openai.types.chat.chat_completion_message import ChatCompletionMessage
+
+    from intellicrack.core.types import ImageResultPart
 
 _T = TypeVar("_T")
 
@@ -351,6 +360,8 @@ class LLMProviderBase(ABC):
         self._model_capabilities: dict[str, ModelCapabilities] = {}
         self._capability_overrides: dict[str, CapabilityOverride] = {}
         self._last_sent_tools: SentToolReport = SentToolReport()
+        self._reasoning_summary_mode: ReasoningSummaryMode = ReasoningSummaryMode.AUTO
+        self._reasoning_summary_refused: bool = False
         self._logger = get_logger(__name__)
         self._logger.info("provider_base_initialized")
 
@@ -423,6 +434,89 @@ class LLMProviderBase(ABC):
             return
         self._capability_overrides[model] = override
 
+    @property
+    def reasoning_summary_mode(self) -> ReasoningSummaryMode:
+        """Whether Responses requests from this instance ask for reasoning summaries.
+
+        Returns:
+            ReasoningSummaryMode: The configured mode.
+        """
+        return self._reasoning_summary_mode
+
+    def set_reasoning_summary_mode(self, mode: ReasoningSummaryMode) -> None:
+        """Choose whether Responses requests ask for reasoning summaries.
+
+        Choosing a different mode forgets an earlier refusal, so switching
+        back to :attr:`ReasoningSummaryMode.AUTO` after the organization is
+        verified asks again; choosing the mode already in use keeps it.
+
+        Args:
+            mode: The mode to use.
+        """
+        if mode is self._reasoning_summary_mode:
+            return
+        self._reasoning_summary_mode = mode
+        self._reasoning_summary_refused = False
+
+    @property
+    def requests_reasoning_summaries(self) -> bool:
+        """Whether the next Responses request asks for a reasoning summary.
+
+        Returns:
+            bool: ``True`` when the mode is on, or automatic and the endpoint
+            has not refused a summary to this instance.
+        """
+        mode = self._reasoning_summary_mode
+        return mode is ReasoningSummaryMode.ON or (mode is ReasoningSummaryMode.AUTO and not self._reasoning_summary_refused)
+
+    def _accept_reasoning_summary_refusal(self, body: Mapping[str, Any]) -> dict[str, Any] | None:
+        """Record that the endpoint refused a reasoning summary, and give the body to retry with.
+
+        Only the automatic mode falls back: with summaries switched on the
+        refusal is the operator's to see.
+
+        Args:
+            body: The refused Responses request body.
+
+        Returns:
+            dict[str, Any] | None: The body without ``reasoning.summary``, or
+            ``None`` when no retry should be made.
+        """
+        retry = without_reasoning_summary(body)
+        if self._reasoning_summary_mode is not ReasoningSummaryMode.AUTO or retry is None:
+            return None
+        if not self._reasoning_summary_refused:
+            self._logger.warning("reasoning_summary_refused", provider=self.name, remembered=True)
+        self._reasoning_summary_refused = True
+        return retry
+
+    async def _send_with_summary_fallback[R](
+        self,
+        send: Callable[[dict[str, Any]], Awaitable[R]],
+        body: dict[str, Any],
+    ) -> tuple[R, dict[str, Any]]:
+        """Send a Responses request, retrying once without ``reasoning.summary`` when the endpoint refuses it.
+
+        Args:
+            send: Sends one body and returns what the endpoint answered.
+            body: The request body.
+
+        Returns:
+            tuple[R, dict[str, Any]]: The answer, and the body that earned it.
+
+        Raises:
+            ReasoningSummaryRefusedError: When the refusal cannot be retried
+                around, because summaries are switched on or the body asked
+                for none.
+        """
+        try:
+            return await send(body), body
+        except ReasoningSummaryRefusedError:
+            retry = self._accept_reasoning_summary_refusal(body)
+            if retry is None:
+                raise
+        return await send(retry), retry
+
     def capability_overrides(self) -> dict[str, CapabilityOverride]:
         """Return every per-model override currently configured.
 
@@ -446,7 +540,9 @@ class LLMProviderBase(ABC):
         """Resolve one model's capability record through the layered merge.
 
         Resolution order is the dialect's defaults, then the preset's known
-        capabilities for that model family, then metadata ingested from the
+        capabilities for that model family (or, for an endpoint configured
+        from no preset, what the model family's wire format needs), then
+        metadata ingested from the
         endpoint's own ``/models`` payload, then the per-model user override,
         which always wins. A model id that matches nothing exactly is retried
         with its variant suffix stripped, so ``my-model:free`` resolves
@@ -460,7 +556,12 @@ class LLMProviderBase(ABC):
         """
         adapter = self.adapter()
         base = adapter.default_capabilities() if adapter is not None else ModelCapabilities()
-        base = merge_capabilities(base, preset_capabilities(self.preset_id, model))
+        family = (
+            preset_capabilities(self.preset_id, model)
+            if preset_for(self.preset_id) is not None
+            else dialect_model_capabilities(self.dialect, model)
+        )
+        base = merge_capabilities(base, family)
         ingested = self._lookup_model_entry(self._model_capabilities, model)
         if ingested is not None:
             base = ingested
@@ -1239,11 +1340,23 @@ class LLMProviderBase(ABC):
         *,
         serialize_tool_arguments: bool = True,
         include_tool_call_type: bool = True,
+        capabilities: ModelCapabilities | None = None,
+        ollama_images: bool = False,
     ) -> list[dict[str, object]]:
         """Convert internal messages to OpenAI-compatible format.
 
         Shared conversion logic for providers that use the OpenAI message
         schema (OpenAI, Grok, HuggingFace, OpenRouter, Ollama).
+
+        Tool results are rendered the way the Chat Completions dialect renders
+        them. A result the tool reported as an error is marked as one, so the
+        model is not left to guess from the text. A tool message carries text
+        only, so an image a tool returned rides in a ``user`` message placed
+        after the whole run of tool messages, which the endpoint requires to
+        be contiguous: as ``image_url`` data-URI parts, or, for Ollama's
+        native API, as its ``images`` list. An image goes natively only when
+        the model accepts images and the endpoint takes the format; any other
+        is described in the tool message instead, saying why it was not sent.
 
         Args:
             messages: List of Message objects to convert.
@@ -1253,13 +1366,24 @@ class LLMProviderBase(ABC):
             include_tool_call_type: When True, each tool call dict
                 includes ``"type": "function"``. When False, the key
                 is omitted (Ollama).
+            capabilities: The target model's capability record, which says
+                whether it accepts images. ``None`` sends no image natively.
+            ollama_images: Whether images are written in Ollama's native
+                ``images`` list rather than as ``image_url`` parts.
 
         Returns:
             list[dict[str, object]]: List of message dicts in OpenAI-compatible format.
         """
         converted: list[dict[str, object]] = []
+        policy = OLLAMA_IMAGE_POLICY if ollama_images else OPENAI_IMAGE_POLICY
+        record = capabilities if capabilities is not None else ModelCapabilities()
+        refusal = image_refusal_for(record, policy)
+        pending_images: list[tuple[str, list[ImageResultPart]]] = []
 
         for msg in messages:
+            if msg.role != "tool" and pending_images:
+                converted.append(LLMProviderBase._image_message(pending_images, ollama_images=ollama_images))
+                pending_images = []
             if msg.role in {"system", "user"}:
                 converted.append({
                     "role": msg.role,
@@ -1288,16 +1412,69 @@ class LLMProviderBase(ABC):
 
                 converted.append(assistant_msg)
             elif msg.role == "tool" and msg.tool_results:
-                converted.extend(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tr.call_id,
-                        "content": tool_result_text(tr),
-                    }
-                    for tr in msg.tool_results
-                )
+                for tr in msg.tool_results:
+                    text = tool_result_text(tr, image_refusal=refusal)
+                    if tr.is_error and tr.success:
+                        text = f"[tool reported an error]\n{text}"
+                    converted.append({"role": "tool", "tool_call_id": tr.call_id, "content": text})
+                    if images := sendable_image_parts(tr, record, policy):
+                        pending_images.append((tr.call_id, images))
 
+        if pending_images:
+            converted.append(LLMProviderBase._image_message(pending_images, ollama_images=ollama_images))
         return converted
+
+    def _openai_format_for_model(
+        self,
+        messages: list[Message],
+        model: str,
+        *,
+        serialize_tool_arguments: bool = True,
+        include_tool_call_type: bool = True,
+        ollama_images: bool = False,
+    ) -> list[dict[str, object]]:
+        """Convert messages to the OpenAI schema for one model, sending images natively when it accepts them.
+
+        Args:
+            messages: The conversation.
+            model: The model the request is for, whose capability record says whether it accepts images.
+            serialize_tool_arguments: Whether tool call arguments are sent as a JSON string rather than an object.
+            include_tool_call_type: Whether each tool call carries ``"type": "function"``.
+            ollama_images: Whether images are written in Ollama's native ``images`` list.
+
+        Returns:
+            list[dict[str, object]]: The converted messages.
+        """
+        return self._convert_messages_to_openai_format(
+            messages,
+            serialize_tool_arguments=serialize_tool_arguments,
+            include_tool_call_type=include_tool_call_type,
+            capabilities=self.capabilities_for(model),
+            ollama_images=ollama_images,
+        )
+
+    @staticmethod
+    def _image_message(pending: list[tuple[str, list[ImageResultPart]]], *, ollama_images: bool) -> dict[str, object]:
+        """Build the ``user`` message carrying the images a run of tool results returned.
+
+        Args:
+            pending: Each tool call's id and the images it returned, in order.
+            ollama_images: Whether to write Ollama's native ``images`` list rather than ``image_url`` parts.
+
+        Returns:
+            dict[str, object]: The message.
+        """
+        calls = ", ".join(call_id for call_id, _ in pending)
+        caption = f"Images returned by tool call {calls}:"
+        if ollama_images:
+            return {"role": "user", "content": caption, "images": [part.data for _, images in pending for part in images]}
+        content: list[dict[str, object]] = [{"type": "text", "text": caption}]
+        content.extend(
+            {"type": "image_url", "image_url": {"url": f"data:{part.mime_type};base64,{part.data}"}}
+            for _, images in pending
+            for part in images
+        )
+        return {"role": "user", "content": content}
 
     @staticmethod
     def _build_usage_from_openai_completion(response: object) -> UsageInfo | None:

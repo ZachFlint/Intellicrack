@@ -53,6 +53,7 @@ import asyncio
 import ipaddress
 import re
 import socket
+import sys
 from contextlib import closing
 from typing import TYPE_CHECKING, Final
 
@@ -401,6 +402,10 @@ def _qemu_binary(tmp_path: Path) -> Path:
     return binary
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="the generated Windows guest agent is PowerShell and is driven here by a real powershell.exe",
+)
 class TestTheGeneratedWindowsAgentListensWhereTheForwardDelivers:
     """The Windows agent's own listener must answer a non-loopback connection."""
 

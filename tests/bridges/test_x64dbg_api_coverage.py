@@ -90,7 +90,11 @@ async def test_control_method_classifies_unavailable_plugin(
 
 
 async def test_breakpoint_management(bridge: X64DbgBridge) -> None:
-    """Verify breakpoint methods.
+    """Verify breakpoint methods surface a missing plugin instead of masking it.
+
+    Without a deployed plugin, ``get_breakpoints`` must raise rather than
+    silently return the local cache (D19), while the locally tracked entry
+    is left intact.
 
     Args:
         bridge: Fresh X64DbgBridge instance without an active plugin pipe.
@@ -112,13 +116,16 @@ async def test_breakpoint_management(bridge: X64DbgBridge) -> None:
     with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.remove_breakpoint(_ADDR_BREAKPOINT)
 
-    bps = await bridge.get_breakpoints()
-    assert len(bps) == 1
-    assert bps[0].address == _ADDR_BREAKPOINT
+    with pytest.raises(ToolError, match=r"bridge plugin not available"):
+        await bridge.get_breakpoints()
+    assert _ADDR_BREAKPOINT in bridge.breakpoints
 
 
 async def test_watchpoint_management(bridge: X64DbgBridge) -> None:
-    """Verify watchpoint methods.
+    """Verify watchpoint methods surface a missing plugin instead of masking it.
+
+    Without a deployed plugin, ``get_watchpoints`` must raise rather than
+    silently return the local cache (D19).
 
     Args:
         bridge: Fresh X64DbgBridge instance without an active plugin pipe.
@@ -126,9 +133,8 @@ async def test_watchpoint_management(bridge: X64DbgBridge) -> None:
     with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.set_watchpoint(_ADDR_WATCHPOINT, _WATCHPOINT_SIZE, "read")
 
-    # get_watchpoints should work locally
-    wps = await bridge.get_watchpoints()
-    assert isinstance(wps, list)
+    with pytest.raises(ToolError, match=r"bridge plugin not available"):
+        await bridge.get_watchpoints()
 
 
 async def test_register_management(bridge: X64DbgBridge) -> None:

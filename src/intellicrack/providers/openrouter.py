@@ -432,7 +432,7 @@ class OpenRouterProvider(LLMProviderBase):
         self._cancel_requested = False
         self._pending_usage = None
 
-        openrouter_messages = self.convert_messages_to_provider_format(messages)
+        openrouter_messages = self._openai_format_for_model(messages, model)
 
         tools_count = len(tools) if tools else 0
         self._logger.info(
@@ -838,7 +838,7 @@ class OpenRouterProvider(LLMProviderBase):
         if enable_cache:
             self._logger.debug("openrouter_stream_cache_enabled", model=model)
 
-        openrouter_messages = self.convert_messages_to_provider_format(messages)
+        openrouter_messages = self._openai_format_for_model(messages, model)
 
         tools_count = len(tools) if tools else 0
         self._logger.info(

@@ -19,7 +19,7 @@ retains none of the binary-analysis context that passes through it.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, Final, override
+from typing import TYPE_CHECKING, Any, ClassVar, Final, cast, override
 
 from intellicrack.bridges.json_schema import function_parameters, to_strict_subset
 from intellicrack.core.json_payload import is_json_array, is_json_object
@@ -42,6 +42,7 @@ from intellicrack.providers.capabilities import (
     ToolSearchSupport,
 )
 from intellicrack.providers.dialects.base import (
+    OPENAI_IMAGE_POLICY,
     DialectAdapter,
     DialectRequest,
     DialectResponse,
@@ -49,8 +50,10 @@ from intellicrack.providers.dialects.base import (
     ToolCallFragment,
     ToolNameStyle,
     UsageInfo,
-    image_parts,
+    conversation_cache_key,
+    image_refusal_for,
     parse_tool_call,
+    sendable_image_parts,
     tool_result_text,
     wire_function_name,
 )
@@ -60,6 +63,7 @@ from intellicrack.providers.tool_names import from_wire_name, from_wire_pair, to
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from intellicrack.core.result_parts import ImagePolicy
     from intellicrack.core.types import Message, ToolChoice, ToolDefinition, ToolFunction, ToolResult
 
 
@@ -84,11 +88,54 @@ A search result is not a tool call: it makes a deferred tool callable, and retur
 """
 
 REASONING_SUMMARY_MODE: Final[str] = "auto"
-"""``reasoning.summary`` value requested whenever reasoning is on.
+"""``reasoning.summary`` value requested whenever reasoning is on and summaries are wanted.
 
 Responses returns no readable reasoning unless a summary is requested, so without it a reasoning model's chain is invisible in the UI and
 every replayed reasoning item carries an empty summary.
 """
+
+HTTP_BAD_REQUEST: Final[int] = 400
+
+REASONING_SUMMARY_PARAM: Final[str] = "reasoning.summary"
+"""The ``param`` an OpenAI error names when the organization may not receive reasoning summaries."""
+
+
+def refuses_reasoning_summary(status: int, body: object) -> bool:
+    """Report whether an error response refuses the ``reasoning.summary`` request field.
+
+    OpenAI answers a thinking-enabled request from an organization that has
+    not completed verification with ``400`` and an ``invalid_request_error``
+    whose ``param`` is ``reasoning.summary``.
+
+    Args:
+        status: The HTTP status.
+        body: The decoded error body.
+
+    Returns:
+        bool: ``True`` for that refusal.
+    """
+    if status != HTTP_BAD_REQUEST or not isinstance(body, dict):
+        return False
+    error = cast("dict[str, object]", body).get("error")
+    return isinstance(error, dict) and cast("dict[str, object]", error).get("param") == REASONING_SUMMARY_PARAM
+
+
+def without_reasoning_summary(body: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Copy a Responses request body without its ``reasoning.summary``.
+
+    Args:
+        body: The request body.
+
+    Returns:
+        dict[str, Any] | None: The copy, or ``None`` when the body asked for
+        no summary, so there is nothing a retry would change.
+    """
+    reasoning = body.get("reasoning")
+    if not isinstance(reasoning, dict) or "summary" not in reasoning:
+        return None
+    kept = {key: value for key, value in cast("dict[str, Any]", reasoning).items() if key != "summary"}
+    return {**body, "reasoning": kept}
+
 
 _TOOL_SEARCH_EVENT_TYPES: Final[frozenset[str]] = frozenset({
     "response.tool_search_call.in_progress",
@@ -106,9 +153,12 @@ class ResponsesAdapter(DialectAdapter):
 
     Attributes:
         dialect: Always :data:`ApiDialect.RESPONSES`.
+        image_policy: Which images the endpoint accepts natively,
+            :data:`~intellicrack.providers.dialects.base.OPENAI_IMAGE_POLICY`.
     """
 
     dialect: ClassVar[ApiDialect] = ApiDialect.RESPONSES
+    image_policy: ClassVar[ImagePolicy] = OPENAI_IMAGE_POLICY
 
     @override
     def default_capabilities(self) -> ModelCapabilities:
@@ -387,7 +437,7 @@ class ResponsesAdapter(DialectAdapter):
             body["stream"] = True
 
         if request.enable_cache and capabilities.supports_prompt_cache_key:
-            body["prompt_cache_key"] = request.model
+            body["prompt_cache_key"] = conversation_cache_key(request.messages, request.model)
 
         return self.apply_body_overrides(body, request)
 
@@ -395,8 +445,9 @@ class ResponsesAdapter(DialectAdapter):
     def reasoning_param(request: DialectRequest) -> dict[str, Any] | None:
         """Resolve the nested ``reasoning`` object for a request.
 
-        A summary is always requested alongside the effort: Responses returns
-        no readable reasoning without one.
+        A summary is requested alongside the effort unless the request says
+        not to: Responses returns no readable reasoning without one, but
+        OpenAI refuses it to organizations that have not been verified.
 
         Args:
             request: The normalized request.
@@ -411,7 +462,7 @@ class ResponsesAdapter(DialectAdapter):
         thinking = request.thinking
         if thinking is None or not thinking.enabled:
             return None
-        param: dict[str, Any] = {"summary": REASONING_SUMMARY_MODE}
+        param: dict[str, Any] = {"summary": REASONING_SUMMARY_MODE} if request.reasoning_summary else {}
         effort = _effort_for_budget(thinking.budget_tokens, reasoning.effort_levels)
         if effort is not None:
             param["effort"] = effort
@@ -489,7 +540,7 @@ class ResponsesAdapter(DialectAdapter):
                 reasoning.append(_parse_reasoning_item(item))
             elif item_type in _TOOL_SEARCH_ITEM_TYPES:
                 loaded.extend(canonical_names_in_tool_search_output(item))
-                reasoning.append(_provider_item(item))
+                reasoning.append(tool_search_replay_item(item))
 
         if loaded:
             _logger.info("responses_tool_search_loaded", tools=loaded)
@@ -566,8 +617,10 @@ class ResponsesAdapter(DialectAdapter):
         """Render a tool result as a ``function_call_output`` item.
 
         Images ride in a following user message as ``input_image`` items when
-        the model reports vision, and degrade to the shared deterministic text
-        description when it does not.
+        the model reports vision and the image is one the endpoint accepts
+        (see :data:`~intellicrack.providers.dialects.base.OPENAI_IMAGE_POLICY`);
+        any other image degrades to the shared deterministic text description,
+        which says why it was not sent.
 
         Args:
             result: The tool result to render.
@@ -579,7 +632,7 @@ class ResponsesAdapter(DialectAdapter):
             user message carrying the images.
         """
         del function_name
-        text = tool_result_text(result)
+        text = tool_result_text(result, image_refusal=image_refusal_for(capabilities, self.image_policy))
         if result.is_error and result.success:
             text = f"[tool reported an error]\n{text}"
         items: list[dict[str, Any]] = [
@@ -589,8 +642,8 @@ class ResponsesAdapter(DialectAdapter):
                 "output": text,
             },
         ]
-        images = image_parts(result)
-        if images and capabilities.supports_vision:
+        images = sendable_image_parts(result, capabilities, self.image_policy)
+        if images:
             items.append({
                 "role": "user",
                 "content": [
@@ -797,7 +850,7 @@ def _function_call_wire_name(item: Mapping[str, Any]) -> str | None:
     return to_wire_name(from_wire_pair(namespace, name))
 
 
-def _provider_item(item: Mapping[str, Any]) -> ReasoningItem:
+def tool_search_replay_item(item: Mapping[str, Any]) -> ReasoningItem:
     """Capture a tool-search output item for verbatim replay.
 
     Args:
@@ -899,7 +952,7 @@ def _completed_item_deltas(event: Mapping[str, Any]) -> list[StreamDelta]:
     if item_type == "reasoning":
         return [StreamDelta(reasoning_item=_parse_reasoning_item(item))]
     if item_type in _TOOL_SEARCH_ITEM_TYPES:
-        return [StreamDelta(reasoning_item=_provider_item(item))]
+        return [StreamDelta(reasoning_item=tool_search_replay_item(item))]
     return []
 
 

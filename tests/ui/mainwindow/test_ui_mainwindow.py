@@ -1068,6 +1068,15 @@ class TestApplyProviderSettingsHandlesDisabled:
 
         class _FakeProvider:
             is_connected: bool = True
+            reasoning_summary_modes: ClassVar[list[object]] = []
+
+            def set_reasoning_summary_mode(self, mode: object) -> None:
+                """Record the reasoning-summary mode the settings applied.
+
+                Args:
+                    mode: The saved mode.
+                """
+                self.reasoning_summary_modes.append(mode)
 
         class _FakeRegistry:
             def get(self, _name: str) -> _FakeProvider:
@@ -1089,6 +1098,7 @@ class TestApplyProviderSettingsHandlesDisabled:
         class _SettingsHolder:
             _orchestrator: _FakeOrchestratorForSettings = _FakeOrchestratorForSettings()
             status_update: _StatusEmissionRecorder = status_recorder
+            _current_instance_provider = MainWindow._current_instance_provider
 
             def _run_async(self, _coro: object) -> None:
                 """Discard the async work for this test.
@@ -1104,6 +1114,10 @@ class TestApplyProviderSettingsHandlesDisabled:
                 Args:
                     _result: Result from the reconnect worker (unused).
                 """
+
+            @staticmethod
+            def _populate_provider_combo() -> None:
+                """No-op refresh of the toolbar's provider list, which this holder does not have."""
 
             @staticmethod
             def _on_provider_reconnect_error(_error: object) -> None:

@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import importlib
+import inspect
 import json
 import logging
 import tempfile
@@ -124,7 +125,7 @@ class _ScriptedQMP:
             _QMPResponse: The scripted response, or a default success response.
 
         Raises:
-            Exception: The scripted ``cont_error``, if set.
+            self._cont_error: The scripted ``cont_error``, if set.
         """
         if self._cont_error is not None:
             raise self._cont_error
@@ -172,7 +173,7 @@ class _ScriptedAgent:
             list[object]: The scripted messages.
 
         Raises:
-            Exception: The scripted ``error``, if set.
+            self._error: The scripted ``error``, if set.
         """
         if self._error is not None:
             raise self._error
@@ -221,6 +222,10 @@ class _ScriptedSandbox(InMemorySandbox):
 
         Args:
             name: Name of the method currently being invoked.
+
+        Raises:
+            self._fail_error: The scripted error, when ``name`` is the scripted
+                failing method.
         """
         if self._fail_method == name and self._fail_error is not None:
             raise self._fail_error
@@ -446,6 +451,9 @@ class _FailingManager(StubManager):
 
         Returns:
             StubInstance: Created instance.
+
+        Raises:
+            self._create_error: The scripted ``create_error``, if set.
         """
         if self._create_error is not None:
             raise self._create_error
@@ -487,6 +495,9 @@ class _FailingManager(StubManager):
 
         Returns:
             tuple[StubInstance, ExecutionReport]: Instance and report.
+
+        Raises:
+            self._run_binary_error: The scripted ``run_binary_error``, if set.
         """
         if self._run_binary_error is not None:
             raise self._run_binary_error
@@ -2197,7 +2208,7 @@ class TestF0010LastErrorLifecycleSymmetric:
 
 
 class TestF0011ToolDefDefaults:
-    """F-0011: Tool definitions have default= values for time_limit, output_path, args, categories."""
+    """F-0011: Tool definitions declare defaults for time_limit, output_path, args, categories that match the methods."""
 
     def _get_param(self, fn_name: str, param_name: str) -> object:
         """Return parameter from tool definition by function and parameter name.
@@ -2218,11 +2229,21 @@ class TestF0011ToolDefDefaults:
                         return p
         return None
 
-    def test_run_binary_time_limit_has_default(self) -> None:
-        """sandbox.run_binary time_limit has a default value."""
+    def test_run_binary_time_limit_default_matches_method(self) -> None:
+        """sandbox.run_binary time_limit advertises the method's real default.
+
+        ``run_binary``'s ``time_limit`` defaults to ``None``, meaning "use the
+        sandbox config value", so the tool definition must not claim a fixed
+        number of seconds: its declared default must equal the method's real
+        default and its description must document the config fallback.
+        """
         param = self._get_param("sandbox.run_binary", "time_limit")
         assert param is not None
-        assert getattr(param, "default", None) is not None
+        real_default = inspect.signature(SandboxBridge.run_binary).parameters["time_limit"].default
+        assert real_default is None
+        assert getattr(param, "default", None) == real_default
+        assert getattr(param, "required", True) is False
+        assert "sandbox config value" in str(getattr(param, "description", ""))
 
     def test_run_binary_args_has_default(self) -> None:
         """sandbox.run_binary args has a default value."""

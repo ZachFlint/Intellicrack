@@ -7,8 +7,9 @@
 Cross-tool navigation maps a section's virtual address to a raw file offset so
 the hex editor can scroll there. That requires ``SectionInfo`` to record the raw
 file offset (PE ``PointerToRawData`` / ELF ``sh_offset``). This test parses a
-real PE (the running Python interpreter) and asserts the orchestrator's section
-extractor copies each section's file offset into ``SectionInfo.raw_offset``.
+real binary -- the running Python interpreter, a PE on Windows and an ELF on
+Linux -- and asserts the orchestrator's section extractor copies each section's
+file offset into ``SectionInfo.raw_offset``.
 
 Falsified by reverting the ``raw_offset=...`` population (every section would
 default to 0, and the ``.text`` file offset is non-zero in a real PE).
@@ -35,9 +36,10 @@ if TYPE_CHECKING:
 
 
 def test_section_raw_offset_matches_pe_file_offset() -> None:
-    """``_extract_sections`` must copy each PE section's file offset verbatim.
+    """``_extract_sections`` must copy each section's file offset verbatim.
 
-    Parses the real ``python.exe`` PE and asserts that every extracted
+    Parses the running interpreter (a PE on Windows, an ELF on Linux) and
+    asserts that every extracted
     ``SectionInfo.raw_offset`` equals the corresponding LIEF section file
     offset, and that the executable ``.text`` section has a non-zero offset
     (which the pre-fix default of 0 could never satisfy).
@@ -45,17 +47,18 @@ def test_section_raw_offset_matches_pe_file_offset() -> None:
     pe_path = Path(sys.executable)
     parse_fn = cast("_LiefParseFn", vars(lief)["parse"])
     parsed = parse_fn(str(pe_path))
-    assert isinstance(parsed, lief.PE.Binary), "python.exe did not parse as a PE binary"
+    native_format = lief.PE.Binary if sys.platform == "win32" else lief.ELF.Binary
+    assert isinstance(parsed, native_format), f"{pe_path} did not parse as a {native_format.__module__} binary"
 
     extract_sections = cast("_ExtractSectionsFn", vars(orchestrator_mod)["_extract_sections"])
     sections = extract_sections(parsed)
-    assert sections, "no sections extracted from the real PE"
+    assert sections, "no sections extracted from the real binary"
 
     lief_offset_by_name = {str(sec.name): int(sec.offset) for sec in parsed.sections}
     for section in sections:
         assert section.name in lief_offset_by_name, f"unexpected section name {section.name!r}"
-        assert section.raw_offset == lief_offset_by_name[section.name], f"raw_offset for {section.name!r} does not match the PE file offset"
+        assert section.raw_offset == lief_offset_by_name[section.name], f"raw_offset for {section.name!r} does not match the file offset"
 
     text_section = next((s for s in sections if s.name.startswith(".text")), None)
-    assert text_section is not None, "real PE unexpectedly has no .text section"
+    assert text_section is not None, "real binary unexpectedly has no .text section"
     assert text_section.raw_offset > 0, "raw_offset was left at the default 0 (F1 regression)"

@@ -19,11 +19,10 @@ rather than send something the endpoint will reject.
 
 from __future__ import annotations
 
-import copy
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
-from intellicrack.core.json_payload import is_json_array, is_json_object
+from intellicrack.core.json_payload import copy_json, is_json_array, is_json_object
 from intellicrack.core.logging import get_logger
 
 
@@ -50,7 +49,20 @@ Bounds the work, and the output, of a reference graph that fans out without recu
 twice is exponential even though no definition refers to itself.
 """
 
+MAX_SCHEMA_NESTING: Final[int] = 128
+"""Deepest schema nesting inlining descends into; a node below it is replaced by the permissive empty schema.
+
+A schema nested thousands of levels deep with no ``$ref`` at all would otherwise exhaust the interpreter's recursion limit in every pass
+that walks it -- inlining, strict reduction, validation. No real tool nests its arguments a hundred levels deep.
+"""
+
 _DEF_CONTAINERS: Final[frozenset[str]] = frozenset({"$defs", "definitions"})
+
+_REFERENCE_KEYWORDS: Final[tuple[str, ...]] = ("$ref", "$dynamicRef")
+"""Keywords that point at another schema. ``$dynamicRef`` is resolved like ``$ref``: a document has no enclosing dynamic scope here."""
+
+_ANCHOR_KEYWORDS: Final[tuple[str, ...]] = ("$anchor", "$dynamicAnchor")
+"""Keywords that name a schema so a plain-name fragment such as ``#node`` can point at it."""
 
 _INLINE_MAP_KEYWORDS: Final[frozenset[str]] = frozenset({"properties", "patternProperties", "dependentSchemas"})
 """Keywords whose value maps a caller-chosen name to a subschema; the names are data and are never filtered."""
@@ -199,12 +211,17 @@ def _lookup_ref(root: dict[str, Any], ref: str) -> dict[str, Any] | None:
         ref: The ``$ref`` value, e.g. ``"#/$defs/Point"``, or ``"#"`` for
             the root itself.
 
+    A plain-name fragment, such as ``#node``, names the schema carrying that
+    ``$anchor`` or ``$dynamicAnchor``.
+
     Returns:
         dict[str, Any] | None: The referenced schema, or ``None`` when the
         pointer is remote, malformed or unresolvable.
     """
     if ref == "#":
         return root
+    if ref.startswith("#") and not ref.startswith("#/"):
+        return _find_anchor(root, ref[1:])
     if not ref.startswith("#/"):
         return None
     segments = [segment.replace("~1", "/").replace("~0", "~") for segment in ref[2:].split("/") if segment]
@@ -218,6 +235,30 @@ def _lookup_ref(root: dict[str, Any], ref: str) -> dict[str, Any] | None:
     return current if is_json_object(current) else None
 
 
+def _find_anchor(root: dict[str, Any], name: str) -> dict[str, Any] | None:
+    """Find the schema a plain-name fragment names.
+
+    The walk is iterative, so a deeply nested document is searched as surely as a flat one.
+
+    Args:
+        root: The schema to search.
+        name: The anchor name, without the ``#``.
+
+    Returns:
+        dict[str, Any] | None: The first schema, in document order, whose ``$anchor`` or ``$dynamicAnchor`` is ``name``.
+    """
+    pending: list[object] = [root]
+    while pending:
+        node = pending.pop()
+        if is_json_object(node):
+            if any(node.get(keyword) == name for keyword in _ANCHOR_KEYWORDS):
+                return node
+            pending.extend(reversed(list(node.values())))
+        elif is_json_array(node):
+            pending.extend(reversed(node))
+    return None
+
+
 @dataclass(slots=True)
 class _InlineState:
     """Bookkeeping for one :func:`inline_refs` pass.
@@ -229,73 +270,92 @@ class _InlineState:
         active: How many times each reference is currently being expanded
             on the path from the root to the node being rewritten.
         collapsed: References that were replaced by a permissive schema.
+        truncated: How many nodes nested past :data:`MAX_SCHEMA_NESTING`
+            were replaced by the permissive empty schema.
     """
 
     root: dict[str, Any]
     remaining: int = MAX_INLINE_NODES
     active: dict[str, int] = field(default_factory=dict[str, int])
     collapsed: list[str] = field(default_factory=list[str])
+    truncated: int = 0
 
 
-def _inline_schema(node: object, state: _InlineState, depth: int) -> object:
-    """Inline every local ``$ref`` within one schema node.
+def _inline_schema(node: object, state: _InlineState, depth: int, nesting: int = 0) -> object:
+    """Inline every local ``$ref`` and ``$dynamicRef`` within one schema node.
 
     Args:
         node: The schema node to rewrite; a boolean schema passes through.
         state: The pass's bookkeeping.
         depth: Remaining expansion depth.
+        nesting: How deep in the schema this node sits.
 
     Returns:
-        object: A new node with local references inlined.
+        object: A new node with local references inlined, or the permissive
+        empty schema when the node sits past :data:`MAX_SCHEMA_NESTING`.
     """
     if not is_json_object(node):
-        return copy.deepcopy(node)
+        return copy_json(node)
+    if nesting > MAX_SCHEMA_NESTING:
+        state.truncated += 1
+        return {}
     state.remaining -= 1
-    ref = node.get("$ref")
-    if isinstance(ref, str):
-        return _expand_ref(node, ref, state, depth)
-    return _inline_members(node, state, depth)
+    for keyword in _REFERENCE_KEYWORDS:
+        ref = node.get(keyword)
+        if isinstance(ref, str):
+            return _expand_ref(node, ref, state, depth, nesting)
+    return _inline_members(node, state, depth, nesting)
 
 
-def _inline_members(node: dict[str, Any], state: _InlineState, depth: int) -> dict[str, Any]:
+def _inline_members(node: dict[str, Any], state: _InlineState, depth: int, nesting: int) -> dict[str, Any]:
     """Rewrite the keywords of one schema node, recursing only into subschemas.
 
     Values of data keywords such as ``enum``, ``const`` and ``default`` are
     copied verbatim, and the names in a ``properties`` map are kept whatever
     they are, including ``definitions`` or ``$defs``. Only the definition
-    containers of the schema node itself are dropped.
+    containers of the schema node itself are dropped. The legacy
+    ``dependencies`` keyword maps each name to a schema or to a list of
+    property names; its schemas are inlined and its lists kept.
 
     Args:
         node: The schema node whose keywords are rewritten.
         state: The pass's bookkeeping.
         depth: Remaining expansion depth.
+        nesting: How deep in the schema this node sits.
 
     Returns:
         dict[str, Any]: The rewritten node.
     """
+    inner = nesting + 1
     result: dict[str, Any] = {}
     for key, value in node.items():
-        if key in _DEF_CONTAINERS or key == "$ref":
+        if key in _DEF_CONTAINERS or key in _REFERENCE_KEYWORDS:
             continue
         if key in _INLINE_MAP_KEYWORDS and is_json_object(value):
-            result[key] = {name: _inline_schema(member, state, depth) for name, member in value.items()}
+            result[key] = {name: _inline_schema(member, state, depth, inner) for name, member in value.items()}
+        elif key == "dependencies" and is_json_object(value):
+            result[key] = {
+                name: copy_json(member) if is_json_array(member) else _inline_schema(member, state, depth, inner)
+                for name, member in value.items()
+            }
         elif (key in _INLINE_LIST_KEYWORDS or key in _INLINE_SCHEMA_KEYWORDS) and is_json_array(value):
-            result[key] = [_inline_schema(member, state, depth) for member in value]
+            result[key] = [_inline_schema(member, state, depth, inner) for member in value]
         elif key in _INLINE_SCHEMA_KEYWORDS:
-            result[key] = _inline_schema(value, state, depth)
+            result[key] = _inline_schema(value, state, depth, inner)
         else:
-            result[key] = copy.deepcopy(value)
+            result[key] = copy_json(value)
     return result
 
 
-def _expand_ref(node: dict[str, Any], ref: str, state: _InlineState, depth: int) -> object:
-    """Replace one ``$ref`` node by its target, merged with its sibling keywords.
+def _expand_ref(node: dict[str, Any], ref: str, state: _InlineState, depth: int, nesting: int) -> object:
+    """Replace one reference node by its target, merged with its sibling keywords.
 
     Args:
         node: The schema node carrying the reference.
         ref: The reference it carries.
         state: The pass's bookkeeping.
         depth: Remaining expansion depth.
+        nesting: How deep in the schema this node sits; the target takes its place, at the same depth.
 
     Returns:
         object: The expanded node. A reference that is unresolvable, too
@@ -303,7 +363,7 @@ def _expand_ref(node: dict[str, Any], ref: str, state: _InlineState, depth: int)
         sibling keywords, which is the permissive reading every dialect
         accepts.
     """
-    siblings = _inline_members(node, state, depth)
+    siblings = _inline_members(node, state, depth, nesting)
     reentries = state.active.get(ref, 0)
     if depth <= 0 or reentries >= MAX_REF_REENTRY or state.remaining <= 0:
         state.collapsed.append(ref)
@@ -315,10 +375,49 @@ def _expand_ref(node: dict[str, Any], ref: str, state: _InlineState, depth: int)
         return siblings
     state.active[ref] = reentries + 1
     try:
-        expanded = _inline_schema(target, state, depth - 1)
+        expanded = _inline_schema(target, state, depth - 1, nesting)
     finally:
         state.active[ref] = reentries
     return dict(expanded) | siblings if is_json_object(expanded) else expanded
+
+
+def truncate_schema_nesting(schema: dict[str, Any], limit: int = MAX_SCHEMA_NESTING) -> tuple[dict[str, Any], int]:
+    """Replace every schema node nested deeper than ``limit`` with the permissive empty schema.
+
+    The walk is iterative, so it copes with any depth, and a pass that then
+    recurses over the result -- one level of recursion per level of nesting
+    -- is safe. Depth counts JSON containers, so an object and the map of
+    properties inside it are two levels.
+
+    Args:
+        schema: The schema.
+        limit: How many levels to keep.
+
+    Returns:
+        tuple[dict[str, Any], int]: A copy of the schema with deeper nodes replaced, and how many were replaced.
+    """
+    replaced = 0
+    root: dict[str, Any] = {}
+    pending: list[tuple[dict[str, Any] | list[Any], dict[str, Any] | list[Any], int]] = [(schema, root, 0)]
+    while pending:
+        source, target, level = pending.pop()
+        members = source.items() if isinstance(source, dict) else enumerate(source)
+        for key, value in members:
+            copied: object
+            if is_json_object(value) or is_json_array(value):
+                if level + 1 > limit:
+                    replaced += 1
+                    copied = {}
+                else:
+                    copied = {} if is_json_object(value) else [None] * len(value)
+                    pending.append((value, copied, level + 1))
+            else:
+                copied = value
+            if isinstance(target, dict):
+                target[str(key)] = copied
+            else:
+                target[int(key)] = copied
+    return root, replaced
 
 
 def _inline_with_report(schema: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
@@ -333,6 +432,9 @@ def _inline_with_report(schema: dict[str, Any]) -> tuple[dict[str, Any], list[st
     """
     state = _InlineState(root=schema)
     inlined = _inline_schema(schema, state, MAX_INLINE_DEPTH)
+    if state.truncated:
+        _logger.warning("json_schema_nesting_truncated", nodes=state.truncated, limit=MAX_SCHEMA_NESTING)
+        state.collapsed.append(f"{state.truncated} nodes nested past {MAX_SCHEMA_NESTING} levels")
     if state.collapsed:
         _logger.warning(
             "json_schema_ref_collapsed",
@@ -351,7 +453,11 @@ def inline_refs(schema: dict[str, Any]) -> dict[str, Any]:
     inside itself, and at most :data:`MAX_INLINE_NODES` visited nodes. A
     reference past any bound collapses to its sibling keywords, a permissive
     schema, so the work and the output stay linear in those bounds however
-    the definitions refer to one another.
+    the definitions refer to one another. ``$dynamicRef`` is expanded like
+    ``$ref``, a plain-name fragment finds its ``$anchor`` or
+    ``$dynamicAnchor``, and a node nested past :data:`MAX_SCHEMA_NESTING` is
+    replaced by the permissive empty schema, so no schema, however deep,
+    exhausts the recursion limit here or in any pass over the result.
 
     Args:
         schema: The raw schema to expand.
@@ -458,7 +564,7 @@ def _strict_keyword(key: str, value: object, reduced: dict[str, Any], state: _St
     if key in _ANNOTATION_ONLY_KEYWORDS:
         return
     if key in _STRICT_DESCRIPTIVE_KEYWORDS or key in _STRICT_CONSTRAINT_KEYWORDS:
-        reduced[key] = copy.deepcopy(value)
+        reduced[key] = copy_json(value)
         return
     state.problems.append(f"keyword {key!r} is not supported")
 
@@ -529,14 +635,14 @@ def _strict_node(node: object, state: _StrictState, nesting: int) -> dict[str, A
         allowed = node["enum"]
         if is_json_array(allowed):
             _strict_enumeration(allowed, state)
-            reduced["enum"] = copy.deepcopy(allowed)
+            reduced["enum"] = copy_json(allowed)
         else:
             state.problems.append("enum is not an array")
     if "const" in node:
         constant = node["const"]
         if isinstance(constant, str):
             state.string_chars += len(constant)
-        reduced["const"] = copy.deepcopy(constant)
+        reduced["const"] = copy_json(constant)
 
     if "format" in node:
         declared_format = node["format"]
@@ -616,7 +722,8 @@ def to_strict_subset(schema: dict[str, Any]) -> tuple[dict[str, Any], bool]:
         state.problems.append(f"{state.string_chars} schema string characters exceed {STRICT_MAX_STRING_CHARS}")
     if state.problems:
         _logger.debug("json_schema_strict_unsupported", problems=state.problems[:8])
-        return copy.deepcopy(schema), False
+        original = copy_json(schema)
+        return (original if is_json_object(original) else {}), False
     return reduced, True
 
 
@@ -1010,14 +1117,18 @@ def _gemini_has_open_object(node: object, *, is_root: bool) -> bool:
         is_root: Whether ``node`` is the function's parameter object itself.
 
     Returns:
-        bool: ``True`` when some nested ``OBJECT`` declares no properties,
-        which Gemini's ``Schema`` rejects.
+        bool: ``True`` when some nested ``OBJECT`` declares no properties, or
+        some nested node has no type at all -- a recursive reference that
+        collapsed, an ``{}`` meaning "anything" -- neither of which Gemini's
+        ``Schema`` accepts.
     """
     if is_json_array(node):
         return any(_gemini_has_open_object(entry, is_root=False) for entry in node)
     if not is_json_object(node):
         return False
     if not is_root and node.get("type") == "OBJECT" and not node.get("properties"):
+        return True
+    if not is_root and "type" not in node and "anyOf" not in node:
         return True
     properties = node.get("properties")
     members: list[object] = list(properties.values()) if is_json_object(properties) else []

@@ -14,6 +14,12 @@ points (``QMessageBox``, ``QInputDialog``, ``QFileDialog``) with non-blocking
 stand-ins, so a panel handler that opens one under the headless ``offscreen``
 Qt platform cannot stall the whole tree; see :func:`guard_modal_dialogs` for
 the full rationale and its narrow compatibility carve-out.
+
+Every UI test also gets a private user-scope ``QSettings`` store (see
+:func:`_isolate_user_settings`), so window state, the auto-approve toggle and
+remembered providers neither leak between tests nor touch the user's real
+settings, and a theme a test applies is removed again afterwards (see
+:func:`_restore_application_theme`).
 """
 
 from __future__ import annotations
@@ -22,7 +28,7 @@ import os
 from typing import TYPE_CHECKING, Any
 
 import pytest
-from PyQt6.QtCore import QEvent
+from PyQt6.QtCore import QEvent, QSettings
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog, QMessageBox
 
 from intellicrack.core.config import Config
@@ -31,6 +37,7 @@ from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
 from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui.panels.async_bridge import drain_bridge_workers, shutdown_bridge_loop
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 if TYPE_CHECKING:
@@ -119,6 +126,9 @@ class NoOpSandboxManager:
         """
         del args, kwargs
 
+    async def destroy_all(self) -> None:
+        """Destroy no sandboxes; awaited by the main window when it closes."""
+
     def __getattr__(self, name: str) -> Callable[..., None]:
         """Return a no-op callable for any attribute.
 
@@ -192,7 +202,54 @@ def qapp() -> Generator[QApplication]:
 
 
 @pytest.fixture(autouse=True)
-def _drain_bridge_workers_after_test() -> Generator[None]:
+def _isolate_user_settings(tmp_path_factory: pytest.TempPathFactory) -> Generator[None]:
+    """Give each UI test a private, empty user-scope ``QSettings`` store.
+
+    Production code opens its settings with the process-wide default format,
+    so switching that to ``IniFormat`` and pointing the user-scope INI path at
+    a fresh directory relocates every store the windows read and write. A
+    persisted toggle such as auto-approve therefore cannot leak from one test
+    into the next, and the user's real settings (the registry on Windows) are
+    never touched.
+
+    Args:
+        tmp_path_factory: Session temporary directory factory.
+
+    Yields:
+        None: Control passes to the test; the default format is restored on teardown.
+    """
+    store = tmp_path_factory.mktemp("qsettings")
+    previous_format = QSettings.defaultFormat()
+    QSettings.setDefaultFormat(QSettings.Format.IniFormat)
+    QSettings.setPath(QSettings.Format.IniFormat, QSettings.Scope.UserScope, str(store))
+    yield
+    QSettings.setDefaultFormat(previous_format)
+
+
+@pytest.fixture(autouse=True)
+def _restore_application_theme() -> Generator[None]:
+    """Remove an application theme a UI test applied once the test ends.
+
+    :meth:`ThemeManager.apply_theme` installs an application-wide stylesheet,
+    and its font and size rules override the fonts widgets set themselves.
+    Left in place, a theme applied by one test changes what every later test
+    measures, so the stylesheet in effect before the test is put back and the
+    theme manager singleton is reset to match it.
+
+    Yields:
+        None: Control passes to the test; the stylesheet is restored on teardown.
+    """
+    app = QApplication.instance()
+    previous_sheet = app.styleSheet() if isinstance(app, QApplication) else ""
+    yield
+    app = QApplication.instance()
+    if isinstance(app, QApplication) and app.styleSheet() != previous_sheet:
+        app.setStyleSheet(previous_sheet)
+        ThemeManager.reset_instance()
+
+
+@pytest.fixture(autouse=True)
+def _drain_bridge_workers_after_test(guard_modal_dialogs: None) -> Generator[None]:
     """Drain in-flight async-bridge worker threads after every UI test.
 
     UI panels dispatch real ``BridgeCallWorker`` / ``GenericCallableWorker``
@@ -203,9 +260,19 @@ def _drain_bridge_workers_after_test() -> Generator[None]:
     guarantees every dispatched worker finishes and its ``deleteLater`` is
     delivered before the next test (or process exit) begins.
 
+    Draining delivers the workers' late results, and a result handler may open
+    a modal dialog, so the drain depends on :func:`guard_modal_dialogs`: the
+    dialog stand-ins (and any the test installed on the same ``monkeypatch``)
+    stay in place until the drain has finished, instead of a real modal
+    blocking the headless run forever.
+
+    Args:
+        guard_modal_dialogs: The modal-dialog guard, kept active through the drain.
+
     Yields:
         None: Control passes to the test; the drain runs on teardown.
     """
+    del guard_modal_dialogs
     yield
     drain_bridge_workers()
     app = QApplication.instance()

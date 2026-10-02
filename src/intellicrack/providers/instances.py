@@ -68,8 +68,9 @@ the base URL: ``chat/completions`` and ``models`` for Chat Completions,
 Gemini. These are the base URLs those relative paths need for each built-in
 whose preset base URL cannot serve them: OpenAI's ``/v1`` root, Anthropic's
 and Gemini's hosts, Ollama's OpenAI-compatible ``/v1`` root, and the
-HuggingFace router's OpenAI-compatible ``/v1`` root (the preset still names
-the retired ``api-inference.huggingface.co`` host).
+HuggingFace router's OpenAI-compatible ``/v1`` root (the preset names the
+router host itself, ``https://router.huggingface.co``, which the dedicated
+SDK client extends with its own paths).
 """
 
 

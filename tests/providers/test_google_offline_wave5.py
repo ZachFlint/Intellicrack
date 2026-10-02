@@ -903,17 +903,18 @@ class TestConvertMessagesToProviderFormat:
         fr_dict = cast("dict[str, object]", fr_part["function_response"])
         assert fr_dict["name"] == "analyze_binary"
         response_dict = cast("dict[str, object]", fr_dict["response"])
-        assert response_dict["result"] == "binary analysis result"
+        assert response_dict["output"] == "binary analysis result"
 
     def test_function_response_result_field_carries_tool_output(self) -> None:
-        """The ``response.result`` field carries the tool's output string verbatim.
+        """The ``response.output`` field carries the tool's output string verbatim.
 
-        Oracle: ``{"response": {"result": <tool_output>}}`` is the Gemini
-        function response wire format; any other key name silently drops the
-        output.
+        Oracle: google-genai's ``FunctionResponse.response`` documentation --
+        "Use 'output' key to specify function output and 'error' key to
+        specify error details" -- names ``output`` as the key the model reads
+        a function's output from.
 
-        Mutation caught: wrapping the result under ``{"output": ...}`` instead
-        of ``{"result": ...}`` causes ``response_dict["result"] == ...`` to fail
+        Mutation caught: wrapping the result under any other key, such as
+        ``{"result": ...}``, causes ``response_dict["output"] == ...`` to fail
         with a ``KeyError``.
         """
         tc = ToolCall(
@@ -947,4 +948,4 @@ class TestConvertMessagesToProviderFormat:
         parts = cast("list[dict[str, object]]", result[1]["parts"])
         fr_dict = cast("dict[str, object]", parts[0]["function_response"])
         response_dict = cast("dict[str, object]", fr_dict["response"])
-        assert response_dict["result"] == "00 01 02 03 04 05 06 07"
+        assert response_dict["output"] == "00 01 02 03 04 05 06 07"

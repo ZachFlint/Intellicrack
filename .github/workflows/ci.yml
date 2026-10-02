@@ -202,11 +202,12 @@ jobs:
     needs: [setup, changes]
     if: (success() || failure()) && (needs.changes.outputs.python == 'true' || github.event_name == 'workflow_dispatch')
     continue-on-error: true
-    timeout-minutes: 60
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          submodules: recursive
       - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: latest
@@ -252,7 +253,7 @@ jobs:
         run: pixi run fix-pyqt6-icu
       - name: Test with pytest
         run: |
-          pixi run pytest tests/ -v --cov=src/intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
+          pixi run pytest tests/ -v -n auto -m "not host_native" --cov=src/intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
         env:
           PYTHONDONTWRITEBYTECODE: 1
           PYTHONIOENCODING: utf-8

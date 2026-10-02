@@ -60,6 +60,7 @@ merely present in it.
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
@@ -443,6 +444,10 @@ class TestTheWholeCertificateChainIsTrusted:
             f"own terminal certificate {run.thumbprint}, so the guest still cannot validate the catalog (S17-D45)"
         )
 
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="re-signing a real catalog from Windows' CatRoot and rooting it in the machine trust store",
+    )
     def test_an_untrusted_catalog_is_rooted_when_the_whole_script_runs(
         self,
         powershell: Path,

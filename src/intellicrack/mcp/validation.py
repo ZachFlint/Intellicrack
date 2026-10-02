@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""JSON Schema validation for structured tool output.
+r"""JSON Schema validation for structured tool output.
 
 A server that publishes an ``outputSchema`` has made a promise about what its
 tools return. This module checks the promise, so a result that quietly does
@@ -19,12 +19,19 @@ exactly as it is understood everywhere else in Intellicrack.
 Annotation-only keywords -- ``title``, ``description``, ``default``,
 ``examples``, ``format``, ``$comment`` -- assert nothing and are skipped, which
 is what the specification calls for.
+
+Schema patterns are ECMA-262 regular expressions, as JSON Schema specifies,
+not Python ones, and the two dialects disagree: ``$`` in Python also matches
+before a final newline, ``\d`` and ``\w`` match every script's digits and
+letters, ``.`` matches the Unicode line separators, ``\s`` does not match the
+byte-order mark, and ``[^]``, ``\cJ`` and ``\u{...}`` are not Python syntax at
+all. :func:`ecma_to_python_pattern` rewrites each such construct into the
+Python expression that means what the ECMA-262 one means.
 """
 
 from __future__ import annotations
 
 import functools
-import itertools
 import math
 import re
 import time
@@ -35,7 +42,7 @@ from typing import TYPE_CHECKING, Any, Final
 import regex
 
 from intellicrack.bridges.json_schema import inline_refs
-from intellicrack.core.json_payload import is_json_array, is_json_object
+from intellicrack.core.json_payload import is_json_array, is_json_object, json_equality_key
 from intellicrack.core.logging import get_logger
 
 
@@ -70,6 +77,39 @@ _SAMPLE_ALPHABET: Final[str] = "".join(chr(code) for code in (*range(32, 127), 0
 _BRACE_QUANTIFIER: Final[re.Pattern[str]] = re.compile(r"\{(\d*)(?:(,)(\d*))?}")
 
 _ZERO_WIDTH_ESCAPES: Final[frozenset[str]] = frozenset("bBAZzG")
+
+MAX_PATTERN_GROUP_DEPTH: Final[int] = 64
+"""Deepest group nesting a schema pattern may have before it is refused rather than analysed.
+
+Well past any pattern a real schema writes; much deeper, and the analysis itself would exhaust the interpreter's recursion limit.
+"""
+
+_ECMA_LINE_TERMINATORS: Final[str] = "\\n\\r\\u2028\\u2029"
+"""What ECMA-262's ``.`` does not match, written for a character class."""
+
+_ECMA_WHITESPACE: Final[tuple[tuple[int, int], ...]] = (
+    (0x09, 0x0D),
+    (0x20, 0x20),
+    (0xA0, 0xA0),
+    (0x1680, 0x1680),
+    (0x2000, 0x200A),
+    (0x2028, 0x2029),
+    (0x202F, 0x202F),
+    (0x205F, 0x205F),
+    (0x3000, 0x3000),
+    (0xFEFF, 0xFEFF),
+)
+"""ECMA-262 ``\\s``: WhiteSpace and LineTerminator, the byte-order mark included, as code-point ranges."""
+
+_ECMA_DIGIT: Final[tuple[tuple[int, int], ...]] = ((0x30, 0x39),)
+_ECMA_WORD: Final[tuple[tuple[int, int], ...]] = ((0x30, 0x39), (0x41, 0x5A), (0x5F, 0x5F), (0x61, 0x7A))
+_ECMA_CLASSES: Final[dict[str, tuple[tuple[int, int], ...]]] = {"d": _ECMA_DIGIT, "w": _ECMA_WORD, "s": _ECMA_WHITESPACE}
+_MAX_CODE_POINT: Final[int] = 0x10FFFF
+_ECMA_WORD_CLASS: Final[str] = "[0-9A-Z_a-z]"
+
+
+class _PatternTooDeepError(ValueError):
+    """A schema pattern nests groups deeper than :data:`MAX_PATTERN_GROUP_DEPTH`."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +170,7 @@ class _PatternParser:
         """
         self._text = expression
         self._index = 0
+        self._depth = 0
 
     def parse(self) -> tuple[tuple[_Item, ...], ...]:
         """Parse the whole expression.
@@ -207,9 +248,32 @@ class _PatternParser:
         Returns:
             _Atom | None: The group, or ``None`` for a comment or an inline
             flag setting.
+
+        Raises:
+            _PatternTooDeepError: If groups nest deeper than
+                :data:`MAX_PATTERN_GROUP_DEPTH`.
         """
         start = self._index
         self._index += 1
+        self._depth += 1
+        if self._depth > MAX_PATTERN_GROUP_DEPTH:
+            message = f"groups nest more than {MAX_PATTERN_GROUP_DEPTH} deep"
+            raise _PatternTooDeepError(message)
+        try:
+            return self._group_body(start)
+        finally:
+            self._depth -= 1
+
+    def _group_body(self, start: int) -> _Atom | None:
+        """Parse what follows a group's opening parenthesis.
+
+        Args:
+            start: Where the group's opening parenthesis is.
+
+        Returns:
+            _Atom | None: The group, or ``None`` for a comment or an inline
+            flag setting.
+        """
         zero_width = False
         if self._peek() == "?":
             self._index += 1
@@ -490,7 +554,9 @@ def pattern_hazard(expression: str) -> str | None:
     three ways repeated three times, is left alone. Separately, more than
     :data:`MAX_OVERLAPPING_UNBOUNDED_RUN` unbounded repetitions in a row over
     characters they can share, such as ``a*a*a*a*a*b``, backtrack
-    polynomially in the input length and are refused.
+    polynomially in the input length and are refused. A pattern whose groups
+    nest deeper than :data:`MAX_PATTERN_GROUP_DEPTH` is refused without
+    analysis.
 
     Args:
         expression: The regular expression source.
@@ -498,7 +564,11 @@ def pattern_hazard(expression: str) -> str | None:
     Returns:
         str | None: Why the pattern is refused, or ``None`` when it is safe.
     """
-    for sequence in _PatternParser(expression).parse():
+    try:
+        sequences = _PatternParser(expression).parse()
+    except _PatternTooDeepError as exc:
+        return str(exc)
+    for sequence in sequences:
         if (hazard := _sequence_hazard(sequence)) is not None:
             return hazard
     return None
@@ -521,6 +591,9 @@ def compile_schema_pattern(expression: str) -> regex.Pattern[str] | None:
     assertion about a server's own output, which is a far smaller cost than
     a frozen event loop.
 
+    The pattern is ECMA-262, and is compiled as what it means there, through
+    :func:`ecma_to_python_pattern`.
+
     Args:
         expression: The regular expression from the schema.
 
@@ -535,10 +608,191 @@ def compile_schema_pattern(expression: str) -> regex.Pattern[str] | None:
         _logger.warning("json_schema_pattern_refused", pattern=expression[:128], reason=hazard)
         return None
     try:
-        return regex.compile(expression)
-    except regex.error:
+        return regex.compile(ecma_to_python_pattern(expression))
+    except (regex.error, ValueError):
         _logger.debug("json_schema_pattern_invalid", pattern=expression[:128])
         return None
+
+
+def _class_text(ranges: tuple[tuple[int, int], ...]) -> str:
+    """Write code-point ranges as the inside of a character class.
+
+    Args:
+        ranges: Inclusive ranges, in order.
+
+    Returns:
+        str: The class body, every code point written as an escape.
+    """
+    return "".join(f"\\U{low:08x}" if low == high else f"\\U{low:08x}-\\U{high:08x}" for low, high in ranges)
+
+
+def _complement(ranges: tuple[tuple[int, int], ...]) -> tuple[tuple[int, int], ...]:
+    """Take the code points a set of ranges leaves out.
+
+    Args:
+        ranges: Inclusive, sorted, non-overlapping ranges.
+
+    Returns:
+        tuple[tuple[int, int], ...]: The ranges of every other code point.
+    """
+    gaps: list[tuple[int, int]] = []
+    start = 0
+    for low, high in ranges:
+        if low > start:
+            gaps.append((start, low - 1))
+        start = high + 1
+    if start <= _MAX_CODE_POINT:
+        gaps.append((start, _MAX_CODE_POINT))
+    return tuple(gaps)
+
+
+def _class_escape(letter: str) -> str | None:
+    r"""Write an ECMA-262 class escape as the inside of a Python character class.
+
+    Args:
+        letter: The letter after the backslash.
+
+    Returns:
+        str | None: The class body for ``\d``, ``\D``, ``\w``, ``\W``,
+        ``\s`` or ``\S``, or ``None`` for any other letter.
+    """
+    ranges = _ECMA_CLASSES.get(letter.lower())
+    if ranges is None:
+        return None
+    return _class_text(ranges if letter.islower() else _complement(ranges))
+
+
+def _ecma_escape(pattern: str, index: int, *, in_class: bool) -> tuple[str, int]:
+    """Translate one backslash escape of an ECMA-262 pattern.
+
+    Args:
+        pattern: The whole pattern.
+        index: Where the backslash is.
+        in_class: Whether the escape sits inside a character class.
+
+    Returns:
+        tuple[str, int]: The Python text, and the index just past the escape.
+
+    Raises:
+        ValueError: If the escape is incomplete.
+    """
+    if index + 1 >= len(pattern):
+        message = "the pattern ends with a lone backslash"
+        raise ValueError(message)
+    letter = pattern[index + 1]
+    end = index + 2
+    if (body := _class_escape(letter)) is not None:
+        return (body if in_class else f"[{body}]"), end
+    if letter == "c" and end < len(pattern) and pattern[end].isascii() and pattern[end].isalpha():
+        return f"\\x{ord(pattern[end]) % 32:02x}", end + 1
+    if letter == "u" and end < len(pattern) and pattern[end] == "{":
+        close = pattern.find("}", end)
+        if close == -1:
+            message = "an unterminated \\u{...} escape"
+            raise ValueError(message)
+        return f"\\U{int(pattern[end + 1 : close], 16):08x}", close + 1
+    if letter == "0" and not (end < len(pattern) and pattern[end].isdigit()):
+        return "\\x00", end
+    if letter == "b":
+        if in_class:
+            return "\\x08", end
+        return f"(?:(?<={_ECMA_WORD_CLASS})(?!{_ECMA_WORD_CLASS})|(?<!{_ECMA_WORD_CLASS})(?={_ECMA_WORD_CLASS}))", end
+    if letter == "B" and not in_class:
+        return f"(?:(?<={_ECMA_WORD_CLASS})(?={_ECMA_WORD_CLASS})|(?<!{_ECMA_WORD_CLASS})(?!{_ECMA_WORD_CLASS}))", end
+    if letter == "/":
+        return "/", end
+    return pattern[index:end], end
+
+
+def _ecma_class(pattern: str, index: int) -> tuple[str, int]:
+    """Translate one ECMA-262 character class.
+
+    Args:
+        pattern: The whole pattern.
+        index: Where the opening bracket is.
+
+    Returns:
+        tuple[str, int]: The Python text, and the index just past the class.
+
+    Raises:
+        ValueError: If the class is never closed.
+    """
+    position = index + 1
+    negated = position < len(pattern) and pattern[position] == "^"
+    if negated:
+        position += 1
+    if position < len(pattern) and pattern[position] == "]":
+        return ("(?s:.)" if negated else "(?!)"), position + 1
+    parts: list[str] = []
+    after_class_escape = False
+    while position < len(pattern) and pattern[position] != "]":
+        character = pattern[position]
+        if character == "\\":
+            letter = pattern[position + 1 : position + 2]
+            text, position = _ecma_escape(pattern, position, in_class=True)
+            parts.append(text)
+            after_class_escape = bool(letter) and _class_escape(letter) is not None
+            continue
+        if (character == "-" and after_class_escape) or character == "[":
+            parts.append(f"\\{character}")
+        else:
+            parts.append(character)
+        after_class_escape = False
+        position += 1
+    if position >= len(pattern):
+        message = "an unterminated character class"
+        raise ValueError(message)
+    return f"[{'^' if negated else ''}{''.join(parts)}]", position + 1
+
+
+def ecma_to_python_pattern(pattern: str) -> str:
+    r"""Rewrite an ECMA-262 regular expression as the ``regex`` expression that means the same.
+
+    JSON Schema patterns are ECMA-262. Where Python's dialect differs, the
+    construct is replaced by one that behaves as ECMA-262's does:
+
+    * ``$`` matches only at the very end, never before a final newline;
+    * ``.`` matches anything but a line terminator (``\n``, ``\r``,
+      U+2028, U+2029);
+    * ``\d`` and ``\w`` match ASCII digits and word characters only, and
+      ``\b`` and ``\B`` are word boundaries over those;
+    * ``\s`` matches ECMA-262 whitespace and line terminators, the
+      byte-order mark included;
+    * ``[^]`` matches any character and ``[]`` none;
+    * ``\cX``, ``\u{...}``, ``\0`` and ``\/`` are written as Python
+      escapes, and ``\b`` inside a class is a backspace.
+
+    Everything else is shared by the two dialects and kept as written.
+
+    Args:
+        pattern: The ECMA-262 expression.
+
+    Returns:
+        str: The equivalent Python ``regex`` expression.
+
+    A pattern that is not well-formed ECMA-262, such as one ending in a lone
+    backslash, propagates :class:`ValueError` from the escape or class it
+    breaks off in.
+    """
+    out: list[str] = []
+    index = 0
+    while index < len(pattern):
+        character = pattern[index]
+        if character == "\\":
+            text, index = _ecma_escape(pattern, index, in_class=False)
+            out.append(text)
+        elif character == "[":
+            text, index = _ecma_class(pattern, index)
+            out.append(text)
+        else:
+            if character == ".":
+                out.append(f"[^{_ECMA_LINE_TERMINATORS}]")
+            elif character == "$":
+                out.append("\\Z")
+            else:
+                out.append(character)
+            index += 1
+    return "".join(out)
 
 
 _pattern_deadline: ContextVar[float | None] = ContextVar("_pattern_deadline", default=None)
@@ -548,8 +802,9 @@ _pattern_deadline: ContextVar[float | None] = ContextVar("_pattern_deadline", de
 def search_pattern(compiled: regex.Pattern[str], text: str) -> bool | None:
     """Search one string with a schema pattern under a hard time limit.
 
-    The ``regex`` engine checks its timeout while it backtracks and releases
-    the GIL while it matches, so an expensive pattern costs at most
+    The ``regex`` engine checks its timeout while it backtracks, and the
+    search asks it to release the GIL while it matches (``concurrent=True``;
+    without it the GIL is held throughout), so an expensive pattern costs at most
     :data:`PATTERN_MATCH_TIMEOUT_S`, and all patterns in one validation
     together at most :data:`PATTERN_VALIDATION_BUDGET_S`.
 
@@ -569,7 +824,7 @@ def search_pattern(compiled: regex.Pattern[str], text: str) -> bool | None:
             _logger.debug("json_schema_pattern_budget_exhausted", pattern=compiled.pattern[:128])
             return None
     try:
-        return compiled.search(text, timeout=limit) is not None
+        return compiled.search(text, timeout=limit, concurrent=True) is not None
     except TimeoutError:
         _logger.warning("json_schema_pattern_timed_out", pattern=compiled.pattern[:128], length=len(text), limit_s=limit)
         return None
@@ -699,15 +954,7 @@ def _json_equal(left: object, right: object) -> bool:
     Returns:
         bool: ``True`` when the two are the same JSON value.
     """
-    if isinstance(left, bool) or isinstance(right, bool):
-        return isinstance(left, bool) and isinstance(right, bool) and left is right
-    if isinstance(left, int | float) and isinstance(right, int | float):
-        return left == right
-    if is_json_array(left) and is_json_array(right):
-        return len(left) == len(right) and all(itertools.starmap(_json_equal, zip(left, right, strict=True)))
-    if is_json_object(left) and is_json_object(right):
-        return left.keys() == right.keys() and all(_json_equal(item, right[key]) for key, item in left.items())
-    return type(left) is type(right) and left == right
+    return json_equality_key(left) == json_equality_key(right)
 
 
 def _check_enumeration(value: object, schema: Mapping[str, Any], path: str) -> Iterator[SchemaViolation]:
@@ -839,8 +1086,10 @@ def _check_array(value: object, schema: Mapping[str, Any], path: str, depth: int
 def _has_duplicates(items: Sequence[object]) -> bool:
     """Report whether a JSON array holds two equal elements.
 
-    Equality is JSON equality, so ``1`` and ``true`` are distinct and
-    unhashable values are compared directly rather than through a set.
+    Equality is JSON equality, so ``1`` and ``true`` are distinct. Each
+    element is reduced to its :func:`~intellicrack.core.json_payload.json_equality_key`
+    and the keys are counted through a set, so the check is linear in the
+    number of elements rather than quadratic.
 
     Args:
         items: The array elements.
@@ -848,11 +1097,12 @@ def _has_duplicates(items: Sequence[object]) -> bool:
     Returns:
         bool: ``True`` when any two elements are equal.
     """
-    seen: list[object] = []
+    seen: set[str] = set()
     for item in items:
-        if any(_json_equal(item, existing) for existing in seen):
+        key = json_equality_key(item)
+        if key in seen:
             return True
-        seen.append(item)
+        seen.add(key)
     return False
 
 

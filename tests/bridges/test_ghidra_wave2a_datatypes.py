@@ -29,6 +29,7 @@ Production defects revealed and fixed as part of this gate:
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -117,6 +118,220 @@ def _run[T](coro: Coroutine[Any, Any, T]) -> T:
         T: Return value of the coroutine.
     """
     return asyncio.run(coro)
+
+
+def _make_address(offset: int) -> SimpleNamespace:
+    """Build a Ghidra-shaped ``Address`` double for ``offset``.
+
+    Args:
+        offset: Numeric address offset.
+
+    Returns:
+        SimpleNamespace: Object exposing ``getOffset`` and ``add`` like
+        ``ghidra.program.model.address.Address``.
+    """
+
+    def _add(delta: int) -> SimpleNamespace:
+        """Return the address ``delta`` bytes past this one.
+
+        Args:
+            delta: Byte displacement to add.
+
+        Returns:
+            SimpleNamespace: Address double at ``offset + delta``.
+        """
+        return _make_address(offset + delta)
+
+    return SimpleNamespace(offset=offset, getOffset=lambda: offset, add=_add)
+
+
+def _make_data_type(name: str, length: int) -> SimpleNamespace:
+    """Build a Ghidra-shaped ``DataType`` double.
+
+    Args:
+        name: Data type name as Ghidra reports it.
+        length: Data type size in bytes.
+
+    Returns:
+        SimpleNamespace: Object exposing ``getName`` and ``getLength``.
+    """
+    return SimpleNamespace(getName=lambda: name, getLength=lambda: length)
+
+
+def _java_iterator(items: list[SimpleNamespace]) -> SimpleNamespace:
+    """Wrap ``items`` in a Java-style ``hasNext``/``next`` iterator.
+
+    Args:
+        items: Elements to yield in order.
+
+    Returns:
+        SimpleNamespace: Iterator exposing ``hasNext`` and ``next``.
+    """
+    pending = list(items)
+    return SimpleNamespace(hasNext=lambda: bool(pending), next=lambda: pending.pop(0))
+
+
+class _RecordingListing:
+    """Ghidra-shaped ``Listing`` double that records every code-unit mutation."""
+
+    def __init__(self) -> None:
+        """Initialise an empty listing with no recorded mutations."""
+        self.data_at: dict[int, SimpleNamespace] = {}
+        self.cleared: list[tuple[int, int, object]] = []
+        self.created: list[tuple[int, SimpleNamespace]] = []
+        self.api = SimpleNamespace(
+            getDataAt=self.get_data_at,
+            clearCodeUnits=self.clear_code_units,
+            createData=self.create_data,
+        )
+
+    def get_data_at(self, addr: SimpleNamespace) -> SimpleNamespace | None:
+        """Return the data item defined at ``addr``, if any.
+
+        Args:
+            addr: Address double to look up.
+
+        Returns:
+            SimpleNamespace | None: The defined data item, or ``None``.
+        """
+        return self.data_at.get(int(addr.offset))
+
+    def clear_code_units(self, start: SimpleNamespace, end: SimpleNamespace, clear_context: object) -> None:
+        """Record and apply a ``clearCodeUnits`` call over ``[start, end]``.
+
+        Args:
+            start: First address of the cleared range.
+            end: Last address of the cleared range.
+            clear_context: Ghidra's clear-context flag as passed by the script.
+        """
+        first = int(start.offset)
+        last = int(end.offset)
+        self.cleared.append((first, last, clear_context))
+        for offset in [key for key in self.data_at if first <= key <= last]:
+            del self.data_at[offset]
+
+    def create_data(self, addr: SimpleNamespace, data_type: SimpleNamespace) -> SimpleNamespace:
+        """Define ``data_type`` at ``addr`` and return the new data item.
+
+        Args:
+            addr: Address double where the data is created.
+            data_type: Resolved data type double to apply.
+
+        Returns:
+            SimpleNamespace: Data item exposing ``getDataType`` and ``getLength``.
+        """
+        offset = int(addr.offset)
+        created = SimpleNamespace(getDataType=lambda: data_type, getLength=data_type.getLength)
+        self.data_at[offset] = created
+        self.created.append((offset, data_type))
+        return created
+
+
+class _RecordingProgram:
+    """Ghidra-shaped ``Program`` double with a data type manager and transactions."""
+
+    def __init__(self, data_types: list[SimpleNamespace]) -> None:
+        """Register ``data_types`` in the program's data type manager.
+
+        Args:
+            data_types: Data type doubles the program's manager can resolve.
+        """
+        self.listing = _RecordingListing()
+        self.transactions: list[tuple[str, object]] = []
+        self._open: dict[int, str] = {}
+        by_path = {f"/{dt.getName()}": dt for dt in data_types}
+        self.data_type_manager = SimpleNamespace(
+            getDataType=by_path.get,
+            getAllDataTypes=lambda: _java_iterator(list(data_types)),
+        )
+        self.api = SimpleNamespace(
+            getListing=lambda: self.listing.api,
+            getDataTypeManager=lambda: self.data_type_manager,
+            startTransaction=self.start_transaction,
+            endTransaction=self.end_transaction,
+        )
+
+    def start_transaction(self, name: str) -> int:
+        """Open a named transaction and return its id.
+
+        Args:
+            name: Transaction description supplied by the script.
+
+        Returns:
+            int: Identifier passed back to :meth:`end_transaction`.
+        """
+        tx_id = len(self._open) + len(self.transactions) + 1
+        self._open[tx_id] = name
+        return tx_id
+
+    def end_transaction(self, tx_id: int, commit: object) -> None:
+        """Close transaction ``tx_id`` and record whether it was committed.
+
+        Args:
+            tx_id: Identifier returned by :meth:`start_transaction`.
+            commit: Commit flag as passed by the script.
+        """
+        self.transactions.append((self._open.pop(tx_id), commit))
+
+
+class _ExecutingGhidraBridge:
+    """In-process double for the ``ghidra_bridge`` client that runs the script.
+
+    ``remote_exec`` executes the emitted script against a shared globals
+    namespace seeded with ``currentProgram`` and ``toAddr``, and
+    ``remote_eval`` evaluates an expression in that same namespace. This is
+    the boundary the real client crosses, so a test observes what the script
+    actually resolved and applied rather than a canned reply.
+    """
+
+    def __init__(self, program: _RecordingProgram) -> None:
+        """Seed the remote namespace with the program double.
+
+        Args:
+            program: Program double exposed to the script as ``currentProgram``.
+        """
+        self.globals: dict[str, Any] = {"currentProgram": program.api, "toAddr": _make_address}
+        self.exec_calls: list[str] = []
+
+    def remote_exec(self, code: str) -> None:
+        """Execute ``code`` against the shared namespace.
+
+        Args:
+            code: Python source emitted by the bridge.
+        """
+        self.exec_calls.append(code)
+        exec(compile(code, "<remote_exec>", "exec"), self.globals)
+
+    def remote_eval(self, expression: str) -> object:
+        """Evaluate ``expression`` against the shared namespace.
+
+        Args:
+            expression: Python expression, normally the result sentinel name.
+
+        Returns:
+            object: Value of ``expression`` in the remote namespace.
+        """
+        wrapper_source = f"def _ic_test_eval():\n    return ({expression})\n"
+        local_namespace: dict[str, Any] = {}
+        exec(compile(wrapper_source, "<remote_eval>", "exec"), self.globals, local_namespace)
+        return local_namespace["_ic_test_eval"]()
+
+
+def _make_executing_bridge(data_types: list[SimpleNamespace]) -> tuple[GhidraBridge, _ExecutingGhidraBridge, _RecordingProgram]:
+    """Construct a GhidraBridge whose transport really runs the emitted script.
+
+    Args:
+        data_types: Data type doubles registered in the program's manager.
+
+    Returns:
+        tuple[GhidraBridge, _ExecutingGhidraBridge, _RecordingProgram]: The
+        live bridge, its executing transport, and the program double.
+    """
+    program = _RecordingProgram(data_types)
+    transport = _ExecutingGhidraBridge(program)
+    bridge = GhidraBridge()
+    setattr(bridge, "_bridge", transport)
+    return bridge, transport, program
 
 
 # ---------------------------------------------------------------------------
@@ -221,21 +436,27 @@ def test_get_data_type_emits_getdataat_api_call() -> None:
 
 
 def test_set_data_type_returns_true_on_success() -> None:
-    """set_data_type returns True when the parse-and-create script succeeds.
+    """set_data_type returns True after resolving and applying the type.
 
-    Oracle: eval_response = True (script's _set_ok sentinel was True).
-    Mutation caught: if the trailing sentinel expression '_set_ok' is removed,
-    _execute_remote returns None and bool(None) == False, not True.
+    The emitted script runs against a program double: ``_ic_resolve_data_type``
+    must resolve ``dword`` from the program's data type manager and the script
+    must create it at the address inside a committed transaction.
+
+    Oracle: the listing records exactly one createData of the registered dword
+    object at ``_TEST_ADDRESS`` and the transaction commits.
+    Mutation caught: if the trailing ``_set_ok`` capture is lost,
+    _execute_remote returns None and the result is False; if the resolver
+    fails to find the type, nothing is created and the result is False.
     """
-    bridge, fake = _make_bridge()
-    fake.eval_response = True
+    dword = _make_data_type("dword", 4)
+    bridge, transport, program = _make_executing_bridge([dword])
 
     result = _run(bridge.set_data_type(_TEST_ADDRESS, "dword"))
 
     assert result is True
-    assert len(fake.exec_calls) == 1
-    assert "DataTypeParser" in fake.exec_calls[0]
-    assert "dword" in fake.exec_calls[0]
+    assert len(transport.exec_calls) == 1
+    assert program.listing.created == [(_TEST_ADDRESS, dword)]
+    assert program.transactions == [("intellicrack.set_data_type", True)]
 
 
 def test_set_data_type_returns_false_when_parse_fails() -> None:
@@ -254,20 +475,31 @@ def test_set_data_type_returns_false_when_parse_fails() -> None:
     assert result is False
 
 
-def test_set_data_type_emits_datatypeparser_call() -> None:
-    """set_data_type script must call DataTypeParser for the requested type.
+def test_set_data_type_resolves_and_applies_requested_type() -> None:
+    """set_data_type must resolve the requested type and replace existing data.
 
-    Oracle: exec_calls[0] contains both 'DataTypeParser' and the type name.
-    Mutation caught: hardcoding a fixed type name instead of data_type_literal
-    would make the injected type name absent from the script.
+    ``DataTypeParser`` was replaced by the headless-safe
+    ``_ic_resolve_data_type`` helper because it pulls in Swing, which a
+    headless PyGhidra process cannot import. With both ``dword`` and ``qword``
+    registered and a byte already defined at the address, the script must
+    resolve ``qword`` (not any other registered type), clear the existing code
+    unit, and create the resolved type there.
+
+    Oracle: the applied type is the registered qword object and the prior
+    code unit at the address was cleared.
+    Mutation caught: hardcoding a fixed type name instead of the requested
+    one applies the wrong type; dropping the clear leaves the old data in place.
     """
-    bridge, fake = _make_bridge()
-    fake.eval_response = True
+    dword = _make_data_type("dword", 4)
+    qword = _make_data_type("qword", 8)
+    bridge, _transport, program = _make_executing_bridge([dword, qword])
+    program.listing.data_at[_TEST_ADDRESS] = SimpleNamespace(getLength=lambda: 1)
 
-    _run(bridge.set_data_type(_TEST_ADDRESS, "qword"))
+    result = _run(bridge.set_data_type(_TEST_ADDRESS, "qword"))
 
-    assert "DataTypeParser" in fake.exec_calls[0]
-    assert "qword" in fake.exec_calls[0]
+    assert result is True
+    assert program.listing.cleared == [(_TEST_ADDRESS, _TEST_ADDRESS, False)]
+    assert program.listing.created == [(_TEST_ADDRESS, qword)]
 
 
 # ---------------------------------------------------------------------------
@@ -338,27 +570,30 @@ def test_create_data_type_returns_failure_when_created_is_none() -> None:
 
 
 def test_create_data_returns_success_dict_with_address_and_size() -> None:
-    """create_data returns address, type, size, and success on success.
+    """create_data resolves the type, applies it, and reports the created item.
 
-    Oracle: eval_response = dict with address == _TEST_ADDRESS, size == 4.
-    Mutation caught: if 'address' key is mapped from addr.getOffset() but the
-    key is named 'offset' instead, result['address'] would be KeyError.
+    The emitted script runs against a program double with a byte already
+    defined at the address. ``_ic_resolve_data_type`` must resolve ``dword``,
+    the script must clear the full four-byte span the new item occupies, create
+    the dword there in a committed transaction, and report the created item's
+    address and size.
+
+    Oracle: result dict built from the created item (address, size 4), the
+    cleared span ``[addr, addr + 3]``, and the dword object in the listing.
+    Mutation caught: if 'address' is reported under another key, or size is
+    taken from the request instead of the created item, the dict differs; if
+    the clear span drops the ``getLength() - 1`` end, the span differs.
     """
-    bridge, fake = _make_bridge()
-    fake.eval_response = {
-        "address": _TEST_ADDRESS,
-        "type": "dword",
-        "size": 4,
-        "success": True,
-    }
+    dword = _make_data_type("dword", 4)
+    bridge, _transport, program = _make_executing_bridge([dword])
+    program.listing.data_at[_TEST_ADDRESS] = SimpleNamespace(getLength=lambda: 1)
 
     result = _run(bridge.create_data(_TEST_ADDRESS, "dword"))
 
-    assert result["address"] == _TEST_ADDRESS
-    assert result["type"] == "dword"
-    assert result["size"] == 4
-    assert result["success"] is True
-    assert "DataTypeParser" in fake.exec_calls[0]
+    assert result == {"address": _TEST_ADDRESS, "type": "dword", "size": 4, "success": True}
+    assert program.listing.cleared == [(_TEST_ADDRESS, _TEST_ADDRESS + 3, False)]
+    assert program.listing.created == [(_TEST_ADDRESS, dword)]
+    assert program.transactions == [("intellicrack.create_data", True)]
 
 
 def test_create_data_script_includes_type_name() -> None:

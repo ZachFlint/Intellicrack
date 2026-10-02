@@ -43,8 +43,39 @@ urls.Changelog = "https://github.com/ZachFlint/Intellicrack/blob/main/CHANGELOG.
 scripts.intellicrack = "intellicrack.main:main"
 gui-scripts.intellicrack-gui = "intellicrack.main:main"
 dependencies = [
+  "anthropic>=1.11.0,<2",
+  "anyio>=4.15.1,<5",
+  "capstone>=5.0.9,<6",
+  "cryptography>=50.0.2,<51",
+  "frida>=17.20.0,<18",
+  "ghidra-bridge>=1.0.0,<2",
+  "google-genai>=2.27.0,<3",
+  "httpcore>=1.0.9,<2",
+  "httpx>=0.28.1,<0.29",
+  "httpx2>=2.13.1,<3",
+  "huggingface-hub>=1.33.0,<2",
+  "jpype1>=1.7.1,<2",
+  "keyring>=25.7.0,<26",
+  "keystone-engine>=0.9.2,<0.10",
+  "lief>=1.0.0,<2",
+  "mcp>=2.2.0,<3",
+  "mcp-types>=2.2.0,<3",
+  "openai>=3.23.0,<4",
+  "pefile>=2024.8.26,<2025",
+  "psutil>=7.2.2,<8",
+  "pydantic>=2.13.5,<3",
+  "pyghidra>=2.2.1,<3",
+  "PyQt6>=6.11.0,<7",
   "pyyaml",
+  "r2pipe>=1.9.8,<2",
+  "regex>=2026.5.9,<2027",
+  "rzpipe>=0.6.2,<0.7",
   "setuptools",
+  "structlog>=26.1.0,<27",
+  "tiktoken>=0.14.0,<0.15",
+  "tomli-w>=1.2.0,<2",
+  "xxhash>=4.0.1,<5",
+  "yara-python>=4.5.4,<5",
 ]
 optional-dependencies.dev = [
   "astor",
@@ -742,6 +773,7 @@ pypi-dependencies.openai = ">=3.23.0, <4"
 pypi-dependencies.tiktoken = ">=0.14.0, <0.15"
 pypi-dependencies.google-genai = ">=2.27.0, <3"
 pypi-dependencies.httpx = ">=0.28.1, <0.29"
+pypi-dependencies.httpcore = ">=1.0.9, <2"
 pypi-dependencies.structlog = ">=26.1.0, <27"
 pypi-dependencies.pydantic = ">=2.13.5, <3"
 pypi-dependencies.tomli-w = ">=1.2.0, <2"
@@ -774,6 +806,9 @@ pypi-dependencies.keyring = ">=25.7.0, <26"
 pypi-dependencies.psutil = ">=7.2.2, <8"
 pypi-dependencies.pyghidra = ">=2.2.1, <3"
 pypi-dependencies.yara-python = ">=4.5.4, <5"
+# Imported by mcp/validation.py for ECMA-262 pattern checks; declared rather than left to arrive
+# through tiktoken.
+pypi-dependencies.regex = ">=2026.5.9, <2027"
 # Transitive / environment packages (kept bounded; runtime-side).
 pypi-dependencies.networkx = ">=3.7, <4"
 pypi-dependencies.anyio = ">=4.15.1, <5"
@@ -938,6 +973,12 @@ coverage = ">=7.16.2, <8"
 freezegun = ">=1.5.5, <2"
 responses = ">=0.26.3, <0.27"
 faker = ">=40.40.0, <41"
+# File-backed keyring the credential and OAuth gates store real secrets in, so no test touches the
+# operating system's own keyring (tests/_helpers/private_keyring.py).
+keyrings-alt = ">=5.0.2, <6"
+# Launchers the sandboxed-launch gates run a confined server through (tests/mcp/test_fix_r2_sandbox_launchers.py).
+uv = ">=0.9, <1"
+pipx = ">=1.8, <2"
 
 # Documentation build.
 [tool.pixi.feature.docs.pypi-dependencies]
@@ -1074,6 +1115,7 @@ format.max-line-length = 140
 
 [tool.pytest]
 ini_options.addopts = ["-ra", "--strict-markers"]
+ini_options.faulthandler_timeout = 300
 ini_options.markers = [
   "slow: Slow running tests",
   "integration: Integration tests",

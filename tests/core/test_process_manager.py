@@ -24,6 +24,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, TypedDict, cast
 
+import psutil
 import pytest
 
 from intellicrack.core.process_manager import (
@@ -694,6 +695,11 @@ class TestTerminateExternalPid:
     ) -> None:
         """Verify terminate_external_pid kills a real process on Unix.
 
+        The child sleeps for a minute, so returning from ``wait`` within the
+        timeout proves it was killed. psutil reaps the killed child while
+        waiting for it, so ``Popen`` sees no exit status of its own; the
+        process table no longer holding the PID is what shows it is gone.
+
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
@@ -712,8 +718,8 @@ class TestTerminateExternalPid:
 
         assert result is True
 
-        exit_code = proc.wait(timeout=PROCESS_WAIT_TIMEOUT)
-        assert exit_code != 0
+        _ = proc.wait(timeout=PROCESS_WAIT_TIMEOUT)
+        assert not psutil.pid_exists(pid), f"PID {pid} is still in the process table after terminate_external_pid"
 
 
 class TestProcessCleanup:

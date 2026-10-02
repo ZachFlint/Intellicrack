@@ -29,6 +29,13 @@ REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[2]
 
 _INHERITED_ENV: Final[tuple[str, ...]] = ("PATH", "SYSTEMROOT", "TEMP", "TMP", "HOME", "USERPROFILE", "LOCALAPPDATA", "APPDATA")
 
+_INHERITED_ENV_PREFIXES: Final[tuple[str, ...]] = ("CONDA_", "PIXI_")
+"""Variables the pixi activation sets, which packages read at import time.
+
+Capstone, for one, joins ``CONDA_PREFIX`` into its library search path when it is imported inside a conda-style environment, and fails
+with a ``TypeError`` when the variable is missing.
+"""
+
 
 class ChildTimeoutError(AssertionError):
     """The child interpreter did not finish within its timeout."""
@@ -38,8 +45,9 @@ def run_child_json(code: str, *, timeout_s: float, extra_env: Mapping[str, str] 
     """Run a snippet in a fresh interpreter and decode the JSON it prints last.
 
     The child sees the repository's ``src`` and root on ``PYTHONPATH`` and only
-    a minimal inherited environment, so proxy and cache settings come solely
-    from ``extra_env``.
+    a minimal inherited environment -- the system variables plus what the pixi
+    activation set -- so proxy and cache settings come solely from
+    ``extra_env``.
 
     Args:
         code: Python source; its last line of output must be one JSON object.
@@ -59,6 +67,7 @@ def run_child_json(code: str, *, timeout_s: float, extra_env: Mapping[str, str] 
         value = os.environ.get(key)
         if value is not None:
             env[key] = value
+    env.update({key: value for key, value in os.environ.items() if key.startswith(_INHERITED_ENV_PREFIXES)})
     env.update(extra_env or {})
     try:
         completed = subprocess.run(

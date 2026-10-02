@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -42,6 +43,7 @@ if TYPE_CHECKING:
 
 
 _FAKE_HANDLE: int = 0xABCDEF
+_WINDOWS_CONNECT_REASON: str = "NamedPipeClient.connect() opens Win32 named pipes and raises on any other platform"
 
 
 class _FakePipe:
@@ -321,6 +323,7 @@ async def connected_client(fake_pipe: _FakePipe) -> AsyncIterator[NamedPipeClien
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(sys.platform != "win32", reason=_WINDOWS_CONNECT_REASON)
 async def test_connect_already_connected_is_noop(fake_pipe: _FakePipe) -> None:
     """Second ``connect()`` on an already-connected client is a silent no-op (GAP-06).
 
@@ -372,6 +375,7 @@ async def test_connect_already_connected_is_noop(fake_pipe: _FakePipe) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(sys.platform != "win32", reason=_WINDOWS_CONNECT_REASON)
 async def test_send_command_raises_when_read_failure_is_set(
     connected_client: NamedPipeClient,
 ) -> None:
@@ -538,6 +542,7 @@ async def test_read_message_non_dict_payload_raises_tool_error(fake_pipe: _FakeP
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(sys.platform != "win32", reason=_WINDOWS_CONNECT_REASON)
 async def test_reader_loop_response_missing_id_logs_warning(
     fake_pipe: _FakePipe,
     monkeypatch: pytest.MonkeyPatch,
@@ -584,6 +589,7 @@ async def test_reader_loop_response_missing_id_logs_warning(
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(sys.platform != "win32", reason=_WINDOWS_CONNECT_REASON)
 async def test_reader_loop_no_waiter_for_id_logs_debug(
     fake_pipe: _FakePipe,
     monkeypatch: pytest.MonkeyPatch,

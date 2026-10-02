@@ -29,12 +29,18 @@ All tests drive a real :class:`HexEditorWidget` bound to a real
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from PyQt6.QtGui import QColor, QFontMetrics, QImage, QPainter
 from PyQt6.QtWidgets import QApplication
 
 from intellicrack.ui.panels.hex_editor_widget import HexEditorWidget
 from intellicrack.ui.resources.theme_manager import THEME_DARK, THEME_LIGHT, ThemeManager
+
+
+if TYPE_CHECKING:
+    from pytestqt.qtbot import QtBot
 
 
 hexcore = pytest.importorskip(
@@ -46,6 +52,7 @@ hexcore = pytest.importorskip(
 pytestmark = pytest.mark.integration
 
 
+_ENTROPY_WAIT_MS: int = 5000
 _SAMPLE_BYTES: bytes = bytes((i * 7 + 3) & 0xFF for i in range(4096))
 
 
@@ -192,15 +199,18 @@ class TestOffsetColor:
 class TestEntropyMinimap:
     """M21: the minimap receives entropy and stays within the widget."""
 
-    def test_minimap_receives_entropy_and_fits_within_widget(self, qapp: QApplication) -> None:
+    def test_minimap_receives_entropy_and_fits_within_widget(self, qapp: QApplication, qtbot: QtBot) -> None:
         """Enabling the minimap pushes entropy and keeps geometry inside the widget.
 
         Pre-fix: entropy was never pushed (empty bars) and the minimap was
         placed past the scrollbar with no reserved margin, so its right edge
-        overran the widget and the viewport width did not shrink.
+        overran the widget and the viewport width did not shrink. The entropy
+        scan runs on a background worker so it never blocks the GUI thread,
+        so the test waits for its result to reach the minimap.
 
         Args:
             qapp: The shared QApplication fixture.
+            qtbot: pytest-qt bot used to wait for the background entropy scan.
         """
         try:
             _restore_theme()
@@ -215,6 +225,7 @@ class TestEntropyMinimap:
 
                 minimap = widget._minimap
                 assert minimap.isVisible()
+                qtbot.waitUntil(lambda: bool(minimap._entropy_values), timeout=_ENTROPY_WAIT_MS)
                 assert minimap._entropy_values, "entropy was not pushed into the minimap"
                 assert minimap._total_size == widget._doc_length()
 

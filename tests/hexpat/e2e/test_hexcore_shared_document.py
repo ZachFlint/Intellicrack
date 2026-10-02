@@ -28,6 +28,7 @@ import struct
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
+from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
@@ -91,9 +92,19 @@ _WORKERS: Final = _READER_THREADS + _WRITER_THREADS
 """Threads contending for the one document."""
 
 _SKEW_SAMPLES: Final = 2000
-"""Reader samples taken while a writer changes the byte underneath them."""
+"""Fewest reader samples taken while a writer changes the byte underneath them."""
 
-_SKEW_WRITE_CAP: Final = _SKEW_SAMPLES * 4
+_SKEW_MIN_CHANGES: Final = 50
+"""Times the watched byte must change under the paired reader.
+
+Fewer would mean the writer barely overlapped the sampling, and a clean result
+would then say little about whether the paired read keeps the two facts together.
+"""
+
+_SKEW_SAMPLE_CAP: Final = 200_000
+"""Samples a reader may take before giving up on the evidence it is waiting for."""
+
+_SKEW_WRITE_CAP: Final = _SKEW_SAMPLE_CAP * 4
 """Writes the flipping thread may make before giving up on being stopped."""
 
 _SKEW_MARKS: Final = (0x00, 0xFF)
@@ -450,16 +461,21 @@ def test_read_window_reports_the_generation_of_the_bytes_it_returns(
     assert window[0] == 0xFF
 
 
-def _flip_until(doc: HexDocument, stop: threading.Event) -> int:
-    """Alternate the document's first byte until the reader has finished.
+def _flip_until(doc: HexDocument, stop: threading.Event, sampling: threading.Event) -> int:
+    """Alternate the document's first byte while the reader is sampling.
+
+    The writer holds off until the reader has started, so it cannot spend its
+    whole write budget before there is anything to overlap with.
 
     Args:
         doc: The shared document.
         stop: Set by the reader once it has taken every sample it wants.
+        sampling: Set by the reader as it takes its first sample.
 
     Returns:
         int: Writes performed, which the caller checks is not zero.
     """
+    sampling.wait()
     writes = 0
     while not stop.is_set() and writes < _SKEW_WRITE_CAP:
         doc.write_bytes(0, bytes((_SKEW_MARKS[writes % len(_SKEW_MARKS)],)))
@@ -467,18 +483,40 @@ def _flip_until(doc: HexDocument, stop: threading.Event) -> int:
     return writes
 
 
-def _first_skew(samples: list[tuple[int, int]]) -> str | None:
-    """Find a sample whose byte is not the one its generation implies.
+def _skew_of(generation: int, value: int) -> str | None:
+    """Describe how a sample's byte disagrees with the byte its generation implies.
 
     The writer alternates deterministically and every write advances the counter
     by one, so the byte standing at a given generation is fixed: the write that
     produced generation ``g`` was the ``g``-th, and wrote ``_SKEW_MARKS[(g - 1)
     % 2]``. That makes the expected value derived from the writer's own rule
-    rather than restated here, and it is checked per sample -- comparing samples
+    rather than restated here.
+
+    Generation zero is the document as opened, before any write, and implies
+    nothing.
+
+    Args:
+        generation: Generation the sample reported.
+        value: First byte the sample reported.
+
+    Returns:
+        str | None: Description of the disagreement, or ``None`` when the byte
+        is the one its generation calls for.
+    """
+    if generation == 0:
+        return None
+    expected = _SKEW_MARKS[(generation - 1) % len(_SKEW_MARKS)]
+    if value != expected:
+        return f"generation {generation} should carry byte {expected:#04x} but carried {value:#04x}"
+    return None
+
+
+def _first_skew(samples: list[tuple[int, int]]) -> str | None:
+    """Find a sample whose byte is not the one its generation implies.
+
+    Each sample is checked on its own against :func:`_skew_of`; comparing samples
     against each other instead would almost never find two to compare, because a
     writer this fast gives nearly every sample a generation of its own.
-
-    Generation zero is skipped: it is the document as opened, before any write.
 
     Args:
         samples: Observed ``(generation, first byte)`` pairs, in the order taken.
@@ -488,69 +526,101 @@ def _first_skew(samples: list[tuple[int, int]]) -> str | None:
         sample carried the byte its generation calls for.
     """
     for generation, value in samples:
-        if generation == 0:
-            continue
-        expected = _SKEW_MARKS[(generation - 1) % len(_SKEW_MARKS)]
-        if value != expected:
-            return f"generation {generation} should carry byte {expected:#04x} but carried {value:#04x}"
+        skew = _skew_of(generation, value)
+        if skew is not None:
+            return skew
     return None
 
 
-def _sample_paired(doc: HexDocument, stop: threading.Event) -> list[tuple[int, int]]:
+def _byte_changes(samples: list[tuple[int, int]]) -> int:
+    """Count how often the watched byte differs from the sample before it.
+
+    Args:
+        samples: Observed ``(generation, first byte)`` pairs, in the order taken.
+
+    Returns:
+        int: Number of adjacent samples whose bytes differ.
+    """
+    return sum(1 for (_, before), (_, after) in pairwise(samples) if before != after)
+
+
+def _sample_paired(doc: HexDocument, stop: threading.Event, sampling: threading.Event) -> list[tuple[int, int]]:
     """Sample the first byte and its generation from one windowed read.
+
+    Sampling continues past :data:`_SKEW_SAMPLES` until the byte has changed
+    :data:`_SKEW_MIN_CHANGES` times, so a clean result always comes from a run
+    the writer genuinely overlapped, up to :data:`_SKEW_SAMPLE_CAP` samples.
 
     Args:
         doc: The shared document.
         stop: Set once sampling is done, releasing the writer.
+        sampling: Set as sampling starts, letting the writer begin.
 
     Returns:
         list[tuple[int, int]]: The ``(generation, first byte)`` pairs observed.
     """
     samples: list[tuple[int, int]] = []
-    for _ in range(_SKEW_SAMPLES):
+    changes = 0
+    sampling.set()
+    while len(samples) < _SKEW_SAMPLE_CAP:
         window, _, generation, _ = doc.read_window(0, _ONE_BYTE)
+        if samples and samples[-1][1] != window[0]:
+            changes += 1
         samples.append((generation, window[0]))
+        if len(samples) >= _SKEW_SAMPLES and changes >= _SKEW_MIN_CHANGES:
+            break
     stop.set()
     return samples
 
 
-def _sample_unpaired(doc: HexDocument, stop: threading.Event) -> list[tuple[int, int]]:
+def _sample_unpaired(doc: HexDocument, stop: threading.Event, sampling: threading.Event) -> list[tuple[int, int]]:
     """Sample the same two facts the way the window route used to, in two calls.
+
+    Sampling stops at the first sample whose byte disagrees with its generation,
+    or after :data:`_SKEW_SAMPLE_CAP` samples.
 
     Args:
         doc: The shared document.
         stop: Set once sampling is done, releasing the writer.
+        sampling: Set as sampling starts, letting the writer begin.
 
     Returns:
         list[tuple[int, int]]: The ``(generation, first byte)`` pairs observed.
     """
     samples: list[tuple[int, int]] = []
-    for _ in range(_SKEW_SAMPLES):
+    sampling.set()
+    while len(samples) < _SKEW_SAMPLE_CAP:
         generation = doc.generation()
-        samples.append((generation, doc.read(0, _ONE_BYTE)[0]))
+        value = doc.read(0, _ONE_BYTE)[0]
+        samples.append((generation, value))
+        if _skew_of(generation, value) is not None:
+            break
     stop.set()
     return samples
 
 
 def _sample_under_a_writer(
     doc: HexDocument,
-    sampler: Callable[[HexDocument, threading.Event], list[tuple[int, int]]],
+    sampler: Callable[[HexDocument, threading.Event, threading.Event], list[tuple[int, int]]],
 ) -> list[tuple[int, int]]:
     """Run a sampler while another thread rewrites the byte it is watching.
 
     Args:
         doc: The shared document.
-        sampler: Takes the samples and sets the stop event when finished.
+        sampler: Signals when it starts, takes the samples, and sets the stop
+            event when finished.
 
     Returns:
         list[tuple[int, int]]: Whatever the sampler observed.
     """
     stop = threading.Event()
+    sampling = threading.Event()
     with ThreadPoolExecutor(max_workers=_ONE_WRITER) as pool:
-        writing = pool.submit(_flip_until, doc, stop)
+        writing = pool.submit(_flip_until, doc, stop, sampling)
         try:
-            samples = sampler(doc, stop)
+            samples = sampler(doc, stop, sampling)
         finally:
+            sampling.set()
             stop.set()
         assert writing.result(timeout=_JOIN_TIMEOUT) > 0, "the writer never ran, so nothing could skew"
     return samples
@@ -578,7 +648,10 @@ def test_a_window_never_reports_a_generation_its_bytes_did_not_have(
 
     skew = _first_skew(samples)
     assert skew is None, skew
-    assert len({value for _, value in samples}) > 1, "the byte never changed, so no skew could have shown"
+    assert _byte_changes(samples) >= _SKEW_MIN_CHANGES, (
+        f"the byte changed only {_byte_changes(samples)} times in {len(samples)} samples, "
+        "so the writer barely overlapped the reads and a missing skew proves little"
+    )
 
 
 def test_the_unpaired_control_really_does_skew_the_generation(
@@ -602,6 +675,6 @@ def test_the_unpaired_control_really_does_skew_the_generation(
     samples = _sample_under_a_writer(doc, _sample_unpaired)
 
     assert _first_skew(samples) is not None, (
-        f"{_SKEW_SAMPLES} unpaired samples never caught the generation disagreeing with the bytes, "
+        f"{len(samples)} unpaired samples never caught the generation disagreeing with the bytes, "
         "so this control cannot show that the paired read is what keeps them together"
     )

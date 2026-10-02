@@ -17,7 +17,10 @@ from typing import TYPE_CHECKING
 import pytest
 from PyQt6.QtWidgets import QApplication, QMessageBox, QPushButton
 
+from intellicrack.core.session import Session, SessionStore
 from intellicrack.ui.app import MainWindow
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from tests._helpers.real_binaries import load_real_elf
 
 from .conftest import CallRecorder, DialogRecorder, NoOpSandboxManager
 
@@ -25,10 +28,14 @@ from .conftest import CallRecorder, DialogRecorder, NoOpSandboxManager
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from pytestqt.qtbot import QtBot
+
     from intellicrack.core.config import Config
     from intellicrack.core.orchestrator import Orchestrator
 
 _EXPECTED_MENU_ACTION_COUNT: int = 6
+_LOAD_TIMEOUT_S: float = 60.0
+_LOAD_TIMEOUT_MS: int = 60_000
 
 
 class FakeToolWidget:
@@ -639,27 +646,35 @@ class TestCurrentBinaryTracking:
     @staticmethod
     def test_load_binary_sets_current_binary_and_enables_buttons(
         patched_window: MainWindow,
+        real_orchestrator: Orchestrator,
+        tmp_path: Path,
+        qtbot: QtBot,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify _load_binary sets current_binary, updates label, enables buttons, and calls hex editor.
 
-        The production code at ``_load_binary`` must:
+        The production code at ``_load_binary`` loads the binary asynchronously into the active session and,
+        once the load succeeds, must:
         1. Set ``current_binary`` to the supplied path.
         2. Update ``_binary_label`` to show the filename.
         3. Enable every button in ``_binary_dependent_buttons``.
         4. Call ``tool_panel.open_in_hex_editor`` with the string path.
 
-        If any of these side-effects are removed, the corresponding assertion fails.
+        The load runs to completion inside the test, so its result is never delivered after the test's
+        patches are undone. If any of these side-effects are removed, the corresponding assertion fails.
 
         Args:
             patched_window: MainWindow fixture with SandboxManager patched out.
+            real_orchestrator: The window's orchestrator, given an active session.
+            tmp_path: Per-test directory holding the session database.
+            qtbot: Waits for the asynchronous load to finish.
             monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
         """
         window = patched_window
-        test_path = Path("/test/sample.exe")
-
-        run_async_recorder = CallRecorder()
-        monkeypatch.setattr(window, "_run_async", run_async_recorder)
+        test_path = load_real_elf()
+        stored = Session.create(provider="openai", model="m")
+        SessionStore(db_path=tmp_path / "sessions.db").save(stored)
+        _ = run_bridge_coroutine(real_orchestrator.load_session(stored.id), timeout_s=_LOAD_TIMEOUT_S)
 
         hex_editor_recorder = CallRecorder(result=True)
         monkeypatch.setattr(window.tool_panel, "open_in_hex_editor", hex_editor_recorder)
@@ -668,6 +683,7 @@ class TestCurrentBinaryTracking:
             button.setEnabled(False)
 
         window._load_binary(test_path)
+        qtbot.waitUntil(lambda: window.current_binary is not None, timeout=_LOAD_TIMEOUT_MS)
 
         assert window.current_binary == test_path, f"current_binary expected {test_path!r}, got {window.current_binary!r}"
 

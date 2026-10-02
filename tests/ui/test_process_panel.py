@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import os
+import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
@@ -26,6 +27,12 @@ from intellicrack.ui.panels.process_panel import ProcessPanel
 from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
 from intellicrack.ui.panels.process_panel.process_tab import ProcessTab
 from tests.ui.conftest import SignalRecorder
+
+
+_REQUIRES_WIN32_PROCESS_API = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="enumerates live processes through the Win32 process API (kernel32), which ProcessBridge requires",
+)
 
 
 if TYPE_CHECKING:
@@ -576,12 +583,14 @@ class TestToolDefinition:
         """Verify each tool function's declared parameters align with the dispatch-level method signature.
 
         The tool definition's parameter names are what the LLM sends as JSON keys.
-        If the dispatch-level method signature differs from the definition, every LLM
-        invocation of that function will produce a TypeError at dispatch time. This
-        test uses the production dispatch rule (split suffix) to locate the exact
-        method the orchestrator will call, then compares sorted parameter names from
-        the tool definition against sorted parameter names in that method's Python
-        signature for every one of the 67 functions.
+        A declared parameter the method does not accept, or a required method
+        parameter the definition never declares, makes every LLM invocation of that
+        function fail with a TypeError at dispatch time. This test uses the
+        production dispatch rule (split suffix) to locate the exact method the
+        orchestrator will call and checks both directions for every function. A
+        method may also take optional, caller-side parameters the model never sends
+        (such as a cancellation event or a progress callback); those are not part
+        of the tool contract.
         """
         b = ProcessBridge()
         for func in b.tool_definition.functions:
@@ -591,14 +600,19 @@ class TestToolDefinition:
             sig_params: list[str] = [
                 p for p in sig.parameters if sig.parameters[p].kind not in {inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD}
             ]
-            definition_params: list[str] = [p.name for p in func.parameters]
-            assert sorted(sig_params) == sorted(definition_params), (
-                f"Parameter mismatch for '{func.name}' -> dispatch method '{dispatch_name}': "
-                f"definition={sorted(definition_params)}, "
-                f"signature={sorted(sig_params)}"
+            required_params: set[str] = {p for p in sig_params if sig.parameters[p].default is inspect.Parameter.empty}
+            definition_params: set[str] = {p.name for p in func.parameters}
+            assert definition_params <= set(sig_params), (
+                f"'{func.name}' declares parameters dispatch method '{dispatch_name}' does not accept: "
+                f"{sorted(definition_params - set(sig_params))}"
+            )
+            assert required_params <= definition_params, (
+                f"dispatch method '{dispatch_name}' requires parameters '{func.name}' never declares: "
+                f"{sorted(required_params - definition_params)}"
             )
 
     @staticmethod
+    @_REQUIRES_WIN32_PROCESS_API
     def test_list_function_executes_end_to_end_through_real_registry(process_registry: ToolRegistry) -> None:
         """The advertised process.list runs through the real registry against live PIDs.
 
@@ -622,6 +636,7 @@ class TestToolDefinition:
         assert matched[0].name.lower().startswith("python"), f"the test process name must be a python image, got {matched[0].name!r}"
 
     @staticmethod
+    @_REQUIRES_WIN32_PROCESS_API
     def test_list_detailed_filter_argument_flows_through_registry(process_registry: ToolRegistry) -> None:
         """A filter argument passes through the registry into the live enumeration.
 
@@ -669,6 +684,7 @@ class TestAttachEnablesOnSelection:
     ``_on_process_selected``.
     """
 
+    @_REQUIRES_WIN32_PROCESS_API
     def test_selecting_process_row_enables_attach_and_reports_pid(self, panel: ProcessPanel, qapp: QApplication) -> None:
         """Selecting a live process row enables Attach and exposes the matching PID.
 
@@ -734,6 +750,7 @@ class TestProcessTablesReadOnly:
             f"F2 opened an editor on a table with editTriggers={table.editTriggers()!r}"
         )
 
+    @_REQUIRES_WIN32_PROCESS_API
     def test_system_process_table_is_read_only(self, panel: ProcessPanel, qapp: QApplication) -> None:
         """The system process table must have NoEditTriggers and refuse an F2 edit.
 

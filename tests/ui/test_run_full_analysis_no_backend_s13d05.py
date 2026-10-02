@@ -34,7 +34,6 @@ the real "no backend connected" condition -- through
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import pytest
@@ -50,13 +49,13 @@ from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from pathlib import Path
 
     from pytestqt.qtbot import QtBot
 
     from intellicrack.core.config import Config
     from intellicrack.core.orchestrator import Orchestrator
 
-_SYSTEM_DLL = Path(r"C:\Windows\System32\kernel32.dll")
 _WAIT_TIMEOUT_MS = 15000
 
 
@@ -89,6 +88,7 @@ class TestRunFullAnalysisWithNoBackendConnected:
         window: MainWindow,
         qtbot: QtBot,
         monkeypatch: pytest.MonkeyPatch,
+        real_pe_dll: Path,
     ) -> None:
         """With no Ghidra/Cutter bridge registered, the run must warn, not claim completion.
 
@@ -97,16 +97,15 @@ class TestRunFullAnalysisWithNoBackendConnected:
             qtbot: pytest-qt bot used to pump the event loop for the queued
                 async-bridge callback.
             monkeypatch: pytest monkeypatch fixture.
+            real_pe_dll: A real system PE DLL to load as the analysis target.
         """
-        assert _SYSTEM_DLL.exists(), "test requires a real Windows system DLL fixture"
-
         tool_registry = window._orchestrator.tool_registry
         with pytest.raises(ToolError):
             tool_registry.get_ghidra_bridge()
         with pytest.raises(ToolError):
             tool_registry.get_cutter_bridge()
 
-        binary_info = run_bridge_coroutine(window._orchestrator._load_binary(_SYSTEM_DLL))
+        binary_info = run_bridge_coroutine(window._orchestrator._load_binary(real_pe_dll))
         assert isinstance(binary_info, BinaryInfo)
 
         session = run_bridge_coroutine(

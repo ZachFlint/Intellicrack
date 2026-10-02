@@ -482,12 +482,13 @@ async def test_no_os_name_nt_predicate_in_module(
         fake_pipe: In-memory transport bound onto the client so ``_open_handle``
             performs no platform check and cannot mask ``connect``'s guard.
     """
-    monkeypatch.setattr(sys, "platform", "cygwin")
-    monkeypatch.setattr(os, "name", "nt")
     client = NamedPipeClient()
     _bind_fake_pipe(client, fake_pipe)
-    with pytest.raises(ToolError, match="only supported on Windows"):
-        await client.connect()
+    with monkeypatch.context() as patched:
+        patched.setattr(sys, "platform", "cygwin")
+        patched.setattr(os, "name", "nt")
+        with pytest.raises(ToolError, match="only supported on Windows"):
+            await client.connect()
 
 
 # ---------------------------------------------------------------------------
@@ -517,6 +518,10 @@ def test_format_error_hint_returns_none_for_unknown_code() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
 async def test_concurrent_send_command_ids_are_unique(
     fake_pipe: _FakePipe,
     connected_client: NamedPipeClient,
@@ -549,6 +554,10 @@ async def test_concurrent_send_command_ids_are_unique(
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
 async def test_request_id_wraps_at_int31_max(connected_client: NamedPipeClient) -> None:
     """The id counter wraps at ``2 ** 31 - 1`` so it never overflows (F-0019)."""
     setattr(connected_client, "_next_id", 0x7FFFFFFE)
@@ -568,6 +577,10 @@ async def test_request_id_wraps_at_int31_max(connected_client: NamedPipeClient) 
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
 async def test_event_handler_exception_does_not_break_request_stream(
     fake_pipe: _FakePipe,
 ) -> None:
@@ -675,6 +688,10 @@ async def _exchange_and_assert_handler_error(
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
 async def test_event_handler_runs_outside_write_lock(
     fake_pipe: _FakePipe,
 ) -> None:
@@ -817,6 +834,10 @@ async def test_send_command_raises_tool_error_when_not_connected() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
 async def test_close_fails_pending_send_command(
     connected_client: NamedPipeClient,
 ) -> None:
@@ -830,6 +851,10 @@ async def test_close_fails_pending_send_command(
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
 async def test_close_waits_for_inflight_write(
     fake_pipe: _FakePipe,
     connected_client: NamedPipeClient,
@@ -871,6 +896,10 @@ async def test_close_waits_for_inflight_write(
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
 async def test_close_dispatches_handle_close_via_thread_pool(
     fake_pipe: _FakePipe,
 ) -> None:
@@ -916,6 +945,10 @@ async def test_close_dispatches_handle_close_via_thread_pool(
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
 async def test_close_is_idempotent(connected_client: NamedPipeClient) -> None:
     """Calling ``close()`` twice does not raise and leaves the client closed."""
     await connected_client.close()
@@ -929,6 +962,10 @@ async def test_close_is_idempotent(connected_client: NamedPipeClient) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
 async def test_cancelled_connect_closes_handle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1003,6 +1040,10 @@ async def _run_cancelled_connect_reap(
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
 async def test_timed_out_connect_closes_handle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1239,6 +1280,10 @@ async def test_connect_close_lifecycle_logs_at_info(
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
 async def test_send_command_round_trip(
     fake_pipe: _FakePipe,
     connected_client: NamedPipeClient,

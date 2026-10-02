@@ -41,6 +41,7 @@ from __future__ import annotations
 import asyncio
 import os
 import shutil
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
@@ -196,6 +197,7 @@ def _assemble_sidecar(tmp_path: Path) -> Path:
     return directory
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows target staging: ipconfig.exe runs with or without its en-US MUI companion")
 @pytest.mark.asyncio
 class TestCompanionFilesReachTheTarget:
     """A target must be able to run the way it runs on a real machine."""

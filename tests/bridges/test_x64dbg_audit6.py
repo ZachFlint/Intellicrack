@@ -679,6 +679,10 @@ class TestGetProcessInfoRaisesWhenDetached:
         assert excinfo.value.tool_name == "x64dbg"
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="get_process_info resolves the parent PID through the Windows Toolhelp API, which raises off Windows",
+    )
     async def test_returns_processinfo_with_correct_pid_when_attached(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -733,6 +737,10 @@ class TestGetProcessInfoRaisesWhenDetached:
         assert result.modules[0].base_address == 0x400000
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="get_process_info resolves the parent PID through the Windows Toolhelp API, which raises off Windows",
+    )
     async def test_get_process_info_result_is_not_none(
         self,
         monkeypatch: pytest.MonkeyPatch,

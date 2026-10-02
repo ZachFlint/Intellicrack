@@ -4,13 +4,16 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real file-backed keyrings confined to a test's own directory.
 
-The suite's configured backend is ``keyrings.alt``'s plaintext file keyring, which normally writes to one file shared by every test and
-every xdist worker. These helpers give a test its own file, install it as the process keyring for the test's duration, and restore the
-previous backend afterwards. Nothing is simulated: reads and writes go through the real backend to a real file.
+The backend is ``keyrings.alt``'s plaintext file keyring, declared as a dependency of the pixi ``test`` feature. Left to itself it writes
+to one file under the user's data directory, shared by every test and every xdist worker; these helpers point it at a file the test owns,
+install it as the process keyring for the test's duration, and restore the previous backend afterwards, so a test that stores a secret
+never touches the operating system's own keyring. Nothing is simulated: reads and writes go through the real backend to a real file.
 """
 
 from __future__ import annotations
 
+import errno
+import os
 import string
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Protocol, cast
@@ -28,7 +31,7 @@ if TYPE_CHECKING:
 
 
 PLAINTEXT_FILE_KEYRING = "keyrings.alt.file.PlaintextKeyring"
-"""The file-backed keyring the suite is configured with."""
+"""The file-backed keyring every private keyring is built from."""
 
 CRED_MAX_CREDENTIAL_BLOB_SIZE = 5 * 512
 """Windows ``CRED_MAX_CREDENTIAL_BLOB_SIZE``: the largest generic credential blob ``CredWrite`` accepts."""
@@ -162,6 +165,80 @@ class CredentialManagerSizedKeyring(KeyringBackend):
             username: The entry name.
         """
         self._inner.delete_password(service, username)
+
+
+class FullKeyring(KeyringBackend):
+    """A real keyring with room for a fixed number of entries, which then fails the way a full disk does.
+
+    Storage is delegated to a real file keyring. Once it holds ``capacity`` entries, writing a new one raises the ``OSError`` with
+    ``ENOSPC`` that writing its file on a full disk raises; rewriting an entry already there still succeeds, as it would in place.
+
+    Attributes:
+        capacity: How many entries fit.
+    """
+
+    capacity: int
+
+    def __init__(self, path: Path, capacity: int) -> None:
+        """Store for real in a private file keyring with room for ``capacity`` entries.
+
+        Args:
+            path: The keyring file.
+            capacity: How many entries fit.
+        """
+        super().__init__()
+        self._inner = cast("SecretBackend", private_file_keyring(path))
+        self._names: set[tuple[str, str]] = set()
+        self.capacity = capacity
+
+    @properties.classproperty
+    def priority(self) -> float:
+        """Rank above the fallback backends.
+
+        Returns:
+            float: The backend priority.
+        """
+        del self
+        return 1.0
+
+    def get_password(self, service: str, username: str) -> str | None:
+        """Read a secret.
+
+        Args:
+            service: The service name.
+            username: The entry name.
+
+        Returns:
+            str | None: The secret, or ``None`` when absent.
+        """
+        return self._inner.get_password(service, username)
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        """Store a secret, unless it is a new entry and the keyring is full.
+
+        Args:
+            service: The service name.
+            username: The entry name.
+            password: The secret.
+
+        Raises:
+            OSError: With ``ENOSPC``, if the entry is new and there is no room for it.
+        """
+        name = (service, username)
+        if name not in self._names and len(self._names) >= self.capacity:
+            raise OSError(errno.ENOSPC, os.strerror(errno.ENOSPC))
+        self._inner.set_password(service, username, password)
+        self._names.add(name)
+
+    def delete_password(self, service: str, username: str) -> None:
+        """Delete a secret, freeing its room.
+
+        Args:
+            service: The service name.
+            username: The entry name.
+        """
+        self._inner.delete_password(service, username)
+        self._names.discard((service, username))
 
 
 @contextmanager

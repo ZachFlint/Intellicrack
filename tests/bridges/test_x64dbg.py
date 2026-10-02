@@ -23,6 +23,7 @@ import ctypes
 import os
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -37,6 +38,10 @@ from intellicrack.core.types import (
     ToolError,
     ToolName,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 if sys.platform == "win32":
@@ -60,6 +65,108 @@ TEST_BP_ID_THIRD = 3
 TEST_BP_COUNT_TWO = 2
 TEST_BP_COUNT_THREE = 3
 BUFFER_SIZE_4K = 4096
+
+
+class _FakePipeClient:
+    """In-process substitute for ``NamedPipeClient``.
+
+    Records every ``(command, params)`` pair sent by the bridge and returns
+    canned responses produced by the caller-supplied ``responder``, so the
+    real ``get_breakpoints`` / ``get_watchpoints`` merge logic runs against a
+    live plugin RPC round-trip instead of being bypassed.
+    """
+
+    def __init__(
+        self,
+        responder: Callable[[str, dict[str, Any] | None], dict[str, Any]],
+    ) -> None:
+        """Initialise with a scripted responder callable.
+
+        Args:
+            responder: Maps ``(command, params)`` to the fake response dict.
+        """
+        self._responder = responder
+        self.sent: list[tuple[str, dict[str, Any] | None]] = []
+
+    @property
+    def is_connected(self) -> bool:
+        """Report the pipe as connected.
+
+        Returns:
+            bool: Always ``True``.
+        """
+        return True
+
+    async def send_command(
+        self,
+        command: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Record the request and return the scripted response.
+
+        Args:
+            command: RPC command name forwarded by the bridge.
+            params: Optional parameter dict forwarded by the bridge.
+
+        Returns:
+            dict[str, Any]: Canned response from the responder.
+        """
+        self.sent.append((command, params))
+        return self._responder(command, params)
+
+
+class _PlaceholderProcess:
+    """Sentinel satisfying the bridge's ``self._process is not None`` guards."""
+
+    def poll(self) -> int | None:
+        """Report process status the way :class:`subprocess.Popen.poll` does.
+
+        Returns:
+            int | None: Always ``None``, indicating the stand-in debugger
+            process is still running.
+        """
+        return None
+
+
+def _install_fake_pipe(
+    bridge: X64DbgBridge,
+    responder: Callable[[str, dict[str, Any] | None], dict[str, Any]],
+) -> _FakePipeClient:
+    """Attach a ``_FakePipeClient`` to ``bridge`` and mark the plugin deployed.
+
+    Args:
+        bridge: Bridge instance under test.
+        responder: Callable returning a canned response for each command.
+
+    Returns:
+        _FakePipeClient: The freshly attached fake, useful for assertions on
+        the ``sent`` list.
+    """
+    fake = _FakePipeClient(responder)
+    setattr(bridge, "_pipe_client", fake)
+    setattr(bridge, "_plugin_deployed", True)
+    setattr(bridge, "_process", _PlaceholderProcess())
+    return fake
+
+
+def _empty_bp_list_responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
+    """Return an empty ``bp_list`` result so only local tracking surfaces.
+
+    Args:
+        command: RPC command name issued by the bridge.
+        _params: Ignored parameter dict.
+
+    Returns:
+        dict[str, Any]: A success envelope whose ``result`` is an empty list
+        for ``bp_list``.
+
+    Raises:
+        AssertionError: If any command other than ``bp_list`` is issued.
+    """
+    if command == "bp_list":
+        return {"id": 1, "success": True, "result": []}
+    msg = f"unexpected command: {command}"
+    raise AssertionError(msg)
 
 
 def test_bridge_initial_state() -> None:
@@ -149,13 +256,16 @@ def test_breakpoint_id_increments(x64dbg_bridge: X64DbgBridge) -> None:
 async def test_breakpoint_retrieved_via_get_breakpoints(x64dbg_bridge: X64DbgBridge) -> None:
     """Verify a stored breakpoint is returned by the real get_breakpoints path.
 
-    Drives the actual ``get_breakpoints`` retrieval logic (local tracking
-    merge, with the plugin skipped because no pipe is connected) rather than
-    inspecting the backing dict directly.
+    Drives the actual ``get_breakpoints`` retrieval logic through a live
+    ``bp_list`` RPC round-trip: the plugin reports no GUI breakpoints (empty
+    result), so the locally tracked breakpoint must survive the merge. This
+    exercises the real pipe path rather than inspecting the backing dict
+    directly, and does not rely on the removed silent local-cache fallback.
 
     Args:
         x64dbg_bridge: Fresh X64DbgBridge instance supplied by the fixture.
     """
+    fake = _install_fake_pipe(x64dbg_bridge, _empty_bp_list_responder)
     bp = BreakpointInfo(
         id=TEST_BP_ID_FIRST,
         address=TEST_ADDR_CODE_1,
@@ -167,6 +277,7 @@ async def test_breakpoint_retrieved_via_get_breakpoints(x64dbg_bridge: X64DbgBri
     x64dbg_bridge.breakpoints[TEST_ADDR_CODE_1] = bp
 
     retrieved = await x64dbg_bridge.get_breakpoints()
+    assert ("bp_list", None) in fake.sent
     by_address = {entry.address: entry for entry in retrieved}
     assert TEST_ADDR_CODE_1 in by_address
     assert by_address[TEST_ADDR_CODE_1].id == TEST_BP_ID_FIRST
@@ -178,9 +289,13 @@ async def test_breakpoint_retrieved_via_get_breakpoints(x64dbg_bridge: X64DbgBri
 async def test_multiple_breakpoints_via_get_breakpoints(x64dbg_bridge: X64DbgBridge) -> None:
     """Verify multiple stored breakpoints surface through get_breakpoints.
 
+    Drives the real ``bp_list`` RPC round-trip with an empty plugin result so
+    the three locally tracked breakpoints survive the merge.
+
     Args:
         x64dbg_bridge: Fresh X64DbgBridge instance supplied by the fixture.
     """
+    fake = _install_fake_pipe(x64dbg_bridge, _empty_bp_list_responder)
     addresses = [TEST_ADDR_CODE_1, TEST_ADDR_CODE_2, TEST_ADDR_CODE_3]
     for i, addr in enumerate(addresses):
         bp = BreakpointInfo(
@@ -193,6 +308,7 @@ async def test_multiple_breakpoints_via_get_breakpoints(x64dbg_bridge: X64DbgBri
         x64dbg_bridge.breakpoints[addr] = bp
 
     retrieved = await x64dbg_bridge.get_breakpoints()
+    assert ("bp_list", None) in fake.sent
     by_address = {entry.address: entry for entry in retrieved}
     assert len(by_address) == TEST_BP_COUNT_THREE
     assert by_address[TEST_ADDR_CODE_1].id == TEST_BP_ID_FIRST
@@ -214,9 +330,14 @@ def test_watchpoint_id_increments(x64dbg_bridge: X64DbgBridge) -> None:
 async def test_watchpoint_retrieved_via_get_watchpoints(x64dbg_bridge: X64DbgBridge) -> None:
     """Verify a stored watchpoint is returned by the real get_watchpoints path.
 
+    Drives the real ``bp_list`` RPC round-trip (watchpoints are enumerated
+    through the hardware-breakpoint table) with an empty plugin result so the
+    locally tracked watchpoint survives the merge.
+
     Args:
         x64dbg_bridge: Fresh X64DbgBridge instance supplied by the fixture.
     """
+    fake = _install_fake_pipe(x64dbg_bridge, _empty_bp_list_responder)
     wp = WatchpointInfo(
         id=TEST_BP_ID_FIRST,
         address=TEST_ADDR_DATA_1,
@@ -228,6 +349,7 @@ async def test_watchpoint_retrieved_via_get_watchpoints(x64dbg_bridge: X64DbgBri
     x64dbg_bridge.watchpoints[TEST_BP_ID_FIRST] = wp
 
     retrieved = await x64dbg_bridge.get_watchpoints()
+    assert ("bp_list", None) in fake.sent
     by_address = {entry.address: entry for entry in retrieved}
     assert TEST_ADDR_DATA_1 in by_address
     assert by_address[TEST_ADDR_DATA_1].id == TEST_BP_ID_FIRST

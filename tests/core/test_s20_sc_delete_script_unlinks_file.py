@@ -13,7 +13,10 @@ read-only file on Windows) must not silently drop the in-memory entry.
 from __future__ import annotations
 
 import stat
+import sys
 from typing import TYPE_CHECKING
+
+import pytest
 
 from intellicrack.core.script_gen import Script, ScriptLanguage, ScriptManager
 
@@ -61,6 +64,10 @@ def test_delete_script_missing_name_returns_false_without_touching_disk(tmp_path
     assert manager.delete_script("does_not_exist") is False
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Windows refuses to delete a read-only file; POSIX unlinks it, so no unlink failure occurs",
+)
 def test_delete_script_retains_entry_when_backing_file_cannot_be_unlinked(tmp_path: Path) -> None:
     """A real unlink failure must surface, not be swallowed with the entry dropped.
 

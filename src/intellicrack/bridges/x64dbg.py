@@ -21,7 +21,7 @@ import tempfile
 import threading
 import time
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, TypeGuard, cast
 
 from intellicrack.bridges.base import (
@@ -11381,7 +11381,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         """
         _logger.debug("x64dbg_command_queued", command="plugload", path=path)
         await self._send_command(f'plugload "{path}"')
-        plugin_name = Path(path).stem
+        plugin_name = PureWindowsPath(path).stem
         present = await self._query_plugin_present(plugin_name)
         if present is None:
             return {"success": True, "path": path, "verified": False}

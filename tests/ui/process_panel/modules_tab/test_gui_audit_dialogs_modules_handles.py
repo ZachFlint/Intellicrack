@@ -9,8 +9,9 @@ Address) previously used the default equal-width columns with no stretch and
 no tooltips, so the wide hexadecimal granted-access mask and object address
 were silently clipped. These tests pin the fix:
 
-* The handle table configures a real resize policy with a stretch column and
-  content-sized columns for the fixed-width hex values.
+* The handle table sizes every column to its content with no stretched last
+  section, so a value wider than the viewport widens the table and its
+  horizontal scrollbar reaches it instead of the column being squeezed.
 * Populated cells expose the full value as a tooltip so clipped text remains
   readable on hover.
 """
@@ -20,6 +21,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 import pytest
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHeaderView
 
 from intellicrack.ui.panels.process_panel.modules_tab import ModulesTab
@@ -76,8 +78,13 @@ def modules_tab(qapp: QApplication) -> Iterator[ModulesTab]:
 class TestHandleTableColumnPolicy:
     """The handle table must use a real resize policy instead of clipping."""
 
-    def test_type_column_stretches_and_hex_columns_size_to_contents(self, modules_tab: ModulesTab) -> None:
-        """One column stretches while the fixed-width hex columns size to their contents.
+    def test_columns_size_to_contents_and_scroll_horizontally(self, modules_tab: ModulesTab) -> None:
+        """Every column sizes to its content and overflow scrolls instead of clipping.
+
+        A ``Stretch`` section always fills exactly the remaining viewport width,
+        so it can never overflow into the table's horizontal scrollbar and gets
+        squeezed when the pane is narrow; content-sized columns keep the full
+        hex values visible and scrollable.
 
         Args:
             modules_tab: ModulesTab fixture.
@@ -87,8 +94,12 @@ class TestHandleTableColumnPolicy:
         assert header is not None, "handle table must have a horizontal header"
 
         modes = [header.sectionResizeMode(i) for i in range(table.columnCount())]
-        assert QHeaderView.ResizeMode.Stretch in modes, (
-            f"at least one handle-table column must stretch to fill available width; got modes {modes}"
+        assert modes == [QHeaderView.ResizeMode.ResizeToContents] * table.columnCount(), (
+            f"every handle-table column must size to its content; got modes {modes}"
+        )
+        assert not header.stretchLastSection(), "the last section must not stretch, or it can never overflow into the scrollbar"
+        assert table.horizontalScrollBarPolicy() != Qt.ScrollBarPolicy.ScrollBarAlwaysOff, (
+            "the handle table must keep a horizontal scrollbar so overflowing columns stay reachable"
         )
         assert header.sectionResizeMode(2) == QHeaderView.ResizeMode.ResizeToContents, (
             "the Granted Access column must size to its content so the full mask is shown"

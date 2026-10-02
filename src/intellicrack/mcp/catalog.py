@@ -14,26 +14,32 @@ and has to ask again.
 Everything a server sends is untrusted. Descriptions are truncated, the tool
 count is capped, an oversized input schema drops its tool rather than the
 whole listing, and a malformed name is refused. What survives is stored
-verbatim -- in particular the input schema, which reaches the provider
-boundary byte-identical so a ``$ref``-bearing schema is not silently
-flattened.
+verbatim -- in particular the input schema, whose structure reaches the
+provider boundary intact so a ``$ref``-bearing schema is not silently
+flattened. What the model is shown is the entry's advertised schema: the same
+structure with every piece of the server's text cleaned, and every unsafe
+identifier replaced by an alias that is mapped back before a call is sent.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+import math
+from contextlib import nullcontext
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from intellicrack.core.logging import get_logger
 from intellicrack.mcp.config import TOOL_NAME_PATTERN, to_canonical_name
 from intellicrack.mcp.errors import McpProtocolError
+from intellicrack.mcp.untrusted_schema import SanitizedSchema, sanitize_input_schema
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
+    from contextlib import AbstractAsyncContextManager
 
     from mcp import Client
     from mcp.client.caching import CacheMode
@@ -81,6 +87,9 @@ class McpToolEntry:
         annotations: The server's behavioural hints, or ``None``. These are
             untrusted unless the server is trusted, which is why
             classification consults the trust store before reading them.
+        advertised_schema: ``input_schema`` rewritten to be safe in front
+            of a model, with the aliases that map a call's arguments back.
+            Derived from ``input_schema`` when the entry is built.
     """
 
     name: str
@@ -90,6 +99,11 @@ class McpToolEntry:
     input_schema: dict[str, Any]
     output_schema: dict[str, Any] | None
     annotations: ToolAnnotations | None
+    advertised_schema: SanitizedSchema = field(init=False, compare=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Derive the schema the model is shown from the one the server published."""
+        object.__setattr__(self, "advertised_schema", sanitize_input_schema(self.input_schema))
 
     @property
     def display_name(self) -> str:
@@ -206,19 +220,130 @@ def truncate_description(description: str) -> str:
     return f"{description[:keep]}{_TRUNCATION_MARKER}"
 
 
+_ENCODE_VALUE: Final[int] = 0
+_EMIT_TEXT: Final[int] = 1
+_LEAVE_CONTAINER: Final[int] = 2
+
+
+def _float_text(number: float) -> str:
+    """Write a float the way :mod:`json` does.
+
+    Args:
+        number: The float.
+
+    Returns:
+        str: ``NaN``, ``Infinity``, ``-Infinity`` or the float's ``repr``.
+    """
+    if math.isnan(number):
+        return "NaN"
+    if math.isinf(number):
+        return "Infinity" if number > 0 else "-Infinity"
+    return repr(float(number))
+
+
+def _key_text(key: object) -> str:
+    """Write an object member's name the way :mod:`json` does.
+
+    Args:
+        key: The member's key.
+
+    Returns:
+        str: The key as a JSON string.
+
+    Raises:
+        TypeError: If the key is not a string, number, boolean or ``None``.
+    """
+    if isinstance(key, str):
+        text = key
+    elif key is None or isinstance(key, bool):
+        text = "null" if key is None else "true" if key else "false"
+    elif isinstance(key, float):
+        text = _float_text(key)
+    elif isinstance(key, int):
+        text = str(int(key))
+    else:
+        message = f"keys must be str, int, float, bool or None, not {type(key).__name__}"
+        raise TypeError(message)
+    return json.dumps(text, ensure_ascii=False)
+
+
+def _member_order(member: tuple[object, object]) -> str | float:
+    """Give the sort position of an object member, by its key.
+
+    Args:
+        member: The key and its value.
+
+    Returns:
+        str | float: The key, which :func:`sorted` compares as :mod:`json` does.
+    """
+    return cast("str | float", member[0])
+
+
 def canonical_json(value: object) -> str:
     """Serialize a value to a stable JSON string.
 
     Keys are sorted and separators are fixed, so the same logical schema
-    produces the same bytes in any process and on any platform.
+    produces the same bytes in any process and on any platform. The text is
+    exactly what ``json.dumps(value, sort_keys=True, separators=(",", ":"),
+    ensure_ascii=False, default=str)`` writes, but the walk is iterative, so
+    no nesting is too deep: :func:`json.dumps` recurses in C, which Python
+    3.13 stops at 3000 levels on Windows and 10000 elsewhere.
 
     Args:
         value: The value to serialize.
 
     Returns:
         str: The canonical JSON encoding.
+
+    Raises:
+        ValueError: If a list or object contains itself.
     """
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
+    pieces: list[str] = []
+    open_containers: set[int] = set()
+    steps: list[tuple[int, object]] = [(_ENCODE_VALUE, value)]
+    while steps:
+        action, current = steps.pop()
+        if action == _EMIT_TEXT:
+            pieces.append(cast("str", current))
+            continue
+        if action == _LEAVE_CONTAINER:
+            open_containers.discard(cast("int", current))
+            continue
+        if current is None or isinstance(current, bool):
+            pieces.append("null" if current is None else "true" if current else "false")
+        elif isinstance(current, str):
+            pieces.append(json.dumps(current, ensure_ascii=False))
+        elif isinstance(current, int):
+            pieces.append(str(int(current)))
+        elif isinstance(current, float):
+            pieces.append(_float_text(current))
+        elif isinstance(current, (list, tuple, dict)):
+            container = cast("list[object] | tuple[object, ...] | dict[object, object]", current)
+            identity = id(container)
+            if identity in open_containers:
+                message = "Circular reference detected"
+                raise ValueError(message)
+            open_containers.add(identity)
+            steps.append((_LEAVE_CONTAINER, identity))
+            if isinstance(container, dict):
+                members = sorted(container.items(), key=_member_order)
+                pieces.append("{")
+                steps.append((_EMIT_TEXT, "}"))
+                for index, (key, member) in enumerate(reversed(members)):
+                    steps.extend(((_ENCODE_VALUE, member), (_EMIT_TEXT, _key_text(key) + ":")))
+                    if index < len(members) - 1:
+                        steps.append((_EMIT_TEXT, ","))
+            else:
+                items = container
+                pieces.append("[")
+                steps.append((_EMIT_TEXT, "]"))
+                for index, item in enumerate(reversed(items)):
+                    steps.append((_ENCODE_VALUE, item))
+                    if index < len(items) - 1:
+                        steps.append((_EMIT_TEXT, ","))
+        else:
+            pieces.append(json.dumps(str(current), ensure_ascii=False))
+    return "".join(pieces)
 
 
 def _annotations_fingerprint(annotations: ToolAnnotations | None) -> str:
@@ -382,7 +507,13 @@ def build_catalog(
     )
 
 
-async def fetch_catalog(client: Client, server_id: str, *, cache_mode: CacheMode = "use") -> McpToolCatalog:
+async def fetch_catalog(
+    client: Client,
+    server_id: str,
+    *,
+    cache_mode: CacheMode = "use",
+    request_deadline: Callable[[], AbstractAsyncContextManager[object]] = nullcontext,
+) -> McpToolCatalog:
     """Retrieve a server's complete tool listing.
 
     Pagination is followed to exhaustion, preserving the order the server
@@ -402,6 +533,12 @@ async def fetch_catalog(client: Client, server_id: str, *, cache_mode: CacheMode
             ``"use"`` serves a fresh cached page, ``"refresh"`` always asks
             the server and stores the answer, ``"bypass"`` always asks and
             stores nothing.
+        request_deadline: Builds the deadline each page request runs under.
+            The SDK client carries no timeout of its own, so this is what
+            bounds a server that never answers.
+
+    A page that overruns its deadline propagates the :class:`TimeoutError`
+    the deadline raises.
 
     Returns:
         McpToolCatalog: The complete listing.
@@ -417,7 +554,8 @@ async def fetch_catalog(client: Client, server_id: str, *, cache_mode: CacheMode
     seen_cursors: set[str] = set()
 
     for page in range(MAX_LIST_PAGES):
-        result = await client.list_tools(cursor=cursor, cache_mode=cache_mode)
+        async with request_deadline():
+            result = await client.list_tools(cursor=cursor, cache_mode=cache_mode)
         if page == 0:
             ttl_ms = result.ttl_ms
             cache_scope = result.cache_scope

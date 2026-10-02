@@ -38,7 +38,7 @@ from intellicrack.credentials.env_loader import (
     unregister_instance_mapping,
 )
 from intellicrack.providers import ids as provider_ids
-from intellicrack.providers.capabilities import CapabilityOverride
+from intellicrack.providers.capabilities import CapabilityOverride, ReasoningSummaryMode
 from intellicrack.providers.presets import preset_for
 
 
@@ -70,6 +70,8 @@ versioning legacy each time the schema advanced.
 
 SCHEMA_VERSION_KEY: Final[str] = "schema_version"
 MODEL_OVERRIDES_KEY: Final[str] = "model_overrides"
+REASONING_SUMMARIES_KEY: Final[str] = "reasoning_summaries"
+"""Section key holding whether Responses requests ask for reasoning summaries: ``auto``, ``on`` or ``off``."""
 """Key holding a provider section's per-model capability overrides."""
 
 INSTANCES_KEY: Final[str] = "instances"
@@ -112,6 +114,24 @@ def saved_model_overrides(section: Mapping[str, object]) -> dict[str, Capability
         else:
             _logger.warning("model_override_not_an_object", model=model_id)
     return overrides
+
+
+def saved_reasoning_summary_mode(section: Mapping[str, object]) -> ReasoningSummaryMode:
+    """Read whether a provider's Responses requests ask for reasoning summaries.
+
+    Args:
+        section: The provider's section from ``providers.json``.
+
+    Returns:
+        ReasoningSummaryMode: The saved mode, or automatic when none is saved
+        or the saved value is not one of the modes.
+    """
+    raw = section.get(REASONING_SUMMARIES_KEY)
+    try:
+        return ReasoningSummaryMode(raw) if isinstance(raw, str) else ReasoningSummaryMode.AUTO
+    except ValueError:
+        _logger.warning("reasoning_summary_mode_unknown", value=raw)
+        return ReasoningSummaryMode.AUTO
 
 
 def coerce_timeout_seconds(value: object) -> float | None:

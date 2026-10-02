@@ -238,16 +238,20 @@ def test_toolbar_refresh_uses_saved_base_url_for_an_unconnected_provider(
 ) -> None:
     """Refresh Models for a disconnected OpenAI lists the gateway's models from the saved base URL.
 
+    The key and base URL are saved to the redirected state root's ``.env``
+    before the window starts, as they are when an earlier session saved them,
+    so the credential loader the window builds at startup reads them.
+
     Args:
         window_factory: Factory yielding real windows.
         gateway: Loopback server fixture.
         qtbot: pytest-qt bot.
     """
-    window = window_factory()
     _ = get_env_file().write_text(
         f'OPENAI_API_KEY={_ACCEPTED_KEY}\nOPENAI_API_BASE="{gateway.openai_compatible_base_url}"\n',
         encoding="utf-8",
     )
+    window = window_factory()
     provider_combo: object = getattr(window, "_provider_combo")
     assert isinstance(provider_combo, QComboBox)
     index = provider_combo.findData(provider_ids.OPENAI)

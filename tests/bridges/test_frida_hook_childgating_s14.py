@@ -66,7 +66,7 @@ _logger = logging.getLogger(__name__)
 _MESSAGE_WAIT_TIMEOUT_S: Final[float] = 10.0
 _MESSAGE_POLL_INTERVAL_S: Final[float] = 0.05
 _HOOK_INVOKE_COUNT: Final[int] = 5
-_EXPECTED_CHILD_GATING_REASON: Final[str] = "not yet supported on this os"
+_EXPECTED_CHILD_GATING_REASON: Final[str] = "child gating is not supported on this OS"
 
 
 def _run_async[T](coro: Coroutine[object, object, T]) -> T:
@@ -209,22 +209,24 @@ def test_add_hook_default_callback_fires_on_invocation(self_attached_bridge: Fri
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 def test_enable_child_gating_surfaces_real_platform_reason(self_attached_bridge: FridaBridge) -> None:
-    """Verify enabling child gating on Windows surfaces the real Frida failure reason.
+    """Verify enabling child gating on Windows surfaces the platform-limitation reason.
 
     Regression test for S14-D18: on this Windows build, Frida's local device
     raises ``frida.NotSupportedError('not yet supported on this OS')`` from
     ``Device.enable_spawn_gating()`` -- confirmed directly against the real
-    ``frida`` package before writing this assertion. The previous bridge
-    code discarded that text and raised a bare
-    ``ToolError("child gating operation failed")``, so the UI only ever
-    showed the generic message and never the platform-limitation reason.
-    This test calls the real bridge method and asserts the raised
-    ``ToolError`` carries the actual Frida reason text in
-    ``details['reason']``. Falsifiable: if the bridge still swallows the
-    message, ``details`` is empty (or lacks 'reason') and the assertions
-    fail; if Frida ever silently starts supporting spawn gating on this
-    build, no exception is raised at all and the ``pytest.raises`` block
-    fails loudly instead of masking a behavior change.
+    ``frida`` package before writing this assertion. The bridge classifies
+    that ``frida.NotSupportedError`` into a stable, distinct platform-
+    limitation reason rather than either the bare generic
+    ``ToolError("child gating operation failed")`` (which carries no reason)
+    or the raw, fragile third-party ``str(e)`` text. This test calls the
+    real bridge method and asserts the raised ``ToolError`` carries that
+    stable platform-limitation reason in ``details['reason']``. Falsifiable:
+    if the bridge funnelled the ``NotSupportedError`` through the generic
+    ``except Exception`` fallback, ``details`` would be empty (or lacks
+    'reason') and the assertions fail; if Frida ever silently starts
+    supporting spawn gating on this build, no exception is raised at all and
+    the ``pytest.raises`` block fails loudly instead of masking a behavior
+    change.
 
     Args:
         self_attached_bridge: Bridge fixture attached to the current test process.
@@ -235,7 +237,7 @@ def test_enable_child_gating_surfaces_real_platform_reason(self_attached_bridge:
     reason = exc_info.value.details.get("reason")
     assert isinstance(reason, str), f"ToolError.details['reason'] must be a string, got {exc_info.value.details!r}"
     assert reason, f"ToolError.details must carry a non-empty 'reason' string, got {exc_info.value.details!r}"
-    assert reason.lower() == _EXPECTED_CHILD_GATING_REASON, (
-        f"expected the real Frida platform-limitation text {_EXPECTED_CHILD_GATING_REASON!r}, got {reason!r} -- "
+    assert reason == _EXPECTED_CHILD_GATING_REASON, (
+        f"expected the stable platform-limitation reason {_EXPECTED_CHILD_GATING_REASON!r}, got {reason!r} -- "
         "a generic/masked message would fail this exact-text comparison"
     )

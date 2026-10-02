@@ -28,6 +28,7 @@ from intellicrack.core.types import (
     ProviderError,
     ReasoningItem,
     ReasoningKind,
+    ReasoningSummaryRefusedError,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
@@ -46,10 +47,12 @@ from intellicrack.providers.capabilities import ApiDialect, TokenLimitField
 from intellicrack.providers.dialects.base import DialectRequest, StreamDelta, ToolCallFragment
 from intellicrack.providers.dialects.chat_completions import ChatCompletionsAdapter
 from intellicrack.providers.dialects.responses import (
+    REASONING_SUMMARY_PARAM,
     ResponsesAdapter,
     canonical_from_tool_search_output,
     canonical_names_in_tool_search_output,
     parse_usage,
+    tool_search_replay_item,
 )
 from intellicrack.providers.presets import OPENAI_CONTEXT_WINDOW, preset_capabilities
 
@@ -200,8 +203,11 @@ def _responses_stream_deltas(event: ResponseStreamEvent) -> list[StreamDelta]:
     if event.type == "response.output_item.done":
         if event.item.type == "reasoning":
             return [StreamDelta(reasoning_item=_reasoning_item(event.item))]
-        if event.item.type == "tool_search_output" and (loaded := canonical_names_in_tool_search_output(event.item.to_dict())):
-            _module_logger.info("responses_tool_search_loaded", tools=loaded)
+        if event.item.type in {"tool_search_call", "tool_search_output"}:
+            item = event.item.to_dict()
+            if loaded := canonical_names_in_tool_search_output(item):
+                _module_logger.info("responses_tool_search_loaded", tools=loaded)
+            return [StreamDelta(reasoning_item=tool_search_replay_item(item))]
         return []
     if event.type == "response.completed":
         return [*_usage_delta(event.response.usage), StreamDelta(finish=event.response.status or "completed")]
@@ -574,7 +580,7 @@ class OpenAIProvider(LLMProviderBase):
                 enable_cache=enable_cache,
             )
 
-        openai_messages = self.convert_messages_to_provider_format(messages)
+        openai_messages = self._openai_format_for_model(messages, model)
         openai_tools = self.convert_tools_to_provider_format(tools) if tools else None
 
         tool_choice_param: ChatCompletionToolChoiceOptionParam | None = None
@@ -1094,7 +1100,7 @@ class OpenAIProvider(LLMProviderBase):
                 )
             return
 
-        openai_messages = self.convert_messages_to_provider_format(messages)
+        openai_messages = self._openai_format_for_model(messages, model)
         openai_tools = self.convert_tools_to_provider_format(tools) if tools else None
 
         tool_choice_value: ChatCompletionToolChoiceOptionParam | None = None
@@ -1231,6 +1237,7 @@ class OpenAIProvider(LLMProviderBase):
                 thinking=thinking,
                 enable_cache=enable_cache,
                 stream=stream,
+                reasoning_summary=self.requests_reasoning_summaries,
             ),
         )
 
@@ -1246,20 +1253,30 @@ class OpenAIProvider(LLMProviderBase):
         Raises:
             ProviderError: If the client is not connected or the response is
                 not a JSON object.
+            ReasoningSummaryRefusedError: If the organization may not receive
+                the reasoning summary the body asked for.
+            openai.BadRequestError: For any other ``400``, which the
+                surrounding translation turns into a typed error.
         """
         if self.client is None:
             self._logger.warning("openai_responses_not_connected", model=body.get("model"))
             raise ProviderError(_ERR_NOT_CONNECTED)
+        client = self.client
         with self._translate_openai_errors(
             log_prefix="openai_responses",
             messages=_OPENAI_CHAT_ERRORS,
             log_extra={"model": str(body.get("model", ""))},
         ):
-            raw = await self.client.post(
-                _RESPONSES_PATH,
-                cast_to=httpx.Response,
-                body=body,
-            )
+            try:
+                raw = await client.post(
+                    _RESPONSES_PATH,
+                    cast_to=httpx.Response,
+                    body=body,
+                )
+            except openai.BadRequestError as exc:
+                if exc.param == REASONING_SUMMARY_PARAM:
+                    raise ReasoningSummaryRefusedError(str(exc), provider_name=self.name, status_code=exc.status_code) from exc
+                raise
         decoded: object = raw.json()
         if not isinstance(decoded, dict):
             self._logger.warning("openai_responses_payload_not_an_object")
@@ -1305,12 +1322,15 @@ class OpenAIProvider(LLMProviderBase):
             stream=False,
         )
         start_time = time.perf_counter()
-        api_task: asyncio.Task[dict[str, Any]] = asyncio.create_task(
-            self._retry_with_backoff(lambda: self._post_responses(body)),
+        api_task: asyncio.Task[tuple[dict[str, Any], dict[str, Any]]] = asyncio.create_task(
+            self._send_with_summary_fallback(
+                lambda attempt: self._retry_with_backoff(lambda: self._post_responses(attempt)),
+                body,
+            ),
         )
         self._current_task = cast("asyncio.Task[object]", api_task)
         try:
-            payload = await api_task
+            payload, _ = await api_task
         finally:
             self._current_task = None
         duration_ms = (time.perf_counter() - start_time) * 1000
@@ -1335,43 +1355,70 @@ class OpenAIProvider(LLMProviderBase):
         )
         return message, tool_calls or None
 
+    async def _open_responses_stream(self, body: dict[str, Any]) -> AsyncStream[ResponseStreamEvent]:
+        """Open a Responses stream.
+
+        Args:
+            body: The request body built by the Responses adapter.
+
+        Returns:
+            AsyncStream[ResponseStreamEvent]: The open stream.
+
+        Raises:
+            ProviderError: If the client is not connected.
+            ReasoningSummaryRefusedError: If the organization may not receive
+                the reasoning summary the body asked for.
+            openai.BadRequestError: For any other ``400``, which the caller
+                translates into a typed error.
+        """
+        if self.client is None:
+            self._logger.warning("openai_responses_stream_not_connected", model=body.get("model"))
+            raise ProviderError(_ERR_NOT_CONNECTED)
+        try:
+            return await self.client.post(
+                _RESPONSES_PATH,
+                cast_to=Response,
+                body=body,
+                stream=True,
+                stream_cls=AsyncStream[ResponseStreamEvent],
+            )
+        except openai.BadRequestError as exc:
+            if exc.param == REASONING_SUMMARY_PARAM:
+                raise ReasoningSummaryRefusedError(str(exc), provider_name=self.name, status_code=exc.status_code) from exc
+            raise
+
     async def _iter_responses_stream(self, body: dict[str, Any]) -> AsyncIterator[str]:
         """Open a Responses stream and yield its visible text deltas.
+
+        The SDK stream is closed however the loop ends, so a cancel that
+        breaks out of it releases the connection rather than leaving the
+        response body unread.
 
         Args:
             body: The request body built by the Responses adapter.
 
         Yields:
             str: Text chunks as they arrive.
-
-        Raises:
-            ProviderError: If the client is not connected.
         """
-        if self.client is None:
-            self._logger.warning("openai_responses_stream_not_connected", model=body.get("model"))
-            raise ProviderError(_ERR_NOT_CONNECTED)
-        stream = await self.client.post(
-            _RESPONSES_PATH,
-            cast_to=Response,
-            body=body,
-            stream=True,
-            stream_cls=AsyncStream[ResponseStreamEvent],
-        )
+        stream, _ = await self._send_with_summary_fallback(self._open_responses_stream, body)
         buffer = ToolCallBufferManager()
         reasoning: list[ReasoningItem] = []
-        async for event in stream:
-            if self._cancel_requested:
-                break
-            for delta in _responses_stream_deltas(event):
-                buffer.absorb(delta)
-                if delta.usage is not None:
-                    self._pending_usage = delta.usage
-                if delta.reasoning_item is not None:
-                    reasoning.append(delta.reasoning_item)
-                if delta.reasoning:
-                    self._pending_thinking.append(delta.reasoning)
-                if delta.text:
-                    yield delta.text
+        try:
+            async for event in stream:
+                if self._cancel_requested:
+                    break
+                for delta in _responses_stream_deltas(event):
+                    buffer.absorb(delta)
+                    if delta.usage is not None:
+                        self._pending_usage = delta.usage
+                    if delta.reasoning_item is not None:
+                        reasoning.append(delta.reasoning_item)
+                    if delta.reasoning:
+                        self._pending_thinking.append(delta.reasoning)
+                    if delta.text:
+                        yield delta.text
+        finally:
+            await stream.close()
         self._pending_tool_calls = buffer.finalize()
         self._pending_reasoning = reasoning
 

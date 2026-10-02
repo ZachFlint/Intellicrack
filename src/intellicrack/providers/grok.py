@@ -392,7 +392,7 @@ class GrokProvider(LLMProviderBase):
         self._cancel_requested = False
         self._pending_usage = None
 
-        grok_messages_raw = self.convert_messages_to_provider_format(messages)
+        grok_messages_raw = self._openai_format_for_model(messages, model)
         grok_messages_typed = cast("list[ChatCompletionMessageParam]", grok_messages_raw)
 
         grok_tools_typed = self._grok_tools(model, tools)
@@ -893,7 +893,7 @@ class GrokProvider(LLMProviderBase):
         if enable_cache:
             self._logger.debug("grok_stream_cache_auto", model=model)
 
-        grok_messages_raw = self.convert_messages_to_provider_format(messages)
+        grok_messages_raw = self._openai_format_for_model(messages, model)
         grok_messages_typed = cast("list[ChatCompletionMessageParam]", grok_messages_raw)
 
         grok_tools_typed = self._grok_tools(model, tools)

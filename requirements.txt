@@ -129,6 +129,7 @@ jsonlint==0.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 keyring==25.7.0
+keyrings-alt==5.0.2
 keystone-engine==0.9.2
 libcst==1.9.0
 librt==0.16.0
@@ -197,6 +198,7 @@ pip-api==0.0.35
 pip-audit==2.10.1
 pip-requirements-parser==32.0.1
 pipdeptree==4.2.5
+pipx==1.17.9
 pkginfo==1.13
 platformdirs==4.12.2
 plotly==7.1.0
@@ -364,6 +366,8 @@ tzdata==2026.4
 umf==1.1.0
 uncalled==0.1.8
 urllib3==2.8.0
+userpath==1.9.2
+uv==0.12.22
 uvicorn==0.54.0
 validate-pyproject==0.26
 validate-pyproject-schema-store==2026.9.30

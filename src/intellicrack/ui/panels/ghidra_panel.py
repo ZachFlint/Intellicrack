@@ -332,6 +332,7 @@ class GhidraPanel(AnalysisPanelBase):
         set_max_block_count(self._disasm_view, 50000)
 
         disasm_container = QWidget()
+        self._disasm_tab: QWidget = disasm_container
         disasm_layout = QVBoxLayout(disasm_container)
         disasm_layout.setContentsMargins(0, 0, 0, 0)
         disasm_toolbar = QHBoxLayout()
@@ -2462,7 +2463,7 @@ class GhidraPanel(AnalysisPanelBase):
         if bridge is None:
             return
         self._set_status(f"Block 0x{address:X}")
-        self._code_tabs.setCurrentWidget(self._disasm_view)
+        self._code_tabs.setCurrentWidget(self._disasm_tab)
         run_bridge_coroutine_logged(
             bridge.disassemble(address),
             on_success=self._apply_disassembly,

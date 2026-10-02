@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import pytest
 from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
+from PyQt6.QtWidgets import QApplication, QCheckBox, QMessageBox, QStyle, QStyleOptionButton, QWidget
 
 from intellicrack.core.config import Config
 from intellicrack.ui.log_viewer import LogRecordDetailsDialog, LogRecordDict, LogViewerWindow
@@ -305,6 +305,28 @@ def test_handler_signal_appends_live_record(qtbot: QtBot, tmp_path: Path) -> Non
     finally:
         root_logger.setLevel(previous_level)
         window.close()
+
+
+def _click_checkbox(qtbot: QtBot, check: QCheckBox) -> None:
+    """Click a checkbox where its style accepts the click.
+
+    A ``QCheckBox`` toggles only for a press inside its indicator-and-label
+    click rect; a checkbox laid out wider than its label ignores a click in
+    the blank space beyond the text, which is where the widget's centre falls
+    under styles such as Fusion.
+
+    Args:
+        qtbot: pytest-qt bot fixture.
+        check: The checkbox to click.
+    """
+    option = QStyleOptionButton()
+    option.initFrom(check)
+    option.text = check.text()
+    option.icon = check.icon()
+    option.iconSize = check.iconSize()
+    click_rect = check.style().subElementRect(QStyle.SubElement.SE_CheckBoxClickRect, option, check)
+    assert click_rect.isValid(), "the checkbox style reported no clickable area"
+    qtbot.mouseClick(check, Qt.MouseButton.LeftButton, pos=click_rect.center())
 
 
 def _open_window(
@@ -681,7 +703,7 @@ def test_case_sensitive_checkbox_toggles_proxy(qtbot: QtBot, tmp_path: Path) -> 
     check = window._case_check
     assert check is not None
     assert check.isChecked() is False
-    qtbot.mouseClick(check, Qt.MouseButton.LeftButton)
+    _click_checkbox(qtbot, check)
     qtbot.waitUntil(check.isChecked, timeout=_DEFAULT_TIMEOUT_MS)
     text_edit = window._text_query_edit
     assert text_edit is not None
@@ -756,7 +778,7 @@ def test_auto_scroll_disabled_does_not_scroll(
     window, _ = _open_window(qtbot, tmp_path, seed_count=0)
     check = window._auto_scroll_check
     assert check is not None
-    qtbot.mouseClick(check, Qt.MouseButton.LeftButton)
+    _click_checkbox(qtbot, check)
     qtbot.waitUntil(lambda: not check.isChecked(), timeout=_LIVE_RECORD_TIMEOUT_MS)
 
     table = window._table_view

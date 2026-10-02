@@ -16,6 +16,7 @@ import os
 import shutil
 import socket
 import subprocess
+import sys
 import time
 import zipfile
 from pathlib import Path
@@ -745,6 +746,10 @@ class TestF0003PollForResult:
         assert not stderr_file.exists(), "stderr sidecar should be cleaned up"
         assert not script_file.exists(), "script file should be cleaned up"
 
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="the generated Windows guest script is a cmd.exe batch file run here by a real cmd.exe",
+    )
     def test_generated_windows_script_executes_and_writes_exact_sidecars(self, tmp_path: Path) -> None:
         r"""The generated Windows .cmd actually redirects to the sidecars when run.
 

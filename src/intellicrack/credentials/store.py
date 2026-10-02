@@ -11,6 +11,7 @@ Keychain, or Linux Secret Service via the keyring library).
 from __future__ import annotations
 
 import asyncio
+import errno
 import json
 import secrets
 import threading
@@ -86,6 +87,14 @@ class CredentialNotFoundError(CredentialStoreError):
     """Requested credential was not found."""
 
 
+class CredentialStoreFullError(CredentialStoreError):
+    """The keyring refused a write because it has no room left.
+
+    Raised in place of the backend's own error so the operator is told what to do about it. Whatever was stored before under the same
+    name is still there, unchanged.
+    """
+
+
 class KeyringReadError(CredentialStoreError):
     """The keyring holds an entry for the credential but it could not be read.
 
@@ -104,6 +113,21 @@ _CHUNK_MANIFEST_MARKER: Final[str] = "intellicrack_chunked_credential"
 _CHUNK_MANIFEST_VERSION: Final[int] = 1
 _CHUNK_KEY_INFIX: Final[str] = "__chunk_"
 _CHUNK_GENERATION_BYTES: Final[int] = 4
+_CHUNK_PENDING_SUFFIX: Final[str] = "pending"
+_READ_ATTEMPTS: Final[int] = 2
+
+_KEYRING_LOCK: Final[threading.RLock] = threading.RLock()
+"""Held for every keyring read, write and delete any :class:`CredentialStore` makes.
+
+A chunked value spans several entries. Two stores writing the same credential, each deleting the chunks it believed were the previous
+ones, would orphan each other's; a reader between a writer's manifest switch and its cleanup would find chunks missing. One lock across
+every instance in the process makes each read, write and delete of a value atomic with respect to the others.
+"""
+
+_WINDOWS_QUOTA_ERRORS: Final[frozenset[int]] = frozenset({8, 14, 112, 1816})
+"""``ERROR_NOT_ENOUGH_MEMORY``, ``ERROR_OUTOFMEMORY``, ``ERROR_DISK_FULL`` and ``ERROR_NOT_ENOUGH_QUOTA``: the keyring has no room."""
+
+_POSIX_QUOTA_ERRORS: Final[frozenset[int]] = frozenset({errno.ENOSPC, errno.EDQUOT})
 _UTF16_UNIT_BYTES: Final[int] = 2
 _UTF16_PAIR_BYTES: Final[int] = 4
 _BMP_MAX_CODE_POINT: Final[int] = 0xFFFF
@@ -178,6 +202,18 @@ class ChunkManifest:
         return f"{key}{_CHUNK_KEY_INFIX}{self.generation}_{index}"
 
 
+def _pending_key(key: str) -> str:
+    """Name the entry recording the chunk generation a write of ``key`` is in the middle of.
+
+    Args:
+        key: The value's own keyring key.
+
+    Returns:
+        str: The pending marker's keyring key.
+    """
+    return f"{key}{_CHUNK_KEY_INFIX}{_CHUNK_PENDING_SUFFIX}"
+
+
 def credential_blob_size(value: str) -> int:
     """Measure a value the way Windows Credential Manager does.
 
@@ -222,6 +258,31 @@ def split_credential_blob(value: str, max_bytes: int = CRED_MAX_CREDENTIAL_BLOB_
     if current or not pieces:
         pieces.append("".join(current))
     return pieces
+
+
+def is_quota_failure(error: BaseException) -> bool:
+    """Report whether a failed keyring write failed for lack of room.
+
+    Windows Credential Manager reports it through the Win32 error on the backend's exception, a file-backed keyring through the errno of
+    the ``OSError`` it raised; either may be the cause of the error keyring re-raised.
+
+    Args:
+        error: The error the write raised.
+
+    Returns:
+        bool: ``True`` when the error, or one it was raised from, says the store is full.
+    """
+    seen: set[int] = set()
+    current: BaseException | None = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        winerror = getattr(current, "winerror", None)
+        if isinstance(winerror, int) and winerror in _WINDOWS_QUOTA_ERRORS:
+            return True
+        if isinstance(current, OSError) and current.errno in _POSIX_QUOTA_ERRORS:
+            return True
+        current = current.__cause__ or current.__context__
+    return False
 
 
 def _is_count(value: object) -> TypeGuard[int]:
@@ -465,6 +526,10 @@ class CredentialStore:
     def _read_blob(self, keyring: ModuleType, key: str) -> str | None:
         """Read one stored value, reassembling it when it was written in chunks.
 
+        The read holds :data:`_KEYRING_LOCK`, so no write in this process can switch the value's chunks underneath it. A write from
+        another process still can: a chunk found missing is followed by one more read, and only a value that is still incomplete then is
+        reported.
+
         Runs on a worker thread; every call it makes blocks on the backend.
 
         Args:
@@ -475,15 +540,39 @@ class CredentialStore:
             str | None: The whole value, or ``None`` when nothing is stored under ``key``.
 
         Raises:
-            KeyringReadError: If a chunk the manifest names is missing or the reassembled value is not the recorded length.
+            KeyringReadError: If a chunk the manifest names is missing or the reassembled value is not the recorded length, on a second
+                read as well as the first.
         """
-        primary: object = keyring.get_password(self.SERVICE_NAME, key)
-        if primary is None:
+        with _KEYRING_LOCK:
+            for attempt in range(1, _READ_ATTEMPTS + 1):
+                primary: object = keyring.get_password(self.SERVICE_NAME, key)
+                if primary is None:
+                    return None
+                stored = str(primary)
+                manifest = ChunkManifest.parse(stored)
+                if manifest is None:
+                    return stored
+                try:
+                    return self._assemble(keyring, key, manifest)
+                except KeyringReadError:
+                    if attempt == _READ_ATTEMPTS or keyring.get_password(self.SERVICE_NAME, key) == primary:
+                        raise
             return None
-        stored = str(primary)
-        manifest = ChunkManifest.parse(stored)
-        if manifest is None:
-            return stored
+
+    def _assemble(self, keyring: ModuleType, key: str, manifest: ChunkManifest) -> str:
+        """Join the chunks one manifest names.
+
+        Args:
+            keyring: The keyring module to read through.
+            key: The value's own keyring key.
+            manifest: The manifest stored under ``key``.
+
+        Returns:
+            str: The whole value.
+
+        Raises:
+            KeyringReadError: If a chunk is missing or the joined value is not the recorded length.
+        """
         pieces: list[str] = []
         for index in range(manifest.count):
             piece: object = keyring.get_password(self.SERVICE_NAME, manifest.chunk_key(key, index))
@@ -500,10 +589,18 @@ class CredentialStore:
     def _write_blob(self, keyring: ModuleType, key: str, value: str) -> None:
         """Store one value, splitting it across entries when it exceeds the Credential Manager blob limit.
 
-        A value that fits is written directly under ``key``, exactly as before chunking existed. A larger one is written as chunks under a
-        fresh generation tag first, and only then is the manifest written under ``key``, so the entry always points at a complete set. The
-        chunks of whatever was stored previously are removed afterwards. An existing entry that cannot be read does not block the write,
-        because overwriting it is how the operator repairs it; only its old chunks, which cannot be located, are left behind.
+        A value that fits is written directly under ``key``, exactly as before chunking existed. A larger one is written as a transaction:
+
+        1. the new chunks' generation is recorded under a pending marker first, so a crash part-way through leaves a record of what to
+           remove;
+        2. the chunks are written, and if one fails -- the keyring is full, say -- every chunk already written is removed again and the
+           failure propagates, leaving the value that was stored before untouched;
+        3. the manifest naming the complete set replaces whatever was under ``key``;
+        4. the previous value's chunks are removed, and then the pending marker.
+
+        Chunks a crashed write left behind are removed before the next write or delete of the same value. The whole write holds
+        :data:`_KEYRING_LOCK`. An existing entry that cannot be read does not block the write, because overwriting it is how the operator
+        repairs it; only its old chunks, which cannot be located, are left behind.
 
         Runs on a worker thread; every call it makes blocks on the backend.
 
@@ -512,24 +609,84 @@ class CredentialStore:
             key: The value's own keyring key.
             value: The value to store.
         """
-        previous: ChunkManifest | None = None
+        with _KEYRING_LOCK:
+            self._recover_pending(keyring, key)
+            previous: ChunkManifest | None = None
+            try:
+                previous_primary: object = keyring.get_password(self.SERVICE_NAME, key)
+            except (OSError, ValueError, _KeyringError, _Win32CredentialError):
+                _logger.warning("credential_previous_entry_unreadable", key_id=key, exc_info=True)
+            else:
+                previous = ChunkManifest.parse(str(previous_primary)) if previous_primary is not None else None
+            if credential_blob_size(value) <= CRED_MAX_CREDENTIAL_BLOB_BYTES and ChunkManifest.parse(value) is None:
+                keyring.set_password(self.SERVICE_NAME, key, value)
+            else:
+                self._write_chunked(keyring, key, value)
+            if previous is not None:
+                self._delete_chunks(keyring, key, previous)
+            self._clear_pending(keyring, key)
+
+    def _write_chunked(self, keyring: ModuleType, key: str, value: str) -> None:
+        """Write a value as chunks and then its manifest, removing every chunk written if any step fails.
+
+        A failure propagates from the backend once the chunks and the pending marker are removed. If the removal itself fails, the marker
+        stays, and the next write or delete of the value finishes the job.
+
+        Args:
+            keyring: The keyring module to write through.
+            key: The value's own keyring key.
+            value: The value to store.
+        """
+        pieces = split_credential_blob(value)
+        manifest = ChunkManifest(generation=secrets.token_hex(_CHUNK_GENERATION_BYTES), count=len(pieces), length=len(value))
+        keyring.set_password(self.SERVICE_NAME, _pending_key(key), manifest.generation)
+        written = 0
+        committed = False
         try:
-            previous_primary: object = keyring.get_password(self.SERVICE_NAME, key)
-        except (OSError, ValueError, _KeyringError, _Win32CredentialError):
-            _logger.warning("credential_previous_entry_unreadable", key_id=key, exc_info=True)
-        else:
-            previous = ChunkManifest.parse(str(previous_primary)) if previous_primary is not None else None
-        if credential_blob_size(value) <= CRED_MAX_CREDENTIAL_BLOB_BYTES and ChunkManifest.parse(value) is None:
-            keyring.set_password(self.SERVICE_NAME, key, value)
-        else:
-            pieces = split_credential_blob(value)
-            manifest = ChunkManifest(generation=secrets.token_hex(_CHUNK_GENERATION_BYTES), count=len(pieces), length=len(value))
             for index, piece in enumerate(pieces):
                 keyring.set_password(self.SERVICE_NAME, manifest.chunk_key(key, index), piece)
+                written = index + 1
             keyring.set_password(self.SERVICE_NAME, key, manifest.serialize())
-            _logger.debug("credential_stored_in_chunks", key_id=key, chunk_count=manifest.count)
-        if previous is not None:
-            self._delete_chunks(keyring, key, previous)
+            committed = True
+        finally:
+            if not committed:
+                self._delete_chunks(keyring, key, ChunkManifest(generation=manifest.generation, count=written, length=0))
+                self._clear_pending(keyring, key)
+        _logger.debug("credential_stored_in_chunks", key_id=key, chunk_count=manifest.count)
+
+    def _recover_pending(self, keyring: ModuleType, key: str) -> None:
+        """Remove the chunks an interrupted write left behind.
+
+        The pending marker names the generation that was being written. Unless the manifest under ``key`` now names that generation --
+        the write got as far as committing -- its chunks are orphans, and they are removed in order until one is missing.
+
+        Args:
+            keyring: The keyring module to delete through.
+            key: The value's own keyring key.
+        """
+        generation: object = keyring.get_password(self.SERVICE_NAME, _pending_key(key))
+        if generation is None:
+            return
+        primary: object = keyring.get_password(self.SERVICE_NAME, key)
+        current = ChunkManifest.parse(str(primary)) if primary is not None else None
+        if current is None or current.generation != str(generation):
+            orphan = ChunkManifest(generation=str(generation), count=0, length=0)
+            index = 0
+            while keyring.get_password(self.SERVICE_NAME, orphan.chunk_key(key, index)) is not None:
+                keyring.delete_password(self.SERVICE_NAME, orphan.chunk_key(key, index))
+                index += 1
+            _logger.info("credential_orphaned_chunks_removed", key_id=key, chunk_count=index)
+        self._clear_pending(keyring, key)
+
+    def _clear_pending(self, keyring: ModuleType, key: str) -> None:
+        """Remove the pending marker of a value, if there is one.
+
+        Args:
+            keyring: The keyring module to delete through.
+            key: The value's own keyring key.
+        """
+        if keyring.get_password(self.SERVICE_NAME, _pending_key(key)) is not None:
+            keyring.delete_password(self.SERVICE_NAME, _pending_key(key))
 
     def _delete_chunks(self, keyring: ModuleType, key: str, manifest: ChunkManifest) -> None:
         """Remove the chunk entries one manifest names.
@@ -556,14 +713,16 @@ class CredentialStore:
         Returns:
             bool: ``True`` when a value was stored and has been removed, ``False`` when nothing was stored.
         """
-        primary: object = keyring.get_password(self.SERVICE_NAME, key)
-        if primary is None:
-            return False
-        manifest = ChunkManifest.parse(str(primary))
-        keyring.delete_password(self.SERVICE_NAME, key)
-        if manifest is not None:
-            self._delete_chunks(keyring, key, manifest)
-        return True
+        with _KEYRING_LOCK:
+            self._recover_pending(keyring, key)
+            primary: object = keyring.get_password(self.SERVICE_NAME, key)
+            if primary is None:
+                return False
+            manifest = ChunkManifest.parse(str(primary))
+            keyring.delete_password(self.SERVICE_NAME, key)
+            if manifest is not None:
+                self._delete_chunks(keyring, key, manifest)
+            return True
 
     async def _get_from_keyring(self, provider: str) -> ProviderCredentials | None:
         """Get credentials directly from keyring.
@@ -619,7 +778,8 @@ class CredentialStore:
 
         Raises:
             KeyringUnavailableError: If keyring is not available.
-            CredentialStoreError: If storage fails.
+            CredentialStoreFullError: If the keyring has no room for the credential. Nothing stored before is changed.
+            CredentialStoreError: If storage fails for any other reason.
         """
         if self._keyring is None:
             _logger.warning("credential_set_keyring_unavailable", provider=provider)
@@ -653,6 +813,13 @@ class CredentialStore:
             _logger.info("credentials_stored", provider=provider, store="keyring")
         except (OSError, KeyError, ValueError, _KeyringError, _Win32CredentialError) as e:
             _logger.warning("credential_store_failed", provider=provider, error=str(e), exc_info=True)
+            if is_quota_failure(e):
+                msg = (
+                    f"The system keyring is full, so the credential for {provider} could not be saved ({e}). Remove credentials you no "
+                    f"longer use -- on Windows, in Credential Manager under Windows Credentials -- and save again. The credential stored "
+                    f"before is unchanged."
+                )
+                raise CredentialStoreFullError(msg) from e
             msg = f"Failed to store credentials: {e}"
             raise CredentialStoreError(msg) from e
 

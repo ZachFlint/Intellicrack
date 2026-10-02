@@ -607,7 +607,7 @@ class TestResolveLazyWarningLog:
         monkeypatch.setattr(_lazy_mod, "_logger", sink)
 
         with pytest.raises(AttributeError, match=r"has no attribute"):
-            resolve("_AbsolutelyNonexistentBridge", {})
+            resolve("AbsolutelyNonexistentBridge", {})
 
         assert sink.has_event("lazy_resolve_unknown_attribute", level="warning"), (
             "Expected 'lazy_resolve_unknown_attribute' warning log event to be emitted"
@@ -624,7 +624,7 @@ class TestResolveLazyWarningLog:
         """
         sink = _LogSink()
         monkeypatch.setattr(_lazy_mod, "_logger", sink)
-        target = "_VeryUnlikelyBridgeName_XYZ123"
+        target = "VeryUnlikelyBridgeName_XYZ123"
 
         with pytest.raises(AttributeError):
             resolve(target, {})

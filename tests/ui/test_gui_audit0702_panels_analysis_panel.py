@@ -8,10 +8,11 @@ Each test targets one audit finding for
 :class:`intellicrack.ui.panels.analysis_panel.BridgeAnalysisPanel` and fails
 against the pre-fix behaviour:
 
-* ``test_h33_*`` (H33): the variable-length data column in every table
-  (Value/Function/Name) must use ``QHeaderView.ResizeMode.Stretch`` instead
-  of relying on ``setStretchLastSection`` granting space to an unrelated
-  trailing column, and every populated cell must carry a tooltip with its
+* ``test_h33_*`` (H33): every table column, including the variable-length
+  Value/Function/Name columns, must size to its content instead of relying
+  on ``setStretchLastSection`` granting space to an unrelated trailing
+  column, so a long value widens its column and the table scrolls
+  horizontally to it; and every populated cell must carry a tooltip with its
   full, unclipped text.
 * ``test_m34_*`` (M34): the address-column accent colour must be re-resolved
   from :class:`ThemeManager` and reapplied to every already-rendered address
@@ -27,6 +28,7 @@ All tests drive a real :class:`BridgeAnalysisPanel` under an offscreen
 
 from __future__ import annotations
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QHeaderView
 
 from intellicrack.core.types import (
@@ -109,14 +111,16 @@ def _restore_theme() -> None:
     ThemeManager.get_instance().apply_theme(THEME_DARK)
 
 
-def test_h33_variable_length_columns_use_stretch_resize_mode(qapp: QApplication) -> None:
-    """The variable-length data column in each table stretches, not just the last one.
+def test_h33_every_table_column_sizes_to_its_content(qapp: QApplication) -> None:
+    """Every column of every table resizes to its content and overflow scrolls.
 
     Pre-fix, only ``setStretchLastSection(True)`` was used with
     ``QHeaderView.ResizeMode.Interactive`` everywhere, so the Value/Function
-    column never had ``Stretch`` mode -- this assertion fails against that
-    code because ``sectionResizeMode(1)`` on the strings table would report
-    ``Interactive``, not ``Stretch``.
+    column stayed at a fixed default width. A ``Stretch`` column is no fix
+    either: it always fills exactly the remaining viewport width, so it can
+    never overflow into the horizontal scrollbar and is crushed to its minimum
+    in a narrow dock (S20-D16). Content-sized columns with no stretched last
+    section keep long values whole and reachable by scrolling.
 
     Args:
         qapp: The shared QApplication fixture.
@@ -124,40 +128,36 @@ def test_h33_variable_length_columns_use_stretch_resize_mode(qapp: QApplication)
     _ = qapp
     panel = BridgeAnalysisPanel()
     try:
-        strings_header = panel._strings_table.horizontalHeader()
-        assert strings_header is not None
-        assert strings_header.sectionResizeMode(1) == QHeaderView.ResizeMode.Stretch, (
-            "Value column (strings table) does not stretch to fill available space"
-        )
-        assert strings_header.sectionResizeMode(0) == QHeaderView.ResizeMode.ResizeToContents
-
-        imports_header = panel._imports_table.horizontalHeader()
-        assert imports_header is not None
-        assert imports_header.sectionResizeMode(0) == QHeaderView.ResizeMode.Stretch, "DLL column (imports table) does not stretch"
-        assert imports_header.sectionResizeMode(1) == QHeaderView.ResizeMode.Stretch, "Function column (imports table) does not stretch"
-
-        functions_header = panel._functions_table.horizontalHeader()
-        assert functions_header is not None
-        assert functions_header.sectionResizeMode(1) == QHeaderView.ResizeMode.Stretch, "Name column (functions table) does not stretch"
-
-        exports_header = panel._exports_table.horizontalHeader()
-        assert exports_header is not None
-        assert exports_header.sectionResizeMode(0) == QHeaderView.ResizeMode.Stretch, "Name column (exports table) does not stretch"
-
-        assert strings_header.stretchLastSection() is False, (
-            "legacy stretch-last-section is still granting extra space only to the trailing Section column instead of the Value column"
-        )
+        tables = {
+            "strings": panel._strings_table,
+            "imports": panel._imports_table,
+            "exports": panel._exports_table,
+            "functions": panel._functions_table,
+            "sections": panel._sections_table,
+        }
+        for name, table in tables.items():
+            header = table.horizontalHeader()
+            assert header is not None
+            modes = [header.sectionResizeMode(col) for col in range(table.columnCount())]
+            assert modes == [QHeaderView.ResizeMode.ResizeToContents] * table.columnCount(), (
+                f"{name} table columns must size to their content; got {modes}"
+            )
+            assert header.stretchLastSection() is False, (
+                f"{name} table still stretches its trailing column instead of sizing every column to its content"
+            )
+            assert table.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAsNeeded, (
+                f"{name} table must scroll horizontally to columns that overflow the viewport"
+            )
     finally:
         panel.deleteLater()
 
 
-def test_h33_stretch_column_absorbs_widened_table_space(qapp: QApplication) -> None:
-    """The stretch column actually claims the extra space once the table is widened.
+def test_h33_long_value_widens_its_column_past_a_narrow_viewport(qapp: QApplication) -> None:
+    """A long Value is shown whole and the narrow table scrolls to it.
 
-    Pre-fix the Value column used ``Interactive`` resize mode, so widening
-    the table would leave it at its default ~100px width while the (empty,
-    unaffected) last column absorbed the space; this measures real geometry,
-    not just the declared resize-mode enum.
+    Pre-fix the Value column used ``Interactive`` resize mode, so a long
+    value was clipped to the default ~100px width; this measures real
+    geometry, not just the declared resize-mode enum.
 
     Args:
         qapp: The shared QApplication fixture.
@@ -165,19 +165,20 @@ def test_h33_stretch_column_absorbs_widened_table_space(qapp: QApplication) -> N
     _ = qapp
     panel = BridgeAnalysisPanel()
     try:
-        panel.resize(900, 400)
+        panel.set_analysis(_make_analysis())
+        panel.resize(400, 400)
         panel.show()
         QApplication.processEvents()
         table = panel._strings_table
-        table.resize(880, 300)
+        table.resize(300, 300)
         QApplication.processEvents()
 
-        address_width = table.columnWidth(0)
+        text_width = table.fontMetrics().horizontalAdvance(_LONG_STRING_VALUE)
         value_width = table.columnWidth(1)
-        assert value_width > address_width * 3, (
-            "Value column did not absorb the widened table's extra space via "
-            f"Stretch resize mode (address={address_width}, value={value_width})"
-        )
+        assert value_width >= text_width, f"Value column clipped the long string (column={value_width}px, text={text_width}px)"
+        scroll_bar = table.horizontalScrollBar()
+        assert scroll_bar is not None
+        assert scroll_bar.maximum() > 0, "the narrow table cannot scroll horizontally to the overflowing Value column"
     finally:
         panel.deleteLater()
 

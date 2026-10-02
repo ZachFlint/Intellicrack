@@ -192,6 +192,7 @@ class TestExecuteNumericSearchFallback:
             signed=False,
             big_endian=False,
             is_range=False,
+            is_float=False,
         )
         offsets = [r[0] for r in results]
         assert 8 in offsets

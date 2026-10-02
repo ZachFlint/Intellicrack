@@ -19,8 +19,10 @@ The fix routes both ends of the panel patch flow through the bridge:
   via ``run_bridge_coroutine`` and base64-decodes the result before
   writing to disk.
 - ``_on_import_patches`` reads the file, base64-encodes the bytes, and
-  calls ``bridge.import_patches(b64, original_path)``. The bridge
-  inspects magic bytes and dispatches to the correct format.
+  calls ``bridge.import_patches(b64, original_path)``, which inspects
+  magic bytes and dispatches to the correct format. ``.bps`` files go
+  to ``bridge.import_patches_bps(b64, original_path)`` so a native
+  hexcore backend rebuilds the target directly.
 - BPS/UPS export and import require the original unmodified file on
   disk; the panel passes ``self.file_path`` and rejects the operation
   with a user-visible warning if no source file is available.
@@ -117,6 +119,7 @@ class _FakeBridge:
         self._import_count: int = import_count
         self.export_calls: list[tuple[str, str | None]] = []
         self.import_calls: list[tuple[str, str | None]] = []
+        self.import_bps_calls: list[tuple[str, str]] = []
 
     async def export_patches(self, patch_format: str, original_path: str | None = None) -> str:
         """Record the export call and return the configured base64 payload.
@@ -145,6 +148,21 @@ class _FakeBridge:
         assert decoded, "panel must encode non-empty patch payload"
         self.import_calls.append((data_b64, original_path))
         return self._import_count
+
+    async def import_patches_bps(self, patch_b64: str, original_path: str) -> dict[str, int]:
+        """Record the BPS import call and report the rebuilt target size.
+
+        Args:
+            patch_b64: Base64-encoded BPS patch bytes.
+            original_path: Source file path the panel passed.
+
+        Returns:
+            dict[str, int]: ``{"target_size": int}`` sized from the original file.
+        """
+        decoded = base64.b64decode(patch_b64.encode("ascii"))
+        assert decoded, "panel must encode non-empty patch payload"
+        self.import_bps_calls.append((patch_b64, original_path))
+        return {"target_size": _DOC_LEN}
 
 
 class _StubHexWidget:
@@ -438,6 +456,7 @@ class TestImportRoutesThroughBridge:
         harness.trigger_import_for_test()
 
         assert bridge.import_calls == [], "panel must NOT call the bridge when BPS import lacks an original file"
+        assert bridge.import_bps_calls == [], "panel must NOT call the BPS bridge route when BPS import lacks an original file"
         assert any(kind == "warning" for kind, _t, _m in silence_dialogs), (
             "panel must surface a warning when BPS import lacks an original file"
         )
@@ -448,7 +467,7 @@ class TestImportRoutesThroughBridge:
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """BPS import with a real file_path passes ``original_path`` to the bridge.
+        """BPS import with a real file_path routes to ``import_patches_bps`` with ``original_path``.
 
         Args:
             qapp: Qt application fixture (kept alive for widget construction).
@@ -470,9 +489,14 @@ class TestImportRoutesThroughBridge:
 
         harness.trigger_import_for_test()
 
-        assert _wait_until(lambda: len(bridge.import_calls) == 1), (
-            f"bridge.import_patches must be called exactly once; got {len(bridge.import_calls)} "
+        assert _wait_until(lambda: len(bridge.import_bps_calls) == 1), (
+            f"bridge.import_patches_bps must be called exactly once; got {len(bridge.import_bps_calls)} "
             f"after waiting {_ASYNC_WAIT_TIMEOUT_S}s for the background bridge worker"
         )
-        _b64, sent_original = bridge.import_calls[0]
+        assert bridge.import_calls == [], "BPS import must use the dedicated BPS bridge route, not the generic dispatcher"
+        sent_b64, sent_original = bridge.import_bps_calls[0]
         assert sent_original == str(original), "panel must pass the resolved original file path for BPS import"
+        assert base64.b64decode(sent_b64.encode("ascii")) == _BPS_BYTES, "panel must base64-encode the on-disk BPS bytes verbatim"
+        assert _wait_until(lambda: harness.hex_widget_update_count_for_test() == 1), (
+            f"successful BPS import must repaint the hex widget viewport exactly once within {_ASYNC_WAIT_TIMEOUT_S}s"
+        )

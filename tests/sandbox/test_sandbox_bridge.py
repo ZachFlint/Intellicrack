@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from intellicrack.sandbox.base import SandboxConfig
 
 
-_EXPECTED_FUNC_COUNT: Final[int] = 30
+_EXPECTED_FUNC_COUNT: Final[int] = 31
 _MIN_DESC_LEN: Final[int] = 5
 _WIN_INSTANCE: Final[str] = "win-test-001"
 _QEMU_INSTANCE: Final[str] = "qemu-test-001"
@@ -216,6 +216,8 @@ class TestToolDefinition:
 
         assert (await _dispatch("yara_scan", _WIN_INSTANCE))["match_count"] == 1
         assert (await _dispatch("extract_iocs", _WIN_INSTANCE))["instance_id"] == _WIN_INSTANCE
+
+        assert (await _dispatch("list_guest_processes", _WIN_INSTANCE))["instance_id"] == _WIN_INSTANCE
         assert (await _dispatch("timeline", _WIN_INSTANCE))["count"] == 2
         assert (await _dispatch("detect_behaviors", _WIN_INSTANCE))["count"] == 0
         assert (await _dispatch("detect_c2", _WIN_INSTANCE))["count"] == 0

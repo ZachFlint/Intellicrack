@@ -7,17 +7,19 @@
 Finding H37: the module tree's ``Path`` column had no header resize
 configuration and no per-item tooltip, so full on-disk module paths were
 clipped to the default interactive width with no way to widen or hover to
-read them. The fix stretches the ``Path`` column, resizes the other columns
-to their content, and sets a per-item tooltip carrying the full path.
+read them. The fix sizes every column to its content (with no stretched last
+section, so an overflowing path widens the view and the table's own
+horizontal scrollbar reaches it) and sets a per-item tooltip carrying the
+full path.
 
 Finding M57: the COM server table's ``Loaded Path`` column (the last
 column) was left at the ``QHeaderView`` default ``Interactive`` mode with no
-tooltip, unlike ``DLL Path`` which stretched. The fix stretches both path
-columns and gives every path cell a full-value tooltip.
+tooltip. The fix sizes both path columns to their content, scrollable
+horizontally, and gives every path cell a full-value tooltip.
 
 Finding M58: the DLL-injection log's ``Details`` column received raw
 exception text on injection failure with no resize mode or tooltip. The fix
-stretches the ``Details`` column and reuses the ``DLL Path``/``Details``
+sizes the ``Details`` column to its content and reuses the ``DLL Path``/``Details``
 cells' tooltip so long error text stays readable on hover.
 
 Each test drives the real :class:`ModulesTab` widget and its production
@@ -35,7 +37,8 @@ from pathlib import Path as FsPath
 from typing import TYPE_CHECKING
 
 import pytest
-from PyQt6.QtWidgets import QHeaderView, QMessageBox
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QAbstractItemView, QHeaderView, QMessageBox
 
 from intellicrack.bridges.process import ProcessBridge
 from intellicrack.core.types import ModuleInfo
@@ -119,6 +122,32 @@ def _install_fake_dispatch(monkeypatch: pytest.MonkeyPatch) -> dict[str, Callabl
     return captured
 
 
+def _assert_columns_sized_to_content(view: QAbstractItemView, header: QHeaderView | None, column_count: int) -> None:
+    """Assert every column fits its content and overflow scrolls horizontally.
+
+    A ``Stretch`` section always fills exactly the remaining viewport width,
+    so it can never overflow and never reaches the view's horizontal
+    scrollbar; a long path in such a column is crushed and elided. Sizing
+    every column to its content with no stretched last section lets a long
+    path widen the view so the horizontal scrollbar reveals it in full.
+
+    Args:
+        view: The item view owning ``header``.
+        header: The view's horizontal header.
+        column_count: Number of columns the view defines.
+    """
+    assert header is not None
+    assert header.count() == column_count
+    assert not header.stretchLastSection(), "the last section must not stretch, or it can never overflow into the scrollbar"
+    for idx in range(column_count):
+        assert header.sectionResizeMode(idx) == QHeaderView.ResizeMode.ResizeToContents, (
+            f"column {idx} must resize to its content width, not stay Interactive or Stretch"
+        )
+    assert view.horizontalScrollBarPolicy() != Qt.ScrollBarPolicy.ScrollBarAlwaysOff, (
+        "the view must keep a horizontal scrollbar so content-sized columns that overflow stay reachable"
+    )
+
+
 def _auto_confirm_message_box(monkeypatch: pytest.MonkeyPatch) -> list[tuple[object, ...]]:
     """Replace ``QMessageBox.warning`` with a recorder that always confirms.
 
@@ -139,10 +168,10 @@ def _auto_confirm_message_box(monkeypatch: pytest.MonkeyPatch) -> list[tuple[obj
 
 
 class TestH37ModulePathColumn:
-    """H37: the module tree's Path column stretches and paths get tooltips."""
+    """H37: the module tree's Path column fits its content and paths get tooltips."""
 
     def test_h37_header_resize_modes(self, tab: ModulesTab) -> None:
-        """The Path column stretches; every other column resizes to content.
+        """Every column, including ``Path``, resizes to its content.
 
         Pre-fix there was no ``header().setSectionResizeMode`` call at all,
         so every column (including index 3, ``Path``) sat at the
@@ -151,15 +180,7 @@ class TestH37ModulePathColumn:
         Args:
             tab: The ``ModulesTab`` under test.
         """
-        header = tab._mod_tree.header()
-        assert header is not None
-        assert header.sectionResizeMode(3) == QHeaderView.ResizeMode.Stretch, (
-            "Path column (index 3) must stretch to fill the available width"
-        )
-        for idx in (0, 1, 2, 4):
-            assert header.sectionResizeMode(idx) == QHeaderView.ResizeMode.ResizeToContents, (
-                f"column {idx} must resize to its content width, not stay Interactive"
-            )
+        _assert_columns_sized_to_content(tab._mod_tree, tab._mod_tree.header(), 5)
 
     def test_h37_refresh_modules_populates_path_text_and_tooltip(
         self,
@@ -195,33 +216,25 @@ class TestH37ModulePathColumn:
         assert item is not None
         expected_path = str(_LONG_MODULE_PATH)
         assert item.text(3) == expected_path, "Path column must show the full on-disk path"
-        assert item.toolTip(3) == expected_path, (
-            "Path column must carry a full-path tooltip so a clipped Stretch column stays readable on hover"
-        )
+        assert item.toolTip(3) == expected_path, "Path column must carry a full-path tooltip so a long path stays readable on hover"
         assert tab._mod_count.text() == "1 modules"
 
 
 class TestM57ComTableLoadedPath:
-    """M57: the COM table's DLL Path and Loaded Path columns stretch and get tooltips."""
+    """M57: the COM table's DLL Path and Loaded Path columns fit their content and get tooltips."""
 
     def test_m57_header_resize_modes(self, tab: ModulesTab) -> None:
-        """Both path columns stretch; CLSID resizes to content.
+        """CLSID and both path columns resize to their content.
 
-        Pre-fix only column 1 (``DLL Path``) was set to ``Stretch``; column
-        2 (``Loaded Path``, the last column) was left at the ``Interactive``
+        Pre-fix only column 1 (``DLL Path``) had a resize mode; column 2
+        (``Loaded Path``, the last column) was left at the ``Interactive``
         default because ``QTableWidget.stretchLastSection`` defaults to
         ``False``.
 
         Args:
             tab: The ``ModulesTab`` under test.
         """
-        header = tab._com_table.horizontalHeader()
-        assert header is not None
-        assert header.sectionResizeMode(0) == QHeaderView.ResizeMode.ResizeToContents
-        assert header.sectionResizeMode(1) == QHeaderView.ResizeMode.Stretch, "DLL Path column must stretch"
-        assert header.sectionResizeMode(2) == QHeaderView.ResizeMode.Stretch, (
-            "Loaded Path column (the last column) must stretch instead of staying Interactive"
-        )
+        _assert_columns_sized_to_content(tab._com_table, tab._com_table.horizontalHeader(), 3)
 
     def test_m57_refresh_com_populates_tooltips_on_long_paths(
         self,
@@ -263,24 +276,18 @@ class TestM57ComTableLoadedPath:
 
 
 class TestM58InjectLogDetails:
-    """M58: the DLL-injection log's Details column stretches and gets tooltips."""
+    """M58: the DLL-injection log's Details column fits its content and gets tooltips."""
 
     def test_m58_header_resize_modes(self, tab: ModulesTab) -> None:
-        """The Details column stretches; Status resizes to content.
+        """``DLL Path``, ``Status`` and ``Details`` resize to their content.
 
-        Pre-fix only column 0 (``DLL Path``) was set to ``Stretch``; column
-        2 (``Details``) was left at the ``Interactive`` default.
+        Pre-fix only column 0 (``DLL Path``) had a resize mode; column 2
+        (``Details``) was left at the ``Interactive`` default.
 
         Args:
             tab: The ``ModulesTab`` under test.
         """
-        header = tab._inject_log.horizontalHeader()
-        assert header is not None
-        assert header.sectionResizeMode(0) == QHeaderView.ResizeMode.Stretch
-        assert header.sectionResizeMode(1) == QHeaderView.ResizeMode.ResizeToContents
-        assert header.sectionResizeMode(2) == QHeaderView.ResizeMode.Stretch, (
-            "Details column must stretch instead of staying at the Interactive default"
-        )
+        _assert_columns_sized_to_content(tab._inject_log, tab._inject_log.horizontalHeader(), 3)
 
     def test_m58_injection_failure_sets_details_tooltip(
         self,

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import time
 from typing import TYPE_CHECKING, Final, override
 
@@ -38,6 +39,11 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator
 
     from PyQt6.QtWidgets import QApplication
+
+pytestmark = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="attaching opens the live test process through the Win32 process API (kernel32 OpenProcess)",
+)
 
 _MAX_WAIT_S: Final[float] = 6.0
 _POLL_INTERVAL_S: Final[float] = 0.02
