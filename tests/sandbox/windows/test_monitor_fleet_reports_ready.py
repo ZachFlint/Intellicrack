@@ -19,14 +19,16 @@ gate stages the fleet with the backend's own staging code, runs the real
 launcher over it with its default wait limit, and requires that no script was
 left running unreported and that every script able to start anywhere did start.
 
-The dispatcher is staged beside the monitors and launched with them. Its guest
-paths are pointed at a scratch directory so that running it here leaves nothing
-behind outside the test's own folder.
+The dispatcher is staged too, because it is the one script the launcher must not
+be given: the bootstrap starts it, and a second copy would take every command a
+second time. Its guest paths are pointed at a scratch directory so that a copy
+the launcher did start would leave nothing behind outside the test's own folder.
 """
 
 from __future__ import annotations
 
 import asyncio
+import re
 import shutil
 import sys
 from dataclasses import dataclass
@@ -50,6 +52,8 @@ pytestmark = pytest.mark.skipif(
 
 _LAUNCHER_NAME: Final[str] = "start_monitors.cmd"
 _PID_FILE_NAME: Final[str] = "monitors.pids"
+_BOOTSTRAP_NAME: Final[str] = "sandbox_bootstrap.cmd"
+_SCRIPT_THE_BOOTSTRAP_STARTS: Final[re.Pattern[str]] = re.compile(r'-File "[^"]*\\([^"\\]+\.ps1)"')
 _MONITOR_DIR_NAME: Final[str] = "monitor"
 _LOGS_DIR_NAME: Final[str] = "logs"
 _GUEST_DIR_NAME: Final[str] = "guest"
@@ -91,11 +95,13 @@ class _FleetStart:
     Attributes:
         staged: File names of the scripts the launcher was given to start.
         running: File names the launcher left tracked in its PID file.
+        started_by_bootstrap: File names of the scripts the bootstrap starts itself.
         stderr: Everything the launcher wrote to standard error.
     """
 
     staged: frozenset[str]
     running: frozenset[str]
+    started_by_bootstrap: frozenset[str]
     stderr: str
 
 
@@ -162,6 +168,7 @@ async def _start_staged_fleet(root: Path) -> _FleetStart:
     monitor_folder = await _StagingSandbox(SandboxConfig()).stage_fleet(shared)
     logs = shared / _LOGS_DIR_NAME
     staged = frozenset(script.name for script in monitor_folder.glob("*.ps1") if not script.name.startswith(_HELPER_PREFIX))
+    bootstrap = await asyncio.to_thread((monitor_folder / _BOOTSTRAP_NAME).read_text, encoding="utf-8")
 
     stderr_path = root / "launcher.stderr.txt"
     try:
@@ -182,6 +189,7 @@ async def _start_staged_fleet(root: Path) -> _FleetStart:
     return _FleetStart(
         staged=staged,
         running=frozenset(tracked.values()),
+        started_by_bootstrap=frozenset(_SCRIPT_THE_BOOTSTRAP_STARTS.findall(bootstrap)),
         stderr=stderr_path.read_text(encoding="utf-8", errors="replace"),
     )
 
@@ -200,7 +208,7 @@ def fleet_start(tmp_path_factory: pytest.TempPathFactory) -> _FleetStart:
 
 
 def test_the_backend_stages_the_fleet_the_launcher_starts(fleet_start: _FleetStart) -> None:
-    """The launcher must have been given the bundled monitors, the inline ones and the dispatcher.
+    """The launcher must have been given the bundled monitors and the backend's inline ones.
 
     Args:
         fleet_start: Outcome of running the launcher over the staged fleet.
@@ -212,6 +220,21 @@ def test_the_backend_stages_the_fleet_the_launcher_starts(fleet_start: _FleetSta
         f"the staged fleet {sorted(fleet_start.staged)} is not the bundled monitors plus the backend's own scripts"
     )
     assert _NOT_LAUNCHED not in fleet_start.stderr, f"the launcher could not start a staged script; stderr={fleet_start.stderr!r}"
+
+
+def test_the_launcher_is_not_given_what_the_bootstrap_starts(fleet_start: _FleetStart) -> None:
+    """A script the bootstrap starts itself must not sit in the folder the launcher starts everything from.
+
+    Falsifiable: with the dispatcher staged beside the monitors, the launcher
+    starts a second copy of it, and both copies take every command.
+
+    Args:
+        fleet_start: Outcome of running the launcher over the staged fleet.
+    """
+    assert fleet_start.started_by_bootstrap, "the bootstrap starts no script, so this gate has nothing to compare"
+    assert fleet_start.started_by_bootstrap.isdisjoint(fleet_start.staged), (
+        f"the launcher was given scripts the bootstrap had already started: {sorted(fleet_start.started_by_bootstrap & fleet_start.staged)}"
+    )
 
 
 def test_no_staged_script_is_left_running_without_reporting(fleet_start: _FleetStart) -> None:

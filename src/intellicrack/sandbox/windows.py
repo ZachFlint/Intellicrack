@@ -128,10 +128,10 @@ _MONITOR_QUIESCENCE_COMPLETE_SETTLE_S: Final[float] = 1.0
 # the monitors that survived startup. It is the single source of truth for
 # which collectors are expected to report.
 _MONITOR_PID_FILE_NAME: Final[str] = "monitors.pids"
-# Present in that file but not a collector: it serves commands, it has no tab.
-_DISPATCHER_SCRIPT_STEM: Final[str] = "sandbox_dispatcher"
 # Each line of that file is "<pid> <script file name>".
 _MONITOR_PID_LINE_FIELDS: Final[int] = 2
+_DISPATCHER_FOLDER_NAME: Final[str] = "dispatcher"
+_DISPATCHER_SCRIPT_NAME: Final[str] = "sandbox_dispatcher.ps1"
 MONITOR_READY_ANNOUNCEMENT: Final[str] = (
     "if ($env:INTELLICRACK_MONITOR_READY) {\n"
     "    $monitorReadyFile = $env:INTELLICRACK_MONITOR_READY\n"
@@ -1850,6 +1850,13 @@ class WindowsSandbox(SandboxBase):
         launches the dispatcher and the monitor fleet, applies user startup
         commands, and finally signals readiness via the ``flags`` marker file.
 
+        The dispatcher is written to a folder of its own. ``start_monitors.cmd``
+        starts every script in the monitor folder, so a dispatcher staged there
+        was started twice, once by the bootstrap and once by the launcher. Each
+        copy keeps its own record of the triggers it has handled, so both took
+        every command: commands ran twice, and the two copies overwrote and
+        locked each other's output and exit-code files.
+
         Raises:
             SandboxError: If sandbox paths are not initialized.
         """
@@ -1861,7 +1868,9 @@ class WindowsSandbox(SandboxBase):
             )
             raise SandboxError(_ERR_SANDBOX_PATHS_NOT_INIT)
 
-        dispatcher_ps1 = self._monitor_folder / "sandbox_dispatcher.ps1"
+        dispatcher_folder = self._shared_folder / _DISPATCHER_FOLDER_NAME
+        await asyncio.to_thread(dispatcher_folder.mkdir, exist_ok=True)
+        dispatcher_ps1 = dispatcher_folder / _DISPATCHER_SCRIPT_NAME
         dispatcher_source = self._dispatcher_ps1_source()
         await asyncio.to_thread(
             dispatcher_ps1.write_text,
@@ -1879,7 +1888,8 @@ class WindowsSandbox(SandboxBase):
 
         _logger.debug(
             "dispatcher_scripts_created",
-            monitor_folder=str(self._monitor_folder),
+            dispatcher=str(dispatcher_ps1),
+            bootstrap=str(bootstrap_cmd),
         )
 
     def _dispatcher_ps1_source(self) -> str:
@@ -1905,7 +1915,6 @@ class WindowsSandbox(SandboxBase):
             "    }\n"
             "}\n"
             "Set-Content -LiteralPath $readyFlag -Value ((Get-Date).ToString('o')) -Encoding utf8\n"
-            f"{MONITOR_READY_ANNOUNCEMENT}"
             "$processed = @{}\n"
             "while ($true) {\n"
             "    try {\n"
@@ -1947,7 +1956,7 @@ class WindowsSandbox(SandboxBase):
         flags_dir = rf"{self.SANDBOX_SHARED_PATH}\flags"
         logon_marker = rf"{flags_dir}\{self.DISPATCHER_LOGON_MARKER}"
         monitor_dir = rf"{self.SANDBOX_SHARED_PATH}\monitor"
-        dispatcher_ps1 = rf"{monitor_dir}\sandbox_dispatcher.ps1"
+        dispatcher_ps1 = rf"{self.SANDBOX_SHARED_PATH}\{_DISPATCHER_FOLDER_NAME}\{_DISPATCHER_SCRIPT_NAME}"
         start_monitors = rf"{monitor_dir}\start_monitors.cmd"
 
         env_lines: list[str] = []
@@ -2421,8 +2430,9 @@ class WindowsSandbox(SandboxBase):
 
         ``start_monitors.cmd`` records one line per spawned monitor and its
         readiness gate rewrites the file with only the survivors, so this is
-        the fleet that can be expected to report. The dispatcher appears there
-        too and is excluded: it serves commands rather than filling a tab.
+        the fleet that can be expected to report. The dispatcher is not a
+        monitor and is staged where the launcher does not look, so it is
+        never among them.
 
         Returns:
             set[str]: Script stems of the surviving collectors, empty when the
@@ -2443,7 +2453,7 @@ class WindowsSandbox(SandboxBase):
             if len(parts) < _MONITOR_PID_LINE_FIELDS:
                 continue
             stem = Path(parts[1].strip()).stem
-            if stem and stem != _DISPATCHER_SCRIPT_STEM:
+            if stem:
                 stems.add(stem)
         return stems
 
