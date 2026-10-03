@@ -112,7 +112,7 @@ _QCOW2_HEADER: Final[bytes] = b"QFI\xfb\x00\x00\x00\x03"
 _AGENT_CONNECT_TIME_LIMIT: Final[float] = 20.0
 _AGENT_CONNECT_RETRY_INTERVAL: Final[float] = 0.5
 _CONNECT_TIME_LIMIT: Final[float] = 5.0
-_REACHABILITY_PROBE_S: Final[float] = 2.0
+_REACHABILITY_PROBE_S: Final[float] = 5.0
 _LISTEN_BACKLOG: Final[int] = 1
 
 _ERR_NO_CONSTRUCTION: Final[str] = "the generated agent's listener statement {statement!r} constructs no TcpListener"
@@ -490,39 +490,88 @@ class TestTheGeneratedWindowsAgentListensWhereTheForwardDelivers:
             tmp_path: Directory the share and the peer script are created under.
         """
         target = _delivery_address()
-        port = _free_host_port()
-        share = tmp_path / _SHARE_DIRECTORY
-        sandbox = _sandbox(GuestOS.WINDOWS)
-        agent_script = await sandbox.generate_agent_script(share, AGENT_SCRIPT_NAME)
+        peer = await _started_peer(tmp_path)
 
-        peer_path = share / MONITOR_DIRECTORY / _PEER_SCRIPT_NAME
-        await asyncio.to_thread(
-            peer_path.write_text,
-            build_peer_script(agent_script, listener_statement=_listener_on_host_free_port(agent_script)),
-            encoding="utf-8",
+        await _handshake_and_stop(peer, target)
+
+    @pytest.mark.asyncio
+    async def test_a_handshake_the_host_abandoned_does_not_cost_the_next_one(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A connection the host opened and gave up on must leave the peer serving the next.
+
+        The production client gives every attempt its own short budget and
+        closes the socket of one whose handshake overran it, and the agent
+        answers the retry on a new connection. A connection is opened and
+        closed here before the client connects, which is what such an attempt
+        looks like from the agent's side.
+
+        Falsifiable: a peer that serves only its first connection has stopped
+        listening by the time the client connects, so the client is refused
+        until its time runs out, which is how this gate's neighbour failed on
+        a loaded runner whenever the first handshake took over half a second.
+
+        Args:
+            tmp_path: Directory the share and the peer script are created under.
+        """
+        target = _delivery_address()
+        peer = await _started_peer(tmp_path)
+        with closing(socket.create_connection((target, peer.port), timeout=_CONNECT_TIME_LIMIT)):
+            pass
+
+        await _handshake_and_stop(peer, target)
+
+
+async def _started_peer(tmp_path: Path) -> GeneratedAgentPeer:
+    """Start the generated Windows agent's listener as a peer on a port the host will bind.
+
+    Args:
+        tmp_path: Directory the share and the peer script are created under.
+
+    Returns:
+        GeneratedAgentPeer: The peer, listening.
+    """
+    share = tmp_path / _SHARE_DIRECTORY
+    agent_script = await _sandbox(GuestOS.WINDOWS).generate_agent_script(share, AGENT_SCRIPT_NAME)
+    peer_path = share / MONITOR_DIRECTORY / _PEER_SCRIPT_NAME
+    await asyncio.to_thread(
+        peer_path.write_text,
+        build_peer_script(agent_script, listener_statement=_listener_on_host_free_port(agent_script)),
+        encoding="utf-8",
+    )
+    peer = GeneratedAgentPeer(peer_path, _free_host_port())
+    await peer.start()
+    return peer
+
+
+async def _handshake_and_stop(peer: GeneratedAgentPeer, target: str) -> None:
+    """Require the production client to complete its readiness handshake with a peer, then end the peer.
+
+    Args:
+        peer: The listening peer.
+        target: The address the client connects to.
+    """
+    port = peer.port
+    client = GuestAgentClient(host=target, port=port)
+    connected = False
+    try:
+        connected = await client.connect(
+            time_limit=_AGENT_CONNECT_TIME_LIMIT,
+            retry_interval=_AGENT_CONNECT_RETRY_INTERVAL,
         )
-
-        peer = GeneratedAgentPeer(peer_path, port)
-        await peer.start()
-        client = GuestAgentClient(host=target, port=port)
-        connected = False
-        try:
-            connected = await client.connect(
-                time_limit=_AGENT_CONNECT_TIME_LIMIT,
-                retry_interval=_AGENT_CONNECT_RETRY_INTERVAL,
-            )
-            assert connected, (
-                f"the generated Windows agent did not answer a handshake at {target}:{port}; "
-                f"a plain connection to {target}:{port} is {_connect_outcome(target, port)}, "
-                f"and to {_PRIMARY_LOOPBACK}:{port} is {_connect_outcome(_PRIMARY_LOOPBACK, port)}"
-            )
-            assert client.is_connected
-        finally:
-            await client.disconnect()
-            if connected:
-                await peer.stop()
-            else:
-                await peer.abandon()
+        assert connected, (
+            f"the generated Windows agent did not answer a handshake at {target}:{port}; "
+            f"a plain connection to {target}:{port} is {_connect_outcome(target, port)}, "
+            f"and to {_PRIMARY_LOOPBACK}:{port} is {_connect_outcome(_PRIMARY_LOOPBACK, port)}"
+        )
+        assert client.is_connected
+    finally:
+        await client.disconnect()
+        if connected:
+            await peer.stop()
+        else:
+            await peer.abandon()
 
 
 class TestBothGeneratedAgentsBindWhereTheForwardDelivers:

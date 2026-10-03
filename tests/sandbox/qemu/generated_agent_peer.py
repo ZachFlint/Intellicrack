@@ -90,8 +90,6 @@ _ERR_AMBIGUOUS_FRAGMENT: Final[str] = "the generated agent script contains {coun
 _ERR_UNCLOSED_FRAGMENT: Final[str] = "the block opened by {fragment!r} is never closed in the generated agent script"
 _ERR_PEER_FAILED: Final[str] = "the in-guest agent peer failed: exit {code}, stderr {stderr!r}"
 
-_PEER_EXIT_TIMEOUT: Final[float] = 15.0
-
 
 def script_line(script: str, beginning: str) -> str:
     """Return the one line of the generated agent script starting with ``beginning``.
@@ -219,6 +217,16 @@ def build_peer_script(agent_script: str, *, listener_statement: str) -> str:
     branches - is the generated script's own source, unedited. Only the accept
     loop that hands requests to those branches is written here.
 
+    That loop serves one connection after another, as the agent's own does. The
+    production client gives each connection attempt its own short budget and
+    closes the socket of an attempt whose handshake overran it, and the agent
+    answers the next attempt on a new connection. A peer that served only the
+    first connection stopped listening the moment a slow first handshake was
+    abandoned, so every retry was refused and the gate failed with nothing
+    wrong in the agent. A client that leaves mid-exchange is not a fault of
+    the peer either, so the write that fails against its closed socket ends
+    that connection and nothing more.
+
     Lifting the readiness branch rather than answering the probe here is what
     makes this peer a gate on it: the production client handshakes before it
     reports itself connected, so if the generated agent ever stopped answering
@@ -263,7 +271,9 @@ def build_peer_script(agent_script: str, *, listener_statement: str) -> str:
                 "$listener.Start()",
                 f"[Console]::Out.WriteLine('{PEER_READY_MARKER}')",
                 "[Console]::Out.Flush()",
+                "while ($true) {",
                 "$client = $listener.AcceptTcpClient()",
+                "try {",
                 "$stream = $client.GetStream()",
                 "$reader = New-Object System.IO.StreamReader($stream)",
                 "while ($client.Connected) {",
@@ -273,8 +283,12 @@ def build_peer_script(agent_script: str, *, listener_statement: str) -> str:
                 script_branch(agent_script, PING_BRANCH_HEADER),
                 script_branch(agent_script, EXECUTE_BRANCH_HEADER),
                 "}",
+                "} catch [System.IO.IOException] {",
+                "    $client.Close()",
+                "    continue",
+                "}",
                 "$client.Close()",
-                "$listener.Stop()",
+                "}",
             ],
         )
         + "\r\n"
@@ -359,10 +373,8 @@ class GeneratedAgentPeer:
     async def abandon(self) -> None:
         """Kill the peer without judging how it ended.
 
-        For the caller that is already reporting a failure of its own: the peer
-        is then still blocked in ``AcceptTcpClient``, so :meth:`stop` would wait
-        out its whole exit timeout and then raise over a peer that did nothing
-        wrong, burying the real failure.
+        For the caller that is already reporting a failure of its own, which a
+        verdict on the peer from :meth:`stop` would bury.
         """
         process = self._process
         if process is None:
@@ -374,30 +386,31 @@ class GeneratedAgentPeer:
         await process.communicate()
 
     async def stop(self) -> None:
-        """Wait for the peer to finish and fail the test if it broke.
+        """End the peer and fail the test if it broke.
 
-        The peer ends by itself once the client under test closes the
-        connection. A peer that instead died of its own fault would otherwise
-        show up as a client-side timeout, which reads like a production defect.
+        The peer serves connections until it is ended here, so one found
+        already gone died of its own fault, as did one that wrote anything to
+        its standard error. Either would otherwise show up as a client-side
+        timeout, which reads like a production defect.
 
         Raises:
-            AssertionError: If the peer exited with a failure status or wrote
-                anything to its standard error.
+            AssertionError: If the peer had exited by itself or wrote anything
+                to its standard error.
         """
         process = self._process
         if process is None:
             return
         self._process = None
-        try:
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=_PEER_EXIT_TIMEOUT)
-        except TimeoutError:
-            process.kill()
-            stdout, stderr = await process.communicate()
+        exit_code = process.returncode
+        if exit_code is None:
+            with contextlib.suppress(ProcessLookupError):
+                process.kill()
+        stdout, stderr = await process.communicate()
         diagnostics = stderr.decode(errors="replace").strip()
-        if process.returncode or diagnostics:
+        if exit_code is not None or diagnostics:
             raise AssertionError(
                 _ERR_PEER_FAILED.format(
-                    code=process.returncode,
+                    code=exit_code,
                     stderr=diagnostics or stdout.decode(errors="replace").strip(),
                 ),
             )
