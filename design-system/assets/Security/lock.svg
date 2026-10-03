@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="lockGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#795548;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3E2723;stop-opacity:1" />
+    </linearGradient>
+    <filter id="lockShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#1C0E0B" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Lock shackle -->
+  <path d="M8 10 L8 7 Q8 4 12 4 Q16 4 16 7 L16 10"
+        stroke="url(#lockGradient)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Lock body -->
+  <rect x="6" y="10" width="12" height="10" rx="2"
+        fill="url(#lockGradient)" stroke="#1C0E0B" stroke-width="0.8" filter="url(#lockShadowFilter)"/>
+
+  <!-- Lock body inner highlight -->
+  <rect x="7" y="11" width="10" height="8" rx="1"
+        fill="none" stroke="#D7CCC8" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- Keyhole -->
+  <circle cx="12" cy="14" r="1.5" fill="#1C0E0B"/>
+  <rect x="11.2" y="14.5" width="1.6" height="3" rx="0.8" fill="#1C0E0B"/>
+
+  <!-- Lock mechanism details -->
+  <circle cx="12" cy="14" r="2.5" fill="none" stroke="#8D6E63" stroke-width="0.5" opacity="0.7"/>
+
+  <!-- Security pins -->
+  <circle cx="9" cy="12" r="0.5" fill="#FFEB3B"/>
+  <circle cx="15" cy="12" r="0.5" fill="#FFEB3B"/>
+  <circle cx="9" cy="18" r="0.5" fill="#FFEB3B"/>
+  <circle cx="15" cy="18" r="0.5" fill="#FFEB3B"/>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="10" cy="8" rx="4" ry="2" fill="#FFFFFF" opacity="0.2"/>
+</svg>

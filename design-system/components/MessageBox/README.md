@@ -1,0 +1,1 @@
+QMessageBox, used for confirmations and errors such as "Provider Not Connected". The box takes the window ground (`ic-window`) and its labels `ic-text`; buttons are the standard push buttons. Qt draws the standard question / warning / critical icon from the platform style, not from the app's icon set; the preview shows the app's Status warning icon in that slot.

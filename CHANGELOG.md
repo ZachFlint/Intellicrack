@@ -318,6 +318,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Fixed
 
+- **ui:** Splash layout and theme tweaks (`4f13608`)
+
 - Isolate frida self-attach tests and rewrite sandbox argfiles (`e06bb28`)
 
 - **tests:** Report isolated Frida skips with the location tuple pytest requires (`29acf85`)

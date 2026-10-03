@@ -1,0 +1,1 @@
+Tree and list views. Both sit on `ic-content` with a 4px radius; an item hovers to `ic-item-hover` and selects to `ic-selection`. The tree adds a disclosure twisty (`ic-twisty`) in muted text and indents children; the list is a flat set of rows. Used for the template tree, the imports/exports lists and the module list.
