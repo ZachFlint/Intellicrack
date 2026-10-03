@@ -3323,6 +3323,11 @@ class TestF0033FullEnvironmentBlock:
         (via a single large env var) and verifies the bridge reads the full
         block including the large variable.
 
+        The child is inspected only once it has reported that its script is
+        running. A process that has just been created is still being set up by
+        the loader, and on a loaded machine it was read in that state and its
+        environment came back empty.
+
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
@@ -3332,10 +3337,14 @@ class TestF0033FullEnvironmentBlock:
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
             "-c",
-            "import time; time.sleep(30)",
+            "import sys, time; sys.stdout.write('running\\n'); sys.stdout.flush(); time.sleep(30)",
             env=child_env,
+            stdout=asyncio.subprocess.PIPE,
         )
         try:
+            assert proc.stdout is not None
+            announced = await proc.stdout.readline()
+            assert announced.strip() == b"running", f"the child never got as far as running its script: {announced!r}"
             await self._assert_large_env_var_readable(process_bridge, proc, large_value)
         finally:
             proc.kill()
