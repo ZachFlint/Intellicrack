@@ -28,6 +28,7 @@ import frida
 import pytest
 
 from intellicrack.bridges.frida_bridge import FridaBridge
+from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.types import HookInfo, ToolError
 
 
@@ -35,7 +36,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Callable, Coroutine, Generator
 
 
 _SPAWN_PID: int = os.getpid()
@@ -47,6 +48,22 @@ _WRITE_CODE_SIZE: int = 5
 _ALLOC_STR_ADDR: int = 0x5555_0000
 _ALLOC_STR_ADDR_HEX: str = "0x55550000"
 _INTERCEPT_RETURN_VALUE: int = 0x1234_5678
+
+
+@pytest.fixture(autouse=True)
+def _own_pid_is_not_left_tracked() -> Generator[None]:
+    """Take this process's PID back out of the process manager after each test.
+
+    The fake device reports this process as the one it spawned, since a spawn
+    must name a live PID, and ``FridaBridge.spawn`` registers what it spawned
+    so that a shutdown sweep ends it. Left registered, that entry named the
+    test worker itself to every later sweep in the same process.
+
+    Yields:
+        None: Control passed to the test.
+    """
+    yield
+    _ = ProcessManager.get_instance().unregister_external_pid(_SPAWN_PID)
 
 
 def _run[T](coro: Coroutine[object, object, T]) -> T:
@@ -217,12 +234,12 @@ class _FakeSession:
         """
         self.on_handlers.setdefault(signal, []).append(callback)
 
-    def create_script(self, source: str, **_: object) -> _FakeScript:
+    def create_script(self, source: str, **_ignored: object) -> _FakeScript:
         """Return a new fake script and record the source.
 
         Args:
             source: JavaScript source (recorded for assertion).
-            **_: Ignored keyword arguments.
+            **_ignored: Ignored keyword arguments.
 
         Returns:
             _FakeScript: Newly registered fake script.
@@ -283,13 +300,13 @@ class _FakeDevice:
         self.attach_calls: list[int] = []
         self.resume_calls: list[int] = []
 
-    def spawn(self, program: str, argv: list[str | bytes] | None = None, **_: object) -> int:
+    def spawn(self, program: str, argv: list[str | bytes] | None = None, **_ignored: object) -> int:
         """Record spawn arguments and return the scripted PID.
 
         Args:
             program: Executable path.
             argv: Command-line argument vector.
-            **_: Ignored keyword arguments.
+            **_ignored: Ignored keyword arguments.
 
         Returns:
             int: Scripted spawn PID.
@@ -303,12 +320,12 @@ class _FakeDevice:
             raise spawn_exc
         return self._spawn_pid
 
-    def attach(self, pid: int, **_: object) -> _FakeSession:
+    def attach(self, pid: int, **_ignored: object) -> _FakeSession:
         """Record the attach PID and return the scripted session.
 
         Args:
             pid: Target process identifier.
-            **_: Ignored keyword arguments (e.g., cancellable).
+            **_ignored: Ignored keyword arguments (e.g., cancellable).
 
         Returns:
             _FakeSession: Scripted session.
@@ -784,7 +801,7 @@ def test_intercept_return_builds_exact_on_leave_string() -> None:
         target: str = "",
         on_enter: str = "",
         on_leave: str = "",
-        **_: object,
+        **_ignored: object,
     ) -> HookInfo:
         """Record hook_function arguments and return a canned HookInfo.
 
@@ -792,7 +809,7 @@ def test_intercept_return_builds_exact_on_leave_string() -> None:
             target: Target function name.
             on_enter: On-enter JS code.
             on_leave: On-leave JS code.
-            **_: Ignored keyword arguments.
+            **_ignored: Keyword arguments the fake has no use for.
 
         Returns:
             HookInfo: Canned hook info for the test.
