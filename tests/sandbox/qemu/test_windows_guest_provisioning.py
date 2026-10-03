@@ -58,6 +58,7 @@ from scripts.sandbox.provision_windows_guest import (
     runtime_machine_argument,
     select_install_media,
 )
+from tests._helpers.sparse_files import extend_sparse
 
 
 if TYPE_CHECKING:
@@ -266,7 +267,7 @@ def _write_iso(
         for lba, data in sorted(sectors.items()):
             handle.seek(lba * _SECTOR)
             handle.write(data)
-        handle.truncate(total_bytes)
+        extend_sparse(handle, total_bytes)
     return path
 
 
