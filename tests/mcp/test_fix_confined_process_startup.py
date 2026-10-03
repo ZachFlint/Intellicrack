@@ -5,18 +5,23 @@
 """Startup gates for a process launched under the confined restricted token.
 
 The sandboxed-server launch derives a restricted, Low integrity token and
-starts the server with it. On a hosted runner the server has been dying in
-loader initialization with ``STATUS_DLL_INIT_FAILED`` before it runs a line of
-its own code, which the full launch reports only as a connection failure. These
-gates isolate that startup from the rest of the launch: each runs a trivial
-process under the real :func:`create_restricted_token` and asserts it reaches
-its own exit code, so a loader-time death is reported as the exact status the
-child exited with, against a known binary and a known creation-flag set, rather
-than buried in a server handshake.
+starts the server with it. On a hosted runner the server died in loader
+initialization with ``STATUS_DLL_INIT_FAILED`` before it ran a line of its own
+code, which the full launch surfaced only as a connection failure. The cause
+was console allocation: a console-subsystem process with no console to inherit
+allocates its own, and standing one up under the restricted token fails on the
+runner. It fails the same way for a console-subsystem grandchild a shim or
+launcher starts, which a flag on the direct child cannot prevent.
 
-A System32 binary isolates the token from the project interpreter's own
-libraries; the console-free variant isolates console allocation (the launch
-creates with ``CREATE_NO_WINDOW``) from the token itself.
+The launch therefore sets no console-creation flag and instead gives the whole
+confined tree a console to inherit, allocated under the launcher's own
+unrestricted token by :func:`ensure_inheritable_console`. These gates lock that
+in: one asserts the launch requests no console of its own, so a return to
+``CREATE_NO_WINDOW`` fails here rather than only on the runner; the other runs a
+real process -- which itself starts a console-subsystem grandchild -- under the
+real :func:`create_restricted_token` and requires the whole tree to reach its
+exit code, so a console the restricted token cannot stand up is caught as the
+exact loader status rather than a server handshake timeout.
 """
 
 from __future__ import annotations
@@ -24,11 +29,17 @@ from __future__ import annotations
 import ctypes
 import sys
 from ctypes import wintypes
-from typing import ClassVar
+from typing import ClassVar, Final
 
 import pytest
 
-from intellicrack.mcp.sandbox_launch import CREATE_NO_WINDOW, CREATE_UNICODE_ENVIRONMENT, create_restricted_token
+from intellicrack.mcp.sandbox_launch import (
+    CREATE_NO_WINDOW,
+    CREATE_UNICODE_ENVIRONMENT,
+    SANDBOX_CREATION_FLAGS,
+    create_restricted_token,
+    ensure_inheritable_console,
+)
 
 
 pytestmark = pytest.mark.skipif(
@@ -36,11 +47,12 @@ pytestmark = pytest.mark.skipif(
     reason="restricted tokens and CreateProcessAsUserW are Windows-only Win32 facilities",
 )
 
-_DETACHED_PROCESS = 0x00000008
-_SYSTEM_CMD = r"C:\Windows\System32\cmd.exe"
-_PROBE_EXIT_CODE = 7
-_WAIT_TIMEOUT_MS = 30000
-_WAIT_OBJECT_0 = 0x00000000
+_DETACHED_PROCESS: Final[int] = 0x00000008
+_SYSTEM_CMD: Final[str] = r"C:\Windows\System32\cmd.exe"
+_PROBE_EXIT_CODE: Final[int] = 7
+_WAIT_TIMEOUT_MS: Final[int] = 30000
+_WAIT_OBJECT_0: Final[int] = 0x00000000
+_ERROR_ACCESS_DENIED: Final[int] = 5
 
 
 class _StartupInfoW(ctypes.Structure):
@@ -84,7 +96,7 @@ def _run_under_token(command: str, creation_flags: int) -> int:
 
     Args:
         command: The command line to run.
-        creation_flags: Process creation flags, as the launch passes them.
+        creation_flags: Process creation flags for the child.
 
     Returns:
         int: The child's exit code, or the negated Win32 error when the process
@@ -142,39 +154,55 @@ def _run_under_token(command: str, creation_flags: int) -> int:
         _ = kernel32.CloseHandle(wintypes.HANDLE(token))
 
 
+def _process_has_console() -> bool:
+    """Report whether this process has a console attached.
+
+    ``AllocConsole`` fails with ``ERROR_ACCESS_DENIED`` when a console already
+    exists, which is a reliable attached-console test where the console-window
+    handle is not, since a window-less console returns no handle.
+
+    Returns:
+        bool: ``True`` if a console is attached.
+    """
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    if kernel32.AllocConsole():
+        return False
+    return ctypes.get_last_error() == _ERROR_ACCESS_DENIED
+
+
 class TestConfinedProcessStartup:
-    """A process created with the confined token must reach its own exit code."""
+    """A confined process tree inherits a console rather than allocating one under the restricted token."""
 
-    def test_system32_binary_starts_with_the_launch_flags(self) -> None:
-        """A System32 binary runs under the restricted token with the launch's creation flags.
+    def test_the_launch_requests_no_console_of_its_own(self) -> None:
+        """The confined launch sets no console-creation flag, so the tree inherits one.
 
-        This isolates the token and the ``CREATE_NO_WINDOW`` flag from the
-        project interpreter: a loader-time death here is the token or the
-        console, not the interpreter's own libraries.
+        Allocating a console under the restricted token fails in loader
+        initialization on a hosted runner, so a return to ``CREATE_NO_WINDOW``
+        or a switch to ``DETACHED_PROCESS`` -- either of which makes a tree
+        member allocate its own -- must fail here rather than only on the runner.
         """
-        code = _run_under_token(f"{_SYSTEM_CMD} /c exit {_PROBE_EXIT_CODE}", CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT)
-        assert code == _PROBE_EXIT_CODE, f"confined System32 cmd.exe exited 0x{code & 0xFFFFFFFF:08X}, not {_PROBE_EXIT_CODE}"
-
-    def test_system32_binary_starts_without_a_console(self) -> None:
-        """The same System32 binary runs under the restricted token with no console allocated.
-
-        Paired with :meth:`test_system32_binary_starts_with_the_launch_flags`,
-        this isolates console allocation: if the console-free variant reaches
-        its exit code where the ``CREATE_NO_WINDOW`` variant dies in the loader,
-        the console allocation is what the restricted token cannot complete.
-        """
-        code = _run_under_token(f"{_SYSTEM_CMD} /c exit {_PROBE_EXIT_CODE}", _DETACHED_PROCESS | CREATE_UNICODE_ENVIRONMENT)
-        assert code == _PROBE_EXIT_CODE, f"confined console-free cmd.exe exited 0x{code & 0xFFFFFFFF:08X}, not {_PROBE_EXIT_CODE}"
-
-    def test_interpreter_starts_with_the_launch_flags(self) -> None:
-        """The project interpreter runs under the restricted token with the launch's creation flags.
-
-        This is the binary the real launch starts; a loader-time death here but
-        not for the System32 binary points at the interpreter's own libraries or
-        their path rather than the token itself.
-        """
-        code = _run_under_token(
-            f'"{sys.executable}" -c "raise SystemExit({_PROBE_EXIT_CODE})"',
-            CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
+        assert not SANDBOX_CREATION_FLAGS & CREATE_NO_WINDOW, (
+            "the confined launch must not set CREATE_NO_WINDOW: its fresh console cannot be stood up under the restricted token"
         )
-        assert code == _PROBE_EXIT_CODE, f"confined interpreter exited 0x{code & 0xFFFFFFFF:08X}, not {_PROBE_EXIT_CODE}"
+        assert not SANDBOX_CREATION_FLAGS & _DETACHED_PROCESS, (
+            "the confined launch must not set DETACHED_PROCESS: a console-subsystem grandchild would then allocate its own console"
+        )
+
+    def test_ensure_inheritable_console_leaves_a_console_attached(self) -> None:
+        """After the launch's console setup, this process has a console for children to inherit."""
+        ensure_inheritable_console()
+        assert _process_has_console(), "ensure_inheritable_console left no console for the confined tree to inherit"
+
+    def test_a_confined_tree_reaches_its_exit_code_inheriting_the_console(self) -> None:
+        """A confined process and the console-subsystem grandchild it starts both run to completion.
+
+        The child is created with the launch's own console setting (none, so it
+        inherits), and it starts a further console-subsystem process. A console
+        the restricted token cannot stand up anywhere in that tree surfaces as
+        the child's loader status rather than a server handshake timeout.
+        """
+        ensure_inheritable_console()
+        console_setting = SANDBOX_CREATION_FLAGS & (CREATE_NO_WINDOW | _DETACHED_PROCESS)
+        command = f'{_SYSTEM_CMD} /c ""{_SYSTEM_CMD}" /c exit {_PROBE_EXIT_CODE}"'
+        code = _run_under_token(command, console_setting | CREATE_UNICODE_ENVIRONMENT)
+        assert code == _PROBE_EXIT_CODE, f"confined cmd.exe tree exited 0x{code & 0xFFFFFFFF:08X}, not {_PROBE_EXIT_CODE}"
