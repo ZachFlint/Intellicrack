@@ -32,6 +32,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.color_defaults import DEFAULT_BOOKMARK_COLOR
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_callable_async, worker_is_running
 from intellicrack.ui.resources.font_manager import FontManager
@@ -670,7 +671,7 @@ class _DocAPI:
         offset: int,
         length: int = 1,
         label: str = "Bookmark",
-        color: str = "#FFFF00",
+        color: str = DEFAULT_BOOKMARK_COLOR,
     ) -> int:
         """Add a bookmark to the document.
 
@@ -862,7 +863,7 @@ class _ReadOnlyDocAPI:
         offset: int,
         length: int = 1,
         label: str = "Bookmark",
-        color: str = "#FFFF00",
+        color: str = DEFAULT_BOOKMARK_COLOR,
     ) -> int:
         """Add a bookmark to the document.
 

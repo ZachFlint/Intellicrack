@@ -26,6 +26,12 @@ if TYPE_CHECKING:
 
 _PERCENT: Final[int] = 100
 
+_ROW_PROPERTY: Final[str] = "toolActivityRow"
+"""Dynamic property the theme stylesheets match to style a running-call row.
+
+Each row's object name embeds its call id, so the rows are styled by this shared property rather than by name.
+"""
+
 
 class _RunningCallRow(QFrame):
     """One running call: its name, its progress and a Cancel button."""
@@ -40,6 +46,7 @@ class _RunningCallRow(QFrame):
         """
         super().__init__(parent)
         self.setObjectName(f"tool_activity_row_{call.id}")
+        self.setProperty(_ROW_PROPERTY, "true")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 4, 8, 4)
         top = QHBoxLayout()

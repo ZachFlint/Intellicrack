@@ -98,7 +98,7 @@ class _MarkdownView(QTextBrowser):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setStyleSheet("background: transparent; border: none;")
+        self.setObjectName("chat_markdown_view")
         document = self.document()
         if document is not None:
             document.setDocumentMargin(0)

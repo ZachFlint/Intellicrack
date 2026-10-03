@@ -34,7 +34,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSplitter,
-    QStyle,
     QTableWidget,
     QTableWidgetItem,
     QTextEdit,
@@ -47,11 +46,13 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.types import BinaryInfo, Message
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.resources.font_manager import FontManager
-from intellicrack.ui.resources.theme_manager import ThemeManager
+from intellicrack.ui.resources.icon_manager import IconManager
 
 
 _logger = get_logger(__name__)
 
+_CHIP_REMOVE_ICON: Final[str] = "edit_delete"
+_CHIP_ICON_SIZE: Final[int] = 16
 _DIALOG_WIDTH: Final[int] = 800
 _DIALOG_HEIGHT: Final[int] = 500
 _SPLIT_LEFT: Final[int] = 450
@@ -280,7 +281,6 @@ class TagChipsWidget(QWidget):
         self._chip_buttons: dict[str, QPushButton] = {}
         self._setup_ui()
         self.refresh()
-        ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
 
     def _setup_ui(self) -> None:
         """Construct the chip flow area and the inline add-tag editor."""
@@ -298,7 +298,7 @@ class TagChipsWidget(QWidget):
         layout.addWidget(chips_frame)
 
         self._empty_label = QLabel("No tags. Add one below.")
-        self._empty_label.setStyleSheet("color: palette(mid); font-style: italic;")
+        self._empty_label.setObjectName("tag_empty_label")
         layout.addWidget(self._empty_label)
 
         editor_row = QHBoxLayout()
@@ -348,75 +348,24 @@ class TagChipsWidget(QWidget):
         self._add_btn.setEnabled(self._session is not None)
         self._tag_input.setEnabled(self._session is not None)
 
-    @staticmethod
-    def _chip_stylesheet() -> str:
-        """Build the tag-chip stylesheet for the application's current theme.
-
-        Sources its colors from :meth:`ThemeManager.get_analysis_colors`
-        instead of Qt palette-role functions (``palette(mid)``,
-        ``palette(button)``, ``palette(highlight)``), which resolve against
-        the widget's native ``QPalette`` rather than the dark/light QSS
-        theme Intellicrack actually renders with, so a chip styled from them
-        stays visually frozen across a theme switch. Every existing chip is
-        restyled with this same object-name-scoped QSS text from
-        :meth:`_on_theme_changed` whenever :attr:`ThemeManager.theme_changed`
-        fires, so chips track the live theme instead of only the theme that
-        was active when they were created.
-
-        Returns:
-            str: Qt stylesheet text scoped to the ``tagChip`` object name.
-        """
-        colors = ThemeManager.get_instance().get_analysis_colors()
-        surface = colors["surface"].name()
-        border = colors["border"].name()
-        foreground = colors["foreground"].name()
-        accent = colors["accent"].name()
-        return (
-            "QPushButton#tagChip { "
-            "padding: 2px 8px; "
-            f"border: 1px solid {border}; "
-            "border-radius: 10px; "
-            f"background: {surface}; "
-            f"color: {foreground}; "
-            "}"
-            f"QPushButton#tagChip:hover {{ background: {accent}; color: #ffffff; }}"
-        )
-
-    def _on_theme_changed(self, resolved_theme: str) -> None:
-        """Recolor every existing tag chip after the application theme changes.
-
-        Connected to :attr:`ThemeManager.theme_changed` in :meth:`__init__`.
-        Chip buttons are styled once, in :meth:`_add_chip`, and are never
-        otherwise revisited, so without this hook a chip created under one
-        theme keeps its original colors after the app switches to the other.
-
-        Args:
-            resolved_theme: The concrete theme now active ("dark" or
-                "light"). Unused: the new stylesheet is rebuilt from
-                :class:`ThemeManager`'s current state regardless of which
-                theme name triggered the signal.
-        """
-        _ = resolved_theme
-        stylesheet = self._chip_stylesheet()
-        for chip_btn in self._chip_buttons.values():
-            chip_btn.setStyleSheet(stylesheet)
-
     def _add_chip(self, tag: str) -> None:
         """Create and insert a chip button for ``tag``.
+
+        The chip carries no stylesheet of its own: the ``QPushButton#tagChip`` rules of the active theme stylesheet color it, so it
+        follows a theme switch like any other themed widget. Its remove icon comes from :class:`IconManager`, which falls back to a
+        rendered Unicode cross when the icon asset is unavailable.
 
         Args:
             tag: Tag value to display.
         """
         chip = QPushButton()
-        style = self.style()
-        if style is not None:
-            chip.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DialogCloseButton))
+        chip.setIcon(IconManager.get_instance().get_icon(_CHIP_REMOVE_ICON, _CHIP_ICON_SIZE))
+        chip.setIconSize(QSize(_CHIP_ICON_SIZE, _CHIP_ICON_SIZE))
         chip.setText(f" {tag} ")
         chip.setObjectName("tagChip")
         chip.setProperty("tag", tag)
         chip.setCursor(Qt.CursorShape.PointingHandCursor)
         chip.setToolTip(f"Remove tag '{tag}'")
-        chip.setStyleSheet(self._chip_stylesheet())
         bound_tag: str = tag
 
         def _on_clicked(_state: int = 0, t: str = bound_tag) -> None:

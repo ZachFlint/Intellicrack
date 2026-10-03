@@ -48,7 +48,7 @@ _BARE_CONSOLAS_RE: re.Pattern[str] = re.compile(
     re.IGNORECASE,
 )
 _EXPECTED_PT_COUNT: int = 0
-_EXPECTED_PX_COUNT: int = 13
+_EXPECTED_PX_COUNT: int = 17
 
 _DEAD_PROPERTY_NAMES: tuple[str, ...] = (
     "secondary",
@@ -254,13 +254,10 @@ class TestFontSizeUnitsNormalized:
     def test_px_font_size_declaration_count_in_each_qss_file() -> None:
         """Each of the four on-disk .qss themes carries the same px font-size count.
 
-        Pins the count to the 14 px declarations per theme file the D35
-        normalization produced, less the one that went with the
-        ``QCheckBox#confirm_remember`` rule when that rule was removed from
-        every theme for styling a widget that does not exist. A future partial
-        revert that drops some but not all px declarations, or that
-        reintroduces pt units without removing the equivalent px rule, is
-        still caught.
+        Pins the count each theme file carries today (17 px declarations),
+        so a partial revert that drops some but not all px declarations, or
+        that reintroduces pt units without removing the equivalent px rule,
+        is still caught.
         """
         for name, text in _ALL_QSS_SOURCES:
             px_count = len(_FONT_SIZE_PX_RE.findall(text))
