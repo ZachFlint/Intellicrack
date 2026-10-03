@@ -83,6 +83,7 @@ _LISTENER_CONSTRUCTION: Final = re.compile(
 _PARSE_CALL: Final = re.compile(r"\[System\.Net\.IPAddress\]::Parse\(\s*'(?P<literal>[^']*)'\s*\)")
 
 _IPV4_LOOPBACK: Final[int] = 0x7F000001
+_PRIMARY_LOOPBACK: Final[str] = str(ipaddress.IPv4Address(_IPV4_LOOPBACK))
 # The next address after it, which the machine answers on just as readily but
 # which a listener bound to the first one does not serve.
 _SECONDARY_LOOPBACK: Final[str] = str(ipaddress.IPv4Address(_IPV4_LOOPBACK + 1))
@@ -111,6 +112,7 @@ _QCOW2_HEADER: Final[bytes] = b"QFI\xfb\x00\x00\x00\x03"
 _AGENT_CONNECT_TIME_LIMIT: Final[float] = 20.0
 _AGENT_CONNECT_RETRY_INTERVAL: Final[float] = 0.5
 _CONNECT_TIME_LIMIT: Final[float] = 5.0
+_REACHABILITY_PROBE_S: Final[float] = 2.0
 _LISTEN_BACKLOG: Final[int] = 1
 
 _ERR_NO_CONSTRUCTION: Final[str] = "the generated agent's listener statement {statement!r} constructs no TcpListener"
@@ -283,6 +285,23 @@ def _forwarded_guest_port(command: list[str], host_port: int) -> int:
         if forwarded == str(host_port):
             return int(guest)
     raise AssertionError(_ERR_NO_AGENT_HOSTFWD.format(port=host_port, netdev=netdev))
+
+
+def _connect_outcome(address: str, port: int) -> str:
+    """Describe what a plain TCP connection to an address gets right now.
+
+    Args:
+        address: The address to connect to.
+        port: The port to connect to.
+
+    Returns:
+        str: ``connected``, or the error the connection was refused with.
+    """
+    try:
+        with closing(socket.create_connection((address, port), timeout=_REACHABILITY_PROBE_S)):
+            return "connected"
+    except OSError as exc:
+        return f"refused with {exc!r}"
 
 
 def _free_host_port() -> int:
@@ -492,7 +511,11 @@ class TestTheGeneratedWindowsAgentListensWhereTheForwardDelivers:
                 time_limit=_AGENT_CONNECT_TIME_LIMIT,
                 retry_interval=_AGENT_CONNECT_RETRY_INTERVAL,
             )
-            assert connected, f"the generated Windows agent did not answer a handshake at {target}:{port}"
+            assert connected, (
+                f"the generated Windows agent did not answer a handshake at {target}:{port}; "
+                f"a plain connection to {target}:{port} is {_connect_outcome(target, port)}, "
+                f"and to {_PRIMARY_LOOPBACK}:{port} is {_connect_outcome(_PRIMARY_LOOPBACK, port)}"
+            )
             assert client.is_connected
         finally:
             await client.disconnect()
