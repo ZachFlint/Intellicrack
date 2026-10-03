@@ -18,6 +18,7 @@ change is refused with :class:`JsonDocumentError`.
 
 from __future__ import annotations
 
+import ctypes
 import json
 import os
 import sys
@@ -26,7 +27,7 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from intellicrack.core.json_payload import JsonObject, is_json_object
 from intellicrack.core.logging import get_logger
@@ -34,11 +35,13 @@ from intellicrack.core.logging import get_logger
 
 if sys.platform == "win32":
     import msvcrt
+    from ctypes import wintypes
 else:
     import fcntl
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
+    from typing import BinaryIO
 
 
 _logger = get_logger(__name__)
@@ -52,6 +55,7 @@ _REPLACE_BACKOFF_S: Final[float] = 0.02
 """First wait between rename attempts; each later wait doubles it."""
 
 _WINDOWS_LOCK_BYTES: Final[int] = 1
+_LOCKFILE_EXCLUSIVE_LOCK: Final[int] = 0x00000002
 
 _locks_guard = threading.Lock()
 _thread_locks: dict[str, threading.RLock] = {}
@@ -84,6 +88,59 @@ def _thread_lock(path: Path) -> threading.RLock:
         return lock
 
 
+class _Overlapped(ctypes.Structure):
+    """Win32 ``OVERLAPPED``, which names the byte range a file lock covers."""
+
+    _fields_: ClassVar = [
+        ("Internal", ctypes.c_size_t),
+        ("InternalHigh", ctypes.c_size_t),
+        ("Offset", ctypes.c_ulong),
+        ("OffsetHigh", ctypes.c_ulong),
+        ("hEvent", ctypes.c_void_p),
+    ]
+
+
+def _lock_windows(handle: BinaryIO, *, exclusive: bool) -> None:
+    """Take or give up the lock on the first byte of an open file, waiting for as long as another process holds it.
+
+    The C runtime's blocking lock, ``msvcrt.locking`` with ``LK_LOCK``, is not
+    blocking: it looks once a second and after ten looks fails with
+    ``EDEADLOCK``. A writer queued behind others that take the lock back to
+    back can look ten times and find it held every time, so under contention
+    a change was refused with "Resource deadlock avoided" although nothing was
+    deadlocked. ``LockFileEx`` waits in the kernel until the lock is granted.
+
+    Args:
+        handle: The sidecar file, open in this process.
+        exclusive: ``True`` to take the lock, ``False`` to release it.
+
+    Raises:
+        ctypes.WinError: If the lock could not be taken or released.
+    """
+    if sys.platform != "win32":
+        return
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.LockFileEx.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.POINTER(_Overlapped),
+    ]
+    kernel32.LockFileEx.restype = wintypes.BOOL
+    kernel32.UnlockFileEx.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, ctypes.POINTER(_Overlapped)]
+    kernel32.UnlockFileEx.restype = wintypes.BOOL
+    file_handle = wintypes.HANDLE(msvcrt.get_osfhandle(handle.fileno()))
+    first_byte = _Overlapped()
+    if exclusive:
+        granted = kernel32.LockFileEx(file_handle, _LOCKFILE_EXCLUSIVE_LOCK, 0, _WINDOWS_LOCK_BYTES, 0, ctypes.byref(first_byte))
+    else:
+        granted = kernel32.UnlockFileEx(file_handle, 0, _WINDOWS_LOCK_BYTES, 0, ctypes.byref(first_byte))
+    if not granted:
+        raise ctypes.WinError(ctypes.get_last_error())
+
+
 @contextmanager
 def _process_lock(lock_path: Path) -> Generator[None]:
     """Hold an exclusive operating-system lock on a sidecar file.
@@ -97,13 +154,11 @@ def _process_lock(lock_path: Path) -> Generator[None]:
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+b") as handle:
         if sys.platform == "win32":
-            _ = handle.seek(0)
-            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, _WINDOWS_LOCK_BYTES)
+            _lock_windows(handle, exclusive=True)
             try:
                 yield
             finally:
-                _ = handle.seek(0)
-                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, _WINDOWS_LOCK_BYTES)
+                _lock_windows(handle, exclusive=False)
         else:
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
             try:
