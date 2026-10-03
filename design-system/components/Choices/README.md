@@ -1,0 +1,1 @@
+Check boxes and radio buttons. Both use a 16px indicator on the `ic-field` fill with an `ic-border-control` edge that turns `ic-accent` on hover; the checked state fills with the accent. The check box is square (3px radius) with a tick in `ic-on-accent`; the radio is round with an inset ring.

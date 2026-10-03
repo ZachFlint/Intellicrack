@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="x64dbgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#795548;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3E2723;stop-opacity:1" />
+    </linearGradient>
+    <filter id="x64dbgShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#1C0E0B" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- x64dbg background shape (modern debugger) -->
+  <rect x="2" y="2" width="20" height="20" rx="3" fill="url(#x64dbgGradient)" stroke="#1C0E0B" stroke-width="0.8" filter="url(#x64dbgShadowFilter)"/>
+  <rect x="3.5" y="3.5" width="17" height="17" rx="2" fill="none" stroke="#D7CCC8" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- x64dbg "x64" text -->
+  <text x="6" y="10" font-family="monospace" font-size="5" font-weight="bold" fill="#FFFFFF">x64</text>
+
+  <!-- Debug symbols (breakpoints, step indicators) -->
+  <circle cx="6" cy="15" r="2" fill="#F44336"/>
+  <circle cx="6" cy="15" r="1" fill="#FFFFFF"/>
+
+  <polygon points="12,14 15,16 12,18" fill="#4CAF50"/>
+
+  <rect x="17" y="14" width="3" height="4" fill="#FF9800"/>
+  <rect x="18" y="15" width="1" height="2" fill="#FFFFFF"/>
+
+  <!-- Binary pattern -->
+  <text x="4" y="7" font-family="monospace" font-size="3" fill="#FFFFFF" opacity="0.6">1100</text>
+  <text x="15" y="7" font-family="monospace" font-size="3" fill="#FFFFFF" opacity="0.6">1010</text>
+
+  <!-- CPU architecture indicator -->
+  <text x="4" y="21" font-family="monospace" font-size="2.5" fill="#FFFFFF" opacity="0.5">64-bit</text>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="9" cy="6" rx="4" ry="2" fill="#FFFFFF" opacity="0.2"/>
+</svg>

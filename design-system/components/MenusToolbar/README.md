@@ -1,0 +1,1 @@
+The window chrome: a 2px-padded menu bar, a toolbar of flat tool buttons split by hairline separators, and an open menu. Menu-bar items and menu items fill with `ic-selection` when open or hovered; menu items carry a right-aligned monospace shortcut and are grouped by `ic-menu-sep` dividers. Menu bar and menus sit on the raised `ic-chrome` surface.
