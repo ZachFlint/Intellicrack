@@ -12,6 +12,7 @@ run_bridge_coroutine_async (non-blocking), and shutdown_bridge_loop.
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from typing import TYPE_CHECKING
 
@@ -485,8 +486,11 @@ class TestBridgeLoopShutdownRobustness:
         """A worker still running when the loop is shut down must exit promptly.
 
         Starts a genuinely long-running coroutine on a real ``BridgeCallWorker``
-        so the worker's OS thread is mid-``future.result`` when
-        ``shutdown_bridge_loop`` stops the shared loop. Because the loop is
+        and waits until that coroutine is running on the shared loop, so the
+        worker's future belongs to the loop ``shutdown_bridge_loop`` then stops.
+        A worker thread that has merely started may not have reached the loop
+        yet, and one that reaches it after the shutdown is given a fresh loop
+        and legitimately waits out the whole coroutine. Because the loop is
         stopped, that future can never complete; a worker that waited on it
         unbounded would block its thread forever, becoming an unjoinable zombie
         whose ``QThread`` aborts the process at teardown. The worker must instead
@@ -496,17 +500,16 @@ class TestBridgeLoopShutdownRobustness:
         falsifies the final assertion.
         """
         worker_join_budget_ms = 3000
-        start_deadline = time.monotonic() + MAX_WAIT_MS / 1000
+        on_the_loop = threading.Event()
 
         async def _long() -> int:
+            on_the_loop.set()
             await asyncio.sleep(30)
             return 1
 
         worker = BridgeCallWorker(_long())
         worker.start()
-        while not worker.isRunning() and time.monotonic() < start_deadline:
-            time.sleep(POLL_INTERVAL_MS / 1000)
-        assert worker.isRunning(), "worker thread never started; test premise not established"
+        assert on_the_loop.wait(MAX_WAIT_MS / 1000), "the coroutine never ran on the bridge loop; test premise not established"
 
         shutdown_bridge_loop()
 
