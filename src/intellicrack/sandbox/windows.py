@@ -76,7 +76,6 @@ if TYPE_CHECKING:
 
 _logger = get_logger(__name__)
 
-_WHERE_TIMEOUT = 10
 _FEATURE_CHECK_TIMEOUT = 30
 _SANDBOX_FEATURE_NAME = "Containers-DisposableClientVM"
 _SANDBOX_INSTALL_STATE_ENABLED = "1"
@@ -695,19 +694,20 @@ class WindowsSandbox(SandboxBase):
     async def _exe_on_path(exe: str) -> bool:
         """Report whether an executable resolves on ``PATH``.
 
+        The search is done in this process. It used to be delegated to a
+        ``where`` child process, which made a lookup fail with a timeout
+        whenever that process took more than ten seconds to start on a loaded
+        machine, and which ran whatever ``where.exe`` the working directory
+        held, because the working directory is searched before the system
+        directory when a program is started by name.
+
         Args:
             exe: Executable filename to look up.
 
         Returns:
-            bool: True when ``where`` resolves the executable.
+            bool: True when the executable is found on ``PATH``.
         """
-        process_manager = ProcessManager.get_instance()
-        result = await process_manager.run_tracked_async(
-            ["where", exe],
-            name="where-sandbox-exe",
-            process_timeout=_WHERE_TIMEOUT,
-        )
-        return result.returncode == _RETURNCODE_SUCCESS
+        return await asyncio.to_thread(shutil.which, exe) is not None
 
     async def _resolve_launcher_exe(self) -> str | None:
         """Resolve which Windows Sandbox launcher binary to use.
