@@ -366,7 +366,7 @@ class OpenAIProvider(LLMProviderBase):
             return
         try:
             await client.close()
-        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
+        except (OSError, RuntimeError) as exc:
             self._logger.warning("openai_client_close_error", error=str(exc))
 
     async def disconnect(self) -> None:

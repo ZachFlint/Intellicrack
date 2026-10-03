@@ -235,7 +235,7 @@ class GoogleProvider(LLMProviderBase):
         try:
             await client.aio.aclose()
             client.close()
-        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
+        except (OSError, RuntimeError) as exc:
             self._logger.warning("google_client_close_error", error=str(exc))
 
     async def disconnect(self) -> None:
