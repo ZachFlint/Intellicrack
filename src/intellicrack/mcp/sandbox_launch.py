@@ -93,11 +93,24 @@ CREATE_UNICODE_ENVIRONMENT: Final[int] = 0x00000400
 EXTENDED_STARTUPINFO_PRESENT: Final[int] = 0x00080000
 CREATE_NO_WINDOW: Final[int] = 0x08000000
 
-SANDBOX_CREATION_FLAGS: Final[int] = CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW
+_STD_INPUT_HANDLE: Final[int] = 0xFFFFFFF6
+_STD_OUTPUT_HANDLE: Final[int] = 0xFFFFFFF5
+_STD_ERROR_HANDLE: Final[int] = 0xFFFFFFF4
+_STD_HANDLES: Final[tuple[int, int, int]] = (_STD_INPUT_HANDLE, _STD_OUTPUT_HANDLE, _STD_ERROR_HANDLE)
+_SW_HIDE: Final[int] = 0
+
+SANDBOX_CREATION_FLAGS: Final[int] = CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT
 """Creation flags of every confined launch.
 
 ``CREATE_SUSPENDED`` is what keeps the job airtight: the process is placed in its job before its first thread runs, so neither the server
 nor anything it starts ever executes outside the job. No breakaway flag is set, and the job does not permit breakaway.
+
+No console-creation flag is set, so the server inherits the launcher's console rather than allocating its own. A console-subsystem child
+with no console to inherit -- which ``CREATE_NO_WINDOW`` forces, since it allocates a fresh one -- stands that console up under the
+restricted Low integrity token, and that allocation fails during loader initialization with ``STATUS_DLL_INIT_FAILED`` on a hosted runner,
+killing the server before it runs. It fails the same way for any console-subsystem grandchild a shim or launcher starts, which a flag on the
+direct child cannot prevent. :func:`ensure_inheritable_console` gives the launcher a console under its own unrestricted token for the whole
+confined tree to inherit, so nothing in it ever allocates one.
 """
 
 DEFAULT_ACTIVE_PROCESS_LIMIT: Final[int] = 16
@@ -1008,7 +1021,64 @@ def _kernel32() -> ctypes.WinDLL:
     kernel32.SetHandleInformation.restype = wintypes.BOOL
     kernel32.LocalFree.argtypes = [ctypes.c_void_p]
     kernel32.LocalFree.restype = ctypes.c_void_p
+    kernel32.AllocConsole.argtypes = []
+    kernel32.AllocConsole.restype = wintypes.BOOL
+    kernel32.GetConsoleWindow.argtypes = []
+    kernel32.GetConsoleWindow.restype = wintypes.HWND
+    kernel32.GetStdHandle.argtypes = [wintypes.DWORD]
+    kernel32.GetStdHandle.restype = wintypes.HANDLE
+    kernel32.SetStdHandle.argtypes = [wintypes.DWORD, wintypes.HANDLE]
+    kernel32.SetStdHandle.restype = wintypes.BOOL
     return kernel32
+
+
+@functools.cache
+def _user32() -> ctypes.WinDLL:
+    """Resolve the Win32 window-management API.
+
+    Returns:
+        ctypes.WinDLL: The ``user32`` library.
+
+    Raises:
+        McpConfigError: If called on a platform that has no Win32 API.
+    """
+    if not IS_WIN32:
+        raise McpConfigError(_ERR_UNSUPPORTED_PLATFORM)
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindow.restype = wintypes.BOOL
+    return user32
+
+
+@functools.cache
+def ensure_inheritable_console() -> None:
+    """Give the launcher a console the confined tree can inherit, once per process.
+
+    A console-subsystem child with no console to inherit allocates its own, and
+    that allocation fails under the confined restricted token on a hosted
+    runner, so every process in the tree must inherit one instead. When the
+    launcher already has a console -- the usual case under a terminal --
+    ``AllocConsole`` fails with ``ERROR_ACCESS_DENIED`` and the tree inherits
+    that one. When it has none -- a windowed application -- a console is
+    allocated here, under the launcher's own unrestricted token where the
+    allocation succeeds, and its window is hidden so nothing flashes on screen.
+    The launcher's own standard handles are saved across the call and restored,
+    since ``AllocConsole`` repoints them at the new console and the launcher's
+    own input and output must stay where they were.
+
+    A platform with no sandbox propagates :class:`McpConfigError` from
+    :func:`_kernel32`.
+    """
+    kernel32 = _kernel32()
+    saved = [kernel32.GetStdHandle(std) for std in _STD_HANDLES]
+    if not kernel32.AllocConsole():
+        return
+    window = kernel32.GetConsoleWindow()
+    if window:
+        _ = _user32().ShowWindow(window, _SW_HIDE)
+    for std, handle in zip(_STD_HANDLES, saved, strict=True):
+        _ = kernel32.SetStdHandle(std, handle)
+    _logger.debug("mcp_sandbox_console_allocated")
 
 
 @functools.cache
@@ -2382,6 +2452,7 @@ def spawn_confined_process(launch: SandboxedLaunch, job: SandboxedJob, token: in
         McpConfigError: If the job was not open. The process has been
             terminated and its pipe ends closed.
     """
+    ensure_inheritable_console()
     pipes = _ChildPipes.open(errlog)
     with INHERITANCE_LOCK:
         try:
