@@ -70,6 +70,8 @@ _MESSAGE_MAX_CHARS: Final[int] = 4096
 _MAX_FIELDS: Final[int] = 32
 _MAX_CHOICES: Final[int] = 256
 _CHOICE_LIST_MAX_HEIGHT: Final[int] = 160
+_STATUS_PROPERTY: Final[str] = "status"
+_STATUS_ERROR: Final[str] = "error"
 _EMAIL_PATTERN: Final[re.Pattern[str]] = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 _JSON_INTEGER: Final[re.Pattern[str]] = re.compile(r"-?(?:0|[1-9][0-9]*)")
@@ -476,6 +478,7 @@ class McpElicitationDialog(QDialog):
 
         self._summary = QLabel("")
         self._summary.setObjectName("mcp_elicit_errors")
+        self._summary.setProperty(_STATUS_PROPERTY, _STATUS_ERROR)
         self._summary.setTextFormat(Qt.TextFormat.PlainText)
         self._summary.setWordWrap(True)
         self._summary.setVisible(False)
@@ -550,6 +553,7 @@ class McpElicitationDialog(QDialog):
         editor.setObjectName(f"mcp_elicit_field_{name}")
         error = QLabel("")
         error.setObjectName(f"mcp_elicit_error_{name}")
+        error.setProperty(_STATUS_PROPERTY, _STATUS_ERROR)
         error.setTextFormat(Qt.TextFormat.PlainText)
         error.setWordWrap(True)
         error.setVisible(False)

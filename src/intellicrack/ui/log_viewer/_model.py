@@ -43,10 +43,6 @@ _COLUMN_COUNT: Final[int] = 6
 _HEADERS: Final[tuple[str, ...]] = ("Time", "Level", "Logger", "Function:Line", "Event", "Extras")
 
 _TINT_ALPHA: Final[int] = 48
-_LUMINANCE_MIDPOINT: Final[float] = 0.5
-_LUMINANCE_RED_WEIGHT: Final[float] = 0.299
-_LUMINANCE_GREEN_WEIGHT: Final[float] = 0.587
-_LUMINANCE_BLUE_WEIGHT: Final[float] = 0.114
 
 
 def _flatten_for_display(text: str) -> str:
@@ -125,14 +121,7 @@ class LogRecordTableModel(QAbstractTableModel):
             QColor: Black for light backgrounds, white for dark ones, chosen by
                 perceived (Rec. 601) relative luminance.
         """
-        luminance = (
-            _LUMINANCE_RED_WEIGHT * background.red()
-            + _LUMINANCE_GREEN_WEIGHT * background.green()
-            + _LUMINANCE_BLUE_WEIGHT * background.blue()
-        ) / 255.0
-        if luminance > _LUMINANCE_MIDPOINT:
-            return QColor(0, 0, 0)
-        return QColor(255, 255, 255)
+        return ThemeManager.contrasting_text_color(background)
 
     def _resolve_level_colors(self) -> None:
         """Resolve per-level foreground and background colors from the active theme.

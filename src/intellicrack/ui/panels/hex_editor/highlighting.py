@@ -62,6 +62,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.color_defaults import DEFAULT_HIGHLIGHT_COLOR
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import (
     GenericCallableWorker,
@@ -70,16 +71,27 @@ from intellicrack.ui.panels.async_bridge import (
     worker_is_running,
 )
 from intellicrack.ui.panels.hex_editor_widget import HighlightRule
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger(__name__)
 
 
-_DEFAULT_HIGHLIGHT_COLOR: Final[str] = "#FFFF00"
 _BYTE_MAX: Final[int] = 255
 _HIGHLIGHT_PATTERN_MAX_MATCHES: Final[int] = 10000
 
 DOCUMENT_MUTATION_LOCK: Final[threading.Lock] = threading.Lock()
+
+
+def _get_default_highlight_color() -> str:
+    """Return the active theme's color for a new byte highlight rule.
+
+    Returns:
+        str: Hex color string of the theme's ``highlight_rule`` hex-mark entry.
+    """
+    return ThemeManager.get_instance().get_hex_mark_colors()["highlight_rule"]
+
+
 """Serialises native ``HexDocument`` access across mutation and search.
 
 Every background ``search_hex`` dispatch in this module acquires this lock for the duration of the call. Any other module that mutates the
@@ -177,7 +189,7 @@ class HighlightingMixin:
 
         color_row = QHBoxLayout()
         color_row.addWidget(QLabel("Color:"))
-        self._highlight_color_edit = QLineEdit(_DEFAULT_HIGHLIGHT_COLOR)
+        self._highlight_color_edit = QLineEdit(_get_default_highlight_color())
         self._highlight_color_edit.setMaximumWidth(80)
         color_row.addWidget(self._highlight_color_edit)
         pick_btn = QPushButton("Pick...")
@@ -206,7 +218,7 @@ class HighlightingMixin:
         self._pattern_rule_worker = None
         self._pending_pattern_add_bridge = None
         self._pending_pattern_add_pattern = ""
-        self._pending_pattern_add_color = _DEFAULT_HIGHLIGHT_COLOR
+        self._pending_pattern_add_color = _get_default_highlight_color()
         self._pattern_refresh_worker = None
         self._pattern_refresh_pending = False
         self._pattern_search_busy_count = 0
@@ -264,7 +276,7 @@ class HighlightingMixin:
             return
 
         condition_idx = self._highlight_condition_combo.currentIndex()
-        color = self._highlight_color_edit.text().strip() if self._highlight_color_edit else _DEFAULT_HIGHLIGHT_COLOR
+        color = self._highlight_color_edit.text().strip() if self._highlight_color_edit else _get_default_highlight_color()
 
         if condition_idx == 0:
             value = self._highlight_byte_value_spin.value() if self._highlight_byte_value_spin else 0
@@ -329,7 +341,7 @@ class HighlightingMixin:
         self._end_pattern_search_busy()
         bridge = getattr(self, "_pending_pattern_add_bridge", None)
         pattern = getattr(self, "_pending_pattern_add_pattern", "")
-        color = getattr(self, "_pending_pattern_add_color", _DEFAULT_HIGHLIGHT_COLOR)
+        color = getattr(self, "_pending_pattern_add_color", _get_default_highlight_color())
         self._pending_pattern_add_bridge = None
         if bridge is None:
             return
@@ -469,7 +481,7 @@ class HighlightingMixin:
         rule_id: str = str(rule.get("id", ""))
         condition_type: str = str(rule.get("condition_type", ""))
         condition_params: Any = rule.get("condition_params", {})
-        color: str = str(rule.get("color", _DEFAULT_HIGHLIGHT_COLOR))
+        color: str = str(rule.get("color", DEFAULT_HIGHLIGHT_COLOR))
 
         if not isinstance(condition_params, dict):
             condition_params = {}

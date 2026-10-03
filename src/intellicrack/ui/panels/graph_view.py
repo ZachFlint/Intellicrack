@@ -17,7 +17,6 @@ from typing import Any, Final, cast, override
 from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import (
     QBrush,
-    QColor,
     QFontMetricsF,
     QMouseEvent,
     QPainter,
@@ -39,7 +38,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources.font_manager import FontManager
-from intellicrack.ui.resources.theme_manager import ThemeManager
+from intellicrack.ui.resources.theme_manager import GraphColors, ThemeManager
 
 
 _logger = get_logger(__name__)
@@ -54,43 +53,13 @@ _ARROW_SIZE: Final[int] = 8
 _ZOOM_FACTOR: Final[float] = 1.15
 
 
-def _get_graph_colors() -> dict[str, QColor]:
-    """Get theme-aware colors for CFG rendering.
+def _get_graph_colors() -> GraphColors:
+    """Get the active theme's colors for CFG rendering.
 
     Returns:
-        dict[str, QColor]: Mapping of color names to QColor instances.
+        GraphColors: The control-flow graph palette of the theme currently rendered, as held by :class:`ThemeManager`.
     """
-    if ThemeManager.get_instance().is_dark_theme():
-        return {
-            "block_bg": QColor(40, 44, 52),
-            "block_border": QColor(80, 85, 95),
-            "header_bg": QColor(55, 60, 72),
-            "header_text": QColor(220, 220, 220),
-            "asm_text": QColor(190, 190, 190),
-            "mnemonic_jump": QColor(86, 156, 214),
-            "mnemonic_call": QColor(78, 201, 176),
-            "mnemonic_ret": QColor(206, 106, 106),
-            "edge_true": QColor(80, 200, 80),
-            "edge_false": QColor(200, 80, 80),
-            "edge_uncond": QColor(150, 150, 150),
-            "selected_border": QColor(100, 150, 255),
-            "background": QColor(30, 30, 30),
-        }
-    return {
-        "block_bg": QColor(255, 255, 255),
-        "block_border": QColor(200, 200, 210),
-        "header_bg": QColor(230, 235, 245),
-        "header_text": QColor(30, 30, 30),
-        "asm_text": QColor(60, 60, 60),
-        "mnemonic_jump": QColor(0, 0, 200),
-        "mnemonic_call": QColor(0, 128, 128),
-        "mnemonic_ret": QColor(180, 50, 50),
-        "edge_true": QColor(40, 160, 40),
-        "edge_false": QColor(200, 40, 40),
-        "edge_uncond": QColor(120, 120, 120),
-        "selected_border": QColor(50, 100, 220),
-        "background": QColor(248, 248, 248),
-    }
+    return ThemeManager.get_instance().get_graph_colors()
 
 
 _JUMP_MNEMONICS = frozenset({

@@ -30,14 +30,12 @@ from intellicrack.bridges.pe_format import (
 )
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
-from intellicrack.ui.resources.theme_manager import ThemeManager
+from intellicrack.ui.resources.theme_manager import HexMarkColors, ThemeManager
 
 
 _logger = get_logger(__name__)
 
 
-_TEMPLATE_COLOR_DARK: Final[str] = "#44FF44"
-_TEMPLATE_COLOR_LIGHT: Final[str] = "#2E7D32"
 _MAGIC_MIN_LEN: Final[int] = 2
 _ELF_CLASS_64: Final[int] = 2
 _MAX_BOOKMARK_SECTIONS: Final[int] = 20
@@ -47,14 +45,24 @@ UserNotifier = Callable[[str, str, "NotificationLevel"], None]
 
 
 def _get_default_template_color() -> str:
-    """Return a theme-appropriate default color for template field highlights.
+    """Return the active theme's default color for template field highlights.
 
     Returns:
-        str: Hex color string suitable for the active theme.
+        str: Hex color string of the theme's ``template_field`` hex-mark entry.
     """
-    if ThemeManager.get_instance().is_dark_theme():
-        return _TEMPLATE_COLOR_DARK
-    return _TEMPLATE_COLOR_LIGHT
+    return ThemeManager.get_instance().get_hex_mark_colors()["template_field"]
+
+
+def _get_structure_colors() -> HexMarkColors:
+    """Return the active theme's colors for structure auto-bookmarks.
+
+    The colors are read once per auto-bookmark pass and written into the bookmarks, so bookmarks that already exist keep the color they were
+    created with when the theme later changes.
+
+    Returns:
+        HexMarkColors: The hex-mark palette of the theme currently rendered, as held by :class:`ThemeManager`.
+    """
+    return ThemeManager.get_instance().get_hex_mark_colors()
 
 
 class TemplatesMixin:
@@ -656,7 +664,8 @@ class TemplatesMixin:
         if dos_data is None:
             return
 
-        self.document.add_bookmark(0, PE_DOS_HEADER_SIZE, "DOS Header", "#FF6B6B")
+        marks = _get_structure_colors()
+        self.document.add_bookmark(0, PE_DOS_HEADER_SIZE, "DOS Header", marks["structure_header"])
         self._notify_state_data_modified(0, PE_DOS_HEADER_SIZE, source="hex-editor.templates.auto-bookmark.pe")
 
         if len(dos_data) < PE_DOS_LFANEW_OFFSET + 4:
@@ -679,7 +688,7 @@ class TemplatesMixin:
         if len(coff_data) < 4 + PE_COFF_HEADER_SIZE or coff_data[:4] != PE_SIGNATURE:
             return
 
-        self.document.add_bookmark(e_lfanew, PE_OPTIONAL_HEADER_OFFSET, "PE File Header", "#4ECDC4")
+        self.document.add_bookmark(e_lfanew, PE_OPTIONAL_HEADER_OFFSET, "PE File Header", marks["structure_table"])
         self._notify_state_data_modified(
             e_lfanew,
             PE_OPTIONAL_HEADER_OFFSET,
@@ -688,7 +697,7 @@ class TemplatesMixin:
 
         _machine, num_sections, opt_size, _characteristics = unpack_coff_header(coff_data, 4)
         if opt_size > 0:
-            self.document.add_bookmark(e_lfanew + PE_OPTIONAL_HEADER_OFFSET, opt_size, "Optional Header", "#4ECDC4")
+            self.document.add_bookmark(e_lfanew + PE_OPTIONAL_HEADER_OFFSET, opt_size, "Optional Header", marks["structure_table"])
             self._notify_state_data_modified(
                 e_lfanew + PE_OPTIONAL_HEADER_OFFSET,
                 opt_size,
@@ -710,7 +719,7 @@ class TemplatesMixin:
         """
         if self.document is None:
             return
-        section_colors = ["#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8"]
+        section_colors = _get_structure_colors()["section_cycle"]
         for i in range(min(num_sections, _MAX_BOOKMARK_SECTIONS)):
             sec_off = section_offset + i * 40
             try:
@@ -734,7 +743,8 @@ class TemplatesMixin:
         if self.document is None:
             return
 
-        self.document.add_bookmark(0, 64, "ELF Header", "#FF6B6B")
+        marks = _get_structure_colors()
+        self.document.add_bookmark(0, 64, "ELF Header", marks["structure_header"])
         self._notify_state_data_modified(0, 64, source="hex-editor.templates.auto-bookmark.elf")
 
         try:
@@ -803,13 +813,13 @@ class TemplatesMixin:
         if ph_offset > 0 and ph_count > 0:
             ph_entry_size = 56 if is_64 else 32
             ph_total = ph_entry_size * ph_count
-            self.document.add_bookmark(ph_offset, ph_total, "Program Headers", "#4ECDC4")
+            self.document.add_bookmark(ph_offset, ph_total, "Program Headers", marks["structure_table"])
             self._notify_state_data_modified(ph_offset, ph_total, source="hex-editor.templates.auto-bookmark.elf")
 
         if sh_offset > 0 and sh_count > 0:
             sh_entry_size = 64 if is_64 else 40
             sh_total = sh_entry_size * sh_count
-            self.document.add_bookmark(sh_offset, sh_total, "Section Headers", "#45B7D1")
+            self.document.add_bookmark(sh_offset, sh_total, "Section Headers", marks["structure_section"])
             self._notify_state_data_modified(sh_offset, sh_total, source="hex-editor.templates.auto-bookmark.elf")
 
         self._refresh_bookmarks()

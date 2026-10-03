@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import QColorDialog, QInputDialog, QTreeWidget, QTreeWidget
 
 from intellicrack.bridges.hex_editor import read_bookmark_sidecar, write_bookmark_sidecar
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger(__name__)
@@ -77,7 +78,8 @@ class BookmarksMixin:
         if not ok or not name:
             return
 
-        color = QColorDialog.getColor(QColor("#FFFF00"), parent, "Bookmark Color")
+        default_color = ThemeManager.get_instance().get_hex_mark_colors()["bookmark"]
+        color = QColorDialog.getColor(QColor(default_color), parent, "Bookmark Color")
         if not color.isValid():
             return
 
