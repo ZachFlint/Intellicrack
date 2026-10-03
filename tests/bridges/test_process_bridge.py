@@ -2795,6 +2795,8 @@ _DOTNET_HOST_CANDIDATES = [
     r"C:\Windows\Microsoft.NET\Framework\v4.0.30319\ngen.exe",
     r"C:\Program Files\dotnet\dotnet.exe",
 ]
+_RUNTIME_LOAD_BUDGET_S = 30.0
+_RUNTIME_LOAD_POLL_S = 0.05
 
 
 class TestF0036AdvApi32MissingRaises:
@@ -3000,16 +3002,25 @@ class TestF0015DotnetByCor20Header:
     ) -> None:
         """Assert detect_dotnet reports the spawned process as managed.
 
+        The host is inspected repeatedly until its runtime shows up rather
+        than once after a fixed pause: a host that is still starting has only
+        its first few modules loaded, and on a loaded machine it was caught in
+        exactly that state and reported, correctly, as not yet managed.
+
         Args:
             process_bridge: ProcessBridge used to invoke ``detect_dotnet``.
             async_proc: Subprocess running a .NET host to inspect.
         """
-        await asyncio.sleep(0.5)
-        if async_proc.returncode is not None:
-            pytest.skip("managed process exited immediately, cannot inspect")
-            return
-        result = await process_bridge.detect_dotnet(async_proc.pid)
-        assert isinstance(result, dict)
+        deadline = time.monotonic() + _RUNTIME_LOAD_BUDGET_S
+        while True:
+            if async_proc.returncode is not None:
+                pytest.skip("managed process exited immediately, cannot inspect")
+                return
+            result = await process_bridge.detect_dotnet(async_proc.pid)
+            assert isinstance(result, dict)
+            if result.get("managed") is True or result.get("clr_loaded") is True or time.monotonic() >= deadline:
+                break
+            await asyncio.sleep(_RUNTIME_LOAD_POLL_S)
         assert result.get("managed") is True or result.get("clr_loaded") is True
         version = result.get("version") or result.get("clr_version")
         assert version is not None
