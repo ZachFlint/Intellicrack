@@ -76,6 +76,7 @@ from scripts.sandbox.provision_windows_guest import (
     select_winpe_driver_packages,
     stage_virtio_medium,
 )
+from tests._helpers.sparse_files import extend_sparse
 from tests.sandbox.qemu.virtio_installer_harness import answer_settings, build_bundled_tools
 
 
@@ -270,7 +271,7 @@ def _windows_install_iso(path: Path) -> Path:
         for lba, data in sorted(sectors.items()):
             handle.seek(lba * _SECTOR)
             handle.write(data)
-        handle.truncate(_MEDIA_BYTES)
+        extend_sparse(handle, _MEDIA_BYTES)
     return path
 
 
