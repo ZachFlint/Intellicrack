@@ -449,7 +449,12 @@ class TestOtherFormatsStillUseGenericImportPatches:
             assert panel.load_file(str(target)) is True
 
             priv_method(panel, "_on_import_patches")()
-            _pump_until(qapp, lambda: bool(bridge.import_patches_calls))
+            _pump_until(
+                qapp,
+                lambda: (
+                    bool(bridge.import_patches_calls) and bridge.document is not None and bytes(bridge.document.read(4, 2)) == b"\x90\x90"
+                ),
+            )
 
             expected_b64 = base64.b64encode(patch_bytes).decode("ascii")
             assert bridge.import_patches_calls == [(expected_b64, None)]
