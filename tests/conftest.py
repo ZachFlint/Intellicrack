@@ -136,33 +136,29 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 @pytest.hookimpl(wrapper=True, trylast=True)
-def pytest_runtest_setup() -> Generator[None]:
-    """Record any Qt fatal message raised while a test sets up.
+def pytest_runtest_setup(item: pytest.Item) -> Generator[None]:
+    """Start recording Qt fatal messages once a test's setup has finished.
 
-    Runs inside pytest-qt's own log capture, so that capture still receives
-    every message.
+    pytest-qt installs its message handler during setup and removes it when
+    the call phase is reported, so the recorder goes in front of it here, after
+    setup, and is removed along with it.
+
+    Args:
+        item: The test being set up.
 
     Yields:
         None: Control passed to the wrapped setup implementation.
     """
-    with worker_crash_report.qt_fatal_messages_recorded():
-        yield
-
-
-@pytest.hookimpl(wrapper=True, trylast=True)
-def pytest_runtest_call() -> Generator[None]:
-    """Record any Qt fatal message raised while a test runs.
-
-    Yields:
-        None: Control passed to the wrapped call implementation.
-    """
-    with worker_crash_report.qt_fatal_messages_recorded():
-        yield
+    yield
+    worker_crash_report.record_fatal_messages_in_front_of_capture(item)
 
 
 @pytest.hookimpl(wrapper=True, trylast=True)
 def pytest_runtest_teardown() -> Generator[None]:
     """Record any Qt fatal message raised while a test tears down.
+
+    pytest-qt's handler is already gone by then, so the recorder is installed
+    and restored around the phase.
 
     Yields:
         None: Control passed to the wrapped teardown implementation.
