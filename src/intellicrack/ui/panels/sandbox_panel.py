@@ -69,7 +69,6 @@ _SPLIT_LEFT: Final[int] = 200
 _SPLIT_RIGHT: Final[int] = 400
 _MIN_FIELD_WIDTH: Final[int] = 160
 _MIN_SPIN_WIDTH: Final[int] = 110
-_SPIN_MIN_WIDTH_STYLE: Final[str] = f"QSpinBox {{ min-width: {_MIN_SPIN_WIDTH}px; }}"
 
 # Companion paths are separated by ';' rather than by whitespace, because a
 # Windows path routinely carries a space and splitting on one would turn a
@@ -315,7 +314,8 @@ class SandboxPanel(AnalysisPanelBase):
         self._timeout_spin = QSpinBox()
         self._timeout_spin.setRange(_TIMEOUT_MIN_SECONDS, _TIMEOUT_MAX_SECONDS)
         self._timeout_spin.setValue(_TIMEOUT_DEFAULT_SECONDS)
-        self._timeout_spin.setStyleSheet(_SPIN_MIN_WIDTH_STYLE)
+        self._timeout_spin.setObjectName("sandbox_timeout_spin")
+        self._timeout_spin.setMinimumWidth(_MIN_SPIN_WIDTH)
         self._timeout_spin.setToolTip("Sandbox execution timeout in seconds")
         config_row.addWidget(self._timeout_spin)
 
@@ -326,7 +326,8 @@ class SandboxPanel(AnalysisPanelBase):
         self._memory_limit_spin = QSpinBox()
         self._memory_limit_spin.setRange(_MEMORY_MIN_MB, _MEMORY_MAX_MB)
         self._memory_limit_spin.setValue(_MEMORY_DEFAULT_MB)
-        self._memory_limit_spin.setStyleSheet(_SPIN_MIN_WIDTH_STYLE)
+        self._memory_limit_spin.setObjectName("sandbox_memory_spin")
+        self._memory_limit_spin.setMinimumWidth(_MIN_SPIN_WIDTH)
         self._memory_limit_spin.setToolTip("Sandbox memory limit in megabytes")
         config_row.addWidget(self._memory_limit_spin)
 

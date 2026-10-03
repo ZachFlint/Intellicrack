@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, cast, override, runtime_checkable
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -31,7 +30,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.resources.font_manager import FontManager
-from intellicrack.ui.resources.theme_manager import ThemeManager
+from intellicrack.ui.resources.theme_manager import StackColors, ThemeManager
 
 
 if TYPE_CHECKING:
@@ -52,37 +51,13 @@ _INFO_MARGIN: Final[int] = 4
 _SOURCE_COMBO_MIN_WIDTH: Final[int] = 120
 
 
-def _get_stack_colors() -> dict[str, QColor]:
-    """Get theme-aware colors for stack frame rendering.
+def _get_stack_colors() -> StackColors:
+    """Get the active theme's colors for stack frame rendering.
 
     Returns:
-        dict[str, QColor]: Mapping of semantic names to QColor values.
+        StackColors: The call-stack palette of the theme currently rendered, as held by :class:`ThemeManager`.
     """
-    if ThemeManager.get_instance().is_dark_theme():
-        return {
-            "index_highlight": QColor("#4ec9b0"),
-            "address": QColor("#569cd6"),
-            "function_known": QColor("#dcdcaa"),
-            "function_unknown": QColor("#888888"),
-            "module": QColor("#4ec9b0"),
-            "offset": QColor("#b5cea8"),
-            "pointer": QColor("#ce9178"),
-            "muted": QColor("#888888"),
-            "error": QColor("#f14c4c"),
-            "connected": QColor("#4ec9b0"),
-        }
-    return {
-        "index_highlight": QColor("#0067c0"),
-        "address": QColor("#0451a5"),
-        "function_known": QColor("#795e26"),
-        "function_unknown": QColor("#5a6370"),
-        "module": QColor("#0067c0"),
-        "offset": QColor("#098658"),
-        "pointer": QColor("#a31515"),
-        "muted": QColor("#5a6370"),
-        "error": QColor("#c62828"),
-        "connected": QColor("#2e7d32"),
-    }
+    return ThemeManager.get_instance().get_stack_colors()
 
 
 @dataclass

@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -37,19 +37,13 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 
-_YARA_MATCH_DARK: Final[str] = "#AA44FF"
-_YARA_MATCH_LIGHT: Final[str] = "#7B1FA2"
-
-
 def _get_yara_match_color() -> str:
-    """Return a theme-appropriate highlight color for YARA matches.
+    """Return the active theme's highlight color for YARA matches.
 
     Returns:
-        str: Hex color string suitable for the active theme.
+        str: Hex color string of the theme's ``yara_match`` hex-mark entry.
     """
-    if ThemeManager.get_instance().is_dark_theme():
-        return _YARA_MATCH_DARK
-    return _YARA_MATCH_LIGHT
+    return ThemeManager.get_instance().get_hex_mark_colors()["yara_match"]
 
 
 class YaraMixin:

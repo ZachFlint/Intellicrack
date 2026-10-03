@@ -1116,8 +1116,31 @@ QTextEdit#user_notes_text:focus {
 }
 
 QLabel#credential_source_label {
-    color: #0a58c4;
+    color: #757575;
+    background-color: rgba(117, 117, 117, 0.2);
     font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 3px;
+}
+
+QLabel#credential_source_label[credentialSource="env_file"] {
+    color: #2e7d32;
+    background-color: rgba(46, 125, 50, 0.2);
+}
+
+QLabel#credential_source_label[credentialSource="environment"] {
+    color: #1565c0;
+    background-color: rgba(21, 101, 192, 0.2);
+}
+
+QLabel#credential_source_label[credentialSource="manual"] {
+    color: #ef6c00;
+    background-color: rgba(239, 108, 0, 0.2);
+}
+
+QLabel#credential_source_label[credentialSource="not_configured"] {
+    color: #c62828;
+    background-color: rgba(198, 40, 40, 0.2);
 }
 
 QLabel#bold_label {
@@ -1330,4 +1353,91 @@ QLabel#attach_hint_label {
     border: 1px solid #d0d5dd;
     border-radius: 6px;
     background-color: rgba(255, 255, 255, 0.95);
+}
+
+/* ========================================
+   Session Tag Chips
+   ======================================== */
+
+QPushButton#tagChip {
+    background-color: #ffffff;
+    color: #1a1d21;
+    border: 1px solid #d0d5dd;
+    border-radius: 10px;
+    padding: 2px 8px;
+}
+
+QPushButton#tagChip:hover {
+    background-color: #0969da;
+    color: #ffffff;
+}
+
+QLabel#tag_empty_label {
+    color: #5b6472;
+    font-style: italic;
+}
+
+/* ========================================
+   Sandbox Limit Spin Boxes
+   ======================================== */
+
+QSpinBox#sandbox_timeout_spin,
+QSpinBox#sandbox_memory_spin {
+    min-width: 110px;
+}
+
+/* ========================================
+   Chat Markdown View, Notice and Tool Provenance
+   ======================================== */
+
+QTextBrowser#chat_markdown_view {
+    background: transparent;
+    border: none;
+}
+
+QLabel#chat_notice {
+    color: #5b6472;
+    background-color: #eaedf2;
+    border-top: 1px solid #d0d5dd;
+    padding: 4px 12px;
+    font-size: 11px;
+}
+
+QLabel#tool_source_badge {
+    color: #e07d1a;
+}
+
+/* ========================================
+   Tool Activity
+   ======================================== */
+
+QFrame[toolActivityRow="true"] {
+    background-color: #f6f8fb;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+}
+
+QLabel#tool_activity_message {
+    color: #5b6472;
+    font-size: 11px;
+}
+
+/* ========================================
+   MCP Consent and Elicitation Dialogs
+   ======================================== */
+
+QLabel#mcp_consent_header,
+QLabel#mcp_elicit_header {
+    font-size: 14px;
+    font-weight: bold;
+    color: #1a1d21;
+}
+
+QLabel#mcp_consent_warning,
+QLabel#mcp_elicit_caution {
+    font-size: 11px;
+    color: #8a6d10;
+    padding: 8px;
+    background-color: #fff8e0;
+    border-radius: 4px;
 }

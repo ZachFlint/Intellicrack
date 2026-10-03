@@ -49,8 +49,6 @@ from intellicrack.ui.resources.theme_manager import ThemeManager
 _logger = get_logger(__name__)
 
 
-_PATTERN_FIELD_DARK: Final[str] = "#FFD080"
-_PATTERN_FIELD_LIGHT: Final[str] = "#E65100"
 _PATTERN_APPLY_SYNC_WAIT_MS: Final[int] = 100
 """Bounded join, in milliseconds, ``_apply_via_interpreter`` waits on the apply worker before returning.
 
@@ -65,14 +63,12 @@ delivering its result via the worker's queued signals whenever the GUI event loo
 
 
 def _get_default_pattern_field_color() -> str:
-    """Return a theme-appropriate highlight color for pattern editor fields.
+    """Return the active theme's highlight color for pattern fields that declare none.
 
     Returns:
-        str: Hex color string suitable for the active theme.
+        str: Hex color string of the theme's ``pattern_field`` hex-mark entry.
     """
-    if ThemeManager.get_instance().is_dark_theme():
-        return _PATTERN_FIELD_DARK
-    return _PATTERN_FIELD_LIGHT
+    return ThemeManager.get_instance().get_hex_mark_colors()["pattern_field"]
 
 
 if TYPE_CHECKING:

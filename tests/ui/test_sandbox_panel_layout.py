@@ -22,11 +22,11 @@ from PyQt6.QtWidgets import QApplication, QScrollArea, QSplitter, QTabWidget, QT
 
 from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.sandbox_panel import SandboxPanel
+from intellicrack.ui.resources.theme_manager import THEME_DARK, THEME_DARK2, THEME_LIGHT, THEME_LIGHT2, ThemeManager
 
 
 _MIN_SPIN_WIDTH = 110
 _MIN_FIELD_WIDTH = 160
-_THEME_SPIN_SHEET = "QSpinBox { border: 1px solid #b4bcc6; padding: 4px 8px; min-width: 90px; }"
 
 
 @pytest.mark.usefixtures("qapp")
@@ -85,32 +85,35 @@ class TestSandboxInputMinimumWidths:
 
     @staticmethod
     def test_spinbox_minimum_width_survives_theme_stylesheet(qapp: QApplication) -> None:
-        """A theme stylesheet's narrower spin-box ``min-width`` must not override the panel's floor.
+        """A theme's generic spin-box ``min-width`` must not shrink the panel's spin boxes below their floor.
 
         Every bundled theme declares ``QSpinBox { min-width: 90px; }`` with
-        padding and a border, which polishes a spin box to a 108px minimum.
-        That must neither override the floor of a panel built under the theme
-        nor of one already on screen when the theme is switched.
+        padding and a border, which polishes a spin box to a 108px minimum and
+        replaces any minimum set from code. Each theme therefore also carries a
+        rule naming the panel's two spin boxes. That must hold the floor both
+        for a panel built under the theme and for one already on screen when
+        the theme is switched, in all four shipped themes.
 
         Args:
             qapp: The shared offscreen QApplication fixture.
         """
-        previous_sheet = qapp.styleSheet()
+        ThemeManager.reset_instance()
+        manager = ThemeManager.get_instance()
         live_panel = SandboxPanel()
         live_panel.show()
         try:
-            qapp.setStyleSheet(_THEME_SPIN_SHEET)
-            qapp.processEvents()
-            built_panel = SandboxPanel()
-            built_panel.show()
-            qapp.processEvents()
-            for panel in (live_panel, built_panel):
-                assert panel._timeout_spin.minimumWidth() >= _MIN_SPIN_WIDTH
-                assert panel._memory_limit_spin.minimumWidth() >= _MIN_SPIN_WIDTH
-            built_panel.close()
+            for theme in (THEME_DARK, THEME_LIGHT, THEME_DARK2, THEME_LIGHT2):
+                assert manager.apply_theme(theme) is True
+                qapp.processEvents()
+                built_panel = SandboxPanel()
+                built_panel.show()
+                qapp.processEvents()
+                for panel in (live_panel, built_panel):
+                    assert panel._timeout_spin.minimumWidth() >= _MIN_SPIN_WIDTH, theme
+                    assert panel._memory_limit_spin.minimumWidth() >= _MIN_SPIN_WIDTH, theme
+                built_panel.close()
         finally:
             live_panel.close()
-            qapp.setStyleSheet(previous_sheet)
 
     @staticmethod
     def test_text_fields_have_minimum_width() -> None:

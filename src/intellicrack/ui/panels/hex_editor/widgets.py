@@ -46,7 +46,7 @@ from intellicrack.ui.panels.hex_editor.base import (
     ENTROPY_MAX,
     compute_streaming_custom_crc,
 )
-from intellicrack.ui.resources.theme_manager import ThemeManager
+from intellicrack.ui.resources.theme_manager import ChartColors, ThemeManager
 
 
 if TYPE_CHECKING:
@@ -56,37 +56,13 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 
-def _get_widget_colors() -> dict[str, QColor]:
-    """Return theme-appropriate colors for hex editor graph widgets.
+def _get_widget_colors() -> ChartColors:
+    """Return the active theme's colors for the hex editor chart widgets.
 
     Returns:
-        dict[str, QColor]: Mapping of color role names to QColor instances.
+        ChartColors: The chart palette of the theme currently rendered, as held by :class:`ThemeManager`.
     """
-    if ThemeManager.get_instance().is_dark_theme():
-        return {
-            "bg": QColor("#1E1E1E"),
-            "entropy_low": QColor("#4CAF50"),
-            "entropy_mid": QColor("#FFC107"),
-            "entropy_high": QColor("#F44336"),
-            "axis": QColor("#888888"),
-            "bar_normal": QColor("#2196F3"),
-            "bar_hovered": QColor("#4CAF50"),
-            "gradient_low": QColor("#1B3A1F"),
-            "gradient_mid": QColor("#3A3A1B"),
-            "gradient_high": QColor("#3A1B1B"),
-        }
-    return {
-        "bg": QColor("#FFFFFF"),
-        "entropy_low": QColor("#2E7D32"),
-        "entropy_mid": QColor("#EF6C00"),
-        "entropy_high": QColor("#C62828"),
-        "axis": QColor("#5a6370"),
-        "bar_normal": QColor("#1565C0"),
-        "bar_hovered": QColor("#2E7D32"),
-        "gradient_low": QColor("#E8F5E9"),
-        "gradient_mid": QColor("#FFF3E0"),
-        "gradient_high": QColor("#FFEBEE"),
-    }
+    return ThemeManager.get_instance().get_chart_colors()
 
 
 class EntropyGraphWidget(QWidget):
@@ -115,6 +91,16 @@ class EntropyGraphWidget(QWidget):
         self._block_size: int = 4096
         self.setMinimumHeight(120)
         self.setMouseTracking(True)
+        ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
+
+    def _on_theme_changed(self, resolved_theme: str) -> None:
+        """Repaint with the new theme's chart colors.
+
+        Args:
+            resolved_theme: The concrete theme now active. Unused: the colors are read from :class:`ThemeManager` on every paint.
+        """
+        _ = resolved_theme
+        self.update()
 
     def set_data(self, entropy_values: list[float], block_size: int) -> None:
         """Load new entropy data and trigger a repaint.
@@ -254,6 +240,16 @@ class ByteDistributionWidget(QWidget):
         self._hovered_bar: int = -1
         self.setMinimumHeight(100)
         self.setMouseTracking(True)
+        ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
+
+    def _on_theme_changed(self, resolved_theme: str) -> None:
+        """Repaint with the new theme's chart colors.
+
+        Args:
+            resolved_theme: The concrete theme now active. Unused: the colors are read from :class:`ThemeManager` on every paint.
+        """
+        _ = resolved_theme
+        self.update()
 
     def set_data(self, counts: list[int]) -> None:
         """Load byte frequency data and repaint.
@@ -680,6 +676,16 @@ class _DigramMatrixWidget(QWidget):
         self._max_val = max(matrix_data, default=1)
         self.setMinimumSize(QSize(_DIGRAM_MIN_WIDGET_SIZE, _DIGRAM_MIN_WIDGET_SIZE))
         self.setMouseTracking(True)
+        ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
+
+    def _on_theme_changed(self, resolved_theme: str) -> None:
+        """Repaint with the new theme's chart colors.
+
+        Args:
+            resolved_theme: The concrete theme now active. Unused: the colors are read from :class:`ThemeManager` on every paint.
+        """
+        _ = resolved_theme
+        self.update()
 
     @override
     def minimumSizeHint(self) -> QSize:
@@ -691,18 +697,19 @@ class _DigramMatrixWidget(QWidget):
         return QSize(_DIGRAM_MIN_WIDGET_SIZE, _DIGRAM_MIN_WIDGET_SIZE)
 
     @staticmethod
-    def _cell_color(count: int, max_val: int) -> QColor:
+    def _cell_color(count: int, max_val: int, zero_color: QColor) -> QColor:
         """Compute the heatmap color for a digram cell count.
 
         Args:
             count: The digram frequency count for this cell.
             max_val: Maximum count across all cells, used for normalization.
+            zero_color: The theme's color for a byte pair that never occurs.
 
         Returns:
-            QColor: Black for zero counts; HSV-interpolated color otherwise.
+            QColor: ``zero_color`` for zero counts; HSV-interpolated color otherwise.
         """
         if count == 0:
-            return QColor(0, 0, 0)
+            return zero_color
         intensity = count / max_val
         hue = int((1.0 - intensity) * 240)
         val = int(55 + intensity * 200)
@@ -712,8 +719,8 @@ class _DigramMatrixWidget(QWidget):
     def paintEvent(self, a0: QPaintEvent | None) -> None:
         """Render the 256x256 digram heatmap.
 
-        Colors range from black (zero) through blue/yellow to white
-        (maximum frequency) using HSV interpolation.
+        Colors range from the theme's zero-count color through blue/yellow to
+        white (maximum frequency) using HSV interpolation.
 
         Args:
             a0: The paint event.
@@ -725,11 +732,12 @@ class _DigramMatrixWidget(QWidget):
         cell_w = w / _DIGRAM_SIZE
         cell_h = h / _DIGRAM_SIZE
         max_val = max(self._max_val, 1)
+        zero_color = _get_widget_colors()["heatmap_zero"]
 
         for row in range(_DIGRAM_SIZE):
             for col in range(_DIGRAM_SIZE):
                 count = self._matrix[row * _DIGRAM_SIZE + col]
-                colour = self._cell_color(count, max_val)
+                colour = self._cell_color(count, max_val, zero_color)
                 x = int(col * cell_w)
                 y = int(row * cell_h)
                 cw = max(1, int((col + 1) * cell_w) - x)
