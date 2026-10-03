@@ -294,38 +294,6 @@ _HANDLE_FLAG_INHERIT: Final[int] = 0x00000001
 _WAIT_OBJECT_0: Final[int] = 0x00000000
 _ERROR_INSUFFICIENT_BUFFER: Final[int] = 122
 
-_TOKEN_USER_CLASS: Final[int] = 1
-"""``TOKEN_INFORMATION_CLASS.TokenUser``: the account a token runs as."""
-
-_DACL_SECURITY_INFORMATION: Final[int] = 0x00000004
-_SECURITY_DESCRIPTOR_REVISION: Final[int] = 1
-_SECURITY_DESCRIPTOR_BUFFER: Final[int] = 64
-_TRUSTEE_IS_SID: Final[int] = 0
-_TRUSTEE_IS_UNKNOWN: Final[int] = 0
-_NOT_USED_ACCESS: Final[int] = 0
-_SET_ACCESS: Final[int] = 2
-_NO_INHERITANCE: Final[int] = 0
-
-_WINSTA_ALL_ACCESS: Final[int] = 0x37F
-"""Every window-station right, so the confined child can connect to the station its GUI DLLs initialize against."""
-
-_STANDARD_RIGHTS_REQUIRED: Final[int] = 0x000F0000
-"""The standard rights (``READ_CONTROL`` among them) a handle open requests alongside the object-specific ones."""
-
-_WINSTA_GRANT_ACCESS: Final[int] = _WINSTA_ALL_ACCESS | _STANDARD_RIGHTS_REQUIRED
-"""The station access the grant confers: every station right plus the standard rights a station open requests, which the object-specific
-bits alone omit, so an account granted only :data:`_WINSTA_ALL_ACCESS` is still refused the connection."""
-
-_DESKTOP_ALL_ACCESS: Final[int] = 0x000F01FF
-"""Every desktop right, standard rights included, so the confined child can open the desktop its GUI DLLs initialize against."""
-
-_TOKEN_GROUPS_CLASS: Final[int] = 2
-"""``TOKEN_INFORMATION_CLASS.TokenGroups``: the groups and well-known logon identity a token carries."""
-
-_SE_GROUP_LOGON_ID: Final[int] = 0xC0000000
-"""The ``SID_AND_ATTRIBUTES`` flag marking a token group as the logon session's own SID, the identity a window station's access control
-entries name rather than the account SID."""
-
 _ERR_UNSUPPORTED_PLATFORM = (
     "MCP server sandboxing is implemented with Windows job objects, restricted tokens and integrity levels, and is not available on "
     "this platform. Turn the sandbox off for this server to run it unconfined, which is a decision that should be made deliberately "
@@ -391,35 +359,6 @@ class _TokenMandatoryLabel(ctypes.Structure):
     """Win32 ``TOKEN_MANDATORY_LABEL``."""
 
     _fields_: ClassVar = [("Label", _SidAndAttributes)]
-
-
-class _TokenUser(ctypes.Structure):
-    """Win32 ``TOKEN_USER``."""
-
-    _fields_: ClassVar = [("User", _SidAndAttributes)]
-
-
-class _TrusteeW(ctypes.Structure):
-    """Win32 ``TRUSTEE_W``."""
-
-    _fields_: ClassVar = [
-        ("pMultipleTrustee", ctypes.c_void_p),
-        ("MultipleTrusteeOperation", ctypes.c_int),
-        ("TrusteeForm", ctypes.c_int),
-        ("TrusteeType", ctypes.c_int),
-        ("ptstrName", ctypes.c_void_p),
-    ]
-
-
-class _ExplicitAccessW(ctypes.Structure):
-    """Win32 ``EXPLICIT_ACCESS_W``."""
-
-    _fields_: ClassVar = [
-        ("grfAccessPermissions", wintypes.DWORD),
-        ("grfAccessMode", ctypes.c_int),
-        ("grfInheritance", wintypes.DWORD),
-        ("Trustee", _TrusteeW),
-    ]
 
 
 class _StartupInfoW(ctypes.Structure):
@@ -1069,8 +1008,6 @@ def _kernel32() -> ctypes.WinDLL:
     kernel32.SetHandleInformation.restype = wintypes.BOOL
     kernel32.LocalFree.argtypes = [ctypes.c_void_p]
     kernel32.LocalFree.restype = ctypes.c_void_p
-    kernel32.GetCurrentThreadId.argtypes = []
-    kernel32.GetCurrentThreadId.restype = wintypes.DWORD
     return kernel32
 
 
@@ -1157,54 +1094,7 @@ def _advapi32() -> ctypes.WinDLL:
         ctypes.POINTER(wintypes.ULONG),
     ]
     advapi32.ConvertSecurityDescriptorToStringSecurityDescriptorW.restype = wintypes.BOOL
-    advapi32.GetTokenInformation.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
-    advapi32.GetTokenInformation.restype = wintypes.BOOL
-    advapi32.SetEntriesInAclW.argtypes = [wintypes.ULONG, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)]
-    advapi32.SetEntriesInAclW.restype = wintypes.DWORD
-    advapi32.GetSecurityDescriptorDacl.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(wintypes.BOOL),
-        ctypes.POINTER(ctypes.c_void_p),
-        ctypes.POINTER(wintypes.BOOL),
-    ]
-    advapi32.GetSecurityDescriptorDacl.restype = wintypes.BOOL
-    advapi32.InitializeSecurityDescriptor.argtypes = [ctypes.c_void_p, wintypes.DWORD]
-    advapi32.InitializeSecurityDescriptor.restype = wintypes.BOOL
-    advapi32.SetSecurityDescriptorDacl.argtypes = [ctypes.c_void_p, wintypes.BOOL, ctypes.c_void_p, wintypes.BOOL]
-    advapi32.SetSecurityDescriptorDacl.restype = wintypes.BOOL
-    advapi32.ConvertSidToStringSidW.argtypes = [ctypes.c_void_p, ctypes.POINTER(wintypes.LPWSTR)]
-    advapi32.ConvertSidToStringSidW.restype = wintypes.BOOL
     return advapi32
-
-
-@functools.cache
-def _user32() -> ctypes.WinDLL:
-    """Resolve the Win32 window-management API.
-
-    Returns:
-        ctypes.WinDLL: The ``user32`` library.
-
-    Raises:
-        McpConfigError: If called on a platform that has no Win32 API.
-    """
-    if not IS_WIN32:
-        raise McpConfigError(_ERR_UNSUPPORTED_PLATFORM)
-    user32 = ctypes.WinDLL("user32", use_last_error=True)
-    user32.GetProcessWindowStation.argtypes = []
-    user32.GetProcessWindowStation.restype = wintypes.HANDLE
-    user32.GetThreadDesktop.argtypes = [wintypes.DWORD]
-    user32.GetThreadDesktop.restype = wintypes.HANDLE
-    user32.GetUserObjectSecurity.argtypes = [
-        wintypes.HANDLE,
-        ctypes.POINTER(wintypes.DWORD),
-        ctypes.c_void_p,
-        wintypes.DWORD,
-        ctypes.POINTER(wintypes.DWORD),
-    ]
-    user32.GetUserObjectSecurity.restype = wintypes.BOOL
-    user32.SetUserObjectSecurity.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD), ctypes.c_void_p]
-    user32.SetUserObjectSecurity.restype = wintypes.BOOL
-    return user32
 
 
 def create_job_object() -> int:
@@ -1457,235 +1347,6 @@ def create_restricted_token() -> int:
         raise ctypes.WinError(error)
     _logger.debug("mcp_sandbox_token_restricted")
     return int(restricted.value or 0)
-
-
-def _token_user_sid(token: int) -> ctypes.Array[ctypes.c_char]:
-    """Read a token's user security identifier into a buffer the caller keeps alive.
-
-    Args:
-        token: The token to read.
-
-    Returns:
-        ctypes.Array[ctypes.c_char]: A buffer holding a ``TOKEN_USER``; its ``User.Sid`` points inside the same buffer, so it stays valid
-        only while the buffer does.
-
-    Raises:
-        ctypes.WinError: If the token's user could not be read.
-    """
-    advapi32 = _advapi32()
-    needed = wintypes.DWORD(0)
-    _ = advapi32.GetTokenInformation(wintypes.HANDLE(token), _TOKEN_USER_CLASS, None, 0, ctypes.byref(needed))
-    if ctypes.get_last_error() != _ERROR_INSUFFICIENT_BUFFER or not needed.value:
-        raise ctypes.WinError(ctypes.get_last_error())
-    buffer = ctypes.create_string_buffer(needed.value)
-    if not advapi32.GetTokenInformation(wintypes.HANDLE(token), _TOKEN_USER_CLASS, buffer, needed, ctypes.byref(needed)):
-        raise ctypes.WinError(ctypes.get_last_error())
-    return buffer
-
-
-def _token_logon_sid(token: int) -> ctypes.Array[ctypes.c_char] | None:
-    """Read a token's logon-session security identifier into a buffer the caller keeps alive.
-
-    The logon SID is the identity a window station and its desktop name in their own access control entries, rather than the account SID, so
-    granting it is what actually lets a token reach them.
-
-    Args:
-        token: The token to read.
-
-    Returns:
-        ctypes.Array[ctypes.c_char] | None: A buffer whose bytes hold a ``TOKEN_GROUPS`` with one group carrying the logon SID, or ``None``
-        if the token has no logon SID. :func:`_logon_sid_address` reads the SID out of the returned buffer, which must outlive that call.
-
-    Raises:
-        ctypes.WinError: If the token's groups could not be read.
-    """
-    advapi32 = _advapi32()
-    needed = wintypes.DWORD(0)
-    _ = advapi32.GetTokenInformation(wintypes.HANDLE(token), _TOKEN_GROUPS_CLASS, None, 0, ctypes.byref(needed))
-    if ctypes.get_last_error() != _ERROR_INSUFFICIENT_BUFFER or not needed.value:
-        raise ctypes.WinError(ctypes.get_last_error())
-    buffer = ctypes.create_string_buffer(needed.value)
-    if not advapi32.GetTokenInformation(wintypes.HANDLE(token), _TOKEN_GROUPS_CLASS, buffer, needed, ctypes.byref(needed)):
-        raise ctypes.WinError(ctypes.get_last_error())
-    return buffer if _logon_sid_address(buffer) else None
-
-
-def _logon_sid_address(groups: ctypes.Array[ctypes.c_char]) -> int:
-    """Find the logon SID inside a ``TOKEN_GROUPS`` buffer.
-
-    Args:
-        groups: A buffer holding a ``TOKEN_GROUPS``, as returned by :func:`_token_logon_sid`.
-
-    Returns:
-        int: The address of the logon SID within the buffer, or zero if no group carries the logon-identity flag.
-    """
-    count = ctypes.cast(groups, ctypes.POINTER(wintypes.DWORD)).contents.value
-    stride = ctypes.sizeof(_SidAndAttributes)
-    base = ctypes.alignment(_SidAndAttributes)
-    for index in range(count):
-        entry = _SidAndAttributes.from_buffer(groups, base + index * stride)
-        if entry.Attributes & _SE_GROUP_LOGON_ID == _SE_GROUP_LOGON_ID:
-            return entry.Sid or 0
-    return 0
-
-
-def _sid_to_string(sid: int) -> str:
-    """Render a security identifier as its SDDL string for diagnostics.
-
-    Args:
-        sid: The security identifier, as an address into a live buffer.
-
-    Returns:
-        str: The SID in ``S-1-...`` form, or ``"<unreadable>"`` if it could not be converted.
-    """
-    out = wintypes.LPWSTR()
-    if not _advapi32().ConvertSidToStringSidW(ctypes.c_void_p(sid), ctypes.byref(out)):
-        return "<unreadable>"
-    try:
-        return out.value or "<empty>"
-    finally:
-        _ = _kernel32().LocalFree(out)
-
-
-def _user_object_security_sddl(handle: int, information: int) -> str:
-    """Render part of a window station or desktop's security as SDDL for diagnostics.
-
-    Args:
-        handle: The window station or desktop to read.
-        information: The ``SECURITY_INFORMATION`` bits to read and render, such as
-            :data:`_DACL_SECURITY_INFORMATION` for the access list or
-            :data:`_LABEL_SECURITY_INFORMATION` for the mandatory integrity label.
-
-    Returns:
-        str: The requested security in SDDL, or ``"<unreadable>"`` if it could not be read.
-    """
-    user32 = _user32()
-    advapi32 = _advapi32()
-    info = wintypes.DWORD(information)
-    needed = wintypes.DWORD(0)
-    _ = user32.GetUserObjectSecurity(wintypes.HANDLE(handle), ctypes.byref(info), None, 0, ctypes.byref(needed))
-    if ctypes.get_last_error() != _ERROR_INSUFFICIENT_BUFFER or not needed.value:
-        return "<unreadable>"
-    descriptor = ctypes.create_string_buffer(needed.value)
-    if not user32.GetUserObjectSecurity(wintypes.HANDLE(handle), ctypes.byref(info), descriptor, needed, ctypes.byref(needed)):
-        return "<unreadable>"
-    out = wintypes.LPWSTR()
-    if not advapi32.ConvertSecurityDescriptorToStringSecurityDescriptorW(
-        descriptor,
-        _SDDL_REVISION_1,
-        information,
-        ctypes.byref(out),
-        None,
-    ):
-        return "<unreadable>"
-    try:
-        return out.value or "<empty>"
-    finally:
-        _ = _kernel32().LocalFree(out)
-
-
-def _grant_user_object_access(handle: int, sid: int, access: int) -> None:
-    """Add one allow entry for a security identifier to a window station or desktop.
-
-    The object's existing access list is read, the entry is merged in, and the result is written back, so nothing the object already
-    granted is lost.
-
-    Args:
-        handle: The window station or desktop to change.
-        sid: The security identifier to grant, as an address into a live buffer.
-        access: The access mask to grant.
-
-    Raises:
-        ctypes.WinError: If the object's security could not be read, merged or written.
-    """
-    advapi32 = _advapi32()
-    user32 = _user32()
-    kernel32 = _kernel32()
-    info = wintypes.DWORD(_DACL_SECURITY_INFORMATION)
-    needed = wintypes.DWORD(0)
-    _ = user32.GetUserObjectSecurity(wintypes.HANDLE(handle), ctypes.byref(info), None, 0, ctypes.byref(needed))
-    if ctypes.get_last_error() != _ERROR_INSUFFICIENT_BUFFER or not needed.value:
-        raise ctypes.WinError(ctypes.get_last_error())
-    descriptor = ctypes.create_string_buffer(needed.value)
-    if not user32.GetUserObjectSecurity(wintypes.HANDLE(handle), ctypes.byref(info), descriptor, needed, ctypes.byref(needed)):
-        raise ctypes.WinError(ctypes.get_last_error())
-    present = wintypes.BOOL()
-    old_dacl = ctypes.c_void_p()
-    defaulted = wintypes.BOOL()
-    if not advapi32.GetSecurityDescriptorDacl(descriptor, ctypes.byref(present), ctypes.byref(old_dacl), ctypes.byref(defaulted)):
-        raise ctypes.WinError(ctypes.get_last_error())
-    entry = _ExplicitAccessW()
-    entry.grfAccessPermissions = access
-    entry.grfAccessMode = _SET_ACCESS
-    entry.grfInheritance = _NO_INHERITANCE
-    entry.Trustee.pMultipleTrustee = None
-    entry.Trustee.MultipleTrusteeOperation = _NOT_USED_ACCESS
-    entry.Trustee.TrusteeForm = _TRUSTEE_IS_SID
-    entry.Trustee.TrusteeType = _TRUSTEE_IS_UNKNOWN
-    entry.Trustee.ptstrName = sid
-    merged = ctypes.c_void_p()
-    if error := advapi32.SetEntriesInAclW(1, ctypes.byref(entry), old_dacl if present.value else None, ctypes.byref(merged)):
-        raise ctypes.WinError(error)
-    try:
-        updated = ctypes.create_string_buffer(_SECURITY_DESCRIPTOR_BUFFER)
-        if not advapi32.InitializeSecurityDescriptor(updated, _SECURITY_DESCRIPTOR_REVISION):
-            raise ctypes.WinError(ctypes.get_last_error())
-        if not advapi32.SetSecurityDescriptorDacl(updated, wintypes.BOOL(1), merged, wintypes.BOOL(0)):
-            raise ctypes.WinError(ctypes.get_last_error())
-        if not user32.SetUserObjectSecurity(wintypes.HANDLE(handle), ctypes.byref(info), updated):
-            raise ctypes.WinError(ctypes.get_last_error())
-    finally:
-        _ = kernel32.LocalFree(merged)
-
-
-def grant_window_station_and_desktop(token: int) -> None:
-    """Let a confined server's token open the window station and desktop its GUI DLLs initialize against.
-
-    Every interactive program, the Python and Node runtimes included, connects to a window station and opens a desktop while its user
-    libraries initialize; denied that, it dies with ``STATUS_DLL_INIT_FAILED`` before it runs a line of its own code. The restricted token
-    holds the Administrators group deny-only, so where the station and desktop grant access only through that group -- as they do under a
-    service or an elevated runner -- the confined child cannot reach them. Both the token's account SID and its logon-session SID are
-    granted, because a window station's access control entries name the logon SID rather than the account, and the station grant carries the
-    standard rights an open requests alongside the station-specific ones, which those alone omit. This restores the child's reach without
-    widening what any other process may do.
-
-    Args:
-        token: The restricted primary token the confined child runs with.
-
-    Raises:
-        ctypes.WinError: If the station, the desktop or their security could not be reached or changed.
-    """
-    user32 = _user32()
-    kernel32 = _kernel32()
-    user_buffer = _token_user_sid(token)
-    user_sid = ctypes.cast(user_buffer, ctypes.POINTER(_TokenUser)).contents.User.Sid or 0
-    logon_buffer = _token_logon_sid(token)
-    logon_sid = _logon_sid_address(logon_buffer) if logon_buffer is not None else 0
-    station = user32.GetProcessWindowStation()
-    if not station:
-        raise ctypes.WinError(ctypes.get_last_error())
-    desktop = user32.GetThreadDesktop(kernel32.GetCurrentThreadId())
-    if not desktop:
-        raise ctypes.WinError(ctypes.get_last_error())
-    _logger.debug(
-        "mcp_sandbox_station_desktop_before_grant",
-        user_sid=_sid_to_string(user_sid),
-        logon_sid=_sid_to_string(logon_sid) if logon_sid else None,
-        station_dacl=_user_object_security_sddl(int(station), _DACL_SECURITY_INFORMATION),
-        desktop_dacl=_user_object_security_sddl(int(desktop), _DACL_SECURITY_INFORMATION),
-        station_label=_user_object_security_sddl(int(station), _LABEL_SECURITY_INFORMATION),
-        desktop_label=_user_object_security_sddl(int(desktop), _LABEL_SECURITY_INFORMATION),
-    )
-    for sid in (user_sid, logon_sid):
-        if not sid:
-            continue
-        _grant_user_object_access(int(station), sid, _WINSTA_GRANT_ACCESS)
-        _grant_user_object_access(int(desktop), sid, _DESKTOP_ALL_ACCESS)
-    _logger.debug(
-        "mcp_sandbox_station_desktop_granted",
-        station_dacl=_user_object_security_sddl(int(station), _DACL_SECURITY_INFORMATION),
-        desktop_dacl=_user_object_security_sddl(int(desktop), _DACL_SECURITY_INFORMATION),
-    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -2721,7 +2382,6 @@ def spawn_confined_process(launch: SandboxedLaunch, job: SandboxedJob, token: in
         McpConfigError: If the job was not open. The process has been
             terminated and its pipe ends closed.
     """
-    grant_window_station_and_desktop(token)
     pipes = _ChildPipes.open(errlog)
     with INHERITANCE_LOCK:
         try:
