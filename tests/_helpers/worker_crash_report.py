@@ -15,11 +15,22 @@ is ``node down: Not properly terminated`` and the name of whichever test xdist
 had last handed the worker, which is how the same death appeared in one CI run
 after another under a different test's name and with no cause.
 
-While a test phase runs, a Qt message handler installed inside pytest-qt's own
-writes every fatal message, and the Python stack of every thread at that
-moment, to a file belonging to the worker, then passes the message on so
-pytest-qt's capture is unchanged. When a worker goes down with an error the
-session prints that file.
+A recording handler writes every fatal message, and the Python stack of every
+thread at that moment, to a file belonging to the worker, then passes the
+message to the handler it stands in front of. When a worker goes down with an
+error the session prints that file.
+
+The recorder has to fit around pytest-qt's capture, whose handler is not
+nested with the test phases: it is installed partway through setup and removed
+when the call phase is reported. So the recorder is put in front of it once
+setup has finished (:func:`record_fatal_messages_in_front_of_capture`) and is
+never taken down by this module: pytest-qt removes it together with its own
+handler by reinstalling whatever preceded both. Installing and restoring
+around each phase instead left one recorder behind per test, each forwarding
+to the last, until a message overflowed the stack. Teardown runs after
+pytest-qt's handler is gone, so there the recorder is installed and restored
+around the phase (:func:`qt_fatal_messages_recorded`). A fatal message raised
+while fixtures are still being set up is the one case not recorded.
 """
 
 from __future__ import annotations
@@ -36,10 +47,12 @@ from PyQt6.QtCore import QtMsgType, qInstallMessageHandler
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
     import pytest
     from PyQt6.QtCore import QMessageLogContext
+
+    type _MessageHandler = Callable[[QtMsgType, QMessageLogContext, str | None], None]
 
 
 FAULT_REPORT_HEADING: Final[str] = "Qt fatal message in worker"
@@ -50,6 +63,9 @@ NO_RECORD_MESSAGE: Final[str] = "the worker recorded no Qt fatal message: someth
 
 XDIST_WORKER_ENV: Final[str] = "PYTEST_XDIST_WORKER"
 """Variable pytest-xdist sets in each worker to its id, such as ``gw0``."""
+
+QT_LOG_CAPTURE_ATTRIBUTE: Final[str] = "qt_log_capture"
+"""Attribute pytest-qt sets on a test item once its message capture has started."""
 
 _FAULT_DIRECTORY_NAME: Final[str] = "intellicrack-worker-faults"
 
@@ -115,19 +131,19 @@ def _record_fatal(message: str) -> None:
         faulthandler.dump_traceback(file=stream, all_threads=True)
 
 
-@contextmanager
-def qt_fatal_messages_recorded() -> Generator[None]:
-    """Record every Qt fatal message raised inside the block, leaving other handling as it was.
+def _install_recorder() -> _MessageHandler | None:
+    """Put a recording handler in front of whichever handler is installed now.
 
-    The handler that was installed before the block still receives every
-    message, so pytest-qt's capture sees exactly what it saw before.
+    A message the recorder has no handler to pass on to is written to standard
+    error, where Qt's own default handler would have put it.
 
-    Yields:
-        None: While the recording handler is installed.
+    Returns:
+        _MessageHandler | None: The handler the recorder now stands in front
+        of, or ``None`` when Qt's default one was in place.
     """
 
     def _handle(mode: QtMsgType, context: QMessageLogContext, message: str | None) -> None:
-        """Record a fatal message, then hand the message to the handler this one replaced.
+        """Record a fatal message, then hand the message to the handler this one stands in front of.
 
         Args:
             mode: The message's severity.
@@ -138,8 +154,39 @@ def qt_fatal_messages_recorded() -> Generator[None]:
             _record_fatal(message or "")
         if previous is not None:
             previous(mode, context, message)
+        else:
+            _ = sys.stderr.write(f"{message or ''}\n")
 
     previous = qInstallMessageHandler(_handle)
+    return previous
+
+
+def record_fatal_messages_in_front_of_capture(item: pytest.Item) -> None:
+    """Record Qt fatal messages for the rest of a test whose pytest-qt capture is running.
+
+    The recorder is left for pytest-qt to remove: when its capture stops it
+    reinstalls the handler that preceded its own, which drops the recorder
+    with it. A test pytest-qt is not capturing is left alone, since nothing
+    would ever remove a recorder installed for it.
+
+    Args:
+        item: The test whose setup has just finished.
+    """
+    if hasattr(item, QT_LOG_CAPTURE_ATTRIBUTE):
+        _ = _install_recorder()
+
+
+@contextmanager
+def qt_fatal_messages_recorded() -> Generator[None]:
+    """Record every Qt fatal message raised inside the block and put the earlier handler back afterwards.
+
+    For code that runs while nothing else installs or removes a handler, which
+    is true of a test's teardown.
+
+    Yields:
+        None: While the recording handler is installed.
+    """
+    previous = _install_recorder()
     try:
         yield
     finally:
