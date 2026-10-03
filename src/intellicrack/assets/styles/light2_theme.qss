@@ -585,7 +585,9 @@ QFrame[role="system"] {
 }
 
 /* Tool Result Frame */
-QFrame[toolResult="true"] {
+QFrame[toolResult="true"],
+QFrame[toolResult="success"],
+QFrame[toolResult="error"] {
     background-color: #f6f8fb;
     border: 1px solid #d0d5dd;
     border-radius: 4px;
@@ -834,7 +836,7 @@ QPlainTextEdit#code_display {
 }
 
 /* Function List */
-QPlainTextEdit#function_list {
+QListWidget#function_list {
     background-color: #ffffff;
     color: #7a5f24;
     border: none;
@@ -846,7 +848,7 @@ QFrame#function_list_panel {
 }
 
 /* XRef Display */
-QPlainTextEdit#xref_display {
+QTreeWidget#xref_display {
     background-color: #ffffff;
     color: #1a1d21;
     border: none;
@@ -1233,11 +1235,6 @@ QLabel#confirm_warning {
     padding: 8px;
     background-color: #fff8e0;
     border-radius: 4px;
-}
-
-QCheckBox#confirm_remember {
-    color: #1a1d21;
-    font-size: 11px;
 }
 
 QPushButton#confirm_deny_button {
