@@ -43,7 +43,7 @@ from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.xpu_utils import is_arc_b580, is_xpu_available
-from tests._helpers import frida_isolation
+from tests._helpers import frida_isolation, worker_crash_report
 from tests._helpers.host_native import (
     HOST_NATIVE_MARKER,
     deselect_host_native,
@@ -133,6 +133,55 @@ def pytest_configure(config: pytest.Config) -> None:
     )
     config.addinivalue_line("markers", _HOST_NATIVE_MARKER_HELP)
     frida_isolation.install(config)
+
+
+@pytest.hookimpl(wrapper=True, trylast=True)
+def pytest_runtest_setup() -> Generator[None]:
+    """Record any Qt fatal message raised while a test sets up.
+
+    Runs inside pytest-qt's own log capture, so that capture still receives
+    every message.
+
+    Yields:
+        None: Control passed to the wrapped setup implementation.
+    """
+    with worker_crash_report.qt_fatal_messages_recorded():
+        yield
+
+
+@pytest.hookimpl(wrapper=True, trylast=True)
+def pytest_runtest_call() -> Generator[None]:
+    """Record any Qt fatal message raised while a test runs.
+
+    Yields:
+        None: Control passed to the wrapped call implementation.
+    """
+    with worker_crash_report.qt_fatal_messages_recorded():
+        yield
+
+
+@pytest.hookimpl(wrapper=True, trylast=True)
+def pytest_runtest_teardown() -> Generator[None]:
+    """Record any Qt fatal message raised while a test tears down.
+
+    Yields:
+        None: Control passed to the wrapped teardown implementation.
+    """
+    with worker_crash_report.qt_fatal_messages_recorded():
+        yield
+
+
+@pytest.hookimpl(optionalhook=True)
+def pytest_testnodedown(node: worker_crash_report.DownedWorker, error: object | None) -> None:
+    """Print where a pytest-xdist worker was when it went down with an error.
+
+    Args:
+        node: The worker that went down.
+        error: What xdist recorded about its end, or ``None`` for an orderly shutdown.
+    """
+    if error is None:
+        return
+    worker_crash_report.report_dead_worker(node.config, node.gateway.id)
 
 
 def pytest_collection_modifyitems(
