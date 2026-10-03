@@ -47,17 +47,17 @@ _MAX_LOOP_STALL_S: Final[float] = 0.5
 
 
 @pytest.fixture(autouse=True)
-def private_state_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Point Intellicrack's configuration directory at the test's own directory.
+def private_state_dir(account_reachable_tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Point Intellicrack's configuration directory at the test's own directory, which the confined account can reach.
 
     Args:
-        tmp_path: Per-test directory, which Windows places under the user's local application data.
+        account_reachable_tmp_path: Per-test directory, which Windows places under the user's local application data.
         monkeypatch: Restores the environment afterwards.
 
     Returns:
         Path: The state directory.
     """
-    state = tmp_path / "state"
+    state = account_reachable_tmp_path / "state"
     state.mkdir()
     monkeypatch.setenv("INTELLICRACK_STATE_DIR", str(state))
     return state

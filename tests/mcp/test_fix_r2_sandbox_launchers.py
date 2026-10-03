@@ -18,10 +18,8 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import csv
 import hashlib
 import json
-import os
 import subprocess
 import sys
 import threading
@@ -43,6 +41,7 @@ from intellicrack.mcp.connection import McpConnection
 from intellicrack.mcp.errors import McpConfigError, McpConnectionError
 from intellicrack.mcp.sandbox_launch import (
     SANDBOX_HOME_LAYOUT,
+    SANDBOX_LAUNCHER_SETTINGS,
     STDERR_TAIL_LINE_CHARS,
     STDERR_TAIL_LINES,
     SandboxConfinementError,
@@ -73,7 +72,6 @@ _PROBE_TIMEOUT_S: Final[float] = 300.0
 _CONNECT_TIMEOUT_S: Final[float] = 120.0
 _TEARDOWN_TIMEOUT_S: Final[float] = 30.0
 _LOCK_HELD_S: Final[float] = 3.0
-_ICACLS_TIMEOUT_S: Final[float] = 60.0
 _DLL_NOT_FOUND: Final[int] = 0xC0000135
 _DLL_NOT_FOUND_SIGNED: Final[int] = _DLL_NOT_FOUND - (1 << 32)
 _UNNAMED_STATUS: Final[int] = 0xC0001234
@@ -235,6 +233,38 @@ class TestSandboxHome:
         assert launch.env["uv_cache_dir"] == "D:\\cache"
         assert launch.env["TEMP"] == home.temp
         assert "OPENAI_API_KEY" not in launch.env
+
+    def test_npm_copies_a_local_package_instead_of_linking_it(self, tmp_path: Path) -> None:
+        """Every confined launch tells npm to copy a local package, and the operator's own setting still wins.
+
+        Windows refuses a Low integrity process a junction to a folder it cannot write, which is how npm would otherwise install a
+        package named by a local path.
+
+        Args:
+            tmp_path: Per-test directory.
+        """
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        (bin_dir / "server.exe").write_bytes(b"")
+        work = tmp_path / "work"
+        work.mkdir()
+        home = SandboxHome(str(tmp_path / "home"))
+        inherited = {"PATH": str(bin_dir), "PATHEXT": ".EXE"}
+        sandbox = McpSandboxSpec(enabled=True, allow_write=(str(work),))
+
+        launch = plan_sandboxed_launch(StdioServerSpec(command="server"), sandbox, {}, inherited, home=home)
+        chosen = plan_sandboxed_launch(
+            StdioServerSpec(command="server"),
+            sandbox,
+            {"NPM_CONFIG_INSTALL_LINKS": "false"},
+            inherited,
+            home=home,
+        )
+
+        assert SANDBOX_LAUNCHER_SETTINGS["npm_config_install_links"] == "true"
+        assert launch.env["npm_config_install_links"] == "true"
+        assert chosen.env["NPM_CONFIG_INSTALL_LINKS"] == "false"
+        assert "npm_config_install_links" not in chosen.env
 
 
 class TestLauncherNotes:
@@ -550,77 +580,6 @@ def _assert_confined_home(report: JsonObject, tmp_path: Path, server_id: str) ->
     assert Path(str(report["home"])).resolve().is_relative_to(home_root)
     assert report["tmp_written"] is True
     assert report["home_written"] is True
-
-
-def _system_tool(name: str) -> str:
-    """Locate a program in the Windows system directory.
-
-    Args:
-        name: The program's name without its suffix.
-
-    Returns:
-        str: Its full path.
-    """
-    return str(Path(os.environ.get("SYSTEMROOT", "C:\\Windows"), "System32", f"{name}.exe"))
-
-
-def _account_sid() -> str:
-    """Read the security identifier of the account the tests run as.
-
-    Returns:
-        str: The SID, such as ``S-1-5-21-...``.
-    """
-    completed = subprocess.run(
-        [_system_tool("whoami"), "/user", "/fo", "csv", "/nh"],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=_ICACLS_TIMEOUT_S,
-    )
-    [row] = list(csv.reader(completed.stdout.splitlines()))
-    return row[1]
-
-
-def _grant(path: Path, permission: str) -> None:
-    """Add one access entry to a directory with ``icacls``.
-
-    Args:
-        path: The directory.
-        permission: The ``icacls`` grant, such as ``*S-1-5-21-...:(OI)(CI)F``.
-    """
-    _ = subprocess.run(
-        [_system_tool("icacls"), str(path), "/grant", permission],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=_ICACLS_TIMEOUT_S,
-    )
-
-
-@pytest.fixture
-def account_reachable_tmp_path(tmp_path: Path, tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """Give the test's directory the access a directory the operator owns has: the operator's own account can use it.
-
-    pytest creates its temporary directories with mode ``0o700``, which Python on Windows turns into a protected access list granting only
-    SYSTEM, Administrators and the directory's owner. Under an elevated runner the owner is the Administrators group, which the sandbox
-    token holds deny-only, so the account a confined server runs as could not even open its own working directory, unlike any directory
-    the operator really owns. The account is granted full access below the test's directory and listing on the directories above it that
-    pytest locked the same way.
-
-    Args:
-        tmp_path: Per-test directory.
-        tmp_path_factory: Locates the session's base temporary directory.
-
-    Returns:
-        Path: The test's directory.
-    """
-    sid = _account_sid()
-    basetemp = tmp_path_factory.getbasetemp()
-    _grant(tmp_path, f"*{sid}:(OI)(CI)F")
-    for ancestor in tmp_path.parents:
-        if ancestor == basetemp.parent or ancestor.is_relative_to(basetemp):
-            _grant(ancestor, f"*{sid}:(RX)")
-    return tmp_path
 
 
 @pytest.fixture
