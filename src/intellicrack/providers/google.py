@@ -142,12 +142,13 @@ class GoogleProvider(LLMProviderBase):
         if not credentials.api_key:
             raise AuthenticationError(_MSG_API_KEY_REQUIRED)
 
+        await self._close_client()
         saved_gemini_key = os.environ.pop("GEMINI_API_KEY", None)
         try:
             await self._connect_impl(credentials)
         except APIError as e:
             self.connected = False
-            self.client = None
+            await self._close_client()
             self._logger.warning(
                 "google_connect_failed",
                 error=self._redact_error_text(e, api_key=credentials.api_key),
@@ -167,7 +168,7 @@ class GoogleProvider(LLMProviderBase):
             httpx.RequestError,
         ) as e:
             self.connected = False
-            self.client = None
+            await self._close_client()
             self._logger.warning(
                 "google_connect_failed",
                 error=self._redact_error_text(e, api_key=credentials.api_key),
@@ -218,6 +219,25 @@ class GoogleProvider(LLMProviderBase):
             has_custom_base=credentials.api_base is not None,
         )
 
+    async def _close_client(self) -> None:
+        """Close the SDK client and its connection pool, if there is one.
+
+        The SDK client owns an HTTP connection pool. Dropped without being
+        closed, the pool is left to the garbage collector, and the SDK's
+        finalizer then closes it by scheduling a task on whichever event loop
+        is running when the collector reaches it -- which fails against
+        connections that belong to a loop already closed, in the middle of
+        whatever unrelated work that loop is doing.
+        """
+        client, self.client = self.client, None
+        if client is None:
+            return
+        try:
+            await client.aio.aclose()
+            client.close()
+        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
+            self._logger.warning("google_client_close_error", error=str(exc))
+
     async def disconnect(self) -> None:
         """Disconnect from Google AI API.
 
@@ -225,7 +245,7 @@ class GoogleProvider(LLMProviderBase):
         """
         try:
             await super().disconnect()
-            self.client = None
+            await self._close_client()
             self._current_task = None
             self._pending_usage = None
             self._logger.info("google_disconnected")
