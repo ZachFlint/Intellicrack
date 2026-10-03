@@ -28,11 +28,12 @@ if TYPE_CHECKING:
 _FIXTURE_BYTES: Final[int] = 256 * 1024 * 1024
 _HEADER: Final[bytes] = b"real header bytes" * 64
 _HEADER_OFFSET: Final[int] = 32768
-_ALLOWED_ON_DISK_BYTES: Final[int] = _FIXTURE_BYTES // 8
-"""How much real disk the fixture may occupy: an eighth of its size.
+_ALLOWED_ON_DISK_BYTES: Final[int] = _FIXTURE_BYTES // 2
+"""How much real disk the fixture may occupy: half of its size.
 
-A sparse file still occupies something, and how much varies by volume: about one megabyte for this fixture on a workstation and about
-seventeen on the hosted CI runner. Extended with a bare ``truncate`` it occupies all of its size, which is what this bound tells apart.
+A sparse file still occupies something, and how much depends on the volume rather than on the file: about one megabyte for this fixture
+on a workstation, and seventeen and then thirty-four on two runs of the hosted CI runner. Extended with a bare ``truncate`` it occupies
+all of its size, which is the difference this bound has to tell apart, so it is set well clear of both.
 """
 _TAIL_PROBE_BYTES: Final[int] = 4096
 
