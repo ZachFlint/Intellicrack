@@ -56,8 +56,6 @@ _LAYOUT_SPACING: Final[int] = 6
 _VALUE_INPUT_WIDTH: Final[int] = 120
 _ALIGN_SPIN_WIDTH: Final[int] = 50
 _MAX_INPUT_WIDTH: Final[int] = 100
-_HIGHLIGHT_DARK: Final[str] = "#FFAA00"
-_HIGHLIGHT_LIGHT: Final[str] = "#FF8800"
 _NUMERIC_SCAN_CHUNK_SIZE: Final[int] = 65536
 _HEX_PATTERN_RE: Final[re.Pattern[str]] = re.compile(r"^[0-9A-Fa-f]*$")
 _INVALID_HEX_MESSAGE: Final[str] = "Invalid hex pattern: use only hex digits 0-9/A-F, with an even number of digits."
@@ -198,14 +196,12 @@ def parse_hex_pattern_bytes(hex_text: str) -> bytes:
 
 
 def _get_highlight_color() -> str:
-    """Return a theme-appropriate highlight color for search results.
+    """Return the active theme's highlight color for search results.
 
     Returns:
-        str: Hex color string suitable for the active theme.
+        str: Hex color string of the theme's ``search_match`` hex-mark entry.
     """
-    if ThemeManager.get_instance().is_dark_theme():
-        return _HIGHLIGHT_DARK
-    return _HIGHLIGHT_LIGHT
+    return ThemeManager.get_instance().get_hex_mark_colors()["search_match"]
 
 
 def execute_text_search(

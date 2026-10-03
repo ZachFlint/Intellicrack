@@ -45,6 +45,18 @@ from intellicrack.bridges.pe_format import (
     unpack_optional_header_image_base,
     unpack_section_header,
 )
+from intellicrack.core.color_defaults import (
+    DEFAULT_BOOKMARK_COLOR,
+    DEFAULT_HIGHLIGHT_COLOR,
+    HTML_EXPORT_ASCII,
+    HTML_EXPORT_BACKGROUND,
+    HTML_EXPORT_OFFSET,
+    HTML_EXPORT_TEXT,
+    PE_STRUCTURE_COLORS,
+    STRUCTURE_COLORS,
+    STRUCTURE_HEADER_COLOR,
+    UNSAFE_COLOR_FALLBACK,
+)
 from intellicrack.core.logging import get_logger, log_binary_operation
 from intellicrack.core.types import ToolDefinition, ToolError, ToolFunction, ToolName, ToolParameter
 
@@ -790,7 +802,13 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                         ToolParameter(name="offset", type="integer", description="Byte offset."),
                         ToolParameter(name="length", type="integer", description="Length in bytes.", required=False, default=1),
                         ToolParameter(name="label", type="string", description="Bookmark label.", required=False, default="Bookmark"),
-                        ToolParameter(name="color", type="string", description="Color hex string.", required=False, default="#FFFF00"),
+                        ToolParameter(
+                            name="color",
+                            type="string",
+                            description="Color hex string.",
+                            required=False,
+                            default=DEFAULT_BOOKMARK_COLOR,
+                        ),
                     ],
                     returns="Bookmark index",
                 ),
@@ -1319,7 +1337,13 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                             enum=["byte_value", "byte_range", "pattern"],
                         ),
                         ToolParameter(name="condition_params", type="string", description="JSON condition parameters."),
-                        ToolParameter(name="color", type="string", description="Highlight color hex.", required=False, default="#FFFF00"),
+                        ToolParameter(
+                            name="color",
+                            type="string",
+                            description="Highlight color hex.",
+                            required=False,
+                            default=DEFAULT_HIGHLIGHT_COLOR,
+                        ),
                     ],
                     returns="Rule ID string",
                 ),
@@ -3122,7 +3146,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         if magic in self._MACHO_FAT_MAGICS:
             bookmarks_fat: list[dict[str, Any]] = []
             fat_indices: list[int] = []
-            self._add_bm(bookmarks_fat, fat_indices, 0, _MIN_HEADER_SIZE, "Mach-O FAT magic", "#FF6B6B")
+            self._add_bm(bookmarks_fat, fat_indices, 0, _MIN_HEADER_SIZE, "Mach-O FAT magic", STRUCTURE_HEADER_COLOR)
             _logger.info("macho_fat_structure_bookmarked")
             return bookmarks_fat
 
@@ -3154,7 +3178,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             added_indices: Mutable list of recorded bookmark indices for
                 transactional rollback by the caller.
         """
-        colors = ("#FF6B6B", "#4ECDC4", "#45B7D1")
+        colors = STRUCTURE_COLORS
         is_64 = magic in self._MACHO_64BIT_MAGICS
         endian = "<" if magic in self._MACHO_LE_MAGICS else ">"
         header_size = self._MACHO_HEADER_SIZE_64 if is_64 else self._MACHO_HEADER_SIZE_32
@@ -3210,7 +3234,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
 
         bookmarks: list[dict[str, Any]] = []
         added_indices: list[int] = []
-        colors = ("#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4")
+        colors = PE_STRUCTURE_COLORS
 
         try:
             self._populate_pe_structure_bookmarks(bookmarks, added_indices, colors)
@@ -3353,7 +3377,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
 
         bookmarks: list[dict[str, Any]] = []
         added_indices: list[int] = []
-        colors = ("#FF6B6B", "#4ECDC4", "#45B7D1")
+        colors = STRUCTURE_COLORS
 
         try:
             self._populate_elf_structure_bookmarks(bookmarks, added_indices, colors)
@@ -3475,7 +3499,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         if _HexEditorBridgeBase._SAFE_COLOR_RE.fullmatch(color) is not None:
             return color
         _logger.warning("html_export_bad_color_replaced", color=color)
-        return "#888888"
+        return UNSAFE_COLOR_FALLBACK
 
     @staticmethod
     def _build_bookmark_map(
@@ -3512,12 +3536,15 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             "<!DOCTYPE html>",
             "<html><head><meta charset='utf-8'>",
             "<style>",
-            "body { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; background: #1e1e2e; color: #cdd6f4; }",
+            (
+                "body { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; "
+                f"background: {HTML_EXPORT_BACKGROUND}; color: {HTML_EXPORT_TEXT}; }}"
+            ),
             "table { border-collapse: collapse; }",
             "td { padding: 1px 4px; white-space: pre; }",
-            ".offset { color: #89b4fa; }",
-            ".ascii { color: #a6e3a1; }",
-            ".hex { color: #cdd6f4; }",
+            f".offset {{ color: {HTML_EXPORT_OFFSET}; }}",
+            f".ascii {{ color: {HTML_EXPORT_ASCII}; }}",
+            f".hex {{ color: {HTML_EXPORT_TEXT}; }}",
             ".bm { border-radius: 2px; padding: 0 2px; }",
             ".legend { margin-top: 16px; }",
             ".legend-item { display: inline-block; margin-right: 12px; padding: 2px 6px; border-radius: 3px; }",
@@ -7706,7 +7733,7 @@ class HexEditorBookmarkMixin(HexEditorPatternMixin):
         offset: int,
         length: int = 1,
         label: str = "Bookmark",
-        color: str = "#FFFF00",
+        color: str = DEFAULT_BOOKMARK_COLOR,
     ) -> int:
         """Add a bookmark at an offset.
 
@@ -7773,7 +7800,7 @@ class HexEditorBookmarkMixin(HexEditorPatternMixin):
         self,
         condition_type: str,
         condition_params: str,
-        color: str = "#FFFF00",
+        color: str = DEFAULT_HIGHLIGHT_COLOR,
     ) -> str:
         """Add a byte highlighting rule.
 

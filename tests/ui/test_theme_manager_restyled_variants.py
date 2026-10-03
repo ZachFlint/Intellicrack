@@ -145,7 +145,7 @@ class TestRestyledVariantDarkFamily:
         theme_manager.apply_theme(THEME_DARK)
         dark_colors = theme_manager.get_analysis_colors()
         assert dark2_colors["background"] == dark_colors["background"]
-        assert dark2_colors["hex_printable"] == dark_colors["hex_printable"]
+        assert dark2_colors["operand_memory"] == dark_colors["operand_memory"]
 
     @staticmethod
     def test_apply_dark2_sets_app_stylesheet(theme_manager: ThemeManager) -> None:

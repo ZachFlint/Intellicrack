@@ -13,6 +13,7 @@ from typing import (
     cast as _cast,
 )
 
+from intellicrack.core.color_defaults import HEXPAT_FIELD_COLORS
 from intellicrack.core.hexpat.ast_nodes import (
     AddressOfExpr,
     ArraySubscriptExpr,
@@ -316,18 +317,7 @@ class HexPatEvaluator:
 
     _POINTER_SIZE: ClassVar[int] = 8
 
-    FIELD_COLORS: ClassVar[tuple[str, ...]] = (
-        "#E06C75",
-        "#61AFEF",
-        "#98C379",
-        "#E5C07B",
-        "#C678DD",
-        "#56B6C2",
-        "#BE5046",
-        "#D19A66",
-        "#7EC8E3",
-        "#C3E88D",
-    )
+    FIELD_COLORS: ClassVar[tuple[str, ...]] = HEXPAT_FIELD_COLORS
 
     def __init__(
         self,

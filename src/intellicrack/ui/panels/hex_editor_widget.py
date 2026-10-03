@@ -36,7 +36,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_callable_async
 from intellicrack.ui.panels.qt_compat import key_event_key, qt_key_page_down, qt_key_page_up, wheel_angle_delta_y
 from intellicrack.ui.resources.font_manager import FontManager
-from intellicrack.ui.resources.theme_manager import ThemeManager
+from intellicrack.ui.resources.theme_manager import HexEditorColors, ThemeManager
 
 
 if TYPE_CHECKING:
@@ -70,7 +70,9 @@ _MAX_BYTE_VALUE = 255
 
 _CONTENT_CLASS_BLOCK_SIZE = 256
 
-_CONTENT_CLASS_COLOR_KEYS: dict[int, str] = {
+_ContentClassColorKey = Literal["content_null", "content_text", "content_generic", "content_compressed", "content_code"]
+
+_CONTENT_CLASS_COLOR_KEYS: dict[int, _ContentClassColorKey] = {
     0: "content_null",
     1: "content_text",
     2: "content_generic",
@@ -111,61 +113,13 @@ def _entropy_value_to_color(
     return QColor(r, g, b)
 
 
-def _get_hex_editor_colors() -> dict[str, QColor]:
-    """Get theme-aware colors for hex editor rendering.
+def _get_hex_editor_colors() -> HexEditorColors:
+    """Get the active theme's colors for hex editor rendering.
 
     Returns:
-        dict[str, QColor]: Mapping of semantic color names to QColor values.
+        HexEditorColors: The hex editor palette of the theme currently rendered, as held by :class:`ThemeManager`.
     """
-    if ThemeManager.get_instance().is_dark_theme():
-        return {
-            "minimap_bg": QColor(25, 25, 25),
-            "minimap_indicator": QColor(100, 150, 255, 100),
-            "minimap_indicator_border": QColor(150, 190, 255),
-            "entropy_low": QColor("#4CAF50"),
-            "entropy_mid": QColor("#FFC107"),
-            "entropy_high": QColor("#F44336"),
-            "editor_bg": QColor(30, 30, 30),
-            "offset_text": QColor(128, 128, 128),
-            "separator": QColor(60, 60, 60),
-            "selection_bg": QColor(100, 149, 237),
-            "hex_normal": QColor(212, 212, 212),
-            "hex_modified": QColor(255, 80, 80),
-            "hex_zero": QColor(80, 80, 80),
-            "ascii_printable": QColor(180, 200, 180),
-            "ascii_nonprintable": QColor(80, 80, 80),
-            "cursor_text": QColor(255, 255, 255),
-            "alignment_grid": QColor(120, 120, 200, 140),
-            "content_null": QColor(90, 90, 90),
-            "content_text": QColor(66, 165, 245),
-            "content_generic": QColor(171, 71, 188),
-            "content_code": QColor(255, 202, 40),
-            "content_compressed": QColor(239, 83, 80),
-        }
-    return {
-        "minimap_bg": QColor(245, 245, 245),
-        "minimap_indicator": QColor(50, 100, 220, 100),
-        "minimap_indicator_border": QColor(50, 100, 220),
-        "entropy_low": QColor("#2E7D32"),
-        "entropy_mid": QColor("#EF6C00"),
-        "entropy_high": QColor("#C62828"),
-        "editor_bg": QColor(255, 255, 255),
-        "offset_text": QColor(117, 117, 117),
-        "separator": QColor(224, 224, 224),
-        "selection_bg": QColor(0, 120, 212, 80),
-        "hex_normal": QColor(26, 26, 26),
-        "hex_modified": QColor(198, 40, 40),
-        "hex_zero": QColor(180, 180, 180),
-        "ascii_printable": QColor(46, 125, 50),
-        "ascii_nonprintable": QColor(180, 180, 180),
-        "cursor_text": QColor(0, 0, 0),
-        "alignment_grid": QColor(80, 80, 170, 140),
-        "content_null": QColor(158, 158, 158),
-        "content_text": QColor(21, 101, 192),
-        "content_generic": QColor(106, 27, 154),
-        "content_code": QColor(245, 127, 23),
-        "content_compressed": QColor(183, 28, 28),
-    }
+    return ThemeManager.get_instance().get_hex_editor_colors()
 
 
 @dataclass
@@ -284,7 +238,7 @@ class EntropyMiniMap(QWidget):
         w: int,
         h: int,
         count: int,
-        colors: dict[str, QColor],
+        colors: HexEditorColors,
     ) -> None:
         """Paint per-chunk entropy bars onto the minimap.
 
@@ -311,7 +265,7 @@ class EntropyMiniMap(QWidget):
         painter: QPainter,
         w: int,
         h: int,
-        colors: dict[str, QColor],
+        colors: HexEditorColors,
     ) -> None:
         """Draw the semi-transparent viewport position indicator.
 

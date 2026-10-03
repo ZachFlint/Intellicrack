@@ -310,16 +310,16 @@ class IconManager:
         Args:
             text: Character or text to render.
             size: Icon size in pixels.
-            color: Text color (defaults to light gray).
+            color: Text color (defaults to the active theme's foreground).
 
         Returns:
             QIcon: QIcon containing the rendered text.
         """
         if color is None:
-            color = QColor("#d4d4d4") if ThemeManager.get_instance().is_dark_theme() else QColor("#1a1d21")
+            color = ThemeManager.get_instance().get_analysis_colors()["foreground"]
 
         pixmap = QPixmap(size, size)
-        pixmap.fill(QColor(0, 0, 0, 0))
+        pixmap.fill(Qt.GlobalColor.transparent)
 
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -379,7 +379,7 @@ class IconManager:
             return loaded
 
         _logger.debug("app_icon_using_fallback")
-        accent = QColor("#007acc") if ThemeManager.get_instance().is_dark_theme() else QColor("#0067c0")
+        accent = ThemeManager.get_instance().get_analysis_colors()["accent"]
         fallback = IconManager._render_text_icon("IC", 256, accent)
         self.icon_cache["app_icon"] = fallback
         return fallback
