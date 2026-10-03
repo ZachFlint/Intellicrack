@@ -59,6 +59,7 @@ from typing import TYPE_CHECKING, Any, BinaryIO, ClassVar, Final, Self
 import anyio
 import anyio.lowlevel
 import mcp_types
+import psutil
 from anyio.streams.file import FileReadStream, FileWriteStream
 from mcp.shared.message import SessionMessage
 
@@ -316,6 +317,11 @@ _LABEL_SECURITY_INFORMATION: Final[int] = 0x00000010
 
 GRANTS_FILENAME: Final[str] = "mcp_sandbox_grants.json"
 """File recording every Low integrity write grant in force, so one left behind by a crash is reverted at the next start."""
+
+_GRANT_OWNER_PID: Final[str] = "ownerPid"
+_GRANT_OWNER_STARTED: Final[str] = "ownerStarted"
+_OWNER_START_TOLERANCE_S: Final[float] = 0.001
+"""How far a recorded start time may differ from a running process's and still name that process."""
 
 _STARTF_USESTDHANDLES: Final[int] = 0x00000100
 _PROC_THREAD_ATTRIBUTE_HANDLE_LIST: Final[int] = 0x00020002
@@ -1700,6 +1706,33 @@ def label_directory_low_integrity(directory: str, *, existing: bool = False) -> 
     _logger.info("mcp_sandbox_write_path_labelled", directory=directory, existing=existing)
 
 
+def _granted_by_another_running_process(entry: JsonObject) -> bool:
+    """Report whether a recorded grant belongs to a different process that is still running.
+
+    The record carries the PID of the process that made the grant and when
+    that process started, so a PID the system has since handed to something
+    else does not pass for the grant's owner. A record with neither, written
+    before grants named their owner, belongs to nobody running.
+
+    Args:
+        entry: One recorded grant.
+
+    Returns:
+        bool: ``True`` when the grant's owner is alive and is not this process.
+    """
+    pid = entry.get(_GRANT_OWNER_PID)
+    started = entry.get(_GRANT_OWNER_STARTED)
+    if isinstance(pid, bool) or not isinstance(pid, int) or isinstance(started, bool) or not isinstance(started, (int, float)):
+        return False
+    if pid == os.getpid():
+        return False
+    try:
+        running_since = psutil.Process(pid).create_time()
+    except psutil.Error:
+        return False
+    return abs(running_since - started) < _OWNER_START_TOLERANCE_S
+
+
 class WriteGrantLedger:
     """Every Low integrity write grant this process holds, counted and recorded on disk.
 
@@ -1834,7 +1867,13 @@ class WriteGrantLedger:
             Returns:
                 bool: Always ``True``.
             """
-            data[key] = {"directory": grant.directory, "originalLabel": grant.original_label, "existing": grant.existing}
+            data[key] = {
+                "directory": grant.directory,
+                "originalLabel": grant.original_label,
+                "existing": grant.existing,
+                _GRANT_OWNER_PID: os.getpid(),
+                _GRANT_OWNER_STARTED: psutil.Process().create_time(),
+            }
             return True
 
         try:
@@ -1867,7 +1906,13 @@ class WriteGrantLedger:
             _logger.warning("mcp_sandbox_grant_record_unremoved", key=key, error=str(exc))
 
     def revert_stale(self) -> int:
-        """Revert every recorded grant this process does not hold.
+        """Revert every recorded grant that nothing running holds.
+
+        A grant this ledger holds is in force, and so is one recorded by
+        another process that is still running: a second Intellicrack starting
+        beside the first must not take the first one's servers' write access
+        away from under them. What is left was recorded by a process that has
+        since ended without reverting it.
 
         Returns:
             int: How many grants were reverted.
@@ -1884,6 +1929,8 @@ class WriteGrantLedger:
                     continue
             if not is_json_object(entry):
                 self._forget(key)
+                continue
+            if _granted_by_another_running_process(entry):
                 continue
             directory = entry.get("directory")
             original = entry.get("originalLabel")
