@@ -2,21 +2,22 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate: importing a bridge, the core or the providers package loads neither PyTorch nor Transformers.
+"""Gate: importing a bridge, the core or the providers package loads no provider SDK, PyTorch or Transformers.
 
 ``intellicrack.core.config`` reads the provider ids, so every bridge and the
 whole of ``intellicrack.core`` import the providers package. That package once
-imported its local Transformers provider, model loader and XPU utilities along
-with everything else, and those three import PyTorch and Transformers at module
-level: a fresh interpreter loaded some 5,500 modules and took about seventeen
-seconds on a workstation before it could import one bridge, and on a loaded CI
-runner the first-import gates ran past their two-minute limit.
+imported every provider with it. Each provider module imports its SDK, and the
+local Transformers provider imports PyTorch and Transformers: a fresh
+interpreter loaded some 5,500 modules and took about seventeen seconds on a
+workstation before it could import one bridge, on a loaded CI runner the
+first-import gates ran past their two-minute limit, and
+``python -m intellicrack --version`` ran past thirty seconds.
 
-The three submodules' names are now exported lazily. These gates start real
-interpreters whose first import is the module under test and require the three
-submodules, and the two libraries, to be absent afterwards; and they hold the
-lazy exports to behaving like the eager ones did -- same objects, same public
-names, same error for a name the package does not export.
+Every name the package exports is now resolved on first use. These gates start
+real interpreters whose first import is the module under test and require the
+SDK-backed submodules, and their libraries, to be absent afterwards; and they
+hold the lazy exports to behaving like the eager ones did -- same objects, same
+public names, same error for a name the package does not export.
 """
 
 from __future__ import annotations
@@ -32,7 +33,12 @@ from tests._helpers.child_python import run_child_json
 
 
 _CHILD_TIMEOUT_S: Final[float] = 120.0
-_HEAVY_LIBRARIES: Final[tuple[str, ...]] = ("torch", "transformers")
+_HEAVY_LIBRARIES: Final[tuple[str, ...]] = ("torch", "transformers", "anthropic", "openai", "google.genai", "huggingface_hub")
+_SDK_BACKED_SUBMODULES: Final[tuple[str, ...]] = tuple(
+    f"intellicrack.providers.{name}"
+    for name in ("anthropic", "google", "grok", "huggingface", "local_transformers", "model_loader", "openai", "xpu_utils")
+)
+"""The provider submodules that import an SDK, PyTorch or Transformers at module level."""
 _FIRST_IMPORTS: Final[tuple[str, ...]] = (
     "intellicrack.bridges.base",
     "intellicrack.bridges.hex_editor",
@@ -50,7 +56,7 @@ def _loaded_after_first_import(module: str) -> dict[str, list[str]]:
         module: The module the child imports before anything else of Intellicrack's.
 
     Returns:
-        dict[str, list[str]]: Under ``submodules``, the lazily exported
+        dict[str, list[str]]: Under ``submodules``, the SDK-backed provider
         submodules the import loaded; under ``libraries``, the heavy libraries
         it loaded.
     """
@@ -62,7 +68,7 @@ def _loaded_after_first_import(module: str) -> dict[str, list[str]]:
 
         importlib.import_module({module!r})
         print(json.dumps({{
-            "submodules": sorted(name for name in {sorted(set(LAZY_EXPORTS.values()))!r} if name in sys.modules),
+            "submodules": sorted(name for name in {_SDK_BACKED_SUBMODULES!r} if name in sys.modules),
             "libraries": sorted(name for name in {_HEAVY_LIBRARIES!r} if name in sys.modules),
         }}))
         """,
@@ -72,11 +78,11 @@ def _loaded_after_first_import(module: str) -> dict[str, list[str]]:
 
 
 @pytest.mark.parametrize("module", _FIRST_IMPORTS)
-def test_a_first_import_loads_neither_the_torch_backed_submodules_nor_their_libraries(module: str) -> None:
-    """A fresh interpreter that imports a bridge, the core or the providers package holds no PyTorch-backed module.
+def test_a_first_import_loads_neither_the_sdk_backed_submodules_nor_their_libraries(module: str) -> None:
+    """A fresh interpreter that imports a bridge, the core or the providers package holds no SDK-backed provider module.
 
-    Falsifiable: with the three submodules imported by the package, every one
-    of these first imports loads all three and both libraries.
+    Falsifiable: with any of those submodules imported by the package, every
+    one of these first imports loads it and its library.
 
     Args:
         module: The module the fresh interpreter imports first.
@@ -133,10 +139,11 @@ def test_every_public_name_of_the_package_resolves() -> None:
     assert missing == [], f"names in __all__ that the package cannot provide: {missing}"
 
 
-def test_lazy_exports_are_public_and_listed() -> None:
-    """Each lazy export is part of the public API and shows up in ``dir()`` before it has been resolved."""
-    assert set(LAZY_EXPORTS) <= set(providers_package.__all__)
+def test_lazy_exports_are_exactly_the_public_names() -> None:
+    """The lazy exports and ``__all__`` name the same things, and all of them show up in ``dir()`` before being resolved."""
+    assert set(LAZY_EXPORTS) == set(providers_package.__all__)
     assert set(LAZY_EXPORTS) <= set(dir(providers_package))
+    assert set(_SDK_BACKED_SUBMODULES) <= set(LAZY_EXPORTS.values())
 
 
 def test_a_name_the_package_does_not_export_is_still_an_attribute_error() -> None:
