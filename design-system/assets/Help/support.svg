@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Life ring / support symbol -->
+  <circle cx="12" cy="12" r="10" stroke="#4A90E2" stroke-width="2" fill="none"/>
+  <circle cx="12" cy="12" r="4" stroke="#4A90E2" stroke-width="2" fill="none"/>
+  <path d="M4.93 4.93L7.76 7.76" stroke="#4A90E2" stroke-width="2" stroke-linecap="round"/>
+  <path d="M16.24 7.76L19.07 4.93" stroke="#4A90E2" stroke-width="2" stroke-linecap="round"/>
+  <path d="M19.07 19.07L16.24 16.24" stroke="#4A90E2" stroke-width="2" stroke-linecap="round"/>
+  <path d="M7.76 16.24L4.93 19.07" stroke="#4A90E2" stroke-width="2" stroke-linecap="round"/>
+</svg>

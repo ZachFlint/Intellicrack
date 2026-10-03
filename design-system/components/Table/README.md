@@ -1,0 +1,1 @@
+Data table. The header sits on `ic-header` with per-cell right borders; body rows zebra-stripe with `ic-alt-row`; a selected row fills with `ic-selection`. Numeric and address columns take the monospace face. Grid lines use the `ic-divider` colour.

@@ -52,59 +52,41 @@ if TYPE_CHECKING:
     from pytestqt.qtbot import QtBot
 
 
-class _NullSignal:
-    """No-op stand-in for a bound ``pyqtSignal`` used by stub workers."""
+def _skip_availability_probe(
+    func: Callable[..., object],
+    /,
+    *args: object,
+    on_success: Callable[[object], None] | None = None,
+    on_error: Callable[[object], None] | None = None,
+    parent: object = None,
+    exceptions: tuple[type[BaseException], ...] = (),
+    **kwargs: object,
+) -> None:
+    """Stand in for ``run_callable_async`` so the dialog never runs the real availability probe.
 
-    def connect(self, callback: Callable[..., object]) -> None:
-        """Discard the connection request.
+    The dialog dispatches the Windows Sandbox probe (a PowerShell subprocess)
+    through ``run_callable_async``. Left real, the probe's result races with
+    the gate tests and flips ``_is_available`` back to ``False`` on hosts
+    without Windows Sandbox; this stub starts nothing and never delivers a
+    result, so the tests alone control the dialog's availability state.
 
-        Args:
-            callback: Slot that would have received the signal.
-        """
-        del callback
-
-
-class _StubAvailabilityWorker:
-    """Stand-in for ``GenericCallableWorker`` that never starts a background thread.
-
-    Keeps ``SandboxConfigDialog`` construction free of the real Windows
-    Sandbox availability probe (a PowerShell subprocess) so the H18/M15/M66
-    gate tests below do not depend on that probe's host environment and do
-    not spawn an unrelated OS process on every dialog construction.
+    Args:
+        func: Probe callable the real worker would execute off-thread (discarded).
+        *args: Positional arguments for the probe (discarded).
+        on_success: Success callback the real worker would invoke (discarded).
+        on_error: Error callback the real worker would invoke (discarded).
+        parent: Delivery context the real worker would use (discarded).
+        exceptions: Exception tuple the real worker would catch (discarded).
+        **kwargs: Keyword arguments for the probe (discarded).
     """
-
-    def __init__(
-        self,
-        func: Callable[..., object],
-        /,
-        *args: object,
-        exceptions: tuple[type[BaseException], ...] = (),
-        parent: object = None,
-        **kwargs: object,
-    ) -> None:
-        """Capture and discard the callable without starting a background thread.
-
-        Args:
-            func: Callable the real worker would execute off-thread (discarded).
-            *args: Positional arguments (discarded).
-            exceptions: Exception tuple (discarded).
-            parent: Qt parent (discarded).
-            **kwargs: Keyword arguments (discarded).
-        """
-        del func, args, exceptions, parent, kwargs
-        self.call_finished: _NullSignal = _NullSignal()
-        self.call_error: _NullSignal = _NullSignal()
-
-    def start(self) -> None:
-        """Do nothing; the stub never runs the probe and never emits a result."""
-        return
+    del func, args, on_success, on_error, parent, exceptions, kwargs
 
 
 def _build_dialog(monkeypatch: pytest.MonkeyPatch) -> SandboxConfigDialog:
     """Construct a ``SandboxConfigDialog`` without the real availability probe or popups.
 
     Args:
-        monkeypatch: Fixture used to stub the availability worker and the
+        monkeypatch: Fixture used to stub the availability probe dispatch and the
             informational/warning popups so the dialog can be driven
             headlessly under an offscreen QApplication.
 
@@ -112,7 +94,7 @@ def _build_dialog(monkeypatch: pytest.MonkeyPatch) -> SandboxConfigDialog:
         SandboxConfigDialog: A dialog with ``_is_available`` forced to
         ``True`` so ``_test_sandbox`` proceeds past its availability guard.
     """
-    monkeypatch.setattr(sandbox_config, "GenericCallableWorker", _StubAvailabilityWorker)
+    monkeypatch.setattr(sandbox_config, "run_callable_async", _skip_availability_probe)
     monkeypatch.setattr(sandbox_config, "show_info", lambda *_a, **_k: QMessageBox.StandardButton.Ok)
     monkeypatch.setattr(sandbox_config, "show_warning", lambda *_a, **_k: QMessageBox.StandardButton.Ok)
     dialog = SandboxConfigDialog()

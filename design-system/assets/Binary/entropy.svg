@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="entropyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF9800;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E65100;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="entropyBarGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFEB3B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F44336;stop-opacity:1" />
+    </linearGradient>
+    <filter id="entropyShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#BF360C" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Entropy analysis window background -->
+  <rect x="2" y="2" width="20" height="20" rx="2"
+        fill="url(#entropyGradient)" stroke="#BF360C" stroke-width="0.8" filter="url(#entropyShadowFilter)"/>
+
+  <!-- Chart background -->
+  <rect x="4" y="4" width="16" height="16" rx="1" fill="#263238"/>
+
+  <!-- Entropy bars/graph -->
+  <rect x="5" y="16" width="1" height="3" fill="#4CAF50"/>
+  <rect x="7" y="14" width="1" height="5" fill="#8BC34A"/>
+  <rect x="9" y="12" width="1" height="7" fill="#CDDC39"/>
+  <rect x="11" y="10" width="1" height="9" fill="#FFEB3B"/>
+  <rect x="13" y="8" width="1" height="11" fill="#FFC107"/>
+  <rect x="15" y="6" width="1" height="13" fill="#FF9800"/>
+  <rect x="17" y="5" width="1" height="14" fill="#FF5722"/>
+  <rect x="19" y="7" width="1" height="12" fill="#F44336"/>
+
+  <!-- Entropy scale -->
+  <text x="3" y="6" font-family="monospace" font-size="1.5" fill="#FFFFFF">8</text>
+  <text x="3" y="10" font-family="monospace" font-size="1.5" fill="#FFFFFF">6</text>
+  <text x="3" y="14" font-family="monospace" font-size="1.5" fill="#FFFFFF">4</text>
+  <text x="3" y="18" font-family="monospace" font-size="1.5" fill="#FFFFFF">2</text>
+  <text x="3" y="20" font-family="monospace" font-size="1.5" fill="#FFFFFF">0</text>
+
+  <!-- Grid lines -->
+  <path d="M4 6 L20 6" stroke="#37474F" stroke-width="0.3"/>
+  <path d="M4 10 L20 10" stroke="#37474F" stroke-width="0.3"/>
+  <path d="M4 14 L20 14" stroke="#37474F" stroke-width="0.3"/>
+  <path d="M4 18 L20 18" stroke="#37474F" stroke-width="0.3"/>
+
+  <!-- High entropy indicator (encrypted/packed) -->
+  <circle cx="18" cy="3" r="1.5" fill="#F44336">
+    <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <text x="18" y="3.5" font-family="monospace" font-size="1.2" text-anchor="middle" fill="#FFFFFF">!</text>
+
+  <!-- Entropy analysis label -->
+  <text x="12" y="2" font-family="monospace" font-size="2" text-anchor="middle" fill="#FFFFFF" font-weight="bold">ENTROPY</text>
+
+  <!-- Statistical indicators -->
+  <rect x="4" y="21" width="6" height="1" fill="#4CAF50"/>
+  <text x="7" y="22.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#FFFFFF">AVG</text>
+
+  <rect x="11" y="21" width="4" height="1" fill="#FF9800"/>
+  <text x="13" y="22.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#FFFFFF">MAX</text>
+
+  <rect x="16" y="21" width="4" height="1" fill="#F44336"/>
+  <text x="18" y="22.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#FFFFFF">STD</text>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="10" cy="5" rx="4" ry="1.5" fill="#FFFFFF" opacity="0.2"/>
+</svg>

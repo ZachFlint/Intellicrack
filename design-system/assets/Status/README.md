@@ -1,0 +1,1 @@
+State icons used beside status text and in the status bar. Each is a filled gradient badge whose hue matches its status colour token, and each is always paired with a word, never used as the only signal: success, error, warning, info, ready, idle, loading, question.

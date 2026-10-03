@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="loadingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#607D8B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#263238;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="spinnerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FF9800;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4CAF50;stop-opacity:0.2" />
+    </linearGradient>
+  </defs>
+
+  <!-- Loading circle background -->
+  <circle cx="12" cy="12" r="10" fill="none" stroke="#E0E0E0" stroke-width="2"/>
+
+  <!-- Animated progress arc -->
+  <circle cx="12" cy="12" r="10" fill="none" stroke="url(#spinnerGradient)"
+          stroke-width="2.5" stroke-linecap="round"
+          stroke-dasharray="31.4 31.4"
+          transform-origin="12 12">
+    <animateTransform attributeName="transform" attributeType="XML"
+                      type="rotate" from="0 12 12" to="360 12 12"
+                      dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Center loading dots -->
+  <circle cx="8" cy="12" r="1.2" fill="#4CAF50" opacity="0.8">
+    <animate attributeName="opacity" values="0.2;1;0.2" dur="1.5s" repeatCount="indefinite" begin="0s"/>
+  </circle>
+  <circle cx="12" cy="12" r="1.2" fill="#FF9800" opacity="0.6">
+    <animate attributeName="opacity" values="0.2;1;0.2" dur="1.5s" repeatCount="indefinite" begin="0.5s"/>
+  </circle>
+  <circle cx="16" cy="12" r="1.2" fill="#2196F3" opacity="0.4">
+    <animate attributeName="opacity" values="0.2;1;0.2" dur="1.5s" repeatCount="indefinite" begin="1s"/>
+  </circle>
+</svg>

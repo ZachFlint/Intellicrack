@@ -1,0 +1,1 @@
+Grouping containers. A group box sits on the `ic-panel` surface with its title notched into the top border over the window ground. A docked panel is framed by an `ic-panel-header` (raised chrome, bold title) above a content body, optionally closed by an `ic-info-panel` summary strip.

@@ -57,8 +57,7 @@ DEFAULT_DPI_SCALE: Final[float] = 1.0
 
 _PROGRESS_BAR_BASE_HEIGHT: Final[int] = 6
 _OVERLAY_MARGIN_H: Final[int] = 20
-_OVERLAY_MARGIN_BOTTOM: Final[int] = 30
-_OVERLAY_SPACING: Final[int] = 8
+_PROGRESS_BAR_PIPELINE_GAP: Final[int] = 6
 _STATUS_FONT_SIZE: Final[int] = 11
 _TITLE_FONT_SIZE: Final[int] = 32
 _SUBTITLE_FONT_SIZE: Final[int] = 12
@@ -539,40 +538,39 @@ class SplashScreen(QSplashScreen):
         return SplashScreen._create_fallback_pixmap(width, height, dpi_scale)
 
     def _setup_overlay(self) -> None:
-        """Set up the progress bar and status label overlay widgets.
+        """Set up the progress bar overlay and the retained status and version labels.
 
-        The overlay starts hidden and is revealed by :meth:`set_progress` once the first progress update arrives, so the animated progress
-        bar is actually visible to the user while initialization runs. The status and version labels it also hosts are retained for backward
-        compatibility with code that accesses them directly.
+        The painted layers own the pipeline row, the status message and the version string, so the overlay only has to show the progress bar.
+        All overlay metrics are logical pixels: Qt applies the device pixel ratio itself, which keeps the bar in the gap between the painted
+        status text and the top of the pipeline circles at every display scale. The status and version labels stay as hidden widgets so code
+        that reads or updates them keeps working without drawing the same text a second time. The overlay starts hidden and is revealed by
+        :meth:`set_progress` once the first progress update arrives, so the animated progress bar is actually visible to the user while
+        initialization runs.
         """
         self._overlay = QWidget(self)
         self._overlay.setStyleSheet("background: transparent;")
 
-        margin_h = int(_OVERLAY_MARGIN_H * self._dpi_scale)
-        margin_b = int(_OVERLAY_MARGIN_BOTTOM * self._dpi_scale)
-        spacing = int(_OVERLAY_SPACING * self._dpi_scale)
+        bar_bottom_offset = _PIPELINE_Y_OFFSET_FROM_BOTTOM + _PIPELINE_CIRCLE_DIAMETER // 2 + _PROGRESS_BAR_PIPELINE_GAP
 
         layout = QVBoxLayout(self._overlay)
-        layout.setContentsMargins(margin_h, 0, margin_h, margin_b)
-        layout.setSpacing(spacing)
+        layout.setContentsMargins(_OVERLAY_MARGIN_H, 0, _OVERLAY_MARGIN_H, bar_bottom_offset)
+        layout.setSpacing(0)
         layout.addStretch()
 
-        status_font_size = int(_STATUS_FONT_SIZE * self._dpi_scale)
-        self._status_label = QLabel("Initializing...")
+        self._status_label = QLabel("Initializing...", self._overlay)
         self._status_label.setStyleSheet(
-            f"color: {FALLBACK_TEXT_COLOR}; font-size: {status_font_size}px; background: transparent;",
+            f"color: {FALLBACK_TEXT_COLOR}; font-size: {_STATUS_FONT_SIZE}px; background: transparent;",
         )
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self._status_label)
+        self._status_label.setVisible(False)
 
-        bar_height = int(_PROGRESS_BAR_BASE_HEIGHT * self._dpi_scale)
-        border_radius = max(1, bar_height // 2)
+        border_radius = max(1, _PROGRESS_BAR_BASE_HEIGHT // 2)
         self.progress_bar = QProgressBar()
         self._progress_bar = self.progress_bar
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(False)
-        self.progress_bar.setFixedHeight(bar_height)
+        self.progress_bar.setFixedHeight(_PROGRESS_BAR_BASE_HEIGHT)
         self.progress_bar.setStyleSheet(
             f"""
             QProgressBar {{
@@ -590,15 +588,14 @@ class SplashScreen(QSplashScreen):
 
         self.version_label: QLabel | None = None
         if self._version:
-            version_font_size = int(_VERSION_FONT_SIZE * self._dpi_scale)
-            self.version_label = QLabel(f"v{self._version}")
+            self.version_label = QLabel(f"v{self._version}", self._overlay)
             self.version_label.setStyleSheet(
-                f"color: {_VERSION_LABEL_COLOR}; font-size: {version_font_size}px; background: transparent;",
+                f"color: {_VERSION_LABEL_COLOR}; font-size: {_VERSION_FONT_SIZE}px; background: transparent;",
             )
             self.version_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-            layout.addWidget(self.version_label)
+            self.version_label.setVisible(False)
 
-        self._overlay.setGeometry(0, 0, self.scaled_width, self.scaled_height)
+        self._overlay.setGeometry(self.rect())
 
     def show_animated(self) -> None:
         """Show the splash screen with a fade-in animation and start visual effects."""
@@ -1120,7 +1117,7 @@ class SplashScreen(QSplashScreen):
         """
         super().resizeEvent(a0)
         if hasattr(self, "_overlay"):
-            self._overlay.setGeometry(0, 0, self.width(), self.height())
+            self._overlay.setGeometry(self.rect())
 
     @property
     def progress(self) -> int:
@@ -1143,6 +1140,8 @@ class SplashScreen(QSplashScreen):
     @property
     def status_label(self) -> QLabel:
         """Hidden status label widget retained for backward compatibility.
+
+        The status text is painted by :meth:`paintEvent`; this label keeps the same text for callers that read it and is never shown.
 
         Returns:
             QLabel: The hidden status label widget (retained for backward compatibility).

@@ -1,0 +1,1214 @@
+/* Intellicrack component stylesheet.
+
+   A faithful HTML/CSS translation of the PyQt6 QSS themes in
+   src/intellicrack/assets/styles. Every value resolves from the --ic-* custom
+   properties the design-system page generates from tokens.json; the Qt widget
+   selectors (QPushButton, QLineEdit, QTabBar::tab, ...) become the .ic-*
+   classes below, so a preview renders what the application's widgets render
+   under the same tokens, in any of the four themes.
+
+   The :root block holds only what the token layer does not emit itself: the
+   two font stacks (the generated tokens.css names font families --font-ui /
+   --font-code, not --ic-font-*) and a mirror of the non-themed scalar ramps,
+   so a preview is correct on its own. */
+
+:root {
+  --ic-font-ui: "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ic-font-code: "JetBrains Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+
+  --ic-space-2: 2px;
+  --ic-space-4: 4px;
+  --ic-space-6: 6px;
+  --ic-space-8: 8px;
+  --ic-space-10: 10px;
+  --ic-space-12: 12px;
+  --ic-space-16: 16px;
+  --ic-space-20: 20px;
+  --ic-space-24: 24px;
+
+  --ic-radius-xs: 2px;
+  --ic-radius-sm: 3px;
+  --ic-radius-md: 4px;
+  --ic-radius-lg: 6px;
+  --ic-radius-xl: 8px;
+
+  --ic-fs-10: 10px;
+  --ic-fs-11: 11px;
+  --ic-fs-12: 12px;
+  --ic-fs-13: 13px;
+  --ic-fs-14: 14px;
+  --ic-fs-16: 16px;
+
+  --ic-fw-regular: 400;
+  --ic-fw-semibold: 600;
+  --ic-fw-bold: 700;
+
+  --ic-control-h: 24px;
+  --ic-field-h: 20px;
+  --ic-control-min-w: 90px;
+  --ic-indicator: 16px;
+  --ic-scrollbar: 12px;
+  --ic-splitter: 8px;
+  --ic-progress-h: 8px;
+  --ic-tab-indicator: 2px;
+  --ic-result-bar: 3px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ============================================================ ROOT */
+
+.ic {
+  background: var(--ic-window);
+  color: var(--ic-text);
+  font-family: var(--ic-font-ui);
+  font-size: var(--ic-fs-12);
+  line-height: 1.4;
+}
+
+.ic-mono {
+  font-family: var(--ic-font-code);
+}
+
+/* ============================================================ BUTTONS */
+
+.ic-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ic-space-6);
+  min-height: var(--ic-control-h);
+  padding: var(--ic-space-6) var(--ic-space-16);
+  border: none;
+  border-radius: var(--ic-radius-md);
+  background: var(--ic-primary);
+  color: var(--ic-on-accent);
+  font-family: inherit;
+  font-size: var(--ic-fs-12);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ic-btn:hover {
+  background: var(--ic-primary-hover);
+}
+
+.ic-btn:active {
+  background: var(--ic-primary-pressed);
+}
+
+.ic-btn:disabled,
+.ic-btn.is-disabled {
+  background: var(--ic-disabled-fill);
+  color: var(--ic-text-disabled);
+  cursor: default;
+}
+
+.ic-btn--execute {
+  padding: var(--ic-space-8) var(--ic-space-20);
+  font-weight: var(--ic-fw-bold);
+}
+
+/* Flat / secondary / tool button: transparent with an outline. */
+.ic-btn--flat,
+.ic-btn--secondary,
+.ic-btn--tool {
+  background: transparent;
+  border: 1px solid var(--ic-border);
+  color: var(--ic-text);
+  padding: var(--ic-space-4) var(--ic-space-12);
+}
+
+.ic-btn--flat:hover,
+.ic-btn--secondary:hover,
+.ic-btn--tool:hover {
+  background: var(--ic-hover);
+}
+
+.ic-btn--tool:hover {
+  border-color: var(--ic-accent);
+}
+
+.ic-btn--tool:active {
+  background: var(--ic-tool-pressed);
+}
+
+/* Toggle button: outline at rest, primary fill when checked. */
+.ic-btn--toggle {
+  background: transparent;
+  border: 1px solid var(--ic-border);
+  color: var(--ic-text);
+  padding: var(--ic-space-4) var(--ic-space-12);
+}
+
+.ic-btn--toggle:hover {
+  background: var(--ic-hover);
+}
+
+.ic-btn--toggle.is-checked {
+  background: var(--ic-primary);
+  border-color: var(--ic-primary);
+  color: var(--ic-on-accent);
+}
+
+/* Danger: destructive outline that fills on hover. */
+.ic-btn--danger {
+  background: transparent;
+  border: 1px solid var(--ic-danger);
+  color: var(--ic-danger);
+  padding: var(--ic-space-4) var(--ic-space-12);
+}
+
+.ic-btn--danger:hover {
+  background: var(--ic-danger-hover-bg);
+}
+
+/* ============================================================ INPUTS */
+
+.ic-input,
+.ic-combo,
+.ic-spin {
+  min-height: var(--ic-control-h);
+  padding: var(--ic-space-6) var(--ic-space-8);
+  border: 1px solid var(--ic-border-control);
+  border-radius: var(--ic-radius-md);
+  background: var(--ic-field);
+  color: var(--ic-text);
+  font-family: inherit;
+  font-size: var(--ic-fs-12);
+}
+
+.ic-input {
+  min-height: var(--ic-field-h);
+}
+
+.ic-combo,
+.ic-spin {
+  background: var(--ic-combo);
+  min-width: var(--ic-control-min-w);
+}
+
+.ic-input:focus,
+.ic-combo:focus,
+.ic-spin:focus,
+.ic-input.is-focus,
+.ic-combo.is-focus {
+  outline: none;
+  border-color: var(--ic-accent);
+}
+
+.ic-input:disabled,
+.ic-input.is-disabled {
+  background: var(--ic-header);
+  color: var(--ic-text-disabled);
+}
+
+.ic-input::placeholder {
+  color: var(--ic-text-muted);
+}
+
+.ic-combo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ic-space-8);
+  cursor: pointer;
+}
+
+.ic-combo::after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--ic-glyph);
+}
+
+.ic-textarea {
+  width: 100%;
+  padding: var(--ic-space-8);
+  border: 1px solid var(--ic-border-control);
+  border-radius: var(--ic-radius-md);
+  background: var(--ic-content);
+  color: var(--ic-text);
+  font-family: var(--ic-font-code);
+  font-size: var(--ic-fs-12);
+  resize: vertical;
+}
+
+.ic-textarea::selection,
+.ic-input::selection {
+  background: var(--ic-selection);
+}
+
+/* Check box and radio */
+.ic-check,
+.ic-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ic-space-8);
+  color: var(--ic-text);
+  cursor: pointer;
+}
+
+.ic-check-box,
+.ic-radio-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ic-indicator);
+  height: var(--ic-indicator);
+  flex: 0 0 auto;
+  border: 1px solid var(--ic-border-control);
+  background: var(--ic-field);
+  color: transparent;
+}
+
+.ic-check-box {
+  border-radius: var(--ic-radius-sm);
+  font-size: var(--ic-fs-11);
+}
+
+.ic-radio-dot {
+  border-radius: 50%;
+}
+
+.ic-check:hover .ic-check-box,
+.ic-radio:hover .ic-radio-dot {
+  border-color: var(--ic-accent);
+}
+
+.ic-check.is-checked .ic-check-box {
+  background: var(--ic-accent);
+  border-color: var(--ic-accent);
+  color: var(--ic-on-accent);
+}
+
+.ic-radio.is-checked .ic-radio-dot {
+  background: var(--ic-accent);
+  border-color: var(--ic-accent);
+  box-shadow: inset 0 0 0 3px var(--ic-field);
+}
+
+/* ============================================================ MENUS / TOOLBAR */
+
+.ic-menubar {
+  display: flex;
+  align-items: stretch;
+  gap: var(--ic-space-2);
+  padding: var(--ic-space-2);
+  background: var(--ic-chrome);
+  color: var(--ic-text);
+  border-bottom: 1px solid var(--ic-border);
+}
+
+.ic-menubar-item {
+  padding: var(--ic-space-4) var(--ic-space-8);
+  border-radius: var(--ic-radius-xs);
+}
+
+.ic-menubar-item:hover {
+  background: var(--ic-hover);
+}
+
+.ic-menubar-item.is-open {
+  background: var(--ic-selection);
+  color: var(--ic-on-selection);
+}
+
+.ic-menu {
+  padding: var(--ic-space-4);
+  background: var(--ic-chrome);
+  border: 1px solid var(--ic-border);
+  min-width: 200px;
+}
+
+.ic-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ic-space-16);
+  padding: var(--ic-space-6) var(--ic-space-24) var(--ic-space-6) var(--ic-space-8);
+  border-radius: var(--ic-radius-xs);
+  color: var(--ic-text);
+}
+
+.ic-menu-item:hover {
+  background: var(--ic-selection);
+  color: var(--ic-on-selection);
+}
+
+.ic-menu-shortcut {
+  font-family: var(--ic-font-code);
+  font-size: var(--ic-fs-11);
+  color: var(--ic-text-muted);
+}
+
+.ic-menu-sep {
+  height: 1px;
+  margin: var(--ic-space-4) var(--ic-space-8);
+  background: var(--ic-divider);
+}
+
+.ic-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ic-space-4);
+  padding: var(--ic-space-4);
+  background: var(--ic-chrome);
+  border-bottom: 1px solid var(--ic-border);
+}
+
+.ic-toolbar-ext {
+  margin-left: auto;
+  padding: 0 var(--ic-space-6);
+  color: var(--ic-text);
+  font-size: var(--ic-fs-14);
+  line-height: 1;
+}
+
+.ic-toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: var(--ic-space-4) var(--ic-space-8);
+  background: var(--ic-border);
+}
+
+/* ============================================================ TABS */
+
+.ic-tabbar {
+  display: flex;
+  align-items: stretch;
+  background: var(--ic-content);
+}
+
+.ic-tab {
+  padding: var(--ic-space-8) var(--ic-space-16);
+  background: var(--ic-header);
+  color: var(--ic-text);
+  border: none;
+  border-bottom: var(--ic-tab-indicator) solid transparent;
+}
+
+.ic-tab:hover:not(.is-selected) {
+  background: var(--ic-hover);
+}
+
+.ic-tab.is-selected {
+  background: var(--ic-content);
+  border-bottom-color: var(--ic-accent);
+}
+
+.ic-tabpane {
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-md);
+  background: var(--ic-content);
+  padding: var(--ic-space-16);
+}
+
+/* ============================================================ LISTS / TREES / TABLES */
+
+.ic-list,
+.ic-tree {
+  background: var(--ic-content);
+  color: var(--ic-text);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-md);
+  overflow: hidden;
+}
+
+.ic-list-item {
+  padding: var(--ic-space-6) var(--ic-space-8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ic-tree-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ic-space-6);
+  padding: var(--ic-space-4) var(--ic-space-8);
+}
+
+.ic-list-item:hover:not(.is-selected),
+.ic-tree-item:hover:not(.is-selected) {
+  background: var(--ic-item-hover);
+}
+
+.ic-list-item.is-selected,
+.ic-tree-item.is-selected {
+  background: var(--ic-selection);
+  color: var(--ic-on-selection);
+}
+
+.ic-twisty {
+  width: 10px;
+  color: var(--ic-text-muted);
+}
+
+.ic-table {
+  width: 100%;
+  border: 1px solid var(--ic-border);
+  border-collapse: collapse;
+  background: var(--ic-content);
+  color: var(--ic-text);
+  font-size: var(--ic-fs-12);
+}
+
+.ic-table th {
+  padding: var(--ic-space-6);
+  text-align: left;
+  background: var(--ic-header);
+  border-right: 1px solid var(--ic-border);
+  border-bottom: 1px solid var(--ic-border);
+  font-weight: var(--ic-fw-regular);
+}
+
+.ic-table td {
+  padding: var(--ic-space-4) var(--ic-space-6);
+  border-bottom: 1px solid var(--ic-divider);
+}
+
+.ic-table tbody tr:nth-child(even) {
+  background: var(--ic-alt-row);
+}
+
+.ic-table tbody tr.is-selected td {
+  background: var(--ic-selection);
+  color: var(--ic-on-selection);
+}
+
+.ic-table td.is-mono {
+  font-family: var(--ic-font-code);
+}
+
+/* ============================================================ GROUP BOX / PANELS */
+
+.ic-groupbox {
+  position: relative;
+  margin-top: var(--ic-space-12);
+  padding: var(--ic-space-16) var(--ic-space-12) var(--ic-space-12);
+  background: var(--ic-panel);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-md);
+}
+
+.ic-groupbox-title {
+  position: absolute;
+  top: calc(var(--ic-space-12) * -1);
+  left: var(--ic-space-8);
+  padding: 0 var(--ic-space-8);
+  background: var(--ic-window);
+  color: var(--ic-text);
+}
+
+.ic-panel-header {
+  padding: var(--ic-space-6) var(--ic-space-8);
+  background: var(--ic-header);
+  border-bottom: 1px solid var(--ic-border);
+  font-weight: var(--ic-fw-bold);
+}
+
+.ic-dock-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ic-space-8);
+  padding: var(--ic-space-6);
+  background: var(--ic-header);
+  border-bottom: 1px solid var(--ic-border);
+  color: var(--ic-text);
+  text-align: left;
+}
+
+.ic-info-panel {
+  padding: var(--ic-space-10);
+  background: var(--ic-info-panel);
+  border-top: 1px solid var(--ic-border);
+  color: var(--ic-text-muted);
+}
+
+/* ============================================================ SCROLLBAR / SLIDER / PROGRESS */
+
+.ic-scrolltrack {
+  width: var(--ic-scrollbar);
+  padding: var(--ic-space-2);
+  background: var(--ic-scrollbar-track);
+  border-radius: var(--ic-radius-lg);
+}
+
+.ic-scrollthumb {
+  width: 100%;
+  height: 48px;
+  background: var(--ic-scrollbar-thumb);
+  border-radius: var(--ic-radius-lg);
+}
+
+.ic-slider {
+  position: relative;
+  height: var(--ic-indicator);
+  display: flex;
+  align-items: center;
+}
+
+.ic-slider-groove {
+  width: 100%;
+  height: var(--ic-groove, 4px);
+  background: var(--ic-border);
+  border-radius: 2px;
+}
+
+.ic-slider-handle {
+  position: absolute;
+  width: var(--ic-indicator);
+  height: var(--ic-indicator);
+  border-radius: 50%;
+  background: var(--ic-accent);
+}
+
+.ic-progress {
+  height: var(--ic-progress-h);
+  background: var(--ic-border);
+  border-radius: var(--ic-radius-md);
+  overflow: hidden;
+}
+
+.ic-progress-chunk {
+  height: 100%;
+  background: var(--ic-accent);
+  border-radius: var(--ic-radius-md);
+}
+
+/* ============================================================ STATUS BAR / LABELS */
+
+.ic-statusbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ic-space-16);
+  padding: var(--ic-space-4) var(--ic-space-12);
+  background: var(--ic-accent);
+  color: var(--ic-on-accent);
+  font-size: var(--ic-fs-12);
+}
+
+.ic-heading {
+  font-size: var(--ic-fs-16);
+  font-weight: var(--ic-fw-bold);
+}
+
+.ic-muted {
+  color: var(--ic-text-muted);
+}
+
+.ic-status--success {
+  color: var(--ic-success);
+}
+
+.ic-status--error {
+  color: var(--ic-error);
+}
+
+.ic-status--warning {
+  color: var(--ic-warning);
+}
+
+.ic-status--info {
+  color: var(--ic-info);
+}
+
+.ic-status--idle {
+  color: var(--ic-text-muted);
+}
+
+.ic-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ============================================================ TOOLTIP / OVERLAY */
+
+.ic-tooltip {
+  display: inline-block;
+  padding: var(--ic-space-4) var(--ic-space-8);
+  background: var(--ic-chrome);
+  color: var(--ic-text);
+  border: 1px solid var(--ic-border);
+}
+
+.ic-overlay {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  background: var(--ic-overlay-scrim);
+}
+
+.ic-overlay-card {
+  padding: var(--ic-space-16) var(--ic-space-24);
+  background: var(--ic-overlay-card);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-lg);
+  color: var(--ic-text);
+  font-size: var(--ic-fs-13);
+  font-weight: var(--ic-fw-semibold);
+}
+
+.ic-splitter {
+  background: var(--ic-border);
+}
+
+.ic-splitter:hover {
+  background: var(--ic-accent);
+}
+
+/* ============================================================ CHAT */
+
+.ic-bubble {
+  max-width: 560px;
+  padding: var(--ic-space-8) var(--ic-space-12);
+  border-radius: var(--ic-radius-xl);
+}
+
+/* The bubble text inherits ic-text (light-grey in the dark themes, dark in the
+   light themes), exactly as the app's message label does; it is not forced to
+   the on-accent colour, which would be unreadable on the pale light-theme
+   user bubble. */
+.ic-bubble--user {
+  background: var(--ic-bubble-user);
+  color: var(--ic-text);
+}
+
+.ic-bubble--assistant {
+  background: var(--ic-bubble-assistant);
+  color: var(--ic-text);
+}
+
+.ic-bubble--system {
+  background: var(--ic-bubble-system);
+  color: var(--ic-text);
+}
+
+.ic-bubble-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ic-space-12);
+  margin-bottom: var(--ic-space-4);
+}
+
+.ic-bubble-role {
+  font-size: var(--ic-fs-11);
+  font-weight: var(--ic-fw-bold);
+}
+
+.ic-bubble-time {
+  font-size: var(--ic-fs-10);
+  color: var(--ic-text-muted);
+}
+
+.ic-bubble code {
+  font-family: var(--ic-font-code);
+  color: var(--ic-code-variable);
+}
+
+.ic-tool-call {
+  padding: var(--ic-space-8) var(--ic-space-12);
+  background: var(--ic-tool-call-bg);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-lg);
+  font-family: var(--ic-font-code);
+  font-size: var(--ic-fs-12);
+}
+
+.ic-tool-call-head {
+  color: var(--ic-code-type);
+  font-weight: var(--ic-fw-bold);
+}
+
+.ic-tool-call-args {
+  color: var(--ic-code-variable);
+}
+
+.ic-tool-result {
+  padding: var(--ic-space-8) var(--ic-space-12);
+  background: var(--ic-tool-result-bg);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-lg);
+}
+
+.ic-tool-result--success {
+  background: var(--ic-result-success-bg);
+  border-color: var(--ic-result-success-border);
+}
+
+.ic-tool-result--error {
+  background: var(--ic-result-error-bg);
+  border-color: var(--ic-result-error-border);
+}
+
+.ic-tool-result-head--success {
+  color: var(--ic-success-text);
+  font-weight: var(--ic-fw-bold);
+}
+
+.ic-tool-result-head--error {
+  color: var(--ic-danger);
+  font-weight: var(--ic-fw-bold);
+}
+
+/* ============================================================ CODE / SYNTAX */
+
+.ic-code {
+  padding: var(--ic-space-12);
+  background: var(--ic-content);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-md);
+  font-family: var(--ic-font-code);
+  font-size: var(--ic-fs-12);
+  line-height: 1.6;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.asm-jump { color: var(--ic-asm-jump); }
+.asm-call { color: var(--ic-asm-call); }
+.asm-ret { color: var(--ic-asm-ret); }
+.asm-nop { color: var(--ic-asm-nop); }
+.asm-reg { color: var(--ic-asm-register); }
+.asm-imm { color: var(--ic-asm-immediate); }
+.asm-mem { color: var(--ic-asm-memory); }
+.asm-addr { color: var(--ic-text-muted); }
+
+/* ============================================================ COMBO POP-UP / SPIN / TOOL MENU */
+
+.ic-combo-popup {
+  min-width: var(--ic-control-min-w);
+  padding: 0;
+  background: var(--ic-chrome);
+  border: 1px solid var(--ic-border);
+  color: var(--ic-text);
+}
+
+.ic-combo-popup-item {
+  padding: var(--ic-space-4) var(--ic-space-8);
+}
+
+.ic-combo-popup-item.is-selected {
+  background: var(--ic-selection);
+  color: var(--ic-on-selection);
+}
+
+.ic-spin {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ic-spin-value {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: var(--ic-space-6) var(--ic-space-8);
+}
+
+.ic-spin-buttons {
+  display: flex;
+  flex-direction: column;
+  width: var(--ic-indicator);
+}
+
+.ic-spin-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ic-control-raised);
+  border-left: 1px solid var(--ic-control-raised);
+  color: var(--ic-text);
+  font-size: 8px;
+  line-height: 1;
+}
+
+.ic-spin-btn:hover,
+.ic-spin-btn.is-hover {
+  background: var(--ic-control-raised-hover);
+}
+
+.ic-tool-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ic-space-6);
+  min-height: var(--ic-control-h);
+  padding: var(--ic-space-6) var(--ic-space-8);
+  background: transparent;
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-md);
+  color: var(--ic-text);
+  font-family: inherit;
+  font-size: var(--ic-fs-12);
+}
+
+.ic-tool-menu::after {
+  content: "";
+  width: 0;
+  height: 0;
+  margin-left: var(--ic-space-2);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--ic-glyph);
+}
+
+.ic-tool-menu:hover,
+.ic-tool-menu.is-hover {
+  background: var(--ic-control-raised);
+  border-color: var(--ic-accent);
+}
+
+.ic-tool-menu:active,
+.ic-tool-menu.is-pressed {
+  background: var(--ic-tool-pressed);
+}
+
+.ic-tool-menu:disabled,
+.ic-tool-menu.is-disabled {
+  color: var(--ic-text-disabled);
+  border-color: var(--ic-border);
+  background: transparent;
+}
+
+/* ============================================================ TAB CLOSE / ANALYSIS TABS */
+
+.ic-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: var(--ic-space-6);
+  border-radius: var(--ic-radius-sm);
+  color: var(--ic-text-muted);
+  font-size: var(--ic-fs-11);
+  line-height: 1;
+}
+
+.ic-tab-close:hover,
+.ic-tab-close.is-hover {
+  background: var(--ic-hover);
+  color: var(--ic-text);
+}
+
+.ic-analysis-tabs .ic-tabbar {
+  background: var(--ic-header);
+}
+
+.ic-analysis-tabs .ic-tabpane {
+  border: none;
+  border-radius: 0;
+}
+
+/* ============================================================ SPLITTER / SEPARATORS / VERTICAL SLIDER */
+
+.ic-splitter--h {
+  width: var(--ic-splitter);
+  align-self: stretch;
+  flex: 0 0 auto;
+}
+
+.ic-splitter--v {
+  height: var(--ic-splitter);
+}
+
+.ic-splitter.is-hover {
+  background: var(--ic-accent);
+}
+
+.ic-hline {
+  height: 1px;
+  border: none;
+  background: var(--ic-border);
+}
+
+.ic-vline {
+  width: 1px;
+  align-self: stretch;
+  background: var(--ic-border);
+}
+
+.ic-slider--v {
+  width: var(--ic-indicator);
+  height: 120px;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.ic-slider--v .ic-slider-groove {
+  width: var(--ic-groove, 4px);
+  height: 100%;
+}
+
+.ic-slider-handle.is-hover {
+  background: var(--ic-primary-hover);
+}
+
+.ic-slider-handle.is-pressed {
+  background: var(--ic-primary-pressed);
+}
+
+.ic-slider-handle.is-disabled {
+  background: var(--ic-text-disabled);
+}
+
+/* ============================================================ LABEL VARIANTS */
+
+.ic-label-panel-title,
+.ic-label-bold {
+  color: var(--ic-text);
+  font-weight: var(--ic-fw-bold);
+}
+
+.ic-label-description,
+.ic-label-secondary {
+  color: var(--ic-text-muted);
+}
+
+.ic-label-timestamp {
+  color: var(--ic-text-muted);
+  font-size: var(--ic-fs-10);
+}
+
+.ic-label-hint {
+  color: var(--ic-text-muted);
+  font-size: var(--ic-fs-11);
+  font-style: italic;
+}
+
+.ic-label-search-status {
+  color: var(--ic-text-muted);
+  font-size: var(--ic-fs-11);
+}
+
+.ic-label-code {
+  color: var(--ic-code-variable);
+  font-family: var(--ic-font-code);
+}
+
+.ic-label-credential {
+  color: var(--ic-code-variable);
+  font-size: var(--ic-fs-11);
+}
+
+/* ============================================================ ANALYSIS TEXT PANELS */
+
+.ic-code-panel {
+  margin: 0;
+  padding: var(--ic-space-8);
+  background: var(--ic-content);
+  color: var(--ic-text);
+  border: none;
+  font-family: var(--ic-font-code);
+  font-size: var(--ic-fs-12);
+  line-height: 1.5;
+  white-space: pre;
+  overflow: hidden;
+}
+
+.ic-code-panel::selection,
+.ic-code-panel .is-selected {
+  background: var(--ic-code-selection);
+}
+
+.ic-list--functions .ic-list-item:not(.is-selected) {
+  color: var(--ic-code-function);
+}
+
+.ic-code-panel--console {
+  color: var(--ic-text-console);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: var(--ic-fs-10);
+}
+
+.ic-notes {
+  width: 100%;
+  min-height: 72px;
+  padding: var(--ic-space-8);
+  background: var(--ic-content);
+  color: var(--ic-text);
+  border: 1px solid var(--ic-border-control);
+  border-radius: var(--ic-radius-md);
+  font-family: var(--ic-font-code);
+  font-size: var(--ic-fs-12);
+}
+
+.ic-notes.is-focus {
+  border-color: var(--ic-accent);
+}
+
+/* ============================================================ TOOL-RESULT PROPERTY FRAMES */
+
+.ic-result-frame {
+  padding: var(--ic-space-8) var(--ic-space-12);
+  background: var(--ic-tool-result-bg);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-md);
+}
+
+.ic-result-frame--success {
+  border-left: var(--ic-result-bar) solid var(--ic-success);
+}
+
+.ic-result-frame--error {
+  border-left: var(--ic-result-bar) solid var(--ic-error);
+}
+
+/* ============================================================ CHAT CHROME */
+
+.ic-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ic-space-8);
+  padding: var(--ic-space-6) var(--ic-space-8);
+  background: var(--ic-chrome);
+  border-bottom: 1px solid var(--ic-border);
+}
+
+.ic-chat-input-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ic-space-8);
+  padding: var(--ic-space-8);
+  background: var(--ic-panel-muted);
+  border-top: 1px solid var(--ic-border);
+}
+
+.ic-chat-textedit {
+  flex: 1;
+  min-height: 40px;
+  padding: var(--ic-space-8);
+  background: var(--ic-chrome);
+  color: var(--ic-text);
+  border: 1px solid var(--ic-border-control);
+  border-radius: var(--ic-radius-xl);
+}
+
+.ic-chat-textedit.is-focus {
+  border-color: var(--ic-accent);
+}
+
+.ic-send-btn {
+  min-height: var(--ic-control-h);
+  padding: var(--ic-space-6) var(--ic-space-16);
+  border: none;
+  border-radius: var(--ic-radius-lg);
+  background: var(--ic-primary);
+  color: var(--ic-on-accent);
+  font-family: inherit;
+  font-size: var(--ic-fs-12);
+}
+
+.ic-send-btn:hover {
+  background: var(--ic-primary-hover);
+}
+
+.ic-send-btn:active {
+  background: var(--ic-send-pressed);
+}
+
+.ic-send-btn:disabled,
+.ic-send-btn.is-disabled {
+  background: var(--ic-disabled-fill);
+  color: var(--ic-send-disabled-text);
+}
+
+/* ============================================================ PREFERENCES DIALOG */
+
+.ic-prefs {
+  display: grid;
+  grid-template-columns: 168px 1fr;
+  grid-template-rows: 1fr auto;
+  border: 1px solid var(--ic-border);
+  background: var(--ic-window);
+  overflow: hidden;
+}
+
+.ic-prefs-categories {
+  grid-row: 1;
+  background: var(--ic-panel-muted);
+  border-right: 1px solid var(--ic-border);
+}
+
+.ic-prefs-category {
+  padding: var(--ic-space-12) var(--ic-space-16);
+  color: var(--ic-text);
+}
+
+.ic-prefs-category:hover:not(.is-selected),
+.ic-prefs-category.is-hover {
+  background: var(--ic-item-hover);
+}
+
+.ic-prefs-category.is-selected {
+  background: var(--ic-selection);
+  color: var(--ic-on-selection);
+}
+
+.ic-prefs-stack {
+  grid-row: 1;
+  padding: var(--ic-space-16);
+  background: var(--ic-window);
+}
+
+.ic-prefs-buttons {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ic-space-8);
+  padding: var(--ic-space-8) var(--ic-space-12);
+  background: var(--ic-chrome);
+  border-top: 1px solid var(--ic-border);
+}
+
+/* ============================================================ MESSAGE BOX */
+
+.ic-msgbox {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--ic-space-12) var(--ic-space-16);
+  padding: var(--ic-space-16);
+  background: var(--ic-window);
+  color: var(--ic-text);
+  border: 1px solid var(--ic-border);
+}
+
+.ic-msgbox-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.ic-msgbox-buttons {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ic-space-8);
+}
+
+/* ============================================================ SWATCH / CHIP */
+
+.ic-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--ic-radius-xs);
+  border: 1px solid var(--ic-divider);
+  vertical-align: -2px;
+}
