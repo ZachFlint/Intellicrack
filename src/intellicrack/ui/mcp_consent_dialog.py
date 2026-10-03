@@ -33,6 +33,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.mcp.config import launcher_notes, sandbox_limitations
 from intellicrack.mcp.consent import describe_launch, scan_command_for_dangerous_patterns
 from intellicrack.ui.resources.font_manager import FontManager
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 if TYPE_CHECKING:
@@ -53,11 +54,19 @@ _COMMAND_VIEW_MIN_HEIGHT: Final[int] = 340
 _BUTTON_MIN_WIDTH: Final[int] = 120
 _CODE_FONT_POINT_SIZE: Final[int] = 9
 
-_FLAG_BACKGROUND: Final[QColor] = QColor(255, 176, 0, 96)
-"""Amber wash behind a flagged fragment.
+_FLAG_BACKGROUND_ALPHA: Final[int] = 96
+"""Opacity of the wash behind a flagged fragment, so the command text stays readable through it."""
 
-Alpha-blended so it reads against both the light and the dark theme without the dialog having to know which one is active.
-"""
+
+def _flag_background() -> QColor:
+    """Build the wash painted behind a flagged fragment.
+
+    Returns:
+        QColor: The active theme's warning color at reduced opacity.
+    """
+    wash = QColor(ThemeManager.get_instance().get_analysis_colors()["warning"])
+    wash.setAlpha(_FLAG_BACKGROUND_ALPHA)
+    return wash
 
 
 class _DangerousPatternHighlighter(QSyntaxHighlighter):
@@ -77,8 +86,27 @@ class _DangerousPatternHighlighter(QSyntaxHighlighter):
         super().__init__(document)
         self._tokens = sorted({pattern.token for pattern in patterns if pattern.token.strip()}, key=len, reverse=True)
         self._format = QTextCharFormat()
-        self._format.setBackground(_FLAG_BACKGROUND)
+        self._format.setBackground(_flag_background())
         self._format.setFontWeight(700)
+        ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
+
+    def _on_theme_changed(self, resolved_theme: str) -> None:
+        """Repaint the flagged fragments in the new theme's warning color.
+
+        Args:
+            resolved_theme: The concrete theme now active. Unused: the color is read from :class:`ThemeManager`.
+        """
+        _ = resolved_theme
+        self._format.setBackground(_flag_background())
+        self.rehighlight()
+
+    def flag_background(self) -> QColor:
+        """Return the wash currently painted behind flagged fragments.
+
+        Returns:
+            QColor: The background color of the flagged-fragment format.
+        """
+        return self._format.background().color()
 
     @override
     def highlightBlock(self, text: str | None) -> None:

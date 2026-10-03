@@ -6,20 +6,36 @@
 
 Provides centralized theme and stylesheet management with support for dark, light, and system themes. The system theme follows the operating
 system's light/dark preference and tracks live OS changes.
+
+The module is also the single source of every colour the UI paints itself rather than leaving to the stylesheets: one palette per theme id,
+read through the typed ``ThemeManager.get_*_colors`` accessors. Widgets hold no colour tables of their own.
 """
 
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass, replace
 from importlib import resources
-from typing import ClassVar, Final, override
+from typing import TYPE_CHECKING, ClassVar, Final, TypedDict, override
 
 from PyQt6.QtCore import QEvent, QObject, Qt, pyqtBoundSignal, pyqtSignal
 from PyQt6.QtGui import QColor, QGuiApplication
 from PyQt6.QtWidgets import QAbstractScrollArea, QApplication, QFrame, QMenuBar, QStyle, QToolBar, QWidget
 
+from intellicrack.core.color_defaults import (
+    DEFAULT_BOOKMARK_COLOR,
+    DEFAULT_HIGHLIGHT_COLOR,
+    SECTION_CYCLE_COLORS,
+    STRUCTURE_HEADER_COLOR,
+    STRUCTURE_SECTION_COLOR,
+    STRUCTURE_TABLE_COLOR,
+)
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources.resource_helper import get_assets_path, get_style_path
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 if sys.platform == "win32":
@@ -227,6 +243,607 @@ def _load_family_fallback_stylesheet(theme: str) -> str:
 
 DARK_THEME_FALLBACK: Final[str] = _load_family_fallback_stylesheet(THEME_DARK)
 LIGHT_THEME_FALLBACK: Final[str] = _load_family_fallback_stylesheet(THEME_LIGHT)
+
+
+class HexEditorColors(TypedDict):
+    """Colours the hex editor grid, its entropy minimap and its colour modes paint with.
+
+    Attributes:
+        minimap_bg: Background of the entropy minimap strip.
+        minimap_indicator: Translucent fill of the minimap's visible-region marker.
+        minimap_indicator_border: Outline of the minimap's visible-region marker.
+        entropy_low: Low end of the entropy heat-map ramp.
+        entropy_mid: Middle of the entropy heat-map ramp.
+        entropy_high: High end of the entropy heat-map ramp.
+        editor_bg: Background of the hex grid.
+        offset_text: Offset column and column-header text.
+        separator: Rule drawn between the offset, hex and ASCII columns.
+        selection_bg: Fill behind selected bytes.
+        hex_normal: Hex digits of an unmodified, non-zero byte.
+        hex_modified: Text of a byte edited since the last save.
+        hex_zero: Hex digits of a zero byte.
+        ascii_printable: ASCII-column text of a printable byte.
+        ascii_nonprintable: ASCII-column placeholder of a non-printable byte.
+        cursor_text: Text of selected bytes and the cursor outline.
+        alignment_grid: Dashed alignment-grid lines.
+        content_null: Content-class tint for null or padding blocks.
+        content_text: Content-class tint for text blocks.
+        content_generic: Content-class tint for unclassified data blocks.
+        content_code: Content-class tint for machine-code blocks.
+        content_compressed: Content-class tint for compressed or encrypted blocks.
+    """
+
+    minimap_bg: QColor
+    minimap_indicator: QColor
+    minimap_indicator_border: QColor
+    entropy_low: QColor
+    entropy_mid: QColor
+    entropy_high: QColor
+    editor_bg: QColor
+    offset_text: QColor
+    separator: QColor
+    selection_bg: QColor
+    hex_normal: QColor
+    hex_modified: QColor
+    hex_zero: QColor
+    ascii_printable: QColor
+    ascii_nonprintable: QColor
+    cursor_text: QColor
+    alignment_grid: QColor
+    content_null: QColor
+    content_text: QColor
+    content_generic: QColor
+    content_code: QColor
+    content_compressed: QColor
+
+
+class ChartColors(TypedDict):
+    """Colours of the hex editor's statistics charts: entropy graph, byte histogram and digram heat map.
+
+    Attributes:
+        bg: Chart background.
+        entropy_low: Entropy line colour below the low threshold.
+        entropy_mid: Entropy line colour between the thresholds.
+        entropy_high: Entropy line colour above the high threshold.
+        axis: Axis lines and labels.
+        bar_normal: Histogram bar.
+        bar_hovered: Histogram bar under the pointer.
+        gradient_low: Background band of the low-entropy range.
+        gradient_mid: Background band of the mid-entropy range.
+        gradient_high: Background band of the high-entropy range.
+        heatmap_zero: Digram heat-map cell for a byte pair that never occurs.
+    """
+
+    bg: QColor
+    entropy_low: QColor
+    entropy_mid: QColor
+    entropy_high: QColor
+    axis: QColor
+    bar_normal: QColor
+    bar_hovered: QColor
+    gradient_low: QColor
+    gradient_mid: QColor
+    gradient_high: QColor
+    heatmap_zero: QColor
+
+
+class GraphColors(TypedDict):
+    """Colours of the control-flow graph view.
+
+    Attributes:
+        block_bg: Basic-block body fill.
+        block_border: Basic-block outline.
+        header_bg: Basic-block address header fill.
+        header_text: Basic-block address header text.
+        asm_text: Instruction text with no special role.
+        mnemonic_jump: Jump instructions.
+        mnemonic_call: Call instructions.
+        mnemonic_ret: Return instructions.
+        edge_true: Edge taken when a branch condition holds.
+        edge_false: Edge taken when a branch condition fails.
+        edge_uncond: Unconditional edge.
+        selected_border: Outline of the selected basic block.
+        background: Graph canvas.
+    """
+
+    block_bg: QColor
+    block_border: QColor
+    header_bg: QColor
+    header_text: QColor
+    asm_text: QColor
+    mnemonic_jump: QColor
+    mnemonic_call: QColor
+    mnemonic_ret: QColor
+    edge_true: QColor
+    edge_false: QColor
+    edge_uncond: QColor
+    selected_border: QColor
+    background: QColor
+
+
+class StackColors(TypedDict):
+    """Text colours of the call-stack table.
+
+    Attributes:
+        index_highlight: Index of the innermost frame.
+        address: Return address.
+        function_known: Resolved function name.
+        function_unknown: Placeholder shown for an unresolved function.
+        module: Module name.
+        offset: Offset into the function.
+        pointer: Frame and stack pointer values.
+    """
+
+    index_highlight: QColor
+    address: QColor
+    function_known: QColor
+    function_unknown: QColor
+    module: QColor
+    offset: QColor
+    pointer: QColor
+
+
+class CredentialSourceColors(TypedDict):
+    """Colours that say where a provider credential comes from.
+
+    The four source entries are also declared, value for value, by the ``QLabel#credential_source_label[credentialSource=...]`` rules of the
+    theme stylesheets, which is what styles the source badge itself.
+
+    Attributes:
+        env_file: Credential read from the ``.env`` file.
+        environment: Credential read from the process environment.
+        manual: Credential typed into the dialog.
+        not_configured: No credential available.
+        default: Any source the UI does not recognise.
+        configured: Provider list entry with a working credential.
+        unconfigured: Provider list entry without one.
+    """
+
+    env_file: QColor
+    environment: QColor
+    manual: QColor
+    not_configured: QColor
+    default: QColor
+    configured: QColor
+    unconfigured: QColor
+
+
+class HexMarkColors(TypedDict):
+    """Default colours for marks the hex editor stores in a document.
+
+    These are ``#RRGGBB`` strings rather than :class:`~PyQt6.QtGui.QColor` objects because they are written into bookmarks, highlight rules
+    and highlight regions, which persist them as text. A theme entry only supplies the colour a new mark starts with; a mark that already
+    exists keeps the colour it was created or saved with.
+
+    Attributes:
+        search_match: Highlight of a search hit.
+        yara_match: Highlight of a YARA rule match.
+        pattern_field: Highlight of a pattern field that declares no colour.
+        template_field: Highlight of a template field that declares no colour.
+        bookmark: Colour offered for a new bookmark.
+        highlight_rule: Colour offered for a new byte highlight rule.
+        structure_header: Auto-bookmark of a file header (DOS, ELF).
+        structure_table: Auto-bookmark of a header table (PE headers, program headers).
+        structure_section: Auto-bookmark of section-level structures (section headers).
+        section_cycle: Rotation used when each section gets its own auto-bookmark.
+    """
+
+    search_match: str
+    yara_match: str
+    pattern_field: str
+    template_field: str
+    bookmark: str
+    highlight_rule: str
+    structure_header: str
+    structure_table: str
+    structure_section: str
+    section_cycle: tuple[str, ...]
+
+
+class SplashColors(TypedDict):
+    """Colours of the startup splash screen.
+
+    The splash paints its own dark background whatever theme is configured, so there is one splash palette rather than one per theme, and
+    it is derived from the dark theme's entries.
+
+    Attributes:
+        accent: Progress fill, the active pipeline stage and the accent bar.
+        glow: Tint of the glow drawn around the brand mark.
+        text: Status, stage-label and title text.
+        subtitle: Subtitle text.
+        track: Unfilled part of the progress bar.
+        stage_pending: Pipeline stage that has not started.
+        stage_error: Pipeline stage that failed.
+        version_text: Version label, the text colour at reduced opacity.
+    """
+
+    accent: QColor
+    glow: QColor
+    text: QColor
+    subtitle: QColor
+    track: QColor
+    stage_pending: QColor
+    stage_error: QColor
+    version_text: QColor
+
+
+_SPLASH_VERSION_ALPHA: Final[int] = 153
+_LUMINANCE_MIDPOINT: Final[float] = 0.5
+_LUMINANCE_RED_WEIGHT: Final[float] = 0.299
+_LUMINANCE_GREEN_WEIGHT: Final[float] = 0.587
+_LUMINANCE_BLUE_WEIGHT: Final[float] = 0.114
+
+
+def _dark_analysis_colors() -> dict[str, QColor]:
+    """Build the dark theme's general semantic colours.
+
+    Returns:
+        dict[str, QColor]: Mapping of semantic colour names to fresh QColor instances.
+    """
+    return {
+        "background": QColor(30, 30, 30),
+        "foreground": QColor(212, 212, 212),
+        "accent": QColor(0, 122, 204),
+        "success": QColor(76, 175, 80),
+        "error": QColor(244, 67, 54),
+        "warning": QColor(255, 152, 0),
+        "muted": QColor(136, 136, 136),
+        "border": QColor(62, 62, 66),
+        "mnemonic_jump": QColor(86, 156, 214),
+        "mnemonic_call": QColor(220, 220, 170),
+        "mnemonic_ret": QColor(206, 145, 120),
+        "operand_register": QColor(78, 201, 176),
+        "operand_immediate": QColor(181, 206, 168),
+        "operand_memory": QColor(156, 220, 254),
+    }
+
+
+def _light_analysis_colors() -> dict[str, QColor]:
+    """Build the light theme's general semantic colours.
+
+    Returns:
+        dict[str, QColor]: Mapping of semantic colour names to fresh QColor instances.
+    """
+    return {
+        "background": QColor(236, 238, 242),
+        "foreground": QColor(26, 29, 33),
+        "accent": QColor(0, 103, 192),
+        "success": QColor(46, 125, 50),
+        "error": QColor(198, 40, 40),
+        "warning": QColor(239, 108, 0),
+        "muted": QColor(90, 99, 112),
+        "border": QColor(194, 200, 208),
+        "mnemonic_jump": QColor(0, 0, 255),
+        "mnemonic_call": QColor(121, 94, 38),
+        "mnemonic_ret": QColor(163, 21, 21),
+        "operand_register": QColor(0, 128, 128),
+        "operand_immediate": QColor(9, 134, 88),
+        "operand_memory": QColor(4, 81, 165),
+    }
+
+
+def _dark_hex_editor_colors() -> HexEditorColors:
+    """Build the dark theme's hex editor colours.
+
+    Returns:
+        HexEditorColors: Fresh QColor instances for every hex editor role.
+    """
+    return {
+        "minimap_bg": QColor(25, 25, 25),
+        "minimap_indicator": QColor(100, 150, 255, 100),
+        "minimap_indicator_border": QColor(150, 190, 255),
+        "entropy_low": QColor("#4CAF50"),
+        "entropy_mid": QColor("#FFC107"),
+        "entropy_high": QColor("#F44336"),
+        "editor_bg": QColor(30, 30, 30),
+        "offset_text": QColor(128, 128, 128),
+        "separator": QColor(60, 60, 60),
+        "selection_bg": QColor(100, 149, 237),
+        "hex_normal": QColor(212, 212, 212),
+        "hex_modified": QColor(255, 80, 80),
+        "hex_zero": QColor(80, 80, 80),
+        "ascii_printable": QColor(180, 200, 180),
+        "ascii_nonprintable": QColor(80, 80, 80),
+        "cursor_text": QColor(255, 255, 255),
+        "alignment_grid": QColor(120, 120, 200, 140),
+        "content_null": QColor(90, 90, 90),
+        "content_text": QColor(66, 165, 245),
+        "content_generic": QColor(171, 71, 188),
+        "content_code": QColor(255, 202, 40),
+        "content_compressed": QColor(239, 83, 80),
+    }
+
+
+def _light_hex_editor_colors() -> HexEditorColors:
+    """Build the light theme's hex editor colours.
+
+    Returns:
+        HexEditorColors: Fresh QColor instances for every hex editor role.
+    """
+    return {
+        "minimap_bg": QColor(245, 245, 245),
+        "minimap_indicator": QColor(50, 100, 220, 100),
+        "minimap_indicator_border": QColor(50, 100, 220),
+        "entropy_low": QColor("#2E7D32"),
+        "entropy_mid": QColor("#EF6C00"),
+        "entropy_high": QColor("#C62828"),
+        "editor_bg": QColor(255, 255, 255),
+        "offset_text": QColor(117, 117, 117),
+        "separator": QColor(224, 224, 224),
+        "selection_bg": QColor(0, 120, 212, 80),
+        "hex_normal": QColor(26, 26, 26),
+        "hex_modified": QColor(198, 40, 40),
+        "hex_zero": QColor(180, 180, 180),
+        "ascii_printable": QColor(46, 125, 50),
+        "ascii_nonprintable": QColor(180, 180, 180),
+        "cursor_text": QColor(0, 0, 0),
+        "alignment_grid": QColor(80, 80, 170, 140),
+        "content_null": QColor(158, 158, 158),
+        "content_text": QColor(21, 101, 192),
+        "content_generic": QColor(106, 27, 154),
+        "content_code": QColor(245, 127, 23),
+        "content_compressed": QColor(183, 28, 28),
+    }
+
+
+def _dark_chart_colors() -> ChartColors:
+    """Build the dark theme's statistics-chart colours.
+
+    Returns:
+        ChartColors: Fresh QColor instances for every chart role.
+    """
+    return {
+        "bg": QColor("#1E1E1E"),
+        "entropy_low": QColor("#4CAF50"),
+        "entropy_mid": QColor("#FFC107"),
+        "entropy_high": QColor("#F44336"),
+        "axis": QColor("#888888"),
+        "bar_normal": QColor("#2196F3"),
+        "bar_hovered": QColor("#4CAF50"),
+        "gradient_low": QColor("#1B3A1F"),
+        "gradient_mid": QColor("#3A3A1B"),
+        "gradient_high": QColor("#3A1B1B"),
+        "heatmap_zero": QColor(0, 0, 0),
+    }
+
+
+def _light_chart_colors() -> ChartColors:
+    """Build the light theme's statistics-chart colours.
+
+    Returns:
+        ChartColors: Fresh QColor instances for every chart role.
+    """
+    return {
+        "bg": QColor("#FFFFFF"),
+        "entropy_low": QColor("#2E7D32"),
+        "entropy_mid": QColor("#EF6C00"),
+        "entropy_high": QColor("#C62828"),
+        "axis": QColor("#5a6370"),
+        "bar_normal": QColor("#1565C0"),
+        "bar_hovered": QColor("#2E7D32"),
+        "gradient_low": QColor("#E8F5E9"),
+        "gradient_mid": QColor("#FFF3E0"),
+        "gradient_high": QColor("#FFEBEE"),
+        "heatmap_zero": QColor(0, 0, 0),
+    }
+
+
+def _dark_graph_colors() -> GraphColors:
+    """Build the dark theme's control-flow graph colours.
+
+    Returns:
+        GraphColors: Fresh QColor instances for every graph role.
+    """
+    return {
+        "block_bg": QColor(40, 44, 52),
+        "block_border": QColor(80, 85, 95),
+        "header_bg": QColor(55, 60, 72),
+        "header_text": QColor(220, 220, 220),
+        "asm_text": QColor(190, 190, 190),
+        "mnemonic_jump": QColor(86, 156, 214),
+        "mnemonic_call": QColor(78, 201, 176),
+        "mnemonic_ret": QColor(206, 106, 106),
+        "edge_true": QColor(80, 200, 80),
+        "edge_false": QColor(200, 80, 80),
+        "edge_uncond": QColor(150, 150, 150),
+        "selected_border": QColor(100, 150, 255),
+        "background": QColor(30, 30, 30),
+    }
+
+
+def _light_graph_colors() -> GraphColors:
+    """Build the light theme's control-flow graph colours.
+
+    Returns:
+        GraphColors: Fresh QColor instances for every graph role.
+    """
+    return {
+        "block_bg": QColor(255, 255, 255),
+        "block_border": QColor(200, 200, 210),
+        "header_bg": QColor(230, 235, 245),
+        "header_text": QColor(30, 30, 30),
+        "asm_text": QColor(60, 60, 60),
+        "mnemonic_jump": QColor(0, 0, 200),
+        "mnemonic_call": QColor(0, 128, 128),
+        "mnemonic_ret": QColor(180, 50, 50),
+        "edge_true": QColor(40, 160, 40),
+        "edge_false": QColor(200, 40, 40),
+        "edge_uncond": QColor(120, 120, 120),
+        "selected_border": QColor(50, 100, 220),
+        "background": QColor(248, 248, 248),
+    }
+
+
+def _dark_stack_colors() -> StackColors:
+    """Build the dark theme's call-stack table colours.
+
+    Returns:
+        StackColors: Fresh QColor instances for every stack-table role.
+    """
+    return {
+        "index_highlight": QColor("#4ec9b0"),
+        "address": QColor("#569cd6"),
+        "function_known": QColor("#dcdcaa"),
+        "function_unknown": QColor("#888888"),
+        "module": QColor("#4ec9b0"),
+        "offset": QColor("#b5cea8"),
+        "pointer": QColor("#ce9178"),
+    }
+
+
+def _light_stack_colors() -> StackColors:
+    """Build the light theme's call-stack table colours.
+
+    Returns:
+        StackColors: Fresh QColor instances for every stack-table role.
+    """
+    return {
+        "index_highlight": QColor("#0067c0"),
+        "address": QColor("#0451a5"),
+        "function_known": QColor("#795e26"),
+        "function_unknown": QColor("#5a6370"),
+        "module": QColor("#0067c0"),
+        "offset": QColor("#098658"),
+        "pointer": QColor("#a31515"),
+    }
+
+
+def _dark_credential_source_colors() -> CredentialSourceColors:
+    """Build the dark theme's credential-source colours.
+
+    Returns:
+        CredentialSourceColors: Fresh QColor instances for every credential-source role.
+    """
+    return {
+        "env_file": QColor(34, 139, 34),
+        "environment": QColor(70, 130, 180),
+        "manual": QColor(218, 165, 32),
+        "not_configured": QColor(178, 34, 34),
+        "default": QColor(128, 128, 128),
+        "configured": QColor(34, 139, 34),
+        "unconfigured": QColor(169, 169, 169),
+    }
+
+
+def _light_credential_source_colors() -> CredentialSourceColors:
+    """Build the light theme's credential-source colours.
+
+    Returns:
+        CredentialSourceColors: Fresh QColor instances for every credential-source role.
+    """
+    return {
+        "env_file": QColor(46, 125, 50),
+        "environment": QColor(21, 101, 192),
+        "manual": QColor(239, 108, 0),
+        "not_configured": QColor(198, 40, 40),
+        "default": QColor(117, 117, 117),
+        "configured": QColor(46, 125, 50),
+        "unconfigured": QColor(117, 117, 117),
+    }
+
+
+def _dark_hex_mark_colors() -> HexMarkColors:
+    """Build the dark theme's default hex-mark colours.
+
+    The bookmark, highlight-rule and structure entries are the defaults the hex-editor bridge advertises, read from
+    :mod:`intellicrack.core.color_defaults` so the dark theme and the bridge contract stay one value.
+
+    Returns:
+        HexMarkColors: Default colour strings for every kind of mark.
+    """
+    return {
+        "search_match": "#FFAA00",
+        "yara_match": "#AA44FF",
+        "pattern_field": "#FFD080",
+        "template_field": "#44FF44",
+        "bookmark": DEFAULT_BOOKMARK_COLOR,
+        "highlight_rule": DEFAULT_HIGHLIGHT_COLOR,
+        "structure_header": STRUCTURE_HEADER_COLOR,
+        "structure_table": STRUCTURE_TABLE_COLOR,
+        "structure_section": STRUCTURE_SECTION_COLOR,
+        "section_cycle": SECTION_CYCLE_COLORS,
+    }
+
+
+def _light_hex_mark_colors() -> HexMarkColors:
+    """Build the light theme's default hex-mark colours.
+
+    Marks are painted as translucent washes behind dark text on a white grid, so the light theme uses deeper, more saturated hues than the
+    pastels that read well on the dark grid.
+
+    Returns:
+        HexMarkColors: Default colour strings for every kind of mark.
+    """
+    return {
+        "search_match": "#FF8800",
+        "yara_match": "#7B1FA2",
+        "pattern_field": "#E65100",
+        "template_field": "#2E7D32",
+        "bookmark": "#F9A825",
+        "highlight_rule": "#F9A825",
+        "structure_header": "#C62828",
+        "structure_table": "#00897B",
+        "structure_section": "#0277BD",
+        "section_cycle": ("#0277BD", "#2E7D32", "#F9A825", "#8E24AA", "#00897B"),
+    }
+
+
+@dataclass(frozen=True, slots=True)
+class _ThemePalette:
+    """Every painted-colour table of one theme.
+
+    Each field is a factory rather than a stored mapping, so every caller receives fresh :class:`~PyQt6.QtGui.QColor` objects it may adjust
+    (for example with ``setAlpha``) without disturbing the palette.
+
+    Attributes:
+        analysis: General semantic colours and disassembly token colours.
+        hex_editor: Hex grid, minimap and colour-mode colours.
+        charts: Entropy graph, byte histogram and digram heat-map colours.
+        graph: Control-flow graph colours.
+        stack: Call-stack table colours.
+        credential_sources: Provider credential-source colours.
+        hex_marks: Default colours of marks stored in hex documents.
+    """
+
+    analysis: Callable[[], dict[str, QColor]]
+    hex_editor: Callable[[], HexEditorColors]
+    charts: Callable[[], ChartColors]
+    graph: Callable[[], GraphColors]
+    stack: Callable[[], StackColors]
+    credential_sources: Callable[[], CredentialSourceColors]
+    hex_marks: Callable[[], HexMarkColors]
+
+
+_DARK_PALETTE: Final[_ThemePalette] = _ThemePalette(
+    analysis=_dark_analysis_colors,
+    hex_editor=_dark_hex_editor_colors,
+    charts=_dark_chart_colors,
+    graph=_dark_graph_colors,
+    stack=_dark_stack_colors,
+    credential_sources=_dark_credential_source_colors,
+    hex_marks=_dark_hex_mark_colors,
+)
+_LIGHT_PALETTE: Final[_ThemePalette] = _ThemePalette(
+    analysis=_light_analysis_colors,
+    hex_editor=_light_hex_editor_colors,
+    charts=_light_chart_colors,
+    graph=_light_graph_colors,
+    stack=_light_stack_colors,
+    credential_sources=_light_credential_source_colors,
+    hex_marks=_light_hex_mark_colors,
+)
+
+_THEME_PALETTES: Final[dict[str, _ThemePalette]] = {
+    THEME_DARK: _DARK_PALETTE,
+    THEME_LIGHT: _LIGHT_PALETTE,
+    THEME_DARK2: replace(_DARK_PALETTE),
+    THEME_LIGHT2: replace(_LIGHT_PALETTE),
+}
+"""One palette per concrete theme id.
+
+``dark2`` and ``light2`` are entries of their own that start as copies of ``dark`` and ``light``. Giving a restyled theme its own painted
+colours means replacing a field of its entry here (``replace(_DARK_PALETTE, graph=_dark2_graph_colors)``); no widget needs to change.
+"""
 
 
 class ThemeManager:
@@ -677,81 +1294,138 @@ class ThemeManager:
         """
         return self._current_theme in _DARK_FAMILY
 
-    def get_analysis_colors(self) -> dict[str, QColor]:
-        """Get theme-aware semantic colors for custom painting and analysis views.
+    def _palette(self, theme: str | None) -> _ThemePalette:
+        """Select the palette of a theme.
+
+        Args:
+            theme: Theme name to resolve, or ``None`` for the theme currently rendered. ``"system"`` and unknown names resolve the same way
+                :meth:`resolve_theme` resolves them.
+
+        Returns:
+            _ThemePalette: The palette entry of the resolved theme.
+        """
+        resolved = self._current_theme if theme is None else self.resolve_theme(theme)
+        return _THEME_PALETTES.get(resolved, _THEME_PALETTES[DEFAULT_THEME])
+
+    def get_analysis_colors(self, theme: str | None = None) -> dict[str, QColor]:
+        """Get the general semantic colors and disassembly token colors of a theme.
+
+        Args:
+            theme: Theme name, or ``None`` for the theme currently rendered.
 
         Returns:
             dict[str, QColor]: Mapping of semantic color names to QColor instances.
         """
-        if self.is_dark_theme():
-            return {
-                "background": QColor(30, 30, 30),
-                "foreground": QColor(212, 212, 212),
-                "accent": QColor(0, 122, 204),
-                "success": QColor(76, 175, 80),
-                "error": QColor(244, 67, 54),
-                "warning": QColor(255, 152, 0),
-                "info": QColor(33, 150, 243),
-                "muted": QColor(136, 136, 136),
-                "border": QColor(62, 62, 66),
-                "surface": QColor(45, 45, 48),
-                "selection": QColor(9, 71, 113),
-                "entropy_low": QColor(76, 175, 80),
-                "entropy_mid": QColor(255, 152, 0),
-                "entropy_high": QColor(244, 67, 54),
-                "graph_edge": QColor(100, 100, 100),
-                "graph_node_bg": QColor(45, 45, 48),
-                "graph_node_border": QColor(62, 62, 66),
-                "hex_zero": QColor(100, 100, 100),
-                "hex_printable": QColor(156, 220, 254),
-                "hex_nonprintable": QColor(244, 67, 54),
-                "hex_modified": QColor(255, 152, 0),
-                "offset_text": QColor(136, 136, 136),
-                "separator": QColor(62, 62, 66),
-                "minimap_bg": QColor(37, 37, 38),
-                "minimap_indicator": QColor(0, 122, 204, 80),
-                "mnemonic_jump": QColor(86, 156, 214),
-                "mnemonic_call": QColor(220, 220, 170),
-                "mnemonic_ret": QColor(206, 145, 120),
-                "mnemonic_nop": QColor(100, 100, 100),
-                "operand_register": QColor(78, 201, 176),
-                "operand_immediate": QColor(181, 206, 168),
-                "operand_memory": QColor(156, 220, 254),
-            }
+        return self._palette(theme).analysis()
+
+    def get_hex_editor_colors(self, theme: str | None = None) -> HexEditorColors:
+        """Get the colors the hex editor grid, minimap and color modes paint with.
+
+        Args:
+            theme: Theme name, or ``None`` for the theme currently rendered.
+
+        Returns:
+            HexEditorColors: Colors for every hex editor role.
+        """
+        return self._palette(theme).hex_editor()
+
+    def get_chart_colors(self, theme: str | None = None) -> ChartColors:
+        """Get the colors of the entropy graph, byte histogram and digram heat map.
+
+        Args:
+            theme: Theme name, or ``None`` for the theme currently rendered.
+
+        Returns:
+            ChartColors: Colors for every chart role.
+        """
+        return self._palette(theme).charts()
+
+    def get_graph_colors(self, theme: str | None = None) -> GraphColors:
+        """Get the colors of the control-flow graph view.
+
+        Args:
+            theme: Theme name, or ``None`` for the theme currently rendered.
+
+        Returns:
+            GraphColors: Colors for every graph role.
+        """
+        return self._palette(theme).graph()
+
+    def get_stack_colors(self, theme: str | None = None) -> StackColors:
+        """Get the text colors of the call-stack table.
+
+        Args:
+            theme: Theme name, or ``None`` for the theme currently rendered.
+
+        Returns:
+            StackColors: Colors for every stack-table role.
+        """
+        return self._palette(theme).stack()
+
+    def get_credential_source_colors(self, theme: str | None = None) -> CredentialSourceColors:
+        """Get the colors that say where a provider credential comes from.
+
+        Args:
+            theme: Theme name, or ``None`` for the theme currently rendered.
+
+        Returns:
+            CredentialSourceColors: Colors for every credential-source role.
+        """
+        return self._palette(theme).credential_sources()
+
+    def get_hex_mark_colors(self, theme: str | None = None) -> HexMarkColors:
+        """Get the default colors of marks the hex editor stores in a document.
+
+        Args:
+            theme: Theme name, or ``None`` for the theme currently rendered.
+
+        Returns:
+            HexMarkColors: Default ``#RRGGBB`` strings for every kind of mark.
+        """
+        return self._palette(theme).hex_marks()
+
+    @staticmethod
+    def get_splash_colors() -> SplashColors:
+        """Get the colors of the startup splash screen.
+
+        The splash always renders on its own dark background, so these are the dark theme's entries whatever theme is active. It needs no
+        :class:`ThemeManager` instance and no applied theme, so the splash can call it before the application is styled.
+
+        Returns:
+            SplashColors: Colors for every splash role.
+        """
+        dark = _THEME_PALETTES[THEME_DARK].analysis()
+        version_text = QColor(dark["foreground"])
+        version_text.setAlpha(_SPLASH_VERSION_ALPHA)
         return {
-            "background": QColor(236, 238, 242),
-            "foreground": QColor(26, 29, 33),
-            "accent": QColor(0, 103, 192),
-            "success": QColor(46, 125, 50),
-            "error": QColor(198, 40, 40),
-            "warning": QColor(239, 108, 0),
-            "info": QColor(21, 101, 192),
-            "muted": QColor(90, 99, 112),
-            "border": QColor(194, 200, 208),
-            "surface": QColor(255, 255, 255),
-            "selection": QColor(0, 103, 192, 50),
-            "entropy_low": QColor(46, 125, 50),
-            "entropy_mid": QColor(239, 108, 0),
-            "entropy_high": QColor(198, 40, 40),
-            "graph_edge": QColor(154, 163, 173),
-            "graph_node_bg": QColor(255, 255, 255),
-            "graph_node_border": QColor(194, 200, 208),
-            "hex_zero": QColor(154, 163, 173),
-            "hex_printable": QColor(4, 81, 165),
-            "hex_nonprintable": QColor(198, 40, 40),
-            "hex_modified": QColor(239, 108, 0),
-            "offset_text": QColor(90, 99, 112),
-            "separator": QColor(212, 217, 224),
-            "minimap_bg": QColor(227, 230, 235),
-            "minimap_indicator": QColor(0, 103, 192, 80),
-            "mnemonic_jump": QColor(0, 0, 255),
-            "mnemonic_call": QColor(121, 94, 38),
-            "mnemonic_ret": QColor(163, 21, 21),
-            "mnemonic_nop": QColor(160, 160, 160),
-            "operand_register": QColor(0, 128, 128),
-            "operand_immediate": QColor(9, 134, 88),
-            "operand_memory": QColor(4, 81, 165),
+            "accent": dark["accent"],
+            "glow": QColor(dark["accent"]),
+            "text": dark["foreground"],
+            "subtitle": dark["muted"],
+            "track": dark["border"],
+            "stage_pending": QColor(85, 85, 85),
+            "stage_error": QColor(204, 51, 51),
+            "version_text": version_text,
         }
+
+    @staticmethod
+    def contrasting_text_color(background: QColor) -> QColor:
+        """Return black or white, whichever reads better on a solid background.
+
+        Args:
+            background: Solid color the text is painted over.
+
+        Returns:
+            QColor: Black for light backgrounds and white for dark ones, chosen by perceived (Rec. 601) relative luminance.
+        """
+        luminance = (
+            _LUMINANCE_RED_WEIGHT * background.red()
+            + _LUMINANCE_GREEN_WEIGHT * background.green()
+            + _LUMINANCE_BLUE_WEIGHT * background.blue()
+        ) / 255.0
+        if luminance > _LUMINANCE_MIDPOINT:
+            return QColor(0, 0, 0)
+        return QColor(255, 255, 255)
 
     def clear_cache(self) -> None:
         """Clear the stylesheet cache."""

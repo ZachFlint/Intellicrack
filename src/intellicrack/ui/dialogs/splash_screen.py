@@ -42,6 +42,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources import get_assets_path
 from intellicrack.ui.resources.font_manager import FontManager
+from intellicrack.ui.resources.theme_manager import SplashColors, ThemeManager
 
 
 _logger = get_logger(__name__)
@@ -62,7 +63,6 @@ _STATUS_FONT_SIZE: Final[int] = 11
 _TITLE_FONT_SIZE: Final[int] = 32
 _SUBTITLE_FONT_SIZE: Final[int] = 12
 _VERSION_FONT_SIZE: Final[int] = 10
-_VERSION_LABEL_COLOR: Final[str] = "rgba(212, 212, 212, 0.6)"
 _PROGRESS_BAR_BG_COLOR: Final[str] = "#3e3e42"
 _SUBTITLE_COLOR: Final[str] = "#888888"
 
@@ -165,6 +165,75 @@ _BG_GRADIENT_INNER_COLOR: Final[str] = "#1a1a1a"
 _BG_GRADIENT_MID_COLOR: Final[str] = "#121212"
 _BG_GRADIENT_OUTER_COLOR: Final[str] = "#0a0a0a"
 _BG_GRADIENT_MID_STOP: Final[float] = 0.55
+
+
+def _fallback_splash_colors() -> SplashColors:
+    """Build the splash colors from this module's own literals.
+
+    Returns:
+        SplashColors: The colors the splash was designed with, used for any role the theme system cannot supply.
+    """
+    version_text = QColor(FALLBACK_TEXT_COLOR)
+    version_text.setAlpha(_VERSION_ALPHA)
+    return {
+        "accent": QColor(FALLBACK_ACCENT_COLOR),
+        "glow": QColor(_GLOW_ACCENT_COLOR),
+        "text": QColor(FALLBACK_TEXT_COLOR),
+        "subtitle": QColor(_SUBTITLE_COLOR),
+        "track": QColor(_PROGRESS_BAR_BG_COLOR),
+        "stage_pending": QColor(_STAGE_PENDING_COLOR),
+        "stage_error": QColor(_STAGE_ERROR_COLOR),
+        "version_text": version_text,
+    }
+
+
+def _valid_or(color: QColor, fallback: QColor) -> QColor:
+    """Pick a theme color, or its fallback when the theme has no usable value.
+
+    Args:
+        color: The color supplied by the theme system.
+        fallback: The literal the splash was designed with.
+
+    Returns:
+        QColor: ``color`` when it is a valid color, otherwise ``fallback``.
+    """
+    return color if color.isValid() else fallback
+
+
+def _splash_colors() -> SplashColors:
+    """Resolve the splash colors from the dark theme's entries.
+
+    The splash always paints its own dark background, so it reads the dark theme's entries whatever theme is configured and never switches
+    with the application theme. It is shown before any theme has been applied, so each role falls back to this module's literal when the
+    theme system does not hand back a valid color for it.
+
+    Returns:
+        SplashColors: The color of every splash role.
+    """
+    themed = ThemeManager.get_splash_colors()
+    fallback = _fallback_splash_colors()
+    return {
+        "accent": _valid_or(themed["accent"], fallback["accent"]),
+        "glow": _valid_or(themed["glow"], fallback["glow"]),
+        "text": _valid_or(themed["text"], fallback["text"]),
+        "subtitle": _valid_or(themed["subtitle"], fallback["subtitle"]),
+        "track": _valid_or(themed["track"], fallback["track"]),
+        "stage_pending": _valid_or(themed["stage_pending"], fallback["stage_pending"]),
+        "stage_error": _valid_or(themed["stage_error"], fallback["stage_error"]),
+        "version_text": _valid_or(themed["version_text"], fallback["version_text"]),
+    }
+
+
+def _css_rgba(color: QColor) -> str:
+    """Format a color with its opacity for a Qt stylesheet.
+
+    Args:
+        color: The color to format.
+
+    Returns:
+        str: An ``rgba(r, g, b, a)`` expression with the alpha as a fraction of one.
+    """
+    return f"rgba({color.red()}, {color.green()}, {color.blue()}, {color.alphaF():.2g})"
 
 
 def _draw_splash_background(painter: QPainter, size: int) -> None:
@@ -327,7 +396,7 @@ class SplashScreen(QSplashScreen):
         scaled_h = int(SPLASH_HEIGHT * dpi_scale)
 
         transparent_pixmap = QPixmap(scaled_w, scaled_h)
-        transparent_pixmap.fill(QColor(0, 0, 0, 0))
+        transparent_pixmap.fill(Qt.GlobalColor.transparent)
         transparent_pixmap.setDevicePixelRatio(dpi_scale)
         super().__init__(transparent_pixmap)
 
@@ -476,9 +545,10 @@ class SplashScreen(QSplashScreen):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
 
+        colors = _splash_colors()
         title_font = FontManager.get_instance().get_heading_font(int(_TITLE_FONT_SIZE * dpi_scale))
         painter.setFont(title_font)
-        painter.setPen(QColor(FALLBACK_TEXT_COLOR))
+        painter.setPen(colors["text"])
 
         title_rect = pixmap.rect()
         title_rect.setBottom(title_rect.center().y())
@@ -486,7 +556,7 @@ class SplashScreen(QSplashScreen):
 
         subtitle_font = FontManager.get_instance().get_ui_font(int(_SUBTITLE_FONT_SIZE * dpi_scale))
         painter.setFont(subtitle_font)
-        painter.setPen(QColor(_SUBTITLE_COLOR))
+        painter.setPen(colors["subtitle"])
 
         subtitle_rect = pixmap.rect()
         subtitle_rect.setTop(title_rect.center().y() + int(20 * dpi_scale))
@@ -495,7 +565,7 @@ class SplashScreen(QSplashScreen):
 
         accent_rect = pixmap.rect()
         accent_rect.setTop(accent_rect.bottom() - int(4 * dpi_scale))
-        painter.fillRect(accent_rect, QColor(FALLBACK_ACCENT_COLOR))
+        painter.fillRect(accent_rect, colors["accent"])
 
         painter.end()
         return pixmap
@@ -547,6 +617,7 @@ class SplashScreen(QSplashScreen):
         :meth:`set_progress` once the first progress update arrives, so the animated progress bar is actually visible to the user while
         initialization runs.
         """
+        colors = _splash_colors()
         self._overlay = QWidget(self)
         self._overlay.setStyleSheet("background: transparent;")
 
@@ -559,7 +630,7 @@ class SplashScreen(QSplashScreen):
 
         self._status_label = QLabel("Initializing...", self._overlay)
         self._status_label.setStyleSheet(
-            f"color: {FALLBACK_TEXT_COLOR}; font-size: {_STATUS_FONT_SIZE}px; background: transparent;",
+            f"color: {colors['text'].name()}; font-size: {_STATUS_FONT_SIZE}px; background: transparent;",
         )
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._status_label.setVisible(False)
@@ -574,12 +645,12 @@ class SplashScreen(QSplashScreen):
         self.progress_bar.setStyleSheet(
             f"""
             QProgressBar {{
-                background-color: {_PROGRESS_BAR_BG_COLOR};
+                background-color: {colors["track"].name()};
                 border: none;
                 border-radius: {border_radius}px;
             }}
             QProgressBar::chunk {{
-                background-color: {FALLBACK_ACCENT_COLOR};
+                background-color: {colors["accent"].name()};
                 border-radius: {border_radius}px;
             }}
         """,
@@ -590,7 +661,7 @@ class SplashScreen(QSplashScreen):
         if self._version:
             self.version_label = QLabel(f"v{self._version}", self._overlay)
             self.version_label.setStyleSheet(
-                f"color: {_VERSION_LABEL_COLOR}; font-size: {_VERSION_FONT_SIZE}px; background: transparent;",
+                f"color: {_css_rgba(colors['version_text'])}; font-size: {_VERSION_FONT_SIZE}px; background: transparent;",
             )
             self.version_label.setAlignment(Qt.AlignmentFlag.AlignRight)
             self.version_label.setVisible(False)
@@ -724,7 +795,7 @@ class SplashScreen(QSplashScreen):
         self.showMessage(
             self._status_message,
             Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter,
-            QColor(FALLBACK_TEXT_COLOR),
+            _splash_colors()["text"],
         )
 
         app = QApplication.instance()
@@ -925,7 +996,8 @@ class SplashScreen(QSplashScreen):
             title_rect: Rectangle for title text positioning.
             title: Title text string to render.
         """
-        accent = QColor(_GLOW_ACCENT_COLOR)
+        colors = _splash_colors()
+        accent = colors["glow"]
 
         for alpha, radius in _GLOW_LAYERS:
             glow_color = QColor(accent.red(), accent.green(), accent.blue(), alpha)
@@ -939,7 +1011,7 @@ class SplashScreen(QSplashScreen):
                 offset_rect = title_rect.translated(offset_x, offset_y)
                 painter.drawText(offset_rect, Qt.AlignmentFlag.AlignCenter, title)
 
-        painter.setPen(QColor(FALLBACK_TEXT_COLOR))
+        painter.setPen(colors["text"])
         painter.drawText(title_rect, Qt.AlignmentFlag.AlignCenter, title)
 
     def _draw_pipeline(self, painter: QPainter, rect: QRectF) -> None:
@@ -955,7 +1027,8 @@ class SplashScreen(QSplashScreen):
         pipeline_y = rect.height() - _PIPELINE_Y_OFFSET_FROM_BOTTOM * scale
         spacing = (rect.width() - 2.0 * margin_h) / max(1, _STAGE_COUNT - 1)
 
-        colors = (QColor(_STAGE_PENDING_COLOR), QColor(FALLBACK_ACCENT_COLOR), QColor(_STAGE_ERROR_COLOR))
+        splash_colors = _splash_colors()
+        colors = (splash_colors["stage_pending"], splash_colors["accent"], splash_colors["stage_error"])
 
         painter.setPen(QPen(colors[0], _PIPELINE_LINE_WIDTH * scale))
         for i in range(_STAGE_COUNT - 1):
@@ -1018,7 +1091,7 @@ class SplashScreen(QSplashScreen):
 
         if state == _StageState.PENDING:
             painter.setPen(QPen(pending_color, _PENDING_PEN_WIDTH * self._dpi_scale))
-            painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
+            painter.setBrush(QBrush(Qt.GlobalColor.transparent))
             painter.drawEllipse(circle_rect)
 
         elif state == _StageState.ACTIVE:
@@ -1026,7 +1099,7 @@ class SplashScreen(QSplashScreen):
             alpha = int(_ACTIVE_BASE_ALPHA + _ACTIVE_RANGE_ALPHA * pulse)
             pulse_color = QColor(accent.red(), accent.green(), accent.blue(), alpha)
             painter.setPen(QPen(pulse_color, _ACTIVE_PEN_WIDTH * self._dpi_scale))
-            painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
+            painter.setBrush(QBrush(Qt.GlobalColor.transparent))
             painter.drawEllipse(circle_rect)
 
             dot_r = radius * _DOT_RADIUS_FACTOR
@@ -1084,8 +1157,9 @@ class SplashScreen(QSplashScreen):
         pipeline_y = rect.height() - _PIPELINE_Y_OFFSET_FROM_BOTTOM * scale
 
         status_font = FontManager.get_instance().get_ui_font(int(_STATUS_FONT_SIZE * scale))
+        colors = _splash_colors()
         painter.setFont(status_font)
-        painter.setPen(QColor(FALLBACK_TEXT_COLOR))
+        painter.setPen(colors["text"])
         status_y = pipeline_y - _STATUS_Y_OFFSET_FROM_PIPELINE * scale
         status_rect = QRectF(0, status_y - _STATUS_TEXT_HEIGHT * scale, rect.width(), _STATUS_TEXT_HEIGHT * scale)
         painter.drawText(status_rect, Qt.AlignmentFlag.AlignCenter, self._status_message)
@@ -1093,7 +1167,7 @@ class SplashScreen(QSplashScreen):
         if self._version:
             version_font = FontManager.get_instance().get_ui_font(int(_VERSION_FONT_SIZE * scale))
             painter.setFont(version_font)
-            painter.setPen(QColor(212, 212, 212, _VERSION_ALPHA))
+            painter.setPen(colors["version_text"])
             version_margin_b = _VERSION_MARGIN_BOTTOM * scale
             version_margin_r = _VERSION_MARGIN_RIGHT * scale
             version_rect = QRectF(

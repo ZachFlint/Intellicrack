@@ -90,7 +90,7 @@ from intellicrack.providers.presets import all_presets, preset_for
 from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
 from intellicrack.ui.panels.async_bridge import RetainedWorker, run_bridge_coroutine, run_bridge_coroutine_async
 from intellicrack.ui.resources import IconManager
-from intellicrack.ui.resources.theme_manager import ThemeManager
+from intellicrack.ui.resources.theme_manager import CredentialSourceColors, ThemeManager
 
 
 _logger = get_logger(__name__)
@@ -171,31 +171,19 @@ _TIMEOUT_PROVIDER_DEFAULT_TEXT: Final[str] = "Provider default"
 _PROVIDERS_WITHOUT_CREDENTIAL_FIELDS: Final[frozenset[str]] = frozenset({"local_transformers"})
 
 
-def _get_source_colors() -> dict[str, QColor]:
-    """Get theme-aware colors for credential source indicators.
+_CredentialSourceKey = Literal["env_file", "environment", "manual", "not_configured", "default"]
+
+_CREDENTIAL_SOURCE_PROPERTY: Final[str] = "credentialSource"
+"""Dynamic property the theme stylesheets match to color the credential source badge."""
+
+
+def _get_source_colors() -> CredentialSourceColors:
+    """Get the active theme's colors for credential source indicators.
 
     Returns:
-        dict[str, QColor]: Mapping of source names to QColor values.
+        CredentialSourceColors: The credential-source palette of the theme currently rendered, as held by :class:`ThemeManager`.
     """
-    if ThemeManager.get_instance().is_dark_theme():
-        return {
-            "env_file": QColor(34, 139, 34),
-            "environment": QColor(70, 130, 180),
-            "manual": QColor(218, 165, 32),
-            "not_configured": QColor(178, 34, 34),
-            "default": QColor(128, 128, 128),
-            "configured": QColor(34, 139, 34),
-            "unconfigured": QColor(169, 169, 169),
-        }
-    return {
-        "env_file": QColor(46, 125, 50),
-        "environment": QColor(21, 101, 192),
-        "manual": QColor(239, 108, 0),
-        "not_configured": QColor(198, 40, 40),
-        "default": QColor(117, 117, 117),
-        "configured": QColor(46, 125, 50),
-        "unconfigured": QColor(117, 117, 117),
-    }
+    return ThemeManager.get_instance().get_credential_source_colors()
 
 
 def _restyle(widget: QWidget) -> None:
@@ -794,6 +782,27 @@ class CredentialSourceDetector:
         return CredentialSource.MANUAL
 
     @staticmethod
+    def get_source_key(source: str) -> _CredentialSourceKey:
+        """Map a credential source to the key the theme system knows it by.
+
+        The key names the source's entry in :class:`ThemeManager`'s credential-source palette and is the value of the
+        ``credentialSource`` property the theme stylesheets match on the source badge.
+
+        Args:
+            source: The credential source string.
+
+        Returns:
+            _CredentialSourceKey: The theme key of the source, or ``"default"`` for a source the UI does not recognise.
+        """
+        source_key_map: dict[str, _CredentialSourceKey] = {
+            CredentialSource.ENV_FILE: "env_file",
+            CredentialSource.ENVIRONMENT: "environment",
+            CredentialSource.MANUAL: "manual",
+            CredentialSource.NOT_CONFIGURED: "not_configured",
+        }
+        return source_key_map.get(source, "default")
+
+    @staticmethod
     def get_source_color(source: str) -> QColor:
         """Get the display color for a credential source.
 
@@ -803,15 +812,7 @@ class CredentialSourceDetector:
         Returns:
             QColor: QColor for the source indicator.
         """
-        colors = _get_source_colors()
-        source_key_map = {
-            CredentialSource.ENV_FILE: "env_file",
-            CredentialSource.ENVIRONMENT: "environment",
-            CredentialSource.MANUAL: "manual",
-            CredentialSource.NOT_CONFIGURED: "not_configured",
-        }
-        key = source_key_map.get(source, "default")
-        return colors.get(key, colors["default"])
+        return _get_source_colors()[CredentialSourceDetector.get_source_key(source)]
 
 
 class ConnectionTestWorker(RetainedWorker):
@@ -4233,18 +4234,24 @@ class ProviderSettingsWidget(QFrame):
             api_key: The current API key value.
         """
         if self._credential_detector is None:
-            self._credential_source_label.setText(CredentialSource.NOT_CONFIGURED)
+            self._show_credential_source(CredentialSource.NOT_CONFIGURED)
             return
 
-        source = self._credential_detector.detect_source(self.provider_id, api_key)
-        color = self._credential_detector.get_source_color(source)
+        self._show_credential_source(self._credential_detector.detect_source(self.provider_id, api_key))
 
+    def _show_credential_source(self, source: str) -> None:
+        """Show a credential source on the badge and let the theme color it.
+
+        The badge carries no stylesheet of its own. Its ``credentialSource`` property selects the matching
+        ``QLabel#credential_source_label[credentialSource=...]`` rule of the active theme stylesheet, so the badge follows a theme switch
+        like any other themed widget.
+
+        Args:
+            source: The credential source string to display.
+        """
         self._credential_source_label.setText(source)
-        self._credential_source_label.setStyleSheet(
-            f"QLabel {{ padding: 4px 8px; border-radius: 3px; font-size: 11px; "
-            f"background-color: rgba({color.red()}, {color.green()}, {color.blue()}, 0.2); "
-            f"color: rgb({color.red()}, {color.green()}, {color.blue()}); }}",
-        )
+        self._credential_source_label.setProperty(_CREDENTIAL_SOURCE_PROPERTY, CredentialSourceDetector.get_source_key(source))
+        _restyle(self._credential_source_label)
 
     def _compute_recommended_model_text(self, discovery: ModelDiscovery) -> str:
         """Determine the recommended-model label text for the provider.
