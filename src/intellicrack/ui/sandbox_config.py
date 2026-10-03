@@ -722,6 +722,7 @@ class SandboxConfigDialog(QDialog):
 
         self._status_frame = QFrame()
         self._status_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        self._status_frame.setProperty("toolResult", "true")
         status_layout = QHBoxLayout(self._status_frame)
 
         self._status_icon = QLabel()

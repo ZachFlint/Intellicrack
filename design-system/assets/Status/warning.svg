@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="warningGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF9800;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E65100;stop-opacity:1" />
+    </linearGradient>
+    <filter id="warningShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#BF360C" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Warning triangle background -->
+  <path d="M12 2 L22 20 L2 20 Z" fill="url(#warningGradient)" stroke="#BF360C" stroke-width="0.8" filter="url(#warningShadowFilter)"/>
+  <path d="M12 4.5 L19.5 18.5 L4.5 18.5 Z" fill="none" stroke="#FFE0B2" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- Exclamation mark -->
+  <path d="M12 8 L12 14" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="12" cy="17" r="1.2" fill="#FFFFFF"/>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="11" cy="7" rx="2.5" ry="1.2" fill="#FFFFFF" opacity="0.2"/>
+</svg>

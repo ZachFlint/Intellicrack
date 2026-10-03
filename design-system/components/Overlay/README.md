@@ -1,0 +1,1 @@
+The attach-hint overlay covers a detail tab with a translucent scrim (`ic-overlay-scrim`, the window colour at ~82% over the view) and a centred card (`ic-overlay-card`) directing the next action. The same pattern backs any full-tab empty state that waits on the user.

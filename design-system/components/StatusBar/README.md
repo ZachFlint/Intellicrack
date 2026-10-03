@@ -1,0 +1,1 @@
+The main-window status bar is the one surface painted in the full accent, with `ic-on-accent` text. Inline status is carried by the quartet `ic-status--success / --error / --warning / --info` (plus idle), each pairing a coloured dot with its word so the state never rides on colour alone.

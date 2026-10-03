@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="infoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2196F3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0D47A1;stop-opacity:1" />
+    </linearGradient>
+    <filter id="infoShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#01579B" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Info circle background -->
+  <circle cx="12" cy="12" r="11" fill="url(#infoGradient)" stroke="#01579B" stroke-width="0.8" filter="url(#infoShadowFilter)"/>
+  <circle cx="12" cy="12" r="8.5" fill="none" stroke="#BBDEFB" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- Information 'i' -->
+  <circle cx="12" cy="7.5" r="1.2" fill="#FFFFFF"/>
+  <path d="M12 10.5 L12 16.5" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M10.5 16.5 L13.5 16.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="10" cy="8" rx="3" ry="1.5" fill="#FFFFFF" opacity="0.2"/>
+</svg>

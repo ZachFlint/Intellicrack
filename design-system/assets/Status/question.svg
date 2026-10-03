@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="questionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#9C27B0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4A148C;stop-opacity:1" />
+    </linearGradient>
+    <filter id="questionShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#2E003E" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Question circle background -->
+  <circle cx="12" cy="12" r="11" fill="url(#questionGradient)" stroke="#2E003E" stroke-width="0.8" filter="url(#questionShadowFilter)"/>
+  <circle cx="12" cy="12" r="8.5" fill="none" stroke="#E1BEE7" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- Question mark -->
+  <path d="M9 9 Q9 7 11 7 Q13 7 13 9 Q13 10.5 12 11 L12 13" stroke="#FFFFFF" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="12" cy="16" r="1.2" fill="#FFFFFF"/>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="10" cy="8" rx="3" ry="1.5" fill="#FFFFFF" opacity="0.2"/>
+</svg>

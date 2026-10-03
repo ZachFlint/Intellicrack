@@ -1,0 +1,963 @@
+{
+  "v": 3,
+  "layout": "files",
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-02T18:05:00Z"
+  },
+  "title": "Intellicrack",
+  "namespace": "Intellicrack",
+  "libraries": [],
+  "sections": {},
+  "groups": [
+    "Logos",
+    "Status",
+    "Tools",
+    "Actions",
+    "Binary",
+    "File",
+    "Edit",
+    "Navigation",
+    "Security",
+    "AI",
+    "Database",
+    "Help",
+    "Legacy"
+  ],
+  "assetGroups": {
+    "Logos": {
+      "name": "Logos",
+      "tile": "l",
+      "order": [
+        "intellicrack-mark.png",
+        "intellicrack-wordmark.png",
+        "app-icon.png",
+        "splash.png"
+      ],
+      "files": {
+        "intellicrack-mark.png": {
+          "name": "intellicrack-mark.png",
+          "blob": "0846fa15708e168afe398817708bcf34",
+          "size": 19498,
+          "type": "image/png"
+        },
+        "intellicrack-wordmark.png": {
+          "name": "intellicrack-wordmark.png",
+          "blob": "342ef6c3b726f5a671bd2ce0e1c01094",
+          "size": 6818,
+          "type": "image/png"
+        },
+        "app-icon.png": {
+          "name": "app-icon.png",
+          "blob": "7b0b2dd8eaebff82138d24f191f75866",
+          "size": 18025,
+          "type": "image/png"
+        },
+        "splash.png": {
+          "name": "splash.png",
+          "blob": "d0e6892f71d6762bda011ab892b8cd02",
+          "size": 77295,
+          "type": "image/png"
+        }
+      }
+    },
+    "Status": {
+      "name": "Status",
+      "tile": "m",
+      "order": [
+        "error.svg",
+        "idle.svg",
+        "info.svg",
+        "loading.svg",
+        "question.svg",
+        "ready.svg",
+        "success.svg",
+        "warning.svg"
+      ],
+      "files": {
+        "error.svg": {
+          "name": "error.svg",
+          "blob": "b5064990d6a0f9208ec2af47097b53ee",
+          "size": 1078,
+          "type": "image/svg+xml"
+        },
+        "idle.svg": {
+          "name": "idle.svg",
+          "blob": "c095ea1bc4c49a0f799956c890c8c588",
+          "size": 1473,
+          "type": "image/svg+xml"
+        },
+        "info.svg": {
+          "name": "info.svg",
+          "blob": "5741729eee50906c354b0c57680a0920",
+          "size": 1132,
+          "type": "image/svg+xml"
+        },
+        "loading.svg": {
+          "name": "loading.svg",
+          "blob": "50d7bbca4d51c23b524d6a4c74d63bf2",
+          "size": 1238,
+          "type": "image/svg+xml"
+        },
+        "question.svg": {
+          "name": "question.svg",
+          "blob": "141f720b2edda6e1581bc71c5555a32a",
+          "size": 1114,
+          "type": "image/svg+xml"
+        },
+        "ready.svg": {
+          "name": "ready.svg",
+          "blob": "ae71e2a5715d150869af8636cb8139d0",
+          "size": 1248,
+          "type": "image/svg+xml"
+        },
+        "success.svg": {
+          "name": "success.svg",
+          "blob": "2b33dca249f6c86123ed7e74146e47a9",
+          "size": 1014,
+          "type": "image/svg+xml"
+        },
+        "warning.svg": {
+          "name": "warning.svg",
+          "blob": "72a35036c361425d2a8514fd41f5e8a9",
+          "size": 1046,
+          "type": "image/svg+xml"
+        }
+      }
+    },
+    "Tools": {
+      "name": "Tools",
+      "tile": "m",
+      "order": [
+        "cheat_engine.svg",
+        "cutter.svg",
+        "frida.svg",
+        "gdb.svg",
+        "ghidra.svg",
+        "ollydbg.svg",
+        "radare2.svg",
+        "x64dbg.svg"
+      ],
+      "files": {
+        "cheat_engine.svg": {
+          "name": "cheat_engine.svg",
+          "blob": "da70a6027494debe5022c5fecbad07d3",
+          "size": 1879,
+          "type": "image/svg+xml"
+        },
+        "cutter.svg": {
+          "name": "cutter.svg",
+          "blob": "079cba067d07b7668c8d87d06ac78b43",
+          "size": 1262,
+          "type": "image/svg+xml"
+        },
+        "frida.svg": {
+          "name": "frida.svg",
+          "blob": "14486c443c4221879df98dcc2b0140af",
+          "size": 1396,
+          "type": "image/svg+xml"
+        },
+        "gdb.svg": {
+          "name": "gdb.svg",
+          "blob": "e1e58583f3ed1ad91305c5e7f49db031",
+          "size": 1815,
+          "type": "image/svg+xml"
+        },
+        "ghidra.svg": {
+          "name": "ghidra.svg",
+          "blob": "a3576e8e0916f2468aa4f14d681e049d",
+          "size": 1477,
+          "type": "image/svg+xml"
+        },
+        "ollydbg.svg": {
+          "name": "ollydbg.svg",
+          "blob": "80ead7339d7332ee4335f6f9ab4e4367",
+          "size": 1768,
+          "type": "image/svg+xml"
+        },
+        "radare2.svg": {
+          "name": "radare2.svg",
+          "blob": "87f4c3a136954facc5b40703e610a8fc",
+          "size": 1515,
+          "type": "image/svg+xml"
+        },
+        "x64dbg.svg": {
+          "name": "x64dbg.svg",
+          "blob": "290b4957fe3bc9d0c3117f5f8fc9e3b2",
+          "size": 1643,
+          "type": "image/svg+xml"
+        }
+      }
+    },
+    "Actions": {
+      "name": "Actions",
+      "tile": "s",
+      "order": [
+        "build.svg",
+        "debug.svg",
+        "deploy.svg",
+        "generate.svg",
+        "pause.svg",
+        "restart.svg",
+        "run.svg",
+        "stop.svg",
+        "test.svg"
+      ],
+      "files": {
+        "build.svg": {
+          "name": "build.svg",
+          "blob": "01027338b7d27e204c1167b54390620d",
+          "size": 1259,
+          "type": "image/svg+xml"
+        },
+        "debug.svg": {
+          "name": "debug.svg",
+          "blob": "a8b63ebb9fd0340e5ee1ba8b479bd6cc",
+          "size": 675,
+          "type": "image/svg+xml"
+        },
+        "deploy.svg": {
+          "name": "deploy.svg",
+          "blob": "f1a4f63d51c6b9b9a45ba2b925a59cdf",
+          "size": 1586,
+          "type": "image/svg+xml"
+        },
+        "generate.svg": {
+          "name": "generate.svg",
+          "blob": "59efa95095f5fde671b7b1538287cc37",
+          "size": 251,
+          "type": "image/svg+xml"
+        },
+        "pause.svg": {
+          "name": "pause.svg",
+          "blob": "2124e3cc8cadbd9b970abf1e9b92cd53",
+          "size": 288,
+          "type": "image/svg+xml"
+        },
+        "restart.svg": {
+          "name": "restart.svg",
+          "blob": "27db82dd0687ee10305539a6a28edf5c",
+          "size": 456,
+          "type": "image/svg+xml"
+        },
+        "run.svg": {
+          "name": "run.svg",
+          "blob": "807571f379beaca80aff2a85c807aa73",
+          "size": 242,
+          "type": "image/svg+xml"
+        },
+        "stop.svg": {
+          "name": "stop.svg",
+          "blob": "f9d90644f4c1b3f78433932d783d7022",
+          "size": 230,
+          "type": "image/svg+xml"
+        },
+        "test.svg": {
+          "name": "test.svg",
+          "blob": "683b9fd3684049583bb22380e74a6b5f",
+          "size": 705,
+          "type": "image/svg+xml"
+        }
+      }
+    },
+    "Binary": {
+      "name": "Binary",
+      "tile": "s",
+      "order": [
+        "disasm.svg",
+        "dll.svg",
+        "entropy.svg",
+        "exe.svg",
+        "hex.svg",
+        "so.svg"
+      ],
+      "files": {
+        "disasm.svg": {
+          "name": "disasm.svg",
+          "blob": "5af6ea5b16ac13976c85c9f985d9bdcf",
+          "size": 2459,
+          "type": "image/svg+xml"
+        },
+        "dll.svg": {
+          "name": "dll.svg",
+          "blob": "1681e96c463babb86266968735118a4e",
+          "size": 2426,
+          "type": "image/svg+xml"
+        },
+        "entropy.svg": {
+          "name": "entropy.svg",
+          "blob": "781fc59656d94ab5630ffa768bcd75cc",
+          "size": 3277,
+          "type": "image/svg+xml"
+        },
+        "exe.svg": {
+          "name": "exe.svg",
+          "blob": "7320f327081ae4b6d5ca2471b69d3954",
+          "size": 1781,
+          "type": "image/svg+xml"
+        },
+        "hex.svg": {
+          "name": "hex.svg",
+          "blob": "fe7a9f5ba18c53139b59f0525db738a5",
+          "size": 2982,
+          "type": "image/svg+xml"
+        },
+        "so.svg": {
+          "name": "so.svg",
+          "blob": "30cc80791615fb6c379e271d40aebc3d",
+          "size": 2674,
+          "type": "image/svg+xml"
+        }
+      }
+    },
+    "File": {
+      "name": "File",
+      "tile": "s",
+      "order": [
+        "close.svg",
+        "import.svg",
+        "new.svg",
+        "open.svg",
+        "save.svg",
+        "save_as.svg"
+      ],
+      "files": {
+        "close.svg": {
+          "name": "close.svg",
+          "blob": "01da77a512fbabb0fbc326c9129931d5",
+          "size": 459,
+          "type": "image/svg+xml"
+        },
+        "import.svg": {
+          "name": "import.svg",
+          "blob": "f94723542b4d9aab0b55a838c8769b6b",
+          "size": 574,
+          "type": "image/svg+xml"
+        },
+        "new.svg": {
+          "name": "new.svg",
+          "blob": "781e79af57bbae14d30ad28bd1e9519f",
+          "size": 452,
+          "type": "image/svg+xml"
+        },
+        "open.svg": {
+          "name": "open.svg",
+          "blob": "b190f5dcf672f93ac39f1351168b87de",
+          "size": 484,
+          "type": "image/svg+xml"
+        },
+        "save.svg": {
+          "name": "save.svg",
+          "blob": "c7dc5de449c81f9a2199dfc1ce309017",
+          "size": 551,
+          "type": "image/svg+xml"
+        },
+        "save_as.svg": {
+          "name": "save_as.svg",
+          "blob": "a02c932a144cdd0312b12894eba15c2d",
+          "size": 521,
+          "type": "image/svg+xml"
+        }
+      }
+    },
+    "Edit": {
+      "name": "Edit",
+      "tile": "s",
+      "order": [
+        "copy.svg",
+        "cut.svg",
+        "delete.svg",
+        "paste.svg",
+        "redo.svg",
+        "replace.svg",
+        "search.svg",
+        "undo.svg"
+      ],
+      "files": {
+        "copy.svg": {
+          "name": "copy.svg",
+          "blob": "deaebd8eb6f1025b08e1a778d0b2e190",
+          "size": 369,
+          "type": "image/svg+xml"
+        },
+        "cut.svg": {
+          "name": "cut.svg",
+          "blob": "af9d1c127f5a3224200395a977662b8f",
+          "size": 580,
+          "type": "image/svg+xml"
+        },
+        "delete.svg": {
+          "name": "delete.svg",
+          "blob": "cb97321844a4142a4a520a4e81fc20a1",
+          "size": 669,
+          "type": "image/svg+xml"
+        },
+        "paste.svg": {
+          "name": "paste.svg",
+          "blob": "7d3a4b9371f4ba80026ce2c1ef8da4c9",
+          "size": 500,
+          "type": "image/svg+xml"
+        },
+        "redo.svg": {
+          "name": "redo.svg",
+          "blob": "0fc1fea0804db1c406534ba6eb59a11a",
+          "size": 403,
+          "type": "image/svg+xml"
+        },
+        "replace.svg": {
+          "name": "replace.svg",
+          "blob": "555d789b5904b51e06dfefb83dfbbb1d",
+          "size": 543,
+          "type": "image/svg+xml"
+        },
+        "search.svg": {
+          "name": "search.svg",
+          "blob": "98db8c7ff4219fe93d44f087ba9ce1b3",
+          "size": 331,
+          "type": "image/svg+xml"
+        },
+        "undo.svg": {
+          "name": "undo.svg",
+          "blob": "17f5688169948517457c3ec57c64cdf6",
+          "size": 398,
+          "type": "image/svg+xml"
+        }
+      }
+    },
+    "Navigation": {
+      "name": "Navigation",
+      "tile": "s",
+      "order": [
+        "back.svg",
+        "down.svg",
+        "forward.svg",
+        "home.svg",
+        "refresh.svg",
+        "up.svg"
+      ],
+      "files": {
+        "back.svg": {
+          "name": "back.svg",
+          "blob": "bad5862145eb9537ba91bc2f8b6b9f52",
+          "size": 351,
+          "type": "image/svg+xml"
+        },
+        "down.svg": {
+          "name": "down.svg",
+          "blob": "aef697af516e6d0891d737ddc5ddb514",
+          "size": 352,
+          "type": "image/svg+xml"
+        },
+        "forward.svg": {
+          "name": "forward.svg",
+          "blob": "8033a01d395c577a78ab1e3210d412ab",
+          "size": 352,
+          "type": "image/svg+xml"
+        },
+        "home.svg": {
+          "name": "home.svg",
+          "blob": "e429971d16b6198d2eef949702381d6f",
+          "size": 467,
+          "type": "image/svg+xml"
+        },
+        "refresh.svg": {
+          "name": "refresh.svg",
+          "blob": "8ef71ec921916776923e55223e9378d2",
+          "size": 519,
+          "type": "image/svg+xml"
+        },
+        "up.svg": {
+          "name": "up.svg",
+          "blob": "ede4c9f9ee60e860d89eddee78aa9f23",
+          "size": 351,
+          "type": "image/svg+xml"
+        }
+      }
+    },
+    "Security": {
+      "name": "Security",
+      "tile": "s",
+      "order": [
+        "firewall.svg",
+        "key.svg",
+        "lock.svg",
+        "scan.svg",
+        "shield.svg",
+        "warning.svg"
+      ],
+      "files": {
+        "firewall.svg": {
+          "name": "firewall.svg",
+          "blob": "7d47a115350ed55e4b7affc51f67392d",
+          "size": 2608,
+          "type": "image/svg+xml"
+        },
+        "key.svg": {
+          "name": "key.svg",
+          "blob": "427f22a46c415ccdc9690fecdff3d216",
+          "size": 1811,
+          "type": "image/svg+xml"
+        },
+        "lock.svg": {
+          "name": "lock.svg",
+          "blob": "74eb6b4fa08e197bbf0a9fd38dc37e07",
+          "size": 1541,
+          "type": "image/svg+xml"
+        },
+        "scan.svg": {
+          "name": "scan.svg",
+          "blob": "39c3d6976fc1324f15f3e186d342ff50",
+          "size": 2003,
+          "type": "image/svg+xml"
+        },
+        "shield.svg": {
+          "name": "shield.svg",
+          "blob": "8ca96624e309596fdc4a4f0846df30a0",
+          "size": 1428,
+          "type": "image/svg+xml"
+        },
+        "warning.svg": {
+          "name": "warning.svg",
+          "blob": "3c286386858bb99b6c9800c8cc45b8ca",
+          "size": 1535,
+          "type": "image/svg+xml"
+        }
+      }
+    },
+    "AI": {
+      "name": "AI",
+      "tile": "s",
+      "order": [
+        "brain.svg",
+        "inference.svg",
+        "model.svg",
+        "neural.svg",
+        "training.svg"
+      ],
+      "files": {
+        "brain.svg": {
+          "name": "brain.svg",
+          "blob": "693e8eb9c44fafeb7cf037a4b21cb2d8",
+          "size": 696,
+          "type": "image/svg+xml"
+        },
+        "inference.svg": {
+          "name": "inference.svg",
+          "blob": "33118ff156b0cd6974260741002767cf",
+          "size": 2542,
+          "type": "image/svg+xml"
+        },
+        "model.svg": {
+          "name": "model.svg",
+          "blob": "a57f7fd61f4b85fce3b89272a07c0181",
+          "size": 1703,
+          "type": "image/svg+xml"
+        },
+        "neural.svg": {
+          "name": "neural.svg",
+          "blob": "4ae92f52de000ed958e20a422fa4700b",
+          "size": 3164,
+          "type": "image/svg+xml"
+        },
+        "training.svg": {
+          "name": "training.svg",
+          "blob": "afa738af1d09288f856418dca66628bd",
+          "size": 2381,
+          "type": "image/svg+xml"
+        }
+      }
+    },
+    "Database": {
+      "name": "Database",
+      "tile": "s",
+      "order": [
+        "connect.svg",
+        "export.svg",
+        "query.svg",
+        "table.svg"
+      ],
+      "files": {
+        "connect.svg": {
+          "name": "connect.svg",
+          "blob": "01fb2eafc638a00f693d6f0880451e21",
+          "size": 2350,
+          "type": "image/svg+xml"
+        },
+        "export.svg": {
+          "name": "export.svg",
+          "blob": "6d30e7d45d6c1018527ca638dfd725a4",
+          "size": 3009,
+          "type": "image/svg+xml"
+        },
+        "query.svg": {
+          "name": "query.svg",
+          "blob": "08a62d7c8b62304cfdbd574d02674c33",
+          "size": 2774,
+          "type": "image/svg+xml"
+        },
+        "table.svg": {
+          "name": "table.svg",
+          "blob": "5ff2588b464f15168f337e7955f6b2bf",
+          "size": 3804,
+          "type": "image/svg+xml"
+        }
+      }
+    },
+    "Help": {
+      "name": "Help",
+      "tile": "s",
+      "order": [
+        "about.svg",
+        "docs.svg",
+        "documentation.svg",
+        "support.svg",
+        "tutorial.svg"
+      ],
+      "files": {
+        "about.svg": {
+          "name": "about.svg",
+          "blob": "bc283e7dd774b3e75cfc33f13f2da2d2",
+          "size": 445,
+          "type": "image/svg+xml"
+        },
+        "docs.svg": {
+          "name": "docs.svg",
+          "blob": "de8bef154c2f8ce8de5f4e20b57326a0",
+          "size": 2569,
+          "type": "image/svg+xml"
+        },
+        "documentation.svg": {
+          "name": "documentation.svg",
+          "blob": "611569f1978232d0a272c53260a86926",
+          "size": 661,
+          "type": "image/svg+xml"
+        },
+        "support.svg": {
+          "name": "support.svg",
+          "blob": "6e0838a854258e03e8b884a65d4ae8d8",
+          "size": 703,
+          "type": "image/svg+xml"
+        },
+        "tutorial.svg": {
+          "name": "tutorial.svg",
+          "blob": "b54780e59fc06c5bdb6c51749a6ca852",
+          "size": 444,
+          "type": "image/svg+xml"
+        }
+      }
+    },
+    "Legacy": {
+      "name": "Legacy",
+      "tile": "s",
+      "order": [
+        "accessories-text-editor.png",
+        "ai-assistant.png",
+        "analyze.png",
+        "application-certificate.png",
+        "binary-file-icon.png",
+        "cancel-button.png",
+        "computer-icon.png",
+        "desktop-icon.png",
+        "detailed-view.png",
+        "dialog-password.png",
+        "document-edit.png",
+        "document-open.png",
+        "document-save-as.png",
+        "document-save.png",
+        "edit-delete.png",
+        "export.png",
+        "file-icon.png",
+        "folder-icon.png",
+        "frida-tool.png",
+        "ghidra-tool.png",
+        "icon_preview.png",
+        "import.png",
+        "list-add.png",
+        "mail-send.png",
+        "media-play.png",
+        "media-playback-start.png",
+        "network-server.png",
+        "network-workgroup.png",
+        "open.png",
+        "package-x-generic.png",
+        "preferences-system.png",
+        "progress-spinner.png",
+        "python-file-icon.png",
+        "refresh.png",
+        "security-medium.png",
+        "settings.png",
+        "status-error.png",
+        "status-success.png",
+        "status-warning.png",
+        "stop.png",
+        "system-search.png",
+        "vulnerability.png"
+      ],
+      "files": {
+        "accessories-text-editor.png": {
+          "name": "accessories-text-editor.png",
+          "blob": "e158a224e7f4b649b5c522b0dcd6629f",
+          "size": 411,
+          "type": "image/png"
+        },
+        "ai-assistant.png": {
+          "name": "ai-assistant.png",
+          "blob": "805c41f10f602d4297eb0f950bd079a8",
+          "size": 185,
+          "type": "image/png"
+        },
+        "analyze.png": {
+          "name": "analyze.png",
+          "blob": "b34024a748ab6381b54b4c7ac61d2833",
+          "size": 208,
+          "type": "image/png"
+        },
+        "application-certificate.png": {
+          "name": "application-certificate.png",
+          "blob": "c7335eada0f2a3ce4062cedbf7c216af",
+          "size": 171,
+          "type": "image/png"
+        },
+        "binary-file-icon.png": {
+          "name": "binary-file-icon.png",
+          "blob": "0238e431b01da414554e737013564fec",
+          "size": 421,
+          "type": "image/png"
+        },
+        "cancel-button.png": {
+          "name": "cancel-button.png",
+          "blob": "5a615a4aa6d76fea0796dbe27aa38abb",
+          "size": 209,
+          "type": "image/png"
+        },
+        "computer-icon.png": {
+          "name": "computer-icon.png",
+          "blob": "64c25ab6d92b980269a628ce6be40938",
+          "size": 152,
+          "type": "image/png"
+        },
+        "desktop-icon.png": {
+          "name": "desktop-icon.png",
+          "blob": "4db034e865f95560e7bb6470994a7c7e",
+          "size": 152,
+          "type": "image/png"
+        },
+        "detailed-view.png": {
+          "name": "detailed-view.png",
+          "blob": "08283b7f9493bc54e38b2634b9fe6a52",
+          "size": 119,
+          "type": "image/png"
+        },
+        "dialog-password.png": {
+          "name": "dialog-password.png",
+          "blob": "e3fba7f40dbc96bdaf364ab5e3822526",
+          "size": 156,
+          "type": "image/png"
+        },
+        "document-edit.png": {
+          "name": "document-edit.png",
+          "blob": "a3ac8f56fac81cd0f3ca1020881b75bb",
+          "size": 188,
+          "type": "image/png"
+        },
+        "document-open.png": {
+          "name": "document-open.png",
+          "blob": "53f0c7e050ab12f9b122da9bc52cac34",
+          "size": 187,
+          "type": "image/png"
+        },
+        "document-save-as.png": {
+          "name": "document-save-as.png",
+          "blob": "e2c7c482b86f1708279a54d48457bd21",
+          "size": 188,
+          "type": "image/png"
+        },
+        "document-save.png": {
+          "name": "document-save.png",
+          "blob": "c6df5d3a463a7e7144d47c50c4885386",
+          "size": 166,
+          "type": "image/png"
+        },
+        "edit-delete.png": {
+          "name": "edit-delete.png",
+          "blob": "6aee386010786a25b52ccad5ad052d9f",
+          "size": 221,
+          "type": "image/png"
+        },
+        "export.png": {
+          "name": "export.png",
+          "blob": "0a5848478473f473e1c7c552ea47774f",
+          "size": 163,
+          "type": "image/png"
+        },
+        "file-icon.png": {
+          "name": "file-icon.png",
+          "blob": "0480276d0b245a8d0da2168920a18b16",
+          "size": 141,
+          "type": "image/png"
+        },
+        "folder-icon.png": {
+          "name": "folder-icon.png",
+          "blob": "11d2ece6fd1f697d1f3882892a116cb5",
+          "size": 120,
+          "type": "image/png"
+        },
+        "frida-tool.png": {
+          "name": "frida-tool.png",
+          "blob": "4b34d555c8da87fe804a02a8ed9f12c0",
+          "size": 169,
+          "type": "image/png"
+        },
+        "ghidra-tool.png": {
+          "name": "ghidra-tool.png",
+          "blob": "f7a828ff6c58c75eb221b71e964f7e89",
+          "size": 198,
+          "type": "image/png"
+        },
+        "icon_preview.png": {
+          "name": "icon_preview.png",
+          "blob": "b0bf71dffe9cfb1bef5929d2aead26d2",
+          "size": 1025987,
+          "type": "image/png"
+        },
+        "import.png": {
+          "name": "import.png",
+          "blob": "1245b042141d1ab3cb3a0a2fb94a6952",
+          "size": 166,
+          "type": "image/png"
+        },
+        "list-add.png": {
+          "name": "list-add.png",
+          "blob": "e3fcb935bf80bd31ad342016f4bea04a",
+          "size": 197,
+          "type": "image/png"
+        },
+        "mail-send.png": {
+          "name": "mail-send.png",
+          "blob": "581ae5ecce4ff9e3301e3bf053e66982",
+          "size": 203,
+          "type": "image/png"
+        },
+        "media-play.png": {
+          "name": "media-play.png",
+          "blob": "0fd8a617b51754678ba4b44fb7b07e59",
+          "size": 203,
+          "type": "image/png"
+        },
+        "media-playback-start.png": {
+          "name": "media-playback-start.png",
+          "blob": "049845a0fca5ef71af32ea7ad86b72fa",
+          "size": 156,
+          "type": "image/png"
+        },
+        "network-server.png": {
+          "name": "network-server.png",
+          "blob": "dc230d74a61798d10e6036f07ee2b5da",
+          "size": 152,
+          "type": "image/png"
+        },
+        "network-workgroup.png": {
+          "name": "network-workgroup.png",
+          "blob": "b6e2a0fe5f302c1fc127dbdc325b610b",
+          "size": 193,
+          "type": "image/png"
+        },
+        "open.png": {
+          "name": "open.png",
+          "blob": "bb228dd3345b37973824795b5f1a3f68",
+          "size": 187,
+          "type": "image/png"
+        },
+        "package-x-generic.png": {
+          "name": "package-x-generic.png",
+          "blob": "8e07f7fb85807d61c8a4ad18eff9bbde",
+          "size": 188,
+          "type": "image/png"
+        },
+        "preferences-system.png": {
+          "name": "preferences-system.png",
+          "blob": "610cd82386539847f0e7ed632d2a2609",
+          "size": 227,
+          "type": "image/png"
+        },
+        "progress-spinner.png": {
+          "name": "progress-spinner.png",
+          "blob": "267cfaab437436c194c945c597a80f44",
+          "size": 166,
+          "type": "image/png"
+        },
+        "python-file-icon.png": {
+          "name": "python-file-icon.png",
+          "blob": "53f06a0fa6d8ca8dafb5225919281f2f",
+          "size": 394,
+          "type": "image/png"
+        },
+        "refresh.png": {
+          "name": "refresh.png",
+          "blob": "c42fefcf94c26b3c11a7d1cbebfe4f13",
+          "size": 161,
+          "type": "image/png"
+        },
+        "security-medium.png": {
+          "name": "security-medium.png",
+          "blob": "a4d57b279bf94b1d290b6f8881c375d5",
+          "size": 188,
+          "type": "image/png"
+        },
+        "settings.png": {
+          "name": "settings.png",
+          "blob": "7f79752100765ea0e7cec62ea171d198",
+          "size": 154,
+          "type": "image/png"
+        },
+        "status-error.png": {
+          "name": "status-error.png",
+          "blob": "4aeac1d44d1ae38e2956581d45c380cd",
+          "size": 221,
+          "type": "image/png"
+        },
+        "status-success.png": {
+          "name": "status-success.png",
+          "blob": "ca4412a706e3ea90efcfd6621e6bf093",
+          "size": 206,
+          "type": "image/png"
+        },
+        "status-warning.png": {
+          "name": "status-warning.png",
+          "blob": "da01fdc37328fc506b7625c1df078760",
+          "size": 178,
+          "type": "image/png"
+        },
+        "stop.png": {
+          "name": "stop.png",
+          "blob": "5d91e6b3b400b18d97b5ba9cb6a91a1e",
+          "size": 105,
+          "type": "image/png"
+        },
+        "system-search.png": {
+          "name": "system-search.png",
+          "blob": "e61207116e04c641cde89757b059785a",
+          "size": 189,
+          "type": "image/png"
+        },
+        "vulnerability.png": {
+          "name": "vulnerability.png",
+          "blob": "e97bc991d3e4ac2a95c9677d099a9ff4",
+          "size": 200,
+          "type": "image/png"
+        }
+      }
+    }
+  },
+  "blobs": {},
+  "docs": {
+    "readme": "project/README.md",
+    "sections": []
+  },
+  "lastChange": {
+    "by": "Zach",
+    "via": "intellicrack qss sync",
+    "at": "2026-10-02T18:05:00Z",
+    "note": "Extracted from src/intellicrack: tokens from the four QSS themes, theme_manager and the hex-editor / chart / CFG painters; 71 SVG icons, 42 legacy PNGs, 4 brand images and JetBrains Mono shipped verbatim."
+  }
+}
