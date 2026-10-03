@@ -35,6 +35,7 @@ first still carrying the traceback of the exception that ended it.
 from __future__ import annotations
 
 import asyncio
+import gc
 import json
 import socket
 import struct
@@ -329,6 +330,14 @@ def agent_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]
     is the same production factory's output under the same name, so what the
     file records is still what the module logs.
 
+    Garbage left by earlier tests is collected before the file exists. The log
+    is process-wide, and an asynchronous HTTP client an earlier test dropped
+    without closing closes itself from its finalizer by scheduling a task on
+    whatever loop is running when the collector reaches it. Reached inside this
+    test, that task fails against its own long-closed loop and the failure is
+    rendered here as a traceback the channel under test never produced.
+    Collected now, with no loop running, the finalizer schedules nothing.
+
     Args:
         tmp_path: Per-test directory the log is written into.
         monkeypatch: Fixture used to rebind the module logger for the test.
@@ -336,6 +345,7 @@ def agent_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]
     Yields:
         Path: The log file the production pipeline writes to.
     """
+    _ = gc.collect()
     log_dir = tmp_path / "logs"
     IntellicrackLogger.configure(
         level=_CAPTURE_LEVEL,
