@@ -834,7 +834,7 @@ QPlainTextEdit#code_display {
 }
 
 /* Function List */
-QPlainTextEdit#function_list {
+QListWidget#function_list {
     background-color: #ffffff;
     color: #795e26;
     border: none;
@@ -846,7 +846,7 @@ QFrame#function_list_panel {
 }
 
 /* XRef Display */
-QPlainTextEdit#xref_display {
+QTreeWidget#xref_display {
     background-color: #ffffff;
     color: #1a1d21;
     border: none;
@@ -1233,11 +1233,6 @@ QLabel#confirm_warning {
     padding: 8px;
     background-color: #fff8e1;
     border-radius: 4px;
-}
-
-QCheckBox#confirm_remember {
-    color: #1a1d21;
-    font-size: 11px;
 }
 
 QPushButton#confirm_deny_button {
