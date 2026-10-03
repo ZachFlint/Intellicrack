@@ -218,9 +218,10 @@ async def test_a_rejected_key_closes_the_openai_client_that_was_built(
     built: list[openai.AsyncOpenAI] = []
     monkeypatch.setattr(openai, "AsyncOpenAI", _keeping(openai.AsyncOpenAI, built))
     provider = factory()
+    rejected = _credentials(endpoint_server, provider, _REJECTED_KEY)
 
     with pytest.raises(AuthenticationError):
-        await provider.connect(_credentials(endpoint_server, provider, _REJECTED_KEY))
+        await provider.connect(rejected)
 
     assert len(built) == 1
     assert _sdk_client(provider) is None
@@ -244,9 +245,10 @@ async def test_a_rejected_key_closes_the_anthropic_client_that_was_built(
     built: list[anthropic.AsyncAnthropic] = []
     monkeypatch.setattr(anthropic, "AsyncAnthropic", _keeping(anthropic.AsyncAnthropic, built))
     provider = AnthropicProvider()
+    rejected = _credentials(endpoint_server, provider, _REJECTED_KEY)
 
     with pytest.raises(AuthenticationError):
-        await provider.connect(_credentials(endpoint_server, provider, _REJECTED_KEY))
+        await provider.connect(rejected)
 
     assert len(built) == 1
     assert _sdk_client(provider) is None
