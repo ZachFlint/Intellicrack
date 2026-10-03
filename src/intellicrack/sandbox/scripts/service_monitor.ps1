@@ -12,6 +12,25 @@ $logPath = Join-Path -Path $LogDir -ChildPath 'service_monitor.log'
 $jsonlPath = Join-Path -Path $LogDir -ChildPath 'service_monitor.jsonl'
 $errorLogPath = Join-Path -Path $LogDir -ChildPath 'service_monitor.errors.jsonl'
 
+# start_monitors.cmd hands every monitor it launches the path of a file in
+# INTELLICRACK_MONITOR_READY and takes the creation of that file as the only
+# proof the monitor started. This is called once startup can no longer fail.
+# The variable is cleared first so nothing this process launches inherits it;
+# a monitor started any other way has none and creates nothing.
+function Send-MonitorReady {
+    [CmdletBinding()]
+    param()
+
+    $marker = $env:INTELLICRACK_MONITOR_READY
+    if (-not $marker) { return }
+    $env:INTELLICRACK_MONITOR_READY = $null
+    try {
+        [System.IO.File]::WriteAllText($marker, (Get-Date).ToString('o'))
+    } catch {
+        $null = $_
+    }
+}
+
 function Format-Field {
     param(
         [Parameter(Mandatory = $false)][object]$Value
@@ -343,6 +362,7 @@ Write-JsonlRecord -Record @{
     query_window_seconds = $within
     mode                 = $monitorMode
 }
+Send-MonitorReady
 
 if ($script:PollingFallbackActive) {
     $script:pollingKnownServices = Get-CurrentServiceSnapshot

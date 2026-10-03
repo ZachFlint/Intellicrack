@@ -14,6 +14,25 @@ $lifecyclePath = Join-Path -Path $LogDir -ChildPath 'kernel_object_monitor.lifec
 $script:StopEventName = 'IntellicrackMonitorStop'
 $script:StopEvent = $null
 
+# start_monitors.cmd hands every monitor it launches the path of a file in
+# INTELLICRACK_MONITOR_READY and takes the creation of that file as the only
+# proof the monitor started. This is called once startup can no longer fail.
+# The variable is cleared first so nothing this process launches inherits it;
+# a monitor started any other way has none and creates nothing.
+function Send-MonitorReady {
+    [CmdletBinding()]
+    param()
+
+    $marker = $env:INTELLICRACK_MONITOR_READY
+    if (-not $marker) { return }
+    $env:INTELLICRACK_MONITOR_READY = $null
+    try {
+        [System.IO.File]::WriteAllText($marker, (Get-Date).ToString('o'))
+    } catch {
+        $null = $_
+    }
+}
+
 function Open-MonitorStopEvent {
     [CmdletBinding()]
     [OutputType([System.Threading.EventWaitHandle])]
@@ -613,6 +632,8 @@ Write-KernelLifecycle -State 'started' -Detail "poll_interval_ms=$PollIntervalMi
 # first sweep. Emit an explicit, unambiguous marker once sweep #1 itself has
 # fully returned.
 $script:SweepIndex = 0
+
+Send-MonitorReady
 
 try {
     while ($true) {
