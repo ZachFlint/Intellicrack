@@ -391,3 +391,47 @@ def test_module_level_marker_runs_the_module_in_a_child(pytestconfig: pytest.Con
     in_child, parent_pid = report.read_text(encoding="utf-8").split("\t")
     assert in_child == _ISOLATED_CHILD_REPORT, "the marked probe ran without the isolation child's environment"
     assert int(parent_pid) != os.getpid(), "the marked probe ran inside the session process, not an isolation child"
+
+
+def test_an_ordinary_test_after_an_isolated_module_still_sets_up(pytestconfig: pytest.Config, tmp_path: Path) -> None:
+    """An ordinary test that follows an isolated module in another package sets up and passes.
+
+    Runs a real pytest session over three modules in order: an ordinary probe,
+    an isolated probe in the same package, and an ordinary probe in a different
+    package. Tearing the first one down toward the isolated item leaves the
+    package they share on the session's setup stack.
+
+    Falsifiable: when serving an isolated item left that stack alone, the third
+    module's setup failed with "previous item was not torn down properly",
+    which is how one unrelated test errored in each CI run.
+
+    Args:
+        pytestconfig: Session config, used for the rootdir the session runs from.
+        tmp_path: Per-test temporary directory for the isolated probe's process report.
+    """
+    rootpath = pytestconfig.rootpath
+    here = Path(__file__).resolve().parent
+    before = (here / "frida_isolation_ordinary_probe.py").relative_to(rootpath).as_posix()
+    isolated = (here / "frida_isolation_marker_probe.py").relative_to(rootpath).as_posix()
+    after = (_TESTS_ROOT / "_helpers" / "frida_isolation_following_probe.py").relative_to(rootpath).as_posix()
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        *to_pyargs_argv([before, isolated, after, "-p", "no:randomly", "-p", "no:cacheprovider", "-o", "addopts=", "-v", "--no-header"]),
+    ]
+    env = {**os.environ, PROCESS_REPORT_ENV: str(tmp_path / "process.txt")}
+    completed = subprocess.run(
+        command,
+        cwd=rootpath,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=_GATE_TIMEOUT_SECONDS,
+    )
+    output = f"{completed.stdout}\n{completed.stderr}"
+
+    assert "previous item was not torn down properly" not in output, output
+    assert completed.returncode == 0, output
+    assert "3 passed" in output, output

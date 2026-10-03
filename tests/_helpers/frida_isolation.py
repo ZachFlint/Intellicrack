@@ -48,7 +48,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 import pytest
 
@@ -59,6 +59,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from _pytest.reports import TestReport
+    from _pytest.runner import SetupState
 
 
 _Phase = Literal["setup", "call", "teardown"]
@@ -407,14 +408,14 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
 
     Args:
         item: The test item about to run.
-        nextitem: The next scheduled item (unused; the child owns teardown).
+        nextitem: The next scheduled item, which this process's own setup
+            state is unwound toward once the item has been served.
 
     Returns:
         bool | None: ``True`` when this hook handled a marked item, ``None`` to
             let pytest run the item normally (unmarked tests, and every test
             inside the isolation child itself).
     """
-    _ = nextitem
     if in_isolated_child() or item.get_closest_marker(MARKER_NAME) is None:
         return None
     module_key = str(item.location[0])
@@ -422,7 +423,7 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
     if result is None:
         result = run_module_isolated(module_key, str(item.config.rootpath))
         _MODULE_RESULTS[module_key] = result
-    _emit_reports(item, result)
+    _emit_reports(item, nextitem, result)
     return True
 
 
@@ -602,7 +603,40 @@ def _synthetic_report(
     )
 
 
-def _emit_reports(item: pytest.Item, result: ModuleResult) -> None:
+def _unwind_session_setup(item: pytest.Item, nextitem: pytest.Item | None) -> TestReport:
+    """Tear this process's own setup state down to what the next item needs, and report how that went.
+
+    The child sets up and tears down an isolated test's own fixtures, but an
+    ordinary test that ran here just before it was torn down toward the
+    isolated item, which leaves every collector the two share -- their package,
+    say -- on pytest's setup stack. Nothing isolated ever sets up in this
+    process, so unless the stack is unwound here those collectors are still on
+    it when the next ordinary test starts, and pytest fails that test's setup
+    with "previous item was not torn down properly". A finalizer that fails
+    while unwinding is reported as this item's teardown failure, as pytest
+    reports it for any other test.
+
+    Args:
+        item: The isolated item that has just been served.
+        nextitem: The next scheduled item, or ``None`` when this is the last.
+
+    Returns:
+        TestReport: The item's teardown report.
+    """
+    setup_state = cast("SetupState", getattr(item.session, "_setupstate"))
+
+    def _teardown() -> None:
+        """Unwind the setup stack toward the next item."""
+        setup_state.teardown_exact(nextitem)
+
+    call = cast(
+        "pytest.CallInfo[None]",
+        pytest.CallInfo.from_call(_teardown, when="teardown", reraise=(pytest.exit.Exception, KeyboardInterrupt)),
+    )
+    return pytest.TestReport.from_item_and_call(item, call)
+
+
+def _emit_reports(item: pytest.Item, nextitem: pytest.Item | None, result: ModuleResult) -> None:
     """Emit this item's reports from its module's isolated child results.
 
     A test the child never reported -- because the child crashed before reaching
@@ -610,6 +644,7 @@ def _emit_reports(item: pytest.Item, result: ModuleResult) -> None:
 
     Args:
         item: The self-attach Frida test being served from cached results.
+        nextitem: The next scheduled item, or ``None`` when this is the last.
         result: The cached result of its module's child run.
     """
     key = _node_key(item.nodeid)
@@ -629,5 +664,5 @@ def _emit_reports(item: pytest.Item, result: ModuleResult) -> None:
     at = time.time()
     ihook.pytest_runtest_logreport(report=_synthetic_report(item, "setup", "passed", None, at, at))
     ihook.pytest_runtest_logreport(report=_synthetic_report(item, "call", outcome, longrepr, at, at))
-    ihook.pytest_runtest_logreport(report=_synthetic_report(item, "teardown", "passed", None, at, at))
+    ihook.pytest_runtest_logreport(report=_unwind_session_setup(item, nextitem))
     ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
