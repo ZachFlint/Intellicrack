@@ -19,6 +19,11 @@ gate stages the fleet with the backend's own staging code, runs the real
 launcher over it with its default wait limit, and requires that no script was
 left running unreported and that every script able to start anywhere did start.
 
+The fleet started here is the real one, collecting from the whole machine with
+whatever rights the test process holds, so the module carries the marker that
+keeps tests which start real external programs inside the Docker sandbox, as
+the trace collectors' own live tests do.
+
 The dispatcher is staged too, because it is the one script the launcher must not
 be given: the bootstrap starts it, and a second copy would take every command a
 second time. Its guest paths are pointed at a scratch directory so that a copy
@@ -45,10 +50,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-pytestmark = pytest.mark.skipif(
-    sys.platform != "win32",
-    reason="start_monitors.cmd and the PowerShell monitor fleet it launches are Windows-only",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="start_monitors.cmd and the PowerShell monitor fleet it launches are Windows-only",
+    ),
+    pytest.mark.spawns_process,
+]
 
 _LAUNCHER_NAME: Final[str] = "start_monitors.cmd"
 _PID_FILE_NAME: Final[str] = "monitors.pids"
