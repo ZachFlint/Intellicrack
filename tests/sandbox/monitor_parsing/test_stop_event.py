@@ -42,6 +42,7 @@ from intellicrack.core.subprocess_compat import (
     TimeoutExpired,
     run,
 )
+from intellicrack.sandbox.windows import MONITOR_READY_ANNOUNCEMENT
 
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -219,7 +220,7 @@ def test_start_monitors_skips_underscore_prefixed_scripts(tmp_path: Path) -> Non
     helper_source = "param([string]$LogDir='.')\nStart-Sleep -Seconds 10\n"
     (scripts_dir / "_helper.ps1").write_text(helper_source, encoding="utf-8")
 
-    monitor_source = "param([string]$LogDir='.')\nStart-Sleep -Seconds 10\n"
+    monitor_source = f"param([string]$LogDir='.')\n{MONITOR_READY_ANNOUNCEMENT}Start-Sleep -Seconds 10\n"
     (scripts_dir / "monitor.ps1").write_text(monitor_source, encoding="utf-8")
 
     launched_pids: list[int] = []

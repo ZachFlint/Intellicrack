@@ -43,7 +43,7 @@ from typing import TYPE_CHECKING, Final
 import pytest
 
 from intellicrack.core.subprocess_compat import DEVNULL, SubprocessError, run
-from intellicrack.sandbox.windows import WindowsSandbox
+from intellicrack.sandbox.windows import MONITOR_READY_ANNOUNCEMENT, WindowsSandbox
 
 
 if TYPE_CHECKING:
@@ -79,6 +79,7 @@ _PREAMBLE: Final[str] = (
     "$ErrorActionPreference = 'Stop'\n"
     "$stem = [IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Name)\n"
     "$log = Join-Path -Path $LogDir -ChildPath ($stem + '.log')\n"
+    f"{MONITOR_READY_ANNOUNCEMENT}"
 )
 _WRITE_RECORD: Final[str] = "Add-Content -LiteralPath $log -Value ((Get-Date).ToString('o') + '|record') -Encoding utf8\n"
 _AWAIT_TRIGGER: Final[str] = (

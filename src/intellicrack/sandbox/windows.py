@@ -132,6 +132,20 @@ _MONITOR_PID_FILE_NAME: Final[str] = "monitors.pids"
 _DISPATCHER_SCRIPT_STEM: Final[str] = "sandbox_dispatcher"
 # Each line of that file is "<pid> <script file name>".
 _MONITOR_PID_LINE_FIELDS: Final[int] = 2
+MONITOR_READY_ANNOUNCEMENT: Final[str] = (
+    "if ($env:INTELLICRACK_MONITOR_READY) {\n"
+    "    $monitorReadyFile = $env:INTELLICRACK_MONITOR_READY\n"
+    "    $env:INTELLICRACK_MONITOR_READY = $null\n"
+    "    try { [System.IO.File]::WriteAllText($monitorReadyFile, (Get-Date).ToString('o')) } catch {}\n"
+    "}\n"
+)
+"""PowerShell a monitor runs, once its startup can no longer fail, to tell ``start_monitors.cmd`` it started.
+
+The launcher hands each monitor the path of a file in ``INTELLICRACK_MONITOR_READY`` and takes that
+file's creation as the only proof the monitor started; a monitor that exits, or keeps running, without
+creating it is reported as failed. The variable is cleared before the file is written so that nothing
+the script launches afterwards inherits it, and a script started any other way has none and writes nothing.
+"""
 # How long the Host Compute Service is given to unwind the compute system after
 # the session closes. Measured on a real stop, the worker outlives the session
 # it backs, so anything shorter forces a kill during the very teardown that
@@ -1891,6 +1905,7 @@ class WindowsSandbox(SandboxBase):
             "    }\n"
             "}\n"
             "Set-Content -LiteralPath $readyFlag -Value ((Get-Date).ToString('o')) -Encoding utf8\n"
+            f"{MONITOR_READY_ANNOUNCEMENT}"
             "$processed = @{}\n"
             "while ($true) {\n"
             "    try {\n"
@@ -2094,6 +2109,7 @@ class WindowsSandbox(SandboxBase):
             "    Register-ObjectEvent $w 'Deleted' -Action $action -MessageData $logPath | Out-Null\n"
             "    Register-ObjectEvent $w 'Renamed' -Action $action -MessageData $logPath | Out-Null\n"
             "}\n"
+            f"{MONITOR_READY_ANNOUNCEMENT}"
             "while ($true) { Start-Sleep -Seconds 1 }\n"
         )
 
@@ -2112,6 +2128,7 @@ class WindowsSandbox(SandboxBase):
             "}\n"
             "$logPath = Join-Path -Path $LogDir -ChildPath 'network_monitor.log'\n"
             "$seen = @{}\n"
+            f"{MONITOR_READY_ANNOUNCEMENT}"
             "while ($true) {\n"
             "    $ts = (Get-Date).ToString('o')\n"
             "    $tcp = Get-NetTCPConnection -ErrorAction SilentlyContinue\n"
@@ -2165,6 +2182,7 @@ class WindowsSandbox(SandboxBase):
             "}\n"
             "$logPath = Join-Path -Path $LogDir -ChildPath 'process_monitor.log'\n"
             "$known = @{}\n"
+            f"{MONITOR_READY_ANNOUNCEMENT}"
             "while ($true) {\n"
             "    $ts = (Get-Date).ToString('o')\n"
             "    $procs = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue\n"

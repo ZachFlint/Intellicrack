@@ -42,6 +42,7 @@ from intellicrack.core.subprocess_compat import (
     SubprocessError,
     run,
 )
+from intellicrack.sandbox.windows import MONITOR_READY_ANNOUNCEMENT
 
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -53,6 +54,11 @@ _PID_FILE_NAME: Final[str] = "monitors.pids"
 _START_TIMEOUT_SEC: Final[float] = 90.0
 _STOP_TIMEOUT_SEC: Final[float] = 30.0
 _SETTLE_SEC: Final[float] = 1.5
+_SHORT_WAIT_LIMIT_SEC: Final[int] = 1
+_SCRATCH_MONITOR_LIFETIME_SEC: Final[int] = 120
+_SLOW_STEP_SEC: Final[int] = 3
+_SLOW_DEATH_EXIT_CODE: Final[int] = 7
+_COLLECTING_RECORD: Final[str] = "collecting"
 
 
 pytestmark = pytest.mark.skipif(
@@ -244,7 +250,7 @@ def test_start_script_default_logdir_uses_programdata() -> None:
         assert text.count(suffix) >= 1, f"script must reference ...{suffix!r} at least once; expected resolved path {expected_resolved!r}"
 
 
-_SLEEPER_MONITOR: Final[str] = textwrap.dedent("""\
+_SLEEPER_SETUP: Final[str] = textwrap.dedent("""\
     param([string]$LogDir = '.')
     $ErrorActionPreference = 'Stop'
     if (-not (Test-Path -LiteralPath $LogDir)) {
@@ -252,6 +258,8 @@ _SLEEPER_MONITOR: Final[str] = textwrap.dedent("""\
     }
     $log = Join-Path -Path $LogDir -ChildPath ($MyInvocation.MyCommand.Name + '.log')
     Add-Content -LiteralPath $log -Value ((Get-Date).ToString('o') + '|started') -Encoding utf8
+    """)
+_SLEEPER_LOOP: Final[str] = textwrap.dedent("""\
     $created = $false
     $stop = $null
     try {
@@ -276,6 +284,19 @@ _SLEEPER_MONITOR: Final[str] = textwrap.dedent("""\
         Add-Content -LiteralPath $log -Value ((Get-Date).ToString('o') + '|stopped') -Encoding utf8
     }
     """)
+_SLEEPER_MONITOR: Final[str] = _SLEEPER_SETUP + MONITOR_READY_ANNOUNCEMENT + _SLEEPER_LOOP
+_SCRATCH_PARAMETERS: Final[str] = "param([string]$LogDir = '.')\n"
+_SCRATCH_IDLE: Final[str] = f"Start-Sleep -Seconds {_SCRATCH_MONITOR_LIFETIME_SEC}\n"
+_NEVER_REPORTS_MONITOR: Final[str] = _SCRATCH_PARAMETERS + _SCRATCH_IDLE
+_SLOW_DEATH_MONITOR: Final[str] = f"{_SCRATCH_PARAMETERS}Start-Sleep -Seconds {_SLOW_STEP_SEC}\nexit {_SLOW_DEATH_EXIT_CODE}\n"
+_SLOW_TO_REPORT_MONITOR: Final[str] = (
+    f"{_SCRATCH_PARAMETERS}"
+    f"Start-Sleep -Seconds {_SLOW_STEP_SEC}\n"
+    "$log = Join-Path -Path $LogDir -ChildPath ($MyInvocation.MyCommand.Name + '.log')\n"
+    f"Add-Content -LiteralPath $log -Value '{_COLLECTING_RECORD}' -Encoding utf8\n"
+    f"{MONITOR_READY_ANNOUNCEMENT}"
+    f"{_SCRATCH_IDLE}"
+)
 
 
 def _build_scratch_scripts_dir(scratch_root: Path, monitor_count: int) -> Path:
@@ -365,23 +386,24 @@ def _run_capturing_to_files(
 def _run_scratch_start(
     scripts_dir: Path,
     log_dir: Path,
+    wait_limit_sec: int | None = None,
 ) -> CompletedProcess[str]:
     """Run ``start_monitors.cmd`` from a scratch scripts directory.
 
     Args:
         scripts_dir: Directory containing a copy of the launcher.
         log_dir: Directory for the PID file and per-monitor logs.
+        wait_limit_sec: How long the launcher keeps waiting for a monitor that
+            has neither reported ready nor exited, or ``None`` for its default.
 
     Returns:
         CompletedProcess[str]: The completed process.
     """
     cmd = _resolve_cmd()
-    return _run_capturing_to_files(
-        [cmd, "/c", str(scripts_dir / "start_monitors.cmd"), str(log_dir)],
-        log_dir,
-        "start_monitors",
-        _START_TIMEOUT_SEC,
-    )
+    args = [cmd, "/c", str(scripts_dir / "start_monitors.cmd"), str(log_dir)]
+    if wait_limit_sec is not None:
+        args.append(str(wait_limit_sec))
+    return _run_capturing_to_files(args, log_dir, "start_monitors", _START_TIMEOUT_SEC)
 
 
 def _run_scratch_stop(
@@ -430,9 +452,10 @@ def test_start_script_propagates_failure(tmp_path: Path) -> None:
     """F-0010 runtime check: launcher must exit non-zero on monitor failure.
 
     Build a scratch scripts directory containing one inert sleeper plus
-    one poisoned ``*.ps1`` script that exits immediately with a
-    parameter binding error so the launcher's post-spawn liveness check
-    fires. The launcher must then return non-zero.
+    one poisoned ``*.ps1`` script that dies of a parameter binding error,
+    so its process exits without ever reporting ready. The launcher must
+    then return non-zero, name the monitor, and keep tracking only the
+    sleeper.
 
     Args:
         tmp_path: Pytest-provided temp directory.
@@ -456,11 +479,117 @@ def test_start_script_propagates_failure(tmp_path: Path) -> None:
         assert completed.returncode != 0, (
             f"launcher must exit non-zero when a monitor fails to start; stdout={completed.stdout!r} stderr={completed.stderr!r}"
         )
-        # Diagnostic message must reach stderr.
-        assert "monitor" in (completed.stderr or "").lower(), f"launcher must surface the failure on stderr; stderr={completed.stderr!r}"
-        # Any PIDs that did get tracked should be cleaned up.
-        if (log_dir / _PID_FILE_NAME).is_file():
-            pids = [pid for pid, _ in _read_pid_file(log_dir)]
+        assert poisoned.name in completed.stderr, f"launcher must name the monitor that failed; stderr={completed.stderr!r}"
+        entries = _read_pid_file(log_dir)
+        pids = [pid for pid, _ in entries]
+        assert [name for _, name in entries] == ["sleeper_00.ps1"], (
+            f"only the monitor that started may stay tracked; entries={entries!r} stderr={completed.stderr!r}"
+        )
+    finally:
+        _kill_pids(pids)
+
+
+def test_a_running_monitor_that_never_reports_ready_is_not_taken_for_started(tmp_path: Path) -> None:
+    """A monitor that is merely still alive has not started, however long the launcher looks.
+
+    The launcher used to wait out a time window and count whatever was still
+    running at the end of it as started. A monitor that needed longer than the
+    window to die of its startup failure was therefore reported healthy, which
+    is how the failure gate above lost its race on a loaded runner. What counts
+    now is the monitor's own report, so one that keeps running without ever
+    making it is a failure, and it stays tracked so the stopper can reap it.
+
+    Falsifiable: a launcher that judges by survival exits zero here, because
+    the monitor is alive whenever it looks.
+
+    Args:
+        tmp_path: Pytest-provided temp directory.
+    """
+    scripts_dir = _build_scratch_scripts_dir(tmp_path / "scratch", monitor_count=0)
+    silent = scripts_dir / "never_reports.ps1"
+    silent.write_text(_NEVER_REPORTS_MONITOR, encoding="utf-8")
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+
+    completed = _run_scratch_start(scripts_dir, log_dir, wait_limit_sec=_SHORT_WAIT_LIMIT_SEC)
+
+    pids: list[int] = []
+    try:
+        entries = _read_pid_file(log_dir)
+        pids = [pid for pid, _ in entries]
+        assert completed.returncode != 0, (
+            f"a monitor that never reported ready was taken for started; stdout={completed.stdout!r} stderr={completed.stderr!r}"
+        )
+        assert silent.name in completed.stderr, f"launcher must name the monitor that never reported; stderr={completed.stderr!r}"
+        assert [name for _, name in entries] == [silent.name], (
+            f"a monitor that is still running must stay tracked so it can be stopped; entries={entries!r}"
+        )
+    finally:
+        _kill_pids(pids)
+
+
+def test_a_monitor_that_dies_slowly_without_reporting_is_a_startup_failure(tmp_path: Path) -> None:
+    """How long a monitor takes to die of its startup failure does not decide the outcome.
+
+    Falsifiable: a launcher whose window closes before the monitor exits has
+    already counted it as started, exits zero, and leaves the dead PID tracked.
+
+    Args:
+        tmp_path: Pytest-provided temp directory.
+    """
+    scripts_dir = _build_scratch_scripts_dir(tmp_path / "scratch", monitor_count=1)
+    doomed = scripts_dir / "slow_death.ps1"
+    doomed.write_text(_SLOW_DEATH_MONITOR, encoding="utf-8")
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+
+    completed = _run_scratch_start(scripts_dir, log_dir)
+
+    pids: list[int] = []
+    try:
+        entries = _read_pid_file(log_dir)
+        pids = [pid for pid, _ in entries]
+        assert completed.returncode != 0, (
+            f"a monitor that exited without reporting ready was taken for started; stdout={completed.stdout!r} stderr={completed.stderr!r}"
+        )
+        assert f"{doomed.name} " in completed.stderr, f"launcher must name the monitor that died; stderr={completed.stderr!r}"
+        assert f"exit={_SLOW_DEATH_EXIT_CODE}" in completed.stderr, (
+            f"launcher must report how the monitor died; stderr={completed.stderr!r}"
+        )
+        assert [name for _, name in entries] == ["sleeper_00.ps1"], f"a dead monitor must not stay tracked; entries={entries!r}"
+    finally:
+        _kill_pids(pids)
+
+
+def test_the_launcher_waits_for_a_monitor_that_is_slow_to_report(tmp_path: Path) -> None:
+    """A monitor that takes its time to become ready is waited for, not written off or waved through.
+
+    The scratch monitor writes a record immediately before it reports ready,
+    so finding that record once the launcher has returned shows the launcher
+    returned after the report rather than after some interval of its own.
+
+    Args:
+        tmp_path: Pytest-provided temp directory.
+    """
+    scripts_dir = _build_scratch_scripts_dir(tmp_path / "scratch", monitor_count=0)
+    slow = scripts_dir / "slow_to_report.ps1"
+    slow.write_text(_SLOW_TO_REPORT_MONITOR, encoding="utf-8")
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+
+    completed = _run_scratch_start(scripts_dir, log_dir)
+    record = log_dir / f"{slow.name}.log"
+    recorded = record.read_text(encoding="utf-8", errors="replace") if record.is_file() else ""
+
+    pids: list[int] = []
+    try:
+        entries = _read_pid_file(log_dir)
+        pids = [pid for pid, _ in entries]
+        assert completed.returncode == 0, (
+            f"a monitor that reported ready was not taken for started; stdout={completed.stdout!r} stderr={completed.stderr!r}"
+        )
+        assert _COLLECTING_RECORD in recorded, "the launcher returned before the monitor had reported ready"
+        assert [name for _, name in entries] == [slow.name], f"the monitor that started must be tracked; entries={entries!r}"
     finally:
         _kill_pids(pids)
 
