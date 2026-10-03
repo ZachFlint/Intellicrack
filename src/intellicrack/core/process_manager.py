@@ -52,6 +52,27 @@ _atexit_registered_globally: list[bool] = [False]
 _atexit_guard_lock: threading.Lock = threading.Lock()
 
 
+def _own_lineage() -> frozenset[int]:
+    """Identify this process and every ancestor of it.
+
+    A tracked PID is terminated together with all of its descendants, so a
+    registry entry naming this process, or anything above it, would take this
+    process down with it. That happens for real: the Process panel's "Track
+    This Process" action accepts any row, Intellicrack's own included, and a
+    stale entry can name a PID the system has since handed to one of this
+    process's ancestors.
+
+    Returns:
+        frozenset[int]: The PIDs no termination path may touch.
+    """
+    own = os.getpid()
+    try:
+        ancestors = psutil.Process(own).parents()
+    except psutil.Error:
+        return frozenset({own})
+    return frozenset({own, *(ancestor.pid for ancestor in ancestors)})
+
+
 def _pid_exists(pid: int) -> bool:
     """Check whether a process with the given PID exists on the host OS.
 
@@ -519,8 +540,12 @@ class ProcessManager:
         # Collect all processes including children
         all_procs_psutil: list[psutil.Process] = []
         root_pids = [p.pid for p in processes if p.pid is not None] + external_pids
+        spared = _own_lineage()
 
         for pid in root_pids:
+            if pid in spared:
+                logger.warning("sync_cleanup_spared_own_lineage", pid=pid)
+                continue
             try:
                 proc = psutil.Process(pid)
                 all_procs_psutil.append(proc)
@@ -622,11 +647,17 @@ class ProcessManager:
     ) -> None:
         """Terminate a process tree using psutil (internal).
 
+        A root that is this process or one of its ancestors is left alone,
+        descendants included: its tree contains this process.
+
         Args:
             pid: Root process ID.
             graceful_timeout: Seconds to wait for SIGTERM.
             force_timeout: Seconds to wait for SIGKILL.
         """
+        if pid in _own_lineage():
+            _logger.warning("terminate_tree_spared_own_lineage", pid=pid)
+            return
         try:
             parent = psutil.Process(pid)
         except psutil.NoSuchProcess:
