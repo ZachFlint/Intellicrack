@@ -152,6 +152,18 @@ function Invoke-FallbackPolling {
     }
 }
 
+function Write-MonitorReady {
+    [CmdletBinding()]
+    param()
+
+    $readyPayload = [ordered]@{ timestamp = (Get-Date).ToString('o'); event = 'monitor.ready' } | ConvertTo-Json -Compress
+    try {
+        Write-LogEntry -Line $readyPayload
+    } catch {
+        Write-StructuredError -Event 'event.ready_write_failed' -ErrorRecord $_
+    }
+}
+
 function Invoke-EventDrivenMonitor {
     [CmdletBinding()]
     param()
@@ -219,12 +231,7 @@ function Invoke-EventDrivenMonitor {
     $listener.Add_ClipboardChanged($eventHandler)
     $listener.Show()
     $listener.Hide()
-    $readyPayload = [ordered]@{ timestamp = (Get-Date).ToString('o'); event = 'monitor.ready' } | ConvertTo-Json -Compress
-    try {
-        Write-LogEntry -Line $readyPayload
-    } catch {
-        Write-StructuredError -Event 'event.ready_write_failed' -ErrorRecord $_
-    }
+    Write-MonitorReady
     [System.Windows.Forms.Application]::Run($listener)
 }
 
