@@ -313,6 +313,7 @@ class OpenAIProvider(LLMProviderBase):
         if not credentials.api_key:
             raise AuthenticationError(_ERR_KEY_REQUIRED)
 
+        await self._close_client()
         try:
             self.client = openai.AsyncOpenAI(
                 api_key=credentials.api_key,
@@ -324,7 +325,7 @@ class OpenAIProvider(LLMProviderBase):
             await self.client.models.list()
         except openai.AuthenticationError as e:
             self.connected = False
-            self.client = None
+            await self._close_client()
             detail = self._redact_error_text(e, api_key=credentials.api_key)
             self._logger.warning(
                 "openai_connect_auth_failed",
@@ -333,7 +334,7 @@ class OpenAIProvider(LLMProviderBase):
             raise AuthenticationError(_ERR_INVALID_KEY % detail) from e
         except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
             self.connected = False
-            self.client = None
+            await self._close_client()
             detail = self._redact_error_text(e, api_key=credentials.api_key)
             self._logger.warning(
                 "openai_connect_failed",
@@ -350,11 +351,29 @@ class OpenAIProvider(LLMProviderBase):
                 has_project=credentials.project_id is not None,
             )
 
+    async def _close_client(self) -> None:
+        """Close the SDK client and its connection pool, if there is one.
+
+        The SDK client owns an HTTP connection pool. Dropped without being
+        closed, the pool is left to the garbage collector, and the SDK's
+        finalizer then closes it by scheduling a task on whichever event loop
+        is running when the collector reaches it -- which fails against
+        connections that belong to a loop already closed, in the middle of
+        whatever unrelated work that loop is doing.
+        """
+        client, self.client = self.client, None
+        if client is None:
+            return
+        try:
+            await client.close()
+        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
+            self._logger.warning("openai_client_close_error", error=str(exc))
+
     async def disconnect(self) -> None:
         """Disconnect from OpenAI API."""
         try:
             await super().disconnect()
-            self.client = None
+            await self._close_client()
             self._current_task = None
             self._logger.info("openai_disconnected", success=True)
         except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:

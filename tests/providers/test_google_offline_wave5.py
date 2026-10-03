@@ -71,11 +71,20 @@ class _FakeModelsApi:
         raise OSError(_OFFLINE_PROBE_ERR)
 
 
+class _FakeAsyncApi:
+    """Asynchronous half of the ``genai.Client`` stand-in, which the provider closes with the client."""
+
+    async def aclose(self) -> None:
+        """Close nothing: the stand-in opens no connection."""
+
+
 class _FakeGenaiClient:
     """Minimal ``genai.Client`` stand-in for the ``#28`` env-var gate.
 
     Replaced via ``monkeypatch`` so ``_connect_impl`` never opens a socket
     while the full ``except``/``finally`` logic in ``connect()`` still runs.
+    It carries the two close operations the provider performs on a client it
+    lets go of, as the real client does.
     """
 
     def __init__(self, **_kwargs: object) -> None:
@@ -86,6 +95,10 @@ class _FakeGenaiClient:
                 call (e.g. ``api_key=``); accepted but not used by the stub.
         """
         self.models: _FakeModelsApi = _FakeModelsApi()
+        self.aio: _FakeAsyncApi = _FakeAsyncApi()
+
+    def close(self) -> None:
+        """Close nothing: the stand-in opens no connection."""
 
 
 _SENTINEL_ENV_KEY: str = "test-sentinel-gemini-env-99"

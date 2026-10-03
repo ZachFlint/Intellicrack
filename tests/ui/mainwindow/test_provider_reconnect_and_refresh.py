@@ -35,6 +35,7 @@ from intellicrack.providers.openai import OpenAIProvider
 from intellicrack.providers.openrouter import OpenRouterProvider
 from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui.app import MainWindow
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from tests._helpers.provider_endpoint_server import OPENAI_COMPATIBLE_MODELS_PATH, ProviderEndpointServer
 from tests._helpers.provider_state import isolate_provider_environment, redirected_state_root
 
@@ -77,6 +78,9 @@ def window_factory(
     Teardown joins each window's model-refresh thread before closing the
     window: a gate that fails while a refresh is still running must report the
     failure rather than destroy a running ``QThread``, which aborts the process.
+    It also disconnects every provider the window connected, on the background
+    loop they were connected on, so no SDK client is left to close itself from
+    its finalizer inside a later test.
 
     Args:
         qapp: Qt application fixture.
@@ -111,6 +115,7 @@ def window_factory(
                 worker: object = getattr(window, "model_refresh_worker", None)
                 if isinstance(worker, QThread):
                     assert worker.wait(_WORKER_JOIN_TIMEOUT_MS), "the model refresh thread did not finish"
+                _ = run_bridge_coroutine(_registry(window).disconnect_all())
                 window.close()
 
 
