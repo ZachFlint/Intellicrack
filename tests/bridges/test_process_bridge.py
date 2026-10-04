@@ -2795,6 +2795,8 @@ _DOTNET_HOST_CANDIDATES = [
     r"C:\Windows\Microsoft.NET\Framework\v4.0.30319\ngen.exe",
     r"C:\Program Files\dotnet\dotnet.exe",
 ]
+_RUNTIME_LOAD_BUDGET_S = 30.0
+_RUNTIME_LOAD_POLL_S = 0.05
 
 
 class TestF0036AdvApi32MissingRaises:
@@ -3000,16 +3002,25 @@ class TestF0015DotnetByCor20Header:
     ) -> None:
         """Assert detect_dotnet reports the spawned process as managed.
 
+        The host is inspected repeatedly until its runtime shows up rather
+        than once after a fixed pause: a host that is still starting has only
+        its first few modules loaded, and on a loaded machine it was caught in
+        exactly that state and reported, correctly, as not yet managed.
+
         Args:
             process_bridge: ProcessBridge used to invoke ``detect_dotnet``.
             async_proc: Subprocess running a .NET host to inspect.
         """
-        await asyncio.sleep(0.5)
-        if async_proc.returncode is not None:
-            pytest.skip("managed process exited immediately, cannot inspect")
-            return
-        result = await process_bridge.detect_dotnet(async_proc.pid)
-        assert isinstance(result, dict)
+        deadline = time.monotonic() + _RUNTIME_LOAD_BUDGET_S
+        while True:
+            if async_proc.returncode is not None:
+                pytest.skip("managed process exited immediately, cannot inspect")
+                return
+            result = await process_bridge.detect_dotnet(async_proc.pid)
+            assert isinstance(result, dict)
+            if result.get("managed") is True or result.get("clr_loaded") is True or time.monotonic() >= deadline:
+                break
+            await asyncio.sleep(_RUNTIME_LOAD_POLL_S)
         assert result.get("managed") is True or result.get("clr_loaded") is True
         version = result.get("version") or result.get("clr_version")
         assert version is not None
@@ -3312,6 +3323,11 @@ class TestF0033FullEnvironmentBlock:
         (via a single large env var) and verifies the bridge reads the full
         block including the large variable.
 
+        The child is inspected only once it has reported that its script is
+        running. A process that has just been created is still being set up by
+        the loader, and on a loaded machine it was read in that state and its
+        environment came back empty.
+
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
@@ -3321,10 +3337,14 @@ class TestF0033FullEnvironmentBlock:
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
             "-c",
-            "import time; time.sleep(30)",
+            "import sys, time; sys.stdout.write('running\\n'); sys.stdout.flush(); time.sleep(30)",
             env=child_env,
+            stdout=asyncio.subprocess.PIPE,
         )
         try:
+            assert proc.stdout is not None
+            announced = await proc.stdout.readline()
+            assert announced.strip() == b"running", f"the child never got as far as running its script: {announced!r}"
             await self._assert_large_env_var_readable(process_bridge, proc, large_value)
         finally:
             proc.kill()

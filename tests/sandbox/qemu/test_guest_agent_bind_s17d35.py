@@ -83,6 +83,7 @@ _LISTENER_CONSTRUCTION: Final = re.compile(
 _PARSE_CALL: Final = re.compile(r"\[System\.Net\.IPAddress\]::Parse\(\s*'(?P<literal>[^']*)'\s*\)")
 
 _IPV4_LOOPBACK: Final[int] = 0x7F000001
+_PRIMARY_LOOPBACK: Final[str] = str(ipaddress.IPv4Address(_IPV4_LOOPBACK))
 # The next address after it, which the machine answers on just as readily but
 # which a listener bound to the first one does not serve.
 _SECONDARY_LOOPBACK: Final[str] = str(ipaddress.IPv4Address(_IPV4_LOOPBACK + 1))
@@ -111,6 +112,7 @@ _QCOW2_HEADER: Final[bytes] = b"QFI\xfb\x00\x00\x00\x03"
 _AGENT_CONNECT_TIME_LIMIT: Final[float] = 20.0
 _AGENT_CONNECT_RETRY_INTERVAL: Final[float] = 0.5
 _CONNECT_TIME_LIMIT: Final[float] = 5.0
+_REACHABILITY_PROBE_S: Final[float] = 5.0
 _LISTEN_BACKLOG: Final[int] = 1
 
 _ERR_NO_CONSTRUCTION: Final[str] = "the generated agent's listener statement {statement!r} constructs no TcpListener"
@@ -128,27 +130,21 @@ def _delivery_address() -> str:
 
     This stands in for the guest address SLIRP opens a forwarded connection to.
     What makes that address fatal to a loopback-bound listener is not that it is
-    routable - it is that it is a *different* local address, and a listener bound
-    to one address does not serve another. This machine's own non-loopback
-    address is used when it has one; a test container is started with
-    ``--network none`` and has only the loopback interface, so the second
-    loopback address is used there, which discriminates the two binds exactly
-    the same way. Measured in that container: a listener on the wildcard address
+    routable, it is that it is a *different* local address, and a listener bound
+    to one address does not serve another. The second loopback address
+    discriminates the two binds exactly: a listener on the wildcard address
     accepts a connection to it, and one bound to ``127.0.0.1`` refuses it with
-    ``WinError 10061``.
+    ``WinError 10061``. It is reachable on every Windows host, unlike a routable
+    interface address whose self-connection a hardened or multi-homed runner can
+    drop, which is why a non-loopback interface address is not used here.
 
-    Whichever is chosen is put through :func:`_local_address`, which fails the
-    test rather than let a gate read "not a local address" as a verdict on what
-    the agent bound.
+    The address is put through :func:`_local_address`, which fails the test
+    rather than let a gate read "not a local address" as a verdict on what the
+    agent bound.
 
     Returns:
         str: An address this machine answers on, other than ``127.0.0.1``.
     """
-    resolved = socket.getaddrinfo(socket.gethostname(), None, family=socket.AF_INET, type=socket.SOCK_STREAM)
-    for *_, sockaddr in resolved:
-        address = str(sockaddr[0])
-        if not ipaddress.ip_address(address).is_loopback:
-            return _local_address(address)
     return _local_address(_SECONDARY_LOOPBACK)
 
 
@@ -291,6 +287,67 @@ def _forwarded_guest_port(command: list[str], host_port: int) -> int:
     raise AssertionError(_ERR_NO_AGENT_HOSTFWD.format(port=host_port, netdev=netdev))
 
 
+def _connect_outcome(address: str, port: int) -> str:
+    """Describe what a plain TCP connection to an address gets right now.
+
+    Args:
+        address: The address to connect to.
+        port: The port to connect to.
+
+    Returns:
+        str: ``connected``, or the error the connection was refused with.
+    """
+    try:
+        with closing(socket.create_connection((address, port), timeout=_REACHABILITY_PROBE_S)):
+            return "connected"
+    except OSError as exc:
+        return f"refused with {exc!r}"
+
+
+def _free_host_port() -> int:
+    """Return a port this host will bind, for the peer to listen on.
+
+    The generated agent listens on its guest-side port, which the host need not
+    be able to bind: a Windows CI host reserves port ranges that refuse a bind
+    while nothing listens on them. Binding an ephemeral port and reading it back
+    is the host's own answer to which port it will accept, so the peer runs on a
+    port the host can serve rather than the guest-side literal.
+
+    Returns:
+        int: A port the host bound a moment ago, free to hand to the peer.
+    """
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as probe:
+        probe.bind((_SECONDARY_LOOPBACK, 0))
+        return int(probe.getsockname()[1])
+
+
+def _listener_on_host_free_port(agent_script: str) -> str:
+    """Return the generated agent's listener statement with its port bound to ``$Port``.
+
+    The address expression is left exactly as the agent constructs it -- that is
+    the property under test, whether it binds the wildcard address or loopback --
+    while the guest-side port literal is replaced by the peer's ``-Port``
+    parameter, so the peer can listen on a port the host will actually bind.
+
+    Args:
+        agent_script: Full text of the generated ``agent.ps1``.
+
+    Returns:
+        str: The listener statement, its port replaced by ``$Port``.
+
+    Raises:
+        AssertionError: If the statement constructs no ``TcpListener``.
+    """
+    statement = script_line(agent_script, LISTENER_LINE)
+    parameterized, count = _LISTENER_CONSTRUCTION.subn(
+        lambda match: f"[System.Net.Sockets.TcpListener]::new({match['address']}, $Port)",
+        statement,
+    )
+    if count != 1:
+        raise AssertionError(_ERR_NO_CONSTRUCTION.format(statement=statement))
+    return parameterized
+
+
 def _assert_reachable_at(bind_address: str, target_address: str) -> None:
     """Bind a real socket and require a real connection to ``target_address``.
 
@@ -416,12 +473,15 @@ class TestTheGeneratedWindowsAgentListensWhereTheForwardDelivers:
     ) -> None:
         """The generated listener must serve the address SLIRP delivers to.
 
-        The peer runs the generated agent's own listener statement, unedited,
-        under a real ``powershell.exe``. The production client then connects to
-        a local address other than ``127.0.0.1`` and completes the readiness
-        handshake against the generated ping branch, retrying while the peer
-        starts up, which is the same retry loop production uses on a booting
-        guest. A listener bound to
+        The peer runs the generated agent's own listener statement under a real
+        ``powershell.exe``, its address expression exactly as the agent
+        constructs it and only its port rebound to one the host will bind -- the
+        guest-side port the agent names need not be bindable on the host, which
+        reserves port ranges, and the port it binds is gated separately. The
+        production client then connects to a local address other than
+        ``127.0.0.1`` and completes the readiness handshake against the generated
+        ping branch, retrying while the peer starts up, which is the same retry
+        loop production uses on a booting guest. A listener whose address is
         ``127.0.0.1`` - what the agent used to construct - refuses that
         connection, which is exactly what a real guest did to every command the
         host ever dispatched to a Windows guest.
@@ -430,35 +490,88 @@ class TestTheGeneratedWindowsAgentListensWhereTheForwardDelivers:
             tmp_path: Directory the share and the peer script are created under.
         """
         target = _delivery_address()
-        share = tmp_path / _SHARE_DIRECTORY
-        sandbox = _sandbox(GuestOS.WINDOWS)
-        agent_script = await sandbox.generate_agent_script(share, AGENT_SCRIPT_NAME)
-        _, port = _windows_listener_endpoint(agent_script)
+        peer = await _started_peer(tmp_path)
 
-        peer_path = share / MONITOR_DIRECTORY / _PEER_SCRIPT_NAME
-        await asyncio.to_thread(
-            peer_path.write_text,
-            build_peer_script(agent_script, listener_statement=script_line(agent_script, LISTENER_LINE)),
-            encoding="utf-8",
+        await _handshake_and_stop(peer, target)
+
+    @pytest.mark.asyncio
+    async def test_a_handshake_the_host_abandoned_does_not_cost_the_next_one(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A connection the host opened and gave up on must leave the peer serving the next.
+
+        The production client gives every attempt its own short budget and
+        closes the socket of one whose handshake overran it, and the agent
+        answers the retry on a new connection. A connection is opened and
+        closed here before the client connects, which is what such an attempt
+        looks like from the agent's side.
+
+        Falsifiable: a peer that serves only its first connection has stopped
+        listening by the time the client connects, so the client is refused
+        until its time runs out, which is how this gate's neighbour failed on
+        a loaded runner whenever the first handshake took over half a second.
+
+        Args:
+            tmp_path: Directory the share and the peer script are created under.
+        """
+        target = _delivery_address()
+        peer = await _started_peer(tmp_path)
+        with closing(socket.create_connection((target, peer.port), timeout=_CONNECT_TIME_LIMIT)):
+            pass
+
+        await _handshake_and_stop(peer, target)
+
+
+async def _started_peer(tmp_path: Path) -> GeneratedAgentPeer:
+    """Start the generated Windows agent's listener as a peer on a port the host will bind.
+
+    Args:
+        tmp_path: Directory the share and the peer script are created under.
+
+    Returns:
+        GeneratedAgentPeer: The peer, listening.
+    """
+    share = tmp_path / _SHARE_DIRECTORY
+    agent_script = await _sandbox(GuestOS.WINDOWS).generate_agent_script(share, AGENT_SCRIPT_NAME)
+    peer_path = share / MONITOR_DIRECTORY / _PEER_SCRIPT_NAME
+    await asyncio.to_thread(
+        peer_path.write_text,
+        build_peer_script(agent_script, listener_statement=_listener_on_host_free_port(agent_script)),
+        encoding="utf-8",
+    )
+    peer = GeneratedAgentPeer(peer_path, _free_host_port())
+    await peer.start()
+    return peer
+
+
+async def _handshake_and_stop(peer: GeneratedAgentPeer, target: str) -> None:
+    """Require the production client to complete its readiness handshake with a peer, then end the peer.
+
+    Args:
+        peer: The listening peer.
+        target: The address the client connects to.
+    """
+    port = peer.port
+    client = GuestAgentClient(host=target, port=port)
+    connected = False
+    try:
+        connected = await client.connect(
+            time_limit=_AGENT_CONNECT_TIME_LIMIT,
+            retry_interval=_AGENT_CONNECT_RETRY_INTERVAL,
         )
-
-        peer = GeneratedAgentPeer(peer_path, port)
-        await peer.start()
-        client = GuestAgentClient(host=target, port=port)
-        connected = False
-        try:
-            connected = await client.connect(
-                time_limit=_AGENT_CONNECT_TIME_LIMIT,
-                retry_interval=_AGENT_CONNECT_RETRY_INTERVAL,
-            )
-            assert connected, f"the generated Windows agent did not answer a handshake at {target}:{port}"
-            assert client.is_connected
-        finally:
-            await client.disconnect()
-            if connected:
-                await peer.stop()
-            else:
-                await peer.abandon()
+        assert connected, (
+            f"the generated Windows agent did not answer a handshake at {target}:{port}; "
+            f"a plain connection to {target}:{port} is {_connect_outcome(target, port)}, "
+            f"and to {_PRIMARY_LOOPBACK}:{port} is {_connect_outcome(_PRIMARY_LOOPBACK, port)}"
+        )
+        assert client.is_connected
+    finally:
+        await client.disconnect()
+        if connected:
+            await peer.stop()
+        else:
+            await peer.abandon()
 
 
 class TestBothGeneratedAgentsBindWhereTheForwardDelivers:

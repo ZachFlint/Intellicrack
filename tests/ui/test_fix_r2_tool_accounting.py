@@ -124,13 +124,15 @@ def _on_loop[T](coro: Coroutine[object, object, T]) -> T:
 
 
 class _PricingSource(McpToolSource):
-    """The real tool source, noting each server it is asked to price.
+    """The real tool source, noting each server it is asked to price and the prices it gave.
 
     Attributes:
         priced: The servers priced, in order.
+        given: The prices most recently given for each server.
     """
 
     priced: list[str]
+    given: dict[str, list[ToolCost]]
 
     def __init__(self, manager: McpConnectionManager, registry: ToolRegistry) -> None:
         """Wrap the real source.
@@ -141,6 +143,7 @@ class _PricingSource(McpToolSource):
         """
         super().__init__(manager, registry)
         self.priced = []
+        self.given = {}
 
     def costs(self, server_id: str) -> list[ToolCost]:
         """Price a server's tools the real way, noting that it was asked.
@@ -152,7 +155,9 @@ class _PricingSource(McpToolSource):
             list[ToolCost]: The real costs.
         """
         self.priced.append(server_id)
-        return super().costs(server_id)
+        costs = super().costs(server_id)
+        self.given[server_id] = costs
+        return costs
 
 
 def test_settings_list_prices_tools_through_the_tool_source(
@@ -162,6 +167,11 @@ def test_settings_list_prices_tools_through_the_tool_source(
     private_credentials: CredentialStore,
 ) -> None:
     """The settings dialog shows each running server's tools at the prices the tool source gives.
+
+    The expectation is what the source gave the dialog, not a second pricing
+    made afterwards: a tool is priced with an overestimate until the token
+    encoder has loaded and exactly after that, so two pricings taken either
+    side of the load disagree without the dialog having shown anything wrong.
 
     Args:
         qtbot: The Qt test driver.
@@ -194,8 +204,8 @@ def test_settings_list_prices_tools_through_the_tool_source(
             match = _TOKENS.search(item.text())
             assert match is not None, item.text()
             listed[str(item.data(Qt.ItemDataRole.UserRole))] = int(match.group(1))
-        expected = {cost.canonical_name.rsplit(".", 1)[-1]: cost.total_tokens for cost in source.costs("play")}
-        assert "play" in source.priced[:-1]
+        assert "play" in source.priced
+        expected = {cost.canonical_name.rsplit(".", 1)[-1]: cost.total_tokens for cost in source.given["play"]}
         assert listed == expected
         dialog.close()
     finally:

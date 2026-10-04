@@ -19,6 +19,25 @@ $watchedRoots = @(
     'HKLM:\SYSTEM\CurrentControlSet\Services'
 )
 
+# start_monitors.cmd hands every monitor it launches the path of a file in
+# INTELLICRACK_MONITOR_READY and takes the creation of that file as the only
+# proof the monitor started. This is called once startup can no longer fail.
+# The variable is cleared first so nothing this process launches inherits it;
+# a monitor started any other way has none and creates nothing.
+function Send-MonitorReady {
+    [CmdletBinding()]
+    param()
+
+    $marker = $env:INTELLICRACK_MONITOR_READY
+    if (-not $marker) { return }
+    $env:INTELLICRACK_MONITOR_READY = $null
+    try {
+        [System.IO.File]::WriteAllText($marker, (Get-Date).ToString('o'))
+    } catch {
+        $null = $_
+    }
+}
+
 function Get-RegValueType {
     param([string]$RegPath, [string]$ValueName)
     try {
@@ -69,6 +88,8 @@ function Get-ValueSnapshot {
     } catch {}
     return $snap
 }
+
+Send-MonitorReady
 
 $baseline = @{}
 foreach ($root in $watchedRoots) {

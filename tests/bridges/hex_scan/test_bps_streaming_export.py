@@ -52,6 +52,7 @@ import intellicrack_hexcore
 import pytest
 
 from intellicrack.bridges.hex_editor import HexEditorBridge
+from tests._helpers.sparse_files import extend_sparse
 
 
 if TYPE_CHECKING:
@@ -66,8 +67,8 @@ Sized at slightly more than 2 GiB so any code path that tried to
 allocate a Python ``bytes`` value for the whole source would
 immediately push the Python interpreter's heap well past the bounds
 allowed by the assertions below. The file is created sparse via
-:func:`io.IOBase.truncate` so it consumes negligible real disk on
-NTFS / ext4 / APFS.
+:func:`tests._helpers.sparse_files.extend_sparse` so it consumes
+negligible real disk on NTFS / ext4 / APFS.
 """
 
 _SMALL_SOURCE_BYTES: Final[int] = 4 * 1024 * 1024
@@ -131,18 +132,18 @@ def _call_apply(bridge: HexEditorBridge, attr: str, patch: bytes, source: bytes)
 def _make_sparse_source(path: Path, size: int) -> None:
     """Create a sparse file of ``size`` bytes at ``path``.
 
-    On Windows NTFS and POSIX filesystems alike, opening a file in
-    truncate mode and calling :meth:`io.IOBase.truncate` to a larger
-    size yields a logically zero-filled file whose physical disk
-    footprint is the size of any explicitly written data (here zero),
-    because the trailing zero region is allocated lazily.
+    The file is logically zero-filled and its physical disk footprint
+    is the size of any explicitly written data (here zero). POSIX
+    filesystems leave a hole when a file is extended; NTFS allocates
+    the whole extension unless the file is first marked sparse, which
+    :func:`tests._helpers.sparse_files.extend_sparse` does.
 
     Args:
         path: Destination filesystem path; overwritten if it exists.
         size: Logical length, in bytes, that the file should report.
     """
     with path.open("wb") as fh:
-        fh.truncate(size)
+        extend_sparse(fh, size)
 
 
 def _open_bridge_with_target(payload: bytes) -> HexEditorBridge:

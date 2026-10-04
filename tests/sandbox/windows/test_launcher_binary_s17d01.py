@@ -33,6 +33,7 @@ That behaviour drives four regressions gated here:
 from __future__ import annotations
 
 import asyncio
+import shutil
 import sys
 from typing import TYPE_CHECKING, cast
 
@@ -45,6 +46,7 @@ from intellicrack.sandbox.windows import WindowsSandbox
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
+    from pathlib import Path
 
     from intellicrack.core.subprocess_compat import Popen
 
@@ -200,7 +202,7 @@ class TestExeOnPathIsReal:
     """The PATH probe must genuinely consult the OS, not always answer True."""
 
     def test_detects_a_real_executable_and_rejects_a_missing_one(self) -> None:
-        """``where`` resolves cmd.exe and rejects a name that cannot exist.
+        """The probe resolves cmd.exe and rejects a name that cannot exist.
 
         Without this, the selection tests above could pass against a probe that
         answers True unconditionally.
@@ -211,8 +213,42 @@ class TestExeOnPathIsReal:
         )
         found = asyncio.run(probe("cmd.exe"))
         missing = asyncio.run(probe("intellicrack-no-such-binary.exe"))
-        assert found is True, "where cmd.exe should resolve on a Windows host"
+        assert found is True, "cmd.exe should resolve on a Windows host"
         assert missing is False, "a nonexistent executable must not resolve"
+
+    def test_the_answer_does_not_depend_on_a_program_in_the_working_directory(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A ``where.exe`` sitting in the working directory must not decide what is on ``PATH``.
+
+        The probe used to start ``where`` by name. Windows looks in the working
+        directory before the system directory when it starts a program by name,
+        so the lookup was answered by whatever ``where.exe`` happened to be
+        there, and on a loaded machine the real one could take longer to start
+        than the probe was willing to wait. The stand-in here is a real system
+        program that rejects the argument it is given and exits non-zero.
+
+        Falsifiable: a probe that launches ``where`` runs the stand-in instead
+        and reports that cmd.exe is not on ``PATH``.
+
+        Args:
+            tmp_path: Directory made the working directory for the lookup.
+            monkeypatch: Restores the working directory afterwards.
+        """
+        whoami = shutil.which("whoami.exe")
+        assert whoami is not None, "whoami.exe is part of every Windows installation"
+        shutil.copy2(whoami, tmp_path / "where.exe")
+        monkeypatch.chdir(tmp_path)
+        probe = cast(
+            "Callable[[str], Coroutine[object, object, bool]]",
+            getattr(WindowsSandbox, "_exe_on_path"),
+        )
+
+        found = asyncio.run(probe("cmd.exe"))
+
+        assert found is True, "cmd.exe is on PATH whatever the working directory holds"
 
 
 class TestStartupHealth:

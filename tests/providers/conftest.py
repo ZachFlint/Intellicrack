@@ -22,6 +22,7 @@ import pytest_asyncio
 from intellicrack.core.types import ProviderCredentials, ProviderError
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.anthropic import AnthropicProvider
+from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.google import GoogleProvider
 from intellicrack.providers.grok import GrokProvider
 from intellicrack.providers.huggingface import HuggingFaceProvider
@@ -266,6 +267,53 @@ def pytest_runtest_call() -> Generator[None]:
     except (ProviderError, httpx.HTTPError, OSError, openai.APIConnectionError) as exc:
         _skip_if_environment_precondition(exc)
         raise
+
+
+_SELF_CLOSING_SDK_PROVIDERS: tuple[type[LLMProviderBase], ...] = (AnthropicProvider, OpenAIProvider, GrokProvider, GoogleProvider)
+"""Providers whose SDK client closes itself from its finalizer when nobody closed it.
+
+Each of these SDKs schedules that close as a task on whichever event loop is running when the garbage collector reaches the client. For a
+client a test connected and then abandoned, that is some later test's loop, where the close fails against connections belonging to the
+abandoning test's loop and asyncio reports the failure into the later test.
+"""
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _disconnect_sdk_providers_left_connected(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[None]:
+    """Disconnect every SDK-backed provider a test constructed, once the test is over.
+
+    Most provider gates build a provider against a loopback server inside a
+    helper and never disconnect it. Every provider constructed during the test
+    is kept alive until the test is over, and those of
+    :data:`_SELF_CLOSING_SDK_PROVIDERS` are disconnected here, on the test's
+    own loop, so their clients are closed before that loop is. A provider
+    remembered only weakly is gone by then: it dies when the test function
+    returns, and its client's finalizer has already scheduled the very task
+    this fixture exists to prevent.
+
+    Args:
+        monkeypatch: Restores the provider base class's constructor afterwards.
+
+    Yields:
+        None: Control passed to the test.
+    """
+    constructed: list[LLMProviderBase] = []
+    construct = LLMProviderBase.__init__
+
+    def _construct_and_remember(provider: LLMProviderBase) -> None:
+        """Construct a provider as usual and remember it.
+
+        Args:
+            provider: The provider being constructed.
+        """
+        construct(provider)
+        constructed.append(provider)
+
+    monkeypatch.setattr(LLMProviderBase, "__init__", _construct_and_remember)
+    yield
+    for provider in constructed:
+        if isinstance(provider, _SELF_CLOSING_SDK_PROVIDERS):
+            await provider.disconnect()
 
 
 @pytest_asyncio.fixture

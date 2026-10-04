@@ -26,6 +26,7 @@ Tests validate:
 from __future__ import annotations
 
 import asyncio
+import ctypes
 import inspect
 import os
 import shutil
@@ -1411,6 +1412,39 @@ class TestEntryPointBug:
         assert entry == 4198400
 
 
+def _resolved_path(path: str) -> str:
+    """Resolve a path to its absolute long form, with forward slashes, off the event loop.
+
+    Args:
+        path: The path to resolve.
+
+    Returns:
+        str: The resolved absolute path, using forward slashes, as the bridge forwards it to rizin.
+    """
+    return Path(path).resolve().as_posix()
+
+
+def _short_path(path: str) -> str:
+    r"""Return a directory's 8.3 short form where the volume generates one.
+
+    Short names are what put a ``~`` into a Windows path. A volume with 8.3
+    generation disabled returns the path unchanged, so the gate degrades to a
+    long-path check there and bites on a volume that does generate them, such
+    as the CI runner's ``C:\\Users\\RUNNER~1``.
+
+    Args:
+        path: An existing directory.
+
+    Returns:
+        str: The directory's short form, or ``path`` when none exists.
+    """
+    buffer = ctypes.create_unicode_buffer(32768)
+    length = ctypes.windll.kernel32.GetShortPathNameW(path, buffer, len(buffer))
+    if length == 0 or length >= len(buffer):
+        return path
+    return buffer.value
+
+
 class TestSaveBinary:
     """Verify save_binary sends wtf command (Bug 3 fix)."""
 
@@ -1432,12 +1466,13 @@ class TestSaveBinary:
         b.r2 = _as_r2pipe(recorder)
         await b.analyze()
         recorder.commands.clear()
-        output_path = f"{tempfile.gettempdir()}/output.exe"
-        result = await b.save_binary(output_path)
+        short_dir = await asyncio.to_thread(_short_path, tempfile.gettempdir())
+        raw_path = str(Path(short_dir, "output.exe"))
+        result = await b.save_binary(raw_path)
         assert result is True
         wcf_cmds = [c for c in recorder.commands if c.startswith("wcf")]
         assert len(wcf_cmds) == 1
-        assert output_path in wcf_cmds[0]
+        assert await asyncio.to_thread(_resolved_path, raw_path) in wcf_cmds[0]
 
 
 class TestGetSymbols:

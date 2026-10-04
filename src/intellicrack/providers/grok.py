@@ -155,6 +155,7 @@ class GrokProvider(LLMProviderBase):
 
         base_url = credentials.api_base or self.BASE_URL
 
+        await self._close_client()
         try:
             self.client = openai.AsyncOpenAI(
                 api_key=credentials.api_key,
@@ -164,13 +165,13 @@ class GrokProvider(LLMProviderBase):
             await self.client.models.list()
         except openai.AuthenticationError as e:
             self.connected = False
-            self.client = None
+            await self._close_client()
             detail = self._redact_error_text(e, api_key=credentials.api_key)
             self._logger.warning("grok_auth_failed", error=detail)
             raise AuthenticationError(_ERR_INVALID_API_KEY % detail) from e
         except openai.BadRequestError as e:
             self.connected = False
-            self.client = None
+            await self._close_client()
             detail = self._redact_error_text(e, api_key=credentials.api_key)
             self._logger.warning("grok_bad_request", error=detail)
             error_str = detail.lower()
@@ -179,7 +180,7 @@ class GrokProvider(LLMProviderBase):
             raise ProviderError(_ERR_API_REQUEST % detail) from e
         except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
             self.connected = False
-            self.client = None
+            await self._close_client()
             detail = self._redact_error_text(e, api_key=credentials.api_key)
             self._logger.warning("grok_connect_failed", error=detail)
             raise ProviderError(_ERR_CONNECT_FAILED % detail) from e
@@ -188,11 +189,29 @@ class GrokProvider(LLMProviderBase):
             self.connected = True
             self._logger.info("grok_api_connected", base_url=base_url)
 
+    async def _close_client(self) -> None:
+        """Close the SDK client and its connection pool, if there is one.
+
+        The SDK client owns an HTTP connection pool. Dropped without being
+        closed, the pool is left to the garbage collector, and the SDK's
+        finalizer then closes it by scheduling a task on whichever event loop
+        is running when the collector reaches it -- which fails against
+        connections that belong to a loop already closed, in the middle of
+        whatever unrelated work that loop is doing.
+        """
+        client, self.client = self.client, None
+        if client is None:
+            return
+        try:
+            await client.close()
+        except (OSError, RuntimeError) as exc:
+            self._logger.warning("grok_client_close_error", error=str(exc))
+
     async def disconnect(self) -> None:
         """Disconnect from Grok API."""
         try:
             await super().disconnect()
-            self.client = None
+            await self._close_client()
             self._current_task = None
             self._logger.info("grok_disconnected", provider="grok")
         except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:

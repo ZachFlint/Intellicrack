@@ -47,6 +47,25 @@ foreach ($name in @('ImageSize', 'Size', 'ImageLength')) {
 $script:KnownPayloadSchemas = [System.Collections.Generic.HashSet[string]]::new()
 $script:ObservedPayloadFieldNames = [System.Collections.Generic.HashSet[string]]::new()
 
+# start_monitors.cmd hands every monitor it launches the path of a file in
+# INTELLICRACK_MONITOR_READY and takes the creation of that file as the only
+# proof the monitor started. This is called once startup can no longer fail.
+# The variable is cleared first so nothing this process launches inherits it;
+# a monitor started any other way has none and creates nothing.
+function Send-MonitorReady {
+    [CmdletBinding()]
+    param()
+
+    $marker = $env:INTELLICRACK_MONITOR_READY
+    if (-not $marker) { return }
+    $env:INTELLICRACK_MONITOR_READY = $null
+    try {
+        [System.IO.File]::WriteAllText($marker, (Get-Date).ToString('o'))
+    } catch {
+        $null = $_
+    }
+}
+
 function Open-MonitorStopEvent {
     [CmdletBinding()]
     [OutputType([System.Threading.EventWaitHandle])]
@@ -553,6 +572,7 @@ function Invoke-RealtimeDllMonitor {
         $script:StopMonitorJob = $stopMonitorJob
         $script:StopMonitorSubscriberId = $stopActionSubscriberId
         $stopMonitor.Start()
+        Send-MonitorReady
 
         # Pumped through psbase: PowerShell's adapted-member binder refuses this
         # one call ("result type 'System.Boolean' ... not compatible with ...
@@ -613,6 +633,8 @@ function Invoke-WmiDllMonitor {
                 -Detail $_.Exception.Message
         }
     }
+
+    Send-MonitorReady
 
     try {
         while ($true) {

@@ -362,6 +362,27 @@ def validate_r2_argument(value: str, *, field: str) -> str:
     return value
 
 
+def _resolve_save_target(path: str) -> str:
+    r"""Resolve a save path to an absolute, forward-slash path with no 8.3 short components.
+
+    Windows hands out short names such as ``C:\\Users\\RUNNER~1`` for long
+    directory names, and the ``~`` in them is rizin's grep operator, so a raw
+    short path cannot be forwarded on a command line. Resolving the path
+    expands every short component to its long form while leaving a literal
+    ``~`` that is part of a real name in place, so genuine injection attempts
+    are still refused downstream. The result is rendered with forward slashes,
+    which rizin accepts on every platform and which carry no backslash-escaping
+    hazard, so a configured ``C:/out.bin`` is forwarded unchanged.
+
+    Args:
+        path: The configured or defaulted save path.
+
+    Returns:
+        str: The resolved absolute path, using forward slashes.
+    """
+    return Path(path).resolve().as_posix()
+
+
 def _find_json_start(text: str) -> int | None:
     """Locate the index of the first JSON container opener in ``text``.
 
@@ -3842,6 +3863,7 @@ class CutterRopMixin(CutterMetadataMixin):
         else:
             target = path
 
+        target = await asyncio.to_thread(_resolve_save_target, target)
         validate_r2_argument(target, field="save_binary path")
         result = await self._r2_cmd(f"wcf {target}")
         if "error" in result.lower() or "cannot" in result.lower() or "fail" in result.lower():

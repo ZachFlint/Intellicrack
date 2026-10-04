@@ -59,6 +59,7 @@ from typing import TYPE_CHECKING, Any, BinaryIO, ClassVar, Final, Self
 import anyio
 import anyio.lowlevel
 import mcp_types
+import psutil
 from anyio.streams.file import FileReadStream, FileWriteStream
 from mcp.shared.message import SessionMessage
 
@@ -93,11 +94,24 @@ CREATE_UNICODE_ENVIRONMENT: Final[int] = 0x00000400
 EXTENDED_STARTUPINFO_PRESENT: Final[int] = 0x00080000
 CREATE_NO_WINDOW: Final[int] = 0x08000000
 
-SANDBOX_CREATION_FLAGS: Final[int] = CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW
+_STD_INPUT_HANDLE: Final[int] = 0xFFFFFFF6
+_STD_OUTPUT_HANDLE: Final[int] = 0xFFFFFFF5
+_STD_ERROR_HANDLE: Final[int] = 0xFFFFFFF4
+_STD_HANDLES: Final[tuple[int, int, int]] = (_STD_INPUT_HANDLE, _STD_OUTPUT_HANDLE, _STD_ERROR_HANDLE)
+_SW_HIDE: Final[int] = 0
+
+SANDBOX_CREATION_FLAGS: Final[int] = CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT
 """Creation flags of every confined launch.
 
 ``CREATE_SUSPENDED`` is what keeps the job airtight: the process is placed in its job before its first thread runs, so neither the server
 nor anything it starts ever executes outside the job. No breakaway flag is set, and the job does not permit breakaway.
+
+No console-creation flag is set, so the server inherits the launcher's console rather than allocating its own. A console-subsystem child
+with no console to inherit -- which ``CREATE_NO_WINDOW`` forces, since it allocates a fresh one -- stands that console up under the
+restricted Low integrity token, and that allocation fails during loader initialization with ``STATUS_DLL_INIT_FAILED`` on a hosted runner,
+killing the server before it runs. It fails the same way for any console-subsystem grandchild a shim or launcher starts, which a flag on the
+direct child cannot prevent. :func:`ensure_inheritable_console` gives the launcher a console under its own unrestricted token for the whole
+confined tree to inherit, so nothing in it ever allocates one.
 """
 
 DEFAULT_ACTIVE_PROCESS_LIMIT: Final[int] = 16
@@ -154,6 +168,14 @@ SANDBOX_HOME_LAYOUT: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
 The profile and application-data variables cover whatever reads them, npm included. uv and pipx find their directories through the Windows
 known-folder API rather than the environment, so they are pointed at the home by their own variables; without them ``uv`` and ``uvx``
 fail with "Failed to initialize cache ... Access is denied".
+"""
+
+SANDBOX_LAUNCHER_SETTINGS: Final[Mapping[str, str]] = {"npm_config_install_links": "true"}
+"""Launcher settings every confined server starts with, whatever its home is.
+
+npm installs a package named by a local folder as a junction to that folder, and Windows refuses a Low integrity process a junction whose
+target it cannot write, so ``npx`` on a local package failed with ``EPERM``. ``install-links`` makes npm copy the package into its cache in
+the server's home instead, which a confined server can always do.
 """
 
 BATCH_SUFFIXES: Final[frozenset[str]] = frozenset({".cmd", ".bat"})
@@ -266,11 +288,28 @@ _WIN_BUILTIN_ADMINISTRATORS_SID: Final[int] = 26
 _WIN_LOW_LABEL_SID: Final[int] = 66
 _SECURITY_MAX_SID_SIZE: Final[int] = 68
 
+_TOKEN_USER_CLASS: Final[int] = 1
+_TOKEN_DEFAULT_DACL_CLASS: Final[int] = 6
+_GENERIC_ALL: Final[int] = 0x10000000
+_GRANT_ACCESS: Final[int] = 1
+_NO_INHERITANCE: Final[int] = 0
+_NO_MULTIPLE_TRUSTEE: Final[int] = 0
+_TRUSTEE_IS_SID: Final[int] = 0
+_TRUSTEE_IS_USER: Final[int] = 1
+
 _LOW_LABEL_SDDL: Final[str] = "S:(ML;OICI;NW;;;LW)"
 """A SACL granting Low integrity write access, inherited by files and subdirectories."""
 
 _NO_LABEL_SDDL: Final[str] = "S:"
 """A SACL with no entries: an object carrying it has no explicit mandatory label."""
+
+_MANDATORY_LABEL_MARKER: Final[str] = "(ML;"
+"""How a mandatory-label ACE opens in SDDL.
+
+Its absence means the object carries no integrity label, whatever else the SACL holds: a NULL SACL renders as ``NO_ACCESS_CONTROL`` and an
+auto-inherited one carries the ``AI`` control flag, so ``"S:"``, ``"S:NO_ACCESS_CONTROL"`` and ``"S:AINO_ACCESS_CONTROL"`` all mean the same
+absence and must read back the same.
+"""
 
 _SDDL_REVISION_1: Final[int] = 1
 _SE_FILE_OBJECT: Final[int] = 1
@@ -278,6 +317,11 @@ _LABEL_SECURITY_INFORMATION: Final[int] = 0x00000010
 
 GRANTS_FILENAME: Final[str] = "mcp_sandbox_grants.json"
 """File recording every Low integrity write grant in force, so one left behind by a crash is reverted at the next start."""
+
+_GRANT_OWNER_PID: Final[str] = "ownerPid"
+_GRANT_OWNER_STARTED: Final[str] = "ownerStarted"
+_OWNER_START_TOLERANCE_S: Final[float] = 0.001
+"""How far a recorded start time may differ from a running process's and still name that process."""
 
 _STARTF_USESTDHANDLES: Final[int] = 0x00000100
 _PROC_THREAD_ATTRIBUTE_HANDLE_LIST: Final[int] = 0x00020002
@@ -351,6 +395,41 @@ class _TokenMandatoryLabel(ctypes.Structure):
     """Win32 ``TOKEN_MANDATORY_LABEL``."""
 
     _fields_: ClassVar = [("Label", _SidAndAttributes)]
+
+
+class _TokenUser(ctypes.Structure):
+    """Win32 ``TOKEN_USER``."""
+
+    _fields_: ClassVar = [("User", _SidAndAttributes)]
+
+
+class _TokenDefaultDacl(ctypes.Structure):
+    """Win32 ``TOKEN_DEFAULT_DACL``."""
+
+    _fields_: ClassVar = [("DefaultDacl", ctypes.c_void_p)]
+
+
+class _TrusteeW(ctypes.Structure):
+    """Win32 ``TRUSTEE_W``, naming its trustee by SID."""
+
+    _fields_: ClassVar = [
+        ("pMultipleTrustee", ctypes.c_void_p),
+        ("MultipleTrusteeOperation", ctypes.c_int),
+        ("TrusteeForm", ctypes.c_int),
+        ("TrusteeType", ctypes.c_int),
+        ("ptstrName", ctypes.c_void_p),
+    ]
+
+
+class _ExplicitAccessW(ctypes.Structure):
+    """Win32 ``EXPLICIT_ACCESS_W``."""
+
+    _fields_: ClassVar = [
+        ("grfAccessPermissions", wintypes.DWORD),
+        ("grfAccessMode", ctypes.c_int),
+        ("grfInheritance", wintypes.DWORD),
+        ("Trustee", _TrusteeW),
+    ]
 
 
 class _StartupInfoW(ctypes.Structure):
@@ -586,11 +665,12 @@ def build_environment_allowlist(
 ) -> dict[str, str]:
     """Build the complete environment a confined child receives.
 
-    Four layers, each overriding the one before: the inherited environment
+    Five layers, each overriding the one before: the inherited environment
     filtered to :data:`ENVIRONMENT_ALLOWLIST`; the variables pointing every
-    launcher at the server's sandbox home; the inherited variables the
-    operator named in ``inheritEnv``; and the server's own configured
-    entries. Nothing else crosses: a credential sitting in Intellicrack's
+    launcher at the server's sandbox home; the launcher settings of
+    :data:`SANDBOX_LAUNCHER_SETTINGS`; the inherited variables the operator
+    named in ``inheritEnv``; and the server's own configured entries.
+    Nothing else crosses: a credential sitting in Intellicrack's
     environment for one provider has no business reaching a third-party
     server. Names are compared without regard to case, as Windows compares
     them, so a later layer replaces an earlier entry rather than sitting
@@ -610,6 +690,7 @@ def build_environment_allowlist(
     allowed: dict[str, str] = {}
     _merge_environment(allowed, {name: value for name, value in inherited.items() if name.upper() in ENVIRONMENT_ALLOWLIST})
     _merge_environment(allowed, home.environment())
+    _merge_environment(allowed, SANDBOX_LAUNCHER_SETTINGS)
     _merge_environment(allowed, {name: value for name, value in inherited.items() if name.upper() in wanted})
     _merge_environment(allowed, env)
     return allowed
@@ -1000,7 +1081,64 @@ def _kernel32() -> ctypes.WinDLL:
     kernel32.SetHandleInformation.restype = wintypes.BOOL
     kernel32.LocalFree.argtypes = [ctypes.c_void_p]
     kernel32.LocalFree.restype = ctypes.c_void_p
+    kernel32.AllocConsole.argtypes = []
+    kernel32.AllocConsole.restype = wintypes.BOOL
+    kernel32.GetConsoleWindow.argtypes = []
+    kernel32.GetConsoleWindow.restype = wintypes.HWND
+    kernel32.GetStdHandle.argtypes = [wintypes.DWORD]
+    kernel32.GetStdHandle.restype = wintypes.HANDLE
+    kernel32.SetStdHandle.argtypes = [wintypes.DWORD, wintypes.HANDLE]
+    kernel32.SetStdHandle.restype = wintypes.BOOL
     return kernel32
+
+
+@functools.cache
+def _user32() -> ctypes.WinDLL:
+    """Resolve the Win32 window-management API.
+
+    Returns:
+        ctypes.WinDLL: The ``user32`` library.
+
+    Raises:
+        McpConfigError: If called on a platform that has no Win32 API.
+    """
+    if not IS_WIN32:
+        raise McpConfigError(_ERR_UNSUPPORTED_PLATFORM)
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindow.restype = wintypes.BOOL
+    return user32
+
+
+@functools.cache
+def ensure_inheritable_console() -> None:
+    """Give the launcher a console the confined tree can inherit, once per process.
+
+    A console-subsystem child with no console to inherit allocates its own, and
+    that allocation fails under the confined restricted token on a hosted
+    runner, so every process in the tree must inherit one instead. When the
+    launcher already has a console -- the usual case under a terminal --
+    ``AllocConsole`` fails with ``ERROR_ACCESS_DENIED`` and the tree inherits
+    that one. When it has none -- a windowed application -- a console is
+    allocated here, under the launcher's own unrestricted token where the
+    allocation succeeds, and its window is hidden so nothing flashes on screen.
+    The launcher's own standard handles are saved across the call and restored,
+    since ``AllocConsole`` repoints them at the new console and the launcher's
+    own input and output must stay where they were.
+
+    A platform with no sandbox propagates :class:`McpConfigError` from
+    :func:`_kernel32`.
+    """
+    kernel32 = _kernel32()
+    saved = [kernel32.GetStdHandle(std) for std in _STD_HANDLES]
+    if not kernel32.AllocConsole():
+        return
+    window = kernel32.GetConsoleWindow()
+    if window:
+        _ = _user32().ShowWindow(window, _SW_HIDE)
+    for std, handle in zip(_STD_HANDLES, saved, strict=True):
+        _ = kernel32.SetStdHandle(std, handle)
+    _logger.debug("mcp_sandbox_console_allocated")
 
 
 @functools.cache
@@ -1036,6 +1174,10 @@ def _advapi32() -> ctypes.WinDLL:
     advapi32.GetLengthSid.restype = wintypes.DWORD
     advapi32.SetTokenInformation.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
     advapi32.SetTokenInformation.restype = wintypes.BOOL
+    advapi32.GetTokenInformation.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
+    advapi32.GetTokenInformation.restype = wintypes.BOOL
+    advapi32.SetEntriesInAclW.argtypes = [wintypes.ULONG, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)]
+    advapi32.SetEntriesInAclW.restype = wintypes.DWORD
     advapi32.CreateProcessAsUserW.argtypes = [
         wintypes.HANDLE,
         wintypes.LPCWSTR,
@@ -1302,15 +1444,92 @@ def _lower_integrity(token: wintypes.HANDLE, label_sid: ctypes.Array[ctypes.c_ch
     return ctypes.get_last_error()
 
 
+def _token_information(token: wintypes.HANDLE, information_class: int) -> ctypes.Array[ctypes.c_char]:
+    """Read one variable-length class of a token's information.
+
+    Args:
+        token: The token to read.
+        information_class: The ``TOKEN_INFORMATION_CLASS`` value.
+
+    Returns:
+        ctypes.Array[ctypes.c_char]: A buffer holding the structure of that
+        class and whatever it points at.
+
+    Raises:
+        ctypes.WinError: If the information could not be read.
+    """
+    advapi32 = _advapi32()
+    needed = wintypes.DWORD(0)
+    _ = advapi32.GetTokenInformation(token, information_class, None, 0, ctypes.byref(needed))
+    if ctypes.get_last_error() != _ERROR_INSUFFICIENT_BUFFER or not needed.value:
+        raise ctypes.WinError(ctypes.get_last_error())
+    buffer = ctypes.create_string_buffer(needed.value)
+    if not advapi32.GetTokenInformation(token, information_class, buffer, needed, ctypes.byref(needed)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    return buffer
+
+
+def _grant_user_default_access(token: wintypes.HANDLE) -> None:
+    """Let a token's own account use what a process running under it creates.
+
+    An object created without an explicit security descriptor -- a pipe, an
+    event, a section, the process itself -- takes its access list from the
+    creating token's default one. An elevated operator's default list names
+    Administrators and SYSTEM but not the operator's account, and the confined
+    copy holds Administrators deny-only, so a server derived from it could not
+    open the other end of a pipe it had just created and no launcher could
+    start a child with redirected output. The account is added with full
+    access, which is what a standard account's default list already carries.
+    A token with no default list is left alone: its objects are created with
+    no access list at all, which already admits the account.
+
+    Args:
+        token: The token to change.
+
+    Raises:
+        ctypes.WinError: If the token could not be read or changed.
+    """
+    kernel32 = _kernel32()
+    advapi32 = _advapi32()
+    user = _TokenUser.from_buffer(_token_information(token, _TOKEN_USER_CLASS))
+    current = _TokenDefaultDacl.from_buffer(_token_information(token, _TOKEN_DEFAULT_DACL_CLASS))
+    if not current.DefaultDacl:
+        return
+    entry = _ExplicitAccessW(
+        grfAccessPermissions=_GENERIC_ALL,
+        grfAccessMode=_GRANT_ACCESS,
+        grfInheritance=_NO_INHERITANCE,
+        Trustee=_TrusteeW(
+            pMultipleTrustee=None,
+            MultipleTrusteeOperation=_NO_MULTIPLE_TRUSTEE,
+            TrusteeForm=_TRUSTEE_IS_SID,
+            TrusteeType=_TRUSTEE_IS_USER,
+            ptstrName=user.User.Sid,
+        ),
+    )
+    merged = ctypes.c_void_p()
+    if status := advapi32.SetEntriesInAclW(1, ctypes.byref(entry), current.DefaultDacl, ctypes.byref(merged)):
+        raise ctypes.WinError(status)
+    try:
+        replacement = _TokenDefaultDacl(DefaultDacl=merged)
+        if not advapi32.SetTokenInformation(token, _TOKEN_DEFAULT_DACL_CLASS, ctypes.byref(replacement), ctypes.sizeof(replacement)):
+            raise ctypes.WinError(ctypes.get_last_error())
+    finally:
+        _ = kernel32.LocalFree(merged)
+
+
 def create_restricted_token() -> int:
     """Derive the primary token a confined server runs with.
 
     The token is a restricted copy of Intellicrack's own: every privilege
     except change-notify is removed, the Administrators group is made
     deny-only so an elevated operator's rights do not reach the server, and
-    the integrity level is lowered to Low. Being derived from the caller's
-    own token is what lets it be assigned to a new process without the
-    ``SeAssignPrimaryTokenPrivilege`` a foreign token would need.
+    the integrity level is lowered to Low. Its default access list is given
+    the token's own account, so the server can use the pipes and other objects
+    it creates even when the list it was copied with named only
+    Administrators. Being derived from the caller's own token is what lets it
+    be assigned to a new process without the ``SeAssignPrimaryTokenPrivilege``
+    a foreign token would need.
 
     A platform with no sandbox propagates :class:`McpConfigError` from
     :func:`_kernel32`, and a token that cannot be copied propagates
@@ -1320,8 +1539,9 @@ def create_restricted_token() -> int:
         int: The token handle. The caller owns it and must close it.
 
     Raises:
-        ctypes.WinError: If the process token could not be opened or the copy
-            could not be lowered to Low integrity.
+        ctypes.WinError: If the process token could not be opened, the copy
+            could not be lowered to Low integrity, or its default access list
+            could not be changed.
     """
     kernel32 = _kernel32()
     advapi32 = _advapi32()
@@ -1334,9 +1554,15 @@ def create_restricted_token() -> int:
         restricted = _restricted_copy(own, administrators)
     finally:
         _ = kernel32.CloseHandle(own)
-    if error := _lower_integrity(restricted, low):
-        _ = kernel32.CloseHandle(restricted)
-        raise ctypes.WinError(error)
+    confined = False
+    try:
+        if error := _lower_integrity(restricted, low):
+            raise ctypes.WinError(error)
+        _grant_user_default_access(restricted)
+        confined = True
+    finally:
+        if not confined:
+            _ = kernel32.CloseHandle(restricted)
     _logger.debug("mcp_sandbox_token_restricted")
     return int(restricted.value or 0)
 
@@ -1415,7 +1641,7 @@ def read_mandatory_label(path: str) -> str:
         rendered = text.value or ""
     finally:
         _ = kernel32.LocalFree(ctypes.cast(text, ctypes.c_void_p))
-    return rendered if rendered.startswith("S:") else _NO_LABEL_SDDL
+    return rendered if _MANDATORY_LABEL_MARKER in rendered else _NO_LABEL_SDDL
 
 
 def set_mandatory_label(path: str, sddl: str, *, propagate: bool) -> None:
@@ -1485,6 +1711,33 @@ def label_directory_low_integrity(directory: str, *, existing: bool = False) -> 
     """
     set_mandatory_label(directory, _LOW_LABEL_SDDL, propagate=existing)
     _logger.info("mcp_sandbox_write_path_labelled", directory=directory, existing=existing)
+
+
+def _granted_by_another_running_process(entry: JsonObject) -> bool:
+    """Report whether a recorded grant belongs to a different process that is still running.
+
+    The record carries the PID of the process that made the grant and when
+    that process started, so a PID the system has since handed to something
+    else does not pass for the grant's owner. A record with neither, written
+    before grants named their owner, belongs to nobody running.
+
+    Args:
+        entry: One recorded grant.
+
+    Returns:
+        bool: ``True`` when the grant's owner is alive and is not this process.
+    """
+    pid = entry.get(_GRANT_OWNER_PID)
+    started = entry.get(_GRANT_OWNER_STARTED)
+    if isinstance(pid, bool) or not isinstance(pid, int) or isinstance(started, bool) or not isinstance(started, (int, float)):
+        return False
+    if pid == os.getpid():
+        return False
+    try:
+        running_since = psutil.Process(pid).create_time()
+    except psutil.Error:
+        return False
+    return abs(running_since - started) < _OWNER_START_TOLERANCE_S
 
 
 class WriteGrantLedger:
@@ -1621,7 +1874,13 @@ class WriteGrantLedger:
             Returns:
                 bool: Always ``True``.
             """
-            data[key] = {"directory": grant.directory, "originalLabel": grant.original_label, "existing": grant.existing}
+            data[key] = {
+                "directory": grant.directory,
+                "originalLabel": grant.original_label,
+                "existing": grant.existing,
+                _GRANT_OWNER_PID: os.getpid(),
+                _GRANT_OWNER_STARTED: psutil.Process().create_time(),
+            }
             return True
 
         try:
@@ -1654,7 +1913,13 @@ class WriteGrantLedger:
             _logger.warning("mcp_sandbox_grant_record_unremoved", key=key, error=str(exc))
 
     def revert_stale(self) -> int:
-        """Revert every recorded grant this process does not hold.
+        """Revert every recorded grant that nothing running holds.
+
+        A grant this ledger holds is in force, and so is one recorded by
+        another process that is still running: a second Intellicrack starting
+        beside the first must not take the first one's servers' write access
+        away from under them. What is left was recorded by a process that has
+        since ended without reverting it.
 
         Returns:
             int: How many grants were reverted.
@@ -1671,6 +1936,8 @@ class WriteGrantLedger:
                     continue
             if not is_json_object(entry):
                 self._forget(key)
+                continue
+            if _granted_by_another_running_process(entry):
                 continue
             directory = entry.get("directory")
             original = entry.get("originalLabel")
@@ -2379,6 +2646,7 @@ def spawn_confined_process(launch: SandboxedLaunch, job: SandboxedJob, token: in
         McpConfigError: If the job was not open. The process has been
             terminated and its pipe ends closed.
     """
+    ensure_inheritable_console()
     pipes = _ChildPipes.open(errlog)
     with INHERITANCE_LOCK:
         try:

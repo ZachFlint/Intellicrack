@@ -32,6 +32,7 @@ releases it, which is what puts the arrival on the far side of the old budget.
 from __future__ import annotations
 
 import ast
+import asyncio
 import shutil
 import sys
 import time
@@ -43,7 +44,7 @@ from typing import TYPE_CHECKING, Final
 import pytest
 
 from intellicrack.core.subprocess_compat import DEVNULL, SubprocessError, run
-from intellicrack.sandbox.windows import WindowsSandbox
+from intellicrack.sandbox.windows import MONITOR_READY_ANNOUNCEMENT, WindowsSandbox
 
 
 if TYPE_CHECKING:
@@ -62,6 +63,8 @@ _START_SCRIPT: Final[Path] = _SCRIPTS_DIR / "start_monitors.cmd"
 _BACKEND_SOURCE: Final[Path] = _SANDBOX_DIR / "windows.py"
 _ERR_NO_CONSTANT: Final[str] = "{name} is not declared as a numeric constant in {path}"
 _LAUNCH_TIMEOUT_S: Final[float] = 120.0
+_SCRIPTS_DIR_NAME: Final[str] = "scripts"
+_SHARED_DIR_NAME: Final[str] = "shared"
 _STOP_FLAG_NAME: Final[str] = "stop.flag"
 _TRIGGER_NAME: Final[str] = "reading.trigger"
 # Long enough to outlive the slowest gate here, short enough that a scratch
@@ -79,6 +82,7 @@ _PREAMBLE: Final[str] = (
     "$ErrorActionPreference = 'Stop'\n"
     "$stem = [IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Name)\n"
     "$log = Join-Path -Path $LogDir -ChildPath ($stem + '.log')\n"
+    f"{MONITOR_READY_ANNOUNCEMENT}"
 )
 _WRITE_RECORD: Final[str] = "Add-Content -LiteralPath $log -Value ((Get-Date).ToString('o') + '|record') -Encoding utf8\n"
 _AWAIT_TRIGGER: Final[str] = (
@@ -231,6 +235,24 @@ class _QuiescenceSandbox(WindowsSandbox):
         """
         self._shared_folder = path
 
+    async def stage_dispatcher(self, workspace: Path) -> None:
+        """Stage the dispatcher and bootstrap into a scratch layout with the backend's own code.
+
+        The guest path is pointed at the scratch shared folder, so a dispatcher
+        that did get started would work inside the workspace and nowhere else.
+
+        Args:
+            workspace: Directory the scratch scripts folder and shared folder live in.
+        """
+        shared = workspace / _SHARED_DIR_NAME
+        scripts = workspace / _SCRIPTS_DIR_NAME
+        await asyncio.to_thread(shared.mkdir, parents=True, exist_ok=True)
+        await asyncio.to_thread(scripts.mkdir, parents=True, exist_ok=True)
+        self.SANDBOX_SHARED_PATH = str(shared)
+        self._shared_folder = shared
+        self._monitor_folder = scripts
+        await self._create_dispatcher_scripts()
+
     def surviving_collectors(self) -> set[str]:
         """Forward to :meth:`WindowsSandbox._surviving_collectors`.
 
@@ -299,7 +321,7 @@ def _launched_fleet(workspace: Path, monitors: Mapping[str, str]) -> Generator[_
     Yields:
         _Fleet: The launched fleet, shut down again when the block exits.
     """
-    scripts_dir = workspace / "scripts"
+    scripts_dir = workspace / _SCRIPTS_DIR_NAME
     scripts_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy2(_START_SCRIPT, scripts_dir / _START_SCRIPT.name)
     for helper in _SCRIPTS_DIR.glob("_*.ps1"):
@@ -307,7 +329,7 @@ def _launched_fleet(workspace: Path, monitors: Mapping[str, str]) -> Generator[_
     for name, source in monitors.items():
         (scripts_dir / name).write_text(source, encoding="utf-8")
 
-    shared = workspace / "shared"
+    shared = workspace / _SHARED_DIR_NAME
     logs = shared / "logs"
     logs.mkdir(parents=True, exist_ok=True)
     fleet = _Fleet(shared=shared, logs=logs)
@@ -394,11 +416,15 @@ async def test_the_wait_does_not_return_before_a_late_collector_has_written(tmp_
 
 @pytest.mark.asyncio
 async def test_the_command_dispatcher_is_not_waited_on_as_a_collector(tmp_path: Path) -> None:
-    """The dispatcher shares the pid file but fills no tab, so it is excluded.
+    """The dispatcher fills no tab and is staged where the launcher never records it.
 
-    It is recorded by the same launcher as every monitor and it never writes a
-    ``.log``. Counting it as a collector would make the fleet permanently
-    incomplete and cost the whole settle window on every single run.
+    It never writes a ``.log``, so counting it as a collector would make the
+    fleet permanently incomplete and cost the whole settle window on every
+    single run. It used to be staged beside the monitors, where the launcher
+    started a second copy of it and recorded that copy in the pid file, and the
+    backend filtered it back out by name. The backend's own staging is run here
+    over the scratch layout, so the pid file is what the launcher writes when
+    the dispatcher has been staged the way production stages it.
 
     Args:
         tmp_path: Workspace for the scratch scripts and shared folder.
@@ -406,10 +432,11 @@ async def test_the_command_dispatcher_is_not_waited_on_as_a_collector(tmp_path: 
     monitors = {
         "prompt_alpha.ps1": _prompt_monitor(),
         "prompt_beta.ps1": _prompt_monitor(),
-        "sandbox_dispatcher.ps1": _silent_monitor(),
     }
+    sandbox = _QuiescenceSandbox()
+    await sandbox.stage_dispatcher(tmp_path)
     with _launched_fleet(tmp_path, monitors) as fleet:
-        sandbox = _build_sandbox(fleet)
+        sandbox.use_shared_folder(fleet.shared)
 
         assert sandbox.surviving_collectors() == {"prompt_alpha", "prompt_beta"}, (
             f"the collector fleet read back from the launcher's pid file was "

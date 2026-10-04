@@ -30,7 +30,7 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import pytest
 
@@ -42,10 +42,18 @@ from intellicrack.core.subprocess_compat import (
 )
 
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
 _SCRIPT_PATH: Final[Path] = _REPO_ROOT / "src" / "intellicrack" / "sandbox" / "scripts" / "clipboard_monitor.ps1"
-_PWSH_LAUNCH_TIMEOUT_SEC: Final[float] = 4.0
-_PWSH_KILL_GRACE_SEC: Final[float] = 2.0
+_PWSH_LAUNCH_TIMEOUT_SEC: Final[float] = 60.0
+_PWSH_KILL_GRACE_SEC: Final[float] = 15.0
+_READY_DEADLINE_SEC: Final[float] = 90.0
+_RECORD_DEADLINE_SEC: Final[float] = 30.0
+_POLL_INTERVAL_SEC: Final[float] = 0.25
+_READY_EVENT: Final[str] = "monitor.ready"
 _LOG_NAME: Final[str] = "clipboard_monitor.log"
 
 
@@ -168,6 +176,67 @@ def _set_clipboard(value: str, pwsh: str) -> None:
     assert completed.returncode == 0, f"Set-Clipboard failed: rc={completed.returncode} stderr={completed.stderr!r}"
 
 
+def _read_log(log_path: Path) -> str:
+    """Return the monitor log's current contents, or empty string if absent.
+
+    Args:
+        log_path: Path to the monitor log file.
+
+    Returns:
+        str: The file's text, or ``""`` when it does not yet exist.
+    """
+    if not log_path.exists():
+        return ""
+    return log_path.read_text(encoding="utf-8", errors="replace")
+
+
+def _wait_for_ready(log_path: Path, proc: Popen[str], deadline_sec: float) -> bool:
+    """Wait until the monitor records that its clipboard listener is active.
+
+    Polling for the readiness marker replaces a fixed warm-up sleep that races
+    the monitor's cold start: ``pwsh`` startup and the C# ``Add-Type`` compile
+    can take several seconds under load, and a clipboard change written before
+    the listener is registered is never seen.
+
+    Args:
+        log_path: Path to the monitor log file.
+        proc: The running monitor process, polled so a crash ends the wait early.
+        deadline_sec: Longest time to wait for readiness.
+
+    Returns:
+        bool: ``True`` once the readiness marker is present, else ``False``.
+    """
+    end = time.monotonic() + deadline_sec
+    while time.monotonic() < end:
+        if _READY_EVENT in _read_log(log_path):
+            return True
+        if proc.poll() is not None:
+            break
+        time.sleep(_POLL_INTERVAL_SEC)
+    return _READY_EVENT in _read_log(log_path)
+
+
+def _wait_for_log(log_path: Path, predicate: Callable[[str], bool], deadline_sec: float) -> str:
+    """Poll the monitor log until ``predicate`` accepts its contents or time runs out.
+
+    Args:
+        log_path: Path to the monitor log file.
+        predicate: Returns ``True`` once the log holds the awaited record.
+        deadline_sec: Longest time to wait.
+
+    Returns:
+        str: The log contents at the moment the predicate passed, or the final
+        contents read when the deadline elapsed.
+    """
+    end = time.monotonic() + deadline_sec
+    while time.monotonic() < end:
+        contents = _read_log(log_path)
+        if predicate(contents):
+            return contents
+        time.sleep(_POLL_INTERVAL_SEC)
+    return _read_log(log_path)
+
+
 def _parse_json_log_records(contents: str) -> list[dict[str, object]]:
     """Extract all valid JSON log records from clipboard-monitor log text.
 
@@ -261,17 +330,23 @@ def test_script_writes_logs_to_supplied_logdir(tmp_path: Path) -> None:
     log_dir.mkdir()
     log_path = log_dir / _LOG_NAME
 
+    sentinel = "audit3-logdir-check"
     proc = _start_script(log_dir, pwsh)
     try:
-        time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
-        _set_clipboard("audit3-logdir-check", pwsh)
-        time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
+        assert _wait_for_ready(log_path, proc, _READY_DEADLINE_SEC), f"monitor never became ready; log contents: {_read_log(log_path)!r}"
+        _set_clipboard(sentinel, pwsh)
+        contents = _wait_for_log(
+            log_path,
+            lambda text: any(len(rec) > 3 and sentinel in rec[3] for rec in _parse_pipe_log_records(text)),
+            _RECORD_DEADLINE_SEC,
+        )
     finally:
         _terminate(proc)
 
     assert log_path.exists(), f"expected log file at {log_path}; tmp dir contents: {list(log_dir.iterdir())}"
-    contents = log_path.read_text(encoding="utf-8", errors="replace")
-    assert contents.strip(), f"log file at {log_path} is empty"
+    assert any(len(rec) > 3 and sentinel in rec[3] for rec in _parse_pipe_log_records(contents)), (
+        f"no change record for {sentinel!r} landed in {log_path}; contents: {contents!r}"
+    )
 
 
 def _find_unused_drive_letter() -> str | None:
@@ -406,14 +481,16 @@ def test_script_logs_structured_json_when_add_type_fails(tmp_path: Path) -> None
         errors="replace",
     )
     try:
-        time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
+        contents = _wait_for_log(
+            log_path,
+            lambda text: any(r.get("event") == "init.add_type_failed" for r in _parse_json_log_records(text)),
+            _READY_DEADLINE_SEC,
+        )
         still_alive_after_init = proc.poll() is None
     finally:
         stdout, stderr, _ = _terminate(proc)
 
     assert log_path.exists(), f"expected log file at {log_path}; stdout={stdout!r} stderr={stderr!r}"
-
-    contents = log_path.read_text(encoding="utf-8", errors="replace")
     assert contents.strip(), f"fallback path produced no log output; stdout={stdout!r} stderr={stderr!r}"
 
     json_records = _parse_json_log_records(contents)
@@ -527,17 +604,14 @@ def test_smoke_script_logs_clipboard_change(tmp_path: Path) -> None:
     ``len(sentinel.encode("utf-8"))`` -- a separate computation that does not
     invoke any production code -- making this a genuine falsifiable oracle.
 
-    NOTE: This test exercises the event-driven clipboard path.  On modern .NET
-    (Windows 11 + .NET 10) ``Add-Type`` fails at the ``System.Windows.Forms``
-    ``Form`` subclass boundary with CS0012 because
-    ``System.ComponentModel.Primitives`` is absent from
-    ``-ReferencedAssemblies``.  As a result the script always falls back to the
-    polling loop (``Invoke-FallbackPolling``), which cannot observe clipboard
-    changes written by a sibling process because ``Get-Clipboard -Raw`` returns
-    an empty string when called from a headless subprocess without a window
-    station.  Both defects prevent this test from passing.  The test is left
-    correct-and-red as a genuine quality gate; see production_defects in the
-    audit record for details.
+    This exercises the event-driven clipboard path. The listener records a
+    readiness marker once it is registered, which the test waits for before it
+    writes the clipboard, so the change is written while the listener is live
+    and is caught by ``WM_CLIPBOARDUPDATE`` rather than depending on the polling
+    fallback. The script references the ``System.ComponentModel.Primitives``,
+    ``System.Windows.Forms.Primitives`` and ``System.Drawing.Primitives``
+    assemblies on PowerShell Core so the listener compiles under .NET as well as
+    under Windows PowerShell.
 
     Args:
         tmp_path: Pytest-provided temp directory.
@@ -547,18 +621,20 @@ def test_smoke_script_logs_clipboard_change(tmp_path: Path) -> None:
     log_dir.mkdir()
     log_path = log_dir / _LOG_NAME
 
-    before = datetime.now(tz=UTC)
-
     proc = _start_script(log_dir, pwsh)
     try:
-        time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
+        assert _wait_for_ready(log_path, proc, _READY_DEADLINE_SEC), f"monitor never became ready; log contents: {_read_log(log_path)!r}"
+        before = datetime.now(tz=UTC)
         _set_clipboard(_SMOKE_SENTINEL, pwsh)
-        time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
+        contents = _wait_for_log(
+            log_path,
+            lambda text: any(len(rec) > 3 and _SMOKE_SENTINEL in rec[3] for rec in _parse_pipe_log_records(text)),
+            _RECORD_DEADLINE_SEC,
+        )
     finally:
         _terminate(proc)
 
     assert log_path.exists(), f"smoke log not created at {log_path}"
-    contents = log_path.read_text(encoding="utf-8", errors="replace")
     assert contents.strip(), f"smoke log at {log_path} is empty"
 
     records = _parse_pipe_log_records(contents)

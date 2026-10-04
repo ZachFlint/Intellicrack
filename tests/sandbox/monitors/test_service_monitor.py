@@ -403,14 +403,18 @@ def _build_dedup_harness(log_dir: Path) -> str:
     ``service_monitor.ps1`` (verbatim, not reimplemented) and assembles
     a standalone script that:
 
-    1. Calls ``Publish-LifecycleTransition`` five times in rapid
-       succession with identical (service, state) inputs.
-    2. Sleeps 350 ms (> 250 ms dedup window).
+    1. Calls ``Publish-LifecycleTransition`` five times in succession
+       with identical (service, state) inputs, under a dedup window wide
+       enough that all five fall inside it regardless of host speed, so
+       the burst never races the clock.
+    2. Rewinds every recorded transition timestamp past the window, which
+       is what the passage of time would do, without waiting on it.
     3. Calls ``Publish-LifecycleTransition`` once more.
     4. Prints the total JSONL record count to stdout.
 
     The expected count is **2**: one from the first burst (the four
-    duplicates are suppressed) and one after the window expires.
+    duplicates are suppressed) and one after the recorded transitions age
+    out of the window.
 
     Args:
         log_dir: Writable directory for JSONL/pipe/error log files.
@@ -430,7 +434,7 @@ def _build_dedup_harness(log_dir: Path) -> str:
         f"$jsonlPath   = '{jsonl_path_ps}'",
         f"$errorLogPath = '{error_path_ps}'",
         "$script:lastTransition   = @{}",
-        "$script:duplicateWindowMs = 250",
+        "$script:duplicateWindowMs = 60000",
         "",
     ]
 
@@ -477,7 +481,9 @@ def _build_dedup_harness(log_dir: Path) -> str:
         "    Publish-LifecycleTransition -Instance $syntheticSvc -EventKind 'modified'",
         "}",
         "",
-        "Start-Sleep -Milliseconds 350",
+        "foreach ($k in @($script:lastTransition.Keys)) {",
+        "    $script:lastTransition[$k] = [DateTime]::UtcNow.AddMilliseconds(-($script:duplicateWindowMs + 1000))",
+        "}",
         "",
         "Publish-LifecycleTransition -Instance $syntheticSvc -EventKind 'modified'",
         "",
@@ -496,13 +502,14 @@ def test_script_idempotency_dedupes_rapid_duplicate_transitions(tmp_path: Path) 
 
     Runs a PowerShell harness that loads the exact production function
     bodies from ``service_monitor.ps1`` verbatim (not reimplemented)
-    and exercises ``Publish-LifecycleTransition`` with five rapid
-    back-to-back calls sharing the same ``(service, state)`` key,
-    followed by a 350 ms pause and one additional call.
+    and exercises ``Publish-LifecycleTransition`` with five back-to-back
+    calls sharing the same ``(service, state)`` key under a window wide
+    enough to hold them all, then ages the recorded transitions past the
+    window and calls once more.
 
     Independent oracle: the JSONL record count emitted by the harness
-    must equal **2** (one from the first burst, one after the dedup
-    window expires). Under the documented production mutation --- removing
+    must equal **2** (one from the first burst, one after the recorded
+    transitions age out of the window). Under the documented production mutation --- removing
     the ``Test-DuplicateTransition`` guard at line 196 of
     ``service_monitor.ps1`` so that ``Publish-LifecycleTransition``
     writes a record on every call --- all six calls write JSONL records,

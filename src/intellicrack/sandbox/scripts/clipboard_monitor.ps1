@@ -12,6 +12,25 @@ if (-not (Test-Path -LiteralPath $LogDir)) {
 $script:LogPath = Join-Path -Path $LogDir -ChildPath 'clipboard_monitor.log'
 $script:FallbackPollSeconds = 2
 
+# start_monitors.cmd hands every monitor it launches the path of a file in
+# INTELLICRACK_MONITOR_READY and takes the creation of that file as the only
+# proof the monitor started. This is called once startup can no longer fail.
+# The variable is cleared first so nothing this process launches inherits it;
+# a monitor started any other way has none and creates nothing.
+function Send-MonitorReady {
+    [CmdletBinding()]
+    param()
+
+    $marker = $env:INTELLICRACK_MONITOR_READY
+    if (-not $marker) { return }
+    $env:INTELLICRACK_MONITOR_READY = $null
+    try {
+        [System.IO.File]::WriteAllText($marker, (Get-Date).ToString('o'))
+    } catch {
+        $null = $_
+    }
+}
+
 function Write-LogEntry {
     [CmdletBinding()]
     param(
@@ -127,6 +146,7 @@ function Invoke-FallbackPolling {
     param()
 
     $lastSeen = $null
+    Send-MonitorReady
     while ($true) {
         $ts = (Get-Date).ToString('o')
         $clipText = $null
@@ -149,6 +169,18 @@ function Invoke-FallbackPolling {
         }
 
         Start-Sleep -Seconds $script:FallbackPollSeconds
+    }
+}
+
+function Write-MonitorReady {
+    [CmdletBinding()]
+    param()
+
+    $readyPayload = [ordered]@{ timestamp = (Get-Date).ToString('o'); event = 'monitor.ready' } | ConvertTo-Json -Compress
+    try {
+        Write-LogEntry -Line $readyPayload
+    } catch {
+        Write-StructuredError -Event 'event.ready_write_failed' -ErrorRecord $_
     }
 }
 
@@ -219,12 +251,14 @@ function Invoke-EventDrivenMonitor {
     $listener.Add_ClipboardChanged($eventHandler)
     $listener.Show()
     $listener.Hide()
+    Write-MonitorReady
+    Send-MonitorReady
     [System.Windows.Forms.Application]::Run($listener)
 }
 
 $useEventDriven = $false
 try {
-    Add-Type -TypeDefinition $clipSource -ReferencedAssemblies System.Windows.Forms, System.Drawing -Language CSharp
+    Add-Type -TypeDefinition $clipSource -ReferencedAssemblies (@('System.Windows.Forms', 'System.Drawing') + $(if ($PSVersionTable.PSEdition -eq 'Core') { @('System.ComponentModel.Primitives', 'System.Windows.Forms.Primitives', 'System.Drawing.Primitives') } else { @() })) -Language CSharp
     $useEventDriven = $true
 } catch {
     Write-StructuredError -Event 'init.add_type_failed' -ErrorRecord $_ -Extra @{ fallback = 'polling' }

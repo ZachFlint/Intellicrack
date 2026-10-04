@@ -120,6 +120,7 @@ class AnthropicProvider(LLMProviderBase):
         if not credentials.api_key:
             raise AuthenticationError(_MSG_API_KEY_REQUIRED)
 
+        await self._close_client()
         try:
             self._client = anthropic.AsyncAnthropic(
                 api_key=credentials.api_key,
@@ -128,10 +129,12 @@ class AnthropicProvider(LLMProviderBase):
             )
             await self._client.models.list(limit=1)
         except anthropic.AuthenticationError as e:
+            await self._close_client()
             detail = self._redact_error_text(e, api_key=credentials.api_key)
             self._logger.warning("anthropic_auth_failed", error=detail)
             raise AuthenticationError(_MSG_WITH_DETAIL % (_MSG_INVALID_API_KEY, detail)) from e
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError) as e:
+            await self._close_client()
             detail = self._redact_error_text(e, api_key=credentials.api_key)
             self._logger.warning("anthropic_connect_failed", error=detail)
             raise ProviderError(_MSG_WITH_DETAIL % (_MSG_CONNECTION_FAILED, detail)) from e
@@ -143,11 +146,29 @@ class AnthropicProvider(LLMProviderBase):
                 has_custom_base=credentials.api_base is not None,
             )
 
+    async def _close_client(self) -> None:
+        """Close the SDK client and its connection pool, if there is one.
+
+        The SDK client owns an HTTP connection pool. Dropped without being
+        closed, the pool is left to the garbage collector, and the SDK's
+        finalizer then closes it by scheduling a task on whichever event loop
+        is running when the collector reaches it -- which fails against
+        connections that belong to a loop already closed, in the middle of
+        whatever unrelated work that loop is doing.
+        """
+        client, self._client = self._client, None
+        if client is None:
+            return
+        try:
+            await client.close()
+        except (OSError, RuntimeError) as exc:
+            self._logger.warning("anthropic_client_close_error", error=str(exc))
+
     async def disconnect(self) -> None:
         """Disconnect from Anthropic API."""
         try:
             await super().disconnect()
-            self._client = None
+            await self._close_client()
             self._current_task = None
             self._logger.info("anthropic_disconnected")
         except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:

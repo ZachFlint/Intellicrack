@@ -76,7 +76,6 @@ if TYPE_CHECKING:
 
 _logger = get_logger(__name__)
 
-_WHERE_TIMEOUT = 10
 _FEATURE_CHECK_TIMEOUT = 30
 _SANDBOX_FEATURE_NAME = "Containers-DisposableClientVM"
 _SANDBOX_INSTALL_STATE_ENABLED = "1"
@@ -128,10 +127,24 @@ _MONITOR_QUIESCENCE_COMPLETE_SETTLE_S: Final[float] = 1.0
 # the monitors that survived startup. It is the single source of truth for
 # which collectors are expected to report.
 _MONITOR_PID_FILE_NAME: Final[str] = "monitors.pids"
-# Present in that file but not a collector: it serves commands, it has no tab.
-_DISPATCHER_SCRIPT_STEM: Final[str] = "sandbox_dispatcher"
 # Each line of that file is "<pid> <script file name>".
 _MONITOR_PID_LINE_FIELDS: Final[int] = 2
+_DISPATCHER_FOLDER_NAME: Final[str] = "dispatcher"
+_DISPATCHER_SCRIPT_NAME: Final[str] = "sandbox_dispatcher.ps1"
+MONITOR_READY_ANNOUNCEMENT: Final[str] = (
+    "if ($env:INTELLICRACK_MONITOR_READY) {\n"
+    "    $monitorReadyFile = $env:INTELLICRACK_MONITOR_READY\n"
+    "    $env:INTELLICRACK_MONITOR_READY = $null\n"
+    "    try { [System.IO.File]::WriteAllText($monitorReadyFile, (Get-Date).ToString('o')) } catch {}\n"
+    "}\n"
+)
+"""PowerShell a monitor runs, once its startup can no longer fail, to tell ``start_monitors.cmd`` it started.
+
+The launcher hands each monitor the path of a file in ``INTELLICRACK_MONITOR_READY`` and takes that
+file's creation as the only proof the monitor started; a monitor that exits, or keeps running, without
+creating it is reported as failed. The variable is cleared before the file is written so that nothing
+the script launches afterwards inherits it, and a script started any other way has none and writes nothing.
+"""
 # How long the Host Compute Service is given to unwind the compute system after
 # the session closes. Measured on a real stop, the worker outlives the session
 # it backs, so anything shorter forces a kill during the very teardown that
@@ -681,19 +694,20 @@ class WindowsSandbox(SandboxBase):
     async def _exe_on_path(exe: str) -> bool:
         """Report whether an executable resolves on ``PATH``.
 
+        The search is done in this process. It used to be delegated to a
+        ``where`` child process, which made a lookup fail with a timeout
+        whenever that process took more than ten seconds to start on a loaded
+        machine, and which ran whatever ``where.exe`` the working directory
+        held, because the working directory is searched before the system
+        directory when a program is started by name.
+
         Args:
             exe: Executable filename to look up.
 
         Returns:
-            bool: True when ``where`` resolves the executable.
+            bool: True when the executable is found on ``PATH``.
         """
-        process_manager = ProcessManager.get_instance()
-        result = await process_manager.run_tracked_async(
-            ["where", exe],
-            name="where-sandbox-exe",
-            process_timeout=_WHERE_TIMEOUT,
-        )
-        return result.returncode == _RETURNCODE_SUCCESS
+        return await asyncio.to_thread(shutil.which, exe) is not None
 
     async def _resolve_launcher_exe(self) -> str | None:
         """Resolve which Windows Sandbox launcher binary to use.
@@ -1836,6 +1850,13 @@ class WindowsSandbox(SandboxBase):
         launches the dispatcher and the monitor fleet, applies user startup
         commands, and finally signals readiness via the ``flags`` marker file.
 
+        The dispatcher is written to a folder of its own. ``start_monitors.cmd``
+        starts every script in the monitor folder, so a dispatcher staged there
+        was started twice, once by the bootstrap and once by the launcher. Each
+        copy keeps its own record of the triggers it has handled, so both took
+        every command: commands ran twice, and the two copies overwrote and
+        locked each other's output and exit-code files.
+
         Raises:
             SandboxError: If sandbox paths are not initialized.
         """
@@ -1847,7 +1868,9 @@ class WindowsSandbox(SandboxBase):
             )
             raise SandboxError(_ERR_SANDBOX_PATHS_NOT_INIT)
 
-        dispatcher_ps1 = self._monitor_folder / "sandbox_dispatcher.ps1"
+        dispatcher_folder = self._shared_folder / _DISPATCHER_FOLDER_NAME
+        await asyncio.to_thread(dispatcher_folder.mkdir, exist_ok=True)
+        dispatcher_ps1 = dispatcher_folder / _DISPATCHER_SCRIPT_NAME
         dispatcher_source = self._dispatcher_ps1_source()
         await asyncio.to_thread(
             dispatcher_ps1.write_text,
@@ -1865,7 +1888,8 @@ class WindowsSandbox(SandboxBase):
 
         _logger.debug(
             "dispatcher_scripts_created",
-            monitor_folder=str(self._monitor_folder),
+            dispatcher=str(dispatcher_ps1),
+            bootstrap=str(bootstrap_cmd),
         )
 
     def _dispatcher_ps1_source(self) -> str:
@@ -1932,7 +1956,7 @@ class WindowsSandbox(SandboxBase):
         flags_dir = rf"{self.SANDBOX_SHARED_PATH}\flags"
         logon_marker = rf"{flags_dir}\{self.DISPATCHER_LOGON_MARKER}"
         monitor_dir = rf"{self.SANDBOX_SHARED_PATH}\monitor"
-        dispatcher_ps1 = rf"{monitor_dir}\sandbox_dispatcher.ps1"
+        dispatcher_ps1 = rf"{self.SANDBOX_SHARED_PATH}\{_DISPATCHER_FOLDER_NAME}\{_DISPATCHER_SCRIPT_NAME}"
         start_monitors = rf"{monitor_dir}\start_monitors.cmd"
 
         env_lines: list[str] = []
@@ -2094,6 +2118,7 @@ class WindowsSandbox(SandboxBase):
             "    Register-ObjectEvent $w 'Deleted' -Action $action -MessageData $logPath | Out-Null\n"
             "    Register-ObjectEvent $w 'Renamed' -Action $action -MessageData $logPath | Out-Null\n"
             "}\n"
+            f"{MONITOR_READY_ANNOUNCEMENT}"
             "while ($true) { Start-Sleep -Seconds 1 }\n"
         )
 
@@ -2112,6 +2137,7 @@ class WindowsSandbox(SandboxBase):
             "}\n"
             "$logPath = Join-Path -Path $LogDir -ChildPath 'network_monitor.log'\n"
             "$seen = @{}\n"
+            f"{MONITOR_READY_ANNOUNCEMENT}"
             "while ($true) {\n"
             "    $ts = (Get-Date).ToString('o')\n"
             "    $tcp = Get-NetTCPConnection -ErrorAction SilentlyContinue\n"
@@ -2165,6 +2191,7 @@ class WindowsSandbox(SandboxBase):
             "}\n"
             "$logPath = Join-Path -Path $LogDir -ChildPath 'process_monitor.log'\n"
             "$known = @{}\n"
+            f"{MONITOR_READY_ANNOUNCEMENT}"
             "while ($true) {\n"
             "    $ts = (Get-Date).ToString('o')\n"
             "    $procs = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue\n"
@@ -2403,8 +2430,9 @@ class WindowsSandbox(SandboxBase):
 
         ``start_monitors.cmd`` records one line per spawned monitor and its
         readiness gate rewrites the file with only the survivors, so this is
-        the fleet that can be expected to report. The dispatcher appears there
-        too and is excluded: it serves commands rather than filling a tab.
+        the fleet that can be expected to report. The dispatcher is not a
+        monitor and is staged where the launcher does not look, so it is
+        never among them.
 
         Returns:
             set[str]: Script stems of the surviving collectors, empty when the
@@ -2425,7 +2453,7 @@ class WindowsSandbox(SandboxBase):
             if len(parts) < _MONITOR_PID_LINE_FIELDS:
                 continue
             stem = Path(parts[1].strip()).stem
-            if stem and stem != _DISPATCHER_SCRIPT_STEM:
+            if stem:
                 stems.add(stem)
         return stems
 
