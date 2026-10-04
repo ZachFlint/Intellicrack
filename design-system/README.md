@@ -52,19 +52,38 @@ theme is a token swap.
   their own tinted fills and left borders (`ic-result-success-*`,
   `ic-result-error-*`).
 - **The analysis views have their own ink.** Custom-painted surfaces don't use
-  the stylesheet; each reads its own colour table, and every value here comes
-  from the function that actually paints:
-  - disassembly and the code highlighter: `ic-asm-jump / -call / -ret / -nop /
-    -register / -immediate / -memory` (ThemeManager.get_analysis_colors);
+  the stylesheet. ThemeManager is their single source: it holds one palette per
+  theme and hands each view its colours through a typed accessor.
+  - general colours, `ic-paint-bg / -text / -accent / -success / -error /
+    -warning / -muted / -border`, used by the log viewer, XPU status, VNC view,
+    analysis panel and monochrome icons (`get_analysis_colors`);
+  - disassembly and the code highlighter: `ic-asm-jump / -call / -ret /
+    -register / -immediate / -memory` (same accessor);
   - the hex editor and its entropy minimap: `ic-hex-*`, `ic-minimap-*`,
     `ic-entropy-low / -mid / -high` and the content-class `ic-hex-class-*`
-    (hex_editor_widget.py);
-  - the entropy chart and byte histogram: `ic-chart-*` (hex_editor/widgets.py);
-  - the control-flow graph: `ic-cfg-*` (graph_view.py).
+    (`get_hex_editor_colors`);
+  - the entropy chart, byte histogram and digram heat map: `ic-chart-*`
+    (`get_chart_colors`);
+  - the control-flow graph: `ic-cfg-*` (`get_graph_colors`);
+  - the stack viewer: `ic-stack-*` (`get_stack_colors`);
+  - credential badges and the provider list: `ic-cred-*`, `ic-provider-*`
+    (`get_credential_source_colors`; the badge rules in the stylesheets
+    declare the same values);
+  - hex editor marks: `ic-hex-mark-*` and the structure bookmarks
+    `ic-hex-struct-1` to `-7` (`get_hex_mark_colors`). These only set the
+    colour a new mark starts with; saved marks keep theirs.
 
-  All of them follow the theme *family*, so `dark2` paints with the `dark`
-  values and `light2` with `light`. ThemeManager also defines hex, entropy,
-  graph, minimap and selection colours that no view reads; they are left out.
+  `dark2` and `light2` have palette entries of their own, which currently hold
+  the `dark` and `light` values, so the painted views look the same within a
+  family today but can now diverge.
+- **A few colours never change with the theme.** They are tokens too, with the
+  same value in all four themes: the splash screen's eight colours
+  (`ic-splash-*`, derived from the dark theme because the splash always paints
+  dark), and the contract colours in `core/color_defaults.py` that the AI tool
+  bridge and the pattern evaluator hand out as plain strings: the ten-colour
+  field rotation (`ic-hexpat-1` to `-10`), the exported HTML hex dump
+  (`ic-export-*`) and the bridge's default mark colour
+  (`ic-bridge-mark-default`).
 
 Contrast, measured against WCAG 2 in all four themes. The values are the
 application's own and are kept exact; where they fall short, the token's usage
@@ -83,6 +102,15 @@ note says so.
   family; white text on its dark selection is 3.0:1; zero bytes are dimmed to
   2.1:1 on purpose; and CFG return instructions are 3.9:1 on a dark block.
   Hex bytes, ASCII, instruction text and the disassembly colours all pass.
+- **Badges and log rows:** the credential source badge (11px text on a 20%
+  wash of its own colour) is between 2.2:1 and 3.8:1 in almost every theme;
+  log viewer ERROR rows are 3.7 to 4.2:1 and WARNING rows 2.5:1 in the light
+  family; `ic-paint-accent` as address text is 3.7:1 on the dark content
+  ground; and `ic-provider-configured` is 3.8:1 in dark. The stack viewer's
+  seven colours all pass.
+- **Chat provenance and notices:** the third-party source badge (`ic-warning`,
+  8pt) is 2.7 to 2.8:1 on the tool-call frame in the light family, and the
+  chat notice (`ic-text-muted` at 11px on `ic-panel-muted`) is 4.3:1 in Dark.
 - Disabled text on `ic-disabled-fill` is around 2:1, which WCAG exempts for
   inactive controls.
 
@@ -154,3 +182,22 @@ data: the bytes, per-block entropy and byte counts of
 `C:\Windows\System32\notepad.exe`, and five basic blocks of its CRT startup
 function, laid out by the app's own CFGGraphScene. MainWindow puts the pieces
 together in the real arrangement from app.py and tools.py.
+
+## What has no styling of its own
+
+Several screens have cards here but few or no dedicated rules in the
+stylesheets; they are built from the generic widget styles (default push
+buttons, lists, tabs, group boxes, fields): McpServers, McpContext and the
+Roots tab entirely; GuestProcessPicker, XpuStatus and the log viewer's filter
+column; and, apart from their heading and warning panel, the McpConsent and
+McpElicitation dialogs. In the chat, result parts and the "Resources and
+prompts..." button are generic too. The buttons of the MCP consent prompt are
+left plain on purpose, so a security decision is not steered by colour. When
+designing for these, use the generic components; there is nothing more
+specific to match.
+
+No widget styles itself any more: tag chips, the credential badge, the chat
+notice and source badge, and tool-activity rows all have rules in the four
+theme files. The one exception is the splash screen, which paints its own dark
+artwork. The installer wizard, hexbench and the x64dbg plugin are separate
+surfaces and are not covered here.
