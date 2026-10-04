@@ -177,12 +177,31 @@ RUN $ErrorActionPreference = 'Stop'; \
     Write-Host ('qemu-system-x86_64 probe exit code: ' + $LASTEXITCODE); \
     Write-Host 'QEMU ready.'
 
-ENV GHIDRA_INSTALL_DIR="C:\\tools\\ghidra" \
+# Java at C:\tools\jdk21. The C:\tools\jdk directory junction made near the
+# top of this stage does not survive the layer commit: in the finished image
+# it is a dangling link, so JAVA_HOME was invalid, `java` was never on PATH,
+# and PyGhidra (which runs a bare `java`) could not start Ghidra. Removing or
+# replacing that link in a later layer makes the layer import fail, so it is
+# left alone and the JDK is copied to a path of its own. The build fails
+# unless Java runs from there. The step is at the end of the stage so the
+# layers above stay cached.
+RUN $ErrorActionPreference = 'Stop'; \
+    $jdkReal = (Get-ChildItem 'C:\Program Files\Eclipse Adoptium' -Directory | Where-Object { $_.Name -like 'jdk-21*' } | Select-Object -First 1).FullName; \
+    if (-not $jdkReal) { throw 'Temurin 21 install dir not found under C:\Program Files\Eclipse Adoptium' }; \
+    robocopy $jdkReal 'C:\tools\jdk21' /E /NFL /NDL /NJH /NJS /NP | Out-Null; \
+    if ($LASTEXITCODE -ge 8) { throw ('copying the JDK failed with robocopy exit code ' + $LASTEXITCODE) }; \
+    if (-not (Test-Path -LiteralPath 'C:\tools\jdk21\bin\java.exe')) { throw 'java.exe missing from C:\tools\jdk21\bin' }; \
+    & 'C:\tools\jdk21\bin\java.exe' -version; \
+    if ($LASTEXITCODE -ne 0) { throw 'java does not run from C:\tools\jdk21' }; \
+    Write-Host 'Java ready.'
+
+ENV JAVA_HOME="C:\\tools\\jdk21" \
+    GHIDRA_INSTALL_DIR="C:\\tools\\ghidra" \
     RADARE2_HOME="C:\\tools\\radare2" \
     RIZIN_HOME="C:\\tools\\rizin" \
     QEMU_INSTALL_DIR="C:\\tools\\qemu"
 
-ENV PATH="C:\\tools\\jdk\\bin;C:\\tools\\ghidra\\support;C:\\tools\\radare2\\bin;C:\\tools\\rizin\\bin;${PATH}"
+ENV PATH="C:\\tools\\jdk21\\bin;C:\\tools\\ghidra\\support;C:\\tools\\radare2\\bin;C:\\tools\\rizin\\bin;${PATH}"
 
 # Stage 3 -- pixi environment. Only invalidates when pixi.lock or pyproject.toml change.
 FROM tools AS pixi-env
