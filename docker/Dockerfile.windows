@@ -185,6 +185,17 @@ RUN $ErrorActionPreference = 'Stop'; \
     & 'C:\app\.pixi\envs\default\python.exe' 'C:\app\docker\warm_model.py'; \
     if ($LASTEXITCODE -ne 0) { throw 'local inference model cache warm failed' }
 
+# The Ghidra bridge runs on PyGhidra and refuses to start Ghidra while the
+# stock Jython feature is live in the same installation (see
+# _check_no_live_jython_extension in bridges/ghidra.py), so every real-Ghidra
+# test failed at session start. Disable the feature the way that check asks
+# for. The step sits at the end of the stage so that adding it does not
+# invalidate the toolchain and pixi layers above.
+RUN $ErrorActionPreference = 'Stop'; \
+    $jython = 'C:\tools\ghidra\Ghidra\Features\Jython'; \
+    if (Test-Path -LiteralPath $jython) { Rename-Item -LiteralPath $jython -NewName 'Jython.disabled' }; \
+    if (Test-Path -LiteralPath $jython) { throw 'Ghidra Jython feature is still live' }
+
 # Stage 4 -- final image
 FROM pixi-env AS final
 
