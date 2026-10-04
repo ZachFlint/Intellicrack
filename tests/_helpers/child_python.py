@@ -67,8 +67,8 @@ def run_child_json(code: str, *, timeout_s: float, extra_env: Mapping[str, str] 
         value = os.environ.get(key)
         if value is not None:
             env[key] = value
-    env.update({key: value for key, value in os.environ.items() if key.startswith(_INHERITED_ENV_PREFIXES)})
-    env.update(extra_env or {})
+    env |= {key: value for key, value in os.environ.items() if key.startswith(_INHERITED_ENV_PREFIXES)}
+    env |= extra_env or {}
     try:
         completed = subprocess.run(
             [sys.executable, "-c", textwrap.dedent(code)],

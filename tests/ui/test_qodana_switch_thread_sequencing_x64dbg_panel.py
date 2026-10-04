@@ -142,4 +142,4 @@ def test_switch_thread_with_no_selection_does_not_touch_bridge_or_refresh(
     panel._on_switch_thread()
 
     assert bridge.calls == []
-    assert refresh_calls == []
+    assert not refresh_calls

@@ -225,9 +225,7 @@ def _field_kind(definition: Mapping[str, Any]) -> _FieldKind:
         return _FieldKind.BOOLEAN
     if declared == "integer":
         return _FieldKind.INTEGER
-    if declared == "number":
-        return _FieldKind.NUMBER
-    return _FieldKind.TEXT
+    return _FieldKind.NUMBER if declared == "number" else _FieldKind.TEXT
 
 
 def _format_problem(value: str, declared_format: object) -> str | None:
@@ -338,9 +336,7 @@ def _range_hint(definition: Mapping[str, Any]) -> str:
         return f"from {minimum} to {maximum}"
     if _is_number(minimum):
         return f"at least {minimum}"
-    if _is_number(maximum):
-        return f"at most {maximum}"
-    return ""
+    return f"at most {maximum}" if _is_number(maximum) else ""
 
 
 def _parse_number(text: str, kind: _FieldKind) -> int | float | None:

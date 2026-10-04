@@ -180,10 +180,9 @@ class ScriptedHTTPServer:
             when no route matches.
         """
         with self._lock:
-            queue = self._routes.get((method, path))
-            if not queue:
-                return json_response({"error": {"message": f"no route for {method} {path}"}}, status=404)
-            return queue.pop(0) if len(queue) > 1 else queue[0]
+            if queue := self._routes.get((method, path)):
+                return queue.pop(0) if len(queue) > 1 else queue[0]
+            return json_response({"error": {"message": f"no route for {method} {path}"}}, status=404)
 
     def requests(self, path: str | None = None) -> list[ReceivedRequest]:
         """Return the recorded requests, optionally filtered by path.

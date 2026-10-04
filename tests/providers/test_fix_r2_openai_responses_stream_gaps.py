@@ -195,10 +195,10 @@ class _HangupWatchingServer:
         """
         received = buffered
         while b"\r\n\r\n" not in received:
-            more = connection.recv(65536)
-            if not more:
+            if more := connection.recv(65536):
+                received += more
+            else:
                 return None
-            received += more
         head, _, rest = received.partition(b"\r\n\r\n")
         length = next(
             (int(line.split(b":", 1)[1]) for line in head.split(b"\r\n") if line.lower().startswith(b"content-length:")),

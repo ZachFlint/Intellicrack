@@ -631,7 +631,7 @@ def _worker_positional_limits() -> dict[str, int | None]:
         if any(parameter.kind is inspect.Parameter.VAR_POSITIONAL for parameter in parameters):
             limits[worker_cls.__name__] = None
         else:
-            limits[worker_cls.__name__] = sum(bool(parameter.kind in positional) for parameter in parameters)
+            limits[worker_cls.__name__] = sum(parameter.kind in positional for parameter in parameters)
     return limits
 
 

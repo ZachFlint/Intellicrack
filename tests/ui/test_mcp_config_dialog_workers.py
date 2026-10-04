@@ -191,4 +191,4 @@ class TestLateResultsAfterDestruction:
         parent.deleteLater()
         qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
 
-        assert delivered == [], "a result reached the dialog after it was destroyed"
+        assert not delivered, "a result reached the dialog after it was destroyed"

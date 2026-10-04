@@ -711,9 +711,7 @@ def _thought_signature(part: Mapping[str, Any]) -> str | None:
     signature = part.get("thoughtSignature") or part.get(_THOUGHT_SIGNATURE_KEY)
     if isinstance(signature, bytes):
         return base64.b64encode(signature).decode("ascii")
-    if isinstance(signature, str) and signature:
-        return signature
-    return None
+    return signature if isinstance(signature, str) and signature else None
 
 
 def parse_usage(raw: object) -> UsageInfo | None:

@@ -782,7 +782,6 @@
 .asm-jump { color: var(--ic-asm-jump); }
 .asm-call { color: var(--ic-asm-call); }
 .asm-ret { color: var(--ic-asm-ret); }
-.asm-nop { color: var(--ic-asm-nop); }
 .asm-reg { color: var(--ic-asm-register); }
 .asm-imm { color: var(--ic-asm-immediate); }
 .asm-mem { color: var(--ic-asm-memory); }
@@ -1200,6 +1199,163 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--ic-space-8);
+}
+
+/* ============================================================ CHECKED BUTTON / FORM ROWS */
+
+.ic-btn.is-checked {
+  background: var(--ic-primary-pressed);
+  border: 1px solid var(--ic-accent);
+  color: var(--ic-on-accent);
+}
+
+.ic-form {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--ic-space-8) var(--ic-space-12);
+  align-items: center;
+}
+
+.ic-progress.is-busy .ic-progress-chunk {
+  width: 30%;
+  animation: ic-busy 1.4s linear infinite;
+}
+
+@keyframes ic-busy {
+  from { margin-left: -30%; }
+  to { margin-left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ic-progress.is-busy .ic-progress-chunk { animation: none; margin-left: 35%; }
+}
+
+/* ============================================================ CHAT NOTICE / TOOL ACTIVITY / MCP LABELS */
+
+.ic-chat-notice {
+  padding: var(--ic-space-4) var(--ic-space-12);
+  background: var(--ic-panel-muted);
+  border-top: 1px solid var(--ic-border);
+  color: var(--ic-text-muted);
+  font-size: var(--ic-fs-11);
+}
+
+.ic-activity-row {
+  padding: var(--ic-space-4) var(--ic-space-8);
+  background: var(--ic-tool-result-bg);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-md);
+}
+
+.ic-activity-message {
+  color: var(--ic-text-muted);
+  font-size: var(--ic-fs-11);
+}
+
+.ic-dialog-heading {
+  color: var(--ic-text);
+  font-size: var(--ic-fs-14);
+  font-weight: var(--ic-fw-bold);
+}
+
+.ic-warning-panel {
+  padding: var(--ic-space-8);
+  background: var(--ic-warning-bg);
+  border-radius: var(--ic-radius-md);
+  color: var(--ic-warning-text);
+  font-size: var(--ic-fs-11);
+}
+
+.ic-tag-empty {
+  color: var(--ic-text-muted);
+  font-style: italic;
+}
+
+/* ============================================================ TAG CHIPS (session manager) */
+
+.ic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ic-space-4);
+  padding: 2px var(--ic-space-8);
+  border: 1px solid var(--ic-border);
+  border-radius: 10px;
+  background: var(--ic-chrome);
+  color: var(--ic-text);
+  font-family: inherit;
+  font-size: var(--ic-fs-12);
+  cursor: pointer;
+}
+
+.ic-chip:hover,
+.ic-chip.is-hover {
+  background: var(--ic-accent);
+  color: var(--ic-on-accent);
+}
+
+/* ============================================================ CREDENTIAL BADGES (provider settings) */
+
+.ic-cred {
+  display: inline-block;
+  padding: var(--ic-space-4) var(--ic-space-8);
+  border-radius: var(--ic-radius-sm);
+  font-size: var(--ic-fs-11);
+  color: var(--ic-cred-default);
+  background: var(--ic-cred-default-bg);
+}
+
+.ic-cred--env-file { color: var(--ic-cred-env-file); background: var(--ic-cred-env-file-bg); }
+.ic-cred--environment { color: var(--ic-cred-environment); background: var(--ic-cred-environment-bg); }
+.ic-cred--manual { color: var(--ic-cred-manual); background: var(--ic-cred-manual-bg); }
+.ic-cred--missing { color: var(--ic-cred-missing); background: var(--ic-cred-missing-bg); }
+.ic-provider--configured { color: var(--ic-provider-configured); }
+.ic-provider--unconfigured { color: var(--ic-provider-unconfigured); }
+
+/* ============================================================ LOG VIEWER LEVELS */
+
+.ic-log--debug td { color: var(--ic-paint-muted); }
+.ic-log--info td { color: var(--ic-paint-text); }
+
+.ic-table tbody tr.ic-log--warning td {
+  color: var(--ic-paint-warning);
+  background: color-mix(in srgb, var(--ic-paint-warning) 18.8%, transparent);
+}
+
+.ic-table tbody tr.ic-log--error td {
+  color: var(--ic-paint-error);
+  background: color-mix(in srgb, var(--ic-paint-error) 18.8%, transparent);
+}
+
+.ic-table tbody tr.ic-log--critical td {
+  color: #ffffff;
+  background: var(--ic-paint-error);
+}
+
+/* ============================================================ STACK VIEWER CELLS */
+
+.ic-table--plain td {
+  border-bottom: none;
+}
+
+.ic-stack-frame0 { color: var(--ic-stack-frame0); font-family: var(--ic-font-code); font-weight: var(--ic-fw-bold); }
+.ic-stack-address { color: var(--ic-stack-address); font-family: var(--ic-font-code); }
+.ic-stack-function { color: var(--ic-stack-function); }
+.ic-stack-function-unknown { color: var(--ic-stack-function-unknown); }
+.ic-stack-module { color: var(--ic-stack-module); }
+.ic-stack-offset { color: var(--ic-stack-offset); font-family: var(--ic-font-code); }
+.ic-stack-pointer { color: var(--ic-stack-pointer); font-family: var(--ic-font-code); }
+
+/* ============================================================ MCP */
+
+.ic-flag {
+  background: var(--ic-mcp-flag);
+  font-weight: var(--ic-fw-bold);
+}
+
+.ic-source-badge {
+  font-family: var(--ic-font-code);
+  font-size: 10.67px;
+  color: var(--ic-warning);
 }
 
 /* ============================================================ SWATCH / CHIP */

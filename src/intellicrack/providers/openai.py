@@ -414,7 +414,7 @@ class OpenAIProvider(LLMProviderBase):
         lowered = model_id.lower()
         if lowered.startswith(non_chat_prefixes):
             return False
-        return not any(marker in lowered.split("-") for marker in _NON_CHAT_MODEL_MARKERS)
+        return all(marker not in lowered.split("-") for marker in _NON_CHAT_MODEL_MARKERS)
 
     @staticmethod
     def _infer_context_window(model_id: str) -> int:

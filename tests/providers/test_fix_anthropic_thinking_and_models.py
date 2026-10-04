@@ -357,7 +357,7 @@ async def test_streamed_tool_call_is_parsed_to_canonical_name() -> None:
         provider = await _anthropic(running)
         chunks = [chunk async for chunk in provider.chat_stream([Message(role="user", content="spawn")], "claude-opus-4-7")]
 
-    assert chunks == []
+    assert not chunks
     calls = provider.get_pending_tool_calls()
     assert [(call.id, call.tool_name, call.function_name, call.arguments) for call in calls] == [
         ("toolu_1", "frida", "frida.spawn", {"target": "calc.exe"}),

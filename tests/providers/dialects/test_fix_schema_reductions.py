@@ -302,7 +302,7 @@ def test_every_bridge_function_claiming_strict_is_actually_compliant(bridge_tool
     assert len(functions) > 700
 
     dishonest = {entry["name"]: problems for entry in functions if entry["strict"] and (problems := _strict_ok(entry))}
-    assert dishonest == {}
+    assert not dishonest
     assert any(entry["strict"] for entry in functions)
     assert any(not entry["strict"] for entry in functions)
 
@@ -420,7 +420,7 @@ def test_expressible_schema_stays_in_parameters_without_empty_objects() -> None:
 
     assert "parametersJsonSchema" not in declaration
     assert declaration["parameters"]["properties"]["point"]["properties"]["x"]["type"] == "NUMBER"
-    assert list(_empty_objects(declaration["parameters"], "$")) == []
+    assert not list(_empty_objects(declaration["parameters"], "$"))
 
 
 def test_no_bridge_declaration_carries_an_empty_object(bridge_tools: list[ToolDefinition]) -> None:
@@ -434,7 +434,7 @@ def test_no_bridge_declaration_carries_an_empty_object(bridge_tools: list[ToolDe
     offending = {
         declaration["name"]: found for declaration in declarations if (found := list(_empty_objects(declaration.get("parameters"), "$")))
     }
-    assert offending == {}
+    assert not offending
     assert sum("parametersJsonSchema" in declaration for declaration in declarations) > 0
 
 

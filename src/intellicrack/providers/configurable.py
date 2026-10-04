@@ -361,9 +361,7 @@ class ConfigurableProvider(LLMProviderBase):
                 break
             seen_cursors.add(cursor)
             params[cursor_param] = cursor
-        if first is None:
-            return None
-        return {**first, entries_key: entries}
+        return None if first is None else {**first, entries_key: entries}
 
     async def _get_model_page(
         self,

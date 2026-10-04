@@ -191,9 +191,7 @@ def _called_name(call: ast.Call) -> str | None:
     func = call.func
     if isinstance(func, ast.Attribute):
         return func.attr
-    if isinstance(func, ast.Name):
-        return func.id
-    return None
+    return func.id if isinstance(func, ast.Name) else None
 
 
 def _imports_frida(tree: ast.Module) -> bool:

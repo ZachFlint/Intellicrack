@@ -376,7 +376,7 @@ class TestConcurrentWritesLoseNothing:
         for thread in threads:
             thread.join(timeout=60)
 
-        assert failures == []
+        assert not failures
         recorded = json.loads(path.read_text(encoding="utf-8"))
         assert len(recorded) == _WRITERS * _RECORDS_PER_WRITER
         assert not list(tmp_path.glob("trust.json.*.tmp"))
@@ -417,7 +417,7 @@ class TestConcurrentWritesLoseNothing:
         for worker in workers:
             worker.join(timeout=120)
 
-        assert errors == []
+        assert not errors
         assert len(outcomes) == _PROCESSES
         recorded = json.loads(path.read_text(encoding="utf-8"))
         assert len(recorded) == _PROCESSES * _RECORDS_PER_PROCESS

@@ -480,9 +480,7 @@ def _type_names(declared: object) -> list[str]:
     """
     if isinstance(declared, str):
         return [declared]
-    if is_json_array(declared):
-        return [str(entry) for entry in declared]
-    return []
+    return [str(entry) for entry in declared] if is_json_array(declared) else []
 
 
 def _widen_with_null(node: dict[str, Any]) -> dict[str, Any]:
@@ -676,9 +674,7 @@ def _strict_node(node: object, state: _StrictState, nesting: int) -> dict[str, A
     if not names and not is_object and "anyOf" not in node and "enum" not in node and "const" not in node:
         state.problems.append("schema accepts any value")
 
-    if node.get("nullable") is True:
-        return _widen_with_null(reduced)
-    return reduced
+    return _widen_with_null(reduced) if node.get("nullable") is True else reduced
 
 
 def to_strict_subset(schema: dict[str, Any]) -> tuple[dict[str, Any], bool]:

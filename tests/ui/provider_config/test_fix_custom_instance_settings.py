@@ -419,7 +419,7 @@ def test_probes_withhold_the_key_from_a_public_plaintext_host(
     _settle_page(page)
 
     leaked = [request for request in keyed_endpoint.requests() if "authorization" in request.headers]
-    assert leaked == [], f"the key was sent over plain HTTP to a public host: {leaked}"
+    assert not leaked, f"the key was sent over plain HTTP to a public host: {leaked}"
 
     _child(page, "_insecure_ack_checkbox", QCheckBox).setChecked(True)
     QTest.mouseClick(_child(page, "_test_btn", QPushButton), Qt.MouseButton.LeftButton)

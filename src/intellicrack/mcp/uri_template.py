@@ -147,7 +147,7 @@ def expand_uri_template(template: str, values: Mapping[str, str]) -> str:
                 continue
             encoded = _encode(value[:prefix] if prefix is not None else value, reserved=operator.reserved)
             if operator.named:
-                pieces.append(f"{name}{'=' + encoded if encoded else operator.if_empty}")
+                pieces.append(f"{name}{f'={encoded}' if encoded else operator.if_empty}")
             else:
                 pieces.append(encoded)
         return operator.first + operator.separator.join(pieces) if pieces else ""

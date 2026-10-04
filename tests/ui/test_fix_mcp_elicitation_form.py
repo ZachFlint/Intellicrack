@@ -83,7 +83,7 @@ def _error_text(dialog: McpElicitationDialog, name: str) -> str | None:
     """
     label = dialog.findChild(QLabel, f"mcp_elicit_error_{name}")
     assert label is not None
-    return label.text() if not label.isHidden() else None
+    return None if label.isHidden() else label.text()
 
 
 class TestBoundsAreEnforced:

@@ -489,14 +489,14 @@ class McpService:
 
     def announce_stale_roots(self) -> None:
         """Tell every running server whose roots moved since it last learned them."""
-        stale = self._roots.stale(self._manager.document.servers)
-        if not stale:
+        if stale := self._roots.stale(self._manager.document.servers):
+            run_bridge_coroutine_async(
+                self._manager.announce_roots_changed(stale),
+                on_success=lambda told: _logger.info("mcp_roots_changes_announced", servers=told),
+                on_error=lambda error: _logger.warning("mcp_roots_change_announce_failed", error=str(error)),
+            )
+        else:
             return
-        run_bridge_coroutine_async(
-            self._manager.announce_roots_changed(stale),
-            on_success=lambda told: _logger.info("mcp_roots_changes_announced", servers=told),
-            on_error=lambda error: _logger.warning("mcp_roots_change_announce_failed", error=str(error)),
-        )
 
     def generation_for(self, call: ToolCall) -> str | None:
         """Read the key an answer about a call is remembered under.
