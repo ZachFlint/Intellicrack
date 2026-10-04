@@ -133,6 +133,17 @@ RUN pixi install --frozen
 
 ENV PATH="C:\\app\\.pixi\\envs\\default;C:\\app\\.pixi\\envs\\default\\Scripts;C:\\app\\.pixi\\envs\\default\\Library\\bin;${PATH}"
 
+# Qt6Core.dll imports its ICU symbols from an unversioned icuuc.dll, and in
+# this env that name resolves to a copy without them, so PyQt6.QtCore fails
+# to import ("The specified procedure could not be found") and every test
+# dies in tests/conftest.py. Put the OS icu.dll next to Qt6Core.dll, where
+# the loader looks first. scripts/fix-pyqt6-icu.ps1 does the same for a
+# host environment.
+RUN $ErrorActionPreference = 'Stop'; \
+    Copy-Item -LiteralPath 'C:\Windows\System32\icu.dll' -Destination 'C:\app\.pixi\envs\default\Lib\site-packages\PyQt6\Qt6\bin\icuuc.dll' -Force; \
+    & 'C:\app\.pixi\envs\default\python.exe' -c 'from PyQt6.QtCore import QT_VERSION_STR'; \
+    if ($LASTEXITCODE -ne 0) { throw 'PyQt6.QtCore import verification failed' }
+
 # Build the Rust native module intellicrack_hexcore into the pixi env so
 # tests/test_bridges/conftest.py can import it. Uses portable defaults
 # (no meteorlake-targeted RUSTFLAGS) so the image runs on any x86_64
