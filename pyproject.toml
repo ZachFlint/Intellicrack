@@ -378,6 +378,7 @@ run.omit = [
   "*/tools/*",
   "*/vendor/*",
 ]
+run.patch = ["subprocess"]
 run.source = ["src/intellicrack"]
 report.exclude_lines = [
   "@(abc\\.)?abstractmethod",
