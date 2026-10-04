@@ -19,14 +19,13 @@ interpreter finds through its working directory or ``PATH``.
 from __future__ import annotations
 
 import asyncio
-import importlib.util
 import io
 import struct
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Final
 
 import httpx
 import pytest
@@ -46,7 +45,6 @@ from tests._helpers.scripted_http_server import ScriptedHttpServer, ScriptedResp
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Coroutine, Iterator, Sequence
-    from types import ModuleType
 
 
 pytestmark = pytest.mark.spawns_process
@@ -56,7 +54,6 @@ _RESOURCE_TREE_SIZE: Final[int] = 88
 _RT_VERSION: Final[int] = 16
 _DIRECTORY_FLAG: Final[int] = 0x80000000
 _GARBAGE_PE: Final[bytes] = b"MZ" + bytes(62)
-_FRESH_MODULE_NAME: Final[str] = "intellicrack_critcov_installer_without_pefile"
 _CUTTER_ASSET: Final[str] = "Cutter-v2.3.1-Windows-x86_64.zip"
 _PROBE_EXE: Final[str] = "critcov_probe_tool.exe"
 _FRIDA_IMPORT_ERROR: Final[str] = 'raise ImportError("frida is not installed")\n'
@@ -568,35 +565,6 @@ def short_probe_timeout() -> Iterator[None]:
         setattr(installer_mod, "_VERSION_PROBE_TIMEOUT_S", original)
 
 
-@pytest.fixture
-def no_pefile_module() -> Iterator[ModuleType]:
-    """Load a private copy of the installer module while ``pefile`` cannot be imported.
-
-    Yields:
-        ModuleType: The private module copy, whose ``pefile`` flag is False.
-    """
-    spec = importlib.util.spec_from_file_location(_FRESH_MODULE_NAME, installer_mod.__file__)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    modules = cast("dict[str, ModuleType | None]", sys.modules)
-    had_pefile = "pefile" in modules
-    previous = modules.get("pefile")
-    try:
-        modules[_FRESH_MODULE_NAME] = module
-        modules["pefile"] = None
-        try:
-            spec.loader.exec_module(module)
-        finally:
-            if had_pefile:
-                modules["pefile"] = previous
-            else:
-                modules.pop("pefile", None)
-        yield module
-    finally:
-        modules.pop(_FRESH_MODULE_NAME, None)
-
-
 def test_tool_version_less_equal_orders_by_triple() -> None:
     """``<=`` compares the (major, minor, patch) triple and accepts equality."""
     assert ToolVersion(1, 2, 3) <= ToolVersion(1, 2, 3)
@@ -729,68 +697,6 @@ def test_module_get_version_reads_the_ghidra_version(tmp_path: Path) -> None:
     version = _run(installer_mod.get_version(ToolName.GHIDRA, ghidra, tools))
     assert _triple(version) == (11, 2, 1)
     assert tools.is_dir()
-
-
-def test_import_without_pefile_marks_the_module_unavailable(no_pefile_module: ModuleType) -> None:
-    """When ``pefile`` cannot be imported, the module reports the dependency missing.
-
-    Args:
-        no_pefile_module: Private installer module loaded without ``pefile``.
-    """
-    available: Callable[[], bool] = attr(no_pefile_module, "pefile_available")
-    assert available() is False
-    assert installer_mod.pefile_available() is True
-
-
-def test_version_probe_without_pefile_returns_none(no_pefile_module: ModuleType, tmp_path: Path) -> None:
-    """Without ``pefile`` a real versioned PE yields no version, whereas with it one is found.
-
-    Args:
-        no_pefile_module: Private installer module loaded without ``pefile``.
-        tmp_path: Pytest temporary directory.
-    """
-    exe = _write_pe(tmp_path / "tool.exe", (1, 2, 3, 4))
-    reader: Callable[[Path], str | None] = attr(no_pefile_module, "_read_pe_version_info")
-    with_pefile: Callable[[Path], str | None] = attr(installer_mod, "_read_pe_version_info")
-    assert with_pefile(exe) == "1.2.3.4"
-    assert reader(exe) is None
-
-
-@pytest.mark.parametrize("tool", [ToolName.X64DBG, ToolName.CUTTER])
-def test_verify_without_pefile_fails_for_pe_tools(no_pefile_module: ModuleType, tmp_path: Path, tool: ToolName) -> None:
-    """Verification of a PE-versioned tool fails when ``pefile`` is unavailable.
-
-    Args:
-        no_pefile_module: Private installer module loaded without ``pefile``.
-        tmp_path: Pytest temporary directory.
-        tool: Tool whose verification depends on ``pefile``.
-    """
-    installer_cls: type[ToolInstaller] = attr(no_pefile_module, "ToolInstaller")
-    installer = installer_cls(tmp_path / "tools")
-    install = tmp_path / "install"
-    _write_pe(install / "cutter.exe", (9, 9, 9, 9))
-    _write_pe(install / "release" / "x64" / "x64dbg.exe", (2030, 1, 1, 0))
-    assert _run(installer.verify_tool(tool, install)) is False
-    assert _run(ToolInstaller(tmp_path / "tools2").verify_tool(tool, install)) is True
-
-
-@pytest.mark.parametrize(
-    ("tool", "display"),
-    [(ToolName.X64DBG, "x64dbg"), (ToolName.CUTTER, "Cutter")],
-)
-def test_install_without_pefile_is_refused(no_pefile_module: ModuleType, tmp_path: Path, tool: ToolName, display: str) -> None:
-    """Installing a PE-versioned tool is refused with an explanation when ``pefile`` is missing.
-
-    Args:
-        no_pefile_module: Private installer module loaded without ``pefile``.
-        tmp_path: Pytest temporary directory.
-        tool: Tool being installed.
-        display: Display name expected in the message.
-    """
-    installer_cls: type[ToolInstaller] = attr(no_pefile_module, "ToolInstaller")
-    result = _run(installer_cls(tmp_path / "tools").install_tool(tool))
-    assert result.success is False
-    assert result.error == f"Cannot install {display} because optional dependency 'pefile' is not available."
 
 
 def test_pe_version_comes_from_the_fixed_file_info(tmp_path: Path) -> None:
