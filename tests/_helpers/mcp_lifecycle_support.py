@@ -245,9 +245,7 @@ async def _holds(predicate: Callable[[], bool | Awaitable[bool]]) -> bool:
         bool: Its value.
     """
     outcome = predicate()
-    if inspect.isawaitable(outcome):
-        return await outcome
-    return outcome
+    return await outcome if inspect.isawaitable(outcome) else outcome
 
 
 async def wait_until(predicate: Callable[[], bool | Awaitable[bool]], *, timeout_s: float, interval_s: float = 0.1) -> bool:

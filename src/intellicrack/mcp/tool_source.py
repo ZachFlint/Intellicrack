@@ -764,8 +764,7 @@ class McpToolSource:
             f"Find their tools with `{_SEARCH_FUNCTION_HINT}` the same way as any other tool; every one of their "
             f"names begins with `{NAMESPACE_PREFIX}<serverId>.`.",
         )
-        offering = [status.server_id for status in connected if self._context_tools(status.server_id)]
-        if offering:
+        if offering := [status.server_id for status in connected if self._context_tools(status.server_id)]:
             lines.append(
                 f"{', '.join(offering)} also offer resources or prompts, reached through their "
                 f"`{NAMESPACE_PREFIX}<serverId>.context.*` functions.",
@@ -876,9 +875,7 @@ class McpToolSource:
         """
         connection = self._manager.connection(server_id)
         catalog = connection.catalog if connection is not None else None
-        if catalog is None:
-            return []
-        return estimate_entry_costs(catalog.entries)
+        return [] if catalog is None else estimate_entry_costs(catalog.entries)
 
     async def _execute_on(self, server_id: str, function_name: str, arguments: dict[str, Any]) -> ToolOutput:
         """Run one tool call against one server.

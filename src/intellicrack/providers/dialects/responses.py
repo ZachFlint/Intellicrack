@@ -642,8 +642,7 @@ class ResponsesAdapter(DialectAdapter):
                 "output": text,
             },
         ]
-        images = sendable_image_parts(result, capabilities, self.image_policy)
-        if images:
+        if images := sendable_image_parts(result, capabilities, self.image_policy):
             items.append({
                 "role": "user",
                 "content": [

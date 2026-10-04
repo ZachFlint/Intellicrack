@@ -802,8 +802,7 @@ class McpOAuthClientProvider(OAuthClientProvider):
         issued to; the operator signs in once with the configured client.
         """
         await super()._initialize()
-        configured = self._spec.oauth_client_id
-        if configured:
+        if configured := self._spec.oauth_client_id:
             stored_identity = self.context.client_info
             if stored_identity is not None and stored_identity.client_id != configured:
                 _logger.info(

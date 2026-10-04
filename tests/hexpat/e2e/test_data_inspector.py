@@ -187,10 +187,10 @@ class TestInspectAtBasic:
             "uint64_be": str(struct.unpack(">Q", data[:8])[0]),
             "int16_le": str(struct.unpack("<h", data[:2])[0]),
             "int16_be": str(struct.unpack(">h", data[:2])[0]),
-            "int32_le": str(struct.unpack("<i", data[0:4])[0]),
-            "int32_be": str(struct.unpack(">i", data[0:4])[0]),
-            "int64_le": str(struct.unpack("<q", data[0:8])[0]),
-            "int64_be": str(struct.unpack(">q", data[0:8])[0]),
+            "int32_le": str(struct.unpack("<i", data[:4])[0]),
+            "int32_be": str(struct.unpack(">i", data[:4])[0]),
+            "int64_le": str(struct.unpack("<q", data[:8])[0]),
+            "int64_be": str(struct.unpack(">q", data[:8])[0]),
         }
         for key, expected_val in expected_values.items():
             assert result[key] == expected_val, f"key {key!r}: expected {expected_val!r}, got {result.get(key)!r}"

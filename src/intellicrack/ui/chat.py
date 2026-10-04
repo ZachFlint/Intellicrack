@@ -912,7 +912,7 @@ class ChatPanel(QFrame):
         Returns:
             str: The notices, one per line, or an empty string.
         """
-        return self._notice.text() if not self._notice.isHidden() else ""
+        return "" if self._notice.isHidden() else self._notice.text()
 
     def set_input_enabled(self, *, enabled: bool) -> None:
         """Enable or disable the input widget.

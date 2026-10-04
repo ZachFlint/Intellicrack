@@ -549,8 +549,7 @@ class ChatCompletionsAdapter(DialectAdapter):
                 "content": text,
             },
         ]
-        images = sendable_image_parts(result, capabilities, self.image_policy)
-        if images:
+        if images := sendable_image_parts(result, capabilities, self.image_policy):
             content: list[dict[str, Any]] = [{"type": "text", "text": f"Images returned by tool call {result.call_id}:"}]
             content.extend(
                 {

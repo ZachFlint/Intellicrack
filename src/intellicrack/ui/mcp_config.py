@@ -834,7 +834,7 @@ class McpToolToggleView(QWidget):
         self._list.clear()
         priced = {cost.canonical_name: cost for cost in costs or ()}
         unpriced = [entry for entry in entries if entry.canonical_name not in priced]
-        priced.update((cost.canonical_name, cost) for cost in estimate_entry_costs(unpriced))
+        priced |= ((cost.canonical_name, cost) for cost in estimate_entry_costs(unpriced))
         costs = [priced[entry.canonical_name] for entry in entries]
         for entry, cost in zip(entries, costs, strict=True):
             item = QListWidgetItem(f"{entry.display_name}  ({cost.total_tokens} tokens)")

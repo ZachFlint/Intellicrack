@@ -253,7 +253,7 @@ def test_disabled_cache_still_downloads_under_the_bounds(cache_off: Path) -> Non
         assert time.perf_counter() - started < _CONNECT_TIMEOUT_S + _READ_TIMEOUT_S + _SCHEDULING_SLACK_S
         assert loader.is_backing_off(None)
         assert server.connections == 1
-    assert list(cache_off.iterdir()) == []
+    assert not list(cache_off.iterdir())
 
 
 def _real_o200k(tmp_path: Path) -> bytes:
@@ -296,4 +296,4 @@ def test_disabled_cache_builds_the_encoding_and_removes_the_copies(tmp_path: Pat
     assert encoder.name == DEFAULT_ENCODING_NAME
     assert encoder.encode(_SAMPLE) == expected
     assert encoder.decode(encoder.encode(_SAMPLE)) == _SAMPLE
-    assert list(scratch.iterdir()) == []
+    assert not list(scratch.iterdir())

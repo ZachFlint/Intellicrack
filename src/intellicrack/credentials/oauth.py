@@ -652,9 +652,7 @@ class OAuthCallbackServer:
             int: The bound port once started, otherwise the requested one.
         """
         server = self._server
-        if server is not None:
-            return int(server.server_address[1])
-        return self._port
+        return int(server.server_address[1]) if server is not None else self._port
 
     def expect_state(self, state: str) -> None:
         """Set the ``state`` value the redirect must carry.

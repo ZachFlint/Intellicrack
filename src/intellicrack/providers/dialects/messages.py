@@ -620,8 +620,7 @@ class MessagesAdapter(DialectAdapter):
         raw_usage = event.get("usage")
         if is_json_object(raw_usage):
             delta_usage: dict[str, Any] = raw_usage
-            merged = dict(self._start_usage)
-            merged.update({key: value for key, value in delta_usage.items() if value is not None})
+            merged = dict(self._start_usage) | {key: value for key, value in delta_usage.items() if value is not None}
             self._start_usage = merged
             usage = parse_usage(merged)
             if usage is not None:
@@ -774,8 +773,7 @@ class MessagesAdapter(DialectAdapter):
         """
         del function_name
         text = tool_result_text(result, image_refusal=image_refusal_for(capabilities, self.image_policy))
-        images = sendable_image_parts(result, capabilities, self.image_policy)
-        if images:
+        if images := sendable_image_parts(result, capabilities, self.image_policy):
             blocks: list[dict[str, Any]] = []
             if text:
                 blocks.append({"type": "text", "text": text})

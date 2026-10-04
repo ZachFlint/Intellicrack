@@ -355,7 +355,7 @@ def _embedded_secret_name(value: str) -> str | None:
     Returns:
         str | None: The name of the part that holds a credential, such as ``Password``, or ``None``.
     """
-    if "=" not in value or not any(separator in value for separator in ";&"):
+    if "=" not in value or all(separator not in value for separator in ";&"):
         return None
     for match in _EMBEDDED_ASSIGNMENT_PATTERN.finditer(value):
         name, part = match.group(1).strip(), match.group(2)

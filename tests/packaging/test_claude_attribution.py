@@ -62,16 +62,14 @@ def _git_env(home: Path, author_name: str = _HUMAN_NAME, author_email: str = _HU
     """
     global_config = home / "gitconfig"
     global_config.touch()
-    env = dict(os.environ)
-    env.update({
+    return dict(os.environ) | {
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_CONFIG_GLOBAL": str(global_config),
         "GIT_AUTHOR_NAME": author_name,
         "GIT_AUTHOR_EMAIL": author_email,
         "GIT_COMMITTER_NAME": author_name,
         "GIT_COMMITTER_EMAIL": author_email,
-    })
-    return env
+    }
 
 
 def _git(repo: Path, env: Mapping[str, str], *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:

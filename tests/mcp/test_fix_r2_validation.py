@@ -229,7 +229,7 @@ class TestEcmaPatterns:
         [
             ("^abc$", "abc\n"),
             (r"^\d+$", chr(0x661) + chr(0x662)),
-            (r"^\w+$", chr(0xE9) + "t" + chr(0xE9)),
+            (r"^\w+$", f"{chr(233)}t{chr(233)}"),
             ("^.$", chr(0x2028)),
             ("^.$", "\r"),
             ("^[]$", ""),

@@ -78,7 +78,10 @@ _ALL_DIALECTS: Final[tuple[ApiDialect, ...]] = (
 )
 _TEXT_DIALECTS: Final[tuple[ApiDialect, ...]] = (ApiDialect.CHAT_COMPLETIONS, ApiDialect.RESPONSES, ApiDialect.MESSAGES)
 _FORBIDDEN: Final[frozenset[str]] = frozenset({*(character for character in INVISIBLE if not character.isprintable()), "\u2028", "\u2029"})
-_FENCED_BLOCK: Final[re.Pattern[str]] = re.compile(re.escape(UNTRUSTED_BLOCK_START) + r".*?" + re.escape(UNTRUSTED_BLOCK_END), re.DOTALL)
+_FENCED_BLOCK: Final[re.Pattern[str]] = re.compile(
+    f"{re.escape(UNTRUSTED_BLOCK_START)}.*?{re.escape(UNTRUSTED_BLOCK_END)}",
+    re.DOTALL,
+)
 
 
 def _server() -> McpServerConfig:

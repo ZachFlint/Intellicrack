@@ -170,9 +170,23 @@ def test_loader_skips_the_same_ids_the_creation_rule_refuses(tmp_path: Path) -> 
         tmp_path: Per-test temporary directory.
     """
     settings = tmp_path / "providers.json"
-    records: dict[str, dict[str, object]] = {}
-    for instance_id in ("my-gw", "my_gw", "xai", "gemini", "google_cloud", "1gw", "openai"):
-        records[instance_id] = dict(ProviderInstance(instance_id=instance_id, api_base="http://127.0.0.1:1/v1").to_mapping())
+    records: dict[str, dict[str, object]] = {
+        instance_id: dict(
+            ProviderInstance(
+                instance_id=instance_id,
+                api_base="http://127.0.0.1:1/v1",
+            ).to_mapping(),
+        )
+        for instance_id in (
+            "my-gw",
+            "my_gw",
+            "xai",
+            "gemini",
+            "google_cloud",
+            "1gw",
+            "openai",
+        )
+    }
     _write_instances(settings, records)
 
     loaded = ProviderSettingsStore(settings).load_instances()

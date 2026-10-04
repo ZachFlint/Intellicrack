@@ -2494,7 +2494,7 @@ class McpConnectionManager:
         cancelled with it.
         """
         self._stopped = True
-        connections = [(server_id, connection) for server_id, connection in self._connections.items()]
+        connections = list(self._connections.items())
         self._connections.clear()
         self._order.clear()
         async with asyncio.TaskGroup() as group:

@@ -67,7 +67,7 @@ def _response_object(status: str, *, usage: Mapping[str, object] | None = None, 
     }
     if usage is not None:
         response["usage"] = usage
-    response.update(extra)
+    response |= extra
     return response
 
 

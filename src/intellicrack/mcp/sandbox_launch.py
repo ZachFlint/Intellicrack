@@ -1452,8 +1452,15 @@ def set_mandatory_label(path: str, sddl: str, *, propagate: bool) -> None:
         if not advapi32.GetSecurityDescriptorSacl(descriptor, ctypes.byref(present), ctypes.byref(sacl), ctypes.byref(defaulted)):
             raise ctypes.WinError(ctypes.get_last_error())
         buffer = ctypes.create_unicode_buffer(path)
-        status = advapi32.SetNamedSecurityInfoW(buffer, _SE_FILE_OBJECT, _LABEL_SECURITY_INFORMATION, None, None, None, sacl)
-        if status:
+        if status := advapi32.SetNamedSecurityInfoW(
+            buffer,
+            _SE_FILE_OBJECT,
+            _LABEL_SECURITY_INFORMATION,
+            None,
+            None,
+            None,
+            sacl,
+        ):
             raise ctypes.WinError(status)
     finally:
         _ = kernel32.LocalFree(descriptor)
@@ -1713,9 +1720,7 @@ def revert_stale_write_grants() -> int:
         int: How many grants were reverted; ``0`` on a platform with no
         sandbox.
     """
-    if not sandbox_supported():
-        return 0
-    return _GRANTS.revert_stale()
+    return _GRANTS.revert_stale() if sandbox_supported() else 0
 
 
 def apply_write_confinement(launch: SandboxedLaunch) -> tuple[WriteGrant, ...]:

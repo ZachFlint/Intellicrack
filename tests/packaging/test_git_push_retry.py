@@ -153,8 +153,7 @@ def topology(tmp_path: Path) -> Topology:
     """
     config = tmp_path / "gitconfig"
     config.write_text("[init]\n\tdefaultBranch = main\n", encoding="utf-8")
-    env = dict(os.environ)
-    env.update({
+    env = dict(os.environ) | {
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_CONFIG_GLOBAL": str(config),
         "GIT_AUTHOR_NAME": "Test Human",
@@ -162,7 +161,7 @@ def topology(tmp_path: Path) -> Topology:
         "GIT_COMMITTER_NAME": "Test Human",
         "GIT_COMMITTER_EMAIL": "human@example.org",
         "GIT_TERMINAL_PROMPT": "0",
-    })
+    }
     origin = tmp_path / "origin.git"
     _git(tmp_path, env, "init", "--quiet", "--bare", str(origin))
     seed = tmp_path / "seed"

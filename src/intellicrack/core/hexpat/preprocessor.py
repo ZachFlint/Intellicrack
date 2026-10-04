@@ -138,8 +138,7 @@ class HexPatPreprocessor:
 
             output_lines.append(f"// hexpat-pragma: {stripped[len('#pragma') :].strip()}")
 
-            m = _PRAGMA_ENDIAN_RE.match(stripped)
-            if m:
+            if m := _PRAGMA_ENDIAN_RE.match(stripped):
                 val = m.group(1)
                 endian = "little" if val == "native" else val
                 continue
@@ -747,8 +746,7 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
         if not stripped.startswith("#pragma"):
             continue
 
-        m = _PRAGMA_ENDIAN_RE.match(stripped)
-        if m:
+        if m := _PRAGMA_ENDIAN_RE.match(stripped):
             val = m.group(1)
             endian = "little" if val == "native" else val
             continue

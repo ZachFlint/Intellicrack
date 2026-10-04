@@ -271,7 +271,7 @@ class TestConcurrentAccess:
         for thread in threads:
             thread.join()
 
-        assert failures == []
+        assert not failures
         manifest = ChunkManifest.parse(backend.get_password(service, f"{service}_shared") or "")
         assert manifest is not None
         assert len(_chunk_entries(keyring_file, service)) == manifest.count
@@ -314,5 +314,5 @@ class TestConcurrentAccess:
             stop.set()
             writer.join()
 
-        assert failures == []
+        assert not failures
         assert set(seen) <= set(values)

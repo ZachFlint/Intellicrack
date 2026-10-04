@@ -78,7 +78,7 @@ class TestUnrelatedRequestsAreIgnored:
                 "/favicon.ico",
                 "/",
                 "/robots.txt",
-                "/other?code=abc&state=" + _STATE,
+                f"/other?code=abc&state={_STATE}",
                 "/callback",
                 "/callback?code=forged",
                 "/callback?code=forged&state=wrong",

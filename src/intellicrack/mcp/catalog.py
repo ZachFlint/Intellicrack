@@ -238,7 +238,7 @@ def _float_text(number: float) -> str:
         return "NaN"
     if math.isinf(number):
         return "Infinity" if number > 0 else "-Infinity"
-    return repr(float(number))
+    return repr(number)
 
 
 def _key_text(key: object) -> str:

@@ -541,7 +541,7 @@ def _byte_changes(samples: list[tuple[int, int]]) -> int:
     Returns:
         int: Number of adjacent samples whose bytes differ.
     """
-    return sum(1 for (_, before), (_, after) in pairwise(samples) if before != after)
+    return sum(bool(before != after) for (_, before), (_, after) in pairwise(samples))
 
 
 def _sample_paired(doc: HexDocument, stop: threading.Event, sampling: threading.Event) -> list[tuple[int, int]]:

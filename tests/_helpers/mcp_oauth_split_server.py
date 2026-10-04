@@ -329,8 +329,7 @@ class _BearerGuard:
         if held is None or held[1] < time.time():
             await self._reject(send, 401, f'Bearer resource_metadata="{self._metadata_url}", scope="{BASE_SCOPE}"')
             return
-        missing = [item for item in required if item not in held[0].split()]
-        if missing:
+        if missing := [item for item in required if item not in held[0].split()]:
             await self._reject(send, 403, f'Bearer error="insufficient_scope", scope="{" ".join(missing)}"')
             return
         await self._app(scope, receive, send)

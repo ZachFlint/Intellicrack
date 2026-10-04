@@ -72,7 +72,7 @@ def browser(monkeypatch: pytest.MonkeyPatch) -> _RecordingBrowser:
         ('HTTPS://Auth.Example:8443/a b?q="<x>"#f g', "https://auth.example:8443/a%20b?q=%22%3Cx%3E%22#f%20g"),
         ("https://auth.example/p?x=%zz", "https://auth.example/p?x=%25zz"),
         ("http://[::1]:8080/cb", "http://[::1]:8080/cb"),
-        ("https://b" + chr(0xFC) + "cher.example/", "https://xn--bcher-kva.example/"),
+        (f"https://b{chr(252)}cher.example/", "https://xn--bcher-kva.example/"),
         ("http://host_name.example./ok", "http://host_name.example./ok"),
     ],
     ids=["leading-nul", "leading-space", "tab-and-space", "case-quotes-angles", "stray-percent", "ipv6", "unicode-host", "underscore-host"],
