@@ -72,7 +72,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.x64dbg import PageRights
 
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 _SERVER_MODULE = "tests._helpers.realcov_pipe_server"
 _PIPE_READY_TIMEOUT_S = 15.0
 _WAIT_S = 10.0
