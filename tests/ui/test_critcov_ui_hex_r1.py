@@ -415,7 +415,7 @@ def test_default_community_pattern_registry_lists_the_vendored_patterns(qtbot: Q
     Args:
         qtbot: pytest-qt fixture that owns the host.
     """
-    patterns_dir = Path(__file__).resolve().parents[3] / "vendor" / "community-patterns" / "patterns"
+    patterns_dir = Path(__file__).resolve().parents[2] / "vendor" / "community-patterns" / "patterns"
     assert patterns_dir.is_dir()
     expected_categories = list(PatternRegistry([patterns_dir]).list_by_category())
     assert expected_categories
