@@ -346,11 +346,6 @@ _BPS_MAGIC: Final[bytes] = b"BPS1"
 _UPS_MAGIC: Final[bytes] = b"UPS1"
 _IPS_MAGIC_LEN: Final[int] = 5
 
-_CRC32_WIDTH: Final[int] = 32
-_CRC32_POLY: Final[int] = 0x04C11DB7
-_CRC32_INIT: Final[int] = 0xFFFFFFFF
-_CRC32_XOROUT: Final[int] = 0xFFFFFFFF
-
 _ANALYSIS_DOUBLE: Final[str] = "<d"
 """How the engine packs one entropy value into its buffer accessors."""
 
@@ -417,35 +412,6 @@ def _collect_import_entries(entry: object) -> list[dict[str, Any]]:
             },
         )
     return rows
-
-
-def _is_standard_crc32(
-    width: int,
-    poly: int,
-    init: int,
-    *,
-    refin: bool,
-    refout: bool,
-    xorout: int,
-) -> bool:
-    """Return whether the CRC parameters match the standard ``CRC-32/ISO-HDLC`` algorithm.
-
-    The match enables dispatch to :func:`zlib.crc32` instead of the
-    bit-by-bit Python fallback for the common case used by ZIP, gzip,
-    and PNG.
-
-    Args:
-        width: CRC width in bits.
-        poly: Polynomial.
-        init: Initial CRC value.
-        refin: Whether to reflect input bytes.
-        refout: Whether to reflect the output CRC.
-        xorout: XOR value applied after reflection.
-
-    Returns:
-        bool: True when the parameters match standard CRC-32.
-    """
-    return width == _CRC32_WIDTH and poly == _CRC32_POLY and init == _CRC32_INIT and refin and refout and xorout == _CRC32_XOROUT
 
 
 class _SandboxCopyProgress:
@@ -2756,7 +2722,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             entry = self._unpack_macho_segment_entry(cmd_offset, cmd_size, cmd_type, endian)
             if entry is not None:
                 mappings.append(entry)
-                if self.document is not None:
+                if self.document is not None:  # pragma: no branch - type narrowing; the caller checked
                     self.document.add_va_mapping(entry["file_offset"], entry["virtual_address"], entry["length"])
             cmd_offset += cmd_size
         return mappings
@@ -2839,7 +2805,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         mappings: list[dict[str, int]] = [
             {"file_offset": 0, "virtual_address": image_base, "length": e_lfanew},
         ]
-        if self.document is not None:
+        if self.document is not None:  # pragma: no branch - type narrowing; the caller checked
             self.document.add_va_mapping(0, image_base, e_lfanew)
 
         self._parse_pe_sections_va(
@@ -2878,7 +2844,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             virtual_size = cast("int", section["virtual_size"])
             sec_length = max(virtual_size, raw_size)
             sec_va = image_base + virtual_addr
-            if self.document is not None:
+            if self.document is not None:  # pragma: no branch - type narrowing; the caller checked
                 self.document.add_va_mapping(raw_offset, sec_va, sec_length)
             mappings.append({"file_offset": raw_offset, "virtual_address": sec_va, "length": sec_length})
 
@@ -2920,7 +2886,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             if struct.unpack_from(f"{endian}I", phdr_data, 0)[0] != _PT_LOAD:
                 continue
             p_offset, p_vaddr, p_filesz = self._parse_elf_load_segment(phdr_data, endian, is_64=is_64)
-            if self.document is not None:
+            if self.document is not None:  # pragma: no branch - type narrowing; the caller checked
                 self.document.add_va_mapping(p_offset, p_vaddr, p_filesz)
             mappings.append({"file_offset": p_offset, "virtual_address": p_vaddr, "length": p_filesz})
 
@@ -6804,6 +6770,9 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
     ) -> str:
         """Calculate a CRC with fully custom parameters over a byte range.
 
+        The native backend raises :class:`ValueError` when ``width`` is not
+        8, 16, 32, or 64.
+
         Args:
             start: Start byte offset (inclusive).
             end: End byte offset (exclusive).
@@ -6819,83 +6788,15 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
 
         Raises:
             RuntimeError: If no document is open.
-            ValueError: If width is not 8, 16, 32, or 64.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "compute_hash_custom_crc"):
-            result: str = self.document.compute_hash_custom_crc((start, end), poly, init, width, (refin, refout), xorout)
-            _logger.debug("custom_crc_computed", width=width)
-            return result
-
-        valid_widths = {8, 16, 32, 64}
-        if width not in valid_widths:
-            msg = f"unsupported CRC width {width}; must be one of {valid_widths}"
-            raise ValueError(msg)
-
-        length = end - start
-        raw = self.document.read(start, length)
-        if isinstance(raw, bytes):
-            data = raw
-        elif isinstance(raw, bytearray):
-            data = bytes(raw)
-        elif isinstance(raw, list):
-            data = bytes(cast("list[int]", raw))
-        else:
-            data = bytes(raw)
-
-        mask = (1 << width) - 1
-        hex_width = width // 4
-
-        if _is_standard_crc32(width, poly, init, refin=refin, refout=refout, xorout=xorout):
-            crc = zlib.crc32(data) & mask
-            _logger.debug("custom_crc_computed_zlib", width=width, result=hex(crc))
-            return f"{crc:0{hex_width}X}"
-
-        crc = init & mask
-
-        def reflect(val: int, bits: int) -> int:
-            """Reflect the low ``bits`` of ``val`` around its centre bit.
-
-            Implements the bitwise reflection used by CRC algorithms that
-            specify ``refin`` or ``refout`` to invert the bit order of
-            each byte or the final remainder.
-
-            Args:
-                val: Input value to be reflected.
-                bits: Number of low bits to consider during reflection.
-
-            Returns:
-                int: Value with its low ``bits`` bits reversed.
-            """
-            reflected = 0
-            for _ in range(bits):
-                reflected = (reflected << 1) | (val & 1)
-                val >>= 1
-            return reflected
-
-        table = [0] * 256
-        top_bit = 1 << (width - 1)
-        for i in range(256):
-            entry_in = reflect(i, 8) if refin else i
-            entry = entry_in << (width - 8)
-            for _ in range(8):
-                entry = ((entry << 1) ^ poly) & mask if entry & top_bit else (entry << 1) & mask
-            table[i] = entry
-
-        shift = width - 8
-        for byte in data:
-            crc = ((crc << 8) ^ table[((crc >> shift) ^ byte) & 0xFF]) & mask
-        if refout:
-            crc = reflect(crc, width)
-        crc ^= xorout
-        crc &= mask
-
-        _logger.debug("custom_crc_computed", width=width, result=hex(crc), hex_width=hex_width)
-        return f"{crc:0{hex_width}X}"
+        result: str = self.document.compute_hash_custom_crc((start, end), poly, init, width, (refin, refout), xorout)
+        _logger.debug("custom_crc_computed", width=width)
+        return result
 
     @classmethod
     async def base_convert(cls, value: str, from_base: str = "auto") -> dict[str, str]:
