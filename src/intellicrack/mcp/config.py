@@ -898,15 +898,6 @@ class McpServerConfig:
         """
         return f"{NAMESPACE_PREFIX}{self.server_id}"
 
-    @property
-    def is_http(self) -> bool:
-        """Whether the server is reached over HTTP rather than a child process.
-
-        Returns:
-            bool: ``True`` for the HTTP and SSE transports.
-        """
-        return self.kind in {McpTransportKind.HTTP, McpTransportKind.SSE}
-
     def validate(self) -> None:
         """Check every invariant the rest of the client relies on.
 
