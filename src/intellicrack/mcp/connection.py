@@ -498,7 +498,7 @@ class _MessageReceiveStream(Protocol):
         Returns:
             SessionMessage | Exception: A message, or a transport fault.
         """
-        ...
+        ...  # pragma: no cover - Protocol stub
 
     async def __anext__(self) -> SessionMessage | Exception:
         """Receive the next item.
@@ -506,15 +506,15 @@ class _MessageReceiveStream(Protocol):
         Returns:
             SessionMessage | Exception: A message, or a transport fault.
         """
-        ...
+        ...  # pragma: no cover - Protocol stub
 
     def close(self) -> None:
         """Close the stream."""
-        ...
+        ...  # pragma: no cover - Protocol stub
 
     async def aclose(self) -> None:
         """Close the stream."""
-        ...
+        ...  # pragma: no cover - Protocol stub
 
 
 class _WatchedReceiveStream:
@@ -2567,7 +2567,7 @@ class McpConnectionManager:
 
         await connection.connect()
         catalog = connection.catalog
-        if catalog is not None:
+        if catalog is not None:  # pragma: no branch - type narrowing; connect() set the catalog
             _ = self._consent.note_generation(server_id, catalog.generation)
         connection.start_listening(self._on_connection_changed)
         return connection.status

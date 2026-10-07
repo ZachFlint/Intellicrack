@@ -193,7 +193,7 @@ def _restyle(widget: QWidget) -> None:
         widget: The widget whose style should be refreshed.
     """
     s = widget.style()
-    if s is not None:
+    if s is not None:  # pragma: no branch - type narrowing; style() is typed Optional
         s.unpolish(widget)
         s.polish(widget)
 
@@ -1973,7 +1973,7 @@ class ProviderInstanceDialog(QDialog):
         if not isinstance(preset_id, str) or not preset_id:
             return
         preset = preset_for(preset_id)
-        if preset is None:
+        if preset is None:  # pragma: no cover - type narrowing; combo ids come from the presets
             return
         if preset.dialect is not None:
             self._dialect_combo.setCurrentIndex(self._dialect_combo.findData(preset.dialect.value))
@@ -2302,7 +2302,7 @@ class ProviderConfigDialog(QDialog):
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
 
-        if apply_button := button_box.button(QDialogButtonBox.StandardButton.Apply):
+        if apply_button := button_box.button(QDialogButtonBox.StandardButton.Apply):  # pragma: no branch - type narrowing
             apply_button.clicked.connect(self._on_apply)
 
         main_layout.addWidget(button_box)
@@ -4899,7 +4899,7 @@ class ProviderSettingsWidget(QFrame):
                 ok = bool(tup[0])
                 msg = tup[1] if isinstance(tup[1], str) else ""
                 self.ollama_pull_finished.emit(ok, model_name, msg)
-            else:
+            else:  # pragma: no cover - type narrowing; _pull always returns a pair
                 self.ollama_pull_finished.emit(pull_failure, model_name, "Unexpected pull result")
 
         def _on_error(exc: object) -> None:

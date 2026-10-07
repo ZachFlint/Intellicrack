@@ -166,7 +166,7 @@ class PatternEditorMixin:
         self._pattern_library_tree.setHeaderLabels(["Templates"])
         self._pattern_library_tree.setMinimumWidth(150)
         library_header = self._pattern_library_tree.header()
-        if library_header is not None:
+        if library_header is not None:  # pragma: no branch - type narrowing
             library_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self._pattern_library_tree.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._pattern_library_tree.itemClicked.connect(self._on_pattern_library_clicked)

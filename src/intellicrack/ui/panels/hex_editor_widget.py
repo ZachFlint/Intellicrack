@@ -395,11 +395,11 @@ class HexEditorWidget(QAbstractScrollArea):
         focus_policy = getattr(Qt.FocusPolicy, "StrongFocus", Qt.FocusPolicy(11))
         self.setFocusPolicy(focus_policy)
         vp = self.viewport()
-        if vp is not None:
+        if vp is not None:  # pragma: no branch - type narrowing
             vp.setCursor(Qt.CursorShape.IBeamCursor)
 
         vbar = self.verticalScrollBar()
-        if vbar is not None:
+        if vbar is not None:  # pragma: no branch - type narrowing
             vbar.setSingleStep(1)
             vbar.setPageStep(self._visible_row_count())
             vbar.valueChanged.connect(self._on_scroll_changed)
@@ -832,13 +832,13 @@ class HexEditorWidget(QAbstractScrollArea):
 
         total = self._total_rows()
         vbar = self.verticalScrollBar()
-        if vbar is not None:
+        if vbar is not None:  # pragma: no branch - type narrowing
             vbar.setRange(0, max(0, total - self._visible_row_count()))
             vbar.setValue(0)
             vbar.setPageStep(self._visible_row_count())
 
         vp = self.viewport()
-        if vp is not None:
+        if vp is not None:  # pragma: no branch - type narrowing
             vp.update()
         if self._minimap.isVisible():
             self._refresh_minimap_entropy()
@@ -884,7 +884,7 @@ class HexEditorWidget(QAbstractScrollArea):
         """
         _ = a0
         vp = self.viewport()
-        if vp is None:
+        if vp is None:  # pragma: no cover - type narrowing
             return
         painter = QPainter(vp)
         try:
@@ -1985,7 +1985,7 @@ class HexEditorWidget(QAbstractScrollArea):
         """Copy selection to clipboard as hex string."""
         if text := self.copy_as("hex"):
             clipboard = QApplication.clipboard()
-            if clipboard is not None:
+            if clipboard is not None:  # pragma: no branch - type narrowing
                 clipboard.setText(text)
 
     def _do_paste(self) -> None:
@@ -1996,7 +1996,7 @@ class HexEditorWidget(QAbstractScrollArea):
         if self._document is None:
             return
         clipboard = QApplication.clipboard()
-        if clipboard is None:
+        if clipboard is None:  # pragma: no cover - type narrowing
             return
         text = clipboard.text()
         if not text:
@@ -2124,7 +2124,7 @@ class HexEditorWidget(QAbstractScrollArea):
         lines = _SCROLL_LINES if delta < 0 else -_SCROLL_LINES
 
         vbar = self.verticalScrollBar()
-        if vbar is not None:
+        if vbar is not None:  # pragma: no branch - type narrowing
             vbar.setValue(vbar.value() + lines)
 
     @override
@@ -2177,7 +2177,7 @@ class HexEditorWidget(QAbstractScrollArea):
         total = self._total_rows()
         visible = self._visible_row_count()
         vbar = self.verticalScrollBar()
-        if vbar is not None:
+        if vbar is not None:  # pragma: no branch - type narrowing
             vbar.setRange(0, max(0, total - visible))
             vbar.setPageStep(visible)
 
@@ -2228,7 +2228,7 @@ class HexEditorWidget(QAbstractScrollArea):
         """
         row = offset // self._bytes_per_row
         vbar = self.verticalScrollBar()
-        if vbar is None:
+        if vbar is None:  # pragma: no cover - type narrowing
             return
 
         first_row = vbar.value()
@@ -2242,7 +2242,7 @@ class HexEditorWidget(QAbstractScrollArea):
     def _update_viewport(self) -> None:
         """Trigger a viewport repaint."""
         vp = self.viewport()
-        if vp is not None:
+        if vp is not None:  # pragma: no branch - type narrowing
             vp.update()
 
     def goto_offset(self, offset: int) -> None:
@@ -2428,7 +2428,7 @@ class HexEditorWidget(QAbstractScrollArea):
             ]
             for fmt_key, fmt_label in formats:
                 action = copy_as_menu.addAction(fmt_label)
-                if action is not None:
+                if action is not None:  # pragma: no branch - type narrowing
                     action.setEnabled(has_selection or has_data)
 
                     def _copy_as_slot(_checked: int, k: str = fmt_key) -> None:
@@ -2443,7 +2443,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     action.triggered.connect(_copy_as_slot)
 
         display_menu = menu.addMenu("Display Mode")
-        if display_menu is not None:
+        if display_menu is not None:  # pragma: no branch - type narrowing
             mode_labels: dict[str, str] = {
                 "hex8": "Hex 8-bit",
                 "hex16_le": "Hex 16-bit LE",
@@ -2466,7 +2466,7 @@ class HexEditorWidget(QAbstractScrollArea):
             }
             for mode_key, mode_label in mode_labels.items():
                 action = display_menu.addAction(mode_label)
-                if action is not None:
+                if action is not None:  # pragma: no branch - type narrowing
                     action.setCheckable(True)
                     action.setChecked(self._display_mode == mode_key)
 
@@ -2482,7 +2482,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     action.triggered.connect(_mode_slot)
 
         minimap_action = menu.addAction("Show Entropy Minimap")
-        if minimap_action is not None:
+        if minimap_action is not None:  # pragma: no branch - type narrowing
             minimap_action.setCheckable(True)
             minimap_action.setChecked(self._minimap.isVisible())
 
@@ -2506,7 +2506,7 @@ class HexEditorWidget(QAbstractScrollArea):
         """
         if text := self.copy_as(fmt):
             clipboard = QApplication.clipboard()
-            if clipboard is not None:
+            if clipboard is not None:  # pragma: no branch - type narrowing
                 clipboard.setText(text)
 
     def highlight_offsets(

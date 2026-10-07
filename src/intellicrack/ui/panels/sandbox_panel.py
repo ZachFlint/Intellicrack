@@ -3008,7 +3008,7 @@ class SandboxPanel(AnalysisPanelBase):
         existing: dict[str, QTreeWidgetItem] = {}
         for idx in range(self._instances_tree.topLevelItemCount()):
             item = self._instances_tree.topLevelItem(idx)
-            if item is None:
+            if item is None:  # pragma: no cover - type narrowing
                 continue
             existing[item.text(0)] = item
 

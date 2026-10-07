@@ -1987,7 +1987,7 @@ class CutterPanel(AnalysisPanelBase):
             address: Address to copy.
         """
         clipboard: QClipboard | None = QApplication.clipboard()
-        if clipboard is not None:
+        if clipboard is not None:  # pragma: no branch - type narrowing
             clipboard.setText(f"0x{address:X}")
             self._set_status(f"Copied 0x{address:X}")
 

@@ -1331,7 +1331,7 @@ class GoogleProvider(LLMProviderBase):
         declarations: list[dict[str, Any]] = []
         for entry in self._adapter.build_tool_schemas(self._enforce_tool_count_cap(tools, capabilities), capabilities):
             raw = entry.get("functionDeclarations")
-            if is_json_array(raw):
+            if is_json_array(raw):  # pragma: no branch - type narrowing; the adapter always returns a list
                 members: list[Any] = raw
                 declarations.extend(member for member in members if is_json_object(member))
         return declarations

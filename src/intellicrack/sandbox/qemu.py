@@ -8413,7 +8413,7 @@ if __name__ == "__main__":
 
         if monitor:
             collected = self._collected_root()
-            if collected is not None:
+            if collected is not None:  # pragma: no branch - type narrowing; the caller checked
                 logs_folder = collected / "logs"
                 log_files = await asyncio.to_thread(lambda: list(logs_folder.glob("*.log")))
                 for log_file in log_files:

@@ -562,7 +562,7 @@ class SignaturesMixin:
         self._sig_results_tree.setRootIsDecorated(False)
         self._sig_results_tree.setAlternatingRowColors(True)
         results_header = self._sig_results_tree.header()
-        if results_header is not None:
+        if results_header is not None:  # pragma: no branch - type narrowing
             results_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
             results_header.setStretchLastSection(True)
         self._sig_results_tree.itemDoubleClicked.connect(self._on_sig_result_double_clicked)

@@ -240,7 +240,7 @@ class ComparisonMixin:
             except (AttributeError, ValueError):
                 _logger.exception("diff_doc_read_failed")
                 return
-            if data_a is None:
+            if data_a is None:  # pragma: no cover - type narrowing
                 return
 
             try:

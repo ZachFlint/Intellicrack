@@ -2575,7 +2575,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         # external ``TerminateProcess`` that never reaches either of those
         # code paths.
         job_handle = await asyncio.to_thread(_create_kill_on_close_job_object)
-        if job_handle is not None:
+        if job_handle is not None:  # pragma: no branch - type narrowing; job object creation fails only on OS error
             await asyncio.to_thread(_assign_process_to_job_object, job_handle, self._process.pid)
         self._job_object_handle = job_handle
 
@@ -7712,11 +7712,11 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
 
         process = await asyncio.to_thread(_start_process)
         job_handle = await asyncio.to_thread(_create_kill_on_close_job_object)
-        if job_handle is not None:
+        if job_handle is not None:  # pragma: no branch - type narrowing; job object creation fails only on OS error
             await asyncio.to_thread(_assign_process_to_job_object, job_handle, process.pid)
         self._start_drain_threads(process)
         return_code = await asyncio.to_thread(process.wait)
-        if job_handle is not None:
+        if job_handle is not None:  # pragma: no branch - type narrowing; job object creation fails only on OS error
             await asyncio.to_thread(_close_job_object_handle, job_handle)
         await self._join_drain_threads()
 

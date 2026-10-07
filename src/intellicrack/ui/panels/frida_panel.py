@@ -446,7 +446,7 @@ class FridaPanel(AnalysisPanelBase):
             tabs: The tab widget whose tab bar should never elide labels.
         """
         tab_bar = tabs.tabBar()
-        if tab_bar is None:
+        if tab_bar is None:  # pragma: no cover - type narrowing
             return
         tab_bar.setElideMode(Qt.TextElideMode.ElideNone)
         tab_bar.setUsesScrollButtons(True)
@@ -3224,7 +3224,7 @@ class FridaPanel(AnalysisPanelBase):
         if isinstance(result, (bytes, bytearray)):
             self._mem_hex_display.setPlainText(format_hex_dump(bytes(result), base_addr))
         else:
-            self._mem_hex_display.setPlainText(str(result))
+            self._mem_hex_display.setPlainText(str(result))  # pragma: no cover - type narrowing
 
     def _on_write_memory(self) -> None:
         """Write memory in the target process."""

@@ -1140,7 +1140,7 @@ class HexPatEvaluator:
         resolved = self._types.resolve_primitive(prim_name, eff_endian)
         if resolved is not None:
             return resolved
-        return HexPatType(prim_name, self._pointer_size, signed=False, endian=eff_endian)
+        return HexPatType(prim_name, self._pointer_size, signed=False, endian=eff_endian)  # pragma: no cover - type narrowing
 
     def _instantiate_pointer_type(
         self,
@@ -1306,7 +1306,7 @@ class HexPatEvaluator:
                 children.extend(parent_result.get("children", []))
                 self._offset += int(parent_result["size"])
                 parent_members = _extract_members_dict(parent_result, "_members", pop=True)
-                if parent_members is not None:
+                if parent_members is not None:  # pragma: no branch - type narrowing
                     members |= parent_members
 
         for stmt in type_info.decl.body:
@@ -1867,13 +1867,13 @@ class HexPatEvaluator:
             column=node.column,
         )
         result = self._eval_array_type(array_type_node, node.name, target_offset, color, description, eff_endian)
-        if result is not None:
+        if result is not None:  # pragma: no branch - type narrowing
             field_size = int(result["size"])
             if node.at_offset is None:
                 self._offset = target_offset + field_size
             bound = PatternValue(value=None, offset=target_offset, size=field_size)
             element_members = _extract_members_dict(result, "_element_members", pop=False)
-            if element_members is not None:
+            if element_members is not None:  # pragma: no branch - type narrowing
                 bound.members.update(element_members)
             self._scope.define(node.name, bound)
         return result

@@ -2433,7 +2433,7 @@ class GhidraPanel(AnalysisPanelBase):
             scene = self._cfg_view.graph_scene()
             scene.load_graph(blocks_list)
             self._cfg_view.fit_to_view()
-        elif isinstance(self._cfg_view, QPlainTextEdit):
+        elif isinstance(self._cfg_view, QPlainTextEdit):  # pragma: no branch - type narrowing
             lines2: list[str] = []
             for blk in blocks_list:
                 blk_start = int(cast("int", blk.get("start", 0)))

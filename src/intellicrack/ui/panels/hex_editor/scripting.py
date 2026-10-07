@@ -1286,7 +1286,7 @@ class ScriptingMixin:
             self._script_editor.fontMetrics().horizontalAdvance(" ") * 4,
         )
         editor_doc = self._script_editor.document()
-        if editor_doc is not None:
+        if editor_doc is not None:  # pragma: no branch - type narrowing
             _PythonSyntaxHighlighter(editor_doc)
         layout.addWidget(self._script_editor)
 

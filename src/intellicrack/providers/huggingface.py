@@ -103,7 +103,7 @@ class _ChatCompletionCallable(Protocol):
                 Complete response when ``stream`` is False, or an async iterable
                 of stream chunks when ``stream`` is True.
         """
-        ...
+        ...  # pragma: no cover - Protocol stub
 
 
 class _WhoamiCallable(Protocol):
@@ -115,7 +115,7 @@ class _WhoamiCallable(Protocol):
         Returns:
             dict[str, Any]: Hub identity fields for the current API token.
         """
-        ...
+        ...  # pragma: no cover - Protocol stub
 
 
 _ERR_MODEL_LOADING = "HuggingFace model is loading and not yet ready: %s"

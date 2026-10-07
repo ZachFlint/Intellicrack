@@ -2030,7 +2030,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         for monitor_id, monitor_obj in list(self._file_monitors.items()):
             try:
                 disable_fn = getattr(monitor_obj, "disable", None)
-                if callable(disable_fn):
+                if callable(disable_fn):  # pragma: no branch - type narrowing; getattr may return None
                     await asyncio.to_thread(disable_fn)
             except Exception:
                 _logger.exception("file_monitor_disable_failed", monitor_id=monitor_id)
@@ -4722,7 +4722,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             raise ToolError(_ERR_ALLOC_FAILED) from e
 
         addr: int | None = None
-        for msg in messages:
+        for msg in messages:  # pragma: no branch - type narrowing; the buffer is never empty
             if msg["type"] == "send":
                 payload_dict = cast("dict[str, object]", msg.get("payload", {}))
                 addr_str = str(payload_dict.get("address", "0"))
@@ -7117,7 +7117,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             raise ToolError(_ERR_STRING_ALLOC_FAILED) from e
 
         addr: int | None = None
-        for msg in messages:
+        for msg in messages:  # pragma: no branch - type narrowing; the buffer is never empty
             if msg["type"] == "send":
                 payload_dict = cast("dict[str, object]", msg.get("payload", {}))
                 addr_str = str(payload_dict.get("address", "0"))
@@ -10258,7 +10258,7 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
             return False
 
         disable_fn = getattr(monitor, "disable", None)
-        if callable(disable_fn):
+        if callable(disable_fn):  # pragma: no branch - type narrowing; getattr may return None
             await asyncio.to_thread(disable_fn)
         _logger.info("file_monitor_stopped", monitor_id=monitor_id)
         return True

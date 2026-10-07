@@ -889,7 +889,7 @@ class ToolConfigDialog(QDialog):
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
 
-        if apply_button := button_box.button(QDialogButtonBox.StandardButton.Apply):
+        if apply_button := button_box.button(QDialogButtonBox.StandardButton.Apply):  # pragma: no branch - type narrowing
             apply_button.clicked.connect(self._on_apply)
 
         layout.addWidget(button_box)

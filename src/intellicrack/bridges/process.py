@@ -2702,7 +2702,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
 
         threads = await self.get_threads(target_pid)
 
-        if self._kernel32 is None:
+        if self._kernel32 is None:  # pragma: no cover - type narrowing; get_threads checked
             raise ToolError(_ERR_KERNEL32_NA)
 
         failed_tids: list[int] = []
@@ -2743,7 +2743,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
 
         threads = await self.get_threads(target_pid)
 
-        if self._kernel32 is None:
+        if self._kernel32 is None:  # pragma: no cover - type narrowing; get_threads checked
             raise ToolError(_ERR_KERNEL32_NA)
 
         failed_tids: list[int] = []
@@ -7506,7 +7506,7 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
             raise ToolError(msg)
 
         dup_value = dup_handle.value
-        if dup_value is None:
+        if dup_value is None:  # pragma: no cover - type narrowing
             msg = "DuplicateTokenEx returned null handle"
             raise ToolError(msg)
         _logger.debug("duplicate_token_completed", pid=pid, handle=dup_value)

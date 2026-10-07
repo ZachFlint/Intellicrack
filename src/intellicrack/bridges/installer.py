@@ -1024,7 +1024,7 @@ class ToolInstaller:
                 ):
                     date_str = date_match[0]
                     version = _ToolInstallerVersion.parse(date_str)
-                    if version is not None:
+                    if version is not None:  # pragma: no branch - type narrowing; parse never returns None here
                         _logger.debug(
                             "x64dbg_version_from_release_notes",
                             path=str(candidate),

@@ -639,7 +639,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._reg_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._reg_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         reg_h = self._reg_table.horizontalHeader()
-        if reg_h is not None:
+        if reg_h is not None:  # pragma: no branch - type narrowing
             reg_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         connect_cell_changed(self._reg_table, self._on_register_edited)
         tabs.addTab(self._reg_table, self.tr("Registers"))
@@ -1697,7 +1697,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._stop_mirror_timer()
 
         layout = self.embed_host.layout()
-        if layout is not None:
+        if layout is not None:  # pragma: no branch - type narrowing
             while layout.count():
                 item = layout.takeAt(0)
                 widget = item.widget() if item is not None else None
@@ -1762,7 +1762,7 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         layout = self.embed_host.layout()
-        if layout is not None:
+        if layout is not None:  # pragma: no branch - type narrowing
             while layout.count():
                 item = layout.takeAt(0)
                 widget = item.widget() if item is not None else None
@@ -1989,7 +1989,7 @@ class X64DbgPanel(AnalysisPanelBase):
             self.embedded_container.setParent(None)
             self.embedded_container = None
         layout = self.embed_host.layout()
-        if layout is not None:
+        if layout is not None:  # pragma: no branch - type narrowing
             while layout.count():
                 item = layout.takeAt(0)
                 widget = item.widget() if item is not None else None
