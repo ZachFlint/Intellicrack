@@ -28,6 +28,8 @@ from typing import TYPE_CHECKING, Any, Final, cast
 
 import pytest
 
+from intellicrack.bridges.hex_editor import HexEditorBridge
+
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -307,3 +309,31 @@ def test_missing_pefile_makes_pe_import_and_export_walks_return_empty_lists(real
     _assert_module_state(control, unavailable=(), none_names=())
     assert control["result"]["imports_len"] > 0
     assert control["result"]["exports_len"] > 0
+
+
+@pytest.mark.asyncio
+async def test_list_va_mappings_is_empty_before_load_and_after_close_but_lists_while_open(tmp_path: Path) -> None:
+    """``list_va_mappings`` returns an empty list whenever no document is open.
+
+    One bridge is asked before any file is loaded, then a 64-byte file is opened and mapped
+    (file offset 0x10, virtual address 0x401000, length 0x20) so the control shows the call does
+    list a mapping while a document is open, then the file is closed and the call is asked again.
+
+    Args:
+        tmp_path: Directory holding the 64-byte file.
+    """
+    sample = tmp_path / "va_sample.bin"
+    sample.write_bytes(bytes(range(64)))
+    bridge = HexEditorBridge()
+
+    assert await bridge.list_va_mappings() == []
+
+    await bridge.open_file(str(sample))
+    try:
+        assert await bridge.set_va_base(0x10, 0x401000, 0x20) is True
+        assert await bridge.list_va_mappings() == [{"file_offset": 0x10, "virtual_address": 0x401000, "length": 0x20}]
+    finally:
+        assert await bridge.close_file() is True
+
+    assert bridge.document is None
+    assert await bridge.list_va_mappings() == []

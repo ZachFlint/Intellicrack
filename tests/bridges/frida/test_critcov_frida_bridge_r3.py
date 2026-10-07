@@ -587,6 +587,29 @@ def test_pending_session_children_of_a_remote_device_without_a_server_are_report
     assert isinstance(excinfo.value.__cause__, frida.ServerNotRunningError)
 
 
+def test_frontmost_application_of_a_remote_device_without_a_server_is_reported_as_an_enumeration_failure(
+    idle_bridge: FridaBridge,
+    dead_remote_host: str,
+) -> None:
+    """Asking a remote device with nothing behind it for its frontmost application fails with Frida's error type in the details.
+
+    Args:
+        idle_bridge: Initialized bridge without a session.
+        dead_remote_host: Loopback endpoint where nothing listens.
+    """
+    _run(idle_bridge.connect_device("remote", dead_remote_host))
+
+    with pytest.raises(ToolError) as excinfo:
+        _run(idle_bridge.get_frontmost_application())
+
+    assert excinfo.value.message == "enumeration failed"
+    assert excinfo.value.details == {
+        "frida_error": _REMOTE_REFUSED,
+        "frida_error_type": "ServerNotRunningError",
+    }
+    assert isinstance(excinfo.value.__cause__, frida.ServerNotRunningError)
+
+
 @pytest.mark.parametrize(("call"), [pytest.param(case[1], id=case[0]) for case in _DEAD_REMOTE_CALLS])
 def test_dead_remote_device_surfaces_as_a_tool_error_not_a_raw_frida_error(
     idle_bridge: FridaBridge,
