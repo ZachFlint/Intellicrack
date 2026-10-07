@@ -2414,8 +2414,8 @@ class HexPatEvaluator:
            textual identifier from the parser, so multi-segment paths such as
            ``builtin::std::mem::base_address`` map onto a single flat scope
            key without requiring intermediate namespaces to be evaluated.
-        2. If the full path is registered in the evaluator builtin table or
-           any reachable scope, return the bound :class:`PatternValue`.
+        2. If the full path is bound in any reachable scope, return the bound
+           :class:`PatternValue`.
         3. Otherwise evaluate the namespace expression normally and look the
            member up among its registered children. This preserves nested
            ``ns_value.members`` access for user-defined namespaces.
@@ -2431,9 +2431,6 @@ class HexPatEvaluator:
         """
         flat_path = self._namespace_path(node)
         if flat_path is not None:
-            builtin = self._builtins.get(flat_path)
-            if builtin is not None:
-                return PatternValue(value=builtin)
             scope_val = self._scope.get(flat_path)
             if scope_val is not None:
                 return scope_val
@@ -2836,8 +2833,7 @@ class HexPatEvaluator:
 
         Applies bit-width masking for sized unsigned primitives and
         two's-complement wrapping for signed primitives. Float sources
-        are truncated toward zero; conversion failures (overflow, NaN,
-        infinity) raise a runtime error.
+        are truncated toward zero; NaN and infinity raise a runtime error.
 
         Args:
             value: The source PatternValue.
@@ -2849,7 +2845,7 @@ class HexPatEvaluator:
             PatternValue: A new PatternValue holding an integer coerced to the target's width.
 
         Raises:
-            HexPatRuntimeError: If a float value cannot be converted to an integer.
+            HexPatRuntimeError: If a float value is NaN or infinite.
         """
         raw = value.value
         if isinstance(raw, bool):
@@ -2858,12 +2854,7 @@ class HexPatEvaluator:
             if math.isnan(raw) or math.isinf(raw):
                 msg = f"cannot convert non-finite float to integer type '{target_prim.name}'"
                 raise HexPatRuntimeError(msg, line, column)
-            try:
-                int_val = int(raw)
-            except (OverflowError, ValueError) as exc:
-                _logger.warning("hexpat_float_to_int_conversion_failed", target_type=target_prim.name, error=str(exc))
-                msg = f"cannot convert float to integer type '{target_prim.name}': {exc}"
-                raise HexPatRuntimeError(msg, line, column) from exc
+            int_val = int(raw)
         elif isinstance(raw, int):
             int_val = raw
         elif isinstance(raw, str) and raw:

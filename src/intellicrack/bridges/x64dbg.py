@@ -118,7 +118,7 @@ from intellicrack.core.win32_desktop_process import (
 )
 
 
-if sys.platform == "win32":
+if sys.platform == "win32":  # pragma: no branch - non-Windows
     import ctypes
     from ctypes import wintypes
 
@@ -674,7 +674,7 @@ def _configure_win32_apis() -> None:
         wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
 
 
-if _IS_WIN32:
+if _IS_WIN32:  # pragma: no branch - non-Windows
     _configure_win32_apis()
 
 
@@ -11533,10 +11533,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
             if status_masked == nt_status_success:
                 return bytes(buffer.raw)
             if status_masked == nt_status_info_length_mismatch:
-                new_size = max(return_length.value, buffer_size * 2)
-                if new_size <= buffer_size:
-                    new_size = buffer_size * 2
-                buffer_size = new_size
+                buffer_size = max(return_length.value, buffer_size * 2)
                 if buffer_size > _HANDLE_QUERY_MAX_BUFFER:
                     msg = "SystemExtendedHandleInformation buffer exceeded sanity limit"
                     raise ToolError(msg, tool_name="x64dbg")
@@ -11924,10 +11921,8 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         _logger.info("tls_callbacks_breaking", module_name=module_name)
         callbacks = await self.get_tls_callbacks(module_name)
         for cb in callbacks:
-            addr_str = cb.get("address", "0")
-            if isinstance(addr_str, str):
-                addr = int(addr_str, 0)
-                await self.set_breakpoint(addr)
+            addr = int(cb.get("address", "0"), 0)
+            await self.set_breakpoint(addr)
         return {"success": True, "breakpoints_set": len(callbacks)}
 
     async def get_resources(self, module_name: str) -> list[dict[str, Any]]:

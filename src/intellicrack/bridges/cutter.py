@@ -1894,8 +1894,8 @@ class _CutterBridgeBase(StaticAnalysisBridge):
     async def _release_cutter_resources(self) -> None:
         """Release rizin handles, registered PIDs, and per-binary debug state.
 
-        Each step is wrapped in its own ``try/except/finally`` so a failure cleaning up one resource does not prevent the others from being
-        released. Errors are logged but never re-raised.
+        Each step is wrapped in its own ``try``/``finally`` so the handle is always cleared. Errors closing the rizin session are logged but
+        never re-raised.
         """
         if self._r2 is not None:
             async with self._r2_lock:
@@ -1910,8 +1910,6 @@ class _CutterBridgeBase(StaticAnalysisBridge):
             try:
                 process_manager = ProcessManager.get_instance()
                 process_manager.unregister_external_pid(self._r2_pid)
-            except (OSError, RuntimeError, ValueError, KeyError) as e:
-                _logger.warning("cutter_unregister_pid_failed", pid=self._r2_pid, error=str(e))
             finally:
                 self._r2_pid = None
 

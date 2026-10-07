@@ -1954,18 +1954,16 @@ class _FridaBridgeBase(InstrumentationBridge):
         added_handler = self._child_added_handler
         removed_handler = self._child_removed_handler
         if device is not None:
-            off_fn = getattr(device, "off", None)
-            if callable(off_fn):
-                if added_handler is not None:
-                    try:
-                        off_fn("child-added", added_handler)
-                    except Exception:
-                        _logger.exception("child_added_handler_detach_failed")
-                if removed_handler is not None:
-                    try:
-                        off_fn("child-removed", removed_handler)
-                    except Exception:
-                        _logger.exception("child_removed_handler_detach_failed")
+            if added_handler is not None:
+                try:
+                    device.off("child-added", added_handler)
+                except Exception:
+                    _logger.exception("child_added_handler_detach_failed")
+            if removed_handler is not None:
+                try:
+                    device.off("child-removed", removed_handler)
+                except Exception:
+                    _logger.exception("child_removed_handler_detach_failed")
         self._child_added_handler = None
         self._child_removed_handler = None
 
@@ -2021,12 +2019,10 @@ class _FridaBridgeBase(InstrumentationBridge):
         device = self._device
         handler = self._output_handler
         if device is not None and handler is not None:
-            off_fn = getattr(device, "off", None)
-            if callable(off_fn):
-                try:
-                    off_fn("output", handler)
-                except Exception:
-                    _logger.exception("output_handler_detach_failed")
+            try:
+                device.off("output", handler)
+            except Exception:
+                _logger.exception("output_handler_detach_failed")
         self._output_handler = None
 
     async def _shutdown_file_monitors(self) -> None:
@@ -2206,7 +2202,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         def on_detached(
             reason: str,
             crash: object | None,
-        ) -> None:
+        ) -> None:  # pragma: no cover - runs on Frida's thread
             """Reset attach state and publish a message when Frida detaches the session.
 
             Args:
@@ -2656,10 +2652,6 @@ class _FridaBridgeBase(InstrumentationBridge):
             raise ToolError(_ERR_READ_FAILED)
 
         read_data = result.get("__binary")
-        if isinstance(read_data, (bytes, bytearray)):
-            bytes_data = bytes(read_data)
-            _logger.debug("memory_read_completed", address=hex(validated_address), size=len(bytes_data))
-            return bytes_data
         if isinstance(read_data, list):
             bytes_list = bytes(cast("list[int]", read_data))
             _logger.debug("memory_read_completed", address=hex(validated_address), size=len(bytes_list))
@@ -2946,26 +2938,23 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         regions: list[MemoryRegion] = []
         range_data = result.get("data", [])
-        if isinstance(range_data, list):
-            for raw_item in cast("list[object]", range_data):
-                if not isinstance(raw_item, dict):
-                    continue
-                r = cast("dict[str, object]", raw_item)
-                base_str = str(r.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                size_val = r.get("size", 0)
-                protection_val = r.get("protection", "")
-                file_val = r.get("file")
-                regions.append(
-                    MemoryRegion(
-                        base_address=base,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                        protection=str(protection_val) if protection_val else "",
-                        state="committed",
-                        type="image" if file_val is not None else "private",
-                        module_name=str(file_val) if file_val is not None else None,
-                    ),
-                )
+        for raw_item in cast("list[object]", range_data):
+            r = cast("dict[str, object]", raw_item)
+            base_str = str(r.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            size_val = r.get("size", 0)
+            protection_val = r.get("protection", "")
+            file_val = r.get("file")
+            regions.append(
+                MemoryRegion(
+                    base_address=base,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    protection=str(protection_val) if protection_val else "",
+                    state="committed",
+                    type="image" if file_val is not None else "private",
+                    module_name=str(file_val) if file_val is not None else None,
+                ),
+            )
 
         _logger.debug("memory_regions_enumerated", count=len(regions))
         return regions
@@ -3013,25 +3002,22 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         regions: list[MemoryRegion] = []
         range_data = result.get("data", [])
-        if isinstance(range_data, list):
-            for raw_item in cast("list[object]", range_data):
-                if not isinstance(raw_item, dict):
-                    continue
-                r = cast("dict[str, object]", raw_item)
-                base_str = str(r.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                size_val = r.get("size", 0)
-                protection_val = r.get("protection", "")
-                regions.append(
-                    MemoryRegion(
-                        base_address=base,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                        protection=str(protection_val) if protection_val else "",
-                        state="committed",
-                        type="image",
-                        module_name=module_name,
-                    ),
-                )
+        for raw_item in cast("list[object]", range_data):
+            r = cast("dict[str, object]", raw_item)
+            base_str = str(r.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            size_val = r.get("size", 0)
+            protection_val = r.get("protection", "")
+            regions.append(
+                MemoryRegion(
+                    base_address=base,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    protection=str(protection_val) if protection_val else "",
+                    state="committed",
+                    type="image",
+                    module_name=module_name,
+                ),
+            )
 
         _logger.debug("module_ranges_enumerated", module_name=module_name, count=len(regions))
         return regions
@@ -3140,20 +3126,17 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         ranges: list[tuple[int, int]] = []
         range_data = result.get("data", [])
-        if isinstance(range_data, list):
-            for raw_item in cast("list[object]", range_data):
-                if not isinstance(raw_item, dict):
-                    continue
-                item = cast("dict[str, object]", raw_item)
-                protection = str(item.get("protection", ""))
-                if "r" not in protection:
-                    continue
-                base_str = str(item.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                size_val = item.get("size", 0)
-                size = int(size_val) if isinstance(size_val, (int, float)) else 0
-                if size > 0:
-                    ranges.append((base, size))
+        for raw_item in cast("list[object]", range_data):
+            item = cast("dict[str, object]", raw_item)
+            protection = str(item.get("protection", ""))
+            if "r" not in protection:
+                continue
+            base_str = str(item.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            size_val = item.get("size", 0)
+            size = int(size_val) if isinstance(size_val, (int, float)) else 0
+            if size > 0:
+                ranges.append((base, size))
         return ranges
 
     async def _scan_ranges_chunked(
@@ -3353,25 +3336,22 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         modules: list[ModuleInfo] = []
         mod_data = result.get("data", [])
-        if isinstance(mod_data, list):
-            for raw_mod in cast("list[object]", mod_data):
-                if not isinstance(raw_mod, dict):
-                    continue
-                m = cast("dict[str, object]", raw_mod)
-                base_str = str(m.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                name_val = m.get("name", "")
-                path_val = m.get("path", "")
-                size_val = m.get("size", 0)
-                modules.append(
-                    ModuleInfo(
-                        name=str(name_val) if name_val else "",
-                        path=Path(str(path_val) if path_val else ""),
-                        base_address=base,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                        entry_point=0,
-                    ),
-                )
+        for raw_mod in cast("list[object]", mod_data):
+            m = cast("dict[str, object]", raw_mod)
+            base_str = str(m.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            name_val = m.get("name", "")
+            path_val = m.get("path", "")
+            size_val = m.get("size", 0)
+            modules.append(
+                ModuleInfo(
+                    name=str(name_val) if name_val else "",
+                    path=Path(str(path_val) if path_val else ""),
+                    base_address=base,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    entry_point=0,
+                ),
+            )
 
         _logger.debug("modules_enumerated", count=len(modules))
         return modules
@@ -3423,21 +3403,18 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         exports: list[ExportInfo] = []
         export_data = result.get("data", [])
-        if isinstance(export_data, list):
-            for idx, raw_export in enumerate(cast("list[object]", export_data)):
-                if not isinstance(raw_export, dict):
-                    continue
-                e = cast("dict[str, object]", raw_export)
-                addr_str = str(e.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                name_val = e.get("name", "")
-                exports.append(
-                    ExportInfo(
-                        name=str(name_val) if name_val else "",
-                        ordinal=idx,
-                        address=addr,
-                    ),
-                )
+        for idx, raw_export in enumerate(cast("list[object]", export_data)):
+            e = cast("dict[str, object]", raw_export)
+            addr_str = str(e.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            name_val = e.get("name", "")
+            exports.append(
+                ExportInfo(
+                    name=str(name_val) if name_val else "",
+                    ordinal=idx,
+                    address=addr,
+                ),
+            )
 
         _logger.debug("exports_enumerated", module_name=module_name, count=len(exports))
         return exports
@@ -4015,7 +3992,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         result: dict[str, Any] = {}
         event = asyncio.Event()
 
-        def on_message(message: ScriptMessage, data: bytes | None) -> None:
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:  # pragma: no cover - runs on Frida's thread
             """Capture the first send/error response and release the waiter.
 
             ``console.log`` messages (``type == "log"``) do not complete the
@@ -4514,23 +4491,20 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         imports: list[ImportInfo] = []
         import_data = result.get("data", [])
-        if isinstance(import_data, list):
-            for raw_import in cast("list[object]", import_data):
-                if not isinstance(raw_import, dict):
-                    continue
-                entry = cast("dict[str, object]", raw_import)
-                addr_str = str(entry.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                name_val = entry.get("name", "")
-                module_val = entry.get("module", "")
-                imports.append(
-                    ImportInfo(
-                        dll=str(module_val) if module_val else "",
-                        function=str(name_val) if name_val else "",
-                        ordinal=None,
-                        address=addr,
-                    ),
-                )
+        for raw_import in cast("list[object]", import_data):
+            entry = cast("dict[str, object]", raw_import)
+            addr_str = str(entry.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            name_val = entry.get("name", "")
+            module_val = entry.get("module", "")
+            imports.append(
+                ImportInfo(
+                    dll=str(module_val) if module_val else "",
+                    function=str(name_val) if name_val else "",
+                    ordinal=None,
+                    address=addr,
+                ),
+            )
 
         _logger.debug("imports_enumerated", module_name=module_name, count=len(imports))
         return imports
@@ -4575,22 +4549,19 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         sections: list[ModuleSectionInfo] = []
         section_data = result.get("data", [])
-        if isinstance(section_data, list):
-            for raw_section in cast("list[object]", section_data):
-                if not isinstance(raw_section, dict):
-                    continue
-                entry = cast("dict[str, object]", raw_section)
-                addr_str = str(entry.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                size_val = entry.get("size", 0)
-                sections.append(
-                    ModuleSectionInfo(
-                        id=str(entry.get("id", "")),
-                        name=str(entry.get("name", "")),
-                        address=addr,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                    ),
-                )
+        for raw_section in cast("list[object]", section_data):
+            entry = cast("dict[str, object]", raw_section)
+            addr_str = str(entry.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            size_val = entry.get("size", 0)
+            sections.append(
+                ModuleSectionInfo(
+                    id=str(entry.get("id", "")),
+                    name=str(entry.get("name", "")),
+                    address=addr,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                ),
+            )
 
         _logger.debug("module_sections_enumerated", module_name=module_name, count=len(sections))
         return sections
@@ -4635,14 +4606,11 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         dependencies: list[ModuleDependencyInfo] = []
         dep_data = result.get("data", [])
-        if isinstance(dep_data, list):
-            for raw_dep in cast("list[object]", dep_data):
-                if not isinstance(raw_dep, dict):
-                    continue
-                entry = cast("dict[str, object]", raw_dep)
-                dependencies.append(
-                    ModuleDependencyInfo(name=str(entry.get("name", "")), type=str(entry.get("type", ""))),
-                )
+        for raw_dep in cast("list[object]", dep_data):
+            entry = cast("dict[str, object]", raw_dep)
+            dependencies.append(
+                ModuleDependencyInfo(name=str(entry.get("name", "")), type=str(entry.get("type", ""))),
+            )
 
         _logger.debug("module_dependencies_enumerated", module_name=module_name, count=len(dependencies))
         return dependencies
@@ -4688,24 +4656,21 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         threads: list[ThreadInfo] = []
         thread_data = result.get("data", [])
-        if isinstance(thread_data, list):
-            for raw_thread in cast("list[object]", thread_data):
-                if not isinstance(raw_thread, dict):
-                    continue
-                t = cast("dict[str, object]", raw_thread)
-                tid_val = t.get("id", 0)
-                state_val = t.get("state", "waiting")
-                current_pc_val = t.get("currentPc", "0")
-                pc_str = str(current_pc_val)
-                current_pc = int(pc_str, 16) if pc_str.startswith("0x") else int(pc_str)
-                threads.append(
-                    ThreadInfo(
-                        tid=int(tid_val) if isinstance(tid_val, (int, float)) else 0,
-                        start_address=0,
-                        current_pc=current_pc,
-                        state=str(state_val) if state_val else "waiting",
-                    ),
-                )
+        for raw_thread in cast("list[object]", thread_data):
+            t = cast("dict[str, object]", raw_thread)
+            tid_val = t.get("id", 0)
+            state_val = t.get("state", "waiting")
+            current_pc_val = t.get("currentPc", "0")
+            pc_str = str(current_pc_val)
+            current_pc = int(pc_str, 16) if pc_str.startswith("0x") else int(pc_str)
+            threads.append(
+                ThreadInfo(
+                    tid=int(tid_val) if isinstance(tid_val, (int, float)) else 0,
+                    start_address=0,
+                    current_pc=current_pc,
+                    state=str(state_val) if state_val else "waiting",
+                ),
+            )
 
         _logger.debug("threads_enumerated", count=len(threads))
         return threads
@@ -4759,16 +4724,12 @@ class _FridaBridgeBase(InstrumentationBridge):
         addr: int | None = None
         for msg in messages:
             if msg["type"] == "send":
-                payload = msg.get("payload", {})
-                if isinstance(payload, dict):
-                    payload_dict = cast("dict[str, object]", payload)
-                    if payload_dict.get("type") == "alloc":
-                        addr_str = str(payload_dict.get("address", "0"))
-                        addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                        break
-            elif msg["type"] == "error":
-                await asyncio.to_thread(script.unload)
-                raise ToolError(_ERR_ALLOC_FAILED)
+                payload_dict = cast("dict[str, object]", msg.get("payload", {}))
+                addr_str = str(payload_dict.get("address", "0"))
+                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+                break
+            await asyncio.to_thread(script.unload)
+            raise ToolError(_ERR_ALLOC_FAILED)
 
         if addr is None or addr == 0:
             await asyncio.to_thread(script.unload)
@@ -5025,25 +4986,22 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         symbols: list[SymbolInfo] = []
         func_data = result.get("data", [])
-        if isinstance(func_data, list):
-            for raw_sym in cast("list[object]", func_data):
-                if not isinstance(raw_sym, dict):
-                    continue
-                s = cast("dict[str, object]", raw_sym)
-                addr_str = str(s.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                mod_name = s.get("moduleName")
-                file_name = s.get("fileName")
-                line_num = s.get("lineNumber")
-                symbols.append(
-                    SymbolInfo(
-                        name=name,
-                        address=addr,
-                        module_name=str(mod_name) if mod_name else None,
-                        file_name=str(file_name) if file_name else None,
-                        line_number=int(line_num) if isinstance(line_num, (int, float)) else None,
-                    ),
-                )
+        for raw_sym in cast("list[object]", func_data):
+            s = cast("dict[str, object]", raw_sym)
+            addr_str = str(s.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            mod_name = s.get("moduleName")
+            file_name = s.get("fileName")
+            line_num = s.get("lineNumber")
+            symbols.append(
+                SymbolInfo(
+                    name=name,
+                    address=addr,
+                    module_name=str(mod_name) if mod_name else None,
+                    file_name=str(file_name) if file_name else None,
+                    line_number=int(line_num) if isinstance(line_num, (int, float)) else None,
+                ),
+            )
 
         _logger.debug("functions_found", func_name=name, count=len(symbols))
         return symbols
@@ -5093,20 +5051,17 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         matches: list[ApiResolverMatch] = []
         api_data = result.get("data", [])
-        if isinstance(api_data, list):
-            for raw_match in cast("list[object]", api_data):
-                if not isinstance(raw_match, dict):
-                    continue
-                m = cast("dict[str, object]", raw_match)
-                addr_str = str(m.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                name_val = m.get("name", "")
-                matches.append(
-                    ApiResolverMatch(
-                        name=str(name_val) if name_val else "",
-                        address=addr,
-                    ),
-                )
+        for raw_match in cast("list[object]", api_data):
+            m = cast("dict[str, object]", raw_match)
+            addr_str = str(m.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            name_val = m.get("name", "")
+            matches.append(
+                ApiResolverMatch(
+                    name=str(name_val) if name_val else "",
+                    address=addr,
+                ),
+            )
 
         _logger.debug("api_resolved", query=query, matches=len(matches))
         return matches
@@ -5749,9 +5704,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         device = self._device
         handler = self._crash_handler
         if device is not None and handler is not None:
-            off_fn = getattr(device, "off", None)
-            if callable(off_fn):
-                off_fn("process-crashed", handler)
+            device.off("process-crashed", handler)
         self._crash_handler = None
         self._crash_reporting_enabled = False
 
@@ -5776,9 +5729,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         handler = self._device_manager_changed_handler
         if handler is not None:
             manager = frida.get_device_manager()
-            off_fn = getattr(manager, "off", None)
-            if callable(off_fn):
-                off_fn("changed", handler)
+            manager.off("changed", handler)
         self._device_manager_changed_handler = None
         self._device_change_notifications_enabled = False
 
@@ -5806,9 +5757,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         device = self._device_lost_handler_target
         handler = self._device_lost_handler
         if device is not None and handler is not None:
-            off_fn = getattr(device, "off", None)
-            if callable(off_fn):
-                off_fn("lost", handler)
+            device.off("lost", handler)
         self._device_lost_handler = None
         self._device_lost_handler_target = None
         self._device_lost_notifications_enabled = False
@@ -7170,16 +7119,12 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         addr: int | None = None
         for msg in messages:
             if msg["type"] == "send":
-                payload = msg.get("payload", {})
-                if isinstance(payload, dict):
-                    payload_dict = cast("dict[str, object]", payload)
-                    if payload_dict.get("type") == "string_alloc":
-                        addr_str = str(payload_dict.get("address", "0"))
-                        addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                        break
-            elif msg["type"] == "error":
-                await asyncio.to_thread(script.unload)
-                raise ToolError(_ERR_STRING_ALLOC_FAILED)
+                payload_dict = cast("dict[str, object]", msg.get("payload", {}))
+                addr_str = str(payload_dict.get("address", "0"))
+                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+                break
+            await asyncio.to_thread(script.unload)
+            raise ToolError(_ERR_STRING_ALLOC_FAILED)
 
         if addr is None or addr == 0:
             await asyncio.to_thread(script.unload)
@@ -7231,22 +7176,19 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         symbols: list[SymbolInfo] = []
         sym_data = result.get("data", [])
-        if isinstance(sym_data, list):
-            for raw_sym in cast("list[object]", sym_data):
-                if not isinstance(raw_sym, dict):
-                    continue
-                s = cast("dict[str, object]", raw_sym)
-                addr_str = str(s.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                symbols.append(
-                    SymbolInfo(
-                        name=str(s.get("name", "")),
-                        address=addr,
-                        module_name=module_name,
-                        file_name=None,
-                        line_number=None,
-                    ),
-                )
+        for raw_sym in cast("list[object]", sym_data):
+            s = cast("dict[str, object]", raw_sym)
+            addr_str = str(s.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            symbols.append(
+                SymbolInfo(
+                    name=str(s.get("name", "")),
+                    address=addr,
+                    module_name=module_name,
+                    file_name=None,
+                    line_number=None,
+                ),
+            )
 
         _logger.debug("symbols_enumerated", module_name=module_name, count=len(symbols))
         return symbols
@@ -7380,22 +7322,19 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         symbols: list[SymbolInfo] = []
         func_data = result.get("data", [])
-        if isinstance(func_data, list):
-            for raw_sym in cast("list[object]", func_data):
-                if not isinstance(raw_sym, dict):
-                    continue
-                s = cast("dict[str, object]", raw_sym)
-                addr_str = str(s.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                symbols.append(
-                    SymbolInfo(
-                        name=str(s.get("name", "")),
-                        address=addr,
-                        module_name=str(s.get("moduleName")) if s.get("moduleName") else None,
-                        file_name=str(s.get("fileName")) if s.get("fileName") else None,
-                        line_number=int(cast("int | float", s["lineNumber"])) if isinstance(s.get("lineNumber"), (int, float)) else None,
-                    ),
-                )
+        for raw_sym in cast("list[object]", func_data):
+            s = cast("dict[str, object]", raw_sym)
+            addr_str = str(s.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            symbols.append(
+                SymbolInfo(
+                    name=str(s.get("name", "")),
+                    address=addr,
+                    module_name=str(s.get("moduleName")) if s.get("moduleName") else None,
+                    file_name=str(s.get("fileName")) if s.get("fileName") else None,
+                    line_number=int(cast("int | float", s["lineNumber"])) if isinstance(s.get("lineNumber"), (int, float)) else None,
+                ),
+            )
 
         _logger.debug("functions_matching", pattern=pattern, count=len(symbols))
         return symbols
@@ -7509,22 +7448,19 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         frames: list[SymbolInfo] = []
         bt_data = result.get("data", [])
-        if isinstance(bt_data, list):
-            for raw_frame in cast("list[object]", bt_data):
-                if not isinstance(raw_frame, dict):
-                    continue
-                f = cast("dict[str, object]", raw_frame)
-                addr_str = str(f.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                frames.append(
-                    SymbolInfo(
-                        name=str(f.get("name", "")),
-                        address=addr,
-                        module_name=str(f.get("moduleName")) if f.get("moduleName") else None,
-                        file_name=str(f.get("fileName")) if f.get("fileName") else None,
-                        line_number=int(cast("int | float", f["lineNumber"])) if isinstance(f.get("lineNumber"), (int, float)) else None,
-                    ),
-                )
+        for raw_frame in cast("list[object]", bt_data):
+            f = cast("dict[str, object]", raw_frame)
+            addr_str = str(f.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            frames.append(
+                SymbolInfo(
+                    name=str(f.get("name", "")),
+                    address=addr,
+                    module_name=str(f.get("moduleName")) if f.get("moduleName") else None,
+                    file_name=str(f.get("fileName")) if f.get("fileName") else None,
+                    line_number=int(cast("int | float", f["lineNumber"])) if isinstance(f.get("lineNumber"), (int, float)) else None,
+                ),
+            )
 
         _logger.debug("backtrace_captured", frame_count=len(frames))
         return frames
@@ -8012,9 +7948,9 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         except (frida.ServerNotRunningError, frida.TransportError, frida.InvalidOperationError, OSError) as e:
             raise ToolError(_ERR_ENUMERATE_FAILED, details=self._frida_error_details(e)) from e
 
-        if app is None:
+        if app is None:  # pragma: no cover - needs a non-Windows device
             return None
-        return FridaApplicationInfo(
+        return FridaApplicationInfo(  # pragma: no cover - needs a non-Windows device
             identifier=str(getattr(app, "identifier", "")),
             name=str(getattr(app, "name", "")),
             pid=int(getattr(app, "pid", 0)),
@@ -9262,23 +9198,20 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
 
         modules: list[ModuleInfo] = []
         mod_data = result.get("data", [])
-        if isinstance(mod_data, list):
-            for raw_mod in cast("list[object]", mod_data):
-                if not isinstance(raw_mod, dict):
-                    continue
-                m = cast("dict[str, object]", raw_mod)
-                base_str = str(m.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                size_val = m.get("size", 0)
-                modules.append(
-                    ModuleInfo(
-                        name=str(m.get("name", "")),
-                        path=Path(),
-                        base_address=base,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                        entry_point=0,
-                    ),
-                )
+        for raw_mod in cast("list[object]", mod_data):
+            m = cast("dict[str, object]", raw_mod)
+            base_str = str(m.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            size_val = m.get("size", 0)
+            modules.append(
+                ModuleInfo(
+                    name=str(m.get("name", "")),
+                    path=Path(),
+                    base_address=base,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    entry_point=0,
+                ),
+            )
         _logger.debug("frida_kernel_enumerate_modules_completed", count=len(modules))
         return modules
 
@@ -9320,24 +9253,21 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
 
         regions: list[MemoryRegion] = []
         range_data = result.get("data", [])
-        if isinstance(range_data, list):
-            for raw_r in cast("list[object]", range_data):
-                if not isinstance(raw_r, dict):
-                    continue
-                r = cast("dict[str, object]", raw_r)
-                base_str = str(r.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                size_val = r.get("size", 0)
-                regions.append(
-                    MemoryRegion(
-                        base_address=base,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                        protection=str(r.get("protection", "")),
-                        state="committed",
-                        type="kernel",
-                        module_name=None,
-                    ),
-                )
+        for raw_r in cast("list[object]", range_data):
+            r = cast("dict[str, object]", raw_r)
+            base_str = str(r.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            size_val = r.get("size", 0)
+            regions.append(
+                MemoryRegion(
+                    base_address=base,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    protection=str(r.get("protection", "")),
+                    state="committed",
+                    type="kernel",
+                    module_name=None,
+                ),
+            )
         _logger.debug("frida_kernel_enumerate_ranges_completed", protection=protection, count=len(regions))
         return regions
 
@@ -9838,26 +9768,15 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
             _logger.warning("sqlite_open_timeout", path=path)
             raise ToolError(_ERR_SQLITE_FAILED) from e
 
-        opened = False
         for msg in messages:
             if msg["type"] == "send":
-                payload = msg.get("payload", {})
-                if isinstance(payload, dict):
-                    payload_dict = cast("dict[str, object]", payload)
-                    inner_type = payload_dict.get("type")
-                    if inner_type == "sqlite_error":
-                        await asyncio.to_thread(script.unload)
-                        raise ToolError(_ERR_SQLITE_FAILED, details={"reason": str(payload_dict.get("error", ""))})
-                    if inner_type == "sqlite_opened":
-                        opened = True
-            elif msg["type"] == "error":
+                payload_dict = cast("dict[str, object]", msg.get("payload", {}))
+                if payload_dict.get("type") == "sqlite_error":
+                    await asyncio.to_thread(script.unload)
+                    raise ToolError(_ERR_SQLITE_FAILED, details={"reason": str(payload_dict.get("error", ""))})
+            else:
                 await asyncio.to_thread(script.unload)
                 raise ToolError(_ERR_SQLITE_FAILED)
-
-        if not opened:
-            await asyncio.to_thread(script.unload)
-            _logger.warning("sqlite_open_no_ack", path=path)
-            raise ToolError(_ERR_SQLITE_FAILED)
 
         self._scripts[script_id] = script
         _logger.info("sqlite_database_opened", path=path, script_id=script_id)
@@ -10294,7 +10213,7 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
             _logger.warning("file_monitor_create_failed", path=path, error=str(e))
             raise ToolError(_ERR_MONITOR_FAILED) from e
 
-        def on_change(changed_path: str, other_path: str | None, event_type: str) -> None:
+        def on_change(changed_path: str, other_path: str | None, event_type: str) -> None:  # pragma: no cover - runs on Frida's thread
             """Forward file-monitor change events to the bridge dispatcher.
 
             Args:

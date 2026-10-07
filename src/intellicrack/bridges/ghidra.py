@@ -542,7 +542,7 @@ def _create_kill_on_close_job_object() -> int | None:
         int | None: The job object handle, or ``None`` on a non-Windows
         platform or if the Win32 API calls fail.
     """
-    if os.name != "nt":
+    if os.name != "nt":  # pragma: no cover - non-Windows
         return None
 
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)

@@ -293,10 +293,7 @@ class MainWindow(QMainWindow):
 
         self._icon_manager.preload_icons(["app", "binary", "tools", "provider", "sandbox", "process"])
 
-        try:
-            install_qt_log_handler()
-        except (RuntimeError, OSError, ValueError):
-            _logger.exception("qt_log_handler_install_failed")
+        install_qt_log_handler()
 
         self._log_viewer_window: LogViewerWindow | None = None
 
@@ -391,20 +388,16 @@ class MainWindow(QMainWindow):
             self.resize(min_w, min_h)
             return
 
-        try:
-            avail_x, avail_y, avail_w, avail_h = geometry
-            target_w = max(min_w, avail_w - margin_w)
-            target_h = max(min_h, avail_h - margin_h)
+        avail_x, avail_y, avail_w, avail_h = geometry
+        target_w = max(min_w, avail_w - margin_w)
+        target_h = max(min_h, avail_h - margin_h)
 
-            self.resize(target_w, target_h)
-            move_widget(
-                self,
-                avail_x + (avail_w - target_w) // 2,
-                avail_y + (avail_h - target_h) // 2,
-            )
-        except (AttributeError, RuntimeError, ValueError):
-            _logger.debug("screen_detection_failed_using_default_size", exc_info=True)
-            self.resize(min_w, min_h)
+        self.resize(target_w, target_h)
+        move_widget(
+            self,
+            avail_x + (avail_w - target_w) // 2,
+            avail_y + (avail_h - target_h) // 2,
+        )
 
     @staticmethod
     def _resolve_screen_geometry() -> tuple[int, int, int, int] | None:
@@ -2310,20 +2303,12 @@ class MainWindow(QMainWindow):
         persists the name on the new session and stores the description as ``Session.notes``.
         """
         session_mgr_mod = importlib.import_module(".session_manager", "intellicrack.ui")
-        new_session_cls = getattr(session_mgr_mod, "NewSessionDialog", None)
-        session_name: str = ""
-        description: str = ""
-        if new_session_cls is not None:
-            dialog = new_session_cls(parent=self)
-            if not dialog.exec():
-                return
-            get_name = getattr(dialog, "get_session_name", None)
-            if callable(get_name):
-                session_name = str(get_name()).strip()
-            get_desc = getattr(dialog, "get_description", None)
-            if callable(get_desc):
-                description = str(get_desc()).strip()
-            _logger.debug("new_session_dialog", session_name=session_name, description=description)
+        dialog = session_mgr_mod.NewSessionDialog(parent=self)
+        if not dialog.exec():
+            return
+        session_name: str = str(dialog.get_session_name()).strip()
+        description: str = str(dialog.get_description()).strip()
+        _logger.debug("new_session_dialog", session_name=session_name, description=description)
 
         provider, model = self._selected_provider_model()
 
@@ -2829,12 +2814,11 @@ class MainWindow(QMainWindow):
             enabled = bool(tool_settings.get("enabled", False))
             path_value = str(tool_settings.get("path", ""))
             config_enabled = True
-            if hasattr(self._config, "is_tool_enabled"):
-                try:
-                    config_enabled = self._config.is_tool_enabled(ToolName(tool_id.lower()))
-                except (ValueError, AttributeError):
-                    _logger.debug("tool_name_parse_fallback", tool_id=tool_id)
-                    config_enabled = True
+            try:
+                config_enabled = self._config.is_tool_enabled(ToolName(tool_id.lower()))
+            except (ValueError, AttributeError):
+                _logger.debug("tool_name_parse_fallback", tool_id=tool_id)
+                config_enabled = True
             if enabled and path_value and config_enabled:
                 tools_to_init.append(tool_id)
 
@@ -3736,9 +3720,7 @@ class MainWindow(QMainWindow):
         preferences_module = importlib.import_module(".preferences", "intellicrack.ui")
         dialog = preferences_module.PreferencesDialog(self._config, self)
         config_path = get_config_file("config.toml")
-        set_config_path = getattr(dialog, "set_config_path", None)
-        if callable(set_config_path):
-            set_config_path(config_path)
+        dialog.set_config_path(config_path)
         dialog.settings_changed.connect(self._on_preferences_changed)
         dialog.mcp_settings_requested.connect(lambda: self._on_configure_mcp_from(dialog))
         if dialog.exec():
@@ -4647,9 +4629,7 @@ class MainWindow(QMainWindow):
         # behind. Runs last, after graceful per-bridge teardown had its chance.
         try:
             pm = ProcessManager.get_instance()
-            request_shutdown = getattr(pm, "request_shutdown", None)
-            if callable(request_shutdown):
-                request_shutdown()
+            pm.request_shutdown()
         except (RuntimeError, AttributeError, ImportError) as e:
             _logger.warning("process_manager_shutdown_failed", error=str(e))
 

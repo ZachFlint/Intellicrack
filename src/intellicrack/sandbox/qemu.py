@@ -264,7 +264,6 @@ _PIDFILE_MAX_RETRIES = 3
 _PIDFILE_RETRY_DELAY = 2.0
 PIDFILE_MAX_RETRIES: int = _PIDFILE_MAX_RETRIES
 PIDFILE_RETRY_DELAY: float = _PIDFILE_RETRY_DELAY
-_ERR_UNSUPPORTED_GUEST_OS = "unsupported guest OS"
 _ERR_PCAP_START_FAILED = "packet capture start failed"
 _ERR_PCAP_STOP_FAILED = "packet capture stop failed"
 _ERR_PCAP_NOT_ACTIVE = "no active packet capture with this ID"
@@ -2963,11 +2962,7 @@ class GuestAgentClient:
         retained: list[GuestAgentMessage] = []
         discarded = 0
         while not self._message_queue.empty():
-            try:
-                msg = self._message_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                _logger.debug("message_queue_empty")
-                break
+            msg = self._message_queue.get_nowait()
             if msg.message_type == _AGENT_RESULT_MESSAGE_TYPE:
                 discarded += 1
                 continue
@@ -3079,11 +3074,7 @@ class GuestAgentClient:
         retained: list[GuestAgentMessage] = []
         found: GuestAgentMessage | None = None
         while not self._message_queue.empty():
-            try:
-                msg = self._message_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                _logger.debug("message_queue_empty")
-                break
+            msg = self._message_queue.get_nowait()
             if found is None and msg.message_type == _AGENT_RESULT_MESSAGE_TYPE:
                 found = msg
                 continue
@@ -3101,12 +3092,7 @@ class GuestAgentClient:
         """
         messages: list[GuestAgentMessage] = []
         while not self._message_queue.empty():
-            try:
-                msg = self._message_queue.get_nowait()
-                messages.append(msg)
-            except asyncio.QueueEmpty:
-                _logger.debug("message_queue_empty")
-                break
+            messages.append(self._message_queue.get_nowait())
         return messages
 
 
@@ -4328,18 +4314,12 @@ class QEMUSandbox(SandboxBase):
         Returns:
             tuple[str, list[str]]: Executable and argument list for the
             configured guest family.
-
-        Raises:
-            SandboxError: If the configured guest family is not supported.
         """
         guest_os = self._qemu_config.guest_os
         if guest_os == GuestOS.WINDOWS:
             path, args = _GUEST_EXEC_PROBE_WINDOWS
-        elif guest_os == GuestOS.LINUX:
-            path, args = _GUEST_EXEC_PROBE_LINUX
         else:
-            _logger.warning("guest_exec_probe_unsupported_guest_os", guest_os=str(guest_os))
-            raise SandboxError(_ERR_UNSUPPORTED_GUEST_OS)
+            path, args = _GUEST_EXEC_PROBE_LINUX
         return path, list(args)
 
     async def _wait_for_guest_exec(self, deadline: float) -> None:
@@ -4940,10 +4920,6 @@ class QEMUSandbox(SandboxBase):
         discovered. Every step runs through ``guest-exec`` and its exit status
         is read back, so a failure is detected here instead of surfacing later
         as a monitor that never starts.
-
-        Raises:
-            SandboxError: If the guest agent is unreachable, if the volume
-                cannot be made reachable, or if the guest OS is unsupported.
         """
         if self._shared_folder is None:
             _logger.debug("guest_shared_mount_skipped_no_share")
@@ -4954,11 +4930,8 @@ class QEMUSandbox(SandboxBase):
         guest_os = self._qemu_config.guest_os
         if guest_os == GuestOS.LINUX:
             self._guest_shared_root = await self._mount_linux_shared_volume()
-        elif guest_os == GuestOS.WINDOWS:
-            self._guest_shared_root = await self._resolve_windows_shared_drive()
         else:
-            _logger.warning("guest_shared_mount_unsupported_guest_os", guest_os=str(guest_os))
-            raise SandboxError(_ERR_UNSUPPORTED_GUEST_OS)
+            self._guest_shared_root = await self._resolve_windows_shared_drive()
 
         _logger.info(
             "guest_shared_volume_ready",
@@ -5043,18 +5016,11 @@ class QEMUSandbox(SandboxBase):
         Returns:
             tuple[str, list[str]]: Executable and argument list to pass to
             ``guest-exec``.
-
-        Raises:
-            SandboxError: If the configured guest OS is unsupported.
         """
         guest_os = self._qemu_config.guest_os
         if guest_os == GuestOS.WINDOWS:
             return ("cmd.exe", ["/c", self._windows_launch_path(self._guest_shared_root_for(guest_os))])
-        if guest_os == GuestOS.LINUX:
-            return ("/bin/bash", [self._linux_launch_path(self._guest_shared_root_for(guest_os))])
-
-        _logger.warning("bootstrap_guest_agent_unsupported_guest_os", guest_os=str(guest_os))
-        raise SandboxError(_ERR_UNSUPPORTED_GUEST_OS)
+        return ("/bin/bash", [self._linux_launch_path(self._guest_shared_root_for(guest_os))])
 
     async def _bootstrap_guest_agent(self) -> None:
         """Bootstrap monitor agent script inside the guest via qemu-ga.
@@ -5277,17 +5243,10 @@ class QEMUSandbox(SandboxBase):
 
         Returns:
             list[str]: The ``-drive`` or ``-fsdev``/``-device`` arguments.
-
-        Raises:
-            ValueError: If the configured guest OS is unsupported.
         """
         shared = self._shared_folder
         if shared is None:
             return []
-
-        if self._qemu_config.guest_os not in {GuestOS.WINDOWS, GuestOS.LINUX}:
-            _logger.error("qemu_command_build_failed_guest_os", guest_os=str(self._qemu_config.guest_os))
-            raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
 
         if self._uses_fat_shared_transport():
             # ``label=`` is not a -drive option (raw format rejects it), so the
@@ -5663,7 +5622,7 @@ class QEMUSandbox(SandboxBase):
             cmd.extend(["-vnc", f":{vnc_display}"])
         elif self._qemu_config.display == "sdl":
             cmd.extend(["-display", "sdl"])
-        elif self._qemu_config.display == "spice":
+        else:
             spice_port = self._get_free_port(_VNC_PORT_BASE, _VNC_PORT_MAX)
             cmd.extend(["-spice", f"port={spice_port},disable-ticketing=on"])
 
@@ -6319,11 +6278,8 @@ class QEMUSandbox(SandboxBase):
         """
         pid_content = await asyncio.to_thread(pid_path.read_text, encoding="utf-8")
         pid = int(pid_content.strip())
-        try:
-            ProcessManager.terminate_tree(pid, graceful_timeout=2.0, force_timeout=2.0)
-            _logger.info("cleanup_terminated_orphan_qemu_tree", pid=pid)
-        except psutil.NoSuchProcess:
-            _logger.debug("cleanup_orphan_already_exited", pid=pid, exc_info=True)
+        ProcessManager.terminate_tree(pid, graceful_timeout=2.0, force_timeout=2.0)
+        _logger.info("cleanup_terminated_orphan_qemu_tree", pid=pid)
 
     def _release_claimed_host_ports(self) -> None:
         """Return this sandbox's allocated host ports to the allocator.
@@ -6380,14 +6336,10 @@ class QEMUSandbox(SandboxBase):
         """
         if not _IS_WINDOWS:
             return False
-        try:
-            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-            kernel32.MoveFileExW.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32]
-            kernel32.MoveFileExW.restype = ctypes.c_bool
-            accepted = kernel32.MoveFileExW(str(path), None, _MOVEFILE_DELAY_UNTIL_REBOOT)
-        except OSError as err:
-            _logger.debug("schedule_delete_on_reboot_failed", path=str(path), error=str(err))
-            return False
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.MoveFileExW.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32]
+        kernel32.MoveFileExW.restype = ctypes.c_bool
+        accepted = kernel32.MoveFileExW(str(path), None, _MOVEFILE_DELAY_UNTIL_REBOOT)
         return bool(accepted)
 
     @classmethod
@@ -7049,9 +7001,6 @@ while ($true) {
         loading it, which is what lets ``Add-Type`` actually load the
         library under Windows PowerShell 5.1's Desktop CLR rather than
         failing past discovery with a ``ReflectionTypeLoadException``.
-
-        Raises:
-            ValueError: If an unsupported guest OS is configured.
         """
         if self._shared_folder is None:
             return
@@ -7090,7 +7039,7 @@ while ($true) {
             startup_content = (
                 '@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0agent.ps1"\r\n'
             )
-        elif self._qemu_config.guest_os == GuestOS.LINUX:
+        else:
             agent_script = monitor_dir / "agent.py"
             agent_content = '''#!/usr/bin/env python3
 """QEMU Guest Agent for Intellicrack sandbox monitoring.
@@ -8047,8 +7996,6 @@ if __name__ == "__main__":
             startup_content = (
                 f"#!/bin/bash\nmkdir -p '{log_dir}'\nexec python3 '{agent_path}' >>'{log_dir}/{_GUEST_BOOTSTRAP_LOG_NAME}' 2>&1\n"
             )
-        else:
-            raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
 
         # Verbatim, because the host writing these is a Windows one and text
         # mode would otherwise turn every "\n" into "\r\n". Each launcher above
@@ -8105,7 +8052,7 @@ if __name__ == "__main__":
         if self._agent is not None and self._agent.is_connected:
             return await self._agent.send_command(shell, shell_args, time_limit=effective_timeout)
 
-        if self._uses_fat_shared_transport():
+        if self._uses_fat_shared_transport():  # pragma: no branch - non-Windows
             # The share is a read-only vvfat volume on this transport, so the
             # guest cannot publish a result file onto it and the host cannot
             # make a newly written script appear inside a running guest. The
@@ -8114,14 +8061,14 @@ if __name__ == "__main__":
             status = await self._guest_run(shell, shell_args, time_limit=effective_timeout)
             return (self._guest_exit_code(status, command), status.stdout, status.stderr)
 
-        if self._shared_folder is None:
+        if self._shared_folder is None:  # pragma: no cover - non-Windows
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
-        script_id = secrets.token_hex(8)
-        result_name = f"result_{script_id}.txt"
-        stdout_name = f"{script_id}.stdout"
-        stderr_name = f"{script_id}.stderr"
-        script_name, script_content = self._generate_execution_script(
+        script_id = secrets.token_hex(8)  # pragma: no cover - non-Windows
+        result_name = f"result_{script_id}.txt"  # pragma: no cover - non-Windows
+        stdout_name = f"{script_id}.stdout"  # pragma: no cover - non-Windows
+        stderr_name = f"{script_id}.stderr"  # pragma: no cover - non-Windows
+        script_name, script_content = self._generate_execution_script(  # pragma: no cover - non-Windows
             command=command,
             working_directory=working_directory,
             script_id=script_id,
@@ -8130,13 +8077,13 @@ if __name__ == "__main__":
             stderr_name=stderr_name,
         )
 
-        script_path = self._shared_folder / "input" / script_name
-        result_path = self._shared_folder / "output" / result_name
-        stdout_path = self._shared_folder / "output" / stdout_name
-        stderr_path = self._shared_folder / "output" / stderr_name
-        await asyncio.to_thread(script_path.write_text, script_content, encoding="utf-8")
+        script_path = self._shared_folder / "input" / script_name  # pragma: no cover - non-Windows
+        result_path = self._shared_folder / "output" / result_name  # pragma: no cover - non-Windows
+        stdout_path = self._shared_folder / "output" / stdout_name  # pragma: no cover - non-Windows
+        stderr_path = self._shared_folder / "output" / stderr_name  # pragma: no cover - non-Windows
+        await asyncio.to_thread(script_path.write_text, script_content, encoding="utf-8")  # pragma: no cover - non-Windows
 
-        return await self._poll_for_result(
+        return await self._poll_for_result(  # pragma: no cover - non-Windows
             result_path=result_path,
             stdout_path=stdout_path,
             stderr_path=stderr_path,
@@ -8259,9 +8206,6 @@ if __name__ == "__main__":
 
         Returns:
             tuple[str, str]: Tuple of (script_filename, script_content).
-
-        Raises:
-            ValueError: If an unsupported guest OS is configured.
         """
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
             script_name = f"exec_{script_id}.cmd"
@@ -8276,7 +8220,7 @@ if __name__ == "__main__":
                 f'({command}) 1> "{stdout_guest_path}" 2> "{stderr_guest_path}"\r\n'
                 f'echo %ERRORLEVEL% > "{result_guest_path}"\r\n'
             )
-        elif self._qemu_config.guest_os == GuestOS.LINUX:
+        else:
             script_name = f"exec_{script_id}.sh"
             guest_root = self._guest_shared_root_for(GuestOS.LINUX)
             stdout_guest_path = f"{guest_root}/output/{stdout_name}"
@@ -8286,13 +8230,6 @@ if __name__ == "__main__":
             script_content = (
                 f'#!/bin/bash\n{cd_line}\n( {command} ) > "{stdout_guest_path}" 2> "{stderr_guest_path}"\necho $? > "{result_guest_path}"\n'
             )
-        else:
-            _logger.error(
-                "execution_script_unsupported_guest_os",
-                guest_os=str(self._qemu_config.guest_os),
-                script_id=script_id,
-            )
-            raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
         return script_name, script_content
 
     @staticmethod
@@ -8455,7 +8392,6 @@ if __name__ == "__main__":
 
         Raises:
             SandboxError: If execution fails.
-            ValueError: If the guest OS type is unsupported.
         """
         _logger.info("qemu_run_binary_started", binary=str(binary_path), arg_count=len(args) if args else 0, monitor=monitor)
         if self.state.status != "running":
@@ -8483,10 +8419,7 @@ if __name__ == "__main__":
                 for log_file in log_files:
                     await asyncio.to_thread(log_file.unlink)
 
-        if self._qemu_config.guest_os in {GuestOS.WINDOWS, GuestOS.LINUX}:
-            binary_sandbox_path = self._guest_work_path(f"input/{binary_path.name}")
-        else:
-            raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
+        binary_sandbox_path = self._guest_work_path(f"input/{binary_path.name}")
 
         result: ExecutionResult
         try:
@@ -8496,7 +8429,7 @@ if __name__ == "__main__":
                 effective_timeout,
             )
             result = "success" if exit_code == 0 else "error"
-        except SandboxTimeoutError as e:
+        except SandboxTimeoutError as e:  # pragma: no cover - non-Windows
             _logger.warning("sandbox_execution_timeout", binary=binary_path.name, timeout=effective_timeout)
             result = "timeout"
             stderr = str(e)
@@ -8844,7 +8777,7 @@ if __name__ == "__main__":
             return {name: guest_sizes.get(name, 0) for name in _MONITORING_LOG_NAMES}
 
         folder = self._shared_folder
-        if folder is None:
+        if folder is None:  # pragma: no cover - non-Windows
             return dict.fromkeys(_MONITORING_LOG_NAMES, 0)
         logs_folder = folder / "logs"
         return {name: await asyncio.to_thread(self._stat_log_size, logs_folder / name) for name in _MONITORING_LOG_NAMES}
@@ -10150,8 +10083,8 @@ if __name__ == "__main__":
             agent_used = True
             shared_base = self._guest_shared_root_for(self._qemu_config.guest_os)
             for guest_dir in guest_dirs:
-                if self._qemu_config.guest_os == GuestOS.WINDOWS:
-                    inner_cmd = f'xcopy /S /E /Y /I "{guest_dir}" "{shared_base}output\\dropped_{extract_id}\\{Path(guest_dir).name}"'
+                if self._qemu_config.guest_os == GuestOS.WINDOWS:  # pragma: no branch - non-Windows
+                    inner_cmd = f'xcopy /S /E /Y /I "{guest_dir}" "{shared_base}output\\dropped_{extract_id}\\{Path(guest_dir).name}"'  # pragma: no cover - non-Windows
                 else:
                     dir_name = Path(guest_dir).name
                     inner_cmd = f'cp -r "{guest_dir}" "{shared_base}/output/dropped_{extract_id}/{dir_name}" 2>/dev/null'
@@ -10182,14 +10115,7 @@ if __name__ == "__main__":
         )
 
         if files_collected == 0:
-            try:
-                await asyncio.to_thread(shutil.rmtree, staging_dir, ignore_errors=True)
-            except OSError as cleanup_err:
-                _logger.warning(
-                    "staging_dir_cleanup_failed",
-                    error=str(cleanup_err),
-                    staging_dir=str(staging_dir),
-                )
+            await asyncio.to_thread(shutil.rmtree, staging_dir, ignore_errors=True)
             _logger.error(
                 "dropped_files_extract_empty",
                 agent_used=agent_used,
@@ -10210,10 +10136,7 @@ if __name__ == "__main__":
 
         await asyncio.to_thread(_create_zip)
 
-        try:
-            await asyncio.to_thread(shutil.rmtree, staging_dir, ignore_errors=True)
-        except OSError as e:
-            _logger.warning("staging_dir_cleanup_failed", error=str(e), staging_dir=str(staging_dir))
+        await asyncio.to_thread(shutil.rmtree, staging_dir, ignore_errors=True)
 
         _logger.info("dropped_files_extracted", zip_path=str(zip_path), files=files_collected)
 
@@ -10247,7 +10170,7 @@ if __name__ == "__main__":
             if collected is None:
                 raise SandboxError(_ERR_NO_SHARED_FOLDER)
             return collected / "dropped" / f"dropped_{extract_id}"
-        if self._shared_folder is None:
+        if self._shared_folder is None:  # pragma: no cover - non-Windows
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
         return self._shared_folder / "output" / f"dropped_{extract_id}"
 

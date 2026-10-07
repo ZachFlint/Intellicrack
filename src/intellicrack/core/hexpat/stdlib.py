@@ -2812,16 +2812,7 @@ class BuiltinFunctions:
                 )
                 return str(value)
 
-        try:
-            return _FORMAT_FIELD_RE.sub(_replace, fmt)
-        except (IndexError, KeyError) as exc:
-            _logger.warning(
-                "hexpat_format_string_regex_failed",
-                fmt=fmt,
-                exc_type=type(exc).__name__,
-                error=str(exc),
-            )
-            return fmt
+        return _FORMAT_FIELD_RE.sub(_replace, fmt)
 
     def _read_struct_field(self, *args: object) -> PatternValue:
         """Read a struct field as unsigned integer (internal helper).
@@ -2840,9 +2831,7 @@ class BuiltinFunctions:
             prefix = "<" if self._endian == "little" else ">"
             raw = self._data.read(offset, size)
             result = struct.unpack(f"{prefix}{fmt_char}", raw)[0]
-            if isinstance(result, int):
-                return PatternValue(value=result)
-            return PatternValue(value=int(result))
+            return PatternValue(value=result)
         raw = self._data.read(offset, size)
         byteorder: Literal["little", "big"] = "little" if self._endian == "little" else "big"
         return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=False))

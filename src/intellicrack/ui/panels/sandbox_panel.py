@@ -3040,8 +3040,7 @@ class SandboxPanel(AnalysisPanelBase):
             if stale_id in seen_ids:
                 continue
             row = self._instances_tree.indexOfTopLevelItem(stale_item)
-            if row >= 0:
-                self._instances_tree.takeTopLevelItem(row)
+            self._instances_tree.takeTopLevelItem(row)
 
     def _on_poll_status_error(self, exc: object) -> None:
         """Handle status poll failure.
@@ -3185,34 +3184,31 @@ class SandboxPanel(AnalysisPanelBase):
         _logger.debug("execution_report_loading", report_type=type(report).__name__)
         self._clear_report_tabs()
 
-        if hasattr(report, "file_changes"):
-            for change in report.file_changes:
-                change_map = cast("dict[str, object]", change)
-                op = change_map.get("operation", "unknown")
-                path = change_map.get("path", "")
-                detail = _format_file_change_detail(change_map)
-                item = QTreeWidgetItem([str(op), str(path), detail])
-                self._file_changes_tree.addTopLevelItem(item)
+        for change in report.file_changes:
+            change_map = cast("dict[str, object]", change)
+            op = change_map.get("operation", "unknown")
+            path = change_map.get("path", "")
+            detail = _format_file_change_detail(change_map)
+            item = QTreeWidgetItem([str(op), str(path), detail])
+            self._file_changes_tree.addTopLevelItem(item)
 
-        if hasattr(report, "registry_changes"):
-            for reg_change in report.registry_changes:
-                reg_map = cast("dict[str, object]", reg_change)
-                op = reg_map.get("operation", "unknown")
-                key = reg_map.get("key", "")
-                value = reg_map.get("value_data", "")
-                item = QTreeWidgetItem([str(op), str(key), str(value)])
-                self._registry_changes_tree.addTopLevelItem(item)
+        for reg_change in report.registry_changes:
+            reg_map = cast("dict[str, object]", reg_change)
+            op = reg_map.get("operation", "unknown")
+            key = reg_map.get("key", "")
+            value = reg_map.get("value_data", "")
+            item = QTreeWidgetItem([str(op), str(key), str(value)])
+            self._registry_changes_tree.addTopLevelItem(item)
 
-        if hasattr(report, "network_activity"):
-            for activity in report.network_activity:
-                act_map = cast("dict[str, object]", activity)
-                proto = act_map.get("protocol", "unknown")
-                dest = act_map.get("remote_address", "")
-                port = act_map.get("remote_port", 0)
-                sent = act_map.get("bytes_sent", 0)
-                recv = act_map.get("bytes_received", 0)
-                item = QTreeWidgetItem([str(proto), str(dest), str(port), f"{sent}/{recv} bytes"])
-                self._network_tree.addTopLevelItem(item)
+        for activity in report.network_activity:
+            act_map = cast("dict[str, object]", activity)
+            proto = act_map.get("protocol", "unknown")
+            dest = act_map.get("remote_address", "")
+            port = act_map.get("remote_port", 0)
+            sent = act_map.get("bytes_sent", 0)
+            recv = act_map.get("bytes_received", 0)
+            item = QTreeWidgetItem([str(proto), str(dest), str(port), f"{sent}/{recv} bytes"])
+            self._network_tree.addTopLevelItem(item)
 
         self._log(
             f"[+] Execution report loaded: {len(report.file_changes)} file changes, "

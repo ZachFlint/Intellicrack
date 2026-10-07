@@ -276,10 +276,8 @@ class PatternEditorMixin:
                 self._pattern_error_display.setPlainText("HexPat compiler not available")
             return
 
-        compiler_cls: type[Any] | None = getattr(hexpat_mod, "HexPatCompiler", None)
+        compiler_cls: type[Any] = hexpat_mod.HexPatCompiler
         error_cls: type[Any] | None = getattr(hexpat_mod, "HexPatError", None)
-        if compiler_cls is None:
-            return
 
         try:
             compiler_inst: Any = compiler_cls()
@@ -347,16 +345,12 @@ class PatternEditorMixin:
                 self._pattern_status_label.setText("Apply failed")
             _logger.exception("pattern_apply_failed")
         else:
-            field_count = 0
-            if isinstance(result, list):
-                typed_fields = cast("list[dict[str, object]]", result)
-                field_count = len(typed_fields)
-                if self._templates_tree is not None:
-                    self._templates_tree.clear()
-                    self._populate_template_tree(typed_fields)
-                    self._highlight_template_fields(typed_fields)
-            elif self._templates_tree is not None:
+            typed_fields = cast("list[dict[str, object]]", result)
+            field_count = len(typed_fields)
+            if self._templates_tree is not None:
                 self._templates_tree.clear()
+                self._populate_template_tree(typed_fields)
+                self._highlight_template_fields(typed_fields)
 
             self._populate_template_combo()
 
@@ -470,14 +464,11 @@ class PatternEditorMixin:
         self._pattern_print_buffer = []
 
         if self._interpreter is None:
-            self._interpreter = HexPatInterpreter_cls(print_sink=self._pattern_print_sink)
+            interpreter = HexPatInterpreter_cls(print_sink=self._pattern_print_sink)
+            self._interpreter = interpreter
         else:
-            set_sink = getattr(self._interpreter, "set_print_sink", None)
-            if callable(set_sink):
-                set_sink(self._pattern_print_sink)
-        interpreter = self._interpreter
-        if interpreter is None:
-            return
+            interpreter = self._interpreter
+            interpreter.set_print_sink(self._pattern_print_sink)
 
         if self._pattern_status_label is not None:
             self._pattern_status_label.setText("Executing...")

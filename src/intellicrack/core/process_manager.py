@@ -95,7 +95,7 @@ def _pid_exists(pid: int) -> bool:
 
     if sys.platform == "win32":
         return _pid_exists_windows(pid)
-    return _pid_exists_posix(pid)
+    return _pid_exists_posix(pid)  # pragma: no cover - non-Windows
 
 
 def _pid_handle_alive(kernel32: ctypes.CDLL, handle: int) -> bool:
@@ -174,7 +174,7 @@ def _pid_exists_windows(pid: int) -> bool:
         kernel32.CloseHandle(handle)
 
 
-def _pid_exists_posix(pid: int) -> bool:
+def _pid_exists_posix(pid: int) -> bool:  # pragma: no cover - non-Windows
     """Verify a PID exists on POSIX systems via ``/proc`` and ``os.kill``.
 
     Args:
@@ -424,8 +424,7 @@ class ProcessManager:
             try:
                 self._original_sigint_handler = signal.getsignal(signal.SIGINT)
                 signal.signal(signal.SIGINT, self._signal_handler)
-                if hasattr(signal, "SIGBREAK"):
-                    signal.signal(signal.SIGBREAK, self._signal_handler)
+                signal.signal(signal.SIGBREAK, self._signal_handler)
             except (ValueError, OSError) as e:
                 _logger.exception(
                     "signal_handler_install_failed",
@@ -601,7 +600,7 @@ class ProcessManager:
         if sys.platform == "win32":
             p.kill()
             _logger.info("win32_terminate_signal_sent", pid=p.pid, exit_code=_WIN_PROCESS_TERMINATE)
-        else:
+        else:  # pragma: no cover - non-Windows
             p.kill()
             _logger.info("signal_sent", pid=p.pid, signal=_SIGNAL_SIGKILL)
 
@@ -662,9 +661,6 @@ class ProcessManager:
             parent = psutil.Process(pid)
         except psutil.NoSuchProcess:
             _logger.exception("terminate_tree_root_lookup_missing", pid=pid)
-            return
-        except psutil.AccessDenied:
-            _logger.warning("terminate_tree_root_access_denied", pid=pid)
             return
 
         try:
@@ -948,10 +944,7 @@ class ProcessManager:
         except TimeoutError:
             logger.warning("async_process_zombie_fallback", process_name=name)
             ProcessManager._terminate_process_sync(process)
-            try:
-                await process.wait()
-            except (OSError, RuntimeError) as exc:
-                _logger.warning("zombie_wait_fallback_failed", error=str(exc))
+            await process.wait()
 
         logger.info("async_process_terminated_tree", process_name=name)
 

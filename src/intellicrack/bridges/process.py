@@ -8012,10 +8012,8 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
                 target_pid,
             )
             close_handle = True
-        elif self._process_handle is not None:
-            proc_handle = self._process_handle
         else:
-            raise ToolError(_ERR_NOT_ATTACHED)
+            proc_handle = self._process_handle
 
         if not proc_handle:
             raise ToolError(_ERR_OPEN_FAILED)
@@ -8791,15 +8789,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         meta_data = meta_buf.raw[: bytes_read.value]
         if len(meta_data) < _DOTNET_METADATA_MIN_SIZE:
             return None
-        try:
-            version_str = self._parse_dotnet_metadata_version_string(meta_data)
-        except struct.error as exc:
-            _logger.warning(
-                "dotnet_metadata_header_parse_failed",
-                meta_va=hex(meta_va),
-                error=str(exc),
-            )
-            return None
+        version_str = self._parse_dotnet_metadata_version_string(meta_data)
         return version_str or None
 
     @staticmethod

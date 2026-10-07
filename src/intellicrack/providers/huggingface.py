@@ -973,44 +973,6 @@ class HuggingFaceProvider(LLMProviderBase):
         try:
             async for piece in self._consume_stream_chunks(raw_stream, model=model, tc_buffer=tc_buffer):
                 yield piece
-        except BadRequestError as exc:
-            self._logger.warning(
-                "huggingface_stream_bad_request",
-                model=model,
-                error=str(exc),
-            )
-            raise ProviderError(_ERR_BAD_REQUEST % exc) from exc
-        except InferenceTimeoutError as exc:
-            self._logger.warning(
-                "huggingface_stream_timeout",
-                model=model,
-                error=str(exc),
-            )
-            raise ProviderError(_ERR_TIMEOUT % exc) from exc
-        except HfHubHTTPError as exc:
-            status_code = _hf_status_code(exc)
-            self._logger.warning(
-                "huggingface_stream_http_error",
-                model=model,
-                status_code=status_code,
-                error_type=type(exc).__name__,
-            )
-            self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
-            raise ProviderError(_ERR_API_ERROR % exc) from exc
-        except TimeoutError as exc:
-            if self._cancel_requested:
-                self._logger.warning(
-                    "huggingface_stream_cancelled_during_timeout",
-                    model=model,
-                    exc_info=True,
-                )
-                return
-            self._logger.warning(
-                "huggingface_stream_timeout_generic",
-                model=model,
-                error_type=type(exc).__name__,
-            )
-            raise ProviderError(_ERR_TIMEOUT % exc) from exc
         except (ConnectionError, OSError, ValueError) as exc:
             if self._cancel_requested:
                 self._logger.warning(

@@ -2005,14 +2005,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
         data: bytes = b""
         stripped = text.replace(" ", "").replace("\n", "").replace("\r", "")
-        if all(c in string.hexdigits for c in stripped) and len(stripped) % 2 == 0:
-            try:
-                data = bytes.fromhex(stripped)
-            except ValueError:
-                _logger.warning("hex_editor_paste_hex_parse_failed_fallback_utf8", length=len(text), exc_info=True)
-                data = text.encode("utf-8")
-        else:
-            data = text.encode("utf-8")
+        data = bytes.fromhex(stripped) if all(c in string.hexdigits for c in stripped) and len(stripped) % 2 == 0 else text.encode("utf-8")
 
         if not data:
             return
@@ -2021,28 +2014,24 @@ class HexEditorWidget(QAbstractScrollArea):
             self.about_to_modify.emit(self._cursor_offset + i)
 
         if self._edit_mode == "overwrite":
-            write_fn = getattr(self._document, "write_bytes", None)
-            if callable(write_fn):
-                try:
-                    write_fn(self._cursor_offset, data)
-                    self._push_marks_undo()
-                    for i in range(len(data)):
-                        self._modified_offsets.add(self._cursor_offset + i)
-                    _logger.info("hex_editor_paste_overwrite_completed", offset=self._cursor_offset, length=len(data))
-                except (RuntimeError, ValueError, IndexError, OSError):
-                    _logger.warning("hex_editor_paste_overwrite_failed", offset=self._cursor_offset, exc_info=True)
+            try:
+                self._document.write_bytes(self._cursor_offset, data)
+                self._push_marks_undo()
+                for i in range(len(data)):
+                    self._modified_offsets.add(self._cursor_offset + i)
+                _logger.info("hex_editor_paste_overwrite_completed", offset=self._cursor_offset, length=len(data))
+            except (RuntimeError, ValueError, IndexError, OSError):
+                _logger.warning("hex_editor_paste_overwrite_failed", offset=self._cursor_offset, exc_info=True)
         else:
-            insert_fn = getattr(self._document, "insert_bytes", None)
-            if callable(insert_fn):
-                try:
-                    insert_fn(self._cursor_offset, data)
-                    self._push_marks_undo()
-                    self._shift_modified_offsets_for_insert(self._cursor_offset, len(data))
-                    for i in range(len(data)):
-                        self._modified_offsets.add(self._cursor_offset + i)
-                    _logger.debug("hex_editor_paste_insert_completed", offset=self._cursor_offset, length=len(data))
-                except (RuntimeError, ValueError, IndexError, OSError):
-                    _logger.warning("hex_editor_paste_insert_failed", offset=self._cursor_offset, exc_info=True)
+            try:
+                self._document.insert_bytes(self._cursor_offset, data)
+                self._push_marks_undo()
+                self._shift_modified_offsets_for_insert(self._cursor_offset, len(data))
+                for i in range(len(data)):
+                    self._modified_offsets.add(self._cursor_offset + i)
+                _logger.debug("hex_editor_paste_insert_completed", offset=self._cursor_offset, length=len(data))
+            except (RuntimeError, ValueError, IndexError, OSError):
+                _logger.warning("hex_editor_paste_insert_failed", offset=self._cursor_offset, exc_info=True)
 
         self.data_changed.emit()
         self._update_scrollbar()
@@ -2305,14 +2294,7 @@ class HexEditorWidget(QAbstractScrollArea):
         end = max(self._selection_start, self._selection_end)
         length = end - start + 1
 
-        read_fn = getattr(self._document, "read", None)
-        if callable(read_fn):
-            raw = read_fn(start, length)
-            if isinstance(raw, (bytes, bytearray)):
-                return bytes(raw)
-            if isinstance(raw, list):
-                return bytes(cast("list[int]", raw))
-        return b""
+        return self._document.read(start, length)
 
     def copy_as(self, fmt: str = "hex") -> str:
         """Format the current selection as a string.
@@ -2329,13 +2311,7 @@ class HexEditorWidget(QAbstractScrollArea):
         """
         data = self.get_selection_bytes()
         if not data and (self._document is not None and self._cursor_offset < self._doc_length()):
-            read_fn = getattr(self._document, "read", None)
-            if callable(read_fn):
-                raw = read_fn(self._cursor_offset, 1)
-                if isinstance(raw, (bytes, bytearray)):
-                    data = bytes(raw)
-                elif isinstance(raw, list):
-                    data = bytes(cast("list[int]", raw))
+            data = self._document.read(self._cursor_offset, 1)
         return self.copy_as_format(fmt, data) if data else ""
 
     def copy_as_format(self, fmt: str, data: bytes | None = None) -> str:

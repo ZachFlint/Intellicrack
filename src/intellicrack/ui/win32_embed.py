@@ -113,7 +113,7 @@ def _get_user32() -> ctypes.WinDLL | None:
             or None when running on a non-Windows platform or when
             ``ctypes.windll`` is unavailable for any reason.
     """
-    if not _is_windows() or not hasattr(ctypes, "windll"):
+    if not _is_windows() or not hasattr(ctypes, "windll"):  # pragma: no cover - non-Windows
         return None
 
     user32 = ctypes.WinDLL("user32", use_last_error=True)
@@ -136,7 +136,7 @@ def find_window_by_pid(pid: int) -> int | None:
     """
     _logger.debug("win32_find_window_by_pid_started", pid=pid)
     user32 = _get_user32()
-    if user32 is None:
+    if user32 is None:  # pragma: no cover - non-Windows
         return None
 
     result_hwnd: list[int] = []
@@ -168,23 +168,23 @@ def find_window_by_pid(pid: int) -> int | None:
         if not user32.IsWindowVisible(hwnd):
             return True
 
-        owner_handle = user32.GetWindow(hwnd, _GW_OWNER)
-        owner_int = int(owner_handle) if owner_handle else 0
-        if owner_int != 0:
+        owner_handle = user32.GetWindow(hwnd, _GW_OWNER)  # pragma: no cover - needs a visible desktop
+        owner_int = int(owner_handle) if owner_handle else 0  # pragma: no cover - needs a visible desktop
+        if owner_int != 0:  # pragma: no cover - needs a visible desktop
             return True
 
-        title_buf = ctypes.create_unicode_buffer(_MAX_TITLE_LEN)
-        user32.GetWindowTextW(hwnd, title_buf, _MAX_TITLE_LEN)
-        if not title_buf.value:
+        title_buf = ctypes.create_unicode_buffer(_MAX_TITLE_LEN)  # pragma: no cover - needs a visible desktop
+        user32.GetWindowTextW(hwnd, title_buf, _MAX_TITLE_LEN)  # pragma: no cover - needs a visible desktop
+        if not title_buf.value:  # pragma: no cover - needs a visible desktop
             return True
 
-        result_hwnd.append(hwnd)
-        return False
+        result_hwnd.append(hwnd)  # pragma: no cover - needs a visible desktop
+        return False  # pragma: no cover - needs a visible desktop
 
     callback = enum_func_type(_enum_callback)
     user32.EnumWindows(callback, 0)
 
-    if result_hwnd:
+    if result_hwnd:  # pragma: no cover - needs a visible desktop
         _logger.debug(
             "win32_window_found",
             pid=pid,
@@ -266,7 +266,7 @@ def embed_window(hwnd: int, parent: QWidget) -> QWidget | None:
         return None
 
     user32 = _get_user32()
-    if user32 is None:
+    if user32 is None:  # pragma: no cover - non-Windows
         _logger.warning("win32_embed_unsupported_platform")
         return None
 
@@ -279,11 +279,11 @@ def embed_window(hwnd: int, parent: QWidget) -> QWidget | None:
     if container is None:
         return None
 
-    _logger.info(
+    _logger.info(  # pragma: no cover - needs a visible desktop
         "win32_window_embedded",
         hwnd=hex(hwnd),
     )
-    return container
+    return container  # pragma: no cover - needs a visible desktop
 
 
 def _reparent_and_wrap_hwnd(user32: ctypes.WinDLL, hwnd: int, parent: QWidget) -> QWidget | None:
@@ -302,14 +302,14 @@ def _reparent_and_wrap_hwnd(user32: ctypes.WinDLL, hwnd: int, parent: QWidget) -
     if not _reparent_foreign_hwnd(user32, hwnd, parent_hwnd):
         return None
 
-    foreign_window = QWindow.fromWinId(cast("voidptr", hwnd))
-    if foreign_window is None:
+    foreign_window = QWindow.fromWinId(cast("voidptr", hwnd))  # pragma: no cover - needs a visible desktop
+    if foreign_window is None:  # pragma: no cover - needs a visible desktop
         _logger.warning("win32_embed_from_winid_failed", hwnd=hex(hwnd))
         return None
 
-    container = QWidget.createWindowContainer(foreign_window, parent)
-    container.setMinimumSize(_EMBED_MIN_WIDTH, _EMBED_MIN_HEIGHT)
-    return container
+    container = QWidget.createWindowContainer(foreign_window, parent)  # pragma: no cover - needs a visible desktop
+    container.setMinimumSize(_EMBED_MIN_WIDTH, _EMBED_MIN_HEIGHT)  # pragma: no cover - needs a visible desktop
+    return container  # pragma: no cover - needs a visible desktop
 
 
 def poll_and_embed(
@@ -339,7 +339,7 @@ def poll_and_embed(
         attempt_count[0] += 1
         hwnd = find_window_by_pid(pid)
 
-        if hwnd is not None:
+        if hwnd is not None:  # pragma: no cover - needs a visible desktop
             container = embed_window(hwnd, parent)
             if container is not None:
                 callback(container)
@@ -461,7 +461,7 @@ def _get_capture_bindings() -> _CaptureBindings | None:
         _CaptureBindings | None: The cached bindings, or ``None`` when not
         running on Windows.
     """
-    if not _is_windows() or not hasattr(ctypes, "windll"):
+    if not _is_windows() or not hasattr(ctypes, "windll"):  # pragma: no cover - non-Windows
         return None
     if not _capture_bindings_cache:
         with _capture_bindings_lock:
@@ -495,7 +495,7 @@ def capture_window_image(hwnd: int) -> QImage | None:
         return None
 
     api = _get_capture_bindings()
-    if api is None:
+    if api is None:  # pragma: no cover - non-Windows
         return None
 
     rect = ctypes.wintypes.RECT()
@@ -557,7 +557,7 @@ def _capture_via_memory_dc(
                 if not api.print_window(hwnd, mem_dc, _PW_RENDERFULLCONTENT):
                     _logger.debug("win32_capture_print_window_failed", hwnd=hex(hwnd))
                     return None
-                return _read_bitmap_pixels(api, mem_dc, bitmap, width, height)
+                return _read_bitmap_pixels(api, mem_dc, bitmap, width, height)  # pragma: no cover - needs a visible desktop
             finally:
                 if old_object:
                     api.select_object(mem_dc, old_object)

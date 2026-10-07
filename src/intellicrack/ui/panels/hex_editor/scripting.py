@@ -1145,15 +1145,13 @@ def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str,
         """Write ``text`` to ``target`` and flush when requested.
 
         Args:
-            target: Open text sink with ``write`` and (optionally) ``flush``.
+            target: Open text sink with ``write`` and ``flush``.
             text: Already-joined output string.
             flush: Whether to call ``target.flush()`` after writing.
         """
         target.write(text)
         if flush:
-            flush_fn = getattr(target, "flush", None)
-            if callable(flush_fn):
-                flush_fn()
+            target.flush()
 
     def _safe_print(
         *values: object,

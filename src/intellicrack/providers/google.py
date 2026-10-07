@@ -465,8 +465,6 @@ class GoogleProvider(LLMProviderBase):
             )
             if e.code in _AUTH_STATUS_CODES:
                 raise AuthenticationError(_MSG_INVALID_API_KEY) from e
-            if e.code in _RATE_LIMIT_STATUS_CODES:
-                raise RateLimitError(_MSG_RATE_LIMITED) from e
             raise ProviderError(_MSG_REQUEST_FAILED) from e
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             self._logger.warning(

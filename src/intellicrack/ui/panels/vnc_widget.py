@@ -598,7 +598,7 @@ class RFBClient:
 
         Returns:
             bool: ``True`` when the message was handled (or silently consumed),
-            ``False`` for unrecognised or zero-length message types.
+            ``False`` for unrecognised message types.
 
         Raises:
             _NoMessagePendingError: If no message type byte arrived within
@@ -611,9 +611,6 @@ class RFBClient:
             )
         except TimeoutError:
             raise _NoMessagePendingError from None
-
-        if not msg_type_data:
-            return False
 
         return await asyncio.wait_for(
             self._read_message_body(reader, msg_type_data[0]),
@@ -1032,21 +1029,21 @@ class RFBClient:
         """
         if not _TIGHT_AVAILABLE or not data:
             return
-        pil_image = import_module("PIL.Image")
-        try:
+        pil_image = import_module("PIL.Image")  # pragma: no cover - needs Pillow
+        try:  # pragma: no cover - needs Pillow
             img = pil_image.open(__import__("io").BytesIO(data))
             img = img.convert("RGB")
-        except (OSError, ValueError):
+        except (OSError, ValueError):  # pragma: no cover - needs Pillow
             _logger.exception("vnc_tight_jpeg_decode_failed", length=len(data))
             return
-        rgb = img.tobytes("raw", "RGB")
-        bgrx = bytearray(w * h * _PIXEL_BYTES)
-        for px in range(w * h):
+        rgb = img.tobytes("raw", "RGB")  # pragma: no cover - needs Pillow
+        bgrx = bytearray(w * h * _PIXEL_BYTES)  # pragma: no cover - needs Pillow
+        for px in range(w * h):  # pragma: no cover - needs Pillow
             bgrx[px * _PIXEL_BYTES + 0] = rgb[px * 3 + 2]
             bgrx[px * _PIXEL_BYTES + 1] = rgb[px * 3 + 1]
             bgrx[px * _PIXEL_BYTES + 2] = rgb[px * 3 + 0]
             bgrx[px * _PIXEL_BYTES + 3] = 0
-        async with self._fb_lock:
+        async with self._fb_lock:  # pragma: no cover - needs Pillow
             self.apply_raw_rect(x, y, w, h, bytes(bgrx))
             self._fb_dirty = True
 

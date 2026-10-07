@@ -1215,8 +1215,7 @@ class GhidraPanel(AnalysisPanelBase):
         self._script_editor.setMinimumHeight(_text_edit_min_height(self._script_editor, _TEXT_MIN_VISIBLE_LINES))
         if PythonSyntaxHighlighter is not None:
             doc = self._script_editor.document()
-            if doc is not None:
-                PythonSyntaxHighlighter(doc)
+            PythonSyntaxHighlighter(doc)
         layout.addWidget(self._script_editor, 2)
 
         params_row = QHBoxLayout()
@@ -1456,10 +1455,7 @@ class GhidraPanel(AnalysisPanelBase):
         if category := getattr(result, "category", None):
             parts.append(f"Category: {category}")
         size = getattr(result, "size", None)
-        if size is not None:
-            parts.append(f"Size: {size}")
-        if description := getattr(result, "description", None):
-            parts.append(f"Description: {description}")
+        parts.append(f"Size: {size}")
 
         self._dt_result_view.setPlainText("\n".join(parts) if parts else str(result))
 
@@ -2639,10 +2635,7 @@ class GhidraPanel(AnalysisPanelBase):
         menu.addSeparator()
         raw_actions["delete"] = menu.addAction(self.tr("Delete Function"))
 
-        if any(v is None for v in raw_actions.values()):
-            return
-
-        actions: dict[str, object] = {k: v for k, v in raw_actions.items() if v is not None}
+        actions: dict[str, object] = dict(raw_actions)
 
         chosen = menu.exec(self._func_tree.mapToGlobal(pos))
         if chosen is None:
@@ -2784,13 +2777,10 @@ class GhidraPanel(AnalysisPanelBase):
                 """Display calling-convention results from the Ghidra bridge.
 
                 Args:
-                    r: Bridge result, either a list of convention names or a scalar.
+                    r: Bridge result, a list of convention names.
                 """
-                if isinstance(r, list):
-                    conv_list = cast("list[object]", r)
-                    body_text = "\n".join(str(c) for c in conv_list)
-                else:
-                    body_text = str(r)
+                conv_list = cast("list[object]", r)
+                body_text = "\n".join(str(c) for c in conv_list)
                 self._show_info_dialog("Calling Conventions", body_text)
 
             run_bridge_coroutine_logged(
@@ -3353,8 +3343,6 @@ class GhidraPanel(AnalysisPanelBase):
         menu = QMenu(self)
         remove_action = menu.addAction(self.tr("Remove Label"))
         promote_action = menu.addAction(self.tr("Promote to Primary"))
-        if remove_action is None or promote_action is None:
-            return
 
         chosen = menu.exec(self._labels_table.mapToGlobal(pos))
         if chosen is remove_action:
@@ -3500,8 +3488,6 @@ class GhidraPanel(AnalysisPanelBase):
 
         menu = QMenu(self)
         remove_action = menu.addAction(self.tr("Remove Bookmark"))
-        if remove_action is None:
-            return
 
         chosen = menu.exec(self._bookmarks_table.mapToGlobal(pos))
         if chosen is remove_action:
