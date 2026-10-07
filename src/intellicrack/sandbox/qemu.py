@@ -5890,7 +5890,7 @@ class QEMUSandbox(SandboxBase):
             return self.process.pid if self.process is not None else None
 
         if self._pidfile_path is None:
-            return None
+            return None  # pragma: no cover - non-Windows
 
         for attempt in range(_PIDFILE_MAX_RETRIES):
             await asyncio.sleep(_PIDFILE_RETRY_DELAY)

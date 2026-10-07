@@ -6437,10 +6437,9 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
     async def get_entropy_map(self, block_size: int = 4096) -> list[float]:
         """Get per-block entropy values across the document.
 
-        Prefers the packed ``entropy_map_bytes`` accessor, which returns
+        Uses the packed ``entropy_map_bytes`` accessor, which returns
         the same numbers as little-endian doubles instead of as a list
-        of Python floats. Falls back to the list-returning
-        ``entropy_map``, so the contract holds across hexcore versions.
+        of Python floats.
 
         Args:
             block_size: Block size in bytes for entropy calculation.
@@ -6463,24 +6462,17 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             msg = f"block_size must be positive, got {block_size}"
             raise ValueError(msg)
 
-        if hasattr(self.document, "entropy_map_bytes"):
-            packed = _unpack_analysis_buffer(self.document.entropy_map_bytes(block_size), _ANALYSIS_DOUBLE, "entropy_map_bytes")
-            _logger.debug("entropy_map_computed_buffer", blocks=len(packed), block_size=block_size)
-            return [float(v) for v in packed]
-
-        result = self.document.entropy_map(block_size)
-        _logger.debug("entropy_map_computed", blocks=len(result), block_size=block_size)
-        return [float(v) for v in result]
+        packed = _unpack_analysis_buffer(self.document.entropy_map_bytes(block_size), _ANALYSIS_DOUBLE, "entropy_map_bytes")
+        _logger.debug("entropy_map_computed_buffer", blocks=len(packed), block_size=block_size)
+        return [float(v) for v in packed]
 
     async def get_byte_distribution(self) -> list[int]:
         """Get the 256-element byte frequency distribution.
 
         Prefers the packed ``byte_distribution_bytes`` accessor, which
         returns the same counts as little-endian unsigned 64-bit
-        integers. Falls back to the list-returning
-        ``byte_distribution_full``, and then to a Python streaming
-        computation, so the contract holds across hexcore versions that
-        expose neither. Propagates ``ValueError`` when the packed
+        integers. Falls back to a Python streaming computation when the
+        document does not expose it. Propagates ``ValueError`` when the packed
         accessor returns a payload that is not a whole number of counts.
 
         Returns:
@@ -6498,11 +6490,6 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             packed = _unpack_analysis_buffer(self.document.byte_distribution_bytes(), _ANALYSIS_COUNT, "byte_distribution_bytes")
             _logger.debug("byte_distribution_computed_buffer")
             return [int(v) for v in packed]
-
-        if hasattr(self.document, "byte_distribution_full"):
-            result = self.document.byte_distribution_full()
-            _logger.debug("byte_distribution_computed")
-            return [int(v) for v in result]
 
         _logger.warning("byte_distribution_native_unavailable_using_python_fallback")
         result_py = self._compute_byte_distribution_python()
@@ -6581,11 +6568,10 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
         (the default) the full ``matrix`` list is included so existing
         callers that consume the row-major form still work.
 
-        Prefers the packed ``digram_matrix_bytes`` accessor, which is
+        Uses the packed ``digram_matrix_bytes`` accessor, which is
         where this operation gains most: the list form has PyO3 build
         sixty-five thousand integer objects, the packed form is one
-        512 KiB buffer of little-endian unsigned 64-bit counts. Falls
-        back to the list-returning ``digram_matrix``.
+        512 KiB buffer of little-endian unsigned 64-bit counts.
 
         Args:
             top_k: When positive, return only the top ``top_k``
@@ -6615,13 +6601,8 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             msg = f"top_k must be non-negative, got {top_k}"
             raise ValueError(msg)
 
-        if hasattr(self.document, "digram_matrix_bytes"):
-            packed = _unpack_analysis_buffer(self.document.digram_matrix_bytes(), _ANALYSIS_COUNT, "digram_matrix_bytes")
-            raw_matrix = [int(v) for v in packed]
-            source = "buffer"
-        else:
-            raw_matrix = [int(v) for v in self.document.digram_matrix()]
-            source = "list"
+        packed = _unpack_analysis_buffer(self.document.digram_matrix_bytes(), _ANALYSIS_COUNT, "digram_matrix_bytes")
+        raw_matrix = [int(v) for v in packed]
 
         total_pairs = sum(raw_matrix)
         unique_pairs = sum(v > 0 for v in raw_matrix)
@@ -6640,7 +6621,7 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             top_k=top_k,
             total_pairs=total_pairs,
             unique_pairs=unique_pairs,
-            source=source,
+            source="buffer",
         )
         return result
 
