@@ -5192,6 +5192,11 @@ class CutterDisplayMixin(CutterSearchOpsMixin):
     async def disassemble_function(self, address: int) -> str:
         """Disassemble a complete function.
 
+        Rizin's ``pdf`` prints nothing for some analyzed functions (observed
+        with rizin 0.9.1 on functions whose extent spans far more bytes than
+        their basic blocks), so an empty listing falls back to the recursive
+        listing ``pdr``, which follows the function's basic blocks instead.
+
         Args:
             address: Function address.
 
@@ -5206,6 +5211,8 @@ class CutterDisplayMixin(CutterSearchOpsMixin):
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(f"pdf @ {address}")
+        if not result.strip():
+            result = await self._r2_cmd(f"pdr @ {address}")
         _logger.debug("function_disassembled", address=hex(address))
         return result
 

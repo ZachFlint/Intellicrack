@@ -124,9 +124,11 @@ class TestSearchRopGadgetsS15D03:
         """The reported address is independently confirmed by disassembling at it.
 
         Disassembling the exact address ``search_rop_gadgets`` reports for a
-        gadget must yield that gadget's own first mnemonic (``pop``), proving
-        the address genuinely names the gadget's entry instruction rather
-        than a default-zero or otherwise unrelated value.
+        gadget must yield that gadget's own first instruction, proving the
+        address genuinely names the gadget's entry instruction rather than a
+        default-zero or otherwise unrelated value. A gadget that contains
+        ``pop rdi`` may begin with an earlier instruction, so the expected
+        mnemonic is taken from the gadget's own instruction string.
 
         Args:
             pe_bridge: Analyzed ``where.exe`` bridge.
@@ -134,12 +136,14 @@ class TestSearchRopGadgetsS15D03:
         gadgets = await pe_bridge.search_rop_gadgets("pop rdi")
         assert gadgets
         gadget = gadgets[0]
+        first_instruction = gadget.instructions.split(" ; ")[0]
+        assert "pop rdi" in gadget.instructions
 
         lines = await pe_bridge.disassemble(gadget.address, 1)
 
         assert lines
         assert lines[0].address == gadget.address
-        assert lines[0].mnemonic.lower() == "pop"
+        assert lines[0].mnemonic.lower() == first_instruction.split()[0].lower()
 
 
 class TestSearchBytesS15D05:
