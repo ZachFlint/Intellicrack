@@ -14,6 +14,9 @@ process.
 The reparent helper's failure branch for a refused style write is driven with the desktop window. Its style is readable, and the operating
 system refuses ``SetWindowLongPtrW`` on it with an access-denied error in the container, which is a measured fact; a window owned by another
 process that the test spawns accepts the write, so it cannot reach that branch.
+
+The Cutter panel's function-refresh error handler is reached through the refresh button. A real ``CutterBridge`` that never loaded a binary
+refuses the listing with a ``ToolError``, which is the failure the user would see, and the panel's own worker delivers it.
 """
 
 from __future__ import annotations
@@ -25,18 +28,26 @@ from ctypes import wintypes
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import pytest
+from PyQt6.QtCore import QCoreApplication
 
+from intellicrack.bridges.cutter import CutterBridge
+from intellicrack.core.types import FunctionInfo
 from intellicrack.ui import win32_embed as win32_embed_mod
+from intellicrack.ui.panels.async_bridge import drain_bridge_workers_for
+from intellicrack.ui.panels.cutter_panel import CutterPanel
 from tests._helpers.child_python import run_child_json
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
+    from PyQt6.QtWidgets import QApplication, QLabel, QPushButton, QTreeWidget
+
 pytestmark = pytest.mark.spawns_process
 
 _Dynamic = Any
 
+_WAIT_MS: Final[int] = 20_000
 _CHILD_TIMEOUT_S: Final[float] = 300.0
 _WS_OVERLAPPEDWINDOW: Final[int] = 0x00CF0000
 
@@ -284,3 +295,127 @@ def test_reparent_reports_failure_and_changes_nothing_when_the_style_write_is_re
 
     assert api.style_of(int(desktop)) == style_before
     assert api.get_parent(desktop) is None
+
+
+def _priv(obj: object, name: str) -> _Dynamic:
+    """Read a private attribute or method of a product object.
+
+    Args:
+        obj: Object that owns the attribute.
+        name: Attribute name.
+
+    Returns:
+        _Dynamic: The attribute value.
+    """
+    return getattr(obj, name)
+
+
+def _function(name: str, address: int) -> FunctionInfo:
+    """Build a function record of the bridge's real result type.
+
+    Args:
+        name: Function name.
+        address: Function address.
+
+    Returns:
+        FunctionInfo: The record.
+    """
+    return FunctionInfo(
+        name=name,
+        address=address,
+        size=32,
+        calling_convention="cdecl",
+        return_type="int",
+        parameters=[],
+        local_variables=[],
+    )
+
+
+def _settle_cutter(panel: CutterPanel) -> None:
+    """Join the Cutter panel's bridge workers and deliver their results.
+
+    Args:
+        panel: Panel whose workers are joined.
+    """
+    for _ in range(4):
+        drain_bridge_workers_for(panel, timeout_ms=_WAIT_MS)
+        QCoreApplication.processEvents()
+
+
+def _listed_rows(panel: CutterPanel) -> list[tuple[str, str, str]]:
+    """Read the rows of the panel's function tree.
+
+    Args:
+        panel: Panel under test.
+
+    Returns:
+        list[tuple[str, str, str]]: Name, address and size text of every top-level row.
+    """
+    tree = cast("QTreeWidget", _priv(panel, "_func_tree"))
+    rows: list[tuple[str, str, str]] = []
+    for index in range(tree.topLevelItemCount()):
+        item = tree.topLevelItem(index)
+        assert item is not None
+        rows.append((item.text(0), item.text(1), item.text(2)))
+    return rows
+
+
+@pytest.fixture
+def listed_cutter_panel(qapp: QApplication) -> Generator[CutterPanel]:
+    """Build a Cutter panel with a bridge that never loaded a binary and two functions already listed.
+
+    Args:
+        qapp: Shared application.
+
+    Yields:
+        CutterPanel: The panel under test.
+    """
+    panel = CutterPanel()
+    panel.set_bridge(CutterBridge())
+    _priv(panel, "_apply_functions")([_function("sub.main", 0x401000), _function("sub.helper", 0x402000)])
+    try:
+        yield panel
+    finally:
+        _settle_cutter(panel)
+        _ = panel.stop_tool()
+        panel.close()
+        panel.deleteLater()
+        qapp.processEvents()
+
+
+def test_failed_function_refresh_disables_the_button_while_it_runs_and_enables_it_after(listed_cutter_panel: CutterPanel) -> None:
+    """A refresh the bridge refuses leaves the Refresh button disabled until the failure is delivered, then enabled again.
+
+    The bridge has no binary, so its function listing raises ``ToolError``. The result is delivered on the event loop, which the test does not
+    run between the click and the first assertion.
+
+    Args:
+        listed_cutter_panel: Panel with an unloaded real bridge and two listed functions.
+    """
+    button = cast("QPushButton", _priv(listed_cutter_panel, "_refresh_funcs_btn"))
+    assert button.isEnabled()
+
+    button.click()
+
+    assert not button.isEnabled()
+    _settle_cutter(listed_cutter_panel)
+    assert button.isEnabled()
+
+
+def test_failed_function_refresh_keeps_the_listed_functions_and_their_count(listed_cutter_panel: CutterPanel) -> None:
+    """A refresh the bridge refuses does not clear or change the function list or its count label.
+
+    Args:
+        listed_cutter_panel: Panel with an unloaded real bridge and two listed functions.
+    """
+    label = cast("QLabel", _priv(listed_cutter_panel, "_func_count_label"))
+    button = cast("QPushButton", _priv(listed_cutter_panel, "_refresh_funcs_btn"))
+    rows_before = _listed_rows(listed_cutter_panel)
+    assert sorted(rows_before) == [("sub.helper", "0x402000", "32"), ("sub.main", "0x401000", "32")]
+    assert label.text() == "Functions (2)"
+
+    button.click()
+    _settle_cutter(listed_cutter_panel)
+
+    assert _listed_rows(listed_cutter_panel) == rows_before
+    assert label.text() == "Functions (2)"
