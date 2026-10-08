@@ -47,6 +47,7 @@ from intellicrack.ui.panels.frida_instrumentation_tab import (
     SystemFunctionCallControls,
 )
 from intellicrack.ui.panels.frida_panel import FridaPanel
+from tests._helpers.frida_targets import run_bounded
 
 
 if TYPE_CHECKING:
@@ -73,7 +74,7 @@ _DISPATCH_EXCEPTIONS: tuple[type[BaseException], ...] = (
 
 
 def _run_async[T](coro: Coroutine[object, object, T]) -> T:
-    """Run an async coroutine synchronously for test use.
+    """Run an async coroutine synchronously for test use, failing the test if Frida never returns.
 
     Args:
         coro: Awaitable coroutine to execute.
@@ -81,11 +82,7 @@ def _run_async[T](coro: Coroutine[object, object, T]) -> T:
     Returns:
         T: The coroutine's return value, preserving its type.
     """
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+    return run_bounded(coro)
 
 
 class _TestFridaPanel(FridaPanel):
@@ -399,7 +396,7 @@ def synchronous_dispatch(monkeypatch: pytest.MonkeyPatch) -> list[Coroutine[obje
         del parent
         captured.append(coro)
         try:
-            result = drain_loop.run_until_complete(coro)
+            result = run_bounded(coro, loop=drain_loop)
         except _DISPATCH_EXCEPTIONS as exc:
             if on_error is not None:
                 on_error(exc)

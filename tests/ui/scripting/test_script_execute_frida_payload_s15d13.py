@@ -32,10 +32,11 @@ from PyQt6.QtWidgets import QMessageBox
 
 from intellicrack.bridges.frida_bridge import FridaBridge
 from intellicrack.core.script_gen import ScriptManager
-from intellicrack.core.subprocess_compat import DEVNULL, Popen
+from intellicrack.core.subprocess_compat import DEVNULL, PIPE, Popen
 from intellicrack.ui.panels.async_bridge import drain_bridge_workers, run_bridge_coroutine
 from intellicrack.ui.panels.script_manager import _STATUS_RESET_MS, ScriptManagerPanel
 from intellicrack.ui.tools import ToolOutputPanel
+from tests._helpers.frida_targets import wait_for_stdout_line
 
 
 if TYPE_CHECKING:
@@ -49,8 +50,11 @@ pytestmark = pytest.mark.spawns_process
 
 # Idle child process Frida attaches to. It must outlive the attach and stay
 # quiet, so it sleeps in a loop rather than exiting.
-_CHILD_SOURCE: Final[str] = "import time\nwhile True:\n    time.sleep(0.5)\n"
-_CHILD_STARTUP_S: Final[float] = 2.0
+_CHILD_READY_LINE: Final[bytes] = b"frida-target-ready"
+_CHILD_SOURCE: Final[str] = (
+    f"import sys, time\nsys.stdout.write('{_CHILD_READY_LINE.decode()}\\n')\nsys.stdout.flush()\nwhile True:\n    time.sleep(0.5)\n"
+)
+_CHILD_STOP_TIMEOUT_S: Final[float] = 5.0
 
 _SETUP_TIMEOUT_S: Final[float] = 180.0
 _EXECUTE_DEADLINE_S: Final[float] = 15.0
@@ -99,6 +103,18 @@ def _auto_dismiss_blocking_dialogs(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(QMessageBox, "information", lambda *_a, **_k: QMessageBox.StandardButton.Ok)
 
 
+def _release_child(child: Popen[bytes]) -> None:
+    """Stop the idle child and close its readiness pipe.
+
+    Args:
+        child: The spawned child process.
+    """
+    child.terminate()
+    child.wait(timeout=_CHILD_STOP_TIMEOUT_S)
+    if child.stdout is not None:
+        child.stdout.close()
+
+
 @pytest.fixture
 def attached_frida_panels(
     qapp: QApplication,
@@ -118,8 +134,14 @@ def attached_frida_panels(
         tuple[ToolOutputPanel, ScriptManagerPanel]: The tool panel with an
             attached Frida bridge, and its Scripts panel.
     """
-    child = Popen([sys.executable, "-c", _CHILD_SOURCE], stdout=DEVNULL, stderr=DEVNULL)
-    time.sleep(_CHILD_STARTUP_S)
+    child = Popen([sys.executable, "-c", _CHILD_SOURCE], stdout=PIPE, stderr=DEVNULL)
+    child_ready = False
+    try:
+        wait_for_stdout_line(child, _CHILD_READY_LINE)
+        child_ready = True
+    finally:
+        if not child_ready:
+            _release_child(child)
     bridge = FridaBridge()
     panel = ToolOutputPanel()
     try:
@@ -140,7 +162,7 @@ def attached_frida_panels(
         _ = drain_bridge_workers()
         _settle_pending_status_timers(qapp)
         run_bridge_coroutine(bridge.detach(), timeout_s=_SETUP_TIMEOUT_S)
-        child.terminate()
+        _release_child(child)
         panel.deleteLater()
         qapp.processEvents()
 

@@ -35,8 +35,11 @@ import pytest
 
 from scripts.sandbox.test_types import to_pyargs_argv
 from tests._helpers.frida_isolation import (
+    ChildRun,
     classify_self_attach_modules,
+    clip_output,
     declares_isolation,
+    run_child_with_progress_watch,
     run_module_isolated,
     run_target_isolated,
     self_attaches_frida,
@@ -54,6 +57,24 @@ _GATE_TIMEOUT_SECONDS = 180.0
 _PROBE_NAME = "test_isolation_crash_probe"
 _TESTS_ROOT = Path(__file__).resolve().parents[1]
 _ISOLATED_CHILD_REPORT = "True"
+_WATCH_POLL_SECONDS = 0.2
+_WATCH_STALL_SECONDS = 6.0
+_WATCH_CEILING_SECONDS = 8.0
+_LONG_RUN_BEATS = 20
+_CLIP_LIMIT = 300
+_STDERR_MARKER = "isolation-watch-marker"
+_BEATING_CHILD_SOURCE = (
+    "import pathlib, sys, time\n"
+    "result = pathlib.Path(sys.argv[1])\n"
+    f"sys.stderr.write('{_STDERR_MARKER}\\n')\n"
+    "sys.stderr.flush()\n"
+    "for _ in range(int(sys.argv[2])):\n"
+    "    with result.open('a', encoding='utf-8') as handle:\n"
+    "        handle.write('x\\n')\n"
+    "    time.sleep(0.5)\n"
+    "time.sleep(float(sys.argv[3]))\n"
+)
+"""Child that appends ``argv[2]`` lines half a second apart, then sleeps ``argv[3]`` seconds silently."""
 
 _FORMERLY_UNISOLATED_MODULES = (
     "tests/bridges/completeness/frida/test_frida_lifecycle_scripting.py",
@@ -195,6 +216,116 @@ def test_run_module_isolated_recovers_per_test_outcomes(pytestconfig: pytest.Con
     assert result.outcomes, "the child must report per-test outcomes back to the parent"
     assert "test_find_leaked_ignores_idle_thread_pool_worker" in result.outcomes
     assert all(outcome == "passed" for outcome in result.outcomes.values()), f"unexpected outcomes: {result.outcomes}"
+
+
+def _watch_beating_child(tmp_path: Path, *, beats: int, silence_seconds: float, timeout_seconds: float, stall_seconds: float) -> ChildRun:
+    """Run a trivial child that flushes ``beats`` results and then goes silent, under the progress watch.
+
+    Args:
+        tmp_path: Directory holding the child's result file.
+        beats: Number of result lines the child appends, half a second apart.
+        silence_seconds: How long the child then sleeps without flushing anything.
+        timeout_seconds: Hard ceiling handed to the watch.
+        stall_seconds: Stall limit handed to the watch.
+
+    Returns:
+        ChildRun: What the watch observed.
+    """
+    result_path = tmp_path / "results.tsv"
+    result_path.write_text("", encoding="utf-8")
+    return run_child_with_progress_watch(
+        [sys.executable, "-c", _BEATING_CHILD_SOURCE, str(result_path), str(beats), str(silence_seconds)],
+        cwd=str(tmp_path),
+        env=os.environ,
+        timeout_seconds=timeout_seconds,
+        stall_seconds=stall_seconds,
+        result_path=str(result_path),
+        poll_seconds=_WATCH_POLL_SECONDS,
+    )
+
+
+def test_clip_output_keeps_the_start_and_the_end_of_long_output() -> None:
+    """Long stderr keeps the line a fatal-exception dump opens with as well as its last lines.
+
+    Falsifiable: a tail-only clip drops the first marker and fails the first assertion,
+    and a clip that never shortens fails the length assertion.
+    """
+    text = "FIRST-MARKER" + "x" * 5000 + "LAST-MARKER"
+
+    clipped = clip_output(text, _CLIP_LIMIT)
+
+    assert "FIRST-MARKER" in clipped
+    assert "LAST-MARKER" in clipped
+    assert len(clipped) < len(text)
+    assert clip_output("short", _CLIP_LIMIT) == "short"
+
+
+def test_progress_watch_kills_a_child_that_stops_reporting(tmp_path: Path) -> None:
+    """A child that is alive but flushes nothing new is killed at the stall limit, not at the ceiling.
+
+    The child flushes two results, writes a marker to stderr and then sleeps far
+    longer than the ceiling, which is what a deadlocked Frida attach looks like
+    from outside.
+
+    Falsifiable: without the stall watch the child sleeps until the 60 s
+    ceiling and comes back ``"timeout"``, and a watch that discarded the
+    killed child's stderr loses the marker that stands in for the faulthandler
+    traceback a real hang leaves.
+
+    Args:
+        tmp_path: Per-test temporary directory for the child's result file.
+    """
+    run = _watch_beating_child(tmp_path, beats=2, silence_seconds=600.0, timeout_seconds=60.0, stall_seconds=_WATCH_STALL_SECONDS)
+
+    assert run.stop_reason == "stalled", f"a silent child must be killed by the stall limit, got {run}"
+    assert run.limit_seconds == _WATCH_STALL_SECONDS
+    assert _STDERR_MARKER in run.stderr, f"the killed child's stderr must be kept for diagnosis: {run.stderr!r}"
+
+
+def test_progress_watch_lets_a_reporting_child_outlive_the_stall_limit(tmp_path: Path) -> None:
+    """A child that keeps flushing results is never killed for taking longer than the stall limit.
+
+    The child runs for roughly ten seconds, longer than the six second stall
+    limit, but flushes a result every half second throughout.
+
+    Falsifiable: a watch that measured the stall limit from the child's start
+    instead of from its last flushed result would kill it as ``"stalled"``
+    partway through.
+
+    Args:
+        tmp_path: Per-test temporary directory for the child's result file.
+    """
+    run = _watch_beating_child(
+        tmp_path,
+        beats=_LONG_RUN_BEATS,
+        silence_seconds=0.0,
+        timeout_seconds=120.0,
+        stall_seconds=_WATCH_STALL_SECONDS,
+    )
+
+    assert run.stop_reason == "exited", f"a child that keeps reporting must not be killed: {run}"
+    assert run.returncode == 0
+
+
+def test_progress_watch_still_enforces_the_hard_ceiling(tmp_path: Path) -> None:
+    """A child that reports forever is still stopped at the hard ceiling.
+
+    Falsifiable: a watch that treated any progress as a licence to run on
+    would let a test that loops while flushing results hold the module forever.
+
+    Args:
+        tmp_path: Per-test temporary directory for the child's result file.
+    """
+    run = _watch_beating_child(
+        tmp_path,
+        beats=1000,
+        silence_seconds=0.0,
+        timeout_seconds=_WATCH_CEILING_SECONDS,
+        stall_seconds=_WATCH_STALL_SECONDS,
+    )
+
+    assert run.stop_reason == "timeout", f"a child that never finishes must hit the ceiling: {run}"
+    assert run.limit_seconds == _WATCH_CEILING_SECONDS
 
 
 def test_skipped_isolated_tests_are_reported_with_their_reasons(pytestconfig: pytest.Config, tmp_path: Path) -> None:

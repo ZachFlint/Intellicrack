@@ -11,7 +11,6 @@ Requires frida-python to be installed.
 
 from __future__ import annotations
 
-import asyncio
 import collections.abc
 import inspect
 import logging
@@ -53,6 +52,7 @@ from intellicrack.core.types import (
     ToolError,
     ToolName,
 )
+from tests._helpers.frida_targets import end_target_then_shutdown, run_bounded, wait_for_gui_process_ready
 
 
 try:
@@ -73,8 +73,12 @@ _PID: Final[int] = 1234
 _LINE_NUMBER: Final[int] = 100
 _TIMESTAMP: Final[float] = 1700000000.0
 _DURATION: Final[float] = 42.5
-_NOTEPAD_STARTUP_DELAY: Final[float] = 1.0
 _BRIDGE_SLEEP: Final[float] = 0.3
+_WORKER_APPEAR_TIMEOUT: Final[float] = 10.0
+_WORKER_POLL_INTERVAL: Final[float] = 0.1
+_WORKER_MIN_LOOPS: Final[int] = 50
+_WORKER_LOOPS_TIMEOUT: Final[float] = 15.0
+_COUNTER_SIZE: Final[int] = 8
 _STALKER_SLEEP: Final[float] = 1.0
 _EXACT_FUNCTION_COUNT: Final[int] = 134
 _ALLOC_SIZE: Final[int] = 4096
@@ -122,7 +126,7 @@ _FORBIDDEN_FIXED_NAMES: Final[frozenset[str]] = frozenset({
 
 
 def _run_async[T](coro: Coroutine[object, object, T]) -> T:
-    """Run an async coroutine synchronously for test use.
+    """Run an async coroutine synchronously for test use, failing the test if Frida never returns.
 
     Args:
         coro: Awaitable coroutine to execute.
@@ -130,11 +134,7 @@ def _run_async[T](coro: Coroutine[object, object, T]) -> T:
     Returns:
         T: The coroutine's return value, preserving its type.
     """
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+    return run_bounded(coro)
 
 
 def _assert_symbol_info_nt_create_file(sym: SymbolInfo) -> None:
@@ -632,9 +632,10 @@ def test_parse_stalker_batch_exec_event_no_destination() -> None:
     assert evt.depth == 0, f"depth must be 0, got {evt.depth}"
 
 
+@pytest.mark.spawns_process
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 def test_stalker_unfollow_assembles_trace_with_correct_structure(
-    frida_bridge: FridaBridge,
+    stalker_bridge: FridaBridge,
     worker_thread: int,
 ) -> None:
     """Verify stalker_unfollow returns a StalkerTrace with internally consistent field values.
@@ -651,11 +652,11 @@ def test_stalker_unfollow_assembles_trace_with_correct_structure(
     Frida pointer object), the isinstance assertion fails.
 
     Args:
-        frida_bridge: Bridge fixture attached to the spawned notepad process.
+        stalker_bridge: Bridge fixture attached to this test's private notepad process.
         worker_thread: Thread id of a live worker that generates call events during the trace window.
     """
     trace_id: str = _run_async(
-        frida_bridge.stalker_follow(
+        stalker_bridge.stalker_follow(
             thread_id=worker_thread,
             events="call",
             limit=_STALKER_LIMIT,
@@ -665,7 +666,7 @@ def test_stalker_unfollow_assembles_trace_with_correct_structure(
 
     time.sleep(_STALKER_SLEEP)
 
-    trace: StalkerTrace = _run_async(frida_bridge.stalker_unfollow(thread_id=worker_thread))
+    trace: StalkerTrace = _run_async(stalker_bridge.stalker_unfollow(thread_id=worker_thread))
 
     assert trace.thread_id == worker_thread, f"thread_id must be {worker_thread}, got {trace.thread_id}"
     assert trace.event_count == len(trace.events), (
@@ -902,25 +903,64 @@ def test_fixed_functions_present() -> None:
         assert inspect.iscoroutinefunction(method), f"Method {method_name!r} must be async"
 
 
+def _notepad_executable() -> str:
+    """Locate the ``notepad.exe`` that Frida attaches to.
+
+    Returns:
+        str: Path to ``notepad.exe``.
+    """
+    return shutil.which("notepad.exe") or str(Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe")
+
+
 @pytest.fixture(scope="module")
 def notepad_process() -> Generator[Popen[bytes]]:
-    """Spawn a real notepad.exe for Frida to attach to.
+    """Spawn a real notepad.exe for Frida to attach to, once it has finished starting.
 
     Yields:
         Popen[bytes]: The running notepad process.
     """
-    notepad_path = shutil.which("notepad.exe") or str(
-        Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe",
-    )
     proc = Popen(
-        [notepad_path],
+        [_notepad_executable()],
         stdout=DEVNULL,
         stderr=DEVNULL,
     )
-    time.sleep(_NOTEPAD_STARTUP_DELAY)
-    yield proc
-    proc.terminate()
-    proc.wait(timeout=5)
+    try:
+        wait_for_gui_process_ready(proc)
+        yield proc
+    finally:
+        proc.terminate()
+        proc.wait(timeout=5)
+
+
+@pytest.fixture
+def stalker_bridge() -> Generator[FridaBridge]:
+    """Create a FridaBridge attached to a notepad.exe that only this test uses.
+
+    Stalker is the one feature that can leave a target's agent permanently
+    unresponsive, so the tests that drive it get their own process and their own
+    bridge instead of the shared module-scoped ones. If the agent wedges, only
+    these tests fail and every test on the shared notepad still runs. Teardown
+    kills the target first and then shuts the bridge down under a deadline, so a
+    wedged agent cannot hold it.
+
+    Yields:
+        FridaBridge: An initialized FridaBridge attached to the private notepad.
+    """
+    proc = Popen(
+        [_notepad_executable()],
+        stdout=DEVNULL,
+        stderr=DEVNULL,
+    )
+    bridge: FridaBridge | None = None
+    try:
+        wait_for_gui_process_ready(proc)
+        bridge = FridaBridge()
+        _run_async(bridge.initialize())
+        _run_async(bridge.attach(proc.pid))
+        time.sleep(_BRIDGE_SLEEP)
+        yield bridge
+    finally:
+        end_target_then_shutdown(proc, bridge)
 
 
 @pytest.fixture(scope="module")
@@ -944,9 +984,12 @@ def frida_bridge(notepad_process: Popen[bytes]) -> Generator[FridaBridge]:
         _logger.debug("frida_bridge_fixture_shutdown_failed", exc_info=True)
 
 
+_COUNTER_ADDRESS_PLACEHOLDER: Final[str] = "__COUNTER_ADDRESS__"
 _WORKER_THREAD_JS: Final[str] = """
 var k32 = Process.findModuleByName('kernel32.dll');
 var Sleep = k32.getExportByName('Sleep');
+var counter = ptr('__COUNTER_ADDRESS__');
+counter.writeU32(0);
 var code = Memory.alloc(4096);
 Memory.protect(code, 4096, 'rwx');
 var bytes = [
@@ -958,10 +1001,17 @@ for (var i = 0; i < 8; i++) {
     bytes.push(a.and(0xFF).toInt32());
     a = a.shr(8);
 }
+bytes.push(0x48, 0xB8);
+var c = counter;
+for (var j = 0; j < 8; j++) {
+    bytes.push(c.and(0xFF).toInt32());
+    c = c.shr(8);
+}
 bytes = bytes.concat([
+    0xFF, 0x00,
     0xB9, 0x0A, 0x00, 0x00, 0x00,
     0x41, 0xFF, 0xD4,
-    0xEB, 0xF6
+    0xEB, 0xEA
 ]);
 code.writeByteArray(bytes);
 var CreateThread = new NativeFunction(
@@ -974,39 +1024,53 @@ send({ type: 'worker', tid: tidBuf.readU32() });
 """
 
 
-@pytest.fixture(scope="module")
-def worker_thread(frida_bridge: FridaBridge) -> Generator[int]:
-    """Spawn a busy worker thread inside notepad for Stalker testing.
+@pytest.fixture
+def worker_thread(stalker_bridge: FridaBridge) -> int:
+    """Spawn a busy worker thread inside the test's private notepad for Stalker testing.
 
     Creates a thread running x86-64 machine code that loops calling
     Sleep(10) forever (an unconditional jump back to the loop head, not a
     bounded counter), so the thread is guaranteed to still be executing
-    call instructions no matter when -- or how many times -- a test in this
-    module later stalker-follows it. A bounded iteration count would race
-    against test execution order: by the time a later test in the module
-    ran, the thread could already have exhausted its fixed work and
-    returned, leaving Stalker with 0 events to collect. The thread is
-    created via a persistent script to prevent GC of the code memory while
-    the thread is still running, and is torn down only when the backing
-    notepad.exe process is terminated at test-module teardown.
+    call instructions whenever the test stalker-follows it. Each pass of the
+    loop also increments a counter in the target's memory, and the fixture
+    returns only once that counter shows the thread has run its loop
+    ``_WORKER_MIN_LOOPS`` times: in the container, Stalker followed a thread
+    in its first one or two passes and wedged the agent in 19 of 40 runs, and
+    followed a thread past a few passes and wedged it in 3 of 40, so a thread
+    that merely exists is not a safe thing to follow. The thread is created via
+    a persistent script to prevent GC of the code memory while the thread is
+    still running, and goes away when the private notepad.exe process is killed
+    at teardown.
 
     Args:
-        frida_bridge: Attached FridaBridge instance.
+        stalker_bridge: Bridge attached to the test's private notepad.
 
-    Yields:
+    Returns:
         int: The thread ID of the busy worker thread.
     """
-    tids_before: set[int] = {t.tid for t in _run_async(frida_bridge.enumerate_threads())}
-    script_id: str = _run_async(frida_bridge.execute_persistent_script(_WORKER_THREAD_JS))
-    time.sleep(_BRIDGE_SLEEP)
-    tids_after: set[int] = {t.tid for t in _run_async(frida_bridge.enumerate_threads())}
-    new_tids = tids_after - tids_before
-    assert len(new_tids) >= 1, "worker thread must appear in thread list after creation"
-    yield next(iter(new_tids))
-    try:
-        _run_async(frida_bridge.unload_script(script_id))
-    except ToolError:
-        _logger.debug("worker_thread_fixture_cleanup_failed", exc_info=True)
+    counter_address: int = _run_async(stalker_bridge.allocate_memory(_COUNTER_SIZE))
+    tids_before: set[int] = {t.tid for t in _run_async(stalker_bridge.enumerate_threads())}
+    worker_script = _WORKER_THREAD_JS.replace(_COUNTER_ADDRESS_PLACEHOLDER, hex(counter_address))
+    _ = _run_async(stalker_bridge.execute_persistent_script(worker_script))
+    deadline = time.monotonic() + _WORKER_APPEAR_TIMEOUT
+    new_tids: set[int] = set()
+    while not new_tids and time.monotonic() < deadline:
+        tids_after: set[int] = {t.tid for t in _run_async(stalker_bridge.enumerate_threads())}
+        new_tids = tids_after - tids_before
+        if not new_tids:
+            time.sleep(_WORKER_POLL_INTERVAL)
+    assert len(new_tids) >= 1, f"worker thread must appear in thread list within {_WORKER_APPEAR_TIMEOUT:g}s of creation"
+
+    loops = 0
+    deadline = time.monotonic() + _WORKER_LOOPS_TIMEOUT
+    while loops < _WORKER_MIN_LOOPS and time.monotonic() < deadline:
+        loops = int.from_bytes(_run_async(stalker_bridge.read_memory(counter_address, _COUNTER_SIZE))[:4], "little")
+        if loops < _WORKER_MIN_LOOPS:
+            time.sleep(_WORKER_POLL_INTERVAL)
+    assert loops >= _WORKER_MIN_LOOPS, (
+        f"worker thread must run its loop {_WORKER_MIN_LOOPS} times within {_WORKER_LOOPS_TIMEOUT:g}s, counter reads {loops}"
+    )
+    return next(iter(new_tids))
 
 
 @pytest.fixture(scope="module")
@@ -1341,9 +1405,10 @@ def test_hook_and_remove(frida_bridge: FridaBridge) -> None:
     assert removed, f"remove_hook must return True, got {removed}"
 
 
+@pytest.mark.spawns_process
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_stalker_follow_and_unfollow(
-    frida_bridge: FridaBridge,
+    stalker_bridge: FridaBridge,
     worker_thread: int,
 ) -> None:
     """Verify stalker_follow collects real call events from a busy worker thread.
@@ -1353,11 +1418,11 @@ def test_stalker_follow_and_unfollow(
     type != 'call' the event_type assertion fails.
 
     Args:
-        frida_bridge: Bridge fixture attached to the spawned notepad process.
+        stalker_bridge: Bridge fixture attached to this test's private notepad process.
         worker_thread: Thread id of a live worker that generates call events during the trace window.
     """
     trace_id: str = _run_async(
-        frida_bridge.stalker_follow(
+        stalker_bridge.stalker_follow(
             thread_id=worker_thread,
             events="call",
             limit=_STALKER_LIMIT,
@@ -1367,7 +1432,7 @@ def test_stalker_follow_and_unfollow(
 
     time.sleep(_STALKER_SLEEP)
 
-    trace: StalkerTrace = _run_async(frida_bridge.stalker_unfollow(thread_id=worker_thread))
+    trace: StalkerTrace = _run_async(stalker_bridge.stalker_unfollow(thread_id=worker_thread))
     assert trace.thread_id == worker_thread, f"trace thread_id {trace.thread_id} must match worker thread {worker_thread}"
     assert trace.event_count > 0, f"Stalker must have collected events from worker thread {worker_thread} after {_STALKER_SLEEP}s, got 0"
     assert len(trace.events) == trace.event_count, f"events list length {len(trace.events)} must match event_count {trace.event_count}"
