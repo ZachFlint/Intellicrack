@@ -2584,10 +2584,8 @@ class HexPatEvaluator:
             if isinstance(new_val.value, int):
                 if node.op == "=":
                     self._offset = new_val.value
-                elif node.op == "+=":
-                    self._offset += new_val.value
-                elif node.op == "-=":
-                    self._offset -= new_val.value
+                else:
+                    self._offset = int(self._apply_numeric_op(node.op[:-1], self._offset, new_val.value, node.line, node.column))
             return PatternValue(value=self._offset)
 
         if isinstance(node.target, IdentifierExpr):
