@@ -3668,7 +3668,7 @@ class GhidraPanel(AnalysisPanelBase):
         raw: bytes
         if isinstance(result, dict):
             rd = cast("dict[str, object]", result)
-            byte_list = rd.get("bytes", [])
+            byte_list = rd.get("bytes")
             if isinstance(byte_list, list):
                 typed_bytes = cast("list[int]", byte_list)
                 raw = bytes(typed_bytes)
