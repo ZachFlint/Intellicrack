@@ -5243,13 +5243,13 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
 
         Pointer-size aware: the native PEB is parsed using the *target*
         process's bitness (detected via ``IsWow64Process2``), not the
-        host's. A 64-bit host debugging a 32-bit WOW64 target still gets
-        correct ``image_base_address`` / ``ldr_address`` /
-        ``process_parameters_address`` values because the parser is
-        told to use i386 offsets. When the target is running under
-        WOW64, ``NtQueryInformationProcess(ProcessWow64Information)``
-        is also queried to expose the 32-bit PEB address and a parallel
-        ``wow64_peb`` sub-dict.
+        host's. For a 32-bit WOW64 target on a 64-bit host the basic
+        process query reports the 64-bit PEB, so the block that
+        describes the target is the 32-bit one located with
+        ``NtQueryInformationProcess(ProcessWow64Information)``: the
+        top-level fields come from it, ``native_peb_address`` keeps the
+        address of the 64-bit block, and ``wow64_peb_address`` and the
+        ``wow64_peb`` sub-dict repeat the 32-bit view.
 
         Args:
             pid: Process ID (uses current if not specified).
@@ -5337,8 +5337,14 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             msg = f"{_ERR_NTQUERY_PROC}{status & 4294967295:08X}"
             raise ToolError(msg)
 
-        peb_address = pbi.PebBaseAddress or 0
-        target_is_64bit = self._target_is_64bit(proc_handle)
+        native_peb_address = pbi.PebBaseAddress or 0
+        wow64_info = self._read_wow64_peb(proc_handle)
+        if wow64_info is None:
+            peb_address = native_peb_address
+            target_is_64bit = self._target_is_64bit(proc_handle)
+        else:
+            peb_address = wow64_info[0]
+            target_is_64bit = False
         peb_read_size = ctypes.sizeof(PEB64) if target_is_64bit else ctypes.sizeof(PEB32)
         peb_data = ctypes.create_string_buffer(peb_read_size)
         bytes_read = ctypes.c_size_t()
@@ -5354,8 +5360,8 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
         raw_bytes = peb_data.raw[: bytes_read.value]
         result = self._parse_peb_fields(raw_bytes, peb_address, target_is_64bit=target_is_64bit)
         result["raw"] = raw_bytes
-        wow64_info = self._read_wow64_peb(proc_handle)
         if wow64_info is not None:
+            result["native_peb_address"] = native_peb_address
             result["wow64_peb_address"] = wow64_info[0]
             result["wow64_peb"] = wow64_info[1]
         return result
