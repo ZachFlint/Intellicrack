@@ -2379,6 +2379,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             frida.TransportError,
             frida.InvalidArgumentError,
             frida.ServerNotRunningError,
+            frida.NotSupportedError,
             OSError,
         ) as e:
             _logger.warning(
@@ -2643,6 +2644,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             frida.TransportError,
             frida.InvalidArgumentError,
             frida.ServerNotRunningError,
+            frida.NotSupportedError,
             OSError,
         ) as e:
             _logger.warning(
