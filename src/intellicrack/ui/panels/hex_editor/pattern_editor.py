@@ -483,7 +483,7 @@ class PatternEditorMixin:
             on_success=partial(self._on_interpreter_apply_finished, offset),
             on_error=self._on_interpreter_apply_error,
             parent=self if isinstance(self, QWidget) else None,
-            exceptions=(ValueError, TypeError, AttributeError),
+            exceptions=(ValueError, TypeError, AttributeError, HexPatError),
         )
         self._pattern_apply_worker = worker
         if worker.wait(_PATTERN_APPLY_SYNC_WAIT_MS):
