@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.hexpat.completer import HexPatCompleter
+from intellicrack.core.hexpat.errors import HexPatError
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import HexPatSyntaxHighlighter
 from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_callable_async, worker_is_running
@@ -282,7 +283,7 @@ class PatternEditorMixin:
         try:
             compiler_inst: Any = compiler_cls()
             compiled: str = compiler_inst.compile(source)
-        except (ValueError, TypeError, AttributeError) as exc:
+        except (ValueError, TypeError, AttributeError, HexPatError) as exc:
             is_hexpat_error = error_cls is not None and isinstance(exc, error_cls)
             self._compiled_json = ""
             if is_hexpat_error:
