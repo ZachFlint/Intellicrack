@@ -2040,10 +2040,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         Args:
             path: Path to the binary being analyzed.
         """
-        if not hasattr(self._r2, "_child"):
-            return
-
-        child: object = getattr(self._r2, "_child", None)
+        child: object = getattr(self._r2, "process", None)
         if child is None or not hasattr(child, "pid"):
             return
 

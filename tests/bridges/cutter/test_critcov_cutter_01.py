@@ -923,7 +923,6 @@ class TestRealSession:
             real_pe_dll: Path of the loaded DLL.
         """
         process = _backend_process(loaded_bridge)
-        setattr(loaded_bridge.r2, "_child", process)
         register = cast("Callable[[Path], None]", getattr(loaded_bridge, "_register_rizin_process"))
         register(real_pe_dll)
         assert getattr(loaded_bridge, "_r2_pid") == process.pid
@@ -949,11 +948,16 @@ class TestRealSession:
         """
         register = cast("Callable[[Path], None]", getattr(loaded_bridge, "_register_rizin_process"))
         process = _backend_process(loaded_bridge)
-        for child in (None, object()):
-            setattr(loaded_bridge.r2, "_child", child)
-            register(real_pe_dll)
-            assert getattr(loaded_bridge, "_r2_pid") is None
-            assert process.pid not in _tracked_pids()
+        ProcessManager.get_instance().unregister_external_pid(process.pid)
+        setattr(loaded_bridge, "_r2_pid", None)
+        try:
+            for child in (None, object()):
+                setattr(loaded_bridge.r2, "process", child)
+                register(real_pe_dll)
+                assert getattr(loaded_bridge, "_r2_pid") is None
+                assert process.pid not in _tracked_pids()
+        finally:
+            setattr(loaded_bridge.r2, "process", process)
 
     async def test_reload_unregisters_previous_process(self, loaded_bridge: CutterBridge, real_pe_dll: Path) -> None:
         """Loading another binary closes the old session and releases its registered PID.
@@ -963,7 +967,6 @@ class TestRealSession:
             real_pe_dll: Path of the loaded DLL.
         """
         old_process = _backend_process(loaded_bridge)
-        setattr(loaded_bridge.r2, "_child", old_process)
         register = cast("Callable[[Path], None]", getattr(loaded_bridge, "_register_rizin_process"))
         register(real_pe_dll)
         assert old_process.pid in _tracked_pids()

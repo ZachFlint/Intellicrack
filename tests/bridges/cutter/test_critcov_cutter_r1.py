@@ -292,13 +292,18 @@ class TestBackendExit:
             loaded_bridge: Bridge with the DLL loaded.
             real_pe_dll: Path of the loaded DLL.
         """
+        backend_process: object = getattr(loaded_bridge.r2, "process")
+        registered: object = getattr(loaded_bridge, "_r2_pid")
         before = _tracked_pids()
         child = multiprocessing.Process()
         assert child.pid is None
-        setattr(loaded_bridge.r2, "_child", child)
+        setattr(loaded_bridge.r2, "process", child)
         register = cast("Callable[[Path], None]", getattr(loaded_bridge, "_register_rizin_process"))
-        register(real_pe_dll)
-        assert getattr(loaded_bridge, "_r2_pid") is None
+        try:
+            register(real_pe_dll)
+        finally:
+            setattr(loaded_bridge.r2, "process", backend_process)
+        assert getattr(loaded_bridge, "_r2_pid") == registered
         assert _tracked_pids() == before
 
 
