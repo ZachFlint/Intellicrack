@@ -4542,7 +4542,7 @@ class X64DbgPanel(AnalysisPanelBase):
             return
         run_bridge_coroutine_logged(
             self._bridge.free_memory(address),
-            on_success=lambda _: self._console_output.appendPlainText(f"[+] Freed {hex(address)}"),
+            on_success=lambda freed: self._on_memory_freed(address, freed),
             on_error=lambda e: self._on_generic_error("Free", e),
             parent=self,
             event="x64dbg_free_memory",
@@ -4550,6 +4550,18 @@ class X64DbgPanel(AnalysisPanelBase):
             level="info",
             address=hex(address),
         )
+
+    def _on_memory_freed(self, address: int, freed: object) -> None:
+        """Report the outcome of a Free Memory request in the console.
+
+        Args:
+            address: Address that was passed to the bridge.
+            freed: The bridge's result, true when the memory was released.
+        """
+        if freed:
+            self._console_output.appendPlainText(f"[+] Freed {hex(address)}")
+        else:
+            self._console_output.appendPlainText(f"[-] Free failed: nothing was released at {hex(address)}")
 
     def _on_set_memory_protection(self) -> None:
         """Change a memory page's protection rights using the entered address, rights, and guard flag."""
