@@ -6598,9 +6598,9 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         actually returned, branches on the Optional Header ``Magic``
         field to pick the correct layout, and extracts
         ``AddressOfEntryPoint`` from the documented fixed offset. The
-        entry-point field is the 5th 32-bit field of the Optional
-        Header (i.e. RVA at offset ``PE_ENTRY_POINT_OFFSET = 0x28``)
-        and is the same for both PE32 and PE32+, but bracketing the
+        entry-point field sits 0x10 bytes into the Optional Header, which
+        is ``PE_ENTRY_POINT_OFFSET = 0x28`` bytes from the NT headers
+        signature, and is the same for both PE32 and PE32+, but bracketing the
         read by ``SizeOfOptionalHeader`` lets us detect cropped headers
         (paged-out trailing pages) before silently producing junk.
 
@@ -6673,7 +6673,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
             )
             return 0
 
-        entry_offset = NT_HEADERS_OPTIONAL_OFFSET + PE_ENTRY_POINT_OFFSET
+        entry_offset = PE_ENTRY_POINT_OFFSET
         if len(pe_header) < entry_offset + 4:
             _logger.debug("module_entry_point_header_short", module_name=module_name, length=len(pe_header))
             return 0
@@ -8574,11 +8574,11 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         base_address = await self._resolve_module_base(target_module)
         pe_offset, pe_header = await self._read_pe_header(base_address, target_module, size=256)
 
-        if len(pe_header) < NT_HEADERS_OPTIONAL_OFFSET + PE_ENTRY_POINT_OFFSET + 4:
+        if len(pe_header) < PE_ENTRY_POINT_OFFSET + 4:
             msg = f"PE header too small to read entry point in {target_module}"
             raise ToolError(msg, tool_name="x64dbg")
 
-        entry_rva = struct.unpack_from("<I", pe_header, NT_HEADERS_OPTIONAL_OFFSET + PE_ENTRY_POINT_OFFSET)[0]
+        entry_rva = struct.unpack_from("<I", pe_header, PE_ENTRY_POINT_OFFSET)[0]
         entry_va = base_address + entry_rva
 
         _logger.debug(
