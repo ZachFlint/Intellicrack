@@ -4173,9 +4173,13 @@ class GhidraPanel(AnalysisPanelBase):
         self._call_graph_tree.clear()
         callers = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
         for caller in callers:
-            caller_name = str(caller.get("caller_function", ""))
-            caller_addr = int(cast("int", caller.get("caller_address", 0)))
-            item = QTreeWidgetItem([caller_name, f"0x{caller_addr:X}"])
+            caller_function = caller.get("caller_function")
+            caller_name = str(caller_function) if caller_function else "(outside any function)"
+            caller_addr = caller.get("caller_address")
+            if not isinstance(caller_addr, int):
+                caller_addr = caller.get("call_site")
+            addr_text = f"0x{caller_addr:X}" if isinstance(caller_addr, int) else ""
+            item = QTreeWidgetItem([caller_name, addr_text])
             self._call_graph_tree.addTopLevelItem(item)
 
     def _on_show_slice(self) -> None:
