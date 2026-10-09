@@ -3043,8 +3043,6 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         result = await self._execute_script_and_wait(script_code)
 
-        if "error" in result:
-            raise ToolError(_ERR_WRITE_FAILED)
         if not result.get("success", False):
             raise ToolError(_ERR_WRITE_FAILED, details={"reason": str(result.get("error", ""))})
 
@@ -3098,8 +3096,6 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
 
         result = await self._execute_script_and_wait(script_code)
-        if "error" in result:
-            raise ToolError(_ERR_READ_FAILED)
         if not result.get("success", False):
             raise ToolError(_ERR_READ_FAILED, details={"reason": str(result.get("error", ""))})
 
@@ -3157,8 +3153,6 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
 
         result = await self._execute_script_and_wait(script_code)
-        if "error" in result:
-            raise ToolError(_ERR_WRITE_FAILED)
         if not result.get("success", False):
             raise ToolError(_ERR_WRITE_FAILED, details={"reason": str(result.get("error", ""))})
         return True
@@ -5303,9 +5297,6 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
 
         result = await self._execute_script_and_wait(script_code)
-
-        if "error" in result:
-            raise ToolError(_ERR_READ_FAILED)
 
         if not result.get("success", False):
             raise ToolError(_ERR_READ_FAILED, details={"reason": str(result.get("error", ""))})
