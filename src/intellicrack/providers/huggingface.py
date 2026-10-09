@@ -286,7 +286,7 @@ class HuggingFaceProvider(LLMProviderBase):
             await self._close_client()
             self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_CONNECT_FAILED % exc) from exc
-        except (ConnectionError, TimeoutError, OSError) as exc:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as exc:
             self._logger.warning(
                 "huggingface_connect_failed",
                 error_type=type(exc).__name__,
@@ -432,7 +432,7 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_LIST_MODELS_FAILED % exc) from exc
-        except (ConnectionError, TimeoutError, OSError, ValueError) as exc:
+        except (ConnectionError, TimeoutError, OSError, ValueError, httpx.HTTPError) as exc:
             self._logger.warning(
                 "huggingface_list_models_failed",
                 error_type=type(exc).__name__,
@@ -748,14 +748,14 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_API_ERROR % exc) from exc
-        except TimeoutError as exc:
+        except (TimeoutError, httpx.TimeoutException) as exc:
             self._logger.warning(
                 "huggingface_chat_timeout",
                 model=model,
                 error_type=type(exc).__name__,
             )
             raise ProviderError(_ERR_TIMEOUT % exc) from exc
-        except (ConnectionError, OSError) as exc:
+        except (ConnectionError, OSError, httpx.HTTPError) as exc:
             self._logger.warning(
                 "huggingface_chat_transport_error",
                 model=model,
@@ -955,14 +955,14 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_API_ERROR % exc) from exc
-        except TimeoutError as exc:
+        except (TimeoutError, httpx.TimeoutException) as exc:
             self._logger.warning(
                 "huggingface_stream_timeout",
                 model=model,
                 error_type=type(exc).__name__,
             )
             raise ProviderError(_ERR_TIMEOUT % exc) from exc
-        except (ConnectionError, OSError) as exc:
+        except (ConnectionError, OSError, httpx.HTTPError) as exc:
             self._logger.warning(
                 "huggingface_stream_transport_error",
                 model=model,
