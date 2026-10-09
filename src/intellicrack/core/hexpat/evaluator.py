@@ -3013,6 +3013,13 @@ class HexPatEvaluator:
         elif resolved is None:
             return None
         bindings = self._bind_template_args(params, type_node.template_args, type_node.line, type_node.column, lookup_name)
+        saved_scope = self._scope
+        value_scope = EvalScope(parent=saved_scope)
+        for param_name, bound in bindings.items():
+            value = self._template_value_argument(bound)
+            if value is not None:
+                value_scope.define(param_name, value)
+        self._scope = value_scope
         self._template_args_stack.append(bindings)
         try:
             return self._dispatch_resolved_type(
@@ -3024,6 +3031,35 @@ class HexPatEvaluator:
             )
         finally:
             self._template_args_stack.pop()
+            self._scope = saved_scope
+
+    def _template_value_argument(self, bound: ExprNode | TypeNode) -> PatternValue | None:
+        """Evaluate a template argument that stands for a value rather than a type.
+
+        An expression argument such as the ``4`` in ``Fixed<4>`` is evaluated
+        where the template is used. An identifier argument is parsed as a type
+        reference; when it names no type but does name a variable in scope,
+        that variable's value is forwarded.
+
+        Args:
+            bound: The bound argument produced by :meth:`_bind_template_args`.
+
+        Returns:
+            PatternValue | None: The argument's value, or ``None`` when the
+            argument is a type.
+        """
+        if isinstance(bound, NamedType):
+            names_a_type = (
+                bool(bound.template_args)
+                or bound.namespace is not None
+                or self._lookup_template_arg(bound.name) is not None
+                or bound.name in self._type_node_aliases
+                or self._types.resolve(bound.name) is not None
+            )
+            return None if names_a_type else self._scope.get(bound.name)
+        if isinstance(bound, (PrimitiveType, ArrayType, PointerType, PaddingType, AutoType)):
+            return None
+        return self._eval_expr(bound)
 
     def _dispatch_resolved_type(
         self,
