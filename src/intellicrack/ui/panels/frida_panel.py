@@ -1595,7 +1595,7 @@ class FridaPanel(AnalysisPanelBase):
         if data.get("type") != "remote":
             self._console.appendPlainText("[!] Select a remote device in the Device list to remove it")
             return
-        host = str(data.get("id", ""))
+        host = str(data.get("id", "")).removeprefix(_REMOTE_ID_PREFIX)
         run_bridge_coroutine_logged(
             self._bridge.remove_remote_device(host),
             on_success=lambda _: self._on_remote_device_removed(host),
