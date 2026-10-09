@@ -6200,6 +6200,14 @@ class _X64DbgBridgeBase(DebuggerBridge):
         # transient, retryable failure apart from a genuine one, so a
         # dedicated handle with last-error tracking enabled is required here.
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+        kernel32.Module32FirstW.restype = wintypes.BOOL
+        kernel32.Module32FirstW.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+        kernel32.Module32NextW.restype = wintypes.BOOL
+        kernel32.Module32NextW.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+        kernel32.CloseHandle.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
 
         class ModuleEntry32W(ctypes.Structure):
             """Windows ``MODULEENTRY32W`` layout for module snapshots.
