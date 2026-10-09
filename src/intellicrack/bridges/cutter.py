@@ -12,6 +12,7 @@ one of the two toolchains (for example the Cutter+rizin desktop bundle) still in
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import re
@@ -216,6 +217,19 @@ def _select_pipe_backend() -> _PipeBackend | None:
     if radare2_dir is not None:
         return _PipeBackend(r2pipe, "radare2", radare2_dir)
     return None
+
+
+def _file_sha256(path: Path) -> str:
+    """Hash the content of a file with SHA-256.
+
+    Args:
+        path: The file to hash.
+
+    Returns:
+        str: The lowercase hexadecimal digest.
+    """
+    with path.open("rb") as handle:
+        return hashlib.file_digest(handle, "sha256").hexdigest()
 
 
 def _open_analysis_pipe(target: str, flags: list[str] | None = None) -> _AnalysisPipe:
@@ -2158,6 +2172,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         file_type, arch, bits, entry = await self._extract_binary_metadata()
         await self._r2_cmd("e io.cache=true")
         _, sha256 = await self._extract_hashes()
+        sha256 = sha256 or await asyncio.to_thread(_file_sha256, path)
 
         sections = await self._get_sections_internal()
         imports = await self._get_imports_internal()
