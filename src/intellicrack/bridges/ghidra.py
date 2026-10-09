@@ -7310,12 +7310,16 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     f"""
                     addr = toAddr({address})
                     eqTable = currentProgram.getEquateTable()
-                    existing = eqTable.getEquate({json.dumps(name)})
-                    if existing is None:
-                        eq = eqTable.createEquate({json.dumps(name)}, {value})
-                    else:
-                        eq = existing
-                    eq.addReference(addr, 0)
+                    tx_id = currentProgram.startTransaction('intellicrack.create_equate')
+                    stored = False
+                    try:
+                        eq = eqTable.getEquate({json.dumps(name)})
+                        if eq is None:
+                            eq = eqTable.createEquate({json.dumps(name)}, {value})
+                        eq.addReference(addr, 0)
+                        stored = True
+                    finally:
+                        currentProgram.endTransaction(tx_id, stored)
                     """,
                 ),
             )
@@ -7331,7 +7335,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                 textwrap.dedent(
                     f"""
                     (lambda eq: None if eq is None else {{
-                        'value': long(eq.getValue()),
+                        'value': int(eq.getValue()),
                         'addresses': [r.getAddress().getOffset() for r in eq.getReferences()],
                     }})(currentProgram.getEquateTable().getEquate({json.dumps(name)}))
                     """,
