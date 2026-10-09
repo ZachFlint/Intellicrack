@@ -5628,11 +5628,24 @@ class CutterDebugMixin(CutterDisplayMixin):
         _logger.debug("cutter_breakpoints_queried", count=len(result))
         return result
 
+    async def _program_counter_text(self) -> str:
+        """Read the debuggee's program counter as the backend prints it.
+
+        rizin prints the register that holds the ``PC`` role as
+        ``name = value`` for ``dr PC``; radare2 prints the bare value for
+        ``dr?PC``. Either way the text after the last ``=`` is the value.
+
+        Returns:
+            str: The program counter text, empty when the backend printed none.
+        """
+        command = "dr PC" if _is_rizin_pipe(self._r2) else "dr?PC"
+        return (await self._r2_cmd(command)).rpartition("=")[2].strip()
+
     async def step_into(self) -> int:
         """Single-step into the next instruction.
 
         Issues ``ds`` to perform one source-step, then reads the program
-        counter via ``dr?PC`` so the returned value reflects the
+        counter so the returned value reflects the
         post-step instruction pointer. Propagates ``ToolError`` from
         :meth:`_require_attached` when no process is attached, and from
         :func:`_parse_int_response` when rizin returns an unparseable
@@ -5643,7 +5656,7 @@ class CutterDebugMixin(CutterDisplayMixin):
         """
         self._require_attached("step_into")
         await self._r2_cmd("ds")
-        result = (await self._r2_cmd("dr?PC")).strip()
+        result = await self._program_counter_text()
         _logger.debug("cutter_step_into_complete", pc_raw=result)
         return _parse_int_response(result)
 
@@ -5651,7 +5664,7 @@ class CutterDebugMixin(CutterDisplayMixin):
         """Single-step over the next instruction.
 
         Issues ``dso`` (step-over) which lets ``call`` instructions run
-        to completion before pausing, then reads ``dr?PC`` for the
+        to completion before pausing, then reads the program counter for the
         post-step instruction pointer. Propagates ``ToolError`` from
         :meth:`_require_attached` when no process is attached, and from
         :func:`_parse_int_response` when rizin returns an unparseable
@@ -5662,7 +5675,7 @@ class CutterDebugMixin(CutterDisplayMixin):
         """
         self._require_attached("step_over")
         await self._r2_cmd("dso")
-        result = (await self._r2_cmd("dr?PC")).strip()
+        result = await self._program_counter_text()
         _logger.debug("cutter_step_over_complete", pc_raw=result)
         return _parse_int_response(result)
 
