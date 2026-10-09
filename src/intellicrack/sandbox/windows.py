@@ -3267,6 +3267,7 @@ class WindowsSandbox(SandboxBase):
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
 
         yara_compile = cast("Callable[..., Any]", yara.compile)
+        yara_error = cast("type[Exception]", yara.Error)
         if rules_path is not None:
             compiled_rules = await asyncio.to_thread(yara_compile, filepath=rules_path)
         else:
@@ -3328,7 +3329,7 @@ class WindowsSandbox(SandboxBase):
                         filepath=str(scan_file),
                     )
                     matches.extend(_format_yara_match(ym, str(scan_file), "files") for ym in file_matches)
-                except (OSError, RuntimeError) as e:
+                except (OSError, RuntimeError, yara_error) as e:
                     _logger.warning(
                         "yara_file_scan_error",
                         file=str(scan_file),

@@ -10372,6 +10372,7 @@ if __name__ == "__main__":
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
         yara_compile: Any = yara.compile
+        yara_error = cast("type[Exception]", yara.Error)
         compiled_rules: Any
         if rules_path is not None:
             compiled_rules = await asyncio.to_thread(yara_compile, filepath=rules_path)
@@ -10445,7 +10446,7 @@ rule PackedBinary {
                 try:
                     file_matches = await asyncio.to_thread(compiled_rules.match, filepath=str(scan_file))
                     matches.extend(_format_yara_match(ym, str(scan_file), "files") for ym in file_matches)
-                except (OSError, RuntimeError) as e:
+                except (OSError, RuntimeError, yara_error) as e:
                     _logger.warning("yara_file_scan_error", file=str(scan_file), error=str(e))
 
         _logger.info("yara_scan_complete", match_count=len(matches), scan_target=scan_target)
