@@ -2691,8 +2691,8 @@ class X64DbgPanel(AnalysisPanelBase):
             row = self._mod_detail_table.rowCount()
             self._mod_detail_table.insertRow(row)
             self._mod_detail_table.setItem(row, 0, QTableWidgetItem(str(sec.get("name", ""))))
-            self._mod_detail_table.setItem(row, 1, QTableWidgetItem(str(sec.get("address", ""))))
-            self._mod_detail_table.setItem(row, 2, QTableWidgetItem(str(sec.get("size", ""))))
+            self._mod_detail_table.setItem(row, 1, QTableWidgetItem(str(sec.get("virtual_address", ""))))
+            self._mod_detail_table.setItem(row, 2, QTableWidgetItem(str(sec.get("virtual_size", ""))))
             self._mod_detail_table.setItem(row, 3, QTableWidgetItem(str(sec.get("characteristics", ""))))
 
     def _on_show_module_exports(self) -> None:
