@@ -2401,7 +2401,8 @@ class GhidraPanel(AnalysisPanelBase):
             return
         if isinstance(result, dict):
             pcode_data = cast("dict[str, object]", result)
-            func_name = str(pcode_data.get("function", ""))
+            function = pcode_data.get("function")
+            func_name = str(function) if function else ""
             ops_raw = pcode_data.get("pcode_ops", [])
             ops = cast("list[dict[str, object]]", ops_raw) if isinstance(ops_raw, list) else []
             lines: list[str] = []
