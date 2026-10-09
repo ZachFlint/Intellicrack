@@ -2369,10 +2369,10 @@ class SandboxPanel(AnalysisPanelBase):
                     if isinstance(raw_match, dict):
                         m = cast("dict[str, object]", raw_match)
                         item = QTreeWidgetItem([
-                            str(m.get("signature", "")),
+                            str(m.get("signature_name", "")),
                             str(m.get("category", "")),
                             str(m.get("severity", "")),
-                            str(m.get("mitre", "")),
+                            str(m.get("mitre_attack_id", "")),
                             str(m.get("description", "")),
                         ])
                         self._behaviors_tree.addTopLevelItem(item)
