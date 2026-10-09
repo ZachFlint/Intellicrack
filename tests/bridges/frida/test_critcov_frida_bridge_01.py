@@ -1377,7 +1377,7 @@ def test_resolve_install_address_returns_the_acknowledged_address(attached_bridg
     ]
 
     address = _run(
-        async_method(FridaBridge, "_resolve_install_address")(
+        async_method(attached_bridge, "_resolve_install_address")(
             script=script,
             messages=messages,
             target="critcov",
@@ -1402,7 +1402,7 @@ def test_resolve_install_address_error_payload_unloads_script_and_raises(attache
 
     with pytest.raises(ToolError) as excinfo:
         _run(
-            async_method(FridaBridge, "_resolve_install_address")(
+            async_method(attached_bridge, "_resolve_install_address")(
                 script=script,
                 messages=[_send({"type": "hook_error", "error": "boom"})],
                 target="critcov",
@@ -1428,7 +1428,7 @@ def test_resolve_install_address_without_acknowledgement_unloads_script_and_rais
 
     with pytest.raises(ToolError) as excinfo:
         _run(
-            async_method(FridaBridge, "_resolve_install_address")(
+            async_method(attached_bridge, "_resolve_install_address")(
                 script=script,
                 messages=[_send({"type": "progress"})],
                 target="critcov",

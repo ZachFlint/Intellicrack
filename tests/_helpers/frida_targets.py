@@ -26,6 +26,8 @@ import asyncio
 import ctypes
 import inspect
 import logging
+import os
+import shutil
 import threading
 import time
 from concurrent.futures import (
@@ -33,6 +35,7 @@ from concurrent.futures import (
     wait as wait_futures,
 )
 from ctypes import wintypes
+from pathlib import Path
 from typing import TYPE_CHECKING, Final, Protocol
 
 import pytest
@@ -69,10 +72,53 @@ a session whose agent has stopped answering ends by itself only after Frida's ow
 calls that would each wait out another 25 s.
 """
 
+COUNTER_ADDRESS_PLACEHOLDER: Final[str] = "__COUNTER_ADDRESS__"
+"""Text in :data:`WORKER_THREAD_SCRIPT` to replace with the address (``hex``) of an 8 byte block the worker counts into."""
+
+WORKER_THREAD_SCRIPT: Final[str] = """
+var k32 = Process.findModuleByName('kernel32.dll');
+var Sleep = k32.getExportByName('Sleep');
+var counter = ptr('__COUNTER_ADDRESS__');
+counter.writeU32(0);
+var code = Memory.alloc(4096);
+Memory.protect(code, 4096, 'rwx');
+var bytes = [
+    0x48, 0x83, 0xEC, 0x28
+];
+bytes.push(0x49, 0xBC);
+var a = Sleep;
+for (var i = 0; i < 8; i++) {
+    bytes.push(a.and(0xFF).toInt32());
+    a = a.shr(8);
+}
+bytes.push(0x48, 0xB8);
+var c = counter;
+for (var j = 0; j < 8; j++) {
+    bytes.push(c.and(0xFF).toInt32());
+    c = c.shr(8);
+}
+bytes = bytes.concat([
+    0xFF, 0x00,
+    0xB9, 0x0A, 0x00, 0x00, 0x00,
+    0x41, 0xFF, 0xD4,
+    0xEB, 0xEA
+]);
+code.writeByteArray(bytes);
+var CreateThread = new NativeFunction(
+    k32.getExportByName('CreateThread'),
+    'pointer', ['pointer', 'size_t', 'pointer', 'pointer', 'uint32', 'pointer']
+);
+var tidBuf = Memory.alloc(4);
+CreateThread(ptr(0), 0, code, ptr(0), 0, tidBuf);
+send({ type: 'worker', tid: tidBuf.readU32() });
+"""
+"""A script that starts a thread in the target which calls ``Sleep(10)`` in a loop forever and adds one to a counter each pass."""
+
 SHUTDOWN_TIMEOUT_SECONDS: Final[float] = 10.0
 """Longest a bridge may take to shut down once its target process has been killed."""
 
 _TARGET_EXIT_SECONDS: Final[float] = 5.0
+_PROCESS_SUSPEND_RESUME: Final[int] = 0x0800
 _PROCESS_QUERY_INFORMATION: Final[int] = 0x0400
 _SYNCHRONIZE: Final[int] = 0x00100000
 _INHERIT_HANDLE: Final[bool] = False
@@ -87,6 +133,48 @@ The bridge is kept alongside its name so its ``id`` cannot be reused while recor
 """
 
 _SELF_NAME: Final[str] = "self"
+
+
+def notepad_executable() -> str:
+    """Locate the ``notepad.exe`` that the Frida tests spawn as a target.
+
+    Returns:
+        str: Path to ``notepad.exe``.
+    """
+    return shutil.which("notepad.exe") or str(Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe")
+
+
+def suspend_process(pid: int) -> int:
+    """Freeze every thread of a process, so nothing in it (including an injected agent) answers any more.
+
+    Args:
+        pid: Process to freeze.
+
+    Returns:
+        int: A handle to pass to :func:`resume_process`.
+    """
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    ntdll = ctypes.WinDLL("ntdll")
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    ntdll.NtSuspendProcess.argtypes = [wintypes.HANDLE]
+    handle = kernel32.OpenProcess(_PROCESS_SUSPEND_RESUME, _INHERIT_HANDLE, pid)
+    ntdll.NtSuspendProcess(handle)
+    return int(handle)
+
+
+def resume_process(handle: int) -> None:
+    """Thaw a process frozen by :func:`suspend_process` and release the handle.
+
+    Args:
+        handle: The handle :func:`suspend_process` returned.
+    """
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    ntdll = ctypes.WinDLL("ntdll")
+    ntdll.NtResumeProcess.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    ntdll.NtResumeProcess(handle)
+    kernel32.CloseHandle(handle)
 
 
 def clear_hung_calls() -> None:

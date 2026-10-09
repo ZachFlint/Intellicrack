@@ -15,11 +15,12 @@ import collections.abc
 import inspect
 import logging
 import os
+import queue
 import shutil
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Final, NoReturn
+from typing import TYPE_CHECKING, ClassVar, Final, NoReturn, cast
 
 from intellicrack.core.subprocess_compat import (
     DEVNULL,
@@ -52,7 +53,13 @@ from intellicrack.core.types import (
     ToolError,
     ToolName,
 )
-from tests._helpers.frida_targets import end_target_then_shutdown, run_bounded, wait_for_gui_process_ready
+from tests._helpers.frida_targets import (
+    COUNTER_ADDRESS_PLACEHOLDER,
+    WORKER_THREAD_SCRIPT,
+    end_target_then_shutdown,
+    run_bounded,
+    wait_for_gui_process_ready,
+)
 
 
 try:
@@ -76,8 +83,6 @@ _DURATION: Final[float] = 42.5
 _BRIDGE_SLEEP: Final[float] = 0.3
 _WORKER_APPEAR_TIMEOUT: Final[float] = 10.0
 _WORKER_POLL_INTERVAL: Final[float] = 0.1
-_WORKER_MIN_LOOPS: Final[int] = 50
-_WORKER_LOOPS_TIMEOUT: Final[float] = 15.0
 _COUNTER_SIZE: Final[int] = 8
 _STALKER_SLEEP: Final[float] = 1.0
 _EXACT_FUNCTION_COUNT: Final[int] = 134
@@ -984,46 +989,6 @@ def frida_bridge(notepad_process: Popen[bytes]) -> Generator[FridaBridge]:
         _logger.debug("frida_bridge_fixture_shutdown_failed", exc_info=True)
 
 
-_COUNTER_ADDRESS_PLACEHOLDER: Final[str] = "__COUNTER_ADDRESS__"
-_WORKER_THREAD_JS: Final[str] = """
-var k32 = Process.findModuleByName('kernel32.dll');
-var Sleep = k32.getExportByName('Sleep');
-var counter = ptr('__COUNTER_ADDRESS__');
-counter.writeU32(0);
-var code = Memory.alloc(4096);
-Memory.protect(code, 4096, 'rwx');
-var bytes = [
-    0x48, 0x83, 0xEC, 0x28
-];
-bytes.push(0x49, 0xBC);
-var a = Sleep;
-for (var i = 0; i < 8; i++) {
-    bytes.push(a.and(0xFF).toInt32());
-    a = a.shr(8);
-}
-bytes.push(0x48, 0xB8);
-var c = counter;
-for (var j = 0; j < 8; j++) {
-    bytes.push(c.and(0xFF).toInt32());
-    c = c.shr(8);
-}
-bytes = bytes.concat([
-    0xFF, 0x00,
-    0xB9, 0x0A, 0x00, 0x00, 0x00,
-    0x41, 0xFF, 0xD4,
-    0xEB, 0xEA
-]);
-code.writeByteArray(bytes);
-var CreateThread = new NativeFunction(
-    k32.getExportByName('CreateThread'),
-    'pointer', ['pointer', 'size_t', 'pointer', 'pointer', 'uint32', 'pointer']
-);
-var tidBuf = Memory.alloc(4);
-CreateThread(ptr(0), 0, code, ptr(0), 0, tidBuf);
-send({ type: 'worker', tid: tidBuf.readU32() });
-"""
-
-
 @pytest.fixture
 def worker_thread(stalker_bridge: FridaBridge) -> int:
     """Spawn a busy worker thread inside the test's private notepad for Stalker testing.
@@ -1031,14 +996,18 @@ def worker_thread(stalker_bridge: FridaBridge) -> int:
     Creates a thread running x86-64 machine code that loops calling
     Sleep(10) forever (an unconditional jump back to the loop head, not a
     bounded counter), so the thread is guaranteed to still be executing
-    call instructions whenever the test stalker-follows it. Each pass of the
-    loop also increments a counter in the target's memory, and the fixture
-    returns only once that counter shows the thread has run its loop
-    ``_WORKER_MIN_LOOPS`` times: in the container, Stalker followed a thread
-    in its first one or two passes and wedged the agent in 19 of 40 runs, and
-    followed a thread past a few passes and wedged it in 3 of 40, so a thread
-    that merely exists is not a safe thing to follow. The thread is created via
-    a persistent script to prevent GC of the code memory while the thread is
+    call instructions whenever the test stalker-follows it. The thread's id
+    is taken from the message the worker script sends about itself, not found
+    by listing the process's threads: in the container, following a thread
+    that had been found by a thread listing wedged the agent in a few percent
+    of follows even with the bridge's persistent listing helper, and following
+    a thread learned from its own message did not wedge it once in about 310
+    follows, so these tests follow the second kind. The worker also counts its
+    loop passes into a block of target memory (``COUNTER_ADDRESS_PLACEHOLDER``
+    in the shared script), which this fixture no longer waits on: the
+    measurements showed no difference between a thread followed at once and one
+    that had run its loop dozens of times. The thread is created via a
+    persistent script to prevent GC of the code memory while the thread is
     still running, and goes away when the private notepad.exe process is killed
     at teardown.
 
@@ -1048,29 +1017,22 @@ def worker_thread(stalker_bridge: FridaBridge) -> int:
     Returns:
         int: The thread ID of the busy worker thread.
     """
+    messages: queue.Queue[dict[str, object]] = queue.Queue()
+    stalker_bridge.set_message_handler(messages.put)
     counter_address: int = _run_async(stalker_bridge.allocate_memory(_COUNTER_SIZE))
-    tids_before: set[int] = {t.tid for t in _run_async(stalker_bridge.enumerate_threads())}
-    worker_script = _WORKER_THREAD_JS.replace(_COUNTER_ADDRESS_PLACEHOLDER, hex(counter_address))
+    worker_script = WORKER_THREAD_SCRIPT.replace(COUNTER_ADDRESS_PLACEHOLDER, hex(counter_address))
     _ = _run_async(stalker_bridge.execute_persistent_script(worker_script))
     deadline = time.monotonic() + _WORKER_APPEAR_TIMEOUT
-    new_tids: set[int] = set()
-    while not new_tids and time.monotonic() < deadline:
-        tids_after: set[int] = {t.tid for t in _run_async(stalker_bridge.enumerate_threads())}
-        new_tids = tids_after - tids_before
-        if not new_tids:
-            time.sleep(_WORKER_POLL_INTERVAL)
-    assert len(new_tids) >= 1, f"worker thread must appear in thread list within {_WORKER_APPEAR_TIMEOUT:g}s of creation"
-
-    loops = 0
-    deadline = time.monotonic() + _WORKER_LOOPS_TIMEOUT
-    while loops < _WORKER_MIN_LOOPS and time.monotonic() < deadline:
-        loops = int.from_bytes(_run_async(stalker_bridge.read_memory(counter_address, _COUNTER_SIZE))[:4], "little")
-        if loops < _WORKER_MIN_LOOPS:
-            time.sleep(_WORKER_POLL_INTERVAL)
-    assert loops >= _WORKER_MIN_LOOPS, (
-        f"worker thread must run its loop {_WORKER_MIN_LOOPS} times within {_WORKER_LOOPS_TIMEOUT:g}s, counter reads {loops}"
-    )
-    return next(iter(new_tids))
+    while time.monotonic() < deadline:
+        try:
+            message = messages.get(timeout=_WORKER_POLL_INTERVAL)
+        except queue.Empty:
+            continue
+        payload = message.get("payload")
+        fields = cast("dict[str, object]", payload) if isinstance(payload, dict) else {}
+        if fields.get("type") == "worker":
+            return int(cast("int", fields["tid"]))
+    pytest.fail(f"the worker thread did not report its id within {_WORKER_APPEAR_TIMEOUT:g}s")
 
 
 @pytest.fixture(scope="module")
