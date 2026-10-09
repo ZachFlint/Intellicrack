@@ -7367,7 +7367,9 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             _logger.warning("remote_device_remove_failed", host=host, error=str(e))
             raise ToolError(_ERR_DEVICE_FAILED, details=self._frida_error_details(e, host=host)) from e
 
-        if self._device is not None and str(getattr(self._device, "type", "")) == "remote" and str(getattr(self._device, "id", "")) == host:
+        device = self._device
+        endpoint = str(getattr(device, "id", "")).rpartition("@")[2]
+        if device is not None and str(getattr(device, "type", "")) == "remote" and endpoint == host:
             if self._session is not None:
                 try:
                     await self.detach(kill_spawned=False)
