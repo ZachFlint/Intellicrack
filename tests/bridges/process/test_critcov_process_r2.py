@@ -61,6 +61,7 @@ pytestmark = pytest.mark.spawns_process
 _WAIT_S: Final[float] = 120.0
 _READY: Final[str] = "ready"
 _OUT_OF_RANGE_HANDLE: Final[int] = 1 << 80
+_UNMARSHALLABLE_HANDLE: Final[float] = 0.5
 _PAGE: Final[int] = 0x1000
 _E_LFANEW_OFFSET: Final[int] = 0x3C
 _PEB_PROCESS_PARAMETERS_OFFSET: Final[int] = 0x20
@@ -761,7 +762,7 @@ def test_thread_probes_absorb_a_handle_that_cannot_be_marshalled(
 
 
 @contextlib.contextmanager
-def _attached_handle_value(bridge: ProcessBridge, value: int) -> Generator[None]:
+def _attached_handle_value(bridge: ProcessBridge, value: object) -> Generator[None]:
     """Record a process-handle value on a bridge without any Win32 call and clear it afterwards.
 
     Args:
@@ -786,7 +787,7 @@ def test_mitigation_policies_report_every_policy_unsupported_for_an_unmarshallab
 
     Mutation: removing ``ctypes.ArgumentError`` from the ``except`` clause at process.py:6871 lets the exception escape.
     """
-    with _attached_handle_value(process_bridge, _OUT_OF_RANGE_HANDLE):
+    with _attached_handle_value(process_bridge, _UNMARSHALLABLE_HANDLE):
         policies = _run(process_bridge.get_mitigation_policies())
     assert policies == {name: {"enabled": False, "error": "not supported"} for name in _POLICY_NAMES}
 
@@ -799,7 +800,7 @@ def test_flat_mitigation_summary_is_all_clear_for_an_unmarshallable_handle(proce
 
     Mutation: removing ``ctypes.ArgumentError`` from the ``except`` clause at process.py:7873 lets the exception escape.
     """
-    with _attached_handle_value(process_bridge, _OUT_OF_RANGE_HANDLE):
+    with _attached_handle_value(process_bridge, _UNMARSHALLABLE_HANDLE):
         summary = _run(process_bridge.get_mitigation_policy())
     assert summary == {"dep": False, "aslr": False, "cfg": False, "sehop_via_options_mask": 0}
 
@@ -911,7 +912,7 @@ def test_extension_policy_is_clear_for_an_unmarshallable_handle(process_bridge: 
 
     Mutation: removing ``ctypes.ArgumentError`` from the ``except`` clause at process.py:7957 lets the exception escape.
     """
-    with _attached_handle_value(process_bridge, _OUT_OF_RANGE_HANDLE):
+    with _attached_handle_value(process_bridge, _UNMARSHALLABLE_HANDLE):
         assert _run(process_bridge.get_extension_policy()) == {"disable_extension_points": False}
 
 

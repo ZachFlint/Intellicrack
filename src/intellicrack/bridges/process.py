@@ -1677,6 +1677,23 @@ class _ProcessBridgeBase(ToolBridgeBase):
             ctypes.POINTER(wintypes.HANDLE),
         ]
 
+    @staticmethod
+    def _declare_process_query_prototypes(kernel32: ctypes.WinDLL) -> None:
+        """Declare the handle parameter of the queries that accept the current-process pseudo-handle.
+
+        ``GetCurrentProcess`` is declared as returning a ``HANDLE``, so the 64-bit ``(HANDLE)-1`` pseudo-handle arrives as a
+        pointer-sized integer. A call without ``argtypes`` marshals an integer as a C ``int`` and cannot carry that value, so
+        ``GetProcessMitigationPolicy`` and ``IsProcessInJob`` state their parameter types here.
+
+        Args:
+            kernel32: The ``kernel32`` handle the queries are made through.
+        """
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        kernel32.GetProcessMitigationPolicy.restype = wintypes.BOOL
+        kernel32.GetProcessMitigationPolicy.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, ctypes.c_size_t]
+        kernel32.IsProcessInJob.restype = wintypes.BOOL
+        kernel32.IsProcessInJob.argtypes = [wintypes.HANDLE, wintypes.HANDLE, ctypes.c_void_p]
+
     def _adjust_se_debug_privilege(
         self,
         advapi32_le: ctypes.WinDLL,
@@ -6808,6 +6825,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             _logger.error("kernel32_unavailable", operation="get_mitigation_policies")
             raise ToolError(_ERR_KERNEL32_NA)
 
+        self._declare_process_query_prototypes(self._kernel32)
         target_pid = pid or self._attached_pid
         close_handle = False
         proc_handle: int | None = None
@@ -7878,6 +7896,7 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         aslr_flags: dict[str, object] = cast("dict[str, object]", full.get("ASLR")) if isinstance(full.get("ASLR"), dict) else empty_policy
         cfg_flags: dict[str, object] = cast("dict[str, object]", full.get("CFG")) if isinstance(full.get("CFG"), dict) else empty_policy
 
+        self._declare_process_query_prototypes(self._kernel32)
         target_pid = pid or self._attached_pid
         close_handle = False
         proc_handle: int | None = None
@@ -7936,6 +7955,7 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
+        self._declare_process_query_prototypes(self._kernel32)
         target_pid = pid or self._attached_pid
         close_handle = False
         proc_handle: int | None = None
@@ -9055,6 +9075,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
             _logger.error("kernel32_unavailable", operation="get_job_info")
             raise ToolError(_ERR_KERNEL32_NA)
 
+        self._declare_process_query_prototypes(self._kernel32)
         target_pid = pid or self._attached_pid
         close_handle = False
         proc_handle: int | None = None
@@ -9497,6 +9518,8 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         if not proc_handle:
             raise ToolError(_ERR_OPEN_FAILED)
 
+        self._user32.GetGuiResources.restype = wintypes.DWORD
+        self._user32.GetGuiResources.argtypes = [wintypes.HANDLE, wintypes.DWORD]
         try:
             gdi_count: int = self._user32.GetGuiResources(proc_handle, GR_GDIOBJECTS)
             user_count: int = self._user32.GetGuiResources(proc_handle, GR_USEROBJECTS)
