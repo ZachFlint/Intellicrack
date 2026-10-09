@@ -8660,7 +8660,11 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
             raise RuntimeError(msg)
 
         if hasattr(self.document, "verify_pe_checksum"):
-            result = self.document.verify_pe_checksum()
+            try:
+                result = self.document.verify_pe_checksum()
+            except ValueError as exc:
+                _logger.exception("verify_pe_checksum_failed_native")
+                raise RuntimeError(str(exc)) from exc
             if isinstance(result, dict):
                 return cast("dict[str, Any]", result)
 
@@ -8712,7 +8716,11 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
             raise RuntimeError(msg)
 
         if hasattr(self.document, "repair_pe_checksum"):
-            self.document.repair_pe_checksum()
+            try:
+                self.document.repair_pe_checksum()
+            except ValueError as exc:
+                _logger.exception("repair_pe_checksum_failed_native")
+                raise RuntimeError(str(exc)) from exc
             verify_result = await self.verify_pe_checksum()
             return {
                 "old_checksum": 0,
