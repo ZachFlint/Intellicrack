@@ -430,6 +430,24 @@ _CODE_SECTION_NOT_MAPPED = "SECTION_NOT_MAPPED"
 _THREAD_OP_FAILURE_SENTINEL: int = 0xFFFFFFFF
 
 
+def _win32_last_error(kernel32: ctypes.WinDLL) -> int:
+    """Read the calling thread's Win32 last-error code.
+
+    The bridge's ``kernel32`` handle is loaded without ``use_last_error``,
+    so ``ctypes.get_last_error()`` does not hold the code of a call made
+    through it. ``GetLastError`` does.
+
+    Args:
+        kernel32: The ``kernel32`` handle the failed call was made through.
+
+    Returns:
+        int: The last-error code of the calling thread.
+    """
+    kernel32.GetLastError.argtypes = []
+    kernel32.GetLastError.restype = wintypes.DWORD
+    return int(kernel32.GetLastError())
+
+
 def _thread_op_failed(result: int) -> bool:
     """Tell whether ``SuspendThread`` or ``ResumeThread`` reported failure.
 
@@ -2238,7 +2256,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         if self._kernel32 is None:
             return
         if not self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
-            error_code: int = ctypes.get_last_error()
+            error_code: int = _win32_last_error(self._kernel32)
             if error_code != _ERROR_NO_MORE_FILES:
                 msg = f"{_ERR_SNAPSHOT_FAILED} (Process32First: {error_code})"
                 raise ToolError(msg)
@@ -3393,7 +3411,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         )
 
         if snapshot == INVALID_HANDLE_VALUE:
-            error_code: int = ctypes.get_last_error()
+            error_code: int = _win32_last_error(self._kernel32)
             _logger.warning("module_snapshot_failed", pid=target_pid, error_code=error_code)
             return []
 
@@ -3488,7 +3506,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         self._kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
         snapshot: int = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)
         if snapshot == INVALID_HANDLE_VALUE:
-            error_code: int = ctypes.get_last_error()
+            error_code: int = _win32_last_error(self._kernel32)
             _logger.warning("thread_snapshot_failed", error_code=error_code)
             return []
 
@@ -3565,7 +3583,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             _logger.debug(
                 "thread_start_address_open_failed",
                 tid=tid,
-                error_code=ctypes.get_last_error(),
+                error_code=_win32_last_error(self._kernel32),
             )
             return 0
 
