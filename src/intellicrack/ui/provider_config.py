@@ -1881,6 +1881,10 @@ class ModelRefreshWorker(RetainedWorker):
         return True, models, f"Found {len(models)} Grok models"
 
 
+_RECOMMENDATION_TASK_TYPE: Final[str] = "chat"
+_RECOMMENDATION_TIMEOUT_S: Final[float] = 10.0
+
+
 class ProviderInstanceDialog(QDialog):
     """Collects the identity of a new or duplicated provider instance.
 
@@ -4237,6 +4241,10 @@ class ProviderSettingsWidget(QFrame):
         Args:
             discovery: Model discovery service used to resolve a recommendation.
 
+        Discovery lists models through connected providers, so the lookup
+        runs on the persistent bridge loop their HTTP clients belong to. A
+        lookup that outlives its time limit propagates :class:`TimeoutError`.
+
         Returns:
             str: Label text for the recommended model, or an empty string when
             discovery cannot run (for example, inside a running event loop).
@@ -4250,9 +4258,11 @@ class ProviderSettingsWidget(QFrame):
         if loop is not None and loop.is_running():
             return ""
 
-        if recommended := asyncio.run(
-            discovery.get_recommended_model(self.provider_id),
-        ):
+        recommended = run_bridge_coroutine(
+            discovery.get_recommended_model(_RECOMMENDATION_TASK_TYPE),
+            timeout_s=_RECOMMENDATION_TIMEOUT_S,
+        )
+        if recommended is not None:
             return f"Recommended: {recommended.name}"
         return ""
 
