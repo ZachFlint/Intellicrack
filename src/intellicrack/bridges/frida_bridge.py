@@ -7307,6 +7307,9 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
     ) -> FridaDeviceInfo:
         """Switch to a different Frida device.
 
+        The request is validated before the current session is released, so a
+        rejected request leaves the attached session in place.
+
         Args:
             device_type: Device type (``'local'``, ``'usb'``, ``'remote'``, or
                 ``'enumerated'``). ``'remote'`` adds a brand-new remote
@@ -7322,12 +7325,6 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         Raises:
             ToolError: If connection fails.
         """
-        if self._session is not None:
-            try:
-                await self.detach(kill_spawned=False)
-            except ToolError:
-                _logger.exception("session_release_before_device_switch_failed")
-
         if device_type == "remote" and not host:
             raise ToolError(_ERR_DEVICE_FAILED, details={"reason": "host required for remote device"})
 
@@ -7336,6 +7333,12 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         if device_type not in {"local", "usb", "remote", "enumerated"}:
             raise ToolError(_ERR_DEVICE_FAILED, details={"reason": f"unknown device type: {device_type}"})
+
+        if self._session is not None:
+            try:
+                await self.detach(kill_spawned=False)
+            except ToolError:
+                _logger.exception("session_release_before_device_switch_failed")
 
         try:
             device = await self._resolve_frida_device(device_type, host)
