@@ -539,7 +539,7 @@ class ToolInstallWorker(RetainedWorker):
                 "\n"
                 "def main() -> None:\n"
                 "    ext_dir = Path(__file__).resolve().parent\n"
-                "    ghidra_root = ext_dir.parent\n"
+                "    ghidra_root = ext_dir.parent.parent\n"
                 "    src_script = ext_dir / 'intellicrack_bridge.py'\n"
                 "    dst_dir = ghidra_root / 'ghidra_scripts'\n"
                 "    dst_dir.mkdir(parents=True, exist_ok=True)\n"
