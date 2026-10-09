@@ -33,7 +33,7 @@ from typing import IO, TYPE_CHECKING, Any, Final, NoReturn, cast
 from intellicrack.core._optional_imports import require_yara
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType, pid_is_running
-from intellicrack.core.subprocess_compat import CREATE_NEW_CONSOLE, PIPE, CompletedProcess, Popen
+from intellicrack.core.subprocess_compat import CREATE_NEW_CONSOLE, PIPE, CompletedProcess, Popen, TimeoutExpired
 from intellicrack.sandbox.base import (
     ExecutionReport,
     ExecutionResult,
@@ -318,7 +318,7 @@ def find_sandbox_session_pid(wsb_name: str) -> int | None:
             name="pwsh-find-sandbox-session",
             timeout=_FEATURE_CHECK_TIMEOUT,
         )
-    except (OSError, RuntimeError) as err:
+    except (OSError, RuntimeError, TimeoutExpired) as err:
         _logger.warning("sandbox_session_lookup_error", error=str(err))
         return None
 
@@ -1620,7 +1620,7 @@ class WindowsSandbox(SandboxBase):
                     name="pwsh-find-vmwp",
                     process_timeout=_FEATURE_CHECK_TIMEOUT,
                 )
-            except (OSError, RuntimeError) as err:
+            except (OSError, RuntimeError, TimeoutExpired) as err:
                 _logger.warning("vmwp_lookup_error", error=str(err))
                 await asyncio.sleep(_WORKER_PID_POLL_INTERVAL)
                 continue
