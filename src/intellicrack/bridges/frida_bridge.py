@@ -5976,7 +5976,8 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         Escapes characters that are unsafe in single-quoted, double-quoted, and
         template-literal JavaScript contexts. All non-ASCII and control characters
-        are converted to their four-digit hexadecimal unicode escapes so the
+        are converted to four-digit hexadecimal unicode escapes of their UTF-16
+        code units, so a character above U+FFFF becomes a surrogate pair and the
         resulting literal is ASCII-only and cannot terminate or escape any
         enclosing context.
 
@@ -6015,7 +6016,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             elif ch == "\0":
                 out.append("\\u0000")
             elif code < _ASCII_PRINTABLE_MIN or code == _ASCII_DEL or code > _ASCII_PRINTABLE_MAX:
-                out.append("\\u" + format(code, "04x"))
+                units = ch.encode("utf-16-be", "surrogatepass")
+                out.extend(f"\\u{int.from_bytes(units[index : index + 2], 'big'):04x}" for index in range(0, len(units), 2))
             else:
                 out.append(ch)
         return "".join(out)
