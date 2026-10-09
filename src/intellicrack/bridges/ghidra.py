@@ -10250,7 +10250,12 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
                 extMgr = currentProgram.getExternalManager()
                 addr_val = {addr_literal}
                 mem_addr = toAddr(addr_val) if addr_val is not None else None
-                ext_loc = extMgr.addExtFunction({json.dumps(library)}, {json.dumps(name)}, mem_addr, SourceType.USER_DEFINED)
+                tx_id = currentProgram.startTransaction('intellicrack.add_external_function')
+                ext_loc = None
+                try:
+                    ext_loc = extMgr.addExtFunction({json.dumps(library)}, {json.dumps(name)}, mem_addr, SourceType.USER_DEFINED)
+                finally:
+                    currentProgram.endTransaction(tx_id, ext_loc is not None)
                 {{'library': {json.dumps(library)}, 'name': {json.dumps(name)}, 'address': addr_val, 'success': ext_loc is not None}}
             """)
             return (
