@@ -837,6 +837,7 @@ class RFBClient:
 
         async with self._fb_lock:
             self.fill_rect(tile_x, tile_y, tile_w, tile_h, background)
+            self._fb_dirty = True
 
         if subencoding & _HEXTILE_ANY_SUBRECTS:
             count_byte = await self._reader.readexactly(1)
