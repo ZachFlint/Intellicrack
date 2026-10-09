@@ -255,6 +255,26 @@ def _string_encoding(raw_encoding: str) -> StringEncoding:
     return "ascii"
 
 
+def _xref_kind(raw_type: str) -> XRefType:
+    """Map the backend's cross-reference type to the bridge's.
+
+    rizin reports ``CALL``, ``CODE``, ``DATA`` and ``STRING``; radare2
+    reports ``CALL``, ``CODE``, ``JUMP`` and ``DATA``. A code reference that
+    is not a call is a jump.
+
+    Args:
+        raw_type: The ``type`` field of a cross-reference entry.
+
+    Returns:
+        XRefType: ``"call"``, ``"jump"`` or ``"data"``.
+    """
+    if raw_type == "CALL":
+        return "call"
+    if raw_type in {"CODE", "JUMP", "JMP", "CJMP"}:
+        return "jump"
+    return "data"
+
+
 def _open_analysis_pipe(target: str, flags: list[str] | None = None) -> _AnalysisPipe:
     """Open an analysis-pipe session against the installed rizin/radare2 binary.
 
@@ -2750,26 +2770,16 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
 
         xrefs = await self._cmd_json(f"axtj @ {address}")
 
-        result: list[CrossReference] = []
-        for x in xrefs:
-            ref_type = _get_str(x, "type")
-            xref_type: XRefType
-            if ref_type == "CALL":
-                xref_type = "call"
-            elif ref_type in {"JMP", "CJMP"}:
-                xref_type = "jump"
-            else:
-                xref_type = "data"
-
-            result.append(
-                CrossReference(
-                    from_address=_get_int(x, "from"),
-                    to_address=address,
-                    ref_type=xref_type,
-                    from_function=_get_optional_str(x, "fcn_name"),
-                    to_function=None,
-                ),
+        result = [
+            CrossReference(
+                from_address=_get_int(x, "from"),
+                to_address=address,
+                ref_type=_xref_kind(_get_str(x, "type")),
+                from_function=_get_optional_str(x, "fcn_name"),
+                to_function=None,
             )
+            for x in xrefs
+        ]
 
         _logger.debug("xrefs_to_queried", address=hex(address), result_count=len(result))
         return result
@@ -2795,26 +2805,16 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
 
         xrefs = await self._cmd_json(f"axfj @ {address}")
 
-        result: list[CrossReference] = []
-        for x in xrefs:
-            ref_type = _get_str(x, "type")
-            xref_type: XRefType
-            if ref_type == "CALL":
-                xref_type = "call"
-            elif ref_type in {"JMP", "CJMP"}:
-                xref_type = "jump"
-            else:
-                xref_type = "data"
-
-            result.append(
-                CrossReference(
-                    from_address=address,
-                    to_address=_get_int(x, "to", _get_int(x, "ref")),
-                    ref_type=xref_type,
-                    from_function=None,
-                    to_function=_get_optional_str(x, "fcn_name"),
-                ),
+        result = [
+            CrossReference(
+                from_address=address,
+                to_address=_get_int(x, "to", _get_int(x, "ref")),
+                ref_type=_xref_kind(_get_str(x, "type")),
+                from_function=None,
+                to_function=_get_optional_str(x, "fcn_name"),
             )
+            for x in xrefs
+        ]
 
         _logger.debug("xrefs_from_queried", address=hex(address), result_count=len(result))
         return result
