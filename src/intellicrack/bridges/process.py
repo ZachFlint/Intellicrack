@@ -375,7 +375,7 @@ _MITIGATION_PRIMARY_FLAG: dict[str, str] = {
     "ImageLoad": "NoRemoteImages",
 }
 
-_PEB32_MIN_PARSE_LENGTH = 0x18
+_PEB32_MIN_PARSE_LENGTH = 0x14
 _PEB_BEING_DEBUGGED_OFFSET = 2
 
 TLS_ARRAY_OFFSET_X64 = 0x1480
@@ -5508,7 +5508,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
         """Parse the 32-bit PEB layout used inside WOW64.
 
         Args:
-            raw: Raw i386 PEB memory bytes (at least ``0x18`` bytes).
+            raw: Raw i386 PEB memory bytes (at least ``0x14`` bytes).
             peb_address: 32-bit PEB base address as returned by
                 ``ProcessWow64Information``.
 
