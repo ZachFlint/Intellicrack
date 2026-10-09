@@ -1349,6 +1349,9 @@ class RFBClient:
     def _zrle_read_cpixel(payload: bytes, cursor: int) -> tuple[bytes, int]:
         """Read one 3-byte ZRLE CPIXEL and convert it to BGRX.
 
+        The negotiated format is little-endian with red at shift 16, so the
+        three bytes of a CPIXEL arrive as blue, green, red.
+
         Args:
             payload: Decompressed ZRLE payload.
             cursor: Current read offset.
@@ -1358,7 +1361,7 @@ class RFBClient:
         """
         cp = payload[cursor : cursor + _ZRLE_CPIXEL_BYTES]
         cursor += _ZRLE_CPIXEL_BYTES
-        bgrx = bytes([cp[2], cp[1], cp[0], 0]) if len(cp) == _ZRLE_CPIXEL_BYTES else b"\x00" * _PIXEL_BYTES
+        bgrx = bytes([cp[0], cp[1], cp[2], 0]) if len(cp) == _ZRLE_CPIXEL_BYTES else b"\x00" * _PIXEL_BYTES
         return bgrx, cursor
 
     @staticmethod
@@ -1386,9 +1389,9 @@ class RFBClient:
             cursor += _ZRLE_CPIXEL_BYTES
             if len(cp) < _ZRLE_CPIXEL_BYTES:
                 break
-            out[idx * _PIXEL_BYTES + 0] = cp[2]
+            out[idx * _PIXEL_BYTES + 0] = cp[0]
             out[idx * _PIXEL_BYTES + 1] = cp[1]
-            out[idx * _PIXEL_BYTES + 2] = cp[0]
+            out[idx * _PIXEL_BYTES + 2] = cp[2]
             out[idx * _PIXEL_BYTES + 3] = 0
         return bytes(out), cursor
 
