@@ -2220,7 +2220,7 @@ class SandboxPanel(AnalysisPanelBase):
                     if isinstance(raw_match, dict):
                         m = cast("dict[str, object]", raw_match)
                         self._log(
-                            f"[YARA] {m.get('rule', 'unknown')}: {m.get('strings', '')} in {m.get('file', '')}",
+                            f"[YARA] {m.get('rule', 'unknown')}: {m.get('strings', '')} in {m.get('source', '')}",
                         )
         self._log(f"[+] YARA scan complete: {match_count} matches")
         self._restore_shared_control(self.yara_btn)
