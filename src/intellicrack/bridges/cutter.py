@@ -21,6 +21,7 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, cast, override
 
+import psutil
 import r2pipe
 import rzpipe
 
@@ -273,6 +274,67 @@ def _xref_kind(raw_type: str) -> XRefType:
     if raw_type in {"CODE", "JUMP", "JMP", "CJMP"}:
         return "jump"
     return "data"
+
+
+def _is_rizin_pipe(pipe: object) -> bool:
+    """Tell whether an analysis pipe talks to rizin rather than radare2.
+
+    The two backends name several debugger commands differently, so the
+    debug methods pick the command by the pipe they hold.
+
+    Args:
+        pipe: The open analysis pipe.
+
+    Returns:
+        bool: ``True`` for an ``rzpipe`` session.
+    """
+    return isinstance(pipe, rzpipe.open)
+
+
+def _json_dicts(value: object) -> list[dict[str, Any]]:
+    """Keep the JSON objects of a parsed JSON array.
+
+    Args:
+        value: A parsed JSON value.
+
+    Returns:
+        list[dict[str, Any]]: The objects in ``value`` when it is an array,
+        otherwise an empty list.
+    """
+    if not isinstance(value, list):
+        return []
+    return [cast("dict[str, Any]", item) for item in cast("list[object]", value) if isinstance(item, dict)]
+
+
+def _mapped_images(pid: int, image_ranges: list[tuple[int, int]]) -> list[ModuleInfo]:
+    """Name the image regions of a process by the files the system reports as mapped there.
+
+    Args:
+        pid: The process whose address space is inspected.
+        image_ranges: ``(start, end)`` of every region the debugger classifies as an image.
+
+    Returns:
+        list[ModuleInfo]: One entry per mapped image file, ordered by base
+        address; empty when the process cannot be inspected.
+    """
+    try:
+        regions = cast("list[object]", psutil.Process(pid).memory_maps(grouped=False))
+    except psutil.Error as exc:
+        _logger.warning("cutter_memory_maps_unavailable", pid=pid, error=str(exc))
+        return []
+    spans: dict[str, tuple[int, int]] = {}
+    for region in regions:
+        path = str(getattr(region, "path", ""))
+        start = int(str(getattr(region, "addr", "0")), 16)
+        for range_start, range_end in image_ranges:
+            if range_start <= start < range_end:
+                known = spans.get(path, (range_start, range_end))
+                spans[path] = (min(known[0], range_start), max(known[1], range_end))
+                break
+    return [
+        ModuleInfo(name=Path(path).name, path=Path(path), base_address=base, size=end - base, entry_point=0)
+        for path, (base, end) in sorted(spans.items(), key=lambda item: item[1][0])
+    ]
 
 
 def _open_analysis_pipe(target: str, flags: list[str] | None = None) -> _AnalysisPipe:
@@ -5839,11 +5901,11 @@ class CutterDebugMixin(CutterDisplayMixin):
         returns malformed JSON.
 
         Returns:
-            list[ThreadInfo]: Thread snapshots reported by rizin's
-            ``dptj`` command.
+            list[ThreadInfo]: Thread snapshots reported by the backend's
+            thread listing (``dpTj`` on rizin, ``dptj`` on radare2).
         """
         self._require_attached("get_threads")
-        parsed = await self._debug_cmd_json("dptj")
+        parsed = await self._debug_cmd_json("dpTj" if _is_rizin_pipe(self._r2) else "dptj")
         threads: list[ThreadInfo] = []
         thread_map: dict[int, ThreadInfo] = {}
         if not isinstance(parsed, list):
@@ -5919,6 +5981,22 @@ class CutterDebugMixin(CutterDisplayMixin):
         _logger.debug("cutter_backtrace_queried", count=len(frames))
         return frames
 
+    async def _modules_from_memory_map(self, pid: int) -> list[ModuleInfo]:
+        """List the images mapped into the debuggee from the debugger's memory map.
+
+        Args:
+            pid: Process ID of the debuggee.
+
+        Returns:
+            list[ModuleInfo]: One entry per image file mapped into the process.
+        """
+        maps = _json_dicts(await self._debug_cmd_json("dmj"))
+        image_maps = [entry for entry in maps if _get_str(entry, "name").startswith("IMAGE")]
+        image_ranges = [(_get_int(entry, "addr"), _get_int(entry, "addr_end")) for entry in image_maps]
+        modules = await asyncio.to_thread(_mapped_images, pid, image_ranges)
+        _logger.debug("cutter_modules_from_memory_map", count=len(modules))
+        return modules
+
     async def get_modules(self) -> list[ModuleInfo]:
         """Enumerate loaded modules of the attached process.
 
@@ -5926,14 +6004,21 @@ class CutterDebugMixin(CutterDisplayMixin):
         process is attached, and from :meth:`_debug_cmd_json` when rizin
         returns malformed JSON.
 
+        rizin has no module list until the debuggee has run its loader. When
+        it reports none, the modules are the image regions of the debugger's
+        memory map, named by the files the system reports as mapped there.
+
         Returns:
-            list[ModuleInfo]: Loaded modules reported by rizin's
-            ``dmIj`` command (``ModuleInfo.entry_point`` is ``0`` when
-            rizin omits it).
+            list[ModuleInfo]: Loaded modules reported by the backend's module
+            listing (``dmmj`` on rizin, ``dmIj`` on radare2);
+            ``ModuleInfo.entry_point`` is ``0`` when the backend omits it.
         """
         self._require_attached("get_modules")
-        parsed = await self._debug_cmd_json("dmIj")
+        rizin = _is_rizin_pipe(self._r2)
+        parsed = await self._debug_cmd_json("dmmj" if rizin else "dmIj")
         modules: list[ModuleInfo] = []
+        if rizin and not parsed and self._attached_pid is not None:
+            return await self._modules_from_memory_map(self._attached_pid)
         if not isinstance(parsed, list):
             return modules
         for entry in cast("list[object]", parsed):
