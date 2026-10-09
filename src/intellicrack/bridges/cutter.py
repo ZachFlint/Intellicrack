@@ -2809,7 +2809,7 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
             result.append(
                 CrossReference(
                     from_address=address,
-                    to_address=_get_int(x, "ref"),
+                    to_address=_get_int(x, "to", _get_int(x, "ref")),
                     ref_type=xref_type,
                     from_function=None,
                     to_function=_get_optional_str(x, "fcn_name"),
