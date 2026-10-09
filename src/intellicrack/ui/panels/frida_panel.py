@@ -66,6 +66,7 @@ if TYPE_CHECKING:
 
 _logger = get_logger(__name__)
 
+_REMOTE_ID_PREFIX: Final[str] = "socket@"
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
 _DEVICE_COMBO_MIN_WIDTH: Final[int] = 120
@@ -1570,11 +1571,14 @@ class FridaPanel(AnalysisPanelBase):
             result: The ``FridaDeviceInfo`` returned by the bridge on success.
         """
         entry_text = f"remote:{host_port}"
+        entry_data = {"id": f"{_REMOTE_ID_PREFIX}{host_port}", "type": "remote", "name": entry_text}
         with QSignalBlocker(self._device_combo):
             idx = self._device_combo.findText(entry_text)
             if idx < 0:
-                self._device_combo.addItem(entry_text)
+                self._device_combo.addItem(entry_text, entry_data)
                 idx = self._device_combo.count() - 1
+            else:
+                self._device_combo.setItemData(idx, entry_data)
             self._device_combo.setCurrentIndex(idx)
         self._console.appendPlainText(f"[+] Connected to device: {getattr(result, 'name', entry_text)}")
 
@@ -1610,10 +1614,13 @@ class FridaPanel(AnalysisPanelBase):
             host: The ``host:port`` of the device that was just removed.
         """
         entry_text = f"remote:{host}"
+        remote_id = f"{_REMOTE_ID_PREFIX}{host}"
         with QSignalBlocker(self._device_combo):
-            idx = self._device_combo.findText(entry_text)
-            if idx >= 0:
-                self._device_combo.removeItem(idx)
+            for idx in range(self._device_combo.count() - 1, -1, -1):
+                raw_data = self._device_combo.itemData(idx)
+                item_id = cast("dict[str, object]", raw_data).get("id") if isinstance(raw_data, dict) else None
+                if self._device_combo.itemText(idx) == entry_text or item_id == remote_id:
+                    self._device_combo.removeItem(idx)
             self._device_combo.setCurrentIndex(0)
         self._console.appendPlainText(f"[+] Removed remote device: {host}")
 
