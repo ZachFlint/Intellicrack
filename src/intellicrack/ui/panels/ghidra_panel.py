@@ -4126,6 +4126,10 @@ class GhidraPanel(AnalysisPanelBase):
     def _populate_call_graph_dict(self, data: dict[str, object], parent: QTreeWidgetItem | None) -> None:
         """Recursively populate the call graph tree from a nested dict.
 
+        A node lists its descendants under 'children'. A graph requested in
+        both directions has no 'children' and carries 'callees' and 'callers'
+        instead; both are added.
+
         Args:
             data: Node data dictionary with 'name', 'address', and optional 'children'.
             parent: Parent tree item, or None for root nodes.
@@ -4138,12 +4142,12 @@ class GhidraPanel(AnalysisPanelBase):
             self._call_graph_tree.addTopLevelItem(item)
         else:
             tree_add_child(parent, item)
-        children = data.get("children", data.get("callees", []))
-        if isinstance(children, list):
-            child_list = cast("list[object]", children)
-            for child in child_list:
-                if isinstance(child, dict):
-                    self._populate_call_graph_dict(cast("dict[str, object]", child), item)
+        groups = [data["children"]] if "children" in data else [data.get("callees"), data.get("callers")]
+        for group in groups:
+            if isinstance(group, list):
+                for child in cast("list[object]", group):
+                    if isinstance(child, dict):
+                        self._populate_call_graph_dict(cast("dict[str, object]", child), item)
 
     def _on_show_callers(self) -> None:
         """Show callers for the address in the call graph tab."""
