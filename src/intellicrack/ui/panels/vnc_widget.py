@@ -1000,21 +1000,26 @@ class RFBClient:
             self._fb_dirty = True
 
     async def _read_tight_compact_length(self) -> int:
-        """Read a Tight-encoded compact length (1-3 bytes, 7 bits per byte).
+        """Read a Tight-encoded compact length of one to three bytes.
+
+        The first two bytes carry seven bits and a continuation flag each; the
+        third byte carries eight bits.
 
         Returns:
             int: Decoded length value.
         """
         if self._reader is None:
             return 0
-        length = 0
-        for shift in (0, 7, 14):
-            byte_data = await self._reader.readexactly(1)
-            byte = byte_data[0]
-            length |= (byte & _TIGHT_LENGTH_BYTE_MASK) << shift
-            if not (byte & _TIGHT_LENGTH_CONTINUE_BIT):
-                break
-        return length
+        first = (await self._reader.readexactly(1))[0]
+        length = first & _TIGHT_LENGTH_BYTE_MASK
+        if not (first & _TIGHT_LENGTH_CONTINUE_BIT):
+            return length
+        second = (await self._reader.readexactly(1))[0]
+        length |= (second & _TIGHT_LENGTH_BYTE_MASK) << 7
+        if not (second & _TIGHT_LENGTH_CONTINUE_BIT):
+            return length
+        third = (await self._reader.readexactly(1))[0]
+        return length | (third << 14)
 
     async def _apply_tight_jpeg(self, x: int, y: int, w: int, h: int, data: bytes) -> None:
         """Decode a Tight JPEG payload via Pillow and blit it to the framebuffer.
