@@ -791,7 +791,7 @@ class PatternEditorMixin:
             return
 
         if self._pattern_registry is None:
-            project_root = Path(__file__).resolve().parents[4]
+            project_root = Path(__file__).resolve().parents[5]
             patterns_dir = project_root / "vendor" / "community-patterns" / "patterns"
             if not patterns_dir.exists():
                 return
