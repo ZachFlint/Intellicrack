@@ -10163,9 +10163,9 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
         script_code = f"""
         try {{
             var f = new File('{escaped}', 'rb');
-            var data = f.readBytes(-1);
+            var data = f.readBytes();
             f.close();
-            send({{ type: 'file_read' }}, data);
+            send({{ type: 'file_read', size: data.byteLength }}, data);
         }} catch (e) {{
             send({{ type: 'file_error', error: e.message }});
         }}
@@ -10174,6 +10174,9 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
         result = await self._execute_script_and_wait(script_code, max_wait=10.0)
         if "error" in result or result.get("type") == "file_error":
             raise ToolError(_ERR_FILE_FAILED)
+        if result.get("size") == 0:
+            _logger.debug("frida_file_read_target_completed", path=path, bytes_read=0)
+            return ""
 
         read_data = result.get("__binary")
         if isinstance(read_data, (bytes, bytearray)):
