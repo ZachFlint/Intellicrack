@@ -267,7 +267,7 @@ def _scan_die(doc_data: bytes, db_path: str) -> list[dict[str, Any]]:
                         scan_offset=scan_offset,
                     )
                     continue
-                if fixed_offset + len(pattern_bytes) <= len(doc_data):
+                if 0 <= fixed_offset <= len(doc_data) - len(pattern_bytes):
                     region = doc_data[fixed_offset : fixed_offset + len(pattern_bytes)]
                     if region == pattern_bytes:
                         results.append({
@@ -444,7 +444,7 @@ def _scan_clamav_ndb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:
                     sig_offset_spec=sig_offset_spec,
                 )
                 continue
-            if pattern.match(doc_data, max(offset_val, 0)) is not None:
+            if offset_val >= 0 and pattern.match(doc_data, offset_val) is not None:
                 results.append({
                     "name": sig_name,
                     "type": "ndb",
@@ -527,7 +527,7 @@ def _scan_custom(doc_data: bytes, db_path: str) -> list[dict[str, Any]]:
                 )
                 continue
             end = fixed_offset + len(pattern_bytes)
-            if end <= len(doc_data) and doc_data[fixed_offset:end] == pattern_bytes:
+            if fixed_offset >= 0 and end <= len(doc_data) and doc_data[fixed_offset:end] == pattern_bytes:
                 results.append({
                     "name": sig_name,
                     "type": sig_type,
