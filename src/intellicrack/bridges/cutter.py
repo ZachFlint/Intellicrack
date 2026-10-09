@@ -5782,8 +5782,30 @@ class CutterDebugMixin(CutterDisplayMixin):
         _logger.info("cutter_signal_sent", signal=signal)
         return True
 
+    async def _range_is_readable(self, address: int, size: int) -> bool:
+        """Tell whether the debugger's memory map covers a range with readable pages.
+
+        Args:
+            address: First address of the range.
+            size: Number of bytes in the range.
+
+        Returns:
+            bool: ``True`` when every byte of the range lies in a readable map.
+        """
+        maps = _json_dicts(await self._debug_cmd_json("dmj"))
+        readable = [entry for entry in maps if "r" in _get_str(entry, "perm")]
+        cursor = address
+        for start, stop in sorted((_get_int(entry, "addr"), _get_int(entry, "addr_end")) for entry in readable):
+            if start <= cursor < stop:
+                cursor = stop
+        return cursor >= address + size
+
     async def read_memory(self, address: int, size: int) -> bytes:
         """Read raw memory from the attached process.
+
+        rizin prints ``0xFF`` filler for bytes it cannot read, so on a rizin
+        session the range is checked against the debugger's memory map
+        before it is read.
 
         Args:
             address: Address to read from in the debuggee's address
@@ -5794,8 +5816,8 @@ class CutterDebugMixin(CutterDisplayMixin):
             bytes: Bytes read from the attached process.
 
         Raises:
-            ToolError: If not attached, ``size`` is negative, or rizin
-                returns an unparseable hex response.
+            ToolError: If not attached, ``size`` is negative, the range is
+                not readable, or rizin returns an unparseable hex response.
         """
         self._require_attached("read_memory")
         if size < 0:
@@ -5803,6 +5825,10 @@ class CutterDebugMixin(CutterDisplayMixin):
             raise ToolError(msg, tool_name="cutter")
         if size == 0:
             return b""
+        if _is_rizin_pipe(self._r2) and not await self._range_is_readable(address, size):
+            _logger.warning("read_memory_range_not_readable", address=hex(address), size=size)
+            msg = f"read_memory: no readable memory at {hex(address)} for {size} bytes"
+            raise ToolError(msg, tool_name="cutter")
         response = await self._r2_cmd(f"p8 {size} @ {address}")
         hex_str = response.strip()
         if not hex_str:
