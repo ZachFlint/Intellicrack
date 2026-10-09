@@ -232,6 +232,29 @@ def _file_sha256(path: Path) -> str:
         return hashlib.file_digest(handle, "sha256").hexdigest()
 
 
+def _string_encoding(raw_encoding: str) -> StringEncoding:
+    """Map the backend's name for a string encoding to the bridge's.
+
+    rizin writes ``utf16le``, ``utf16be`` and ``utf8``; radare2 writes
+    ``wide`` or the hyphenated names. Every other encoding is reported as
+    ``ascii``.
+
+    Args:
+        raw_encoding: The ``type`` field of a string entry.
+
+    Returns:
+        StringEncoding: The bridge's encoding label.
+    """
+    normalized = raw_encoding.replace("-", "").lower()
+    if normalized == "utf16be":
+        return "utf-16be"
+    if normalized == "utf8":
+        return "utf-8"
+    if normalized in {"wide", "utf16le"}:
+        return "utf-16le"
+    return "ascii"
+
+
 def _open_analysis_pipe(target: str, flags: list[str] | None = None) -> _AnalysisPipe:
     """Open an analysis-pipe session against the installed rizin/radare2 binary.
 
@@ -2898,22 +2921,11 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
         for s in strings:
             string_val = _get_str(s, "string")
             if regex.search(string_val):
-                raw_encoding = _get_str(s, "type", "ascii")
-                encoding: StringEncoding
-                if raw_encoding == "utf-16be":
-                    encoding = "utf-16be"
-                elif raw_encoding == "utf-8":
-                    encoding = "utf-8"
-                elif raw_encoding in {"wide", "utf-16le"}:
-                    encoding = "utf-16le"
-                else:
-                    encoding = "ascii"
-
                 result.append(
                     StringInfo(
                         address=_get_int(s, "vaddr"),
                         value=string_val,
-                        encoding=encoding,
+                        encoding=_string_encoding(_get_str(s, "type", "ascii")),
                         section=_get_str(s, "section"),
                     ),
                 )
@@ -3372,26 +3384,15 @@ class CutterMetadataMixin(CutterCommandMixin):
             raise ToolError(_ERR_NO_BINARY)
 
         strings = await self._cmd_json("izzj")
-        result: list[StringInfo] = []
-        for s in strings:
-            raw_encoding = _get_str(s, "type", "ascii")
-            encoding: StringEncoding
-            if raw_encoding == "utf-16be":
-                encoding = "utf-16be"
-            elif raw_encoding == "utf-8":
-                encoding = "utf-8"
-            elif raw_encoding in {"wide", "utf-16le"}:
-                encoding = "utf-16le"
-            else:
-                encoding = "ascii"
-            result.append(
-                StringInfo(
-                    address=_get_int(s, "vaddr"),
-                    value=_get_str(s, "string"),
-                    encoding=encoding,
-                    section=_get_str(s, "section"),
-                ),
+        result = [
+            StringInfo(
+                address=_get_int(s, "vaddr"),
+                value=_get_str(s, "string"),
+                encoding=_string_encoding(_get_str(s, "type", "ascii")),
+                section=_get_str(s, "section"),
             )
+            for s in strings
+        ]
         _logger.debug("all_strings_queried", result_count=len(result))
         return result
 
