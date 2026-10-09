@@ -10292,9 +10292,13 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
         _logger.info("overlay_space_creating", overlay_name=name)
         try:
             result = await self._execute_remote(f"""
-                memory = currentProgram.getMemory()
                 default_space = currentProgram.getAddressFactory().getDefaultAddressSpace()
-                overlay_space = memory.createOverlayAddressSpace({json.dumps(name)}, default_space)
+                tx_id = currentProgram.startTransaction('intellicrack.create_overlay_space')
+                overlay_space = None
+                try:
+                    overlay_space = currentProgram.createOverlaySpace({json.dumps(name)}, default_space)
+                finally:
+                    currentProgram.endTransaction(tx_id, overlay_space is not None)
                 {{'name': overlay_space.getName() if overlay_space is not None else {json.dumps(name)}, 'success': overlay_space is not None}}
             """)
             return cast("dict[str, Any]", result) if isinstance(result, dict) else {"name": name, "success": False}
