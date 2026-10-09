@@ -313,6 +313,7 @@ _ERR_YARA_RULE_FILE_EMPTY = "YARA rule file is empty"
 _ERR_YARA_RULE_FILE_NOT_FOUND = "YARA rule file not found"
 MIN_YARA_PATTERN_BYTES = 1
 PE_ENTRY_POINT_OFFSET = 0x28
+_TLS_ADDRESS_OF_CALLBACKS_INDEX = 3
 _HANDLE_QUERY_MAX_BUFFER = 0x10000000
 _X86_NOP_OPCODE = 0x90
 
@@ -11903,7 +11904,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
 
         ptr_size = 8 if is_pe64 else 4
         tls_dir = await self.read_memory(base_address + tls_rva, max(tls_size, 40))
-        callback_array_va = struct.unpack_from("<Q" if is_pe64 else "<I", tls_dir, 12 + ptr_size)[0]
+        callback_array_va = struct.unpack_from("<Q" if is_pe64 else "<I", tls_dir, _TLS_ADDRESS_OF_CALLBACKS_INDEX * ptr_size)[0]
         if callback_array_va == 0:
             return []
 
