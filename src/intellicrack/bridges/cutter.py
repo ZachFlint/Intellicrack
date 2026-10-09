@@ -337,6 +337,49 @@ def _mapped_images(pid: int, image_ranges: list[tuple[int, int]]) -> list[Module
     ]
 
 
+_EXECUTABLE_MAGICS: Final[tuple[bytes, ...]] = (
+    b"MZ",
+    b"\x7fELF",
+    b"\xfe\xed\xfa\xce",
+    b"\xfe\xed\xfa\xcf",
+    b"\xce\xfa\xed\xfe",
+    b"\xcf\xfa\xed\xfe",
+    b"\xca\xfe\xba\xbe",
+    b"#!",
+)
+_EXECUTABLE_MAGIC_LENGTH: Final[int] = 4
+
+
+def _require_openable_target(path: Path, *, debug: bool) -> None:
+    """Refuse a target the backend cannot open, before the pipe is started.
+
+    The pipe library waits for the backend's first prompt without a limit,
+    and a backend that exits before printing one leaves that wait running
+    forever. The backend exits that way for a target that is not a regular
+    file, cannot be read, or, for a debug launch, is not an executable
+    image, so those are rejected here.
+
+    Args:
+        path: The target to open.
+        debug: Whether the target will be launched under the debugger.
+
+    Raises:
+        ToolError: If the backend could not open the target.
+    """
+    if not path.is_file():
+        _logger.warning("binary_load_target_not_a_file", path=str(path))
+        raise ToolError(_ERR_LOAD_FAILED, details={"reason": "target is not a regular file"})
+    try:
+        with path.open("rb") as handle:
+            header = handle.read(_EXECUTABLE_MAGIC_LENGTH)
+    except OSError as exc:
+        _logger.warning("binary_load_target_unreadable", path=str(path), error=str(exc))
+        raise ToolError(_ERR_LOAD_FAILED, details={"reason": f"target cannot be read: {exc}"}) from exc
+    if debug and not header.startswith(_EXECUTABLE_MAGICS):
+        _logger.warning("binary_load_target_not_executable", path=str(path))
+        raise ToolError(_ERR_LOAD_FAILED, details={"reason": "target is not an executable image"})
+
+
 def _open_analysis_pipe(target: str, flags: list[str] | None = None) -> _AnalysisPipe:
     """Open an analysis-pipe session against the installed rizin/radare2 binary.
 
@@ -2238,6 +2281,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
 
         if not await self.is_available():
             raise ToolError(_ERR_TOOL_NOT_AVAILABLE)
+        await asyncio.to_thread(_require_openable_target, path, debug=debug)
 
         try:
             return await self._load_binary_impl(path, debug=debug)
