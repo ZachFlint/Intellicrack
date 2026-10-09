@@ -251,11 +251,13 @@ except (ImportError, OSError) as _exc:
 
 _pefile_mod: Any = None
 _pefile_available: bool = False
+_pe_parse_errors: tuple[type[Exception], ...] = (AttributeError, ValueError, OSError)
 try:
     import pefile as _pefile_import
 
     _pefile_mod = _pefile_import
     _pefile_available = True
+    _pe_parse_errors = (*_pe_parse_errors, _pefile_import.PEFormatError)
 except ImportError as _exc:
     _logger.debug("pefile_unavailable", error=str(_exc))
 
@@ -2154,7 +2156,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                 return _pefile_mod.PE(name=str(disk_path), fast_load=True)
             data = self._read_all_doc_bytes()
             return _pefile_mod.PE(data=data, fast_load=True)
-        except (AttributeError, ValueError, OSError):
+        except _pe_parse_errors:
             _logger.exception("pe_open_for_inspection_failed", source_event=error_event)
             return None
 
