@@ -1045,6 +1045,7 @@ class HexPatEvaluator:
             element_members = _extract_members_dict(result, "_element_members", pop=True)
             bound_val = PatternValue(
                 value=bound_value,
+                type_info=self._declared_user_type(type_node, res_size),
                 offset=int(result["offset"]),
                 size=res_size,
             )
@@ -1053,6 +1054,42 @@ class HexPatEvaluator:
             if element_members is not None:
                 bound_val.members.update(element_members)
             self._scope.define(node.name, bound_val)
+
+    def _declared_user_type(self, type_node: TypeNode, size: int) -> HexPatType | None:
+        """Name the user-defined type a variable was declared with.
+
+        The reflection built-ins look a pattern's type up by name, so a
+        variable declared with a struct, union, enum or bitfield carries that
+        name. Aliases and template parameters are followed to the type they
+        stand for. Primitives, arrays and pointers yield ``None``.
+
+        Args:
+            type_node: The type node of the declaration.
+            size: Number of bytes the instantiated value occupies.
+
+        Returns:
+            HexPatType | None: A descriptor holding the registered type name
+            and the instance size, or ``None`` when the declaration does not
+            name a user-defined type.
+        """
+        if not isinstance(type_node, NamedType):
+            return None
+        template_arg = self._lookup_template_arg(type_node.name)
+        if template_arg is not None:
+            return self._declared_user_type(template_arg, size)
+        qualified = f"{type_node.namespace}::{type_node.name}" if type_node.namespace else type_node.name
+        for candidate in dict.fromkeys((qualified, type_node.name)):
+            node_alias = self._type_node_aliases.get(candidate)
+            if node_alias is not None:
+                return self._declared_user_type(node_alias, size)
+        for candidate in dict.fromkeys((qualified, type_node.name)):
+            resolved = self._types.resolve(candidate)
+            if resolved is None:
+                continue
+            if isinstance(resolved, HexPatType):
+                return None
+            return HexPatType(candidate, size, signed=False, endian=None)
+        return None
 
     def _instantiate_type(
         self,
@@ -1932,7 +1969,12 @@ class HexPatEvaluator:
             )
             nested_members = _extract_members_dict(result, "_members", pop=True)
             element_members = _extract_members_dict(result, "_element_members", pop=True)
-            bound = PatternValue(value=bound_value, offset=int(result["offset"]), size=field_size)
+            bound = PatternValue(
+                value=bound_value,
+                type_info=self._declared_user_type(node.type_node, field_size),
+                offset=int(result["offset"]),
+                size=field_size,
+            )
             if nested_members is not None:
                 bound.members.update(nested_members)
             if element_members is not None:
