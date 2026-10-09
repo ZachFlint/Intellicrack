@@ -566,9 +566,8 @@ class RFBClient:
             return True
 
         if msg_type == 1:
-            await reader.readexactly(5)
-            count_data = await reader.readexactly(2)
-            if count := struct.unpack("!H", count_data)[0]:
+            header = await reader.readexactly(5)
+            if count := struct.unpack("!xHH", header)[1]:
                 await reader.readexactly(count * 6)
             return True
 
