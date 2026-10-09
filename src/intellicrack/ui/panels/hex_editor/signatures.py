@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import mmap
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
@@ -349,6 +350,42 @@ def _scan_clamav_hdb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:
     return results
 
 
+def _compile_ndb_pattern(sig_hex: str) -> re.Pattern[bytes] | None:
+    """Compile the hex field of a ClamAV ``.ndb`` signature into a byte pattern.
+
+    ``*`` stands for any number of bytes and ``??`` for exactly one byte.
+    Every other pair must be two hex digits; :class:`ValueError` from
+    ``bytes.fromhex`` propagates for anything else so the caller can log the
+    malformed line.
+
+    Args:
+        sig_hex: The hex signature field of the database line.
+
+    Returns:
+        re.Pattern[bytes] | None: The compiled pattern, or ``None`` when the
+        field holds no literal byte to anchor a match.
+    """
+    cleaned = "".join(sig_hex.split())
+    parts: list[bytes] = []
+    literal_count = 0
+    index = 0
+    while index < len(cleaned):
+        if cleaned[index] == "*":
+            parts.append(b".*?")
+            index += 1
+            continue
+        pair = cleaned[index : index + 2]
+        if pair == "??":
+            parts.append(b".")
+        else:
+            parts.append(re.escape(bytes.fromhex(pair)))
+            literal_count += 1
+        index += 2
+    if not literal_count:
+        return None
+    return re.compile(b"".join(parts), re.DOTALL)
+
+
 def _scan_clamav_ndb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:
     """Scan ClamAV pattern-based (.ndb) signatures.
 
@@ -368,10 +405,7 @@ def _scan_clamav_ndb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:
         sig_offset_spec = parts[2]
         sig_hex = parts[3]
         try:
-            if clean_hex := sig_hex.replace("*", "").replace("?", ""):
-                pattern_bytes = bytes.fromhex(clean_hex)
-            else:
-                continue
+            pattern = _compile_ndb_pattern(sig_hex)
         except ValueError:
             _logger.warning(
                 "ndb_pattern_decode_failed",
@@ -379,9 +413,12 @@ def _scan_clamav_ndb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:
                 sig_hex=sig_hex,
             )
             continue
+        if pattern is None:
+            continue
         if sig_offset_spec == "*":
-            idx = doc_data.find(pattern_bytes)
-            if idx >= 0:
+            found = pattern.search(doc_data)
+            if found is not None:
+                idx = found.start()
                 results.append({
                     "name": sig_name,
                     "type": "ndb",
@@ -389,7 +426,7 @@ def _scan_clamav_ndb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:
                     "offset": idx,
                     "details": f"Pattern match at 0x{idx:X}",
                 })
-        elif sig_offset_spec == "EP+0" and doc_data[: len(pattern_bytes)] == pattern_bytes:
+        elif sig_offset_spec == "EP+0" and pattern.match(doc_data) is not None:
             results.append({
                 "name": sig_name,
                 "type": "ndb",
@@ -407,8 +444,7 @@ def _scan_clamav_ndb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:
                     sig_offset_spec=sig_offset_spec,
                 )
                 continue
-            end = offset_val + len(pattern_bytes)
-            if end <= len(doc_data) and doc_data[offset_val:end] == pattern_bytes:
+            if pattern.match(doc_data, max(offset_val, 0)) is not None:
                 results.append({
                     "name": sig_name,
                     "type": "ndb",
