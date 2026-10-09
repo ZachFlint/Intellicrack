@@ -165,9 +165,8 @@ _RETURNCODE_UNKNOWN = -2
 _UTF8_BOM = "﻿"
 _MS_PER_SECOND = 1000
 
-_XCOPY_NO_FILES = 2
+_XCOPY_NO_FILES = 1
 _XCOPY_INIT_ERROR = 4
-_XCOPY_ACCESS_DENIED = 5
 
 _ERR_SANDBOX_NOT_RUNNING = "Sandbox is not running"
 _ERR_SHARED_FOLDER_NOT_INIT = "Shared folder not initialized"
@@ -3189,16 +3188,9 @@ class WindowsSandbox(SandboxBase):
                     stderr=xcopy_err,
                 )
                 raise SandboxError(_ERR_EXTRACT_FILES_FAILED)
-            if xcopy_exit == _XCOPY_ACCESS_DENIED:
-                _logger.warning(
-                    "xcopy_access_denied",
-                    guest_dir=guest_dir,
-                    exit_code=xcopy_exit,
-                    stderr=xcopy_err,
-                )
-            elif xcopy_exit == _XCOPY_NO_FILES:
+            if xcopy_exit == _XCOPY_NO_FILES:
                 _logger.debug("xcopy_no_files_found", guest_dir=guest_dir)
-            elif xcopy_exit not in {0, 1}:
+            elif xcopy_exit != 0:
                 _logger.warning(
                     "xcopy_unexpected_exit_code",
                     guest_dir=guest_dir,
