@@ -4583,7 +4583,7 @@ class GhidraPanel(AnalysisPanelBase):
             return
         params_text = self._script_params_input.text().strip()
         try:
-            params: dict[str, object] = json.loads(params_text) if params_text else {}
+            loaded: object = json.loads(params_text) if params_text else {}
         except json.JSONDecodeError as exc:
             _logger.warning(
                 "ghidra_run_script_invalid_json_params",
@@ -4592,6 +4592,11 @@ class GhidraPanel(AnalysisPanelBase):
             )
             self._set_status(f"Invalid JSON params: {exc}")
             return
+        if not isinstance(loaded, dict):
+            _logger.warning("ghidra_run_script_params_not_object", input_text=params_text)
+            self._set_status("Script params must be a JSON object")
+            return
+        params = cast("dict[str, object]", loaded)
         self._run_script_params_btn.setEnabled(False)
         run_bridge_coroutine_logged(
             bridge.execute_script_with_params(script, params),
