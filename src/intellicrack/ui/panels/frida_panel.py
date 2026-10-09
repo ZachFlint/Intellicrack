@@ -1913,7 +1913,7 @@ class FridaPanel(AnalysisPanelBase):
                 self._threads_table.insertRow(row)
                 tid: int = int(getattr(thread_obj, "tid", 0))
                 state: str = str(getattr(thread_obj, "state", "unknown"))
-                pc: object = getattr(thread_obj, "start_address", 0)
+                pc: object = getattr(thread_obj, "current_pc", 0)
                 self._threads_table.setItem(row, 0, QTableWidgetItem(str(tid)))
                 self._threads_table.setItem(row, 1, QTableWidgetItem(state))
                 self._threads_table.setItem(
