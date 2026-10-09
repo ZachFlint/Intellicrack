@@ -430,6 +430,22 @@ _CODE_SECTION_NOT_MAPPED = "SECTION_NOT_MAPPED"
 _THREAD_OP_FAILURE_SENTINEL: int = 0xFFFFFFFF
 
 
+def _thread_op_failed(result: int) -> bool:
+    """Tell whether ``SuspendThread`` or ``ResumeThread`` reported failure.
+
+    Both return ``(DWORD)-1`` on failure. ctypes hands that back as the
+    signed ``-1`` when no return type is declared for the call and as
+    ``0xFFFFFFFF`` when one is; both spellings are recognised.
+
+    Args:
+        result: Value returned by the thread call.
+
+    Returns:
+        bool: ``True`` when the call failed.
+    """
+    return ctypes.c_ulong(result).value == _THREAD_OP_FAILURE_SENTINEL
+
+
 class PEB64(ctypes.Structure):
     """64-bit Process Environment Block layout through ProcessParameters.
 
@@ -2712,7 +2728,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
                 failed_tids.append(thread.tid)
                 continue
             suspend_result: int = self._kernel32.SuspendThread(th_handle)
-            if suspend_result == _THREAD_OP_FAILURE_SENTINEL:
+            if _thread_op_failed(suspend_result):
                 failed_tids.append(thread.tid)
             self._kernel32.CloseHandle(th_handle)
 
@@ -2753,7 +2769,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
                 failed_tids.append(thread.tid)
                 continue
             resume_result: int = self._kernel32.ResumeThread(th_handle)
-            if resume_result == _THREAD_OP_FAILURE_SENTINEL:
+            if _thread_op_failed(resume_result):
                 failed_tids.append(thread.tid)
             self._kernel32.CloseHandle(th_handle)
 
