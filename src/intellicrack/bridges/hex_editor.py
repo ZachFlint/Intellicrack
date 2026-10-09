@@ -3889,11 +3889,11 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                 regex_parts.append(b".")
             else:
                 try:
-                    byte_val = int(pair, 16)
+                    literal = bytes.fromhex(pair)
                 except ValueError:
                     _logger.warning("clamav_ndb_pattern_bad_hex", sig_hex=sig_hex, pair=pair)
                     return None
-                regex_parts.append(re.escape(bytes([byte_val])))
+                regex_parts.append(re.escape(literal))
             min_len += 1
             i += 2
         compiled = re.compile(b"".join(regex_parts), re.DOTALL)
