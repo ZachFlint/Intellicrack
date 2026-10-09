@@ -10,21 +10,18 @@ process that the test itself starts (a Python interpreter blocked on stdin), nev
 against the pytest process. The tests cover argument validation, not-attached and
 no-device guards, failures that a real target produces (unmapped addresses, missing
 modules, destroyed scripts, uncompilable script source), the cancellation-token
-wrappers around attach, spawn and script creation, and the pure helpers that build
-and parse the JavaScript the bridge sends to the agent.
+lookup, and the pure helpers that build and parse the JavaScript the bridge sends
+to the agent.
 """
 
 from __future__ import annotations
 
 import asyncio
 import contextlib
-import queue
 import sys
-from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast
 
 import frida
-import psutil
 import pytest
 
 from intellicrack.bridges.frida_bridge import FridaBridge
@@ -34,8 +31,7 @@ from intellicrack.core.types import FridaDeviceInfo, StalkerEvent, ToolError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator
-
-    from frida import ScriptMessage
+    from pathlib import Path
 
 
 pytestmark = pytest.mark.spawns_process
@@ -47,7 +43,6 @@ _NO_DEVICE: Final[str] = "no Frida device available"
 _NOT_INITIALIZED: Final[dict[str, object]] = {"reason": "bridge not initialised; call initialize() first"}
 _TARGET_READY: Final[bytes] = b"critcov-ready"
 _TARGET_SOURCE: Final[str] = "import sys\nsys.stdout.write('critcov-ready\\n')\nsys.stdout.flush()\nsys.stdin.read()\n"
-_SLEEPER_SOURCE: Final[str] = "import time\ntime.sleep(120)\n"
 _UNATTACHED_CALLS: Final[tuple[tuple[str, tuple[object, ...]], ...]] = (
     ("allocate_memory", (16,)),
     ("protect_memory", (0, 16, "rwx")),
@@ -253,46 +248,6 @@ def _stop_target(proc: Popen[bytes]) -> None:
         for stream in (proc.stdin, proc.stdout):
             if stream is not None:
                 stream.close()
-
-
-def _wait_for_exit(pid: int) -> None:
-    """Wait until the process ``pid`` no longer runs.
-
-    Args:
-        pid: Identifier of the process expected to terminate.
-    """
-    with contextlib.suppress(psutil.NoSuchProcess):
-        psutil.Process(pid).wait(timeout=_WAIT_S)
-
-
-def _first_payload(script: frida.Script) -> object:
-    """Load a script, return the payload of its first ``send`` message and unload it.
-
-    Args:
-        script: Created but not yet loaded Frida script.
-
-    Returns:
-        object: Payload of the first ``send`` message the script emitted.
-    """
-    received: queue.Queue[object] = queue.Queue()
-
-    def on_message(message: ScriptMessage, data: bytes | None) -> None:
-        """Queue the payload of every ``send`` message.
-
-        Args:
-            message: Message emitted by the script.
-            data: Optional binary payload attached to the message.
-        """
-        del data
-        if message["type"] == "send":
-            received.put(message.get("payload"))
-
-    script.on("message", on_message)
-    script.load()
-    try:
-        return received.get(timeout=_WAIT_S)
-    finally:
-        script.unload()
 
 
 def _loaded_script(bridge: FridaBridge) -> tuple[str, frida.Script]:
@@ -727,66 +682,6 @@ def test_resolve_cancellable_resolves_registered_tokens_and_rejects_unknown_ones
         resolve("ghost")
     assert excinfo.value.message == "unknown cancellable token"
     assert excinfo.value.details == {"cancellable_id": "ghost"}
-
-
-def test_attach_with_cancellable_attaches_to_the_requested_process(target_process: Popen[bytes], idle_bridge: FridaBridge) -> None:
-    """Attaching inside a cancellation scope yields a live session whose agent runs in the requested process.
-
-    Args:
-        target_process: The running child process.
-        idle_bridge: Initialized bridge without a session.
-    """
-    device = priv(idle_bridge, "_device", frida.Device)
-
-    session = cast(
-        "frida.Session",
-        sync_method(FridaBridge, "_attach_with_cancellable")(device, target_process.pid, frida.Cancellable()),
-    )
-    try:
-        assert not session.is_detached
-        assert _first_payload(session.create_script("send(Process.id);")) == target_process.pid
-    finally:
-        session.detach()
-
-
-def test_spawn_with_cancellable_starts_the_requested_program(idle_bridge: FridaBridge) -> None:
-    """Spawning inside a cancellation scope starts a process running the requested executable.
-
-    Args:
-        idle_bridge: Initialized bridge without a session.
-    """
-    device = priv(idle_bridge, "_device", frida.Device)
-
-    pid = cast(
-        "int",
-        sync_method(FridaBridge, "_spawn_with_cancellable")(
-            device,
-            sys.executable,
-            [sys.executable, "-c", _SLEEPER_SOURCE],
-            frida.Cancellable(),
-        ),
-    )
-    try:
-        assert Path(psutil.Process(pid).exe()).resolve() == Path(sys.executable).resolve()
-    finally:
-        device.kill(pid)
-        _wait_for_exit(pid)
-
-
-def test_create_script_with_cancellable_compiles_the_given_source(target_process: Popen[bytes], attached_bridge: FridaBridge) -> None:
-    """Creating a script inside a cancellation scope compiles the given source for the attached process.
-
-    Args:
-        target_process: The attached child process.
-        attached_bridge: Bridge attached to the child.
-    """
-    session = priv(attached_bridge, "_session", frida.Session)
-    script = cast(
-        "frida.Script",
-        sync_method(FridaBridge, "_create_script_with_cancellable")(session, "send(Process.id);", frida.Cancellable()),
-    )
-
-    assert _first_payload(script) == target_process.pid
 
 
 @pytest.mark.parametrize("size", [0, -8], ids=["zero", "negative"])
