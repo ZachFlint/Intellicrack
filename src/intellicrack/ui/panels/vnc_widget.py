@@ -2130,6 +2130,7 @@ class VNCWidget(QWidget):
                 handled = await self.client.handle_server_message()
             except (OSError, struct.error):
                 _logger.exception("vnc_pump_error")
+                self.client.connected = False
                 break
             except asyncio.CancelledError:
                 _logger.debug("vnc_pump_cancelled", exc_info=True)
