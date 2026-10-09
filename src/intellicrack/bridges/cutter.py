@@ -5577,7 +5577,8 @@ class CutterDebugMixin(CutterDisplayMixin):
     async def get_breakpoints(self) -> list[BreakpointInfo]:
         """Enumerate active debugger breakpoints.
 
-        Queries rizin via ``dbj`` for the authoritative breakpoint list
+        Queries the backend for the authoritative breakpoint list
+        (``dblj`` on rizin, ``dbj`` on radare2)
         and merges it with the locally tracked map so breakpoints set
         from outside the bridge (e.g. interactive rizin sessions) are
         also surfaced. Locally tracked entries win ties so any
@@ -5591,7 +5592,7 @@ class CutterDebugMixin(CutterDisplayMixin):
             currently known by rizin or by the bridge's local cache.
         """
         self._require_attached("get_breakpoints")
-        parsed = await self._debug_cmd_json("dbj")
+        parsed = await self._debug_cmd_json("dblj" if _is_rizin_pipe(self._r2) else "dbj")
         merged: dict[int, BreakpointInfo] = dict(self._breakpoints)
         if isinstance(parsed, list):
             for entry in cast("list[object]", parsed):
@@ -5601,7 +5602,7 @@ class CutterDebugMixin(CutterDisplayMixin):
                 addr = _get_int(entry_dict, "addr", _get_int(entry_dict, "offset"))
                 if addr == 0 or addr in merged:
                     continue
-                raw_type = _get_str(entry_dict, "type", "software")
+                raw_type = _get_str(entry_dict, "type", "hardware" if entry_dict.get("hw") is True else "software")
                 bp_type_lit: Literal["software", "hardware", "memory"]
                 if raw_type in {"hardware", "hw"}:
                     bp_type_lit = "hardware"
