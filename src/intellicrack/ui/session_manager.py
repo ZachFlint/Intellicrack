@@ -870,6 +870,9 @@ class SessionManagerDialog(QDialog):
     def _normalise_session_datetime(session_data: dict[str, object], field: str) -> None:
         """Convert an ISO-format datetime string in ``session_data`` to a ``datetime``.
 
+        A timestamp without a time zone is read as UTC so every normalised
+        value can be compared with every other.
+
         Args:
             session_data: Session payload dictionary to mutate in place.
             field: Name of the datetime field to normalise.
@@ -878,10 +881,12 @@ class SessionManagerDialog(QDialog):
         if not isinstance(raw, str):
             return
         try:
-            session_data[field] = datetime.fromisoformat(raw)
+            parsed = datetime.fromisoformat(raw)
         except ValueError:
             _logger.warning("session_datetime_parse_failed", field=field, session_id=session_data.get("id"))
             session_data[field] = datetime.now(tz=UTC)
+            return
+        session_data[field] = parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
 
     def _load_sessions_from_disk(self) -> None:
         """Load sessions from disk storage."""
