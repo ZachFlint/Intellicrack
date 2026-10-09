@@ -1093,13 +1093,7 @@ class HexPatEvaluator:
             if ptype is None:
                 msg = f"unknown primitive type '{type_node.name}'"
                 raise HexPatTypeError(msg, type_node.line, type_node.column)
-            pv = self._read_primitive(ptype, offset)
-            actual_size = pv.size if ptype.size <= 0 else ptype.size
-            raw = self._data.read(offset, actual_size)
-            display = self._format_value(pv.value, ptype)
-            result = _make_parsed_field(var_name, offset, actual_size, raw, display, [], color, description)
-            result["_value"] = pv.value
-            return result
+            return self._primitive_field(ptype, var_name, offset, color, description)
 
         if isinstance(type_node, NamedType):
             return self._instantiate_named_type(type_node, var_name, offset, color, description)
@@ -1111,6 +1105,38 @@ class HexPatEvaluator:
             return self._instantiate_pointer_type(type_node, var_name, offset, color, description, eff_endian)
 
         return None
+
+    def _primitive_field(
+        self,
+        ptype: HexPatType,
+        var_name: str,
+        offset: int,
+        color: str,
+        description: str,
+    ) -> dict[str, Any]:
+        """Read a primitive at an offset and describe it as a parsed field.
+
+        A variable-size primitive such as ``str`` takes the size that was
+        actually read. The decoded value travels under ``_value`` so the
+        caller can bind it to the variable.
+
+        Args:
+            ptype: The primitive type to read.
+            var_name: The variable name for the resulting field.
+            offset: Byte offset at which to read the value.
+            color: Hex colour string for UI highlighting.
+            description: Optional description annotation.
+
+        Returns:
+            dict[str, Any]: The parsed-field dictionary with its ``_value`` entry.
+        """
+        pv = self._read_primitive(ptype, offset)
+        actual_size = pv.size if ptype.size <= 0 else ptype.size
+        raw = self._data.read(offset, actual_size)
+        display = self._format_value(pv.value, ptype)
+        result = _make_parsed_field(var_name, offset, actual_size, raw, display, [], color, description)
+        result["_value"] = pv.value
+        return result
 
     def _pointer_storage_primitive(
         self,
@@ -1255,10 +1281,7 @@ class HexPatEvaluator:
                 msg = f"{msg} (did you mean one of: {', '.join(suggestions)}?)"
             raise HexPatTypeError(msg, type_node.line, type_node.column)
         if isinstance(resolved, HexPatType):
-            pv = self._read_primitive(resolved, offset)
-            raw = self._data.read(offset, resolved.size)
-            display = self._format_value(pv.value, resolved)
-            return _make_parsed_field(var_name, offset, resolved.size, raw, display, [], color, description)
+            return self._primitive_field(resolved, var_name, offset, color, description)
         if isinstance(resolved, StructTypeInfo):
             return self._eval_struct_instance(resolved.name, resolved, var_name, offset, color, description)
         if isinstance(resolved, UnionTypeInfo):
@@ -2994,10 +3017,7 @@ class HexPatEvaluator:
             return self._eval_enum_instance(resolved.name, resolved, var_name, offset, color, description)
         if isinstance(resolved, BitfieldTypeInfo):
             return self._eval_bitfield_instance(resolved.name, resolved, var_name, offset, color, description)
-        pv = self._read_primitive(resolved, offset)
-        raw = self._data.read(offset, resolved.size)
-        display = self._format_value(pv.value, resolved)
-        return _make_parsed_field(var_name, offset, resolved.size, raw, display, [], color, description)
+        return self._primitive_field(resolved, var_name, offset, color, description)
 
     def _bind_template_args(
         self,
