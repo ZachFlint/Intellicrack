@@ -5245,8 +5245,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         escaped_protection = self._escape_js_string(protection)
         script_code = f"""
         try {{
-            Memory.protect(ptr({validated_address}), {validated_size}, '{escaped_protection}');
-            send({{ type: 'protect', success: true }});
+            var changed = Memory.protect(ptr({validated_address}), {validated_size}, '{escaped_protection}');
+            send({{ type: 'protect', success: changed }});
         }} catch (e) {{
             send({{ type: 'protect', success: false, error: e.message }});
         }}
@@ -5255,7 +5255,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         result = await self._execute_script_and_wait(script_code)
 
         if "error" in result:
-            raise ToolError(_ERR_PROTECT_FAILED)
+            raise ToolError(_ERR_PROTECT_FAILED, details={"reason": str(result["error"])})
 
         success = result.get("success", False)
         if not success:
