@@ -2557,9 +2557,9 @@ class WindowsSandbox(SandboxBase):
             raise SandboxError(_ERR_SOURCE_NOT_FOUND)
 
         dest_path = self._shared_folder / dest
-        await asyncio.to_thread(dest_path.parent.mkdir, parents=True, exist_ok=True)
 
         try:
+            await asyncio.to_thread(dest_path.parent.mkdir, parents=True, exist_ok=True)
             await asyncio.to_thread(shutil.copy2, source, dest_path)
             _logger.debug("file_copied_to_sandbox", source=str(source), dest=dest)
         except OSError as e:
@@ -2589,8 +2589,8 @@ class WindowsSandbox(SandboxBase):
         if not await asyncio.to_thread(source_path.exists):
             raise SandboxError(_ERR_SOURCE_IN_SANDBOX_NOT_FOUND)
 
-        await asyncio.to_thread(dest.parent.mkdir, parents=True, exist_ok=True)
         try:
+            await asyncio.to_thread(dest.parent.mkdir, parents=True, exist_ok=True)
             await asyncio.to_thread(shutil.copy2, source_path, dest)
             _logger.debug("file_copied_from_sandbox", source=source, dest=str(dest))
         except OSError as e:
