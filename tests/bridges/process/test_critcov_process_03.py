@@ -536,7 +536,7 @@ _SYNC_GUARDS: Final[list[tuple[str, tuple[object, ...]]]] = [
 _IDLE_DEFAULTS: Final[list[tuple[str, tuple[object, ...], object]]] = [
     ("_open_process_for_vm_read", (1234,), (None, False)),
     ("_read_cor20_version", (1, 0x1000), None),
-    ("_read_metadata_version", (1, 0x1000, 0x2000, []), None),
+    ("_read_metadata_version", (1, 0x1000, 0x2000), None),
     ("_collect_job_info", (1, None), {"in_job": False}),
     ("_query_job_details", (1,), {}),
     ("_acquire_queryable_job_handle", (1,), None),

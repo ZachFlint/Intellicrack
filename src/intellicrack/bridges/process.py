@@ -41,7 +41,6 @@ from intellicrack.bridges.pe_format import (
     pe_machine_to_arch,
     read_data_directory_entry,
     read_dos_e_lfanew,
-    rva_to_file_offset,
     unpack_coff_header,
 )
 from intellicrack.bridges.win32_types import (
@@ -8720,7 +8719,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         parsed = self._parse_pe_com_descriptor(data)
         if parsed is None:
             return None
-        com_rva, sections_list = parsed
+        com_rva, _sections = parsed
         cor20_buf = ctypes.create_string_buffer(_DOTNET_COR20_HEADER_SIZE)
         cor20_read = ctypes.c_size_t()
         if (
@@ -8742,21 +8741,19 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         )
         if meta_rva == 0:
             return None
-        return self._read_metadata_version(proc_handle, base_address, meta_rva, sections_list)
+        return self._read_metadata_version(proc_handle, base_address, meta_rva)
 
     def _read_metadata_version(
         self,
         proc_handle: int,
         base_address: int,
         meta_rva: int,
-        sections: list[dict[str, int | str]],
     ) -> str | None:
         """Read the version string from a .NET MetaData root.
 
-        Translates ``meta_rva`` to a virtual address via the section table
-        for on-disk-layout images; falls back to treating the RVA as a
-        direct virtual offset relative to ``base_address`` for
-        loader-mapped in-memory images where virtual address equals RVA.
+        A module in a running process is loader-mapped, so the MetaData
+        root sits at ``base_address + meta_rva`` whatever the raw offset of
+        its section is.
 
         Reads the ECMA-335 CLI MetaData root header and extracts the
         null-terminated version string stored at offset 16.
@@ -8765,8 +8762,6 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
             proc_handle: Open process handle with VM-read rights.
             base_address: Module base address in the target process.
             meta_rva: Relative Virtual Address of the MetaData root.
-            sections: Section header dicts as returned by
-                :func:`~intellicrack.bridges.pe_format.iterate_section_headers`.
 
         Returns:
             str | None: Version string (e.g. ``"v4.0.30319"``), or
@@ -8774,8 +8769,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         """
         if self._kernel32 is None:
             return None
-        file_off = rva_to_file_offset(sections, meta_rva)
-        meta_va = base_address + (file_off if file_off is not None else meta_rva)
+        meta_va = base_address + meta_rva
         meta_buf = ctypes.create_string_buffer(_DOTNET_METADATA_VERSION_MAX + 20)
         bytes_read = ctypes.c_size_t()
         if not self._kernel32.ReadProcessMemory(
