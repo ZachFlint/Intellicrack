@@ -2948,6 +2948,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         validated_size = self._validate_js_int(size, name="size")
         if validated_size < 0:
             raise ToolError(_ERR_READ_FAILED, details={"reason": "size must be non-negative"})
+        if validated_size == 0:
+            return b""
 
         _logger.debug("memory_read_starting", address=hex(validated_address), size=validated_size)
 
