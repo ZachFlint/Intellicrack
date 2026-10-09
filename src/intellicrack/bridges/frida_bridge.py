@@ -3966,6 +3966,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
+        self._forward_script_logs(script)
         await self._call_frida(script.load, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
 
         self._scripts[script_id] = script
@@ -4059,6 +4060,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
+        self._forward_script_logs(script)
         await self._call_frida(script.load, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
 
         self._scripts[script_id] = script
@@ -4159,6 +4161,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
+        self._forward_script_logs(script)
         await self._call_frida(script.load, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
 
         self._scripts[script_id] = script
@@ -4277,6 +4280,17 @@ class _FridaBridgeBase(InstrumentationBridge):
         _logger.debug("function_called", address=hex(validated_address), return_value=coerced)
         return coerced
 
+    def _forward_script_logs(self, script: frida.Script) -> None:
+        """Republish a script's ``console`` output as ``log`` messages.
+
+        frida-python hands ``console.log`` output to the script's log handler and never to its ``message`` signal, so the handler
+        installed here forwards each line to the registered message handler.
+
+        Args:
+            script: The script whose log output is forwarded.
+        """
+        script.set_log_handler(lambda level, text: self._dispatch_message({"type": "log", "level": level, "payload": text}))
+
     async def _execute_script_and_wait(
         self,
         script_code: str,
@@ -4350,6 +4364,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         script = await self._call_frida(self._session.create_script, script_code, cancellable=cancellable)
         script.on("message", on_message)
+        self._forward_script_logs(script)
         await self._call_frida(script.load, limit_seconds=max_wait if max_wait > _FRIDA_AGENT_CALL_TIMEOUT else None)
 
         timed_out = False
