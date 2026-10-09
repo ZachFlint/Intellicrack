@@ -5654,6 +5654,11 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
     ) -> dict[str, object]:
         """Read the TEB from process memory and parse its fields.
 
+        For a 32-bit target on a 64-bit system ``teb_address`` is the
+        thread's 64-bit TEB. WOW64 keeps the address of the thread's 32-bit
+        TEB in the first field of that block, and the 32-bit block is the
+        one that is read and parsed.
+
         Args:
             proc_handle: Open process handle with
                 ``PROCESS_QUERY_INFORMATION | PROCESS_VM_READ`` access.
@@ -5672,9 +5677,20 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
         target_is_64bit = self._target_is_64bit(proc_handle)
+        bytes_read = ctypes.c_size_t()
+        if not target_is_64bit and struct.calcsize("P") == _PTR_SIZE_64:
+            wow64_teb_address = ctypes.c_uint64(0)
+            if not self._kernel32.ReadProcessMemory(
+                proc_handle,
+                ctypes.c_void_p(teb_address),
+                ctypes.byref(wow64_teb_address),
+                ctypes.sizeof(wow64_teb_address),
+                ctypes.byref(bytes_read),
+            ):
+                raise ToolError(_ERR_TEB_READ)
+            teb_address = int(wow64_teb_address.value)
         teb_read_size = ctypes.sizeof(TEB64) if target_is_64bit else ctypes.sizeof(TEB32)
         teb_data = ctypes.create_string_buffer(teb_read_size)
-        bytes_read = ctypes.c_size_t()
         if not self._kernel32.ReadProcessMemory(
             proc_handle,
             ctypes.c_void_p(teb_address),
@@ -9905,7 +9921,8 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
         if not isinstance(tls_array_addr, int) or tls_array_addr == 0:
             return []
 
-        is_x64 = (tls_array_addr & ~0xFFFFFFFF) != 0 or struct.calcsize("P") == _PTR_SIZE_64
+        teb_base = teb.get("teb_address")
+        is_x64 = isinstance(teb_base, int) and tls_array_addr - teb_base == TLS_ARRAY_OFFSET_X64
         ptr_size = 8 if is_x64 else 4
         fmt = "<Q" if is_x64 else "<I"
         static_count = min(max_slots, TLS_STATIC_SLOT_COUNT)
