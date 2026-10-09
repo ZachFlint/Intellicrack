@@ -4250,17 +4250,19 @@ metadata
 
         raw_bytes = pattern if isinstance(pattern, bytes) else b""
         try:
-            byte_list_str = ", ".join(str(b) for b in raw_bytes)
+            byte_list_str = ", ".join(str((b - 256) if b > _JAVA_SIGNED_THRESHOLD else b) for b in raw_bytes)
             result = await self._execute_remote(
                 f"""
+                import jpype
                 addresses = []
                 memory = currentProgram.getMemory()
                 start = memory.getMinAddress()
                 end = memory.getMaxAddress()
-                searcher = memory.findBytes(start, end, [{byte_list_str}], None, True, monitor)
+                needle = jpype.JArray(jpype.JByte)([{byte_list_str}])
+                searcher = memory.findBytes(start, end, needle, None, True, monitor)
                 while searcher is not None:
                     addresses.append(searcher.getOffset())
-                    searcher = memory.findBytes(searcher.add(1), end, [{byte_list_str}], None, True, monitor)
+                    searcher = memory.findBytes(searcher.add(1), end, needle, None, True, monitor)
                 addresses
                 """,
             )
