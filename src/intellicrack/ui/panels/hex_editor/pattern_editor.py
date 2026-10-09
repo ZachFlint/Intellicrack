@@ -118,14 +118,14 @@ class PatternEditorMixin:
             name_val = str(field.get("name", ""))
             offset_raw = field.get("offset")
             size_raw = field.get("size")
-            type_val = str(field.get("type", ""))
+            value_val = str(field.get("display_value", ""))
             offset_int = offset_raw if isinstance(offset_raw, int) else 0
             size_int = size_raw if isinstance(size_raw, int) else 0
             item = QTreeWidgetItem([
                 name_val,
                 f"0x{offset_int:08X}",
                 f"{size_int}",
-                type_val,
+                value_val,
             ])
             self._templates_tree.addTopLevelItem(item)
 
