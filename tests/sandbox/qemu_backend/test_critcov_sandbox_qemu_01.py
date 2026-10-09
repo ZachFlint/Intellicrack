@@ -691,6 +691,15 @@ class _ExposedSandbox(QEMUSandbox):
         """
         return cls._claim_free_port(span, start, end)
 
+    @classmethod
+    def release_ports(cls, ports: set[int]) -> None:
+        """Forward to ``_release_host_ports``.
+
+        Args:
+            ports: Ports previously returned by ``claim_free_port``.
+        """
+        cls._release_host_ports(ports)
+
     def resolve_qemu_img(self) -> Path:
         """Forward to ``_resolve_qemu_img``.
 
@@ -2023,6 +2032,43 @@ def test_port_search_gives_up_when_every_candidate_is_unbindable() -> None:
             _ExposedSandbox.claim_free_port(1, taken, taken + _RESERVED_PORT_WINDOW)
     finally:
         holder.close()
+
+
+def test_port_search_refuses_a_run_that_another_sandbox_has_reserved() -> None:
+    """A range holding exactly one candidate run cannot be claimed twice; releasing it makes it claimable again.
+
+    With a range one wider than the span the search can only ever pick the first port, so the second
+    claim collides with the first claim's reservation on every attempt and ends in the documented
+    ``SandboxError``. The port itself stays bindable the whole time, which is what tells this failure
+    apart from the unbindable-candidate one tested above.
+
+    Falsifiable: without the reservation check the second claim succeeds and hands the same port to two
+    sandboxes, so ``pytest.raises`` fails.
+    """
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        probe.bind((_WILDCARD, 0))
+        port = int(probe.getsockname()[1])
+    finally:
+        probe.close()
+
+    claimed: set[int] = set()
+    try:
+        first = _ExposedSandbox.claim_free_port(1, port, port + _RESERVED_PORT_WINDOW)
+        claimed.add(first)
+        assert first == port
+
+        with pytest.raises(SandboxError, match="no free ports"):
+            _ExposedSandbox.claim_free_port(1, port, port + _RESERVED_PORT_WINDOW)
+
+        _ExposedSandbox.release_ports({first})
+        claimed.discard(first)
+
+        again = _ExposedSandbox.claim_free_port(1, port, port + _RESERVED_PORT_WINDOW)
+        claimed.add(again)
+        assert again == port
+    finally:
+        _ExposedSandbox.release_ports(claimed)
 
 
 def test_qemu_img_is_looked_for_beside_the_qemu_binary(tmp_path: Path) -> None:
