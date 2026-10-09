@@ -2775,7 +2775,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
 
         try:
             mappings = self._collect_pe_va_mappings()
-        except (struct.error, RuntimeError, OSError):
+        except (struct.error, RuntimeError, OSError, ValueError):
             _logger.exception("pe_va_detection_failed")
             return []
         return mappings
@@ -2783,9 +2783,9 @@ class _HexEditorBridgeBase(ToolBridgeBase):
     def _collect_pe_va_mappings(self) -> list[dict[str, int]]:
         """Parse the PE optional header to build the document's VA mapping list.
 
-        ``struct.error``, :class:`RuntimeError`, and :class:`OSError`
-        raised while reading or unpacking propagate to the caller, which
-        catches them to return an empty list.
+        ``struct.error``, :class:`RuntimeError`, :class:`OSError`, and
+        :class:`ValueError` raised while reading or unpacking propagate to
+        the caller, which catches them to return an empty list.
 
         Returns:
             list[dict[str, int]]: VA mapping dicts covering the headers
@@ -2861,7 +2861,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
 
         try:
             mappings = self._collect_elf_va_mappings()
-        except (struct.error, RuntimeError, OSError):
+        except (struct.error, RuntimeError, OSError, ValueError):
             _logger.exception("elf_va_detection_failed")
             return []
         return mappings
@@ -2869,9 +2869,9 @@ class _HexEditorBridgeBase(ToolBridgeBase):
     def _collect_elf_va_mappings(self) -> list[dict[str, int]]:
         """Parse the ELF program header table to build the VA mapping list.
 
-        ``struct.error``, :class:`RuntimeError`, and :class:`OSError`
-        raised while reading or unpacking propagate to the caller, which
-        catches them to return an empty list.
+        ``struct.error``, :class:`RuntimeError`, :class:`OSError`, and
+        :class:`ValueError` raised while reading or unpacking propagate to
+        the caller, which catches them to return an empty list.
 
         Returns:
             list[dict[str, int]]: VA mapping dicts for every ``PT_LOAD``
