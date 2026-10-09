@@ -5102,6 +5102,11 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
             msg = "sandbox bridge not available"
             raise RuntimeError(msg)
 
+        create_fn = getattr(sandbox_bridge, "create", None)
+        if not callable(create_fn):
+            msg = "sandbox bridge does not support create"
+            raise TypeError(msg)
+
         file_path_str = self.document.file_path()
         tmp_path: str | None = None
         if file_path_str is None:
@@ -5111,11 +5116,6 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
             self.document.save(tmp_path)
             _logger.info("save_to_sandbox_temp_file_written", path=tmp_path)
             file_path_str = tmp_path
-
-        create_fn = getattr(sandbox_bridge, "create", None)
-        if not callable(create_fn):
-            msg = "sandbox bridge does not support create"
-            raise TypeError(msg)
 
         progress = _SandboxCopyProgress()
         try:
