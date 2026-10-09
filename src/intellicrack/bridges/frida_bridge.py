@@ -2374,7 +2374,13 @@ class _FridaBridgeBase(InstrumentationBridge):
                 _ERR_PROCESS_NOT_FOUND,
                 details=self._frida_error_details(e, pid=resolved_pid),
             ) from e
-        except (frida.PermissionDeniedError, frida.TransportError, frida.InvalidArgumentError, OSError) as e:
+        except (
+            frida.PermissionDeniedError,
+            frida.TransportError,
+            frida.InvalidArgumentError,
+            frida.ServerNotRunningError,
+            OSError,
+        ) as e:
             _logger.warning(
                 "frida_attach_failed",
                 pid=resolved_pid,
@@ -2609,7 +2615,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         try:
             processes = await self._call_frida(device.enumerate_processes)
-        except (frida.TransportError, frida.PermissionDeniedError, OSError) as e:
+        except (frida.TransportError, frida.PermissionDeniedError, frida.ServerNotRunningError, OSError) as e:
             _logger.warning(
                 "frida_enumerate_processes_failed",
                 error=str(e),
@@ -2632,7 +2638,13 @@ class _FridaBridgeBase(InstrumentationBridge):
                 _ERR_PROCESS_NOT_FOUND,
                 details=self._frida_error_details(e, process_name=name, pid=target_pid),
             ) from e
-        except (frida.PermissionDeniedError, frida.TransportError, frida.InvalidArgumentError, OSError) as e:
+        except (
+            frida.PermissionDeniedError,
+            frida.TransportError,
+            frida.InvalidArgumentError,
+            frida.ServerNotRunningError,
+            OSError,
+        ) as e:
             _logger.warning(
                 "frida_attach_by_name_failed",
                 process_name=name,
@@ -2721,6 +2733,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             frida.PermissionDeniedError,
             frida.TransportError,
             frida.InvalidArgumentError,
+            frida.ServerNotRunningError,
             OSError,
         ) as e:
             _logger.warning(
@@ -2921,7 +2934,13 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         try:
             await self._call_frida(device.kill, pid)
-        except (frida.ProcessNotFoundError, frida.PermissionDeniedError, frida.TransportError, OSError) as e:
+        except (
+            frida.ProcessNotFoundError,
+            frida.PermissionDeniedError,
+            frida.TransportError,
+            frida.ServerNotRunningError,
+            OSError,
+        ) as e:
             _logger.warning("frida_kill_failed", pid=pid, error=str(e), error_type=type(e).__name__)
             raise ToolError(_ERR_KILL_FAILED, details=self._frida_error_details(e, pid=pid)) from e
 
