@@ -233,6 +233,8 @@ def _scan_die(doc_data: bytes, db_path: str) -> list[dict[str, Any]]:
                     hex_pattern=hex_pattern,
                 )
                 continue
+            if not pattern_bytes:
+                continue
 
             if scan_offset == "ep":
                 idx = ep_bytes.find(pattern_bytes)
@@ -454,6 +456,8 @@ def _scan_custom(doc_data: bytes, db_path: str) -> list[dict[str, Any]]:
                 sig_name=sig_name,
                 hex_pattern=hex_pattern,
             )
+            continue
+        if not pattern_bytes:
             continue
 
         if offset_spec == "ep":
