@@ -259,7 +259,13 @@ jobs:
               $drives = Get-PSDrive -PSProvider FileSystem |
                 Where-Object { $_.Name.Length -eq 1 -and $null -ne $_.Free } |
                 ForEach-Object { '{0}: {1:N1} GB' -f $_.Name, ($_.Free / 1GB) }
+              $procs = Get-Process python -ErrorAction SilentlyContinue |
+                Sort-Object PrivateMemorySize64 -Descending | Select-Object -First 3 |
+                ForEach-Object { '{0}={1:N1}' -f $_.Id, ($_.PrivateMemorySize64 / 1GB) }
+              $page = Get-CimInstance Win32_PageFileUsage |
+                ForEach-Object { '{0:N1}/{1:N1}' -f ($_.CurrentUsage / 1024), ($_.AllocatedBaseSize / 1024) }
               Write-Host ('[disk-free] {0:HH:mm:ss}  {1}' -f (Get-Date), ($drives -join '  '))
+              Write-Host ('[memory] {0:HH:mm:ss}  python private GB: {1}  pagefile used/size GB: {2}' -f (Get-Date), ($procs -join ' '), ($page -join ' '))
               Start-Sleep -Seconds 120
             }
           }
