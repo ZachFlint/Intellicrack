@@ -66,6 +66,12 @@ _RETURN_BUDGET_S: float = _DELAY_S / 2
 _WAIT_TIMEOUT_S: float = _DELAY_S + 5.0
 """Ceiling for pumping the Qt event loop while waiting for a background worker."""
 
+_GATE_LIMIT_S: float = 60.0
+"""Longest a held ``search_hex`` waits for its release before giving up, in seconds."""
+
+_SETTLE_CEILING_S: float = 60.0
+"""Ceiling for pumping the Qt event loop until the panel's pattern rescans have all finished."""
+
 _PATTERN_HEX: str = "AA BB CC DD"
 """Hex pattern typed into the highlight rule / search UI for every test below."""
 
@@ -234,6 +240,75 @@ class _DelayedSearchDocument:
         return getattr(self._document, name)
 
 
+class _GatedSearchDocument:
+    """Wraps a real hexcore document whose ``search_hex`` waits until the test releases it.
+
+    A scan that has started therefore stays in flight for exactly as long as
+    the test needs it to, whatever the load on the machine. Every other
+    attribute access is delegated to the wrapped document. A scan that is
+    never released gives up after ``_GATE_LIMIT_S`` and records that it did,
+    so a scan run on the calling thread fails the test instead of hanging it.
+    """
+
+    def __init__(self, document: object) -> None:
+        """Initialise the wrapper around a real document with its scans held.
+
+        Args:
+            document: Real ``intellicrack_hexcore.HexDocument`` to delegate to.
+        """
+        self._document = document
+        self._released = threading.Event()
+        self.search_calls: list[tuple[str, int]] = []
+        self.search_threads: list[str] = []
+        self.released_in_time: list[bool] = []
+
+    def release(self) -> None:
+        """Let every held scan, and every later one, proceed."""
+        self._released.set()
+
+    def search_hex(self, pattern: str, max_matches: int) -> object:
+        """Record the call and calling thread, wait for the release, then delegate to the real search.
+
+        Args:
+            pattern: Hex pattern string to search for.
+            max_matches: Maximum number of matches to return.
+
+        Returns:
+            object: The raw match list from the wrapped document's ``search_hex``.
+        """
+        self.search_calls.append((pattern, max_matches))
+        self.search_threads.append(threading.current_thread().name)
+        self.released_in_time.append(self._released.wait(_GATE_LIMIT_S))
+        return self._document.search_hex(pattern, max_matches)
+
+    def __getattr__(self, name: str) -> object:
+        """Delegate any other attribute access to the wrapped document.
+
+        Args:
+            name: Attribute name being looked up.
+
+        Returns:
+            object: The corresponding attribute on the wrapped document.
+        """
+        return getattr(self._document, name)
+
+
+def _pattern_rescans_settled(panel: HexEditorPanel) -> bool:
+    """Tell whether the panel has no pattern rescan running and none pending.
+
+    The panel clears its worker reference and starts the coalesced follow-up
+    inside one slot, so both being clear between two event-loop passes means
+    the whole chain of rescans has finished.
+
+    Args:
+        panel: The panel whose rescan state is read.
+
+    Returns:
+        bool: ``True`` when every requested rescan has finished.
+    """
+    return getattr(panel, "_pattern_refresh_worker") is None and not priv(panel, "_pattern_refresh_pending", bool)
+
+
 class _FailingSearchDocument:
     """Wraps a real hexcore document whose ``search_hex`` raises after an artificial delay.
 
@@ -380,23 +455,28 @@ class TestH6RefreshPatternHighlightsAsyncDispatch:
         """Three edits made while a rescan is in flight collapse into exactly one follow-up scan.
 
         Pre-fix, each of the three edits synchronously ran its own
-        whole-document ``search_hex`` call inline (three scans total, each
-        blocking the caller for ``_DELAY_S``). Post-fix, the first edit starts
-        a background worker; because ``QThread.isRunning()`` is already true
-        the instant ``start()`` returns, the second and third edits -- made
-        well within the worker's artificial delay -- observe it still running
-        and only set a pending-refresh flag instead of starting their own
-        scans. Once the in-flight worker finishes, exactly one coalesced
+        whole-document ``search_hex`` call inline (three scans total, each on
+        the caller's thread). Post-fix, the first edit starts a background
+        worker; because ``QThread.isRunning()`` is already true the instant
+        ``start()`` returns, the second and third edits observe it still
+        running and only set a pending-refresh flag instead of starting their
+        own scans. Once the in-flight worker finishes, exactly one coalesced
         follow-up scan runs. The wrapped document therefore records exactly
         two ``search_hex`` calls for three edits, never three.
+
+        The wrapped document holds every scan until the test releases it, so
+        the first scan cannot finish while the edits are being typed, and the
+        count is read only once the panel has no rescan running and none
+        pending. Neither step depends on how fast the machine is.
 
         Args:
             qapp: The shared QApplication fixture.
         """
         offsets = [10, 100, 200]
         real_doc = hexcore.HexDocument.open_bytes(_make_document_bytes(300, offsets))
-        wrapped = _DelayedSearchDocument(real_doc, _DELAY_S)
+        wrapped = _GatedSearchDocument(real_doc)
         panel = _make_panel(wrapped)
+        gui_thread = threading.current_thread().name
         try:
             widget = priv(panel, "_hex_widget", HexEditorWidget)
             params: dict[str, object] = {"pattern": _PATTERN_HEX, "offsets": []}
@@ -404,26 +484,34 @@ class TestH6RefreshPatternHighlightsAsyncDispatch:
                 HighlightRule(rule_id="r1", condition_type="pattern", condition_params=params, color="#FFFF00"),
             )
 
-            start = time.monotonic()
             _type_byte(widget, 210, "11")
             _type_byte(widget, 211, "22")
             _type_byte(widget, 212, "33")
-            elapsed = time.monotonic() - start
 
-            assert elapsed < _RETURN_BUDGET_S, (
-                f"three rapid edits blocked the calling thread for {elapsed:.3f}s instead of "
-                "dispatching their pattern rescans to a background worker"
+            assert gui_thread not in wrapped.search_threads, (
+                "an edit ran its pattern rescan on the calling thread instead of dispatching it to a background worker"
+            )
+            assert len(wrapped.search_calls) <= 1, (
+                f"{len(wrapped.search_calls)} scans started while the first was still held; later edits must wait for it"
+            )
+            assert priv(panel, "_pattern_refresh_pending", bool) is True, (
+                "the edits made while a rescan was in flight did not record a pending follow-up rescan"
             )
 
-            completed = _pump_until(qapp, lambda: params["offsets"] == {10, 100, 200}, timeout_s=2 * _DELAY_S + 8.0)
-            assert completed, "the coalesced pattern rescan never completed after pumping the Qt event loop"
+            wrapped.release()
+            settled = _pump_until(qapp, lambda: _pattern_rescans_settled(panel), timeout_s=_SETTLE_CEILING_S)
+            assert settled, "the pattern rescans never settled after pumping the Qt event loop"
 
+            assert params["offsets"] == {10, 100, 200}
             assert len(wrapped.search_calls) == 2, (
                 f"expected exactly 2 search_hex calls (1 in-flight + 1 coalesced follow-up) for 3 rapid "
                 f"edits, got {len(wrapped.search_calls)}: rapid successive edits are not being coalesced "
                 "into a single follow-up rescan"
             )
+            assert gui_thread not in wrapped.search_threads
+            assert wrapped.released_in_time == [True, True]
         finally:
+            wrapped.release()
             panel.deleteLater()
 
 
