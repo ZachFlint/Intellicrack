@@ -15,7 +15,9 @@ defects measured in the container: rizin 0.9.1 has no ``dbj`` and no ``dr?PC``
 command, the thread and module listings come back empty for a live process, an
 unmapped address reads as ``0xff`` bytes, and loading a directory, a locked file
 or a non-executable in debug mode never returns. Rizin's ``db`` takes its address
-through ``@``; ``db <address>`` adds no breakpoint.
+through ``@``; ``db <address>`` adds no breakpoint. The first steps of a process
+that rizin has just started consume its startup debug events, so the step tests
+step past them before they compare program counters.
 """
 
 from __future__ import annotations
@@ -55,6 +57,7 @@ _WHERE_EXE: Final[Path] = _SYSTEM32 / "where.exe"
 _TASKKILL: Final[Path] = _SYSTEM32 / "taskkill.exe"
 _MARKER: Final[str] = "CHILD_JSON "
 _LOAD_DEADLINE_SECONDS: Final[float] = 25.0
+_STARTUP_STEP_LIMIT: Final[int] = 16
 
 _LOAD_CHILD: Final[str] = """\
 import asyncio, ctypes, json, os, shutil, sys
@@ -153,6 +156,35 @@ async def _rip(bridge: CutterBridge) -> int:
         int: Value of ``rip``.
     """
     return int((await _register_json(bridge))["rip"])
+
+
+async def _step_past_process_startup(bridge: CutterBridge) -> int:
+    """Step with rizin's ``ds`` until one step executes exactly one instruction.
+
+    Measured in the container with rizin 0.9.1: a process that rizin has just
+    started is stopped on its first debug event, and the next ``ds`` commands
+    consume the startup events. The first leaves the instruction pointer where
+    it was, the second runs to the loader's breakpoint, and from the fifth on
+    each one advances by the length of the instruction it started on.
+
+    Args:
+        bridge: Bridge attached to a freshly started debuggee.
+
+    Returns:
+        int: Instruction pointer after the first step that advanced by one instruction.
+
+    Raises:
+        AssertionError: When no step advances by one instruction within the limit.
+    """
+    for _ in range(_STARTUP_STEP_LIMIT):
+        before = await _rip(bridge)
+        decoded = cast("list[dict[str, Any]]", json.loads(await bridge.r2_cmd(f"pdj 1 @ {before}")))
+        await bridge.r2_cmd("ds")
+        after = await _rip(bridge)
+        if after == before + int(decoded[0]["size"]):
+            return after
+    msg = f"no step advanced by one instruction within {_STARTUP_STEP_LIMIT} steps"
+    raise AssertionError(msg)
 
 
 async def _esil_pc(bridge: CutterBridge) -> int:
@@ -445,14 +477,15 @@ class TestDebugSession:
     async def test_step_into_returns_the_new_program_counter(self, debug_session: tuple[CutterBridge, int]) -> None:
         """Stepping into one instruction returns the instruction pointer rizin then reports.
 
-        Rizin 0.9.1 has no ``dr?PC`` command, so the bridge raises
-        ``ToolError`` for an empty integer response after the step.
+        Rizin 0.9.1 has no ``dr?PC`` command; it prints the program counter for
+        ``dr PC``. The debuggee is stepped past its startup events first, since
+        a step taken before that does not execute one instruction.
 
         Args:
             debug_session: Bridge attached to the debuggee, and its pid.
         """
         bridge, _pid = debug_session
-        before = await _rip(bridge)
+        before = await _step_past_process_startup(bridge)
         returned = await bridge.step_into()
         assert returned == await _rip(bridge)
         assert returned != before
@@ -461,11 +494,14 @@ class TestDebugSession:
     async def test_step_over_returns_the_new_program_counter(self, debug_session: tuple[CutterBridge, int]) -> None:
         """Stepping over one instruction returns the instruction pointer rizin then reports.
 
+        The debuggee is stepped past its startup events first, since a step
+        taken before that does not execute one instruction.
+
         Args:
             debug_session: Bridge attached to the debuggee, and its pid.
         """
         bridge, _pid = debug_session
-        before = await _rip(bridge)
+        before = await _step_past_process_startup(bridge)
         returned = await bridge.step_over()
         assert returned == await _rip(bridge)
         assert returned != before
