@@ -1059,18 +1059,18 @@ class TestGetThreads:
 
 
 class TestGetModules:
-    """Gate: get_modules issues 'dmIj' and maps JSON fields to ModuleInfo objects."""
+    """Gate: get_modules issues 'dmmj' and maps JSON fields to ModuleInfo objects."""
 
-    def test_issues_dmij_command(self) -> None:
-        """Get_modules issues 'dmIj'.
+    def test_issues_dmmj_command(self) -> None:
+        """Get_modules issues 'dmmj', the module listing of radare2 and of rizin.
 
-        Falsifiable: if get_modules queries 'dmj' (memory regions) instead of
-        'dmIj' (module info), the 'dmIj' assertion fails.
+        Falsifiable: if get_modules queries only 'dmj' (memory regions) instead of
+        'dmmj' (module list), the 'dmmj' assertion fails.
         """
-        recorder = _CommandRecorder({"dmIj": "[]"})
+        recorder = _CommandRecorder({"dmmj": "[]"})
         bridge = _make_attached_bridge(recorder)
         asyncio.run(bridge.get_modules())
-        assert "dmIj" in recorder.commands
+        assert "dmmj" in recorder.commands
 
     def test_name_derived_from_file_path_when_name_absent(self) -> None:
         """When 'name' is absent, ModuleInfo.name is the stem of the 'file' path.
@@ -1088,7 +1088,7 @@ class TestGetModules:
                 "entry": 4097,
             },
         ])
-        recorder = _CommandRecorder({"dmIj": module_json})
+        recorder = _CommandRecorder({"dmmj": module_json})
         bridge = _make_attached_bridge(recorder)
         result = asyncio.run(bridge.get_modules())
         assert len(result) == 1
@@ -1114,7 +1114,7 @@ class TestGetModules:
                 "entry": 4097,
             },
         ])
-        recorder = _CommandRecorder({"dmIj": module_json})
+        recorder = _CommandRecorder({"dmmj": module_json})
         bridge = _make_attached_bridge(recorder)
         result = asyncio.run(bridge.get_modules())
         assert result[0].size == 61440
@@ -1136,7 +1136,7 @@ class TestGetModules:
                 "entry": 0,
             },
         ])
-        recorder = _CommandRecorder({"dmIj": module_json})
+        recorder = _CommandRecorder({"dmmj": module_json})
         bridge = _make_attached_bridge(recorder)
         result = asyncio.run(bridge.get_modules())
         assert result[0].name == "custom_name"

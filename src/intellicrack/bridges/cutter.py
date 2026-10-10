@@ -6001,7 +6001,7 @@ class CutterDebugMixin(CutterDisplayMixin):
 
         Issues rizin's ``dbtj`` (the JSON output mode of ``dbt``, the same
         ``j``-suffix convention already used throughout this mixin for
-        ``dbj``/``drj``/``dmj``/``dptj``/``dmIj``) and parses each frame
+        ``dbj``/``drj``/``dmj``/``dptj``/``dmmj``) and parses each frame
         defensively with multiple candidate key names, since rizin's public
         documentation enumerates ``dbt``'s command syntax but not ``dbtj``'s
         exact JSON field names. Unrecognized keys degrade to ``0``/``None``
@@ -6069,20 +6069,20 @@ class CutterDebugMixin(CutterDisplayMixin):
         process is attached, and from :meth:`_debug_cmd_json` when rizin
         returns malformed JSON.
 
-        rizin has no module list until the debuggee has run its loader. When
-        it reports none, the modules are the image regions of the debugger's
-        memory map, named by the files the system reports as mapped there.
+        Neither rizin nor radare2 has a module list until the debuggee has run
+        its loader. When the backend reports none, the modules are the image
+        regions of the debugger's memory map, named by the files the system
+        reports as mapped there.
 
         Returns:
             list[ModuleInfo]: Loaded modules reported by the backend's module
-            listing (``dmmj`` on rizin, ``dmIj`` on radare2);
+            listing (``dmmj`` on rizin and on radare2);
             ``ModuleInfo.entry_point`` is ``0`` when the backend omits it.
         """
         self._require_attached("get_modules")
-        rizin = _is_rizin_pipe(self._r2)
-        parsed = await self._debug_cmd_json("dmmj" if rizin else "dmIj")
+        parsed = await self._debug_cmd_json("dmmj")
         modules: list[ModuleInfo] = []
-        if rizin and not parsed and self._attached_pid is not None:
+        if not parsed and self._attached_pid is not None:
             return await self._modules_from_memory_map(self._attached_pid)
         if not isinstance(parsed, list):
             return modules
