@@ -194,8 +194,12 @@ async def analyzed_bridge(loaded_bridge: CutterBridge) -> CutterBridge:
 class TestRadare2Fallback:
     """Backend selection and sessions when only radare2 can be found on ``PATH``."""
 
+    @pytest.mark.spawns_process
     def test_select_pipe_backend_falls_back_to_radare2(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """With no rizin on ``PATH`` the radare2 pipe and its install directory are chosen.
+
+        The radare2 installation the test points ``PATH`` at exists only in the
+        sandbox image, so the test runs only there.
 
         Args:
             monkeypatch: Fixture used to restrict ``PATH`` to the radare2 directory.
