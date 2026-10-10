@@ -5594,9 +5594,7 @@ class CutterDebugMixin(CutterDisplayMixin):
                 raw_enabled = entry_dict.get("enabled", True)
                 enabled = raw_enabled if isinstance(raw_enabled, bool) else True
                 hit_count = _get_int(entry_dict, "hits", _get_int(entry_dict, "hit_count"))
-                condition_str: str | None = _get_optional_str(entry_dict, "cond")
-                if condition_str is None:
-                    condition_str = _get_optional_str(entry_dict, "condition")
+                condition_str: str | None = _get_optional_str(entry_dict, "cond") or _get_optional_str(entry_dict, "condition") or None
                 merged[addr] = BreakpointInfo(
                     id=addr,
                     address=addr,
