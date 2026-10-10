@@ -8668,8 +8668,11 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
     async def repair_pe_checksum(self) -> dict[str, Any]:
         """Recalculate and write the correct PE checksum.
 
+        The value the ``CheckSum`` field holds is read before it is overwritten.
+
         Returns:
-            dict[str, Any]: Dict with old_checksum, new_checksum, offset.
+            dict[str, Any]: Dict with old_checksum (the value replaced),
+            new_checksum and offset.
 
         Raises:
             RuntimeError: If no document is open or file is not PE.
@@ -8680,13 +8683,14 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
             raise RuntimeError(msg)
 
         try:
+            before = cast("dict[str, Any]", self.document.verify_pe_checksum())
             self.document.repair_pe_checksum()
         except ValueError as exc:
             _logger.exception("repair_pe_checksum_failed_native")
             raise RuntimeError(str(exc)) from exc
         verify_result = await self.verify_pe_checksum()
         return {
-            "old_checksum": 0,
+            "old_checksum": before.get("stored", 0),
             "new_checksum": verify_result.get("calculated", 0),
             "offset": verify_result.get("offset", 0),
         }
