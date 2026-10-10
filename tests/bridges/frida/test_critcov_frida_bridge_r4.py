@@ -11,8 +11,8 @@ itself starts (a Python interpreter blocked on stdin, a uniquely named copy of
 The cases cover the removal of a remote device that is not the bridge's current
 device, the removal of one that was never added, the release of a session that
 will not detach (a frozen target) while a remote device is removed or the
-device is switched, and an attach by name under a cancellation token that was
-already canceled.
+device is switched, and an attach by name or by process id under a cancellation
+token that was already canceled.
 """
 
 from __future__ import annotations
@@ -57,6 +57,7 @@ _CURRENT_HOST: Final[str] = "127.0.0.1:59982"
 _OTHER_HOST: Final[str] = "127.0.0.1:59983"
 _FROZEN_HOST: Final[str] = "127.0.0.1:59984"
 _DEVICE_FAILED: Final[str] = "failed to initialize Frida device"
+_ATTACH_FAILED: Final[str] = "failed to attach to process"
 _ENUMERATE_POLL_S: Final[float] = 0.1
 
 
@@ -340,5 +341,30 @@ def test_attach_by_name_with_a_canceled_token_raises_a_tool_error_and_attaches_n
     with pytest.raises(ToolError):
         run_bounded(idle_bridge.attach_by_name(name, cancellable_id=token_id))
 
+    assert priv(idle_bridge, "_session", object) is None
+    assert idle_bridge.state.process_attached is False
+
+
+def test_attach_by_pid_with_a_canceled_token_raises_a_tool_error_and_attaches_nothing(
+    idle_bridge: FridaBridge,
+    python_target: Popen[bytes],
+) -> None:
+    """Canceling the attach token before an attach by process id ends the call with the attach error and leaves the bridge detached.
+
+    Args:
+        idle_bridge: Initialized bridge without a session.
+        python_target: A running child process to name by its process id.
+    """
+    token_id = run_bounded(idle_bridge.create_cancellable())
+    tokens = cast("dict[str, frida.Cancellable]", priv(idle_bridge, "_cancellables", object))
+    tokens[token_id].cancel()
+
+    with pytest.raises(ToolError) as excinfo:
+        run_bounded(idle_bridge.attach(python_target.pid, cancellable_id=token_id))
+
+    assert excinfo.value.message == _ATTACH_FAILED
+    assert excinfo.value.details["frida_error_type"] == "OperationCancelledError"
+    assert excinfo.value.details["pid"] == python_target.pid
+    assert isinstance(excinfo.value.__cause__, frida.OperationCancelledError)
     assert priv(idle_bridge, "_session", object) is None
     assert idle_bridge.state.process_attached is False
