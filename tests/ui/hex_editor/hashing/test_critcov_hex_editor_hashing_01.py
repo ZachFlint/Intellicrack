@@ -1442,6 +1442,30 @@ def test_repair_body_routes_through_attached_bridge(make_host: Callable[..., _Ha
     assert log.modified() == [{"offset": _FIELD, "length": 4, "source": _REPAIR_SOURCE}]
 
 
+def test_repair_body_through_a_bridge_that_shares_the_holder_publishes_one_event(make_host: Callable[..., _HashingHost]) -> None:
+    """When the bridge is attached to the panel's own state holder, the repair reaches observers once, from the bridge.
+
+    The bridge publishes the four changed bytes itself, so the panel must not publish them a second time.
+
+    Args:
+        make_host: Factory for hosts.
+    """
+    image = _build_pe(body_len=200)
+    document = _open_bytes(image)
+    holder = HexDocumentState()
+    log = _EventLog()
+    holder.register_callback(log, source_id="observer")
+    bridge = HexEditorBridge()
+    bridge.document = document
+    bridge.set_state_holder(holder)
+    host = make_host(document, state_holder=holder)
+
+    host.repair_and_notify(bridge, _FIELD)
+
+    assert document.read(_FIELD, 4) == struct.pack("<I", _pe_checksum(image, _FIELD))
+    assert log.modified() == [{"offset": _FIELD, "length": 4, "source": "bridge"}]
+
+
 def test_custom_crc_without_document_does_nothing(
     make_host: Callable[..., _HashingHost],
     warnings_shown: list[tuple[QWidget | None, str, str]],

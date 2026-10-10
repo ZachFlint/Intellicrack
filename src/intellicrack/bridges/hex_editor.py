@@ -279,6 +279,7 @@ _ELF_DATA_LE = 1
 _PE_LFANEW_OFFSET = 0x3C
 _AUTO_ARCH_DETECT_BYTES = 4096
 _PE_COFF_HEADER_SIZE = 20
+_PE_CHECKSUM_FIELD_SIZE = 4
 _DOS_HEADER_SIZE = 64
 _PE_SECTION_ENTRY_SIZE = 40
 _MAX_PE_SECTIONS = 96
@@ -8668,7 +8669,9 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
     async def repair_pe_checksum(self) -> dict[str, Any]:
         """Recalculate and write the correct PE checksum.
 
-        The value the ``CheckSum`` field holds is read before it is overwritten.
+        The value the ``CheckSum`` field holds is read before it is overwritten,
+        and the attached state holder is told that the four bytes of the field
+        changed.
 
         Returns:
             dict[str, Any]: Dict with old_checksum (the value replaced),
@@ -8689,10 +8692,13 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
             _logger.exception("repair_pe_checksum_failed_native")
             raise RuntimeError(str(exc)) from exc
         verify_result = await self.verify_pe_checksum()
+        offset: int = verify_result.get("offset", 0)
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(offset, _PE_CHECKSUM_FIELD_SIZE, source="bridge")
         return {
             "old_checksum": before.get("stored", 0),
             "new_checksum": verify_result.get("calculated", 0),
-            "offset": verify_result.get("offset", 0),
+            "offset": offset,
         }
 
 
