@@ -2958,9 +2958,7 @@ class ProviderConfigDialog(QDialog):
         missing = loader.list_missing_providers()
 
         for name in configured:
-            env_var = loader.get_env_var(loader.mapping_for(name).api_key_var)
-            if env_var is not None:
-                _logger.debug("credential_refreshed", provider=name)
+            _logger.debug("credential_refreshed", provider=name)
         _logger.info(
             "credentials_reloaded",
             configured=len(configured),
