@@ -565,6 +565,8 @@ class ProcessManager:
                 _logger.info("signal_sent", pid=p.pid, signal=_SIGNAL_SIGTERM)
             except psutil.NoSuchProcess:
                 _logger.exception("process_terminate_target_missing", pid=p.pid)
+            except psutil.AccessDenied:
+                _logger.warning("sync_cleanup_terminate_access_denied", pid=p.pid)
 
         _, alive = psutil.wait_procs(unique_procs, timeout=self.DEFAULT_GRACEFUL_TIMEOUT)
 
@@ -575,6 +577,8 @@ class ProcessManager:
                     ProcessManager._force_kill_process(p)
                 except psutil.NoSuchProcess:
                     _logger.exception("kill_process_target_missing", pid=p.pid)
+                except psutil.AccessDenied:
+                    _logger.warning("sync_cleanup_kill_access_denied", pid=p.pid)
             psutil.wait_procs(alive, timeout=self.DEFAULT_FORCE_TIMEOUT)
 
         with self._process_lock:
@@ -589,13 +593,13 @@ class ProcessManager:
         """Force-kill a single ``psutil.Process`` with platform-specific logging.
 
         Propagates :class:`psutil.NoSuchProcess` from ``kill()`` when the
-        target process has already exited so the caller can log the missing
-        target.
+        target process has already exited, and :class:`psutil.AccessDenied`
+        when the system refuses to end it, so the caller can log either.
 
         Args:
             p: The ``psutil.Process`` to kill. The caller is responsible for
-                catching :class:`psutil.NoSuchProcess` if the target has
-                already exited.
+                catching :class:`psutil.NoSuchProcess` and
+                :class:`psutil.AccessDenied`.
         """
         if sys.platform == "win32":
             p.kill()

@@ -566,9 +566,8 @@ class RFBClient:
             return True
 
         if msg_type == 1:
-            await reader.readexactly(5)
-            count_data = await reader.readexactly(2)
-            if count := struct.unpack("!H", count_data)[0]:
+            header = await reader.readexactly(5)
+            if count := struct.unpack("!xHH", header)[1]:
                 await reader.readexactly(count * 6)
             return True
 
@@ -838,6 +837,7 @@ class RFBClient:
 
         async with self._fb_lock:
             self.fill_rect(tile_x, tile_y, tile_w, tile_h, background)
+            self._fb_dirty = True
 
         if subencoding & _HEXTILE_ANY_SUBRECTS:
             count_byte = await self._reader.readexactly(1)
@@ -1001,21 +1001,26 @@ class RFBClient:
             self._fb_dirty = True
 
     async def _read_tight_compact_length(self) -> int:
-        """Read a Tight-encoded compact length (1-3 bytes, 7 bits per byte).
+        """Read a Tight-encoded compact length of one to three bytes.
+
+        The first two bytes carry seven bits and a continuation flag each; the
+        third byte carries eight bits.
 
         Returns:
             int: Decoded length value.
         """
         if self._reader is None:
             return 0
-        length = 0
-        for shift in (0, 7, 14):
-            byte_data = await self._reader.readexactly(1)
-            byte = byte_data[0]
-            length |= (byte & _TIGHT_LENGTH_BYTE_MASK) << shift
-            if not (byte & _TIGHT_LENGTH_CONTINUE_BIT):
-                break
-        return length
+        first = (await self._reader.readexactly(1))[0]
+        length = first & _TIGHT_LENGTH_BYTE_MASK
+        if not (first & _TIGHT_LENGTH_CONTINUE_BIT):
+            return length
+        second = (await self._reader.readexactly(1))[0]
+        length |= (second & _TIGHT_LENGTH_BYTE_MASK) << 7
+        if not (second & _TIGHT_LENGTH_CONTINUE_BIT):
+            return length
+        third = (await self._reader.readexactly(1))[0]
+        return length | (third << 14)
 
     async def _apply_tight_jpeg(self, x: int, y: int, w: int, h: int, data: bytes) -> None:
         """Decode a Tight JPEG payload via Pillow and blit it to the framebuffer.
@@ -1349,6 +1354,9 @@ class RFBClient:
     def _zrle_read_cpixel(payload: bytes, cursor: int) -> tuple[bytes, int]:
         """Read one 3-byte ZRLE CPIXEL and convert it to BGRX.
 
+        The negotiated format is little-endian with red at shift 16, so the
+        three bytes of a CPIXEL arrive as blue, green, red.
+
         Args:
             payload: Decompressed ZRLE payload.
             cursor: Current read offset.
@@ -1358,7 +1366,7 @@ class RFBClient:
         """
         cp = payload[cursor : cursor + _ZRLE_CPIXEL_BYTES]
         cursor += _ZRLE_CPIXEL_BYTES
-        bgrx = bytes([cp[2], cp[1], cp[0], 0]) if len(cp) == _ZRLE_CPIXEL_BYTES else b"\x00" * _PIXEL_BYTES
+        bgrx = bytes([cp[0], cp[1], cp[2], 0]) if len(cp) == _ZRLE_CPIXEL_BYTES else b"\x00" * _PIXEL_BYTES
         return bgrx, cursor
 
     @staticmethod
@@ -1386,9 +1394,9 @@ class RFBClient:
             cursor += _ZRLE_CPIXEL_BYTES
             if len(cp) < _ZRLE_CPIXEL_BYTES:
                 break
-            out[idx * _PIXEL_BYTES + 0] = cp[2]
+            out[idx * _PIXEL_BYTES + 0] = cp[0]
             out[idx * _PIXEL_BYTES + 1] = cp[1]
-            out[idx * _PIXEL_BYTES + 2] = cp[0]
+            out[idx * _PIXEL_BYTES + 2] = cp[2]
             out[idx * _PIXEL_BYTES + 3] = 0
         return bytes(out), cursor
 
@@ -2127,6 +2135,7 @@ class VNCWidget(QWidget):
                 handled = await self.client.handle_server_message()
             except (OSError, struct.error):
                 _logger.exception("vnc_pump_error")
+                self.client.connected = False
                 break
             except asyncio.CancelledError:
                 _logger.debug("vnc_pump_cancelled", exc_info=True)

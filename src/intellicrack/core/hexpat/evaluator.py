@@ -1045,6 +1045,7 @@ class HexPatEvaluator:
             element_members = _extract_members_dict(result, "_element_members", pop=True)
             bound_val = PatternValue(
                 value=bound_value,
+                type_info=self._declared_user_type(type_node, res_size),
                 offset=int(result["offset"]),
                 size=res_size,
             )
@@ -1053,6 +1054,42 @@ class HexPatEvaluator:
             if element_members is not None:
                 bound_val.members.update(element_members)
             self._scope.define(node.name, bound_val)
+
+    def _declared_user_type(self, type_node: TypeNode, size: int) -> HexPatType | None:
+        """Name the user-defined type a variable was declared with.
+
+        The reflection built-ins look a pattern's type up by name, so a
+        variable declared with a struct, union, enum or bitfield carries that
+        name. Aliases and template parameters are followed to the type they
+        stand for. Primitives, arrays and pointers yield ``None``.
+
+        Args:
+            type_node: The type node of the declaration.
+            size: Number of bytes the instantiated value occupies.
+
+        Returns:
+            HexPatType | None: A descriptor holding the registered type name
+            and the instance size, or ``None`` when the declaration does not
+            name a user-defined type.
+        """
+        if not isinstance(type_node, NamedType):
+            return None
+        template_arg = self._lookup_template_arg(type_node.name)
+        if template_arg is not None:
+            return self._declared_user_type(template_arg, size)
+        qualified = f"{type_node.namespace}::{type_node.name}" if type_node.namespace else type_node.name
+        for candidate in dict.fromkeys((qualified, type_node.name)):
+            node_alias = self._type_node_aliases.get(candidate)
+            if node_alias is not None:
+                return self._declared_user_type(node_alias, size)
+        for candidate in dict.fromkeys((qualified, type_node.name)):
+            resolved = self._types.resolve(candidate)
+            if resolved is None:
+                continue
+            if isinstance(resolved, HexPatType):
+                return None
+            return HexPatType(candidate, size, signed=False, endian=None)
+        return None
 
     def _instantiate_type(
         self,
@@ -1093,13 +1130,7 @@ class HexPatEvaluator:
             if ptype is None:
                 msg = f"unknown primitive type '{type_node.name}'"
                 raise HexPatTypeError(msg, type_node.line, type_node.column)
-            pv = self._read_primitive(ptype, offset)
-            actual_size = pv.size if ptype.size <= 0 else ptype.size
-            raw = self._data.read(offset, actual_size)
-            display = self._format_value(pv.value, ptype)
-            result = _make_parsed_field(var_name, offset, actual_size, raw, display, [], color, description)
-            result["_value"] = pv.value
-            return result
+            return self._primitive_field(ptype, var_name, offset, color, description)
 
         if isinstance(type_node, NamedType):
             return self._instantiate_named_type(type_node, var_name, offset, color, description)
@@ -1111,6 +1142,38 @@ class HexPatEvaluator:
             return self._instantiate_pointer_type(type_node, var_name, offset, color, description, eff_endian)
 
         return None
+
+    def _primitive_field(
+        self,
+        ptype: HexPatType,
+        var_name: str,
+        offset: int,
+        color: str,
+        description: str,
+    ) -> dict[str, Any]:
+        """Read a primitive at an offset and describe it as a parsed field.
+
+        A variable-size primitive such as ``str`` takes the size that was
+        actually read. The decoded value travels under ``_value`` so the
+        caller can bind it to the variable.
+
+        Args:
+            ptype: The primitive type to read.
+            var_name: The variable name for the resulting field.
+            offset: Byte offset at which to read the value.
+            color: Hex colour string for UI highlighting.
+            description: Optional description annotation.
+
+        Returns:
+            dict[str, Any]: The parsed-field dictionary with its ``_value`` entry.
+        """
+        pv = self._read_primitive(ptype, offset)
+        actual_size = pv.size if ptype.size <= 0 else ptype.size
+        raw = self._data.read(offset, actual_size)
+        display = self._format_value(pv.value, ptype)
+        result = _make_parsed_field(var_name, offset, actual_size, raw, display, [], color, description)
+        result["_value"] = pv.value
+        return result
 
     def _pointer_storage_primitive(
         self,
@@ -1255,10 +1318,7 @@ class HexPatEvaluator:
                 msg = f"{msg} (did you mean one of: {', '.join(suggestions)}?)"
             raise HexPatTypeError(msg, type_node.line, type_node.column)
         if isinstance(resolved, HexPatType):
-            pv = self._read_primitive(resolved, offset)
-            raw = self._data.read(offset, resolved.size)
-            display = self._format_value(pv.value, resolved)
-            return _make_parsed_field(var_name, offset, resolved.size, raw, display, [], color, description)
+            return self._primitive_field(resolved, var_name, offset, color, description)
         if isinstance(resolved, StructTypeInfo):
             return self._eval_struct_instance(resolved.name, resolved, var_name, offset, color, description)
         if isinstance(resolved, UnionTypeInfo):
@@ -1909,7 +1969,12 @@ class HexPatEvaluator:
             )
             nested_members = _extract_members_dict(result, "_members", pop=True)
             element_members = _extract_members_dict(result, "_element_members", pop=True)
-            bound = PatternValue(value=bound_value, offset=int(result["offset"]), size=field_size)
+            bound = PatternValue(
+                value=bound_value,
+                type_info=self._declared_user_type(node.type_node, field_size),
+                offset=int(result["offset"]),
+                size=field_size,
+            )
             if nested_members is not None:
                 bound.members.update(nested_members)
             if element_members is not None:
@@ -2519,10 +2584,8 @@ class HexPatEvaluator:
             if isinstance(new_val.value, int):
                 if node.op == "=":
                     self._offset = new_val.value
-                elif node.op == "+=":
-                    self._offset += new_val.value
-                elif node.op == "-=":
-                    self._offset -= new_val.value
+                else:
+                    self._offset = int(self._apply_numeric_op(node.op[:-1], self._offset, new_val.value, node.line, node.column))
             return PatternValue(value=self._offset)
 
         if isinstance(node.target, IdentifierExpr):
@@ -2948,6 +3011,13 @@ class HexPatEvaluator:
         elif resolved is None:
             return None
         bindings = self._bind_template_args(params, type_node.template_args, type_node.line, type_node.column, lookup_name)
+        saved_scope = self._scope
+        value_scope = EvalScope(parent=saved_scope)
+        for param_name, bound in bindings.items():
+            value = self._template_value_argument(bound)
+            if value is not None:
+                value_scope.define(param_name, value)
+        self._scope = value_scope
         self._template_args_stack.append(bindings)
         try:
             return self._dispatch_resolved_type(
@@ -2959,6 +3029,35 @@ class HexPatEvaluator:
             )
         finally:
             self._template_args_stack.pop()
+            self._scope = saved_scope
+
+    def _template_value_argument(self, bound: ExprNode | TypeNode) -> PatternValue | None:
+        """Evaluate a template argument that stands for a value rather than a type.
+
+        An expression argument such as the ``4`` in ``Fixed<4>`` is evaluated
+        where the template is used. An identifier argument is parsed as a type
+        reference; when it names no type but does name a variable in scope,
+        that variable's value is forwarded.
+
+        Args:
+            bound: The bound argument produced by :meth:`_bind_template_args`.
+
+        Returns:
+            PatternValue | None: The argument's value, or ``None`` when the
+            argument is a type.
+        """
+        if isinstance(bound, NamedType):
+            names_a_type = (
+                bool(bound.template_args)
+                or bound.namespace is not None
+                or self._lookup_template_arg(bound.name) is not None
+                or bound.name in self._type_node_aliases
+                or self._types.resolve(bound.name) is not None
+            )
+            return None if names_a_type else self._scope.get(bound.name)
+        if isinstance(bound, (PrimitiveType, ArrayType, PointerType, PaddingType, AutoType)):
+            return None
+        return self._eval_expr(bound)
 
     def _dispatch_resolved_type(
         self,
@@ -2994,10 +3093,7 @@ class HexPatEvaluator:
             return self._eval_enum_instance(resolved.name, resolved, var_name, offset, color, description)
         if isinstance(resolved, BitfieldTypeInfo):
             return self._eval_bitfield_instance(resolved.name, resolved, var_name, offset, color, description)
-        pv = self._read_primitive(resolved, offset)
-        raw = self._data.read(offset, resolved.size)
-        display = self._format_value(pv.value, resolved)
-        return _make_parsed_field(var_name, offset, resolved.size, raw, display, [], color, description)
+        return self._primitive_field(resolved, var_name, offset, color, description)
 
     def _bind_template_args(
         self,

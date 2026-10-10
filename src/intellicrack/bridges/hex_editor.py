@@ -251,11 +251,13 @@ except (ImportError, OSError) as _exc:
 
 _pefile_mod: Any = None
 _pefile_available: bool = False
+_pe_parse_errors: tuple[type[Exception], ...] = (AttributeError, ValueError, OSError)
 try:
     import pefile as _pefile_import
 
     _pefile_mod = _pefile_import
     _pefile_available = True
+    _pe_parse_errors = (*_pe_parse_errors, _pefile_import.PEFormatError)
 except ImportError as _exc:
     _logger.debug("pefile_unavailable", error=str(_exc))
 
@@ -2154,7 +2156,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                 return _pefile_mod.PE(name=str(disk_path), fast_load=True)
             data = self._read_all_doc_bytes()
             return _pefile_mod.PE(data=data, fast_load=True)
-        except (AttributeError, ValueError, OSError):
+        except _pe_parse_errors:
             _logger.exception("pe_open_for_inspection_failed", source_event=error_event)
             return None
 
@@ -2773,7 +2775,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
 
         try:
             mappings = self._collect_pe_va_mappings()
-        except (struct.error, RuntimeError, OSError):
+        except (struct.error, RuntimeError, OSError, ValueError):
             _logger.exception("pe_va_detection_failed")
             return []
         return mappings
@@ -2781,9 +2783,9 @@ class _HexEditorBridgeBase(ToolBridgeBase):
     def _collect_pe_va_mappings(self) -> list[dict[str, int]]:
         """Parse the PE optional header to build the document's VA mapping list.
 
-        ``struct.error``, :class:`RuntimeError`, and :class:`OSError`
-        raised while reading or unpacking propagate to the caller, which
-        catches them to return an empty list.
+        ``struct.error``, :class:`RuntimeError`, :class:`OSError`, and
+        :class:`ValueError` raised while reading or unpacking propagate to
+        the caller, which catches them to return an empty list.
 
         Returns:
             list[dict[str, int]]: VA mapping dicts covering the headers
@@ -2859,7 +2861,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
 
         try:
             mappings = self._collect_elf_va_mappings()
-        except (struct.error, RuntimeError, OSError):
+        except (struct.error, RuntimeError, OSError, ValueError):
             _logger.exception("elf_va_detection_failed")
             return []
         return mappings
@@ -2867,9 +2869,9 @@ class _HexEditorBridgeBase(ToolBridgeBase):
     def _collect_elf_va_mappings(self) -> list[dict[str, int]]:
         """Parse the ELF program header table to build the VA mapping list.
 
-        ``struct.error``, :class:`RuntimeError`, and :class:`OSError`
-        raised while reading or unpacking propagate to the caller, which
-        catches them to return an empty list.
+        ``struct.error``, :class:`RuntimeError`, :class:`OSError`, and
+        :class:`ValueError` raised while reading or unpacking propagate to
+        the caller, which catches them to return an empty list.
 
         Returns:
             list[dict[str, int]]: VA mapping dicts for every ``PT_LOAD``
@@ -3887,11 +3889,11 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                 regex_parts.append(b".")
             else:
                 try:
-                    byte_val = int(pair, 16)
+                    literal = bytes.fromhex(pair)
                 except ValueError:
                     _logger.warning("clamav_ndb_pattern_bad_hex", sig_hex=sig_hex, pair=pair)
                     return None
-                regex_parts.append(re.escape(bytes([byte_val])))
+                regex_parts.append(re.escape(literal))
             min_len += 1
             i += 2
         compiled = re.compile(b"".join(regex_parts), re.DOTALL)
@@ -5100,6 +5102,11 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
             msg = "sandbox bridge not available"
             raise RuntimeError(msg)
 
+        create_fn = getattr(sandbox_bridge, "create", None)
+        if not callable(create_fn):
+            msg = "sandbox bridge does not support create"
+            raise TypeError(msg)
+
         file_path_str = self.document.file_path()
         tmp_path: str | None = None
         if file_path_str is None:
@@ -5109,11 +5116,6 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
             self.document.save(tmp_path)
             _logger.info("save_to_sandbox_temp_file_written", path=tmp_path)
             file_path_str = tmp_path
-
-        create_fn = getattr(sandbox_bridge, "create", None)
-        if not callable(create_fn):
-            msg = "sandbox bridge does not support create"
-            raise TypeError(msg)
 
         progress = _SandboxCopyProgress()
         try:
@@ -8658,7 +8660,11 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
             raise RuntimeError(msg)
 
         if hasattr(self.document, "verify_pe_checksum"):
-            result = self.document.verify_pe_checksum()
+            try:
+                result = self.document.verify_pe_checksum()
+            except ValueError as exc:
+                _logger.exception("verify_pe_checksum_failed_native")
+                raise RuntimeError(str(exc)) from exc
             if isinstance(result, dict):
                 return cast("dict[str, Any]", result)
 
@@ -8710,7 +8716,11 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
             raise RuntimeError(msg)
 
         if hasattr(self.document, "repair_pe_checksum"):
-            self.document.repair_pe_checksum()
+            try:
+                self.document.repair_pe_checksum()
+            except ValueError as exc:
+                _logger.exception("repair_pe_checksum_failed_native")
+                raise RuntimeError(str(exc)) from exc
             verify_result = await self.verify_pe_checksum()
             return {
                 "old_checksum": 0,

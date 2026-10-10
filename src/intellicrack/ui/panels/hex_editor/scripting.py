@@ -444,8 +444,8 @@ class _DocAPI:
     Provides safe read/write/search operations on the hex document without exposing the full document interface.
     """
 
-    _doc: _HexDocumentProtocol
-    _widget: object
+    __doc: _HexDocumentProtocol
+    __widget: object
 
     def __init__(
         self,
@@ -466,8 +466,8 @@ class _DocAPI:
                 the script does not pass an explicit ``encoding=`` keyword.
                 A ``None`` return value falls back to UTF-8.
         """
-        self._doc = document
-        self._widget = hex_widget
+        self.__doc = document
+        self.__widget = hex_widget
         self._file_path = file_path
         self._encoding_provider = encoding_provider
         _logger.debug("doc_api_initialized", file_path=file_path)
@@ -488,8 +488,8 @@ class _DocAPI:
         Returns:
             int: Cursor byte offset.
         """
-        if self._widget is not None:
-            return int(getattr(self._widget, "_cursor_offset", 0))
+        if self.__widget is not None:
+            return int(getattr(self.__widget, "_cursor_offset", 0))
         return 0
 
     @cursor.setter
@@ -499,8 +499,8 @@ class _DocAPI:
         Args:
             offset: New cursor byte offset.
         """
-        if self._widget is not None:
-            goto_fn = getattr(self._widget, "goto_offset", None)
+        if self.__widget is not None:
+            goto_fn = getattr(self.__widget, "goto_offset", None)
             if callable(goto_fn):
                 goto_fn(offset)
 
@@ -511,9 +511,9 @@ class _DocAPI:
         Returns:
             tuple[int, int] | None: (start, end) tuple or None.
         """
-        if self._widget is not None:
-            start = getattr(self._widget, "_selection_start", -1)
-            end = getattr(self._widget, "_selection_end", -1)
+        if self.__widget is not None:
+            start = getattr(self.__widget, "_selection_start", -1)
+            end = getattr(self.__widget, "_selection_end", -1)
             if isinstance(start, int) and isinstance(end, int) and start >= 0 and end >= 0:
                 return (start, end)
         return None
@@ -525,8 +525,8 @@ class _DocAPI:
         Args:
             value: (start, end) byte offset tuple.
         """
-        if self._widget is not None:
-            set_sel = getattr(self._widget, "set_selection_range", None)
+        if self.__widget is not None:
+            set_sel = getattr(self.__widget, "set_selection_range", None)
             if callable(set_sel):
                 set_sel(value[0], value[1])
 
@@ -536,7 +536,7 @@ class _DocAPI:
         Returns:
             int: Document size.
         """
-        return int(self._doc.length())
+        return int(self.__doc.length())
 
     def read(self, offset: int, length: int) -> bytes:
         """Read bytes from the document.
@@ -548,7 +548,7 @@ class _DocAPI:
         Returns:
             bytes: Read data.
         """
-        raw = self._doc.read(offset, length)
+        raw = self.__doc.read(offset, length)
         return raw if isinstance(raw, bytes) else bytes(raw)
 
     def write(self, offset: int, data: bytes) -> None:
@@ -566,7 +566,7 @@ class _DocAPI:
             data_size=len(data),
             data_sha256=hashlib.sha256(data).hexdigest()[:12],
         )
-        self._doc.write_bytes(offset, data)
+        self.__doc.write_bytes(offset, data)
 
     def insert(self, offset: int, data: bytes) -> None:
         """Insert bytes at the given offset.
@@ -575,7 +575,7 @@ class _DocAPI:
             offset: Insertion point.
             data: Bytes to insert.
         """
-        self._doc.insert_bytes(offset, data)
+        self.__doc.insert_bytes(offset, data)
 
     def delete(self, offset: int, length: int) -> None:
         """Delete bytes from the document.
@@ -584,7 +584,7 @@ class _DocAPI:
             offset: Start offset.
             length: Number of bytes to delete.
         """
-        self._doc.delete_bytes(offset, length)
+        self.__doc.delete_bytes(offset, length)
 
     def search_hex(self, pattern: str, max_results: int = 100) -> list[tuple[int, int]]:
         """Search for a hex pattern in the document.
@@ -596,7 +596,7 @@ class _DocAPI:
         Returns:
             list[tuple[int, int]]: List of (offset, length) matches.
         """
-        raw = self._doc.search_hex(pattern, max_results)
+        raw = self.__doc.search_hex(pattern, max_results)
         return [(int(r[0]), int(r[1])) for r in raw]
 
     def search_text(
@@ -638,7 +638,7 @@ class _DocAPI:
             _logger.warning("scripting_search_text_unknown_encoding", encoding=resolved, error=str(exc))
             msg = f"unknown encoding {resolved!r} for doc.search_text"
             raise LookupError(msg) from exc
-        raw = self._doc.search_text(text, resolved, case_sensitive=True, max_results=max_results)
+        raw = self.__doc.search_text(text, resolved, case_sensitive=True, max_results=max_results)
         return [(int(r[0]), int(r[1])) for r in raw]
 
     def _resolve_search_encoding(self, explicit: str | None) -> str:
@@ -684,7 +684,7 @@ class _DocAPI:
         Returns:
             int: Index of the added bookmark.
         """
-        return int(self._doc.add_bookmark(offset, length, label, color))
+        return int(self.__doc.add_bookmark(offset, length, label, color))
 
 
 class _ReadOnlyDocAPI:
@@ -700,7 +700,7 @@ class _ReadOnlyDocAPI:
         Args:
             inner: The underlying ``_DocAPI`` instance to proxy.
         """
-        self._inner = inner
+        self.__inner = inner
 
     @property
     def file_path(self) -> str | None:
@@ -709,7 +709,7 @@ class _ReadOnlyDocAPI:
         Returns:
             str | None: File path string or None.
         """
-        return self._inner.file_path
+        return self.__inner.file_path
 
     @property
     def cursor(self) -> int:
@@ -718,7 +718,7 @@ class _ReadOnlyDocAPI:
         Returns:
             int: Cursor byte offset.
         """
-        return self._inner.cursor
+        return self.__inner.cursor
 
     @cursor.setter
     def cursor(self, offset: int) -> None:
@@ -727,7 +727,7 @@ class _ReadOnlyDocAPI:
         Args:
             offset: New cursor byte offset.
         """
-        self._inner.cursor = offset
+        self.__inner.cursor = offset
 
     @property
     def selection(self) -> tuple[int, int] | None:
@@ -736,7 +736,7 @@ class _ReadOnlyDocAPI:
         Returns:
             tuple[int, int] | None: (start, end) tuple or None.
         """
-        return self._inner.selection
+        return self.__inner.selection
 
     @selection.setter
     def selection(self, value: tuple[int, int]) -> None:
@@ -745,7 +745,7 @@ class _ReadOnlyDocAPI:
         Args:
             value: (start, end) byte offset tuple.
         """
-        self._inner.selection = value
+        self.__inner.selection = value
 
     def length(self) -> int:
         """Get the document length in bytes.
@@ -753,7 +753,7 @@ class _ReadOnlyDocAPI:
         Returns:
             int: Document size.
         """
-        return self._inner.length()
+        return self.__inner.length()
 
     def read(self, offset: int, length: int) -> bytes:
         """Read bytes from the document.
@@ -765,7 +765,7 @@ class _ReadOnlyDocAPI:
         Returns:
             bytes: Read data.
         """
-        return self._inner.read(offset, length)
+        return self.__inner.read(offset, length)
 
     @staticmethod
     def write(offset: int, data: bytes) -> None:
@@ -825,7 +825,7 @@ class _ReadOnlyDocAPI:
         Returns:
             list[tuple[int, int]]: List of (offset, length) matches.
         """
-        return self._inner.search_hex(pattern, max_results)
+        return self.__inner.search_hex(pattern, max_results)
 
     def search_text(
         self,
@@ -853,7 +853,7 @@ class _ReadOnlyDocAPI:
             LookupError: If the resolved encoding is not a known Python codec.
         """
         try:
-            return self._inner.search_text(text, max_results, encoding=encoding)
+            return self.__inner.search_text(text, max_results, encoding=encoding)
         except LookupError as exc:
             _logger.warning("scripting_search_text_proxy_lookup_failed", encoding=encoding, error=str(exc))
             raise LookupError(str(exc)) from exc
@@ -876,7 +876,7 @@ class _ReadOnlyDocAPI:
         Returns:
             int: Index of the added bookmark.
         """
-        return self._inner.add_bookmark(offset, length, label, color)
+        return self.__inner.add_bookmark(offset, length, label, color)
 
 
 def _script_uses_writes(source: str) -> bool:
@@ -909,9 +909,10 @@ def _script_uses_writes(source: str) -> bool:
 def _validate_script_ast(source: str) -> None:
     """Validate script source against the sandbox whitelist.
 
-    Walks the AST and rejects dangerous attribute chains, disallowed
-    builtin names, imports, async constructs, and ``getattr`` calls
-    that target dunder attributes.
+    Walks the AST and rejects dangerous attribute chains, any attribute
+    whose name holds a double underscore (dunder and name-mangled private
+    attributes), disallowed builtin names, imports, async constructs, and
+    ``getattr`` calls that target underscore attributes.
 
     Args:
         source: Python script source code to validate.
@@ -926,7 +927,7 @@ def _validate_script_ast(source: str) -> None:
             msg = f"{type(node).__name__} is not permitted in sandboxed scripts"
             raise _SandboxViolationError(msg)
 
-        if isinstance(node, ast.Attribute) and node.attr in _FORBIDDEN_ATTRIBUTES:
+        if isinstance(node, ast.Attribute) and ("__" in node.attr or node.attr in _FORBIDDEN_ATTRIBUTES):
             msg = f"access to attribute '{node.attr}' is forbidden"
             raise _SandboxViolationError(msg)
 

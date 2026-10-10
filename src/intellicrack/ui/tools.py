@@ -3032,11 +3032,7 @@ class _ToolOutputPanelAccessorsMixin(_ToolOutputPanelTabsMixin):
         selected_id: str | None = None
         current_script: tuple[str, str, str] | None = None
         if self.script_panel is not None:
-            get_id = getattr(self.script_panel, "get_selected_id", None)
-            if callable(get_id):
-                raw_id = get_id()
-                if isinstance(raw_id, str):
-                    selected_id = raw_id
+            selected_id = self.script_panel.get_selected_id()
             current_script = self.script_panel.get_current_script()
         return selected_id, current_script
 

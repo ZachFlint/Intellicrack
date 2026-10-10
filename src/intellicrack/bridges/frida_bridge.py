@@ -2374,7 +2374,14 @@ class _FridaBridgeBase(InstrumentationBridge):
                 _ERR_PROCESS_NOT_FOUND,
                 details=self._frida_error_details(e, pid=resolved_pid),
             ) from e
-        except (frida.PermissionDeniedError, frida.TransportError, frida.InvalidArgumentError, OSError) as e:
+        except (
+            frida.PermissionDeniedError,
+            frida.TransportError,
+            frida.InvalidArgumentError,
+            frida.ServerNotRunningError,
+            frida.NotSupportedError,
+            OSError,
+        ) as e:
             _logger.warning(
                 "frida_attach_failed",
                 pid=resolved_pid,
@@ -2609,7 +2616,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         try:
             processes = await self._call_frida(device.enumerate_processes)
-        except (frida.TransportError, frida.PermissionDeniedError, OSError) as e:
+        except (frida.TransportError, frida.PermissionDeniedError, frida.ServerNotRunningError, OSError) as e:
             _logger.warning(
                 "frida_enumerate_processes_failed",
                 error=str(e),
@@ -2632,7 +2639,14 @@ class _FridaBridgeBase(InstrumentationBridge):
                 _ERR_PROCESS_NOT_FOUND,
                 details=self._frida_error_details(e, process_name=name, pid=target_pid),
             ) from e
-        except (frida.PermissionDeniedError, frida.TransportError, frida.InvalidArgumentError, OSError) as e:
+        except (
+            frida.PermissionDeniedError,
+            frida.TransportError,
+            frida.InvalidArgumentError,
+            frida.ServerNotRunningError,
+            frida.NotSupportedError,
+            OSError,
+        ) as e:
             _logger.warning(
                 "frida_attach_by_name_failed",
                 process_name=name,
@@ -2721,6 +2735,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             frida.PermissionDeniedError,
             frida.TransportError,
             frida.InvalidArgumentError,
+            frida.ServerNotRunningError,
             OSError,
         ) as e:
             _logger.warning(
@@ -2921,7 +2936,13 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         try:
             await self._call_frida(device.kill, pid)
-        except (frida.ProcessNotFoundError, frida.PermissionDeniedError, frida.TransportError, OSError) as e:
+        except (
+            frida.ProcessNotFoundError,
+            frida.PermissionDeniedError,
+            frida.TransportError,
+            frida.ServerNotRunningError,
+            OSError,
+        ) as e:
             _logger.warning("frida_kill_failed", pid=pid, error=str(e), error_type=type(e).__name__)
             raise ToolError(_ERR_KILL_FAILED, details=self._frida_error_details(e, pid=pid)) from e
 
@@ -2948,6 +2969,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         validated_size = self._validate_js_int(size, name="size")
         if validated_size < 0:
             raise ToolError(_ERR_READ_FAILED, details={"reason": "size must be non-negative"})
+        if validated_size == 0:
+            return b""
 
         _logger.debug("memory_read_starting", address=hex(validated_address), size=validated_size)
 
@@ -3041,8 +3064,6 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         result = await self._execute_script_and_wait(script_code)
 
-        if "error" in result:
-            raise ToolError(_ERR_WRITE_FAILED)
         if not result.get("success", False):
             raise ToolError(_ERR_WRITE_FAILED, details={"reason": str(result.get("error", ""))})
 
@@ -3096,8 +3117,6 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
 
         result = await self._execute_script_and_wait(script_code)
-        if "error" in result:
-            raise ToolError(_ERR_READ_FAILED)
         if not result.get("success", False):
             raise ToolError(_ERR_READ_FAILED, details={"reason": str(result.get("error", ""))})
 
@@ -3155,8 +3174,6 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
 
         result = await self._execute_script_and_wait(script_code)
-        if "error" in result:
-            raise ToolError(_ERR_WRITE_FAILED)
         if not result.get("success", False):
             raise ToolError(_ERR_WRITE_FAILED, details={"reason": str(result.get("error", ""))})
         return True
@@ -3964,6 +3981,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
+        self._forward_script_logs(script)
         await self._call_frida(script.load, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
 
         self._scripts[script_id] = script
@@ -4057,6 +4075,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
+        self._forward_script_logs(script)
         await self._call_frida(script.load, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
 
         self._scripts[script_id] = script
@@ -4157,6 +4176,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
+        self._forward_script_logs(script)
         await self._call_frida(script.load, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
 
         self._scripts[script_id] = script
@@ -4275,6 +4295,17 @@ class _FridaBridgeBase(InstrumentationBridge):
         _logger.debug("function_called", address=hex(validated_address), return_value=coerced)
         return coerced
 
+    def _forward_script_logs(self, script: frida.Script) -> None:
+        """Republish a script's ``console`` output as ``log`` messages.
+
+        frida-python hands ``console.log`` output to the script's log handler and never to its ``message`` signal, so the handler
+        installed here forwards each line to the registered message handler.
+
+        Args:
+            script: The script whose log output is forwarded.
+        """
+        script.set_log_handler(lambda level, text: self._dispatch_message({"type": "log", "level": level, "payload": text}))
+
     async def _execute_script_and_wait(
         self,
         script_code: str,
@@ -4348,6 +4379,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         script = await self._call_frida(self._session.create_script, script_code, cancellable=cancellable)
         script.on("message", on_message)
+        self._forward_script_logs(script)
         await self._call_frida(script.load, limit_seconds=max_wait if max_wait > _FRIDA_AGENT_CALL_TIMEOUT else None)
 
         timed_out = False
@@ -5228,8 +5260,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         escaped_protection = self._escape_js_string(protection)
         script_code = f"""
         try {{
-            Memory.protect(ptr({validated_address}), {validated_size}, '{escaped_protection}');
-            send({{ type: 'protect', success: true }});
+            var changed = Memory.protect(ptr({validated_address}), {validated_size}, '{escaped_protection}');
+            send({{ type: 'protect', success: changed }});
         }} catch (e) {{
             send({{ type: 'protect', success: false, error: e.message }});
         }}
@@ -5238,7 +5270,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         result = await self._execute_script_and_wait(script_code)
 
         if "error" in result:
-            raise ToolError(_ERR_PROTECT_FAILED)
+            raise ToolError(_ERR_PROTECT_FAILED, details={"reason": str(result["error"])})
 
         success = result.get("success", False)
         if not success:
@@ -5286,9 +5318,6 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
 
         result = await self._execute_script_and_wait(script_code)
-
-        if "error" in result:
-            raise ToolError(_ERR_READ_FAILED)
 
         if not result.get("success", False):
             raise ToolError(_ERR_READ_FAILED, details={"reason": str(result.get("error", ""))})
@@ -5959,7 +5988,8 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         Escapes characters that are unsafe in single-quoted, double-quoted, and
         template-literal JavaScript contexts. All non-ASCII and control characters
-        are converted to their four-digit hexadecimal unicode escapes so the
+        are converted to four-digit hexadecimal unicode escapes of their UTF-16
+        code units, so a character above U+FFFF becomes a surrogate pair and the
         resulting literal is ASCII-only and cannot terminate or escape any
         enclosing context.
 
@@ -5998,7 +6028,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             elif ch == "\0":
                 out.append("\\u0000")
             elif code < _ASCII_PRINTABLE_MIN or code == _ASCII_DEL or code > _ASCII_PRINTABLE_MAX:
-                out.append("\\u" + format(code, "04x"))
+                units = ch.encode("utf-16-be", "surrogatepass")
+                out.extend(f"\\u{int.from_bytes(units[index : index + 2], 'big'):04x}" for index in range(0, len(units), 2))
             else:
                 out.append(ch)
         return "".join(out)
@@ -7213,6 +7244,9 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
     ) -> FridaDeviceInfo:
         """Switch to a different Frida device.
 
+        The request is validated before the current session is released, so a
+        rejected request leaves the attached session in place.
+
         Args:
             device_type: Device type (``'local'``, ``'usb'``, ``'remote'``, or
                 ``'enumerated'``). ``'remote'`` adds a brand-new remote
@@ -7228,12 +7262,6 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         Raises:
             ToolError: If connection fails.
         """
-        if self._session is not None:
-            try:
-                await self.detach(kill_spawned=False)
-            except ToolError:
-                _logger.exception("session_release_before_device_switch_failed")
-
         if device_type == "remote" and not host:
             raise ToolError(_ERR_DEVICE_FAILED, details={"reason": "host required for remote device"})
 
@@ -7242,6 +7270,12 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         if device_type not in {"local", "usb", "remote", "enumerated"}:
             raise ToolError(_ERR_DEVICE_FAILED, details={"reason": f"unknown device type: {device_type}"})
+
+        if self._session is not None:
+            try:
+                await self.detach(kill_spawned=False)
+            except ToolError:
+                _logger.exception("session_release_before_device_switch_failed")
 
         try:
             device = await self._resolve_frida_device(device_type, host)
@@ -7279,7 +7313,9 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             _logger.warning("remote_device_remove_failed", host=host, error=str(e))
             raise ToolError(_ERR_DEVICE_FAILED, details=self._frida_error_details(e, host=host)) from e
 
-        if self._device is not None and str(getattr(self._device, "type", "")) == "remote" and str(getattr(self._device, "id", "")) == host:
+        device = self._device
+        endpoint = str(getattr(device, "id", "")).rpartition("@")[2]
+        if device is not None and str(getattr(device, "type", "")) == "remote" and endpoint == host:
             if self._session is not None:
                 try:
                     await self.detach(kill_spawned=False)
@@ -10071,9 +10107,9 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
         script_code = f"""
         try {{
             var f = new File('{escaped}', 'rb');
-            var data = f.readBytes(-1);
+            var data = f.readBytes();
             f.close();
-            send({{ type: 'file_read' }}, data);
+            send({{ type: 'file_read', size: data.byteLength }}, data);
         }} catch (e) {{
             send({{ type: 'file_error', error: e.message }});
         }}
@@ -10082,6 +10118,9 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
         result = await self._execute_script_and_wait(script_code, max_wait=10.0)
         if "error" in result or result.get("type") == "file_error":
             raise ToolError(_ERR_FILE_FAILED)
+        if result.get("size") == 0:
+            _logger.debug("frida_file_read_target_completed", path=path, bytes_read=0)
+            return ""
 
         read_data = result.get("__binary")
         if isinstance(read_data, (bytes, bytearray)):

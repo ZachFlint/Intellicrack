@@ -33,7 +33,7 @@ from typing import IO, TYPE_CHECKING, Any, Final, NoReturn, cast
 from intellicrack.core._optional_imports import require_yara
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType, pid_is_running
-from intellicrack.core.subprocess_compat import CREATE_NEW_CONSOLE, PIPE, CompletedProcess, Popen
+from intellicrack.core.subprocess_compat import CREATE_NEW_CONSOLE, PIPE, CompletedProcess, Popen, TimeoutExpired
 from intellicrack.sandbox.base import (
     ExecutionReport,
     ExecutionResult,
@@ -165,9 +165,8 @@ _RETURNCODE_UNKNOWN = -2
 _UTF8_BOM = "﻿"
 _MS_PER_SECOND = 1000
 
-_XCOPY_NO_FILES = 2
+_XCOPY_NO_FILES = 1
 _XCOPY_INIT_ERROR = 4
-_XCOPY_ACCESS_DENIED = 5
 
 _ERR_SANDBOX_NOT_RUNNING = "Sandbox is not running"
 _ERR_SHARED_FOLDER_NOT_INIT = "Shared folder not initialized"
@@ -319,7 +318,7 @@ def find_sandbox_session_pid(wsb_name: str) -> int | None:
             name="pwsh-find-sandbox-session",
             timeout=_FEATURE_CHECK_TIMEOUT,
         )
-    except (OSError, RuntimeError) as err:
+    except (OSError, RuntimeError, TimeoutExpired) as err:
         _logger.warning("sandbox_session_lookup_error", error=str(err))
         return None
 
@@ -1621,7 +1620,7 @@ class WindowsSandbox(SandboxBase):
                     name="pwsh-find-vmwp",
                     process_timeout=_FEATURE_CHECK_TIMEOUT,
                 )
-            except (OSError, RuntimeError) as err:
+            except (OSError, RuntimeError, TimeoutExpired) as err:
                 _logger.warning("vmwp_lookup_error", error=str(err))
                 await asyncio.sleep(_WORKER_PID_POLL_INTERVAL)
                 continue
@@ -2557,9 +2556,9 @@ class WindowsSandbox(SandboxBase):
             raise SandboxError(_ERR_SOURCE_NOT_FOUND)
 
         dest_path = self._shared_folder / dest
-        await asyncio.to_thread(dest_path.parent.mkdir, parents=True, exist_ok=True)
 
         try:
+            await asyncio.to_thread(dest_path.parent.mkdir, parents=True, exist_ok=True)
             await asyncio.to_thread(shutil.copy2, source, dest_path)
             _logger.debug("file_copied_to_sandbox", source=str(source), dest=dest)
         except OSError as e:
@@ -2589,8 +2588,8 @@ class WindowsSandbox(SandboxBase):
         if not await asyncio.to_thread(source_path.exists):
             raise SandboxError(_ERR_SOURCE_IN_SANDBOX_NOT_FOUND)
 
-        await asyncio.to_thread(dest.parent.mkdir, parents=True, exist_ok=True)
         try:
+            await asyncio.to_thread(dest.parent.mkdir, parents=True, exist_ok=True)
             await asyncio.to_thread(shutil.copy2, source_path, dest)
             _logger.debug("file_copied_from_sandbox", source=source, dest=str(dest))
         except OSError as e:
@@ -3189,16 +3188,9 @@ class WindowsSandbox(SandboxBase):
                     stderr=xcopy_err,
                 )
                 raise SandboxError(_ERR_EXTRACT_FILES_FAILED)
-            if xcopy_exit == _XCOPY_ACCESS_DENIED:
-                _logger.warning(
-                    "xcopy_access_denied",
-                    guest_dir=guest_dir,
-                    exit_code=xcopy_exit,
-                    stderr=xcopy_err,
-                )
-            elif xcopy_exit == _XCOPY_NO_FILES:
+            if xcopy_exit == _XCOPY_NO_FILES:
                 _logger.debug("xcopy_no_files_found", guest_dir=guest_dir)
-            elif xcopy_exit not in {0, 1}:
+            elif xcopy_exit != 0:
                 _logger.warning(
                     "xcopy_unexpected_exit_code",
                     guest_dir=guest_dir,
@@ -3267,6 +3259,7 @@ class WindowsSandbox(SandboxBase):
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
 
         yara_compile = cast("Callable[..., Any]", yara.compile)
+        yara_error = cast("type[Exception]", yara.Error)
         if rules_path is not None:
             compiled_rules = await asyncio.to_thread(yara_compile, filepath=rules_path)
         else:
@@ -3328,7 +3321,7 @@ class WindowsSandbox(SandboxBase):
                         filepath=str(scan_file),
                     )
                     matches.extend(_format_yara_match(ym, str(scan_file), "files") for ym in file_matches)
-                except (OSError, RuntimeError) as e:
+                except (OSError, RuntimeError, yara_error) as e:
                     _logger.warning(
                         "yara_file_scan_error",
                         file=str(scan_file),

@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.hexpat.completer import HexPatCompleter
+from intellicrack.core.hexpat.errors import HexPatError
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import HexPatSyntaxHighlighter
 from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_callable_async, worker_is_running
@@ -117,14 +118,14 @@ class PatternEditorMixin:
             name_val = str(field.get("name", ""))
             offset_raw = field.get("offset")
             size_raw = field.get("size")
-            type_val = str(field.get("type", ""))
+            value_val = str(field.get("display_value", ""))
             offset_int = offset_raw if isinstance(offset_raw, int) else 0
             size_int = size_raw if isinstance(size_raw, int) else 0
             item = QTreeWidgetItem([
                 name_val,
                 f"0x{offset_int:08X}",
                 f"{size_int}",
-                type_val,
+                value_val,
             ])
             self._templates_tree.addTopLevelItem(item)
 
@@ -282,7 +283,7 @@ class PatternEditorMixin:
         try:
             compiler_inst: Any = compiler_cls()
             compiled: str = compiler_inst.compile(source)
-        except (ValueError, TypeError, AttributeError) as exc:
+        except (ValueError, TypeError, AttributeError, HexPatError) as exc:
             is_hexpat_error = error_cls is not None and isinstance(exc, error_cls)
             self._compiled_json = ""
             if is_hexpat_error:
@@ -482,7 +483,7 @@ class PatternEditorMixin:
             on_success=partial(self._on_interpreter_apply_finished, offset),
             on_error=self._on_interpreter_apply_error,
             parent=self if isinstance(self, QWidget) else None,
-            exceptions=(ValueError, TypeError, AttributeError),
+            exceptions=(ValueError, TypeError, AttributeError, HexPatError),
         )
         self._pattern_apply_worker = worker
         if worker.wait(_PATTERN_APPLY_SYNC_WAIT_MS):
@@ -790,7 +791,7 @@ class PatternEditorMixin:
             return
 
         if self._pattern_registry is None:
-            project_root = Path(__file__).resolve().parents[4]
+            project_root = Path(__file__).resolve().parents[5]
             patterns_dir = project_root / "vendor" / "community-patterns" / "patterns"
             if not patterns_dir.exists():
                 return

@@ -2002,21 +2002,21 @@ class MainWindow(QMainWindow):
         Args:
             result: The tool execution result.
         """
-        _ = self._running_call_names.pop(result.call_id, None)
+        call_name = self._running_call_names.pop(result.call_id, "")
         self._chat_panel.tool_activity.finished(result)
-        tool_name = getattr(result, "tool_name", "")
+        tool_name = call_name.partition(".")[0]
         if result.success:
             _logger.info(
                 "orchestrator_tool_result",
                 call_id=getattr(result, "call_id", ""),
-                tool_name=tool_name,
+                tool_name=call_name,
                 duration_ms=result.duration_ms,
             )
         else:
             _logger.warning(
                 "orchestrator_tool_result_failed",
                 call_id=getattr(result, "call_id", ""),
-                tool_name=tool_name,
+                tool_name=call_name,
                 duration_ms=result.duration_ms,
                 error=result.error,
             )
@@ -2028,7 +2028,7 @@ class MainWindow(QMainWindow):
                 result_str = f"{result_str[: _MAX_RESULT_DISPLAY_LEN - 3]}..."
             _logger.info(
                 "orchestrator_tool_result_payload",
-                tool_name=tool_name,
+                tool_name=call_name,
                 call_id=getattr(result, "call_id", ""),
                 result_preview=result_str,
             )
@@ -2051,7 +2051,7 @@ class MainWindow(QMainWindow):
         if result.error:
             _logger.error(
                 "orchestrator_tool_error",
-                tool_name=tool_name,
+                tool_name=call_name,
                 call_id=getattr(result, "call_id", ""),
                 error=str(result.error),
             )

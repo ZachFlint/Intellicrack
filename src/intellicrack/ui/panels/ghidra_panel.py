@@ -2401,7 +2401,8 @@ class GhidraPanel(AnalysisPanelBase):
             return
         if isinstance(result, dict):
             pcode_data = cast("dict[str, object]", result)
-            func_name = str(pcode_data.get("function", ""))
+            function = pcode_data.get("function")
+            func_name = str(function) if function else ""
             ops_raw = pcode_data.get("pcode_ops", [])
             ops = cast("list[dict[str, object]]", ops_raw) if isinstance(ops_raw, list) else []
             lines: list[str] = []
@@ -3668,7 +3669,7 @@ class GhidraPanel(AnalysisPanelBase):
         raw: bytes
         if isinstance(result, dict):
             rd = cast("dict[str, object]", result)
-            byte_list = rd.get("bytes", [])
+            byte_list = rd.get("bytes")
             if isinstance(byte_list, list):
                 typed_bytes = cast("list[int]", byte_list)
                 raw = bytes(typed_bytes)
@@ -4126,6 +4127,10 @@ class GhidraPanel(AnalysisPanelBase):
     def _populate_call_graph_dict(self, data: dict[str, object], parent: QTreeWidgetItem | None) -> None:
         """Recursively populate the call graph tree from a nested dict.
 
+        A node lists its descendants under 'children'. A graph requested in
+        both directions has no 'children' and carries 'callees' and 'callers'
+        instead; both are added.
+
         Args:
             data: Node data dictionary with 'name', 'address', and optional 'children'.
             parent: Parent tree item, or None for root nodes.
@@ -4138,12 +4143,12 @@ class GhidraPanel(AnalysisPanelBase):
             self._call_graph_tree.addTopLevelItem(item)
         else:
             tree_add_child(parent, item)
-        children = data.get("children", data.get("callees", []))
-        if isinstance(children, list):
-            child_list = cast("list[object]", children)
-            for child in child_list:
-                if isinstance(child, dict):
-                    self._populate_call_graph_dict(cast("dict[str, object]", child), item)
+        groups = [data["children"]] if "children" in data else [data.get("callees"), data.get("callers")]
+        for group in groups:
+            if isinstance(group, list):
+                for child in cast("list[object]", group):
+                    if isinstance(child, dict):
+                        self._populate_call_graph_dict(cast("dict[str, object]", child), item)
 
     def _on_show_callers(self) -> None:
         """Show callers for the address in the call graph tab."""
@@ -4173,9 +4178,13 @@ class GhidraPanel(AnalysisPanelBase):
         self._call_graph_tree.clear()
         callers = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
         for caller in callers:
-            caller_name = str(caller.get("caller_function", ""))
-            caller_addr = int(cast("int", caller.get("caller_address", 0)))
-            item = QTreeWidgetItem([caller_name, f"0x{caller_addr:X}"])
+            caller_function = caller.get("caller_function")
+            caller_name = str(caller_function) if caller_function else "(outside any function)"
+            caller_addr = caller.get("caller_address")
+            if not isinstance(caller_addr, int):
+                caller_addr = caller.get("call_site")
+            addr_text = f"0x{caller_addr:X}" if isinstance(caller_addr, int) else ""
+            item = QTreeWidgetItem([caller_name, addr_text])
             self._call_graph_tree.addTopLevelItem(item)
 
     def _on_show_slice(self) -> None:
@@ -4583,7 +4592,7 @@ class GhidraPanel(AnalysisPanelBase):
             return
         params_text = self._script_params_input.text().strip()
         try:
-            params: dict[str, object] = json.loads(params_text) if params_text else {}
+            loaded: object = json.loads(params_text) if params_text else {}
         except json.JSONDecodeError as exc:
             _logger.warning(
                 "ghidra_run_script_invalid_json_params",
@@ -4592,6 +4601,11 @@ class GhidraPanel(AnalysisPanelBase):
             )
             self._set_status(f"Invalid JSON params: {exc}")
             return
+        if not isinstance(loaded, dict):
+            _logger.warning("ghidra_run_script_params_not_object", input_text=params_text)
+            self._set_status("Script params must be a JSON object")
+            return
+        params = cast("dict[str, object]", loaded)
         self._run_script_params_btn.setEnabled(False)
         run_bridge_coroutine_logged(
             bridge.execute_script_with_params(script, params),

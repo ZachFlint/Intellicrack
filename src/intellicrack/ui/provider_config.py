@@ -1323,7 +1323,7 @@ class ModelRefreshWorker(RetainedWorker):
         try:
             success, models, message = self._fetch_models()
             self.refresh_finished.emit(success, models, message)
-        except (ProviderError, RuntimeError, OSError, ValueError) as e:
+        except (ProviderError, RuntimeError, OSError, ValueError, LookupError, TypeError, AttributeError) as e:
             _logger.warning("model_refresh_failed", error=str(e))
             success = False
             self.refresh_finished.emit(success, [], f"Error fetching models: {e}")
@@ -1865,13 +1865,24 @@ class ModelRefreshWorker(RetainedWorker):
             )
             return False, [], f"API error: {response.status_code}"
 
-        models = sorted(m["id"] for m in data.get("data", []) if m.get("id"))
+        payload: object = data
+        entries = cast("dict[str, object]", payload).get("data", []) if isinstance(payload, dict) else None
+        rows = cast("list[object]", entries) if isinstance(entries, list) else None
+        if rows is None or not all(isinstance(row, dict) for row in rows):
+            _logger.warning("model_fetch_malformed_body", provider="grok", body_type=type(data).__name__)
+            return False, [], "The model list response was not a list of model objects"
+
+        models = sorted(str(row["id"]) for row in cast("list[dict[str, object]]", rows) if row.get("id"))
         _logger.info(
             "model_fetch_succeeded",
             provider="grok",
             model_count=len(models),
         )
         return True, models, f"Found {len(models)} Grok models"
+
+
+_RECOMMENDATION_TASK_TYPE: Final[str] = "chat"
+_RECOMMENDATION_TIMEOUT_S: Final[float] = 10.0
 
 
 class ProviderInstanceDialog(QDialog):
@@ -2947,7 +2958,7 @@ class ProviderConfigDialog(QDialog):
         missing = loader.list_missing_providers()
 
         for name in configured:
-            env_var = loader.get_env_var(name)
+            env_var = loader.get_env_var(loader.mapping_for(name).api_key_var)
             if env_var is not None:
                 _logger.debug("credential_refreshed", provider=name)
         _logger.info(
@@ -4230,6 +4241,10 @@ class ProviderSettingsWidget(QFrame):
         Args:
             discovery: Model discovery service used to resolve a recommendation.
 
+        Discovery lists models through connected providers, so the lookup
+        runs on the persistent bridge loop their HTTP clients belong to. A
+        lookup that outlives its time limit propagates :class:`TimeoutError`.
+
         Returns:
             str: Label text for the recommended model, or an empty string when
             discovery cannot run (for example, inside a running event loop).
@@ -4243,9 +4258,11 @@ class ProviderSettingsWidget(QFrame):
         if loop is not None and loop.is_running():
             return ""
 
-        if recommended := asyncio.run(
-            discovery.get_recommended_model(self.provider_id),
-        ):
+        recommended = run_bridge_coroutine(
+            discovery.get_recommended_model(_RECOMMENDATION_TASK_TYPE),
+            timeout_s=_RECOMMENDATION_TIMEOUT_S,
+        )
+        if recommended is not None:
             return f"Recommended: {recommended.name}"
         return ""
 

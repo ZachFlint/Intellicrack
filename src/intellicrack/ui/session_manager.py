@@ -845,9 +845,16 @@ class SessionManagerDialog(QDialog):
         Returns:
             dict[str, object]: Session payload dictionary with id, name, and
             datetime fields normalised.
+
+        Raises:
+            TypeError: If the file does not hold a JSON object.
         """
         with session_file.open(encoding="utf-8") as f:
-            session_data: dict[str, object] = json.load(f)
+            loaded: object = json.load(f)
+        if not isinstance(loaded, dict):
+            msg = f"session file holds {type(loaded).__name__}, not a JSON object"
+            raise TypeError(msg)
+        session_data = cast("dict[str, object]", loaded)
 
         if "id" not in session_data:
             session_data["id"] = session_file.stem
@@ -863,6 +870,9 @@ class SessionManagerDialog(QDialog):
     def _normalise_session_datetime(session_data: dict[str, object], field: str) -> None:
         """Convert an ISO-format datetime string in ``session_data`` to a ``datetime``.
 
+        A timestamp without a time zone is read as UTC so every normalised
+        value can be compared with every other.
+
         Args:
             session_data: Session payload dictionary to mutate in place.
             field: Name of the datetime field to normalise.
@@ -871,10 +881,12 @@ class SessionManagerDialog(QDialog):
         if not isinstance(raw, str):
             return
         try:
-            session_data[field] = datetime.fromisoformat(raw)
+            parsed = datetime.fromisoformat(raw)
         except ValueError:
             _logger.warning("session_datetime_parse_failed", field=field, session_id=session_data.get("id"))
             session_data[field] = datetime.now(tz=UTC)
+            return
+        session_data[field] = parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
 
     def _load_sessions_from_disk(self) -> None:
         """Load sessions from disk storage."""
@@ -884,7 +896,7 @@ class SessionManagerDialog(QDialog):
         for session_file in self.SESSIONS_DIR.glob("*.json"):
             try:
                 session_data = self._read_session_file(session_file)
-            except (json.JSONDecodeError, OSError) as e:
+            except (json.JSONDecodeError, TypeError, OSError) as e:
                 _logger.warning(
                     "session_file_load_failed",
                     file=str(session_file),

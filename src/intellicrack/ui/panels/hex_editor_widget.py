@@ -2017,8 +2017,8 @@ class HexEditorWidget(QAbstractScrollArea):
             try:
                 self._document.write_bytes(self._cursor_offset, data)
                 self._push_marks_undo()
-                for i in range(len(data)):
-                    self._modified_offsets.add(self._cursor_offset + i)
+                written_end = min(self._cursor_offset + len(data), self._document.length())
+                self._modified_offsets.update(range(self._cursor_offset, written_end))
                 _logger.info("hex_editor_paste_overwrite_completed", offset=self._cursor_offset, length=len(data))
             except (RuntimeError, ValueError, IndexError, OSError):
                 _logger.warning("hex_editor_paste_overwrite_failed", offset=self._cursor_offset, exc_info=True)

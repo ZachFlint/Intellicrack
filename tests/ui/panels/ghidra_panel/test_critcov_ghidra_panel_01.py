@@ -1720,14 +1720,14 @@ def test_overlay_space_is_created_under_the_typed_name(ready_panel: GhidraPanel,
         ready_panel: Panel holding a ready bridge.
         bridge: The bridge held by the panel.
     """
-    bridge.rules = [("createOverlayAddressSpace", {"name": "ovl", "success": True})]
+    bridge.rules = [("createOverlaySpace", {"name": "ovl", "success": True})]
     set_text(ready_panel, "_overlay_name_input", " ovl ")
 
     method(ready_panel, "_on_create_overlay_space")()
     settle(ready_panel)
 
     assert len(bridge.scripts) == 1
-    assert 'memory.createOverlayAddressSpace("ovl", default_space)' in bridge.scripts[0]
+    assert 'currentProgram.createOverlaySpace("ovl", default_space)' in bridge.scripts[0]
     assert status(ready_panel) == "Overlay space 'ovl' created"
 
 
@@ -1738,7 +1738,7 @@ def test_overlay_space_failure_is_reported_on_the_status_label(ready_panel: Ghid
         ready_panel: Panel holding a ready bridge.
         bridge: The bridge held by the panel.
     """
-    bridge.rules = [("createOverlayAddressSpace", ToolError("duplicate space"))]
+    bridge.rules = [("createOverlaySpace", ToolError("duplicate space"))]
     set_text(ready_panel, "_overlay_name_input", "ovl")
 
     method(ready_panel, "_on_create_overlay_space")()

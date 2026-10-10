@@ -756,15 +756,15 @@ def _build_tls_pe64_header() -> bytes:
 def _build_tls_directory_pe64() -> bytes:
     """Build a 64-byte PE64 TLS directory with a known callback-array VA.
 
-    The production code reads the callback-array VA as a QWORD at
-    offset ``12 + ptr_size = 12 + 8 = 20`` for PE64.  The oracle VA
+    ``AddressOfCallBacks`` is the fourth pointer-sized field of
+    ``IMAGE_TLS_DIRECTORY64``, at offset ``3 * 8 = 24``.  The oracle VA
     ``_TLS_CALLBACK_ARRAY_VA`` is placed at that exact offset.
 
     Returns:
         bytes: 64-byte TLS directory buffer.
     """
     buf = bytearray(64)
-    struct.pack_into("<Q", buf, 20, _TLS_CALLBACK_ARRAY_VA)
+    struct.pack_into("<Q", buf, 24, _TLS_CALLBACK_ARRAY_VA)
     return bytes(buf)
 
 
@@ -780,10 +780,11 @@ class TestGetTlsCallbacks:
         """Two non-zero callbacks followed by a null terminator yields two entries.
 
         The oracle addresses are ``_TLS_CB0_VA`` / ``_TLS_CB1_VA``.
-        Mutation caught: reading the callback-array VA from offset 24
-        instead of 20 inside the TLS directory would yield 0 for the
-        VA (since those bytes are zero-filled), causing the function to
-        return ``[]`` instead of the two entries.
+        Mutation caught: reading the callback-array VA from offset 20
+        instead of 24 inside the TLS directory would straddle
+        ``AddressOfIndex`` and ``AddressOfCallBacks`` and yield a shifted
+        VA, so the first read would hit an unexpected address instead of
+        returning the two entries.
 
         Args:
             bridge: Fresh bridge fixture.
