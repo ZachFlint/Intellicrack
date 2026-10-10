@@ -2220,24 +2220,6 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         )
         _logger.debug("cutter_process_registered", pid=self._r2_pid)
 
-    async def _extract_hashes(self) -> tuple[str, str]:
-        """Extract MD5 and SHA256 hashes from loaded binary.
-
-        Returns:
-            tuple[str, str]: Tuple of (md5, sha256) hash strings.
-        """
-        hashes = await self._cmd_json("itj")
-        md5 = ""
-        sha256 = ""
-        for h in hashes:
-            hash_type = _get_str(h, "type")
-            if hash_type == "md5":
-                md5 = _get_str(h, "hash")
-            elif hash_type == "sha256":
-                sha256 = _get_str(h, "hash")
-        _logger.debug("binary_hashes_extracted")
-        return md5, sha256
-
     async def _extract_binary_metadata(self) -> tuple[str, str, int, int]:
         """Extract binary metadata from Rizin.
 
@@ -2320,8 +2302,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
 
         file_type, arch, bits, entry = await self._extract_binary_metadata()
         await self._r2_cmd("e io.cache=true")
-        _, sha256 = await self._extract_hashes()
-        sha256 = sha256 or await asyncio.to_thread(_file_sha256, path)
+        sha256 = await asyncio.to_thread(_file_sha256, path)
 
         sections = await self._get_sections_internal()
         imports = await self._get_imports_internal()

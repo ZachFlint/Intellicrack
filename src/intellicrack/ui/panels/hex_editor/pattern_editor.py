@@ -798,7 +798,7 @@ class PatternEditorMixin:
             self._pattern_registry = PatternRegistryCls([patterns_dir])
 
         registry = self._pattern_registry
-        if registry is None:
+        if registry is None:  # pragma: no cover - type narrowing
             return
 
         try:

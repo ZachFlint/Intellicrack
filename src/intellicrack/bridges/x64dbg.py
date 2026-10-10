@@ -6687,15 +6687,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
             _logger.debug("module_entry_point_header_short", module_name=module_name, length=len(pe_header))
             return 0
 
-        try:
-            entry_rva = int(struct.unpack_from("<I", pe_header, entry_offset)[0])
-        except struct.error as exc:
-            _logger.warning(
-                "module_entry_point_rva_unpack_failed",
-                module_name=module_name,
-                error=str(exc),
-            )
-            return 0
+        entry_rva = int(struct.unpack_from("<I", pe_header, entry_offset)[0])
 
         return 0 if entry_rva == 0 else base_address + entry_rva
 

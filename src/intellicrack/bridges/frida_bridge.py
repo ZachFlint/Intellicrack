@@ -10123,10 +10123,6 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
             return ""
 
         read_data = result.get("__binary")
-        if isinstance(read_data, (bytes, bytearray)):
-            hex_str = bytes(read_data).hex()
-            _logger.debug("frida_file_read_target_completed", path=path, bytes_read=len(read_data))
-            return hex_str
         if isinstance(read_data, list):
             list_bytes = bytes(cast("list[int]", read_data))
             _logger.debug("frida_file_read_target_completed", path=path, bytes_read=len(list_bytes))

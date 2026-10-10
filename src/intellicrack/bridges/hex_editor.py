@@ -277,7 +277,6 @@ _BIT_INDEX_MAX = 7
 _ELF_CLASS_64 = 2
 _ELF_DATA_LE = 1
 _PE_LFANEW_OFFSET = 0x3C
-_PE_CHECKSUM_RELATIVE = 64
 _AUTO_ARCH_DETECT_BYTES = 4096
 _PE_COFF_HEADER_SIZE = 20
 _DOS_HEADER_SIZE = 64
@@ -8659,47 +8658,12 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "verify_pe_checksum"):
-            try:
-                result = self.document.verify_pe_checksum()
-            except ValueError as exc:
-                _logger.exception("verify_pe_checksum_failed_native")
-                raise RuntimeError(str(exc)) from exc
-            if isinstance(result, dict):
-                return cast("dict[str, Any]", result)
-
-        data = self._read_all_doc_bytes()
-        if data[:2] != b"MZ":
-            _logger.error("verify_pe_checksum_failed_not_pe", magic_hex=data[:2].hex())
-            msg = "not a PE file"
-            raise RuntimeError(msg)
-
-        e_lfanew = struct.unpack_from("<I", data, _PE_LFANEW_OFFSET)[0]
-        if data[e_lfanew : e_lfanew + 4] != b"PE\x00\x00":
-            _logger.error("verify_pe_checksum_failed_invalid_pe_sig", e_lfanew=hex(e_lfanew))
-            msg = "invalid PE signature"
-            raise RuntimeError(msg)
-
-        checksum_offset = e_lfanew + 4 + _PE_COFF_HEADER_SIZE + _PE_CHECKSUM_RELATIVE
-        if checksum_offset + 4 > len(data):
-            _logger.error("verify_pe_checksum_failed_header_too_short", checksum_offset=hex(checksum_offset))
-            msg = "PE header too short for checksum field"
-            raise RuntimeError(msg)
-
-        stored = struct.unpack_from("<I", data, checksum_offset)[0]
-        calculated = self._compute_pe_checksum_static(data, checksum_offset)
-
-        _logger.debug(
-            "pe_checksum_verified",
-            stored=hex(stored),
-            calculated=hex(calculated),
-        )
-        return {
-            "stored": stored,
-            "calculated": calculated,
-            "offset": checksum_offset,
-            "valid": stored == calculated,
-        }
+        try:
+            result = self.document.verify_pe_checksum()
+        except ValueError as exc:
+            _logger.exception("verify_pe_checksum_failed_native")
+            raise RuntimeError(str(exc)) from exc
+        return cast("dict[str, Any]", result)
 
     async def repair_pe_checksum(self) -> dict[str, Any]:
         """Recalculate and write the correct PE checksum.
@@ -8715,39 +8679,16 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "repair_pe_checksum"):
-            try:
-                self.document.repair_pe_checksum()
-            except ValueError as exc:
-                _logger.exception("repair_pe_checksum_failed_native")
-                raise RuntimeError(str(exc)) from exc
-            verify_result = await self.verify_pe_checksum()
-            return {
-                "old_checksum": 0,
-                "new_checksum": verify_result.get("calculated", 0),
-                "offset": verify_result.get("offset", 0),
-            }
-
+        try:
+            self.document.repair_pe_checksum()
+        except ValueError as exc:
+            _logger.exception("repair_pe_checksum_failed_native")
+            raise RuntimeError(str(exc)) from exc
         verify_result = await self.verify_pe_checksum()
-        old_checksum = verify_result["stored"]
-        new_checksum = verify_result["calculated"]
-        checksum_offset = verify_result["offset"]
-
-        _logger.info(
-            "file_written",
-            path="document",
-            offset=hex(checksum_offset),
-            size=4,
-            op="pe_checksum_repair",
-        )
-        self.document.write_bytes(checksum_offset, struct.pack("<I", new_checksum))
-        _logger.info("pe_checksum_repaired", old=hex(old_checksum), new=hex(new_checksum))
-        if self.state_holder is not None:
-            self.state_holder.notify_data_modified(checksum_offset, 4, source="bridge")
         return {
-            "old_checksum": old_checksum,
-            "new_checksum": new_checksum,
-            "offset": checksum_offset,
+            "old_checksum": 0,
+            "new_checksum": verify_result.get("calculated", 0),
+            "offset": verify_result.get("offset", 0),
         }
 
 
