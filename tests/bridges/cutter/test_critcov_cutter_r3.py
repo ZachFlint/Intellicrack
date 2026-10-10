@@ -10,11 +10,12 @@ with the ``pefile`` entry point, the SHA-256 of a byte-identical copy, and the
 program counter that a second rizin command reports. Debug tests let rizin start
 ``where.exe`` under its debugger (``rizin -d``), attach the bridge to the
 reported pid, and compare against the registers that rizin reports itself and
-against ``ReadProcessMemory`` on the same process. Tests that go red describe
+against ``ReadProcessMemory`` on the same process. Several tests come from
 defects measured in the container: rizin 0.9.1 has no ``dbj`` and no ``dr?PC``
 command, the thread and module listings come back empty for a live process, an
 unmapped address reads as ``0xff`` bytes, and loading a directory, a locked file
-or a non-executable in debug mode never returns.
+or a non-executable in debug mode never returns. Rizin's ``db`` takes its address
+through ``@``; ``db <address>`` adds no breakpoint.
 """
 
 from __future__ import annotations
@@ -426,15 +427,18 @@ class TestDebugSession:
         """A breakpoint added with rizin's own ``db`` command appears in the listing.
 
         Rizin 0.9.1 has no ``dbj`` command (it prints ``Command 'dbj' does not
-        exist`` and its help for ``db``), so the bridge never sees such a breakpoint.
+        exist`` and its help for ``db``); its JSON listing is ``dblj``. The
+        breakpoint is added as ``db @ <address>`` because ``db <address>`` adds
+        nothing, and rizin's own listing is checked before the bridge's.
 
         Args:
             debug_session: Bridge attached to the debuggee, and its pid.
         """
         bridge, _pid = debug_session
         pc = await _rip(bridge)
-        await bridge.r2_cmd(f"db {pc}")
-        assert (await bridge.r2_cmd("dbl")).strip()
+        await bridge.r2_cmd(f"db @ {pc}")
+        own_listing = cast("list[dict[str, Any]]", json.loads(await bridge.r2_cmd("dblj")))
+        assert pc in {int(entry["addr"]) for entry in own_listing}
         assert pc in {entry.address for entry in await bridge.get_breakpoints()}
 
     @pytest.mark.asyncio
