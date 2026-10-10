@@ -67,6 +67,7 @@ if TYPE_CHECKING:
 
 _MAX_WAIT_S: Final[float] = 5.0
 _POLL_INTERVAL_S: Final[float] = 0.02
+_MAP_OF_ADDR_1000: Final[str] = '[{"name":"PRIVATE ","addr":4096,"addr_end":8192,"type":"u","perm":"rw-"}]'
 
 
 def _pump_until(app: QApplication, predicate: object, *, timeout_s: float = _MAX_WAIT_S) -> bool:
@@ -627,7 +628,7 @@ class TestDebuggerTabMemory:
         Args:
             qapp: Qt application fixture used to pump the event loop.
         """
-        recorder = CommandRecorder({"p8 4 @ 4096": "deadbeef"})
+        recorder = CommandRecorder({"dmj": _MAP_OF_ADDR_1000, "p8 4 @ 4096": "deadbeef"})
         bridge = _attached_bridge(recorder)
 
         tab = DebuggerTab()
@@ -659,7 +660,7 @@ class TestDebuggerTabMemory:
         Args:
             qapp: Qt application fixture used to pump the event loop.
         """
-        recorder = CommandRecorder({"wx 90909090 @ 4096": "", "p8 4 @ 4096": "90909090"})
+        recorder = CommandRecorder({"dmj": _MAP_OF_ADDR_1000, "wx 90909090 @ 4096": "", "p8 4 @ 4096": "90909090"})
         bridge = _attached_bridge(recorder)
 
         tab = DebuggerTab()

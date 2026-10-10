@@ -46,6 +46,7 @@ _ATTR_THREADS: str = "_threads"
 
 _PID: int = 1234
 _ADDR_1000: int = 0x1000
+_MAP_OF_ADDR_1000: str = json.dumps([{"name": "PRIVATE ", "addr": 0x1000, "addr_end": 0x2000, "type": "u", "perm": "rw-"}])
 _ADDR_2000: int = 0x2000
 
 
@@ -837,11 +838,24 @@ class TestReadMemory:
         command.  Falsifiable: if read_memory constructs 'p8 4 @ 0x1000' or
         returns the hex string unparsed, either the command or bytes assertion fails.
         """
-        recorder = _CommandRecorder({"p8 4 @ 4096": "deadbeef"})
+        recorder = _CommandRecorder({"dmj": _MAP_OF_ADDR_1000, "p8 4 @ 4096": "deadbeef"})
         bridge = _make_attached_bridge(recorder)
         result = asyncio.run(bridge.read_memory(_ADDR_1000, 4))
         assert "p8 4 @ 4096" in recorder.commands
         assert result == bytes.fromhex("deadbeef")
+
+    def test_range_outside_the_memory_map_is_refused_before_any_p8(self) -> None:
+        """read_memory raises ToolError for a range the debugger's memory map does not cover, without issuing 'p8'.
+
+        The oracle: the map lists one readable region, 0x1000 to 0x2000, and the read asks for 4 bytes at 0x2000.
+        radare2 prints 'ffffffff' for such a read, which the recorder also returns.  Falsifiable: if the map check
+        is skipped for a radare2 session, those four filler bytes are returned and no error is raised.
+        """
+        recorder = _CommandRecorder({"dmj": _MAP_OF_ADDR_1000, "p8": "ffffffff"})
+        bridge = _make_attached_bridge(recorder)
+        with pytest.raises(ToolError, match="no readable memory"):
+            asyncio.run(bridge.read_memory(0x2000, 4))
+        assert not any(cmd.startswith("p8") for cmd in recorder.commands)
 
     def test_size_zero_returns_empty_bytes_no_command(self) -> None:
         """read_memory with size=0 returns b'' without issuing a 'p8' command.
@@ -872,7 +886,7 @@ class TestReadMemory:
         Falsifiable: if the bytes.fromhex exception is swallowed and an empty
         b'' is returned instead, this gate fails.
         """
-        recorder = _CommandRecorder({"p8": "NOTHEX!!"})
+        recorder = _CommandRecorder({"dmj": _MAP_OF_ADDR_1000, "p8": "NOTHEX!!"})
         bridge = _make_attached_bridge(recorder)
         with pytest.raises(ToolError, match="invalid hex response"):
             asyncio.run(bridge.read_memory(_ADDR_1000, 4))

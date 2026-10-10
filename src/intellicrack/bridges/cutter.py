@@ -5842,9 +5842,9 @@ class CutterDebugMixin(CutterDisplayMixin):
     async def read_memory(self, address: int, size: int) -> bytes:
         """Read raw memory from the attached process.
 
-        rizin prints ``0xFF`` filler for bytes it cannot read, so on a rizin
-        session the range is checked against the debugger's memory map
-        before it is read.
+        rizin and radare2 print ``0xFF`` filler for bytes they cannot read,
+        so the range is checked against the debugger's memory map before it
+        is read.
 
         Args:
             address: Address to read from in the debuggee's address
@@ -5856,7 +5856,7 @@ class CutterDebugMixin(CutterDisplayMixin):
 
         Raises:
             ToolError: If not attached, ``size`` is negative, the range is
-                not readable, or rizin returns an unparseable hex response.
+                not readable, or the backend returns an unparseable hex response.
         """
         self._require_attached("read_memory")
         if size < 0:
@@ -5864,7 +5864,7 @@ class CutterDebugMixin(CutterDisplayMixin):
             raise ToolError(msg, tool_name="cutter")
         if size == 0:
             return b""
-        if _is_rizin_pipe(self._r2) and not await self._range_is_readable(address, size):
+        if not await self._range_is_readable(address, size):
             _logger.warning("read_memory_range_not_readable", address=hex(address), size=size)
             msg = f"read_memory: no readable memory at {hex(address)} for {size} bytes"
             raise ToolError(msg, tool_name="cutter")
