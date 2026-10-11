@@ -178,7 +178,8 @@ def _logged(captured: Sequence[Mapping[str, object]], event: str) -> list[Mappin
 def _write_stale_ledger(directory: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Point the configuration directory into a test directory and record one write grant a crashed run left behind.
 
-    The recorded directory no longer exists, so reverting the grant needs no change to any label.
+    The recorded directory no longer exists, so reverting the grant needs no change to any label. Intellicrack honors a state directory
+    only inside the user's profile, so the test directory is also named as the local application data directory.
 
     Args:
         directory: Per-test directory.
@@ -189,6 +190,7 @@ def _write_stale_ledger(directory: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
     """
     state = directory / "state"
     state.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(directory))
     monkeypatch.setenv("INTELLICRACK_STATE_DIR", str(state))
     ledger = get_config_file(GRANTS_FILENAME)
     assert ledger.resolve().is_relative_to(directory.resolve())
