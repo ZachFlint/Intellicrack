@@ -72,6 +72,7 @@ SCHEMA_VERSION_KEY: Final[str] = "schema_version"
 MODEL_OVERRIDES_KEY: Final[str] = "model_overrides"
 REASONING_SUMMARIES_KEY: Final[str] = "reasoning_summaries"
 """Section key holding whether Responses requests ask for reasoning summaries: ``auto``, ``on`` or ``off``."""
+
 """Key holding a provider section's per-model capability overrides."""
 
 INSTANCES_KEY: Final[str] = "instances"

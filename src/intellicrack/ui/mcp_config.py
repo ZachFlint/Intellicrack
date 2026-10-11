@@ -1795,8 +1795,8 @@ class McpConfigDialog(QDialog):
     def _refresh_detail(self) -> None:
         """Refresh the editor, tool list, status, trust and sign-in state for the selection.
 
-        An editor holding unsaved edits for the selected server is left as it
-        is, so a background refresh never throws away what the operator typed.
+        An editor holding unsaved edits for the selected server is left as it is, so a background refresh never throws away what the
+        operator typed.
         """
         config = self._selected_config()
         if config is None:
@@ -2291,10 +2291,8 @@ class McpConfigDialog(QDialog):
     def _on_start_server(self) -> None:
         """Start the selected server, saving the edits first.
 
-        Starting is an explicit request to use the server, so a server that
-        is switched off -- which every newly added server is -- is switched
-        on first. Otherwise it would either refuse to start or run while
-        offering the model nothing.
+        Starting is an explicit request to use the server, so a server that is switched off -- which every newly added server is -- is
+        switched on first. Otherwise it would either refuse to start or run while offering the model nothing.
         """
         config = self._apply_editor()
         if config is None:
@@ -2406,9 +2404,8 @@ class McpConfigDialog(QDialog):
     def refresh_auth_state(self) -> None:
         """Update the sign-out button from what the keyring actually holds.
 
-        Runs whenever the selection or the server's state changes, so the
-        button follows the server being looked at rather than whichever one
-        was selected when the dialog opened.
+        Runs whenever the selection or the server's state changes, so the button follows the server being looked at rather than whichever
+        one was selected when the dialog opened.
         """
         config = self._selected_config()
         self._sign_out_button.setEnabled(False)

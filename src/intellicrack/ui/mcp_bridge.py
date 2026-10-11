@@ -176,10 +176,8 @@ class QtMcpPrompts(QObject):
     def refuse_all(self) -> None:
         """Answer every open question with its refusal and take it off the screen.
 
-        Called on the loop when nobody is left to answer, such as while MCP
-        shuts down. Each asker receives the same answer an unanswered
-        question gets -- a refused launch, a declined elicitation -- at once,
-        rather than waiting out its timeout.
+        Called on the loop when nobody is left to answer, such as while MCP shuts down. Each asker receives the same answer an unanswered
+        question gets -- a refused launch, a declined elicitation -- at once, rather than waiting out its timeout.
         """
         open_prompts = list(self._open)
         for pending in open_prompts:

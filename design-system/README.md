@@ -169,7 +169,6 @@ The live splash screen is a separate, animated piece (see the SplashScreen
 card). Use the marks as shipped; where one cannot be placed, set the name in
 `ic-font-code` white on the dark ground rather than redrawing the brain.
 
-
 ## Consuming the previews
 
 This system ships no JavaScript bundle; it is a class-and-token stylesheet.

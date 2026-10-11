@@ -10,9 +10,8 @@ sent once, with ``initialize``; on 2026-07-28 they ride every request's ``_meta`
 
 The SDK's session declares ``roots`` as ``{"listChanged": true}`` on every generation. ``listChanged`` exists only through 2025-11-25:
 2026-07-28 has no ``notifications/roots/list_changed``, because a server there asks for roots with each request that needs them, so
-declaring it there promises a notification no client can send. :class:`McpClient` builds its session from
-:class:`PreciseClientSession`, which declares ``roots`` as the empty object 2026-07-28 defines, and leaves every other declaration as the
-SDK makes it.
+declaring it there promises a notification no client can send. :class:`McpClient` builds its session from :class:`PreciseClientSession`,
+which declares ``roots`` as the empty object 2026-07-28 defines, and leaves every other declaration as the SDK makes it.
 """
 
 from __future__ import annotations

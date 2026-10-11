@@ -85,7 +85,6 @@ two conflicting credentials. This follows VS Code rather than Zed, which forbids
 PROTOCOL_HEADER_NAMES: Final[frozenset[str]] = frozenset({"host", "content-length", "transfer-encoding", "connection"})
 """Headers a caller may never set, because doing so breaks the HTTP transport."""
 
-
 MESSAGES_IMAGE_POLICY: Final[ImagePolicy] = ImagePolicy(
     mime_types=frozenset({IMAGE_MIME_JPEG, IMAGE_MIME_PNG, IMAGE_MIME_GIF, IMAGE_MIME_WEBP}),
     max_edge=8000,
@@ -103,8 +102,9 @@ OLLAMA_IMAGE_POLICY: Final[ImagePolicy] = ImagePolicy(
     mime_types=frozenset({IMAGE_MIME_JPEG, IMAGE_MIME_PNG}),
     max_bytes=20 * 1024 * 1024,
 )
-"""Images Ollama's native chat API takes in a message's ``images`` list: JPEG and PNG, the formats its vision models are documented
-to decode."""
+"""Images Ollama's native chat API takes in a message's ``images`` list: JPEG and PNG, the formats its vision models are documented to
+decode.
+"""
 
 GEMINI_IMAGE_POLICY: Final[ImagePolicy] = ImagePolicy(
     mime_types=frozenset({IMAGE_MIME_JPEG, IMAGE_MIME_PNG, IMAGE_MIME_WEBP, IMAGE_MIME_HEIC, IMAGE_MIME_HEIF}),

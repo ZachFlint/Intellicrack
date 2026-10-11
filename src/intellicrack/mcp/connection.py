@@ -138,19 +138,15 @@ MAX_RECONNECT_ATTEMPTS: Final[int] = 8
 RECONNECT_RESET_AFTER_S: Final[float] = 30.0
 """How long a connection must stay ready for its next drop to start a fresh series.
 
-A drop after a ready period at least this long is a new incident, so the
-attempt count starts again from zero. A server that fails again sooner is
-still in the same series, which keeps a server that crashes right after its
-handshake from retrying forever.
+A drop after a ready period at least this long is a new incident, so the attempt count starts again from zero. A server that fails again
+sooner is still in the same series, which keeps a server that crashes right after its handshake from retrying forever.
 """
 
 CONNECT_TIMEOUT_S: Final[float] = 45.0
 """How long a first connection and tool listing may take.
 
-Time the operator spends answering a prompt the connection raised -- the
-launch consent dialog, an interactive OAuth sign-in -- is not counted: the
-operator is not the server, and a dialog left open for a minute is not a
-server that failed to start.
+Time the operator spends answering a prompt the connection raised -- the launch consent dialog, an interactive OAuth sign-in -- is not
+counted: the operator is not the server, and a dialog left open for a minute is not a server that failed to start.
 """
 
 DISCONNECT_TIMEOUT_S: Final[float] = 10.0
@@ -162,11 +158,9 @@ STDERR_JOIN_TIMEOUT_S: Final[float] = 2.0
 HEARTBEAT_INTERVAL_S: Final[float] = 15.0
 """How often a live connection probes its server.
 
-The 2026-07-28 protocol has no ``ping``; a modern connection is probed with
-``server/discover``, which every such server must answer, and a handshake-era
-connection with ``ping``. The probe is what notices a remote server that
-went away without closing anything; a local server that exits is noticed at
-once, because its output stream ends.
+The 2026-07-28 protocol has no ``ping``; a modern connection is probed with ``server/discover``, which every such server must answer, and a
+handshake-era connection with ``ping``. The probe is what notices a remote server that went away without closing anything; a local server
+that exits is noticed at once, because its output stream ends.
 """
 
 LISTEN_RETRY_S: Final[float] = 5.0
@@ -314,8 +308,8 @@ class McpServerStatus:
 class _ProgressTracker:
     """Follows the progress notices for one request.
 
-    A notice that reports more progress than any before it renews the
-    request's deadline; every notice is handed on to whoever is showing it.
+    A notice that reports more progress than any before it renews the request's deadline; every notice is handed on to whoever is showing
+    it.
     """
 
     def __init__(
@@ -520,11 +514,9 @@ class _MessageReceiveStream(Protocol):
 class _WatchedReceiveStream:
     """A transport's read stream that reports when it ends.
 
-    When a server's output ends -- a local server exited, a legacy SSE
-    stream was cut -- the session's dispatcher simply stops reading; nothing
-    is raised anywhere. This wrapper sits between the transport and the
-    dispatcher and turns that end into a callback, so the connection learns
-    at once that its server is gone.
+    When a server's output ends -- a local server exited, a legacy SSE stream was cut -- the session's dispatcher simply stops reading;
+    nothing is raised anywhere. This wrapper sits between the transport and the dispatcher and turns that end into a callback, so the
+    connection learns at once that its server is gone.
     """
 
     def __init__(self, inner: _MessageReceiveStream, on_closed: Callable[[], None]) -> None:
@@ -1645,21 +1637,15 @@ class McpConnection:
     async def _supervise(self) -> None:
         """Keep the server connected, retrying with bounded backoff.
 
-        Consecutive failures are counted, and :data:`MAX_RECONNECT_ATTEMPTS`
-        of them stop the retries. A connection that had been ready for
-        :data:`RECONNECT_RESET_AFTER_S` resets the count when it drops, so a
-        server that stays healthy between occasional drops keeps being
+        Consecutive failures are counted, and :data:`MAX_RECONNECT_ATTEMPTS` of them stop the retries. A connection that had been ready for
+        :data:`RECONNECT_RESET_AFTER_S` resets the count when it drops, so a server that stays healthy between occasional drops keeps being
         reconnected for the life of the process.
 
-        However the supervisor ends -- a stop, a refused launch, exhausted
-        retries, cancellation -- the first attempt counts as settled, so a
-        :meth:`connect` still waiting learns the outcome at once instead of
-        waiting out :data:`CONNECT_TIMEOUT_S`.
+        However the supervisor ends -- a stop, a refused launch, exhausted retries, cancellation -- the first attempt counts as settled, so
+        a :meth:`connect` still waiting learns the outcome at once instead of waiting out :data:`CONNECT_TIMEOUT_S`.
 
-        Cancellation of the supervisor task, which unwinds the transport in
-        the task that opened it, and a non-ordinary leaf of a transport
-        failure, such as interpreter shutdown, both propagate from
-        :meth:`_supervise_attempts`.
+        Cancellation of the supervisor task, which unwinds the transport in the task that opened it, and a non-ordinary leaf of a transport
+        failure, such as interpreter shutdown, both propagate from :meth:`_supervise_attempts`.
         """
         try:
             await self._supervise_attempts()
@@ -2060,8 +2046,7 @@ class McpConnection:
     async def _stop_follower(self) -> None:
         """Stop the change follower of the connection that is ending.
 
-        The follower is awaited through :func:`asyncio.wait`, so its own
-        cancellation is absorbed while a cancellation of the caller still
+        The follower is awaited through :func:`asyncio.wait`, so its own cancellation is absorbed while a cancellation of the caller still
         propagates.
         """
         task = self._listen_task
@@ -2206,8 +2191,8 @@ class McpConnection:
 class _StreamPairTransport:
     """Adapts an already-open stream pair to the SDK's transport protocol.
 
-    The transports are opened as context managers so their clients and task groups unwind correctly. The SDK's ``Client`` wants a
-    transport it can enter itself, so the open pair is wrapped in one whose entry is a no-op and whose exit leaves the real teardown to the
+    The transports are opened as context managers so their clients and task groups unwind correctly. The SDK's ``Client`` wants a transport
+    it can enter itself, so the open pair is wrapped in one whose entry is a no-op and whose exit leaves the real teardown to the
     surrounding context. The read stream is watched on the way through, so the end of the server's output is reported.
     """
 

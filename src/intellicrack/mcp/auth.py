@@ -16,8 +16,8 @@ known after discovery, and keying by it would lose every registration whose auth
 Tokens are stored with their absolute expiry and with the authorization server metadata they were obtained under, so after a restart an
 expired access token is refreshed at the right token endpoint instead of being sent and answered with a full re-authorization.
 
-Client identity is resolved in this order: a registration already stored for this server, then a configured pre-registered client id, then
-a Client ID Metadata Document when one is configured and the authorization server supports it, and only then dynamic client registration,
+Client identity is resolved in this order: a registration already stored for this server, then a configured pre-registered client id, then a
+Client ID Metadata Document when one is configured and the authorization server supports it, and only then dynamic client registration,
 which is deprecated and logged as such. The last two are decided by the SDK once it has the authorization server's metadata.
 
 Scope is never invented. The SDK selects it the way the specification prescribes (the ``WWW-Authenticate`` challenge, then the protected
@@ -796,10 +796,9 @@ class McpOAuthClientProvider(OAuthClientProvider):
     async def _initialize(self) -> None:
         """Load stored tokens, their expiry and issuer metadata, and the client identity.
 
-        A configured ``oauthClientId`` replaces a registration stored before
-        it was configured. The stored registration and the tokens issued to
-        it are removed, since a refresh token is bound to the client it was
-        issued to; the operator signs in once with the configured client.
+        A configured ``oauthClientId`` replaces a registration stored before it was configured. The stored registration and the tokens
+        issued to it are removed, since a refresh token is bound to the client it was issued to; the operator signs in once with the
+        configured client.
         """
         await super()._initialize()
         if configured := self._spec.oauth_client_id:

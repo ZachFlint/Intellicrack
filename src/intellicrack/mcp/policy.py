@@ -9,8 +9,8 @@ with three hundred tools would consume the budget before the first message. This
 enabling it costs, and resolves which tools a server is actually allowed to contribute.
 
 Token counting goes through :mod:`intellicrack.core.token_encoding`, which loads the encoding on a background thread with a bounded
-download, so pricing a server's tools from the settings dialog never waits on the network. A caller that already has the active model's
-own counter can inject it.
+download, so pricing a server's tools from the settings dialog never waits on the network. A caller that already has the active model's own
+counter can inject it.
 """
 
 from __future__ import annotations

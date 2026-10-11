@@ -8,13 +8,14 @@
 while holding ``tiktoken``'s process-wide registry lock. A stalled connection therefore blocks the caller, and every other caller of
 ``get_encoding``, for as long as the socket stays open, and a failed download is retried from scratch on the very next call.
 
-This module puts three bounds around that. The BPE files of the encodings ``tiktoken`` ships are fetched here first, with connect, read
-and overall deadlines and a size cap, and written into the cache directory ``tiktoken`` itself reads, under the key it computes, so the
+This module puts three bounds around that. The BPE files of the encodings ``tiktoken`` ships are fetched here first, with connect, read and
+overall deadlines and a size cap, and written into the cache directory ``tiktoken`` itself reads, under the key it computes, so the
 subsequent ``get_encoding`` is a local file read. Resolving the server's name counts against the connect deadline too, since the system
-resolver takes no timeout of its own. When ``TIKTOKEN_CACHE_DIR`` is set to an empty string, which turns ``tiktoken``'s cache off, the
-files are fetched the same way into a temporary directory that is removed once the encoding is built from it. Loading runs on a daemon worker thread, one per encoding, so a caller waits only as long
-as it chooses -- the GUI thread does not wait at all. And a failed load is remembered for :data:`RETRY_AFTER_S` before it is attempted
-again, so an offline machine pays for the failure once rather than on every count.
+resolver takes no timeout of its own. When ``TIKTOKEN_CACHE_DIR`` is set to an empty string, which turns ``tiktoken``'s cache off, the files
+are fetched the same way into a temporary directory that is removed once the encoding is built from it. Loading runs on a daemon worker
+thread, one per encoding, so a caller waits only as long as it chooses -- the GUI thread does not wait at all. And a failed load is
+remembered for :data:`RETRY_AFTER_S` before it is attempted again, so an offline machine pays for the failure once rather than on every
+count.
 
 A caller that gets no encoder back counts with :func:`estimate_tokens_without_encoder`, a deliberate overestimate.
 """
@@ -87,16 +88,15 @@ RETRY_AFTER_S: Final[float] = 300.0
 OFF_GUI_THREAD_WAIT_S: Final[float] = 2.0
 """How long a caller that is not the GUI thread waits for a first load.
 
-A cached encoding loads well within this; a download that has not finished by then carries on in the background while the caller
-estimates.
+A cached encoding loads well within this; a download that has not finished by then carries on in the background while the caller estimates.
 """
 
 ESTIMATE_BYTES_PER_TOKEN: Final[int] = 1
 """UTF-8 bytes per token assumed when no encoder is available.
 
-Every byte-level BPE token covers at least one byte, so this is a true upper bound whatever the text: prose averages three to four bytes
-per token, but addresses, hex dumps and indentation-heavy code come close to one. A context-window check made without the encoder
-therefore errs toward trimming, never toward overflowing.
+Every byte-level BPE token covers at least one byte, so this is a true upper bound whatever the text: prose averages three to four bytes per
+token, but addresses, hex dumps and indentation-heavy code come close to one. A context-window check made without the encoder therefore errs
+toward trimming, never toward overflowing.
 """
 
 _OPENAI_PUBLIC: Final[str] = "https://openaipublic.blob.core.windows.net"
@@ -604,10 +604,8 @@ def estimate_tokens_without_encoder(text: str) -> int:
 class TokenEncodingLoader:
     """Loads ``tiktoken`` encodings in the background and caches the outcome.
 
-    Every load runs on its own daemon thread, at most one per encoding at a
-    time. :meth:`get` returns the encoder as soon as it is loaded and ``None``
-    until then, waiting only as long as the caller allows. A load that fails
-    is not attempted again for ``retry_after_s``.
+    Every load runs on its own daemon thread, at most one per encoding at a time. :meth:`get` returns the encoder as soon as it is loaded
+    and ``None`` until then, waiting only as long as the caller allows. A load that fails is not attempted again for ``retry_after_s``.
     """
 
     def __init__(

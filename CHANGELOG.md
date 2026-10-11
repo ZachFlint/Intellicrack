@@ -1105,5 +1105,3 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 - Advanced CodeQL setup, harden .env perms, patch underscore CVEs (`8c56184`)
 
 - Declare core runtime dependencies and bump HTTP security floors (`693a69c`)
-
-

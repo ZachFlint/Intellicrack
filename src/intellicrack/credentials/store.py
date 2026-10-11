@@ -90,8 +90,8 @@ class CredentialNotFoundError(CredentialStoreError):
 class CredentialStoreFullError(CredentialStoreError):
     """The keyring refused a write because it has no room left.
 
-    Raised in place of the backend's own error so the operator is told what to do about it. Whatever was stored before under the same
-    name is still there, unchanged.
+    Raised in place of the backend's own error so the operator is told what to do about it. Whatever was stored before under the same name
+    is still there, unchanged.
     """
 
 
@@ -119,9 +119,9 @@ _READ_ATTEMPTS: Final[int] = 2
 _KEYRING_LOCK: Final[threading.RLock] = threading.RLock()
 """Held for every keyring read, write and delete any :class:`CredentialStore` makes.
 
-A chunked value spans several entries. Two stores writing the same credential, each deleting the chunks it believed were the previous
-ones, would orphan each other's; a reader between a writer's manifest switch and its cleanup would find chunks missing. One lock across
-every instance in the process makes each read, write and delete of a value atomic with respect to the others.
+A chunked value spans several entries. Two stores writing the same credential, each deleting the chunks it believed were the previous ones,
+would orphan each other's; a reader between a writer's manifest switch and its cleanup would find chunks missing. One lock across every
+instance in the process makes each read, write and delete of a value atomic with respect to the others.
 """
 
 _WINDOWS_QUOTA_ERRORS: Final[frozenset[int]] = frozenset({8, 14, 112, 1816})

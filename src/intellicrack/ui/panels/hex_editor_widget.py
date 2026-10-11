@@ -557,10 +557,10 @@ class HexEditorWidget(QAbstractScrollArea):
         """Start a background worker that populates the entropy cache.
 
         No-ops when no document is attached, the cache is already populated, or a scan is already in flight. Running
-        ``document.entropy_map`` on a background worker thread keeps a full-document entropy scan from blocking the GUI thread on every
-        edit while the entropy minimap or the entropy color mode is active. Dispatch goes through :func:`run_callable_async`, so the
-        worker is not this widget's Qt child: closing the editor mid-scan cannot destroy the running thread, and the scan's result is
-        dropped if it lands after the widget is gone.
+        ``document.entropy_map`` on a background worker thread keeps a full-document entropy scan from blocking the GUI thread on every edit
+        while the entropy minimap or the entropy color mode is active. Dispatch goes through :func:`run_callable_async`, so the worker is
+        not this widget's Qt child: closing the editor mid-scan cannot destroy the running thread, and the scan's result is dropped if it
+        lands after the widget is gone.
         """
         if self._document is None or self._entropy_cache or self._entropy_scan_active:
             return

@@ -4,9 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """The tool calls running now, shown beside the conversation with their progress and a way to cancel each one.
 
-A row appears when a call starts, follows the progress the call reports -- a bar filling towards the total when the tool gives one, a
-busy bar when it does not, and the tool's own message, already cleaned -- and disappears when the call's result arrives. Cancel asks
-for that one call to be stopped; the turn goes on with the call ending as cancelled. The panel is hidden while nothing is running.
+A row appears when a call starts, follows the progress the call reports -- a bar filling towards the total when the tool gives one, a busy
+bar when it does not, and the tool's own message, already cleaned -- and disappears when the call's result arrives. Cancel asks for that one
+call to be stopped; the turn goes on with the call ending as cancelled. The panel is hidden while nothing is running.
 """
 
 from __future__ import annotations

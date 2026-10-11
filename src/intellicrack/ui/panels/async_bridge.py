@@ -142,11 +142,11 @@ class RetainedWorker(QThread):
 
     Subclasses are retained in :class:`_WorkerRegistry` for the lifetime of their OS thread, preventing the ``QThread: Destroyed while
     thread is still running`` abort that occurs when an unparented worker's only Python reference goes out of scope while the thread is
-    still executing. Subclasses name this class directly rather than an alias, so that a source gate walking the class graph can find
-    every worker thread in the package from its bases alone.
+    still executing. Subclasses name this class directly rather than an alias, so that a source gate walking the class graph can find every
+    worker thread in the package from its bases alone.
 
-    A worker may additionally record the widget that dispatched it as its *owner*. The owner is deliberately not the worker's Qt parent:
-    Qt destroys a parent's children along with it, and destroying a ``QThread`` whose OS thread is still running aborts the process with a
+    A worker may additionally record the widget that dispatched it as its *owner*. The owner is deliberately not the worker's Qt parent: Qt
+    destroys a parent's children along with it, and destroying a ``QThread`` whose OS thread is still running aborts the process with a
     native access violation and no Python traceback. Recording the owner separately keeps :func:`drain_bridge_workers_for` able to find a
     widget's in-flight workers without handing that widget the power to delete them mid-flight.
 
