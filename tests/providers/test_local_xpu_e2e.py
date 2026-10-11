@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
     from transformers import PreTrainedTokenizerBase
 
-pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
+pytestmark = [pytest.mark.integration, pytest.mark.asyncio, pytest.mark.xdist_group("real_local_model")]
 
 _TEN_GB: int = 10 * 1024 * 1024 * 1024
 _FOURTEEN_GB: int = 14 * 1024 * 1024 * 1024
@@ -544,7 +544,7 @@ def tinyllama_model_id() -> str:
     return "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="module")
 async def xpu_provider(
     *,
     has_xpu_available: bool,
@@ -568,7 +568,7 @@ async def xpu_provider(
     await provider.disconnect()
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="module")
 async def cpu_provider() -> AsyncGenerator[LocalTransformersProvider]:
     """Create a connected CPU-only provider instance.
 
@@ -581,7 +581,7 @@ async def cpu_provider() -> AsyncGenerator[LocalTransformersProvider]:
     await provider.disconnect()
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="module")
 async def loaded_xpu_provider(
     xpu_provider: LocalTransformersProvider,
     tinyllama_model_id: str,
@@ -591,7 +591,7 @@ async def loaded_xpu_provider(
     Forces a model load by issuing a minimal chat call.
 
     Args:
-        xpu_provider: The session-scoped XPU provider.
+        xpu_provider: The module-scoped XPU provider.
         tinyllama_model_id: The TinyLlama model identifier.
 
     Returns:
@@ -602,7 +602,7 @@ async def loaded_xpu_provider(
     return xpu_provider
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="module")
 async def loaded_cpu_provider(
     cpu_provider: LocalTransformersProvider,
     tinyllama_model_id: str,
@@ -612,7 +612,7 @@ async def loaded_cpu_provider(
     Forces a model load by issuing a minimal chat call.
 
     Args:
-        cpu_provider: The session-scoped CPU provider.
+        cpu_provider: The module-scoped CPU provider.
         tinyllama_model_id: The TinyLlama model identifier.
 
     Returns:
@@ -1471,7 +1471,7 @@ class TestVRAMManagement:
         A dedicated provider with its own isolated ModelCache is created so
         that no other reference to the loaded model's tensors exists when
         unload_model() is called.  Using the global cache would leave the
-        session-scoped loaded_xpu_provider holding a live reference to the
+        module-scoped loaded_xpu_provider holding a live reference to the
         same LoadedModel object, preventing GPU tensor reclamation and making
         the before/after comparison non-deterministic.  With a private cache
         the provider owns the only reference, so after unload() the GPU

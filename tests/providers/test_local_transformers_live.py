@@ -27,7 +27,7 @@ from intellicrack.providers.local_transformers import LocalTransformersProvider
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
+pytestmark = [pytest.mark.integration, pytest.mark.asyncio, pytest.mark.xdist_group("real_local_model")]
 
 _LIVE_MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
