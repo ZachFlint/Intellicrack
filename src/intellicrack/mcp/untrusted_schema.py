@@ -5,8 +5,8 @@
 r"""Making a server's argument schema safe to put in front of a model.
 
 A tool's ``inputSchema`` is the server's own text, and it travels to the model on every request that advertises the tool: property
-descriptions and titles, enumeration and constant values, defaults, examples, even property names. Every one of those strings is a place
-to hide an instruction or a terminal escape.
+descriptions and titles, enumeration and constant values, defaults, examples, even property names. Every one of those strings is a place to
+hide an instruction or a terminal escape.
 
 The schema is rewritten before it is advertised. Annotation text -- descriptions, titles, comments, formats and any keyword Intellicrack
 does not interpret -- is cleaned and bounded. Strings that must reach the server exactly as the server wrote them -- property names,

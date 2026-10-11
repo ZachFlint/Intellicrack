@@ -1,6 +1,6 @@
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
-                       
+
                    THIS DOCUMENT HAS BEEN MODIFIED
 
  Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
@@ -154,7 +154,7 @@ Source.
 same work.
 
   2. Treatment of plugins
-  
+
   This license does not affect plugins, i.e., dynamically linked
 libraries, that use the provided plugin interface mechanism of x64dbg
 for contibuting additional features to the x64dbg project and can only

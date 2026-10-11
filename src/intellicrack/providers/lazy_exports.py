@@ -4,16 +4,13 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Exports of :mod:`intellicrack.providers`, each resolved on first use.
 
-``intellicrack.core.config`` imports the providers package for the provider
-ids alone, so every bridge and the whole of :mod:`intellicrack.core` import
-it. When the package imported its submodules eagerly, that loaded every
-provider SDK and, through the local Transformers provider, PyTorch and
-Transformers: a fresh interpreter spent several seconds on a workstation, and
-more than a minute on a loaded CI runner, before it could import a single
-bridge or print the application's version.
+``intellicrack.core.config`` imports the providers package for the provider ids alone, so every bridge and the whole of
+:mod:`intellicrack.core` import it. When the package imported its submodules eagerly, that loaded every provider SDK and, through the local
+Transformers provider, PyTorch and Transformers: a fresh interpreter spent several seconds on a workstation, and more than a minute on a
+loaded CI runner, before it could import a single bridge or print the application's version.
 
-The package still exports every name it did. It resolves each one here the
-first time it is asked for, so a process pays only for the providers it uses.
+The package still exports every name it did. It resolves each one here the first time it is asked for, so a process pays only for the
+providers it uses.
 """
 
 from __future__ import annotations

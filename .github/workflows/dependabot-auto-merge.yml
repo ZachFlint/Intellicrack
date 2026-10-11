@@ -16,6 +16,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Enable auto-merge for patch and minor updates
         # pip-ecosystem PRs edit requirements.txt directly, which is generated from
+
         # pixi.lock and always overwritten on the next regen -- never auto-merge them.
         # See scripts/generate_requirements.py and the ci.yml drift-check gate.
         if: |

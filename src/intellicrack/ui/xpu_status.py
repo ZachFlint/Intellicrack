@@ -138,12 +138,10 @@ class _RequirementsCheckWorker(RetainedWorker):
     def run(self) -> None:
         """Execute the Windows requirements probe and emit the result.
 
-        Catches :class:`RuntimeError`, :class:`OSError` and
-        :class:`subprocess.SubprocessError` raised by subprocess invocation or
-        PCI BAR enumeration so the GUI thread always receives exactly one
-        terminal signal regardless of failure mode. A slow host where the GPU
-        query exceeds its timeout raises :class:`subprocess.TimeoutExpired`,
-        which is a :class:`subprocess.SubprocessError`, not an ``OSError``.
+        Catches :class:`RuntimeError`, :class:`OSError` and :class:`subprocess.SubprocessError` raised by subprocess invocation or PCI BAR
+        enumeration so the GUI thread always receives exactly one terminal signal regardless of failure mode. A slow host where the GPU
+        query exceeds its timeout raises :class:`subprocess.TimeoutExpired`, which is a :class:`subprocess.SubprocessError`, not an
+        ``OSError``.
         """
         if check_windows_requirements is None:
             self.check_failed.emit("Requirements check is not available in this build")

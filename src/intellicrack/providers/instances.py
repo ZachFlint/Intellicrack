@@ -59,17 +59,14 @@ BUILTIN_DIALECT_API_BASES: Final[dict[str, str]] = {
 }
 """Where a copy of a built-in provider sends its dialect's requests.
 
-A built-in provider talks to its service through a dedicated SDK client, so
-its preset records the SDK's own notion of a base URL -- or none at all when
-the SDK default applies. A duplicated built-in is an ordinary instance that
-speaks its dialect directly, and each dialect resolves its paths relative to
-the base URL: ``chat/completions`` and ``models`` for Chat Completions,
-``v1/messages`` and ``v1/models`` for Messages, ``v1beta/models/...`` for
-Gemini. These are the base URLs those relative paths need for each built-in
-whose preset base URL cannot serve them: OpenAI's ``/v1`` root, Anthropic's
-and Gemini's hosts, Ollama's OpenAI-compatible ``/v1`` root, and the
-HuggingFace router's OpenAI-compatible ``/v1`` root (the preset names the
-router host itself, ``https://router.huggingface.co``, which the dedicated
+A built-in provider talks to its service through a dedicated SDK client, so its preset records the SDK's own notion of a base URL -- or none
+at all when the SDK default applies. A duplicated built-in is an ordinary instance that speaks its dialect directly, and each dialect
+resolves its paths relative to the base URL: ``chat/completions`` and ``models`` for Chat Completions, ``v1/messages`` and ``v1/models`` for
+Messages, ``v1beta/models/...`` for Gemini. These are the base URLs those relative paths need for each built-in whose preset base URL cannot
+serve them: OpenAI's ``/v1`` root, Anthropic's and Gemini's hosts, Ollama's OpenAI-compatible ``/v1`` root, and the HuggingFace router's
+OpenAI-compatible ``/v1`` root (the preset names the router host itself,
+``https://router.huggingface.co``,
+which the dedicated
 SDK client extends with its own paths).
 """
 

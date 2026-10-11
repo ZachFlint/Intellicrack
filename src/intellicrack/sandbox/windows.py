@@ -140,11 +140,11 @@ MONITOR_READY_ANNOUNCEMENT: Final[str] = (
 )
 """PowerShell a monitor runs, once its startup can no longer fail, to tell ``start_monitors.cmd`` it started.
 
-The launcher hands each monitor the path of a file in ``INTELLICRACK_MONITOR_READY`` and takes that
-file's creation as the only proof the monitor started; a monitor that exits, or keeps running, without
-creating it is reported as failed. The variable is cleared before the file is written so that nothing
-the script launches afterwards inherits it, and a script started any other way has none and writes nothing.
+The launcher hands each monitor the path of a file in ``INTELLICRACK_MONITOR_READY`` and takes that file's creation as the only proof the
+monitor started; a monitor that exits, or keeps running, without creating it is reported as failed. The variable is cleared before the file
+is written so that nothing the script launches afterwards inherits it, and a script started any other way has none and writes nothing.
 """
+
 # How long the Host Compute Service is given to unwind the compute system after
 # the session closes. Measured on a real stop, the worker outlives the session
 # it backs, so anything shorter forces a kill during the very teardown that

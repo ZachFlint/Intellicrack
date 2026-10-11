@@ -4,10 +4,10 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """What a server says has changed about its resources and prompts.
 
-A server announces that its list of resources or of prompts changed, and that a resource a client subscribed to was updated. On
-2025-11-25 these arrive as ``notifications/resources/list_changed``, ``notifications/prompts/list_changed`` and
-``notifications/resources/updated``; on 2026-07-28 as events on the ``subscriptions/listen`` stream, which carries the client's
-resource subscriptions in its filter. Either way a connection hands each one on as a :class:`McpContextEvent`.
+A server announces that its list of resources or of prompts changed, and that a resource a client subscribed to was updated. On 2025-11-25
+these arrive as ``notifications/resources/list_changed``, ``notifications/prompts/list_changed`` and ``notifications/resources/updated``; on
+2026-07-28 as events on the ``subscriptions/listen`` stream, which carries the client's resource subscriptions in its filter. Either way a
+connection hands each one on as a :class:`McpContextEvent`.
 """
 
 from __future__ import annotations

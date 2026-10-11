@@ -166,7 +166,10 @@ _SECRET_DESCRIPTOR_TOKENS: Final[frozenset[str]] = frozenset({
     "version",
 })
 """Final name words that describe a setting about a credential rather than the credential: ``TOKEN_TYPE``, ``SIGNATURE_ALGO``,
-``API_KEY_HEADER``. A name ending in one is treated like a weak one."""
+``API_KEY_HEADER``.
+
+A name ending in one is treated like a weak one.
+"""
 
 _SECRET_NAME_WORDS: Final[frozenset[str]] = frozenset({
     "accesstoken",
@@ -194,9 +197,9 @@ _SECRET_VALUE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
 )
 """Value shapes that are credentials regardless of the field they sit in: each is a vendor's documented key or token format.
 
-Shapes that are merely random are deliberately absent. A 40-character hex git commit, a 32-character hex Notion page id, a Google Drive
-file id and a UUID look exactly like keys and are not; a random value used as a key is still caught by the name of the field or option it
-is given under.
+Shapes that are merely random are deliberately absent. A 40-character hex git commit, a 32-character hex Notion page id, a Google Drive file
+id and a UUID look exactly like keys and are not; a random value used as a key is still caught by the name of the field or option it is
+given under.
 """
 
 _MIXED_ENTROPY_MIN_CHARS: Final[int] = 24
@@ -236,6 +239,7 @@ _CHARACTER_CLASSES: Final[int] = 3
 
 _FEWER_CLASSES: Final[int] = 2
 """Two character classes suffice when the value also carries a symbol names and paths do not use."""
+
 _UNTELLING_SYMBOLS: Final[str] = "-_./:\\"
 """Symbols common in names, paths and versions, which say nothing about whether a value is a password."""
 

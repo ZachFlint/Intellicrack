@@ -4,10 +4,10 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """The client-side features one MCP connection offers its server.
 
-Which callbacks a :class:`mcp.Client` is built with is what decides the capabilities it advertises: the SDK declares ``sampling`` only
-when a sampling callback is installed, ``roots`` only with a roots callback, and so on, whichever protocol generation is negotiated.
-A connection is therefore built from one :class:`McpClientHooks` per server, holding exactly the features Intellicrack implements and
-has switched on for that server, and nothing else.
+Which callbacks a :class:`mcp.Client` is built with is what decides the capabilities it advertises: the SDK declares ``sampling`` only when
+a sampling callback is installed, ``roots`` only with a roots callback, and so on, whichever protocol generation is negotiated. A connection
+is therefore built from one :class:`McpClientHooks` per server, holding exactly the features Intellicrack implements and has switched on for
+that server, and nothing else.
 """
 
 from __future__ import annotations

@@ -1504,10 +1504,8 @@ class MainWindow(QMainWindow):
     def _sync_mcp_session_state(self) -> None:
         """Bring MCP up to date with the active session.
 
-        A new or restored session otherwise carries no MCP record, or the
-        stale one saved with it, until some server happens to change state;
-        and servers are offered the session's folders, including a binary
-        just loaded, as their roots.
+        A new or restored session otherwise carries no MCP record, or the stale one saved with it, until some server happens to change
+        state; and servers are offered the session's folders, including a binary just loaded, as their roots.
         """
         service = self._mcp_service
         if service is not None:

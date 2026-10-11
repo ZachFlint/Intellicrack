@@ -4,11 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Measuring and bounding multi-part tool results for the model's context.
 
-A multi-part result mixes prose, structured JSON and binary media. Each costs
-the context window differently: text is tokenized, but an image is billed by
-its pixel dimensions, never by the length of its base64 encoding. These
-helpers price each part the way a provider does and bound the textual parts
-so one large result cannot crowd the rest of the conversation out.
+A multi-part result mixes prose, structured JSON and binary media. Each costs the context window differently: text is tokenized, but an
+image is billed by its pixel dimensions, never by the length of its base64 encoding. These helpers price each part the way a provider does
+and bound the textual parts so one large result cannot crowd the rest of the conversation out.
 """
 
 from __future__ import annotations

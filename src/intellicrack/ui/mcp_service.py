@@ -96,8 +96,7 @@ def _state_of(status: McpServerStatus) -> McpServerState:
 class _GuiThreadRelay(QObject):
     """Carries reports from the background loop onto the GUI thread.
 
-    Created on the GUI thread, so a signal emitted from the loop's thread is
-    queued and its slot runs on the GUI thread.
+    Created on the GUI thread, so a signal emitted from the loop's thread is queued and its slot runs on the GUI thread.
     """
 
     generation_changed = pyqtSignal(str, str)
@@ -433,11 +432,9 @@ class McpService:
     def sync_session_state(self) -> None:
         """Bring the active session's MCP record up to date if it is new to this service.
 
-        Called on the GUI thread whenever the active session may have
-        changed. A session started or restored since the last call is given
-        every server's current state, replacing whatever a restored session
-        carried from the run that saved it; the session already being kept
-        up to date is left alone.
+        Called on the GUI thread whenever the active session may have changed. A session started or restored since the last call is given
+        every server's current state, replacing whatever a restored session carried from the run that saved it; the session already being
+        kept up to date is left alone.
         """
         self.sync_roots()
         session = self._orchestrator.current_session
@@ -458,10 +455,8 @@ class McpService:
     def sync_roots(self) -> None:
         """Offer servers the active session's folders as roots.
 
-        Called on the GUI thread whenever the session, its binaries or its
-        folders may have changed. The target binary's folder, the other
-        binaries' folders and the operator's folders become the session's
-        roots, and every 2025-11-25 server whose own roots moved is told.
+        Called on the GUI thread whenever the session, its binaries or its folders may have changed. The target binary's folder, the other
+        binaries' folders and the operator's folders become the session's roots, and every 2025-11-25 server whose own roots moved is told.
         """
         session = self._orchestrator.current_session
         if session is None:
@@ -567,8 +562,7 @@ class McpService:
     async def refresh_tool_registration(self) -> None:
         """Re-register every configured server's namespace.
 
-        Runs on the background loop, the thread that iterates the tool
-        registry while building tool definitions, so the registry is never
+        Runs on the background loop, the thread that iterates the tool registry while building tool definitions, so the registry is never
         changed underneath that iteration.
         """
         if self._stopped:
@@ -625,10 +619,8 @@ class McpService:
     def _release_approvals(self) -> None:
         """Withdraw the persistent approval store from the confirmation dialog.
 
-        Runs on the GUI thread, the thread every confirmation dialog reads the
-        store from, so a dialog being answered never sees it vanish between
-        offering ``always`` and writing the answer. A store another service
-        has installed since is left in place.
+        Runs on the GUI thread, the thread every confirmation dialog reads the store from, so a dialog being answered never sees it vanish
+        between offering ``always`` and writing the answer. A store another service has installed since is left in place.
         """
         ToolConfirmationDialog.release_approval_store(self._approvals)
 

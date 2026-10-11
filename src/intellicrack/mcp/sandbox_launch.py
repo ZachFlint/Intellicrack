@@ -166,8 +166,8 @@ SANDBOX_HOME_LAYOUT: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
 """Each directory of a sandbox home, relative to its root, and the variables that name it.
 
 The profile and application-data variables cover whatever reads them, npm included. uv and pipx find their directories through the Windows
-known-folder API rather than the environment, so they are pointed at the home by their own variables; without them ``uv`` and ``uvx``
-fail with "Failed to initialize cache ... Access is denied".
+known-folder API rather than the environment, so they are pointed at the home by their own variables; without them ``uv`` and ``uvx`` fail
+with "Failed to initialize cache ... Access is denied".
 """
 
 SANDBOX_LAUNCHER_SETTINGS: Final[Mapping[str, str]] = {"npm_config_install_links": "true"}
@@ -187,8 +187,8 @@ DEFAULT_PATHEXT: Final[str] = ".COM;.EXE;.BAT;.CMD"
 BATCH_UNSAFE_CHARACTERS: Final[tuple[str, ...]] = ('"', "%", "\r", "\n", "\0")
 """Characters ``cmd.exe`` interprets even inside a quoted argument.
 
-A batch script's arguments are re-parsed by the command interpreter, where ``%`` expands a variable and a stray ``"`` ends quoting early.
-An argument carrying one cannot be passed through a ``.cmd`` or ``.bat`` shim without the interpreter rewriting it, so it is refused.
+A batch script's arguments are re-parsed by the command interpreter, where ``%`` expands a variable and a stray ``"`` ends quoting early. An
+argument carrying one cannot be passed through a ``.cmd`` or ``.bat`` shim without the interpreter rewriting it, so it is refused.
 """
 
 PROCESS_TERMINATION_GRACE_S: Final[float] = 2.0
@@ -1114,20 +1114,14 @@ def _user32() -> ctypes.WinDLL:
 def ensure_inheritable_console() -> None:
     """Give the launcher a console the confined tree can inherit, once per process.
 
-    A console-subsystem child with no console to inherit allocates its own, and
-    that allocation fails under the confined restricted token on a hosted
-    runner, so every process in the tree must inherit one instead. When the
-    launcher already has a console -- the usual case under a terminal --
-    ``AllocConsole`` fails with ``ERROR_ACCESS_DENIED`` and the tree inherits
-    that one. When it has none -- a windowed application -- a console is
-    allocated here, under the launcher's own unrestricted token where the
-    allocation succeeds, and its window is hidden so nothing flashes on screen.
-    The launcher's own standard handles are saved across the call and restored,
-    since ``AllocConsole`` repoints them at the new console and the launcher's
-    own input and output must stay where they were.
+    A console-subsystem child with no console to inherit allocates its own, and that allocation fails under the confined restricted token on
+    a hosted runner, so every process in the tree must inherit one instead. When the launcher already has a console -- the usual case under
+    a terminal -- ``AllocConsole`` fails with ``ERROR_ACCESS_DENIED`` and the tree inherits that one. When it has none -- a windowed
+    application -- a console is allocated here, under the launcher's own unrestricted token where the allocation succeeds, and its window is
+    hidden so nothing flashes on screen. The launcher's own standard handles are saved across the call and restored, since ``AllocConsole``
+    repoints them at the new console and the launcher's own input and output must stay where they were.
 
-    A platform with no sandbox propagates :class:`McpConfigError` from
-    :func:`_kernel32`.
+    A platform with no sandbox propagates :class:`McpConfigError` from :func:`_kernel32`.
     """
     kernel32 = _kernel32()
     saved = [kernel32.GetStdHandle(std) for std in _STD_HANDLES]
@@ -2047,10 +2041,12 @@ def _prepare_home(launch: SandboxedLaunch) -> tuple[WriteGrant, ...]:
 
 
 def release_write_confinement(grants: Sequence[WriteGrant]) -> None:
-    """Give up the grants one confined launch held. Blocking: run it on a worker thread.
+    """Give up the grants one confined launch held.
+
+    Blocking: run it on a worker thread.
 
     Args:
-        grants: The grants :func:`apply_write_confinement` returned.
+            grants: The grants :func:`apply_write_confinement` returned.
     """
     for grant in reversed(grants):
         _GRANTS.release(grant)
@@ -2152,12 +2148,9 @@ class SandboxedServerExitedError(McpConnectionError):
 class StderrTee:
     """Carries a confined server's standard error to its log while keeping the last lines.
 
-    The child writes to a pipe of the tee's own; a reader thread forwards
-    every byte, unchanged and as it arrives, to the log the caller supplied,
-    and keeps the most recent lines so the reason a server died can be put
-    in the error that reports it. The thread ends when every process holding
-    the write end has closed it, which for a confined server is when its job
-    has ended.
+    The child writes to a pipe of the tee's own; a reader thread forwards every byte, unchanged and as it arrives, to the log the caller
+    supplied, and keeps the most recent lines so the reason a server died can be put in the error that reports it. The thread ends when
+    every process holding the write end has closed it, which for a confined server is when its job has ended.
     """
 
     def __init__(self, errlog: TextIO, read_fd: int, write_fd: int) -> None:

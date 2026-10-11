@@ -315,8 +315,8 @@ class _RootsChange:
 class McpRootSet:
     """The active session's roots, shared by every connection.
 
-    Read from the event loop by the roots callbacks and written from the GUI
-    thread as the session changes, so the current set is swapped under a lock.
+    Read from the event loop by the roots callbacks and written from the GUI thread as the session changes, so the current set is swapped
+    under a lock.
     """
 
     def __init__(self) -> None:

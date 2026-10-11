@@ -149,12 +149,9 @@ class AnthropicProvider(LLMProviderBase):
     async def _close_client(self) -> None:
         """Close the SDK client and its connection pool, if there is one.
 
-        The SDK client owns an HTTP connection pool. Dropped without being
-        closed, the pool is left to the garbage collector, and the SDK's
-        finalizer then closes it by scheduling a task on whichever event loop
-        is running when the collector reaches it -- which fails against
-        connections that belong to a loop already closed, in the middle of
-        whatever unrelated work that loop is doing.
+        The SDK client owns an HTTP connection pool. Dropped without being closed, the pool is left to the garbage collector, and the SDK's
+        finalizer then closes it by scheduling a task on whichever event loop is running when the collector reaches it -- which fails
+        against connections that belong to a loop already closed, in the middle of whatever unrelated work that loop is doing.
         """
         client, self._client = self._client, None
         if client is None:

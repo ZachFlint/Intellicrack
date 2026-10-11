@@ -9,8 +9,8 @@ OpenRouter, and local Transformers with Intel XPU acceleration.
 
 Every name this package exports is resolved on first use (see :func:`__getattr__`) rather than imported with the package. The provider
 modules import their SDKs, and the local Transformers provider imports PyTorch and Transformers, which together take seconds to load;
-``intellicrack.core.config`` imports this package for the provider ids alone, so every bridge and the whole of ``intellicrack.core``
-would otherwise pay for all of them, as would ``python -m intellicrack --version``.
+``intellicrack.core.config`` imports this package for the provider ids alone, so every bridge and the whole of ``intellicrack.core`` would
+otherwise pay for all of them, as would ``python -m intellicrack --version``.
 """
 
 from __future__ import annotations

@@ -156,10 +156,8 @@ class _Item:
 class _PatternParser:
     """A single-pass structural parser for schema regular expressions.
 
-    It recovers only what the backtracking analysis needs -- groups,
-    alternation, repetition and atom boundaries -- and treats anything it
-    does not recognise as a literal. Compiling the expression, not this
-    parser, decides whether it is valid.
+    It recovers only what the backtracking analysis needs -- groups, alternation, repetition and atom boundaries -- and treats anything it
+    does not recognise as a literal. Compiling the expression, not this parser, decides whether it is valid.
     """
 
     def __init__(self, expression: str) -> None:

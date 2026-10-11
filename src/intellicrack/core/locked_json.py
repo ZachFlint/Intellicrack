@@ -4,16 +4,16 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """A small JSON document on disk that several threads and processes may change at once.
 
-The operator's trust decisions and remembered approvals each live in one JSON file, written from the GUI thread and from the background
-loop alike. A plain read-modify-write through one fixed temporary file loses data three ways: two writers interleave and the second
-overwrites the first's change; on Windows a reader holding the file open makes the writer's rename fail with ``WinError 5``; and two
-writers sharing the temporary file corrupt it. Worse, a corrupt read treated as an empty document makes the next write wipe every record.
+The operator's trust decisions and remembered approvals each live in one JSON file, written from the GUI thread and from the background loop
+alike. A plain read-modify-write through one fixed temporary file loses data three ways: two writers interleave and the second overwrites
+the first's change; on Windows a reader holding the file open makes the writer's rename fail with ``WinError 5``; and two writers sharing
+the temporary file corrupt it. Worse, a corrupt read treated as an empty document makes the next write wipe every record.
 
-:class:`LockedJsonFile` closes all three. Every read and every read-modify-write holds an exclusive lock -- a thread lock within the
-process and an operating-system lock on a sidecar file across processes -- so no two changes interleave and no reader has the file open
-while it is replaced. Each write goes to a temporary file of its own in the same directory and is renamed over the document. And a change
-is only ever applied to a document that was read successfully: a document that cannot be read or parsed is left exactly as it is, and the
-change is refused with :class:`JsonDocumentError`.
+:class:`LockedJsonFile` closes all three. Every read and every read-modify-write holds an exclusive lock -- a thread lock within the process
+and an operating-system lock on a sidecar file across processes -- so no two changes interleave and no reader has the file open while it is
+replaced. Each write goes to a temporary file of its own in the same directory and is renamed over the document. And a change is only ever
+applied to a document that was read successfully: a document that cannot be read or parsed is left exactly as it is, and the change is
+refused with :class:`JsonDocumentError`.
 """
 
 from __future__ import annotations
@@ -64,9 +64,8 @@ _thread_locks: dict[str, threading.RLock] = {}
 class JsonDocumentError(OSError):
     """A JSON document could not be read, or a change to it could not be written.
 
-    Raised instead of applying a change to a document that was not read, so a
-    transient read failure or a corrupt file can never be overwritten with a
-    near-empty one.
+    Raised instead of applying a change to a document that was not read, so a transient read failure or a corrupt file can never be
+    overwritten with a near-empty one.
     """
 
 

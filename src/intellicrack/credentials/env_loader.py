@@ -152,9 +152,8 @@ _UNICODE_ESCAPE_PATTERN: Final[re.Pattern[str]] = re.compile(r"[0-9A-Fa-f]{4}")
 _ENV_LINE_BREAKS: Final[re.Pattern[str]] = re.compile(r"\r\n|\n|\r")
 """The only sequences that end a ``.env`` line.
 
-``str.splitlines`` also splits on vertical tab, form feed, the file, group and
-record separators, NEL and the Unicode line and paragraph separators; a value
-carrying any of those must stay on its line.
+``str.splitlines`` also splits on vertical tab, form feed, the file, group and record separators, NEL and the Unicode line and paragraph
+separators; a value carrying any of those must stay on its line.
 """
 
 _SHORT_ESCAPES: Final[dict[str, str]] = {"\\": "\\\\", '"': '\\"', "$": "\\$", "\n": "\\n", "\r": "\\r", "\t": "\\t"}
@@ -599,10 +598,9 @@ def instance_env_var_conflict(instance_id: str, other_ids: Iterable[str]) -> str
 class _InstanceMappingRegistry:
     """Credential mappings of the user-defined instances currently known.
 
-    A user-defined instance's variables depend on more than its id: an instance
-    created from a preset also reads the variable that preset names. The
-    settings store registers every instance it loads or writes, so every
-    :class:`CredentialLoader` resolves the same mapping for it.
+    A user-defined instance's variables depend on more than its id: an instance created from a preset also reads the variable that preset
+    names. The settings store registers every instance it loads or writes, so every :class:`CredentialLoader` resolves the same mapping for
+    it.
     """
 
     def __init__(self) -> None:
@@ -814,11 +812,9 @@ class CredentialLoader:
     def _migrate_retired_api_bases(self) -> None:
         """Remove saved base URLs on hosts a provider's service has retired.
 
-        HuggingFace retired ``api-inference.huggingface.co`` for its router,
-        so a base URL saved there would send every request to a host that no
-        longer serves them. The variable is removed from ``.env``, and the
-        provider uses its default endpoint. When the file cannot be rewritten
-        the value is still dropped for this session.
+        HuggingFace retired ``api-inference.huggingface.co`` for its router, so a base URL saved there would send every request to a host
+        that no longer serves them. The variable is removed from ``.env``, and the provider uses its default endpoint. When the file cannot
+        be rewritten the value is still dropped for this session.
         """
         for provider, mapping in self.PROVIDER_MAPPINGS.items():
             name = mapping.api_base_var
