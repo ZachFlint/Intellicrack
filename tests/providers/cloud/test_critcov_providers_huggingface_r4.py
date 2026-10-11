@@ -5,7 +5,7 @@
 """Drive the real HuggingFace provider against an inference endpoint that accepts a request and never answers.
 
 The inference client follows the provider's own ``api_base``, so it is pointed at a loopback listener that accepts the TCP connection,
-reads the request and stays silent. The client's request timeout then fires inside ``httpx`` as a read timeout, which the Hugging Face
+reads the request and stays silent. The client's request timeout then fires inside ``httpx2`` as a read timeout, which the Hugging Face
 client does not translate into its own timeout error. The identity probe of ``connect`` goes through the synchronous Hub client, which is
 pointed at a loopback server through ``huggingface_hub``'s public ``set_client_factory`` hook. Nothing leaves the machine and no real
 token is used.
@@ -18,7 +18,7 @@ import importlib
 from typing import TYPE_CHECKING, Final, cast
 from urllib.parse import urlsplit
 
-import httpx
+import httpx2
 import pytest
 from huggingface_hub import set_client_factory
 
@@ -53,11 +53,11 @@ def _hub_pointed_at(origin: str) -> Generator[None]:
         None: Control while the Hub client targets the loopback origin.
     """
     http_module = importlib.import_module("huggingface_hub.utils._http")
-    previous = cast("Callable[[], httpx.Client]", getattr(http_module, "_GLOBAL_CLIENT_FACTORY"))
+    previous = cast("Callable[[], httpx2.Client]", getattr(http_module, "_GLOBAL_CLIENT_FACTORY"))
     port = urlsplit(origin).port
     assert port is not None
 
-    def _redirect(request: httpx.Request) -> None:
+    def _redirect(request: httpx2.Request) -> None:
         """Rewrite a Hub request to the loopback port.
 
         Args:
@@ -65,13 +65,13 @@ def _hub_pointed_at(origin: str) -> Generator[None]:
         """
         request.url = request.url.copy_with(scheme="http", host="127.0.0.1", port=port)
 
-    def _client() -> httpx.Client:
+    def _client() -> httpx2.Client:
         """Build the synchronous Hub client.
 
         Returns:
-            httpx.Client: A client that rewrites requests to the loopback server.
+            httpx2.Client: A client that rewrites requests to the loopback server.
         """
-        return httpx.Client(event_hooks={"request": [_redirect]}, follow_redirects=True, timeout=10.0)
+        return httpx2.Client(event_hooks={"request": [_redirect]}, follow_redirects=True, timeout=10.0)
 
     set_client_factory(_client)
     try:
@@ -107,7 +107,7 @@ def _user() -> list[Message]:
 
 
 @pytest.mark.asyncio
-async def test_chat_reports_an_httpx_read_timeout_as_a_provider_timeout() -> None:
+async def test_chat_reports_an_httpx2_read_timeout_as_a_provider_timeout() -> None:
     """A chat request the endpoint never answers fails with a timeout provider error, not an API error."""
     async with _connected_to_silent_endpoint() as (provider, silent):
         with pytest.raises(ProviderError) as info:
@@ -116,12 +116,12 @@ async def test_chat_reports_an_httpx_read_timeout_as_a_provider_timeout() -> Non
 
     assert type(info.value) is ProviderError
     assert str(info.value).startswith(_TIMEOUT_PREFIX)
-    assert isinstance(info.value.__cause__, httpx.TimeoutException)
+    assert isinstance(info.value.__cause__, httpx2.TimeoutException)
     assert accepted >= 1
 
 
 @pytest.mark.asyncio
-async def test_stream_reports_an_httpx_read_timeout_as_a_provider_timeout() -> None:
+async def test_stream_reports_an_httpx2_read_timeout_as_a_provider_timeout() -> None:
     """A streaming request the endpoint never answers fails with a timeout provider error, not a stream failure."""
     async with _connected_to_silent_endpoint() as (provider, silent):
         with pytest.raises(ProviderError) as info:
@@ -130,5 +130,5 @@ async def test_stream_reports_an_httpx_read_timeout_as_a_provider_timeout() -> N
 
     assert type(info.value) is ProviderError
     assert str(info.value).startswith(_TIMEOUT_PREFIX)
-    assert isinstance(info.value.__cause__, httpx.TimeoutException)
+    assert isinstance(info.value.__cause__, httpx2.TimeoutException)
     assert accepted >= 1
