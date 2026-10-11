@@ -977,7 +977,7 @@ class HuggingFaceProvider(LLMProviderBase):
         try:
             async for piece in self._consume_stream_chunks(raw_stream, model=model, tc_buffer=tc_buffer):
                 yield piece
-        except (ConnectionError, OSError, ValueError) as exc:
+        except (ConnectionError, OSError, ValueError, httpx2.HTTPError) as exc:
             if self._cancel_requested:
                 self._logger.warning(
                     "huggingface_stream_cancelled_during_transport",

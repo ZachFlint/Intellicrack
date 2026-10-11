@@ -43,6 +43,7 @@ from intellicrack.core.types import (
 )
 from intellicrack.providers.huggingface import HuggingFaceProvider
 from tests._helpers.scripted_sdk_server import ScriptedHTTPServer, ScriptedResponse, json_response, sse_response
+from tests._helpers.stalling_http import TruncatingServer
 
 
 if TYPE_CHECKING:
@@ -896,6 +897,24 @@ async def test_stream_decode_failure_after_first_piece_is_a_stream_error() -> No
     assert pieces == ["Hel"]
     assert type(info.value) is ProviderError
     assert str(info.value).startswith("HuggingFace stream failed:")
+
+
+@pytest.mark.asyncio
+async def test_stream_dropped_connection_after_first_piece_is_a_stream_error() -> None:
+    """A connection the endpoint drops mid-stream stops the stream with a stream error after the earlier text was delivered."""
+    head = f"data: {json.dumps(_chunk(content='Hel'))}\n\n".encode()
+    with _loopback(_routes()), TruncatingServer(head=head, content_type="text/event-stream") as broken:
+        async with _connected(broken.url) as provider:
+            pieces: list[str] = []
+            with pytest.raises(ProviderError) as info:
+                await _drain_into(provider, pieces.append)
+        served = broken.requests
+
+    assert pieces == ["Hel"]
+    assert type(info.value) is ProviderError
+    assert str(info.value).startswith("HuggingFace stream failed:")
+    assert isinstance(info.value.__cause__, httpx2.HTTPError)
+    assert served == 1
 
 
 @pytest.mark.asyncio
