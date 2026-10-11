@@ -34,7 +34,7 @@ This round fixes every item below in `src/intellicrack/` and `tests/`. PR #429 (
    - (a) `StructuredResultPart` is never fenced or sanitised (`mcp/tool_source.py:323-327`; rendered with `json.dumps` in `providers/dialects/base.py:295`). Python SDK `MCPServer` tools repeat their text in `structuredContent`, so a server can close the fence with `<<<END_UNTRUSTED_MCP_SERVER_TEXT>>>` and inject instructions. On Gemini the structured object merges natively into `functionResponse.response` (`dialects/gemini.py:465-476`), so ESC, BEL, U+202E, ZWSP and BOM reach the endpoint unchanged.
    - (b) Provider tool definitions pass `input_schema` through verbatim: server-supplied property descriptions, enum and const values, and titles go out raw on every dialect.
    - (c) `render_schema_parameters` (`core/types.py`) writes property names, `$ref` leaf names and const/enum values raw into the system prompt and the `tools.search` signature.
-   - (d) The fence defang only replaces the exact-case marker. Lower-case, spaced (`>>>`) and full-width look-alikes survive. U+2028/U+2029 are kept.
+   - (d) The fence defang only replaces the exact-case marker. Lower-case, spaced (`>>> `) and full-width look-alikes survive. U+2028/U+2029 are kept.
    - Fix: every piece of server-originated text that reaches a model is sanitised, stripping control and bidi characters, and fenced or structurally isolated. This covers structured content, schema text, prompt and resource content, and sampling and elicitation text.
 2. **Image parts are never validated.** MIME type and base64 are unchecked (verify). A bad image is stored in history and breaks every later request to that provider; for example, Anthropic accepts only jpeg, png, gif and webp. Fix:
    - allow-list MIME types per dialect and validate the base64;
@@ -59,20 +59,20 @@ This round fixes every item below in `src/intellicrack/` and `tests/`. PR #429 (
 
 ## B. MCP correctness
 
-1. **The SDK's per-request timeouts still apply during operator waits.** `OperatorWaitClock` pauses only Intellicrack's own deadline.
+8. **The SDK's per-request timeouts still apply during operator waits.** `OperatorWaitClock` pauses only Intellicrack's own deadline.
    - During OAuth sign-in:
      - `server/discover` has a hard 10 s cap (`DISCOVER_TIMEOUT_SECONDS`), so a sign-in over 10 s silently downgrades a modern server to legacy 2025-11-25 and loses `subscriptions/listen`;
      - `initialize` uses `read_timeout_seconds=request_timeout_s` (`connection.py:724`), so a sign-in over about 10 s + `request_timeout_s` fails outright, even though the UI allows 300 s.
    - On legacy servers, elicitation inside `tools/call` is capped by `read_timeout_seconds`, so a slow answer fails with "tools/call timed out". Modern servers are fine.
    - Fix: complete OAuth before the handshake's timed requests start, and exclude operator time from the SDK per-request timeouts on every protocol version.
    - Then fix `test_slow_oauth_sign_in_does_not_time_out`: it currently passes only through the downgrade. It must assert the negotiated protocol version and cover a sign-in longer than 60 s.
-2. **Connection lifecycle** (`mcp/connection.py`):
+9. **Connection lifecycle** (`mcp/connection.py`):
    - Cancelling `connect()` or `manager.start()` leaves the supervisor task running, so the server can still reach READY afterwards (`1166-1168`).
    - `_supervise` returns on stop without setting `_settled`, so an in-flight `connect()` waits the whole 45 s and then reports a misleading timeout (`1096-1098`).
    - `manager.stop()` disconnects servers one at a time, with a 10 s wait each (`1678-1687`). Make it concurrent, and make stop end open OAuth waits.
    - `start_server` has no "stopped" guard. `deny_all_launches` blocks only stdio consent, so a queued HTTP or SSE start after stop still connects (verify).
    - A legacy `list_changed` that arrives while `fetch_catalog` is running is lost, because `_start_follower` replaces `_change_notice` (`1375`) (verify).
-3. **Sandboxed launches** (`mcp/sandbox_launch.py`):
+10. **Sandboxed launches** (`mcp/sandbox_launch.py`):
     - `render_command_line` (`:518`) wraps `.cmd` arguments in quotes without MSVC backslash doubling. An argument ending in `\`, such as `npx … C:\proj\`, swallows every argument after it.
     - `uv`/`uvx` fail with "Failed to initialize cache … Access is denied".
     - `npx` writes its cache to a literal `<cwd>\${LOCALAPPDATA}\npm-cache` because `LOCALAPPDATA` isn't on the allowlist.
@@ -80,12 +80,12 @@ This round fixes every item below in `src/intellicrack/` and `tests/`. PR #429 (
     - Close the handle-inheritance window between `SetHandleInformation(INHERIT)` and closing the handles (`:1386`).
     - Raise an error if `ResumeThread` fails and last-error reads 0 (verify).
     - Remove or wire the dead `SandboxedJob.adopt` and `assign_process_to_job` (`:941`, `:1559`).
-4. **Credential Manager chunking** (`credentials/store.py`):
+11. **Credential Manager chunking** (`credentials/store.py`):
     - A write that fails partway leaks the chunks it has already written, and they can't be deleted afterwards (`525-529`).
     - Concurrent writers orphan each other's chunks.
     - A reader can get a transient `KeyringReadError` while a writer deletes old chunks.
     - Make writes transactional and cleaned up, serialise writers across `CredentialStore` instances, and report quota exhaustion clearly to the user.
-5. **MCP config handling** (`mcp/config.py`, `ui/mcp_config.py`):
+12. **MCP config handling** (`mcp/config.py`, `ui/mcp_config.py`):
     - Importing keys that collide after normalisation (`GitHub` and `github`, or keys that match in their first 32 characters) loses one of them when saved (`serialize_document`, `1419-1420`).
     - Renaming a server to an id that already exists silently replaces that server's config (`_apply_editor`, `1696-1700`). If the replaced server was running, its process keeps running on a config that no longer matches.
     - The literal-secret heuristics still flag harmless values and miss real secrets.
@@ -93,18 +93,18 @@ This round fixes every item below in `src/intellicrack/` and `tests/`. PR #429 (
       - Missed: `DB_CONN=Server=db;Password=Hunter2!`, `--password hunter2`, `-p Sup3rS3cret!`.
     - Pressing Escape or Close (`reject()`) skips the unsaved-changes warning (`closeEvent` only, `2014-2023`).
     - One added server with an empty command blocks Save for every other edit.
-6. **Consent and elicitation prompts are nested modal `exec()` calls** (`ui/mcp_bridge.py:345-357`). Answers are delivered only after `exec()` returns, so with two prompts open, the first answer waits for the second dialog to close and can be discarded as late. Concurrent server starts make this common at startup. Answers must be delivered as soon as they are given, whatever the stacking.
-7. **Elicitation form** (`ui/mcp_elicitation_dialog.py`):
+13. **Consent and elicitation prompts are nested modal `exec()` calls** (`ui/mcp_bridge.py:345-357`). Answers are delivered only after `exec()` returns, so with two prompts open, the first answer waits for the second dialog to close and can be discarded as late. Concurrent server starts make this common at startup. Answers must be delivered as soon as they are given, whatever the stacking.
+14. **Elicitation form** (`ui/mcp_elicitation_dialog.py`):
     - An optional boolean with no default is always sent as `false` (`636-637`).
     - Number fields accept `nan` and `inf` (`_parse_number`).
     - Format checks are lax: date `20260131`, date-time `2026-01-31` and `2026-01-31 10:00`, and uri `a:b` are all accepted.
     - Validate to the spec's formats.
-8. **Legacy built-in providers turn images into text and drop `is_error`.** The built-in OpenAI chat path, Grok, OpenRouter and Ollama (`providers/base.py:1290-1297`, `_convert_messages_to_openai_format`) send `[image image/png, …]` text and carry no error marker.
+15. **Legacy built-in providers turn images into text and drop `is_error`.** The built-in OpenAI chat path, Grok, OpenRouter and Ollama (`providers/base.py:1290-1297`, `_convert_messages_to_openai_format`) send `[image image/png, …]` text and carry no error marker.
     - Route them through the dialect rendering, or give them native image and error handling equal to the dialects.
     - Add end-to-end MCP tests for the Responses and Gemini dialects and for these providers.
-9. **The Gemini tool-result renderer overwrites structured fields named `content` and `error`** (`dialects/gemini.py:465-476`).
-10. **Structured results double the context cost.** When `structuredContent` duplicates the text, both are sent. Send one representation, chosen per dialect, without losing information.
-11. **Validation** (`mcp/validation.py`, `bridges/json_schema.py`):
+16. **The Gemini tool-result renderer overwrites structured fields named `content` and `error`** (`dialects/gemini.py:465-476`).
+17. **Structured results double the context cost.** When `structuredContent` duplicates the text, both are sent. Send one representation, chosen per dialect, without losing information.
+18. **Validation** (`mcp/validation.py`, `bridges/json_schema.py`):
     - **Regression:** a pattern with 249 or more nested groups raises `RecursionError` out of `validate_against_schema` (`_PatternParser`, `116-304`). The elicitation dialog calls it on the GUI thread with no guard (`:660`).
     - `uniqueItems` is O(n²) through Python `_json_equal` (`839-856`). 10,000 items take 15.7 s on the loop, and this path has no time budget.
     - `$ref` inside `dependencies` isn't inlined, and `$dynamicRef` is left as is.
@@ -112,19 +112,19 @@ This round fixes every item below in `src/intellicrack/` and `tests/`. PR #429 (
     - Gemini `parameters` can contain untyped `{}` nodes where recursion was collapsed, and `_gemini_has_open_object` doesn't route them to `parametersJsonSchema` (verify).
     - The ECMA-262 dialect differs from Python's: `^abc$` accepts `"abc\n"`, `\d` matches non-ASCII digits, `.` matches U+2028, `^\s$` rejects U+FEFF, and `[^]`, `\cJ` and `\u{…}` are silently treated as uncompilable. Match ECMA-262 semantics.
     - The docstring claim that `regex` releases the GIL is wrong without `concurrent=True`.
-12. **Tool accounting and dead code:**
+19. **Tool accounting and dead code:**
     - `McpToolSource.costs` has no callers, and `ui/mcp_config.py:696` duplicates the calculation. Make the UI use `estimate_entry_costs` through `costs`.
     - `ToolConfirmationDialog.decision_made` (`ui/confirmation_dialog.py:90`) has no production listener.
     - `schema_parameters` renders `allOf` and nested objects as `any` or `object` (verify).
     - `stop()` calls `ToolConfirmationDialog.set_approval_store(None)` on the loop thread (`ui/mcp_service.py:501`).
     - `_execute_tool_calls` raising `CancelledError` after the assistant message is appended leaves a call with no result (`orchestrator.py:1547`, `2988-2989`) (verify).
     - A history that already starts with an orphaned tool message keeps it.
-13. **Token encoding** (`core/token_encoding` / `mcp/policy.py`):
+20. **Token encoding** (`core/token_encoding` / `mcp/policy.py`):
     - The `.tmp` staging file isn't removed if `replace` fails.
     - DNS resolution isn't covered by the connect timeout.
     - `TIKTOKEN_CACHE_DIR=""` falls through to an unbounded `tiktoken.get_encoding`.
-14. **`open_web_url` hands the raw string to `webbrowser`.** `urlsplit` strips leading C0 and space characters, so `'\x00http://a'`, `' http://x'` and `'http://\\\\evil\\share'` are accepted. Launch only the parsed and re-serialised URL.
-15. **OAuth leftovers:**
+21. **`open_web_url` hands the raw string to `webbrowser`.** `urlsplit` strips leading C0 and space characters, so `'\x00http://a'`, `' http://x'` and `'http://\\\\evil\\share'` are accepted. Launch only the parsed and re-serialised URL.
+22. **OAuth leftovers:**
     - A stored dynamic registration beats a newly configured `oauthClientId`.
     - After the SDK drops an issuer-mismatched registration (`oauth2.py:690`), the code falls back to dynamic registration, not the configured id.
     - `OAuthManager.run_authorization_flow` (`credentials/oauth.py:1516`) now accepts only `/callback`, so a provider `redirect_uri` with another path never completes.
@@ -132,27 +132,27 @@ This round fixes every item below in `src/intellicrack/` and `tests/`. PR #429 (
 
 ## C. Providers
 
- 1. **Thinking fails for unverified OpenAI organizations.** `dialects/responses.py:414` always sends `reasoning.summary: "auto"` when thinking is on. OpenAI returns 400 `invalid_request_error` with `param: reasoning.summary` ("organization must be verified"), so every thinking-enabled gpt-5.x or o-series turn fails for those orgs. This affects both the built-in `OpenAIProvider` and Responses instances.
+23. **Thinking fails for unverified OpenAI organizations.** `dialects/responses.py:414` always sends `reasoning.summary: "auto"` when thinking is on. OpenAI returns 400 `invalid_request_error` with `param: reasoning.summary` ("organization must be verified"), so every thinking-enabled gpt-5.x or o-series turn fails for those orgs. This affects both the built-in `OpenAIProvider` and Responses instances.
     - On that error, retry without `summary` and remember the result per instance.
     - Add a setting for it.
- 2. **Forced `tool_choice` is rejected by newer Claude models.** `any` and `tool` return 400 on Fable 5.1 and Opus 5.5, and on any Claude model with thinking on (`dialects/messages.py:390-395`). Resolve per model and per thinking state.
- 3. **Gemini 3 is sent `thinkingBudget` instead of `thinkingLevel`.** Send the native field per model family.
- 4. **The built-in OpenAI Responses stream has two gaps** (`providers/openai.py`):
+24. **Forced `tool_choice` is rejected by newer Claude models.** `any` and `tool` return 400 on Fable 5.1 and Opus 5.5, and on any Claude model with thinking on (`dialects/messages.py:390-395`). Resolve per model and per thinking state.
+25. **Gemini 3 is sent `thinkingBudget` instead of `thinkingLevel`.** Send the native field per model family.
+26. **The built-in OpenAI Responses stream has two gaps** (`providers/openai.py`):
     - It drops `tool_search_*` items from replay (`_responses_stream_deltas`); the dialect path keeps them.
     - It doesn't close the SDK stream when a cancel breaks the loop (`1363-1366`).
- 5. **HuggingFace settings:**
+27. **HuggingFace settings:**
     - Saved `HUGGINGFACE_API_BASE=https://api-inference.huggingface.co` values are never migrated to the router host.
     - `HUGGINGFACE` has no `default_api_base` in the credential mapping, so saving writes the default URL into `.env`.
     - The docstring at `instances.py:61-73` is stale.
- 6. **Anthropic pause_turn rebuild loses ordering.** The partial turn is rebuilt as reasoning and server blocks followed by text, which loses the model's own interleaving. Preserve block order.
- 7. **`prompt_cache_key` is the model id** (`responses.py:389`, `chat_completions.py:305`). Use a per-conversation key.
- 8. **Round-1 item 73's `parse_tool_call` refactor has no test that goes red when it is reverted.** Add one.
+28. **Anthropic pause_turn rebuild loses ordering.** The partial turn is rebuilt as reasoning and server blocks followed by text, which loses the model's own interleaving. Preserve block order.
+29. **`prompt_cache_key` is the model id** (`responses.py:389`, `chat_completions.py:305`). Use a per-conversation key.
+30. **Round-1 item 73's `parse_tool_call` refactor has no test that goes red when it is reverted.** Add one.
 
 ## D. Missing MCP features (full end-to-end implementations)
 
 Each feature must be implemented from the protocol layer through the orchestrator and GUI, and be persisted where relevant. Each must be tested against real `MCPServer` instances on both the 2026-07-28 and legacy 2025-11-25 paths.
 
- 1. **Sampling (`sampling/createMessage`).** Wire `sampling_callback` on the SDK `Client`, so servers can request completions through the user's configured AI providers.
+31. **Sampling (`sampling/createMessage`).** Wire `sampling_callback` on the SDK `Client`, so servers can request completions through the user's configured AI providers.
     - Map `modelPreferences` (hints, cost, speed and intelligence priorities) to a configured provider and model, with a per-server override.
     - Honour `systemPrompt`, `maxTokens`, `temperature` where the provider accepts it, `stopSequences`, and `includeContext`.
     - Support tool use in sampling where the spec version allows it.
@@ -162,21 +162,21 @@ Each feature must be implemented from the protocol layer through the orchestrato
     - Fence all server text and never expose provider credentials.
     - Advertise the capability only when at least one provider is connected.
     - Record sampling exchanges in the transcript with server attribution.
- 2. **Roots (`roots/list`, `notifications/roots/list_changed`).** Wire `list_roots_callback`.
+32. **Roots (`roots/list`, `notifications/roots/list_changed`).** Wire `list_roots_callback`.
     - Roots come from the active project and session: the target binary's directory, project folders, and operator-added folders, as `file://` URIs with Windows paths encoded correctly.
     - Allow per-server root restrictions, and keep sandbox `allowWrite` consistent with roots.
     - Send `list_changed` when the project, target or root set changes.
     - Add a UI for viewing and editing roots per server.
- 3. **Logging (`logging/setLevel`, `notifications/message`).** Wire `logging_callback`.
+33. **Logging (`logging/setLevel`, `notifications/message`).** Wire `logging_callback`.
     - Route server log messages into the app's structlog pipeline and the log viewer, with server attribution, level mapping and rate limiting.
     - Add a per-server log view and level selector in MCP Settings that sends `logging/setLevel`.
     - Keep stderr capture from stdio servers alongside it.
- 4. **Progress and cancellation.**
+34. **Progress and cancellation.**
     - Send a `progressToken` on `call_tool` (`progress_callback`), and show live progress and messages for long tool calls in the chat and tool UI.
     - Let the operator cancel a running call, sending `notifications/cancelled` and producing a failed tool result.
     - Honour server-side progress on resource reads and prompts too.
     - Progress must not reset or starve the request timeout incorrectly. Define and test how progress extends deadlines.
- 5. **Model access to resources and prompts.** Today they can only be attached by hand from the settings dialog.
+35. **Model access to resources and prompts.** Today they can only be attached by hand from the settings dialog.
     - Expose meta-tools the model can call:
       - list resources and resource templates, paginated
       - read a resource, including binary blobs as parts
@@ -187,11 +187,11 @@ Each feature must be implemented from the protocol layer through the orchestrato
     - Implement `notifications/resources/list_changed` and `notifications/prompts/list_changed` following.
     - Implement `completion/complete` for prompt and resource-template arguments, in both the UI and the meta-tools.
     - Add resource and prompt browsing and insertion to the chat UI, not only the settings dialog.
- 6. **Capability negotiation and status.** Advertise exactly the client capabilities that are actually implemented, per negotiated protocol version. Show each server's negotiated protocol version and server capabilities in MCP Settings.
+36. **Capability negotiation and status.** Advertise exactly the client capabilities that are actually implemented, per negotiated protocol version. Show each server's negotiated protocol version and server capabilities in MCP Settings.
 
 ## E. Tests: gates that don't gate
 
- 1. **Sandbox job confinement (round-1 item 9)** stays green with the sandbox removed:
+37. **Sandbox job confinement (round-1 item 9)** stays green with the sandbox removed:
     - `_is_in_job` uses `IsProcessInJob(h, NULL)`, which is true for any job, and the host is usually already in one.
     - The SDK's own kill-on-close job makes the `_gone` checks indistinguishable.
     - `test_venv_launcher_server_is_confined` never asserts job membership.
@@ -200,26 +200,26 @@ Each feature must be implemented from the protocol layer through the orchestrato
       - the integrity level and privileges;
       - an argument with a trailing backslash;
       - the sandboxed launchers from item 10.
- 2. **Server-death detection (round-1 item 7).** The gates go red only when both detectors are reverted. Gate each one alone, including an idle server killed from outside.
- 3. **`log_tool_call` success reporting** (`core/tools.py:556`) is not gated.
- 4. **The fence-marker defang** is not gated.
- 5. **`test_chat_completions_turn_carries_every_part` accepts the text fallback.** It checks only `"image/png" in json.dumps(body)`. Assert the native `image_url` part.
- 6. **`test_descriptions_are_fenced_everywhere…`** has a near-tautological assertion at line ~683. Rewrite it.
- 7. **The outputSchema `lie` case** passes because the SDK rejects the content first. Exercise Intellicrack's own `validate_structured_content`.
- 8. **Elicitation tests:** the format checks and legacy `enumNames` handling aren't gated; mutants survive. Add tests for booleans, NaN and inf, and date/uri strictness. Most current tests fail on the old code only because of object names; make them assert behaviour.
- 9. **Prompt bridge tests:** there's no test answering after a timeout, and none with two prompts open at once.
-10. **Credential Manager tests:** add tests that chunks are gone after delete, for cleanup after a partial failure, and for concurrent writers.
-11. **Consent tests:** add tests for items 3, 4 and 5 (privilege-widening changes, identity-bound approvals, concurrent trust writes).
-12. **The round-1 item 75 test** checks only the new HuggingFace host, not migration of an already-saved value.
-13. **`test_slow_oauth_sign_in_does_not_time_out` writes to the real Windows Credential Manager.** Isolate it. Existing Intellicrack MCP OAuth entries on the developer machine likely came from this test.
+38. **Server-death detection (round-1 item 7).** The gates go red only when both detectors are reverted. Gate each one alone, including an idle server killed from outside.
+39. **`log_tool_call` success reporting** (`core/tools.py:556`) is not gated.
+40. **The fence-marker defang** is not gated.
+41. **`test_chat_completions_turn_carries_every_part` accepts the text fallback.** It checks only `"image/png" in json.dumps(body)`. Assert the native `image_url` part.
+42. **`test_descriptions_are_fenced_everywhere…`** has a near-tautological assertion at line ~683. Rewrite it.
+43. **The outputSchema `lie` case** passes because the SDK rejects the content first. Exercise Intellicrack's own `validate_structured_content`.
+44. **Elicitation tests:** the format checks and legacy `enumNames` handling aren't gated; mutants survive. Add tests for booleans, NaN and inf, and date/uri strictness. Most current tests fail on the old code only because of object names; make them assert behaviour.
+45. **Prompt bridge tests:** there's no test answering after a timeout, and none with two prompts open at once.
+46. **Credential Manager tests:** add tests that chunks are gone after delete, for cleanup after a partial failure, and for concurrent writers.
+47. **Consent tests:** add tests for items 3, 4 and 5 (privilege-widening changes, identity-bound approvals, concurrent trust writes).
+48. **The round-1 item 75 test** checks only the new HuggingFace host, not migration of an already-saved value.
+49. **`test_slow_oauth_sign_in_does_not_time_out` writes to the real Windows Credential Manager.** Isolate it. Existing Intellicrack MCP OAuth entries on the developer machine likely came from this test.
 
 ## F. Test environment
 
- 1. **`keyrings.alt` is required but not declared.** `tests/_helpers/private_keyring.py:30,46` loads `keyrings.alt.file.PlaintextKeyring`, but it isn't declared in `pyproject.toml` or `pixi.lock` and isn't installed. As a result, 16 auth and credential gates can't run in the project environment:
+50. **`keyrings.alt` is required but not declared.** `tests/_helpers/private_keyring.py:30,46` loads `keyrings.alt.file.PlaintextKeyring`, but it isn't declared in `pyproject.toml` or `pixi.lock` and isn't installed. As a result, 16 auth and credential gates can't run in the project environment:
     - `test_fix_keyring_chunking` (1 failure, 10 errors)
     - `test_fix_oauth_restart` (5 errors)
     - `test_fix_config_import` (1 error)
     Declare it as a test dependency in the pixi environment (updating the lock), or replace it with an in-repo keyring backend. Fix the helper's docstring either way.
- 2. **`tests/_helpers/child_python.py:30,57` gives child processes a minimal environment without `CONDA_PREFIX`.** Capstone's `__init__` joins `os.getenv('CONDA_PREFIX')` and raises `TypeError`, so `tests/ui/test_fix_mcp_tool_cost_nonblocking.py` has never passed on native Windows. Give children the environment the pixi runtime needs.
- 3. **`regex` is imported but not declared.** It's imported by `mcp/validation.py:35` without a fallback, and arrives only through tiktoken. Declare it in `pyproject.toml` and the pixi environment.
- 4. **Test ordering is randomized, so `-x` stops at a different first failure each run.** Make every new test order-independent, and confirm by running the new files with at least two seeds.
+51. **`tests/_helpers/child_python.py:30,57` gives child processes a minimal environment without `CONDA_PREFIX`.** Capstone's `__init__` joins `os.getenv('CONDA_PREFIX')` and raises `TypeError`, so `tests/ui/test_fix_mcp_tool_cost_nonblocking.py` has never passed on native Windows. Give children the environment the pixi runtime needs.
+52. **`regex` is imported but not declared.** It's imported by `mcp/validation.py:35` without a fallback, and arrives only through tiktoken. Declare it in `pyproject.toml` and the pixi environment.
+53. **Test ordering is randomized, so `-x` stops at a different first failure each run.** Make every new test order-independent, and confirm by running the new files with at least two seeds.
