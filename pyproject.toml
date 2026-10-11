@@ -1120,7 +1120,8 @@ format.max-line-length = 140
 ]
 
 [tool.pytest]
-ini_options.addopts = ["-ra", "--strict-markers"]
+# pytest-deadfixtures keeps every fixture value alive until the session ends; load it only for its own run: pytest -p deadfixtures --dead-fixtures
+ini_options.addopts = ["-ra", "--strict-markers", "-p", "no:deadfixtures"]
 ini_options.faulthandler_timeout = 300
 ini_options.markers = [
   "slow: Slow running tests",
