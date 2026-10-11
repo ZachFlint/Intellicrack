@@ -23,7 +23,7 @@ more time, and the eventual failure names the last stage actually reached.
 These gates drive the real, unmodified wait coroutine against a real
 temporary directory standing in for the shared folder - the only thing
 faked is the passage of time, via monkeypatched module constants, so the
-gates run in a fraction of a second rather than minutes.
+gates run in a few seconds rather than minutes.
 """
 
 from __future__ import annotations
@@ -164,46 +164,50 @@ async def test_wait_extends_its_deadline_on_real_progress_and_reports_the_reache
 
     The ready marker is never written, so the wait must eventually fail - but
     only after running past the shrunken base timeout, because the logon
-    marker appears while that first window is still open. A non-adaptive
+    marker is already on disk when the wait begins: the wait's first poll
+    always runs, before any deadline check can fail, and treats the newly
+    seen marker as progress inside the base window. The marker is therefore
+    ordered before the wait by construction, not by a delay, so no sub-second
+    race with a loaded event loop or disk exists. A non-adaptive
     (fixed-timeout) implementation would instead fail right at the base
     timeout, never seeing the deadline move.
+
+    The extension is far larger than the ceiling, so the end of the wait is
+    set by the ceiling cap alone. The elapsed time is therefore bounded below
+    by the ceiling (a deadline is never passed early), which is also well past
+    the base timeout, while the ten second ``wait_for`` limit is only the
+    failure bound for a capless implementation, which would wait out the whole
+    extension.
 
     Args:
         tmp_path: Pytest scratch directory for this test.
         monkeypatch: Pytest fixture used to shrink the real timing constants
-            so the gate runs in about a second instead of minutes.
+            so the gate runs in a few seconds instead of minutes.
     """
-    base_timeout = 0.3
-    extension = 0.6
-    ceiling = 1.5
+    base_timeout = 1.0
+    extension = 30.0
+    ceiling = 3.0
     monkeypatch.setattr(windows_module, "_DISPATCHER_STARTUP_TIMEOUT", base_timeout)
     monkeypatch.setattr(windows_module, "_DISPATCHER_READY_PROGRESS_EXTENSION_S", extension)
     monkeypatch.setattr(windows_module, "_DISPATCHER_READY_MAX_CEILING_S", ceiling)
-    monkeypatch.setattr(windows_module, "_DISPATCHER_POLL_INTERVAL", 0.03)
+    monkeypatch.setattr(windows_module, "_DISPATCHER_POLL_INTERVAL", 0.05)
 
     shared = _make_shared_folder(tmp_path)
+    (shared / "flags" / WindowsSandbox.DISPATCHER_LOGON_MARKER).write_text("logon_started", encoding="ascii")
     sandbox = _ExposedWindowsSandbox()
     sandbox.use_shared_folder(shared)
     sandbox.process = None
 
-    async def _write_logon_marker_partway_through_the_base_window() -> None:
-        """Drop the logon marker while the shrunken base timeout is still open."""
-        await asyncio.sleep(base_timeout / 2)
-        (shared / "flags" / WindowsSandbox.DISPATCHER_LOGON_MARKER).write_text("logon_started", encoding="ascii")
-
-    writer = asyncio.ensure_future(_write_logon_marker_partway_through_the_base_window())
     loop = asyncio.get_running_loop()
     started = loop.time()
     with pytest.raises(SandboxError) as exc_info:
         await asyncio.wait_for(sandbox.wait_for_dispatcher_ready(), timeout=10.0)
     elapsed = loop.time() - started
-    await writer
 
-    assert elapsed > base_timeout + 0.05, (
-        f"the wait returned after {elapsed:.2f}s, at or before the {base_timeout}s base timeout; "
-        f"the logon marker arrived inside that window and should have pushed the deadline out"
+    assert elapsed >= ceiling, (
+        f"the wait returned after {elapsed:.2f}s, before the {ceiling}s ceiling and so near the {base_timeout}s base timeout; "
+        f"the logon marker was seen inside that window and should have pushed the deadline out to the ceiling"
     )
-    assert elapsed < ceiling + 0.5, f"the wait ran {elapsed:.2f}s, past its {ceiling}s ceiling; the extension must still be capped"
     assert "no monitor produced any output" in str(exc_info.value), (
         f"the logon marker was observed but no monitor log ever appeared, so the failure must name that exact stage; got: {exc_info.value}"
     )
