@@ -35,7 +35,8 @@ from typing import TYPE_CHECKING, Final, cast
 import httpx
 import pytest
 import structlog
-from PyQt6.QtCore import QEvent
+from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from intellicrack.core.hexpat.stdlib import set_print_sink
@@ -72,7 +73,7 @@ from tests._helpers.thread_leaks import find_leaked_background_threads
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
 
 _HTTP_OK = 200
@@ -449,6 +450,30 @@ def detach_pattern_print_sink_after_the_test() -> Generator[None]:
         yield
     finally:
         set_print_sink(None)
+
+
+@pytest.fixture(autouse=True)
+def release_keyboard_modifiers_left_by_the_test() -> Generator[None]:
+    """Clear a modifier key that a test's last key event left marked as held.
+
+    Qt remembers the modifiers of the most recent key event. A simulated key
+    click that carries Shift never sends the release of the Shift key itself,
+    so the application keeps reporting Shift as held until some other key
+    event arrives. A table asked to select a row in that state extends a
+    selection from an anchor it does not have and selects nothing, which fails
+    whichever later test in the worker selects a row that way.
+
+    Yields:
+        None: Yields control to the test.
+    """
+    try:
+        yield
+    finally:
+        app = QApplication.instance()
+        if isinstance(app, QApplication) and QApplication.keyboardModifiers() != Qt.KeyboardModifier.NoModifier:
+            target = QWidget()
+            cast("Callable[..., object]", getattr(QTest, "keyRelease"))(target, Qt.Key.Key_Shift, Qt.KeyboardModifier.NoModifier)
+            target.deleteLater()
 
 
 @pytest.fixture(scope="session")
