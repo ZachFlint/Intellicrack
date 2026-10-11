@@ -102,6 +102,20 @@ def _configure_result_columns(tree: QTreeWidget) -> None:
     tree.setTextElideMode(Qt.TextElideMode.ElideMiddle)
 
 
+def _joined(value: object) -> str:
+    """Render a report value for a table cell, joining a list with commas.
+
+    Args:
+        value: The report value, a scalar or a list of scalars.
+
+    Returns:
+        str: The cell text.
+    """
+    if isinstance(value, list):
+        return ", ".join(str(part) for part in cast("list[object]", value))
+    return str(value)
+
+
 def _format_file_change_detail(change: dict[str, object]) -> str:
     """Build a human-readable detail string for a file-change row.
 
@@ -1600,10 +1614,10 @@ class SandboxPanel(AnalysisPanelBase):
                 call = cast("dict[str, object]", raw_call)
                 item = QTreeWidgetItem([
                     str(call.get("timestamp", "")),
-                    str(call.get("process", "")),
-                    str(call.get("api", "")),
+                    str(call.get("process_name", "")),
+                    str(call.get("api_name", "")),
                     str(call.get("module", "")),
-                    str(call.get("args", "")),
+                    _joined(call.get("arguments", "")),
                     str(call.get("return_value", "")),
                 ])
                 self._api_calls_tree.addTopLevelItem(item)
@@ -1622,9 +1636,9 @@ class SandboxPanel(AnalysisPanelBase):
                 load = cast("dict[str, object]", raw_load)
                 item = QTreeWidgetItem([
                     str(load.get("timestamp", "")),
-                    str(load.get("process", "")),
+                    str(load.get("process_name", "")),
                     str(load.get("dll_path", "")),
-                    str(load.get("base_addr", "")),
+                    str(load.get("base_address", "")),
                     str(load.get("size", "")),
                 ])
                 self._dll_loads_tree.addTopLevelItem(item)
@@ -1643,10 +1657,10 @@ class SandboxPanel(AnalysisPanelBase):
                 svc = cast("dict[str, object]", raw_svc)
                 item = QTreeWidgetItem([
                     str(svc.get("operation", "")),
-                    str(svc.get("name", "")),
+                    str(svc.get("service_name", "")),
                     str(svc.get("binary_path", "")),
                     str(svc.get("start_type", "")),
-                    str(svc.get("time", "")),
+                    str(svc.get("timestamp", "")),
                 ])
                 self._services_tree.addTopLevelItem(item)
 
@@ -1663,9 +1677,9 @@ class SandboxPanel(AnalysisPanelBase):
             if isinstance(raw_obj, dict):
                 obj = cast("dict[str, object]", raw_obj)
                 item = QTreeWidgetItem([
-                    str(obj.get("type", "")),
+                    str(obj.get("object_type", "")),
                     str(obj.get("name", "")),
-                    str(obj.get("process", "")),
+                    str(obj.get("process_name", "")),
                     str(obj.get("operation", "")),
                     str(obj.get("timestamp", "")),
                 ])
@@ -1684,10 +1698,10 @@ class SandboxPanel(AnalysisPanelBase):
             if isinstance(raw_inj, dict):
                 inj = cast("dict[str, object]", raw_inj)
                 item = QTreeWidgetItem([
-                    str(inj.get("type", "")),
-                    str(inj.get("source", "")),
-                    str(inj.get("target", "")),
-                    str(inj.get("apis", "")),
+                    str(inj.get("injection_type", "")),
+                    str(inj.get("source_name", "")),
+                    str(inj.get("target_name", "")),
+                    _joined(inj.get("api_calls", "")),
                     str(inj.get("timestamp", "")),
                 ])
                 self._injections_tree.addTopLevelItem(item)
@@ -1707,11 +1721,11 @@ class SandboxPanel(AnalysisPanelBase):
                 item = QTreeWidgetItem([
                     str(sample.get("timestamp", "")),
                     str(sample.get("cpu_percent", "")),
-                    str(sample.get("mem_mb", "")),
-                    str(sample.get("disk_read", "")),
-                    str(sample.get("disk_write", "")),
-                    str(sample.get("net_sent", "")),
-                    str(sample.get("net_recv", "")),
+                    str(sample.get("memory_mb", "")),
+                    str(sample.get("disk_read_bytes", "")),
+                    str(sample.get("disk_write_bytes", "")),
+                    str(sample.get("net_sent_bytes", "")),
+                    str(sample.get("net_recv_bytes", "")),
                 ])
                 self._resources_tree.addTopLevelItem(item)
 
@@ -1731,8 +1745,8 @@ class SandboxPanel(AnalysisPanelBase):
                     str(clip.get("timestamp", "")),
                     str(clip.get("operation", "")),
                     str(clip.get("format", "")),
-                    str(clip.get("preview", "")),
-                    str(clip.get("size", "")),
+                    str(clip.get("content_preview", "")),
+                    str(clip.get("size_bytes", "")),
                 ])
                 self._clipboard_tree.addTopLevelItem(item)
 
@@ -2206,7 +2220,7 @@ class SandboxPanel(AnalysisPanelBase):
                     if isinstance(raw_match, dict):
                         m = cast("dict[str, object]", raw_match)
                         self._log(
-                            f"[YARA] {m.get('rule', 'unknown')}: {m.get('strings', '')} in {m.get('file', '')}",
+                            f"[YARA] {m.get('rule', 'unknown')}: {m.get('strings', '')} in {m.get('source', '')}",
                         )
         self._log(f"[+] YARA scan complete: {match_count} matches")
         self._restore_shared_control(self.yara_btn)
@@ -2355,10 +2369,10 @@ class SandboxPanel(AnalysisPanelBase):
                     if isinstance(raw_match, dict):
                         m = cast("dict[str, object]", raw_match)
                         item = QTreeWidgetItem([
-                            str(m.get("signature", "")),
+                            str(m.get("signature_name", "")),
                             str(m.get("category", "")),
                             str(m.get("severity", "")),
-                            str(m.get("mitre", "")),
+                            str(m.get("mitre_attack_id", "")),
                             str(m.get("description", "")),
                         ])
                         self._behaviors_tree.addTopLevelItem(item)
@@ -3008,7 +3022,7 @@ class SandboxPanel(AnalysisPanelBase):
         existing: dict[str, QTreeWidgetItem] = {}
         for idx in range(self._instances_tree.topLevelItemCount()):
             item = self._instances_tree.topLevelItem(idx)
-            if item is None:
+            if item is None:  # pragma: no cover - type narrowing
                 continue
             existing[item.text(0)] = item
 
@@ -3040,8 +3054,7 @@ class SandboxPanel(AnalysisPanelBase):
             if stale_id in seen_ids:
                 continue
             row = self._instances_tree.indexOfTopLevelItem(stale_item)
-            if row >= 0:
-                self._instances_tree.takeTopLevelItem(row)
+            self._instances_tree.takeTopLevelItem(row)
 
     def _on_poll_status_error(self, exc: object) -> None:
         """Handle status poll failure.
@@ -3185,34 +3198,31 @@ class SandboxPanel(AnalysisPanelBase):
         _logger.debug("execution_report_loading", report_type=type(report).__name__)
         self._clear_report_tabs()
 
-        if hasattr(report, "file_changes"):
-            for change in report.file_changes:
-                change_map = cast("dict[str, object]", change)
-                op = change_map.get("operation", "unknown")
-                path = change_map.get("path", "")
-                detail = _format_file_change_detail(change_map)
-                item = QTreeWidgetItem([str(op), str(path), detail])
-                self._file_changes_tree.addTopLevelItem(item)
+        for change in report.file_changes:
+            change_map = cast("dict[str, object]", change)
+            op = change_map.get("operation", "unknown")
+            path = change_map.get("path", "")
+            detail = _format_file_change_detail(change_map)
+            item = QTreeWidgetItem([str(op), str(path), detail])
+            self._file_changes_tree.addTopLevelItem(item)
 
-        if hasattr(report, "registry_changes"):
-            for reg_change in report.registry_changes:
-                reg_map = cast("dict[str, object]", reg_change)
-                op = reg_map.get("operation", "unknown")
-                key = reg_map.get("key", "")
-                value = reg_map.get("value_data", "")
-                item = QTreeWidgetItem([str(op), str(key), str(value)])
-                self._registry_changes_tree.addTopLevelItem(item)
+        for reg_change in report.registry_changes:
+            reg_map = cast("dict[str, object]", reg_change)
+            op = reg_map.get("operation", "unknown")
+            key = reg_map.get("key", "")
+            value = reg_map.get("value_data", "")
+            item = QTreeWidgetItem([str(op), str(key), str(value)])
+            self._registry_changes_tree.addTopLevelItem(item)
 
-        if hasattr(report, "network_activity"):
-            for activity in report.network_activity:
-                act_map = cast("dict[str, object]", activity)
-                proto = act_map.get("protocol", "unknown")
-                dest = act_map.get("remote_address", "")
-                port = act_map.get("remote_port", 0)
-                sent = act_map.get("bytes_sent", 0)
-                recv = act_map.get("bytes_received", 0)
-                item = QTreeWidgetItem([str(proto), str(dest), str(port), f"{sent}/{recv} bytes"])
-                self._network_tree.addTopLevelItem(item)
+        for activity in report.network_activity:
+            act_map = cast("dict[str, object]", activity)
+            proto = act_map.get("protocol", "unknown")
+            dest = act_map.get("remote_address", "")
+            port = act_map.get("remote_port", 0)
+            sent = act_map.get("bytes_sent", 0)
+            recv = act_map.get("bytes_received", 0)
+            item = QTreeWidgetItem([str(proto), str(dest), str(port), f"{sent}/{recv} bytes"])
+            self._network_tree.addTopLevelItem(item)
 
         self._log(
             f"[+] Execution report loaded: {len(report.file_changes)} file changes, "

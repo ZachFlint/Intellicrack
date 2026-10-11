@@ -36,12 +36,16 @@ ENV PATH="C:\\Program Files\\PowerShell\\7;C:\\ProgramData\\chocolatey\\bin;C:\\
 
 RUN python --version ; pip --version ; git --version ; pwsh -NoLogo -NoProfile -Command "$PSVersionTable.PSVersion"
 
-# Stage 2 -- external analysis tools (JDK 21, Ghidra, radare2)
+# Stage 2 -- toolchain and external analysis tools (JDK 21, MSVC Build Tools,
+# Ghidra, radare2, rizin, QEMU). The slow MSVC install comes before the tool
+# downloads so that a tool version bump does not repeat it.
 FROM base AS tools
 
 ENV JAVA_VERSION="21.0.5.11.1" \
-    GHIDRA_VERSION="11.2.1_PUBLIC_20241105" \
-    RADARE2_VERSION="5.9.8"
+    GHIDRA_VERSION="12.1.4_PUBLIC_20260921" \
+    RADARE2_VERSION="6.2.2" \
+    RIZIN_VERSION="0.9.1" \
+    QEMU_VERSION="10.1.0"
 
 RUN choco install -y --no-progress temurin21
 
@@ -55,39 +59,6 @@ RUN $ErrorActionPreference = 'Stop'; \
 
 ENV JAVA_HOME="C:\\tools\\jdk"
 
-RUN $ErrorActionPreference = 'Stop'; \
-    $ProgressPreference = 'SilentlyContinue'; \
-    $ghidraUrl = 'https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.2.1_build/ghidra_11.2.1_PUBLIC_20241105.zip'; \
-    $ghidraZip = 'C:\temp\ghidra.zip'; \
-    New-Item -ItemType Directory -Force -Path 'C:\temp' | Out-Null; \
-    New-Item -ItemType Directory -Force -Path 'C:\tools' | Out-Null; \
-    Write-Host 'Downloading Ghidra...'; \
-    Invoke-WebRequest -Uri $ghidraUrl -OutFile $ghidraZip -UseBasicParsing; \
-    Write-Host 'Extracting with 7-Zip...'; \
-    & 'C:\Program Files\7-Zip\7z.exe' x $ghidraZip -oC:\tools -bsp0 -bso0 -aoa; \
-    if ($LASTEXITCODE -ne 0) { throw '7z extract failed' }; \
-    Remove-Item $ghidraZip -Force; \
-    Get-ChildItem -Path 'C:\tools' -Directory -Filter 'ghidra_*' | ForEach-Object { Rename-Item -Path $_.FullName -NewName 'ghidra' }; \
-    Write-Host 'Ghidra ready.'
-
-RUN $ErrorActionPreference = 'Stop'; \
-    $ProgressPreference = 'SilentlyContinue'; \
-    $r2Url = 'https://github.com/radareorg/radare2/releases/download/5.9.8/radare2-5.9.8-w64.zip'; \
-    $r2Zip = 'C:\temp\radare2.zip'; \
-    Write-Host 'Downloading radare2...'; \
-    Invoke-WebRequest -Uri $r2Url -OutFile $r2Zip -UseBasicParsing; \
-    Write-Host 'Extracting with 7-Zip...'; \
-    & 'C:\Program Files\7-Zip\7z.exe' x $r2Zip -oC:\tools -bsp0 -bso0 -aoa; \
-    if ($LASTEXITCODE -ne 0) { throw '7z extract failed' }; \
-    Remove-Item $r2Zip -Force; \
-    Get-ChildItem -Path 'C:\tools' -Directory -Filter 'radare2-*' | ForEach-Object { Rename-Item -Path $_.FullName -NewName 'radare2' }; \
-    Write-Host 'radare2 ready.'
-
-ENV GHIDRA_INSTALL_DIR="C:\\tools\\ghidra" \
-    RADARE2_HOME="C:\\tools\\radare2"
-
-ENV PATH="C:\\tools\\jdk\\bin;C:\\tools\\ghidra\\support;C:\\tools\\radare2\\bin;${PATH}"
-
 # MSVC Build Tools 2022 -- required so source-only Python sdists (tree-sitter
 # grammars, C extensions) can build during `pixi install`. setuptools locates
 # the toolchain automatically via vswhere.exe; no PATH edits needed.
@@ -98,6 +69,139 @@ RUN $ErrorActionPreference = 'Stop'; \
     $installPath = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath; \
     if (-not $installPath) { throw 'VC Tools workload not found via vswhere' }; \
     Write-Host "MSVC Build Tools installed at $installPath"
+
+# Ghidra. The bridge launches Ghidra through PyGhidra, which ships with
+# Ghidra 11.3 and later, and it refuses to start while the stock Jython
+# feature is live in the same installation (see
+# _check_no_live_jython_extension in bridges/ghidra.py). The build fails if
+# the PyGhidra feature is missing, and disables Jython the way that check
+# asks for when the release still carries it.
+RUN $ErrorActionPreference = 'Stop'; \
+    $ProgressPreference = 'SilentlyContinue'; \
+    $ghidraUrl = 'https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip'; \
+    $ghidraZip = 'C:\temp\ghidra.zip'; \
+    New-Item -ItemType Directory -Force -Path 'C:\temp' | Out-Null; \
+    New-Item -ItemType Directory -Force -Path 'C:\tools' | Out-Null; \
+    Write-Host 'Downloading Ghidra...'; \
+    Invoke-WebRequest -Uri $ghidraUrl -OutFile $ghidraZip -UseBasicParsing; \
+    Write-Host 'Extracting with 7-Zip...'; \
+    & 'C:\Program Files\7-Zip\7z.exe' x $ghidraZip -oC:\tools -bsp0 -bso0 -aoa; \
+    if ($LASTEXITCODE -ne 0) { throw '7z extract failed' }; \
+    Remove-Item $ghidraZip -Force; \
+    Get-ChildItem -Path 'C:\tools' -Directory -Filter 'ghidra_*' | ForEach-Object { Rename-Item -Path $_.FullName -NewName 'ghidra' }; \
+    if (-not (Test-Path -LiteralPath 'C:\tools\ghidra\Ghidra\Features\PyGhidra\lib\PyGhidra.jar')) { throw 'this Ghidra release has no PyGhidra feature' }; \
+    $jython = 'C:\tools\ghidra\Ghidra\Features\Jython'; \
+    if (Test-Path -LiteralPath $jython) { Rename-Item -LiteralPath $jython -NewName 'Jython.disabled' }; \
+    if (Test-Path -LiteralPath $jython) { throw 'Ghidra Jython feature is still live' }; \
+    Write-Host 'Ghidra ready.'
+
+RUN $ErrorActionPreference = 'Stop'; \
+    $ProgressPreference = 'SilentlyContinue'; \
+    $r2Url = 'https://github.com/radareorg/radare2/releases/download/6.2.2/radare2-6.2.2-w64.zip'; \
+    $r2Zip = 'C:\temp\radare2.zip'; \
+    $r2Tmp = 'C:\temp\radare2'; \
+    Write-Host 'Downloading radare2...'; \
+    Invoke-WebRequest -Uri $r2Url -OutFile $r2Zip -UseBasicParsing; \
+    Write-Host 'Extracting with 7-Zip...'; \
+    & 'C:\Program Files\7-Zip\7z.exe' x $r2Zip ('-o' + $r2Tmp) -bsp0 -bso0 -aoa; \
+    if ($LASTEXITCODE -ne 0) { throw '7z extract failed' }; \
+    Remove-Item $r2Zip -Force; \
+    $r2Exe = Get-ChildItem -Path $r2Tmp -Recurse -Filter 'radare2.exe' | Select-Object -First 1; \
+    if (-not $r2Exe) { throw 'radare2.exe not found in the radare2 archive' }; \
+    Move-Item -LiteralPath $r2Exe.Directory.Parent.FullName -Destination 'C:\tools\radare2'; \
+    Remove-Item -LiteralPath $r2Tmp -Recurse -Force -ErrorAction SilentlyContinue; \
+    if (-not (Test-Path -LiteralPath 'C:\tools\radare2\bin\radare2.exe')) { throw 'radare2 install is incomplete' }; \
+    & 'C:\tools\radare2\bin\radare2.exe' -v; \
+    if ($LASTEXITCODE -ne 0) { throw 'radare2 does not run' }; \
+    Write-Host 'radare2 ready.'
+
+# rizin is the backend the Cutter bridge prefers; radare2 is only its
+# fallback. With rizin on PATH the sandbox exercises the preferred path.
+RUN $ErrorActionPreference = 'Stop'; \
+    $ProgressPreference = 'SilentlyContinue'; \
+    $rzUrl = 'https://github.com/rizinorg/rizin/releases/download/v0.9.1/rizin-windows-shared64-v0.9.1.zip'; \
+    $rzZip = 'C:\temp\rizin.zip'; \
+    $rzTmp = 'C:\temp\rizin'; \
+    Write-Host 'Downloading rizin...'; \
+    Invoke-WebRequest -Uri $rzUrl -OutFile $rzZip -UseBasicParsing; \
+    Write-Host 'Extracting with 7-Zip...'; \
+    & 'C:\Program Files\7-Zip\7z.exe' x $rzZip ('-o' + $rzTmp) -bsp0 -bso0 -aoa; \
+    if ($LASTEXITCODE -ne 0) { throw '7z extract failed' }; \
+    Remove-Item $rzZip -Force; \
+    $rzExe = Get-ChildItem -Path $rzTmp -Recurse -Filter 'rizin.exe' | Select-Object -First 1; \
+    if (-not $rzExe) { throw 'rizin.exe not found in the rizin archive' }; \
+    Move-Item -LiteralPath $rzExe.Directory.Parent.FullName -Destination 'C:\tools\rizin'; \
+    Remove-Item -LiteralPath $rzTmp -Recurse -Force -ErrorAction SilentlyContinue; \
+    if (-not (Test-Path -LiteralPath 'C:\tools\rizin\bin\rizin.exe')) { throw 'rizin install is incomplete' }; \
+    & 'C:\tools\rizin\bin\rizin.exe' -v; \
+    if ($LASTEXITCODE -ne 0) { throw 'rizin does not run' }; \
+    Write-Host 'rizin ready.'
+
+# QEMU binaries (qemu-img and the x86_64 system emulator) for tests that
+# opt in through QEMU_INSTALL_DIR. QEMU is deliberately NOT on PATH: the
+# product finds QEMU through PATH, and the suite relies on QEMU being
+# undiscovered by default. The installer is the official Windows build and
+# is checked against the SHA-512 file published beside it. The other system
+# emulators are removed to keep the layer small. The two version probes are
+# informational so that a loader problem in this base image cannot break
+# the rest of the build; in Server Core qemu-img runs and the system
+# emulator does not load.
+RUN $ErrorActionPreference = 'Stop'; \
+    $ProgressPreference = 'SilentlyContinue'; \
+    $qemuBase = 'https://qemu.weilnetz.de/w64/2025/qemu-w64-setup-20250826'; \
+    $qemuSetup = 'C:\temp\qemu-setup.exe'; \
+    $qemuSum = 'C:\temp\qemu-setup.sha512'; \
+    Write-Host 'Downloading QEMU...'; \
+    Invoke-WebRequest -Uri ($qemuBase + '.exe') -OutFile $qemuSetup -UseBasicParsing; \
+    Invoke-WebRequest -Uri ($qemuBase + '.sha512') -OutFile $qemuSum -UseBasicParsing; \
+    $expected = ((Get-Content -LiteralPath $qemuSum -TotalCount 1) -split '\s+')[0].ToLowerInvariant(); \
+    $actual = (Get-FileHash -LiteralPath $qemuSetup -Algorithm SHA512).Hash.ToLowerInvariant(); \
+    if ((-not $expected) -or ($actual -ne $expected)) { throw ('QEMU installer hash mismatch: ' + $actual) }; \
+    Remove-Item $qemuSum -Force; \
+    Write-Host 'Extracting with 7-Zip...'; \
+    & 'C:\Program Files\7-Zip\7z.exe' x $qemuSetup '-oC:\tools\qemu' -bsp0 -bso0 -aoa; \
+    if (($LASTEXITCODE -ne 0) -or -not (Test-Path -LiteralPath 'C:\tools\qemu\qemu-system-x86_64.exe')) { \
+        Write-Host '7-Zip could not unpack the installer; running it silently instead.'; \
+        Remove-Item -LiteralPath 'C:\tools\qemu' -Recurse -Force -ErrorAction SilentlyContinue; \
+        $setup = Start-Process -FilePath $qemuSetup -ArgumentList '/S', '/D=C:\tools\qemu' -Wait -PassThru; \
+        if ($setup.ExitCode -ne 0) { throw ('QEMU installer failed with exit code ' + $setup.ExitCode) } \
+    }; \
+    Remove-Item $qemuSetup -Force; \
+    Get-ChildItem -Path 'C:\tools\qemu' -Directory -Filter '$*' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; \
+    Get-ChildItem -Path 'C:\tools\qemu' -File -Filter 'qemu-system-*.exe' | Where-Object { $_.Name -notlike 'qemu-system-x86_64*' } | Remove-Item -Force; \
+    if (-not (Test-Path -LiteralPath 'C:\tools\qemu\qemu-system-x86_64.exe')) { throw 'qemu-system-x86_64.exe missing after install' }; \
+    if (-not (Test-Path -LiteralPath 'C:\tools\qemu\qemu-img.exe')) { throw 'qemu-img.exe missing after install' }; \
+    & 'C:\tools\qemu\qemu-img.exe' --version; \
+    Write-Host ('qemu-img probe exit code: ' + $LASTEXITCODE); \
+    & 'C:\tools\qemu\qemu-system-x86_64.exe' --version; \
+    Write-Host ('qemu-system-x86_64 probe exit code: ' + $LASTEXITCODE); \
+    Write-Host 'QEMU ready.'
+
+# Java at C:\tools\jdk21. The C:\tools\jdk directory junction made near the
+# top of this stage does not survive the layer commit: in the finished image
+# it is a dangling link, so JAVA_HOME was invalid, `java` was never on PATH,
+# and PyGhidra (which runs a bare `java`) could not start Ghidra. Removing or
+# replacing that link in a later layer makes the layer import fail, so it is
+# left alone and the JDK is copied to a path of its own. The build fails
+# unless Java runs from there. The step is at the end of the stage so the
+# layers above stay cached.
+RUN $ErrorActionPreference = 'Stop'; \
+    $jdkReal = (Get-ChildItem 'C:\Program Files\Eclipse Adoptium' -Directory | Where-Object { $_.Name -like 'jdk-21*' } | Select-Object -First 1).FullName; \
+    if (-not $jdkReal) { throw 'Temurin 21 install dir not found under C:\Program Files\Eclipse Adoptium' }; \
+    robocopy $jdkReal 'C:\tools\jdk21' /E /NFL /NDL /NJH /NJS /NP | Out-Null; \
+    if ($LASTEXITCODE -ge 8) { throw ('copying the JDK failed with robocopy exit code ' + $LASTEXITCODE) }; \
+    if (-not (Test-Path -LiteralPath 'C:\tools\jdk21\bin\java.exe')) { throw 'java.exe missing from C:\tools\jdk21\bin' }; \
+    & 'C:\tools\jdk21\bin\java.exe' -version; \
+    if ($LASTEXITCODE -ne 0) { throw 'java does not run from C:\tools\jdk21' }; \
+    Write-Host 'Java ready.'
+
+ENV JAVA_HOME="C:\\tools\\jdk21" \
+    GHIDRA_INSTALL_DIR="C:\\tools\\ghidra" \
+    RADARE2_HOME="C:\\tools\\radare2" \
+    RIZIN_HOME="C:\\tools\\rizin" \
+    QEMU_INSTALL_DIR="C:\\tools\\qemu"
+
+ENV PATH="C:\\tools\\jdk21\\bin;C:\\tools\\ghidra\\support;C:\\tools\\radare2\\bin;C:\\tools\\rizin\\bin;${PATH}"
 
 # Stage 3 -- pixi environment. Only invalidates when pixi.lock or pyproject.toml change.
 FROM tools AS pixi-env
@@ -132,6 +236,17 @@ COPY src/ ./src/
 RUN pixi install --frozen
 
 ENV PATH="C:\\app\\.pixi\\envs\\default;C:\\app\\.pixi\\envs\\default\\Scripts;C:\\app\\.pixi\\envs\\default\\Library\\bin;${PATH}"
+
+# Qt6Core.dll imports its ICU symbols from an unversioned icuuc.dll, and in
+# this env that name resolves to a copy without them, so PyQt6.QtCore fails
+# to import ("The specified procedure could not be found") and every test
+# dies in tests/conftest.py. Put the OS icu.dll next to Qt6Core.dll, where
+# the loader looks first. scripts/fix-pyqt6-icu.ps1 does the same for a
+# host environment.
+RUN $ErrorActionPreference = 'Stop'; \
+    Copy-Item -LiteralPath 'C:\Windows\System32\icu.dll' -Destination 'C:\app\.pixi\envs\default\Lib\site-packages\PyQt6\Qt6\bin\icuuc.dll' -Force; \
+    & 'C:\app\.pixi\envs\default\python.exe' -c 'from PyQt6.QtCore import QT_VERSION_STR'; \
+    if ($LASTEXITCODE -ne 0) { throw 'PyQt6.QtCore import verification failed' }
 
 # Build the Rust native module intellicrack_hexcore into the pixi env so
 # tests/test_bridges/conftest.py can import it. Uses portable defaults

@@ -50,6 +50,7 @@ if TYPE_CHECKING:
 
 _logger = get_logger(__name__)
 
+_HEX_FIELD_MAX_LENGTH: Final[int] = 2**31 - 1
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
 _ADDR_INPUT_MAX_WIDTH: Final[int] = 160
@@ -2173,6 +2174,7 @@ class PrecompiledScriptControls(QWidget):
         bytecode_row = QHBoxLayout()
         bytecode_row.addWidget(QLabel("Bytecode:"))
         self._bytecode_input = QLineEdit()
+        self._bytecode_input.setMaxLength(_HEX_FIELD_MAX_LENGTH)
         self._bytecode_input.setPlaceholderText("hex-encoded compiled bytecode")
         bytecode_row.addWidget(self._bytecode_input)
         self._load_compiled_btn = QPushButton("Load Compiled Script")
@@ -2314,6 +2316,7 @@ class ScriptSnapshotControls(QWidget):
         snapshot_row = QHBoxLayout()
         snapshot_row.addWidget(QLabel("Snapshot:"))
         self._snapshot_input = QLineEdit()
+        self._snapshot_input.setMaxLength(_HEX_FIELD_MAX_LENGTH)
         self._snapshot_input.setPlaceholderText("hex-encoded snapshot bytes")
         snapshot_row.addWidget(self._snapshot_input)
         layout.addLayout(snapshot_row)

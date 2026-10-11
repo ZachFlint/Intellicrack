@@ -146,7 +146,7 @@ class _FakeScript:
     """Minimal in-memory ``frida.core.Script`` substitute.
 
     Records ``post`` calls and supports the surface the bridge actually
-    uses -- ``on``/``post``/``load``/``unload``/``eternalize``. The
+    uses -- ``on``/``set_log_handler``/``post``/``load``/``unload``/``eternalize``. The
     handler registered via ``on('message', ...)`` is captured so tests
     can deliver synthetic messages back to the bridge.
     """
@@ -159,6 +159,7 @@ class _FakeScript:
         self.is_destroyed: bool = False
         self.exports_sync: _ScanChunkExports = _ScanChunkExports()
         self._handler: Callable[..., None] | None = None
+        self.log_handler: Callable[[str, str], None] | None = None
         self.unload_should_raise: BaseException | None = None
 
     def on(self, event: str, handler: Callable[..., None]) -> None:
@@ -170,6 +171,14 @@ class _FakeScript:
         """
         if event == "message":
             self._handler = handler
+
+    def set_log_handler(self, handler: Callable[[str, str], None]) -> None:
+        """Keep the log handler the bridge installs, as ``frida.core.Script`` does.
+
+        Args:
+            handler: Callback for the script's console output.
+        """
+        self.log_handler = handler
 
     def load(self) -> None:
         """Record a load invocation."""

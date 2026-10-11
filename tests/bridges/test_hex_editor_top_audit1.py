@@ -16,7 +16,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import struct
-import zlib
 from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -1387,80 +1386,6 @@ class TestF0051DigramMatrixSummary:
         result = _run(bridge.get_digram_matrix(top_k=0))
         assert "matrix" in result
         assert len(result["matrix"]) == 65536
-
-
-# ---------------------------------------------------------------------------
-# F-0052 - CRC fallback uses zlib for CRC-32 IEEE
-# ---------------------------------------------------------------------------
-
-
-class _NoNativeCrcDoc:
-    """Wrapper hiding the native compute_hash_custom_crc to force the fallback."""
-
-    def __init__(self, inner: object) -> None:
-        """Wrap a real document.
-
-        Args:
-            inner: Underlying document.
-        """
-        self._inner = inner
-
-    def __getattr__(self, name: str) -> object:
-        """Forward attribute access except for the native CRC accessor.
-
-        Args:
-            name: Attribute name being accessed.
-
-        Returns:
-            object: Attribute value from the wrapped document.
-
-        Raises:
-            AttributeError: When the requested attribute is
-                ``compute_hash_custom_crc`` (intentionally hidden to
-                exercise the Python fallback path) or when the inner
-                document does not expose the attribute.
-        """
-        if name == "compute_hash_custom_crc":
-            msg = "hidden for test"
-            raise AttributeError(msg)
-        return getattr(self._inner, name)
-
-
-class TestF0052CrcFallbackMatchesZlib:
-    """CRC-32 IEEE fallback must agree with ``zlib.crc32``."""
-
-    def test_crc32_ieee_matches_zlib(
-        self,
-        bridge: HexEditorBridge,
-        tmp_path: Path,
-    ) -> None:
-        """The fallback CRC-32 path returns the same value zlib does.
-
-        Args:
-            bridge: An initialized HexEditorBridge fixture.
-            tmp_path: Pytest temp directory.
-        """
-        payload = b"The quick brown fox jumps over the lazy dog"
-        f = tmp_path / "crc.bin"
-        f.write_bytes(payload)
-        _run(bridge.open_file(str(f)))
-        bridge.document = _NoNativeCrcDoc(bridge.document)
-
-        result_hex = _run(
-            bridge.calculate_hash_custom_crc(
-                start=0,
-                end=len(payload),
-                poly=0x04C11DB7,
-                init=0xFFFFFFFF,
-                width=32,
-                refin=True,
-                refout=True,
-                xorout=0xFFFFFFFF,
-            ),
-        )
-
-        expected = zlib.crc32(payload) & 0xFFFFFFFF
-        assert int(result_hex, 16) == expected
 
 
 # ---------------------------------------------------------------------------

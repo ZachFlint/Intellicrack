@@ -586,8 +586,11 @@ def _assert_confined_home(report: JsonObject, tmp_path: Path, server_id: str) ->
 def private_state_dir(account_reachable_tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Point Intellicrack's state directory, and so every sandbox home, at the test's own directory.
 
+    Intellicrack honors a state directory only inside the user's profile, so the test's directory is also named as the local application
+    data directory; the redirection then holds wherever the runner keeps its temporary files.
+
     Args:
-        account_reachable_tmp_path: Per-test directory, which Windows places under the user's local application data.
+        account_reachable_tmp_path: Per-test directory.
         monkeypatch: Restores the environment afterwards.
 
     Returns:
@@ -595,6 +598,7 @@ def private_state_dir(account_reachable_tmp_path: Path, monkeypatch: pytest.Monk
     """
     state = account_reachable_tmp_path / "state"
     state.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(account_reachable_tmp_path))
     monkeypatch.setenv("INTELLICRACK_STATE_DIR", str(state))
     return state
 

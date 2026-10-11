@@ -41,7 +41,6 @@ from intellicrack.bridges.pe_format import (
     pe_machine_to_arch,
     read_data_directory_entry,
     read_dos_e_lfanew,
-    rva_to_file_offset,
     unpack_coff_header,
 )
 from intellicrack.bridges.win32_types import (
@@ -376,7 +375,7 @@ _MITIGATION_PRIMARY_FLAG: dict[str, str] = {
     "ImageLoad": "NoRemoteImages",
 }
 
-_PEB32_MIN_PARSE_LENGTH = 0x18
+_PEB32_MIN_PARSE_LENGTH = 0x14
 _PEB_BEING_DEBUGGED_OFFSET = 2
 
 TLS_ARRAY_OFFSET_X64 = 0x1480
@@ -429,6 +428,40 @@ _CODE_SECTION_UNMAP_FAILED = "SECTION_UNMAP_FAILED"
 _CODE_SECTION_NOT_MAPPED = "SECTION_NOT_MAPPED"
 
 _THREAD_OP_FAILURE_SENTINEL: int = 0xFFFFFFFF
+
+
+def _win32_last_error(kernel32: ctypes.WinDLL) -> int:
+    """Read the calling thread's Win32 last-error code.
+
+    The bridge's ``kernel32`` handle is loaded without ``use_last_error``,
+    so ``ctypes.get_last_error()`` does not hold the code of a call made
+    through it. ``GetLastError`` does.
+
+    Args:
+        kernel32: The ``kernel32`` handle the failed call was made through.
+
+    Returns:
+        int: The last-error code of the calling thread.
+    """
+    kernel32.GetLastError.argtypes = []
+    kernel32.GetLastError.restype = wintypes.DWORD
+    return int(kernel32.GetLastError())
+
+
+def _thread_op_failed(result: int) -> bool:
+    """Tell whether ``SuspendThread`` or ``ResumeThread`` reported failure.
+
+    Both return ``(DWORD)-1`` on failure. ctypes hands that back as the
+    signed ``-1`` when no return type is declared for the call and as
+    ``0xFFFFFFFF`` when one is; both spellings are recognised.
+
+    Args:
+        result: Value returned by the thread call.
+
+    Returns:
+        bool: ``True`` when the call failed.
+    """
+    return ctypes.c_ulong(result).value == _THREAD_OP_FAILURE_SENTINEL
 
 
 class PEB64(ctypes.Structure):
@@ -1644,6 +1677,23 @@ class _ProcessBridgeBase(ToolBridgeBase):
             ctypes.POINTER(wintypes.HANDLE),
         ]
 
+    @staticmethod
+    def _declare_process_query_prototypes(kernel32: ctypes.WinDLL) -> None:
+        """Declare the handle parameter of the queries that accept the current-process pseudo-handle.
+
+        ``GetCurrentProcess`` is declared as returning a ``HANDLE``, so the 64-bit ``(HANDLE)-1`` pseudo-handle arrives as a
+        pointer-sized integer. A call without ``argtypes`` marshals an integer as a C ``int`` and cannot carry that value, so
+        ``GetProcessMitigationPolicy`` and ``IsProcessInJob`` state their parameter types here.
+
+        Args:
+            kernel32: The ``kernel32`` handle the queries are made through.
+        """
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        kernel32.GetProcessMitigationPolicy.restype = wintypes.BOOL
+        kernel32.GetProcessMitigationPolicy.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, ctypes.c_size_t]
+        kernel32.IsProcessInJob.restype = wintypes.BOOL
+        kernel32.IsProcessInJob.argtypes = [wintypes.HANDLE, wintypes.HANDLE, ctypes.c_void_p]
+
     def _adjust_se_debug_privilege(
         self,
         advapi32_le: ctypes.WinDLL,
@@ -2223,7 +2273,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         if self._kernel32 is None:
             return
         if not self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
-            error_code: int = ctypes.get_last_error()
+            error_code: int = _win32_last_error(self._kernel32)
             if error_code != _ERROR_NO_MORE_FILES:
                 msg = f"{_ERR_SNAPSHOT_FAILED} (Process32First: {error_code})"
                 raise ToolError(msg)
@@ -2702,7 +2752,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
 
         threads = await self.get_threads(target_pid)
 
-        if self._kernel32 is None:
+        if self._kernel32 is None:  # pragma: no cover - type narrowing; get_threads checked
             raise ToolError(_ERR_KERNEL32_NA)
 
         failed_tids: list[int] = []
@@ -2713,7 +2763,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
                 failed_tids.append(thread.tid)
                 continue
             suspend_result: int = self._kernel32.SuspendThread(th_handle)
-            if suspend_result == _THREAD_OP_FAILURE_SENTINEL:
+            if _thread_op_failed(suspend_result):
                 failed_tids.append(thread.tid)
             self._kernel32.CloseHandle(th_handle)
 
@@ -2743,7 +2793,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
 
         threads = await self.get_threads(target_pid)
 
-        if self._kernel32 is None:
+        if self._kernel32 is None:  # pragma: no cover - type narrowing; get_threads checked
             raise ToolError(_ERR_KERNEL32_NA)
 
         failed_tids: list[int] = []
@@ -2754,7 +2804,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
                 failed_tids.append(thread.tid)
                 continue
             resume_result: int = self._kernel32.ResumeThread(th_handle)
-            if resume_result == _THREAD_OP_FAILURE_SENTINEL:
+            if _thread_op_failed(resume_result):
                 failed_tids.append(thread.tid)
             self._kernel32.CloseHandle(th_handle)
 
@@ -3378,7 +3428,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         )
 
         if snapshot == INVALID_HANDLE_VALUE:
-            error_code: int = ctypes.get_last_error()
+            error_code: int = _win32_last_error(self._kernel32)
             _logger.warning("module_snapshot_failed", pid=target_pid, error_code=error_code)
             return []
 
@@ -3473,7 +3523,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         self._kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
         snapshot: int = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)
         if snapshot == INVALID_HANDLE_VALUE:
-            error_code: int = ctypes.get_last_error()
+            error_code: int = _win32_last_error(self._kernel32)
             _logger.warning("thread_snapshot_failed", error_code=error_code)
             return []
 
@@ -3550,7 +3600,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             _logger.debug(
                 "thread_start_address_open_failed",
                 tid=tid,
-                error_code=ctypes.get_last_error(),
+                error_code=_win32_last_error(self._kernel32),
             )
             return 0
 
@@ -5193,13 +5243,13 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
 
         Pointer-size aware: the native PEB is parsed using the *target*
         process's bitness (detected via ``IsWow64Process2``), not the
-        host's. A 64-bit host debugging a 32-bit WOW64 target still gets
-        correct ``image_base_address`` / ``ldr_address`` /
-        ``process_parameters_address`` values because the parser is
-        told to use i386 offsets. When the target is running under
-        WOW64, ``NtQueryInformationProcess(ProcessWow64Information)``
-        is also queried to expose the 32-bit PEB address and a parallel
-        ``wow64_peb`` sub-dict.
+        host's. For a 32-bit WOW64 target on a 64-bit host the basic
+        process query reports the 64-bit PEB, so the block that
+        describes the target is the 32-bit one located with
+        ``NtQueryInformationProcess(ProcessWow64Information)``: the
+        top-level fields come from it, ``native_peb_address`` keeps the
+        address of the 64-bit block, and ``wow64_peb_address`` and the
+        ``wow64_peb`` sub-dict repeat the 32-bit view.
 
         Args:
             pid: Process ID (uses current if not specified).
@@ -5287,8 +5337,14 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             msg = f"{_ERR_NTQUERY_PROC}{status & 4294967295:08X}"
             raise ToolError(msg)
 
-        peb_address = pbi.PebBaseAddress or 0
-        target_is_64bit = self._target_is_64bit(proc_handle)
+        native_peb_address = pbi.PebBaseAddress or 0
+        wow64_info = self._read_wow64_peb(proc_handle)
+        if wow64_info is None:
+            peb_address = native_peb_address
+            target_is_64bit = self._target_is_64bit(proc_handle)
+        else:
+            peb_address = wow64_info[0]
+            target_is_64bit = False
         peb_read_size = ctypes.sizeof(PEB64) if target_is_64bit else ctypes.sizeof(PEB32)
         peb_data = ctypes.create_string_buffer(peb_read_size)
         bytes_read = ctypes.c_size_t()
@@ -5304,8 +5360,8 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
         raw_bytes = peb_data.raw[: bytes_read.value]
         result = self._parse_peb_fields(raw_bytes, peb_address, target_is_64bit=target_is_64bit)
         result["raw"] = raw_bytes
-        wow64_info = self._read_wow64_peb(proc_handle)
         if wow64_info is not None:
+            result["native_peb_address"] = native_peb_address
             result["wow64_peb_address"] = wow64_info[0]
             result["wow64_peb"] = wow64_info[1]
         return result
@@ -5458,7 +5514,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
         """Parse the 32-bit PEB layout used inside WOW64.
 
         Args:
-            raw: Raw i386 PEB memory bytes (at least ``0x18`` bytes).
+            raw: Raw i386 PEB memory bytes (at least ``0x14`` bytes).
             peb_address: 32-bit PEB base address as returned by
                 ``ProcessWow64Information``.
 
@@ -5598,6 +5654,11 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
     ) -> dict[str, object]:
         """Read the TEB from process memory and parse its fields.
 
+        For a 32-bit target on a 64-bit system ``teb_address`` is the
+        thread's 64-bit TEB. WOW64 keeps the address of the thread's 32-bit
+        TEB in the first field of that block, and the 32-bit block is the
+        one that is read and parsed.
+
         Args:
             proc_handle: Open process handle with
                 ``PROCESS_QUERY_INFORMATION | PROCESS_VM_READ`` access.
@@ -5616,9 +5677,20 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
         target_is_64bit = self._target_is_64bit(proc_handle)
+        bytes_read = ctypes.c_size_t()
+        if not target_is_64bit and struct.calcsize("P") == _PTR_SIZE_64:
+            wow64_teb_address = ctypes.c_uint64(0)
+            if not self._kernel32.ReadProcessMemory(
+                proc_handle,
+                ctypes.c_void_p(teb_address),
+                ctypes.byref(wow64_teb_address),
+                ctypes.sizeof(wow64_teb_address),
+                ctypes.byref(bytes_read),
+            ):
+                raise ToolError(_ERR_TEB_READ)
+            teb_address = int(wow64_teb_address.value)
         teb_read_size = ctypes.sizeof(TEB64) if target_is_64bit else ctypes.sizeof(TEB32)
         teb_data = ctypes.create_string_buffer(teb_read_size)
-        bytes_read = ctypes.c_size_t()
         if not self._kernel32.ReadProcessMemory(
             proc_handle,
             ctypes.c_void_p(teb_address),
@@ -6775,6 +6847,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             _logger.error("kernel32_unavailable", operation="get_mitigation_policies")
             raise ToolError(_ERR_KERNEL32_NA)
 
+        self._declare_process_query_prototypes(self._kernel32)
         target_pid = pid or self._attached_pid
         close_handle = False
         proc_handle: int | None = None
@@ -7506,7 +7579,7 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
             raise ToolError(msg)
 
         dup_value = dup_handle.value
-        if dup_value is None:
+        if dup_value is None:  # pragma: no cover - type narrowing
             msg = "DuplicateTokenEx returned null handle"
             raise ToolError(msg)
         _logger.debug("duplicate_token_completed", pid=pid, handle=dup_value)
@@ -7845,6 +7918,7 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         aslr_flags: dict[str, object] = cast("dict[str, object]", full.get("ASLR")) if isinstance(full.get("ASLR"), dict) else empty_policy
         cfg_flags: dict[str, object] = cast("dict[str, object]", full.get("CFG")) if isinstance(full.get("CFG"), dict) else empty_policy
 
+        self._declare_process_query_prototypes(self._kernel32)
         target_pid = pid or self._attached_pid
         close_handle = False
         proc_handle: int | None = None
@@ -7903,6 +7977,7 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
+        self._declare_process_query_prototypes(self._kernel32)
         target_pid = pid or self._attached_pid
         close_handle = False
         proc_handle: int | None = None
@@ -8012,10 +8087,8 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
                 target_pid,
             )
             close_handle = True
-        elif self._process_handle is not None:
-            proc_handle = self._process_handle
         else:
-            raise ToolError(_ERR_NOT_ATTACHED)
+            proc_handle = self._process_handle
 
         if not proc_handle:
             raise ToolError(_ERR_OPEN_FAILED)
@@ -8722,7 +8795,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         parsed = self._parse_pe_com_descriptor(data)
         if parsed is None:
             return None
-        com_rva, sections_list = parsed
+        com_rva, _sections = parsed
         cor20_buf = ctypes.create_string_buffer(_DOTNET_COR20_HEADER_SIZE)
         cor20_read = ctypes.c_size_t()
         if (
@@ -8744,21 +8817,19 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         )
         if meta_rva == 0:
             return None
-        return self._read_metadata_version(proc_handle, base_address, meta_rva, sections_list)
+        return self._read_metadata_version(proc_handle, base_address, meta_rva)
 
     def _read_metadata_version(
         self,
         proc_handle: int,
         base_address: int,
         meta_rva: int,
-        sections: list[dict[str, int | str]],
     ) -> str | None:
         """Read the version string from a .NET MetaData root.
 
-        Translates ``meta_rva`` to a virtual address via the section table
-        for on-disk-layout images; falls back to treating the RVA as a
-        direct virtual offset relative to ``base_address`` for
-        loader-mapped in-memory images where virtual address equals RVA.
+        A module in a running process is loader-mapped, so the MetaData
+        root sits at ``base_address + meta_rva`` whatever the raw offset of
+        its section is.
 
         Reads the ECMA-335 CLI MetaData root header and extracts the
         null-terminated version string stored at offset 16.
@@ -8767,8 +8838,6 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
             proc_handle: Open process handle with VM-read rights.
             base_address: Module base address in the target process.
             meta_rva: Relative Virtual Address of the MetaData root.
-            sections: Section header dicts as returned by
-                :func:`~intellicrack.bridges.pe_format.iterate_section_headers`.
 
         Returns:
             str | None: Version string (e.g. ``"v4.0.30319"``), or
@@ -8776,8 +8845,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         """
         if self._kernel32 is None:
             return None
-        file_off = rva_to_file_offset(sections, meta_rva)
-        meta_va = base_address + (file_off if file_off is not None else meta_rva)
+        meta_va = base_address + meta_rva
         meta_buf = ctypes.create_string_buffer(_DOTNET_METADATA_VERSION_MAX + 20)
         bytes_read = ctypes.c_size_t()
         if not self._kernel32.ReadProcessMemory(
@@ -8791,15 +8859,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         meta_data = meta_buf.raw[: bytes_read.value]
         if len(meta_data) < _DOTNET_METADATA_MIN_SIZE:
             return None
-        try:
-            version_str = self._parse_dotnet_metadata_version_string(meta_data)
-        except struct.error as exc:
-            _logger.warning(
-                "dotnet_metadata_header_parse_failed",
-                meta_va=hex(meta_va),
-                error=str(exc),
-            )
-            return None
+        version_str = self._parse_dotnet_metadata_version_string(meta_data)
         return version_str or None
 
     @staticmethod
@@ -9037,6 +9097,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
             _logger.error("kernel32_unavailable", operation="get_job_info")
             raise ToolError(_ERR_KERNEL32_NA)
 
+        self._declare_process_query_prototypes(self._kernel32)
         target_pid = pid or self._attached_pid
         close_handle = False
         proc_handle: int | None = None
@@ -9479,6 +9540,8 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         if not proc_handle:
             raise ToolError(_ERR_OPEN_FAILED)
 
+        self._user32.GetGuiResources.restype = wintypes.DWORD
+        self._user32.GetGuiResources.argtypes = [wintypes.HANDLE, wintypes.DWORD]
         try:
             gdi_count: int = self._user32.GetGuiResources(proc_handle, GR_GDIOBJECTS)
             user_count: int = self._user32.GetGuiResources(proc_handle, GR_USEROBJECTS)
@@ -9858,7 +9921,8 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
         if not isinstance(tls_array_addr, int) or tls_array_addr == 0:
             return []
 
-        is_x64 = (tls_array_addr & ~0xFFFFFFFF) != 0 or struct.calcsize("P") == _PTR_SIZE_64
+        teb_base = teb.get("teb_address")
+        is_x64 = isinstance(teb_base, int) and tls_array_addr - teb_base == TLS_ARRAY_OFFSET_X64
         ptr_size = 8 if is_x64 else 4
         fmt = "<Q" if is_x64 else "<I"
         static_count = min(max_slots, TLS_STATIC_SLOT_COUNT)

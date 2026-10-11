@@ -615,10 +615,10 @@ class SessionManagerDialog(QDialog):
         self._session_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self._session_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         sm_v_header = self._session_table.verticalHeader()
-        if sm_v_header is not None:
+        if sm_v_header is not None:  # pragma: no branch - type narrowing
             sm_v_header.setVisible(False)
         header = self._session_table.horizontalHeader()
-        if header is not None:
+        if header is not None:  # pragma: no branch - type narrowing
             header.setStretchLastSection(False)
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
@@ -828,7 +828,7 @@ class SessionManagerDialog(QDialog):
 
             if session["id"] == self._current_session_id:
                 for col in range(4):
-                    if item := self._session_table.item(row, col):
+                    if item := self._session_table.item(row, col):  # pragma: no branch - type narrowing
                         font = item.font()
                         font.setBold(True)
                         item.setFont(font)
@@ -845,9 +845,16 @@ class SessionManagerDialog(QDialog):
         Returns:
             dict[str, object]: Session payload dictionary with id, name, and
             datetime fields normalised.
+
+        Raises:
+            TypeError: If the file does not hold a JSON object.
         """
         with session_file.open(encoding="utf-8") as f:
-            session_data: dict[str, object] = json.load(f)
+            loaded: object = json.load(f)
+        if not isinstance(loaded, dict):
+            msg = f"session file holds {type(loaded).__name__}, not a JSON object"
+            raise TypeError(msg)
+        session_data = cast("dict[str, object]", loaded)
 
         if "id" not in session_data:
             session_data["id"] = session_file.stem
@@ -863,6 +870,9 @@ class SessionManagerDialog(QDialog):
     def _normalise_session_datetime(session_data: dict[str, object], field: str) -> None:
         """Convert an ISO-format datetime string in ``session_data`` to a ``datetime``.
 
+        A timestamp without a time zone is read as UTC so every normalised
+        value can be compared with every other.
+
         Args:
             session_data: Session payload dictionary to mutate in place.
             field: Name of the datetime field to normalise.
@@ -871,10 +881,12 @@ class SessionManagerDialog(QDialog):
         if not isinstance(raw, str):
             return
         try:
-            session_data[field] = datetime.fromisoformat(raw)
+            parsed = datetime.fromisoformat(raw)
         except ValueError:
             _logger.warning("session_datetime_parse_failed", field=field, session_id=session_data.get("id"))
             session_data[field] = datetime.now(tz=UTC)
+            return
+        session_data[field] = parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
 
     def _load_sessions_from_disk(self) -> None:
         """Load sessions from disk storage."""
@@ -884,7 +896,7 @@ class SessionManagerDialog(QDialog):
         for session_file in self.SESSIONS_DIR.glob("*.json"):
             try:
                 session_data = self._read_session_file(session_file)
-            except (json.JSONDecodeError, OSError) as e:
+            except (json.JSONDecodeError, TypeError, OSError) as e:
                 _logger.warning(
                     "session_file_load_failed",
                     file=str(session_file),
@@ -948,7 +960,7 @@ class SessionManagerDialog(QDialog):
     def _on_selection_changed(self) -> None:
         """Handle session selection change."""
         sel_model = self._session_table.selectionModel()
-        if sel_model is None:
+        if sel_model is None:  # pragma: no cover - type narrowing
             return
         if selected_rows := sel_model.selectedRows():
             row = selected_rows[0].row()
@@ -1047,7 +1059,7 @@ class SessionManagerDialog(QDialog):
     def _load_selected_session(self) -> None:
         """Load the currently selected session and restore it into the live UI."""
         sel_model = self._session_table.selectionModel()
-        if sel_model is None:
+        if sel_model is None:  # pragma: no cover - type narrowing
             return
         selected_rows = sel_model.selectedRows()
         if not selected_rows:
@@ -1348,7 +1360,7 @@ class SessionManagerDialog(QDialog):
     def _delete_session(self) -> None:
         """Delete the currently selected session."""
         sel_model = self._session_table.selectionModel()
-        if sel_model is None:
+        if sel_model is None:  # pragma: no cover - type narrowing
             return
         selected_rows = sel_model.selectedRows()
         if not selected_rows:
@@ -1487,7 +1499,7 @@ class SessionManagerDialog(QDialog):
     def _export_session(self) -> None:
         """Export selected session to file."""
         sel_model = self._session_table.selectionModel()
-        if sel_model is None:
+        if sel_model is None:  # pragma: no cover - type narrowing
             return
         selected_rows = sel_model.selectedRows()
         if not selected_rows:

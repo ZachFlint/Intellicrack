@@ -888,7 +888,7 @@ class TestSpawnEnvCwdB2:
         working directory instead of ``tmp_path`` - both assertions below
         would fail. Broken production lines: the ``env=env, cwd=cwd``
         keyword arguments forwarded to ``device.spawn`` in
-        ``FridaBridge._spawn_with_cancellable`` (``frida_bridge.py``).
+        ``FridaBridge.spawn`` (``frida_bridge.py``).
         """
         gate_file = tmp_path / "gate_out.txt"
         bat_path = tmp_path / "gate.bat"
@@ -942,7 +942,7 @@ class TestSpawnStdioCaptureB3:
         and the containment assertion fails. Broken production lines: the
         ``if stdio == "pipe": self._ensure_output_handler_registered(device)``
         guard in ``FridaBridge.spawn`` and the ``stdio=stdio`` keyword
-        forwarded through ``_spawn_with_cancellable`` to the real
+        forwarded by ``FridaBridge.spawn`` to the real
         ``device.spawn`` call (``frida_bridge.py``).
 
         Args:

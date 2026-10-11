@@ -67,6 +67,7 @@ if TYPE_CHECKING:
 
 _MAX_WAIT_S: Final[float] = 5.0
 _POLL_INTERVAL_S: Final[float] = 0.02
+_MAP_OF_ADDR_1000: Final[str] = '[{"name":"PRIVATE ","addr":4096,"addr_end":8192,"type":"u","perm":"rw-"}]'
 
 
 def _pump_until(app: QApplication, predicate: object, *, timeout_s: float = _MAX_WAIT_S) -> bool:
@@ -292,7 +293,7 @@ class TestDebuggerTabAttachDetach:
         Args:
             qapp: Qt application fixture used to pump the event loop.
         """
-        recorder = CommandRecorder({"dbj": "[]", "dmj": "[]", "dptj": "[]", "dmIj": "[]", "drj": "{}"})
+        recorder = CommandRecorder({"dbj": "[]", "dmj": "[]", "dptj": "[]", "dmmj": "[]", "drj": "{}"})
         bridge = CutterBridge()
         bridge.r2 = as_r2pipe(recorder)
 
@@ -428,7 +429,7 @@ class TestDebuggerTabSteppingAndContinue:
         Args:
             qapp: Qt application fixture used to pump the event loop.
         """
-        recorder = CommandRecorder({"dr?PC": "0x401234", "dbj": "[]", "dmj": "[]", "dptj": "[]", "dmIj": "[]", "drj": "{}"})
+        recorder = CommandRecorder({"dr?PC": "0x401234", "dbj": "[]", "dmj": "[]", "dptj": "[]", "dmmj": "[]", "drj": "{}"})
         bridge = _attached_bridge(recorder)
 
         tab = DebuggerTab()
@@ -453,7 +454,7 @@ class TestDebuggerTabSteppingAndContinue:
         Args:
             qapp: Qt application fixture used to pump the event loop.
         """
-        recorder = CommandRecorder({"dr?PC": "0x401234", "dbj": "[]", "dmj": "[]", "dptj": "[]", "dmIj": "[]", "drj": "{}"})
+        recorder = CommandRecorder({"dr?PC": "0x401234", "dbj": "[]", "dmj": "[]", "dptj": "[]", "dmmj": "[]", "drj": "{}"})
         bridge = _attached_bridge(recorder)
 
         tab = DebuggerTab()
@@ -476,7 +477,7 @@ class TestDebuggerTabSteppingAndContinue:
         Args:
             qapp: Qt application fixture used to pump the event loop.
         """
-        recorder = CommandRecorder({"dbj": "[]", "dmj": "[]", "dptj": "[]", "dmIj": "[]", "drj": "{}"})
+        recorder = CommandRecorder({"dbj": "[]", "dmj": "[]", "dptj": "[]", "dmmj": "[]", "drj": "{}"})
         bridge = _attached_bridge(recorder)
 
         tab = DebuggerTab()
@@ -531,7 +532,7 @@ class TestSendSignal:
         Args:
             qapp: Qt application fixture used to pump the event loop.
         """
-        recorder = CommandRecorder({"dbj": "[]", "dmj": "[]", "dptj": "[]", "dbtj": "[]", "dmIj": "[]", "drj": "{}"})
+        recorder = CommandRecorder({"dbj": "[]", "dmj": "[]", "dptj": "[]", "dbtj": "[]", "dmmj": "[]", "drj": "{}"})
         bridge = _attached_bridge(recorder)
 
         tab = DebuggerTab()
@@ -627,7 +628,7 @@ class TestDebuggerTabMemory:
         Args:
             qapp: Qt application fixture used to pump the event loop.
         """
-        recorder = CommandRecorder({"p8 4 @ 4096": "deadbeef"})
+        recorder = CommandRecorder({"dmj": _MAP_OF_ADDR_1000, "p8 4 @ 4096": "deadbeef"})
         bridge = _attached_bridge(recorder)
 
         tab = DebuggerTab()
@@ -659,7 +660,7 @@ class TestDebuggerTabMemory:
         Args:
             qapp: Qt application fixture used to pump the event loop.
         """
-        recorder = CommandRecorder({"wx 90909090 @ 4096": "", "p8 4 @ 4096": "90909090"})
+        recorder = CommandRecorder({"dmj": _MAP_OF_ADDR_1000, "wx 90909090 @ 4096": "", "p8 4 @ 4096": "90909090"})
         bridge = _attached_bridge(recorder)
 
         tab = DebuggerTab()
@@ -735,17 +736,17 @@ class TestDebuggerTabRegionsThreadsModules:
         assert _item_text(threads_table, 0, 3) == "running"
 
     @staticmethod
-    def test_refresh_modules_calls_dmij_and_populates_table(qapp: QApplication) -> None:
-        """The modules table must issue rizin's ``dmIj`` and render the real module name.
+    def test_refresh_modules_calls_dmmj_and_populates_table(qapp: QApplication) -> None:
+        """The modules table must issue the backend's ``dmmj`` and render the real module name.
 
         Falsifiable: if ``_refresh_modules`` never called
-        ``self._bridge.get_modules()``, 'dmIj' would never be recorded.
+        ``self._bridge.get_modules()``, 'dmmj' would never be recorded.
 
         Args:
             qapp: Qt application fixture used to pump the event loop.
         """
         recorder = CommandRecorder({
-            "dmIj": '[{"name":"ntdll.dll","addr":1996488704,"size":2097152,"entry":1996490000}]',
+            "dmmj": '[{"name":"ntdll.dll","addr":1996488704,"size":2097152,"entry":1996490000}]',
         })
         bridge = _attached_bridge(recorder)
 
@@ -757,7 +758,7 @@ class TestDebuggerTabRegionsThreadsModules:
         refresh_modules()
 
         assert _pump_until(qapp, lambda: modules_table.rowCount() > 0)
-        assert "dmIj" in recorder.commands
+        assert "dmmj" in recorder.commands
         assert _item_text(modules_table, 0, 0) == "ntdll.dll"
         assert _item_text(modules_table, 0, 1) == f"0x{1996488704:X}"
 
@@ -1316,7 +1317,7 @@ class TestConditionalContinue:
             "dmj": "[]",
             "dptj": "[]",
             "dbtj": "[]",
-            "dmIj": "[]",
+            "dmmj": "[]",
             "drj": "{}",
         })
         bridge = _attached_bridge(recorder)

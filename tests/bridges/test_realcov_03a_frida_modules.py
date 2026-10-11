@@ -18,7 +18,6 @@ sandbox (or when host-process tests are explicitly allowed).
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import shutil
@@ -41,6 +40,7 @@ from intellicrack.core.types import (
     ModuleInfo,
     ToolError,
 )
+from tests._helpers.frida_targets import run_bounded, wait_for_gui_process_ready
 
 
 frida = pytest.importorskip("frida", reason="frida-python required for bridge tests")
@@ -50,7 +50,6 @@ from intellicrack.bridges.frida_bridge import FridaBridge  # noqa: E402
 
 _logger = logging.getLogger(__name__)
 
-_NOTEPAD_STARTUP_DELAY: Final[float] = 1.0
 _BRIDGE_SLEEP: Final[float] = 0.3
 _NOTEPAD_MIN_MODULES: Final[int] = 5
 _NTDLL_BASE_MIN: Final[int] = 0x70000000
@@ -59,7 +58,7 @@ _UNKNOWN_CHILD_PID: Final[int] = 0x7FFFFFFE
 
 
 def _run_async[T](coro: Coroutine[object, object, T]) -> T:
-    """Run an async coroutine synchronously for test use.
+    """Run an async coroutine synchronously for test use, failing the test if Frida never returns.
 
     Args:
         coro: Awaitable coroutine to execute.
@@ -67,16 +66,12 @@ def _run_async[T](coro: Coroutine[object, object, T]) -> T:
     Returns:
         T: The coroutine's return value, preserving its type.
     """
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+    return run_bounded(coro)
 
 
 @pytest.fixture(scope="module")
 def notepad_process() -> Generator[Popen[bytes]]:
-    """Spawn a real notepad.exe for Frida to attach to.
+    """Spawn a real notepad.exe for Frida to attach to, once it has finished starting.
 
     Yields:
         Popen[bytes]: The running notepad process.
@@ -85,10 +80,12 @@ def notepad_process() -> Generator[Popen[bytes]]:
         Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe",
     )
     proc = Popen([notepad_path], stdout=DEVNULL, stderr=DEVNULL)
-    time.sleep(_NOTEPAD_STARTUP_DELAY)
-    yield proc
-    proc.terminate()
-    proc.wait(timeout=5)
+    try:
+        wait_for_gui_process_ready(proc)
+        yield proc
+    finally:
+        proc.terminate()
+        proc.wait(timeout=5)
 
 
 @pytest.fixture(scope="module")
