@@ -44,10 +44,31 @@ jobs:
     outputs:
       python: ${{ steps.python_diff.outputs.substantive || 'false' }}
       x64dbg: ${{ steps.x64dbg_diff.outputs.substantive || 'false' }}
+      test_shards: ${{ steps.shards.outputs.matrix }}
+      test_shard_names: ${{ steps.shards.outputs.names }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      - name: Define test shards
+        id: shards
+        shell: python
+        run: |
+          import json
+          import os
+
+          groups = {
+              "sandbox": ["tests/sandbox"],
+              "bridges": ["tests/bridges"],
+              "ui": ["tests/ui"],
+              "mcp-hexpat": ["tests/mcp", "tests/hexpat"],
+          }
+          assigned = [path for paths in groups.values() for path in paths]
+          shards = [{"name": name, "targets": " ".join(paths)} for name, paths in groups.items()]
+          shards.append({"name": "rest", "targets": " ".join(["tests/", *(f"--ignore={path}" for path in assigned)])})
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps({'include': shards})}\n")
+              output.write(f"names={json.dumps([shard['name'] for shard in shards])}\n")
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -197,12 +218,16 @@ jobs:
       - name: Verify No Mock Usage (Production-Ready Enforcement)
         run: |
           pixi run python scripts/verify_no_mocks.py --ci
-  python-test:
+  python-test-shard:
+    name: python-test (${{ matrix.name }})
     runs-on: windows-latest
     needs: [setup, changes]
     if: (success() || failure()) && (needs.changes.outputs.python == 'true' || github.event_name == 'workflow_dispatch')
     continue-on-error: true
-    timeout-minutes: 120
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.changes.outputs.test_shards) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -269,16 +294,98 @@ jobs:
               Start-Sleep -Seconds 120
             }
           }
-          pixi run pytest tests/ -v -n auto --dist loadfile --instafail -m "not host_native" --cov=src/intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
+          $targets = $env:SHARD_TARGETS -split ' '
+          pixi run pytest @targets -v -n logical --dist loadfile --instafail -m "not host_native" --cov=src/intellicrack --cov-report= --cov-fail-under=0 "--junitxml=test-results-${env:SHARD}.xml"
           $code = $LASTEXITCODE
           Stop-Job $sampler
+          if (Test-Path .coverage) { Rename-Item .coverage ".coverage.${env:SHARD}" }
+          Set-Content -Path "pytest-exit-${env:SHARD}.txt" -Value $code
           exit $code
         env:
+          SHARD: ${{ matrix.name }}
+          SHARD_TARGETS: ${{ matrix.targets }}
           PYTHONDONTWRITEBYTECODE: 1
           PYTHONIOENCODING: utf-8
           PYTHONUTF8: 1
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
+      - name: Upload shard results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-shard-${{ matrix.name }}
+          include-hidden-files: true
+          path: |
+            test-results-${{ matrix.name }}.xml
+            .coverage.${{ matrix.name }}
+            pytest-exit-${{ matrix.name }}.txt
+  python-test:
+    runs-on: windows-latest
+    needs: [changes, python-test-shard]
+    if: (success() || failure()) && (needs.changes.outputs.python == 'true' || github.event_name == 'workflow_dispatch')
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Download shard results
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: test-shard-*
+          merge-multiple: true
+      - name: Check shard results and merge test reports
+        id: shards
+        if: always()
+        shell: python
+        env:
+          SHARD_NAMES: ${{ needs.changes.outputs.test_shard_names }}
+        run: |
+          import json
+          import os
+          import pathlib
+          import sys
+          import xml.etree.ElementTree as ET
+
+          problems = []
+          coverage_complete = True
+          merged = ET.Element("testsuites")
+          for shard in json.loads(os.environ["SHARD_NAMES"]):
+              exit_file = pathlib.Path(f"pytest-exit-{shard}.txt")
+              if not exit_file.exists():
+                  problems.append(f"{shard}: no result was uploaded (the shard job ended before pytest finished)")
+              elif (code := exit_file.read_text(encoding="utf-8").strip()) != "0":
+                  problems.append(f"{shard}: pytest exited with code {code}")
+              if not pathlib.Path(f".coverage.{shard}").exists():
+                  coverage_complete = False
+                  problems.append(f"{shard}: no coverage data was uploaded")
+              report = pathlib.Path(f"test-results-{shard}.xml")
+              if report.exists():
+                  merged.extend(ET.parse(report).getroot().iter("testsuite"))
+          ET.ElementTree(merged).write("test-results.xml", encoding="utf-8", xml_declaration=True)
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"coverage_complete={'true' if coverage_complete else 'false'}\n")
+          for problem in problems:
+              print(f"::error::{problem}")
+          sys.exit(1 if problems else 0)
+      - name: Combine coverage and enforce the threshold
+        if: always() && steps.shards.outputs.coverage_complete == 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pixi run coverage combine
+          if ($LASTEXITCODE -ne 0) { throw 'coverage combine failed' }
+          pixi run coverage xml --fail-under=0
+          if ($LASTEXITCODE -ne 0) { throw 'coverage xml failed' }
+          Write-Host 'Total coverage (percent):'
+          pixi run coverage report --format=total
+          exit $LASTEXITCODE
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -286,7 +393,6 @@ jobs:
           name: test-results
           path: |
             test-results.xml
-            htmlcov/
             coverage.xml
       - name: Upload coverage to Codecov
         if: always()
@@ -302,7 +408,7 @@ jobs:
       - name: Warn when coverage.xml is missing
         if: always() && hashFiles('coverage.xml') == ''
         run: |
-          Write-Host '::warning::coverage.xml was not produced (the pytest step likely crashed before pytest-cov could write its report). Skipping the SonarQube Scan step for this run so SonarCloud does not record a false 0% coverage analysis and fail the quality gate on a run that never had coverage data to begin with.'
+          Write-Host '::warning::coverage.xml was not produced (a test shard ended without uploading its coverage data, or combining the shards failed). Skipping the SonarQube Scan step for this run so SonarCloud does not record a false 0% coverage analysis and fail the quality gate on a run that never had coverage data to begin with.'
       - name: SonarQube Scan
         if: always() && hashFiles('coverage.xml') != ''
         continue-on-error: true
