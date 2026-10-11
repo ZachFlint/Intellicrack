@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
     from transformers import PreTrainedTokenizerBase
 
-pytestmark = [pytest.mark.integration, pytest.mark.asyncio, pytest.mark.xdist_group("real_local_model")]
+pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 _TEN_GB: int = 10 * 1024 * 1024 * 1024
 _FOURTEEN_GB: int = 14 * 1024 * 1024 * 1024

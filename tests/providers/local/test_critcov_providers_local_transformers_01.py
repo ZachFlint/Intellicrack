@@ -62,8 +62,6 @@ if TYPE_CHECKING:
     from intellicrack.providers.base import UsageInfo
 
 
-pytestmark = pytest.mark.xdist_group("real_local_model")
-
 _MODEL_ID: Final[str] = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 _USER_TEXT: Final[str] = "Say hello."
 _SHORT_REPLY_TOKENS: Final[int] = 3
