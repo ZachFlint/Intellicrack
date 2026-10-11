@@ -2128,7 +2128,7 @@ def _build_pe_header(*, magic: int, optional_header_size: int) -> bytes:
     struct.pack_into("<H", buf, 20, optional_header_size)
     struct.pack_into("<H", buf, 22, 0)
     struct.pack_into("<H", buf, NT_HEADERS_OPTIONAL_OFFSET, magic)
-    entry_offset = NT_HEADERS_OPTIONAL_OFFSET + 0x28
+    entry_offset = NT_HEADERS_OPTIONAL_OFFSET + 0x10
     struct.pack_into("<I", buf, entry_offset, _PE_ENTRY_RVA)
     assert NT_HEADERS_OPTIONAL_OFFSET == PE_OPTIONAL_HEADER_OFFSET
     assert PE32PLUS_OPTIONAL_HEADER_SIZE > PE32_OPTIONAL_HEADER_SIZE

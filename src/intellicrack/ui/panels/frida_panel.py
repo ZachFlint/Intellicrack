@@ -66,6 +66,7 @@ if TYPE_CHECKING:
 
 _logger = get_logger(__name__)
 
+_REMOTE_ID_PREFIX: Final[str] = "socket@"
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
 _DEVICE_COMBO_MIN_WIDTH: Final[int] = 120
@@ -446,7 +447,7 @@ class FridaPanel(AnalysisPanelBase):
             tabs: The tab widget whose tab bar should never elide labels.
         """
         tab_bar = tabs.tabBar()
-        if tab_bar is None:
+        if tab_bar is None:  # pragma: no cover - type narrowing
             return
         tab_bar.setElideMode(Qt.TextElideMode.ElideNone)
         tab_bar.setUsesScrollButtons(True)
@@ -1132,8 +1133,7 @@ class FridaPanel(AnalysisPanelBase):
         self._insert_pending_hook_row(pending_key, target)
         function_item = self._hooks_table.item(row, _HOOK_COL_FUNCTION)
         self._hooks_table.setCurrentCell(row, _HOOK_COL_FUNCTION)
-        if function_item is not None:
-            edit_table_item(self._hooks_table, function_item)
+        edit_table_item(self._hooks_table, function_item)
 
         self._add_hook_btn.setEnabled(False)
         run_bridge_coroutine_logged(
@@ -1571,11 +1571,14 @@ class FridaPanel(AnalysisPanelBase):
             result: The ``FridaDeviceInfo`` returned by the bridge on success.
         """
         entry_text = f"remote:{host_port}"
+        entry_data = {"id": f"{_REMOTE_ID_PREFIX}{host_port}", "type": "remote", "name": entry_text}
         with QSignalBlocker(self._device_combo):
             idx = self._device_combo.findText(entry_text)
             if idx < 0:
-                self._device_combo.addItem(entry_text)
+                self._device_combo.addItem(entry_text, entry_data)
                 idx = self._device_combo.count() - 1
+            else:
+                self._device_combo.setItemData(idx, entry_data)
             self._device_combo.setCurrentIndex(idx)
         self._console.appendPlainText(f"[+] Connected to device: {getattr(result, 'name', entry_text)}")
 
@@ -1592,7 +1595,7 @@ class FridaPanel(AnalysisPanelBase):
         if data.get("type") != "remote":
             self._console.appendPlainText("[!] Select a remote device in the Device list to remove it")
             return
-        host = str(data.get("id", ""))
+        host = str(data.get("id", "")).removeprefix(_REMOTE_ID_PREFIX)
         run_bridge_coroutine_logged(
             self._bridge.remove_remote_device(host),
             on_success=lambda _: self._on_remote_device_removed(host),
@@ -1611,10 +1614,13 @@ class FridaPanel(AnalysisPanelBase):
             host: The ``host:port`` of the device that was just removed.
         """
         entry_text = f"remote:{host}"
+        remote_id = f"{_REMOTE_ID_PREFIX}{host}"
         with QSignalBlocker(self._device_combo):
-            idx = self._device_combo.findText(entry_text)
-            if idx >= 0:
-                self._device_combo.removeItem(idx)
+            for idx in range(self._device_combo.count() - 1, -1, -1):
+                raw_data = self._device_combo.itemData(idx)
+                item_id = cast("dict[str, object]", raw_data).get("id") if isinstance(raw_data, dict) else None
+                if self._device_combo.itemText(idx) == entry_text or item_id == remote_id:
+                    self._device_combo.removeItem(idx)
             self._device_combo.setCurrentIndex(0)
         self._console.appendPlainText(f"[+] Removed remote device: {host}")
 
@@ -1914,7 +1920,7 @@ class FridaPanel(AnalysisPanelBase):
                 self._threads_table.insertRow(row)
                 tid: int = int(getattr(thread_obj, "tid", 0))
                 state: str = str(getattr(thread_obj, "state", "unknown"))
-                pc: object = getattr(thread_obj, "start_address", 0)
+                pc: object = getattr(thread_obj, "current_pc", 0)
                 self._threads_table.setItem(row, 0, QTableWidgetItem(str(tid)))
                 self._threads_table.setItem(row, 1, QTableWidgetItem(state))
                 self._threads_table.setItem(
@@ -2213,12 +2219,10 @@ class FridaPanel(AnalysisPanelBase):
         raw_counts = getattr(result, "counts", {})
         duration = getattr(result, "duration_ms", 0.0)
         self._stalker_summary_display.clear()
-        target_count = 0
-        if isinstance(raw_counts, dict):
-            counts = cast("dict[str, int]", raw_counts)
-            target_count = len(counts)
-            for target, count in counts.items():
-                self._stalker_summary_display.appendPlainText(f"{target}: {count}")
+        counts = cast("dict[str, int]", raw_counts)
+        target_count = len(counts)
+        for target, count in counts.items():
+            self._stalker_summary_display.appendPlainText(f"{target}: {count}")
         self._console.appendPlainText(f"[+] Stalker call-summary trace complete: {target_count} targets in {duration:.1f}ms")
         self._stalker_summary_start_btn.setEnabled(True)
         self._stalker_summary_stop_btn.setEnabled(False)
@@ -2257,14 +2261,13 @@ class FridaPanel(AnalysisPanelBase):
         with QSignalBlocker(self._device_combo):
             current = self._device_combo.currentText()
             self._device_combo.clear()
-            if isinstance(result, list):
-                device_list = cast("list[object]", result)
-                for device_obj in device_list:
-                    dev_id = str(getattr(device_obj, "id", ""))
-                    dev_name = str(getattr(device_obj, "name", dev_id))
-                    dev_type = str(getattr(device_obj, "device_type", ""))
-                    display = f"{dev_name} ({dev_type})" if dev_type else dev_name
-                    self._device_combo.addItem(display, {"id": dev_id, "type": dev_type, "name": dev_name})
+            device_list = cast("list[object]", result)
+            for device_obj in device_list:
+                dev_id = str(getattr(device_obj, "id", ""))
+                dev_name = str(getattr(device_obj, "name", dev_id))
+                dev_type = str(getattr(device_obj, "device_type", ""))
+                display = f"{dev_name} ({dev_type})" if dev_type else dev_name
+                self._device_combo.addItem(display, {"id": dev_id, "type": dev_type, "name": dev_name})
             idx = self._device_combo.findText(current)
             if idx >= 0:
                 self._device_combo.setCurrentIndex(idx)
@@ -2527,28 +2530,27 @@ class FridaPanel(AnalysisPanelBase):
         """
         self._hooks_table.setRowCount(0)
         self._hook_ids.clear()
-        if isinstance(result, list):
-            for hook in cast("list[object]", result):
-                hook_id = str(getattr(hook, "id", ""))
-                target = str(getattr(hook, "target", ""))
-                address = getattr(hook, "address", None)
-                addr_str = f"0x{address:X}" if isinstance(address, int) and address else "0x0"
-                active = getattr(hook, "active", True)
+        for hook in cast("list[object]", result):
+            hook_id = str(getattr(hook, "id", ""))
+            target = str(getattr(hook, "target", ""))
+            address = getattr(hook, "address", None)
+            addr_str = f"0x{address:X}" if isinstance(address, int) and address else "0x0"
+            active = getattr(hook, "active", True)
 
-                module_str = ""
-                func_str = target
-                if "!" in target:
-                    parts = target.split("!", 1)
-                    module_str = parts[0]
-                    func_str = parts[1]
+            module_str = ""
+            func_str = target
+            if "!" in target:
+                parts = target.split("!", 1)
+                module_str = parts[0]
+                func_str = parts[1]
 
-                row = self._hooks_table.rowCount()
-                self._hooks_table.insertRow(row)
-                self._hooks_table.setItem(row, _HOOK_COL_ADDRESS, QTableWidgetItem(addr_str))
-                self._hooks_table.setItem(row, _HOOK_COL_MODULE, QTableWidgetItem(module_str))
-                self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, QTableWidgetItem(func_str))
-                self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem("Active" if active else "Inactive"))
-                self._hook_ids.append(hook_id)
+            row = self._hooks_table.rowCount()
+            self._hooks_table.insertRow(row)
+            self._hooks_table.setItem(row, _HOOK_COL_ADDRESS, QTableWidgetItem(addr_str))
+            self._hooks_table.setItem(row, _HOOK_COL_MODULE, QTableWidgetItem(module_str))
+            self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, QTableWidgetItem(func_str))
+            self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem("Active" if active else "Inactive"))
+            self._hook_ids.append(hook_id)
         self._refresh_hooks_btn.setEnabled(True)
 
     def _on_refresh_hooks_error(self, exc: object) -> None:
@@ -2725,19 +2727,18 @@ class FridaPanel(AnalysisPanelBase):
         """
         self._modules_table.setRowCount(0)
         self._module_combo.clear()
-        if isinstance(result, list):
-            for mod in cast("list[object]", result):
-                name = str(getattr(mod, "name", ""))
-                base = getattr(mod, "base_address", 0)
-                size = getattr(mod, "size", 0)
-                path = str(getattr(mod, "path", ""))
-                row = self._modules_table.rowCount()
-                self._modules_table.insertRow(row)
-                self._modules_table.setItem(row, 0, QTableWidgetItem(name))
-                self._modules_table.setItem(row, 1, QTableWidgetItem(f"0x{base:X}" if isinstance(base, int) else str(base)))
-                self._modules_table.setItem(row, 2, QTableWidgetItem(str(size)))
-                self._modules_table.setItem(row, 3, QTableWidgetItem(path))
-                self._module_combo.addItem(name)
+        for mod in cast("list[object]", result):
+            name = str(getattr(mod, "name", ""))
+            base = getattr(mod, "base_address", 0)
+            size = getattr(mod, "size", 0)
+            path = str(getattr(mod, "path", ""))
+            row = self._modules_table.rowCount()
+            self._modules_table.insertRow(row)
+            self._modules_table.setItem(row, 0, QTableWidgetItem(name))
+            self._modules_table.setItem(row, 1, QTableWidgetItem(f"0x{base:X}" if isinstance(base, int) else str(base)))
+            self._modules_table.setItem(row, 2, QTableWidgetItem(str(size)))
+            self._modules_table.setItem(row, 3, QTableWidgetItem(path))
+            self._module_combo.addItem(name)
         self._refresh_modules_btn.setEnabled(True)
 
     def _on_modules_error(self, exc: object) -> None:
@@ -2827,16 +2828,15 @@ class FridaPanel(AnalysisPanelBase):
             result: List of ExportInfo from the bridge.
         """
         self._exports_table.setRowCount(0)
-        if isinstance(result, list):
-            for exp in cast("list[object]", result):
-                name = str(getattr(exp, "name", ""))
-                addr = getattr(exp, "address", 0)
-                ordinal = getattr(exp, "ordinal", 0)
-                row = self._exports_table.rowCount()
-                self._exports_table.insertRow(row)
-                self._exports_table.setItem(row, 0, QTableWidgetItem(name))
-                self._exports_table.setItem(row, 1, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
-                self._exports_table.setItem(row, 2, QTableWidgetItem(str(ordinal)))
+        for exp in cast("list[object]", result):
+            name = str(getattr(exp, "name", ""))
+            addr = getattr(exp, "address", 0)
+            ordinal = getattr(exp, "ordinal", 0)
+            row = self._exports_table.rowCount()
+            self._exports_table.insertRow(row)
+            self._exports_table.setItem(row, 0, QTableWidgetItem(name))
+            self._exports_table.setItem(row, 1, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
+            self._exports_table.setItem(row, 2, QTableWidgetItem(str(ordinal)))
         self._module_detail_tabs.setCurrentIndex(0)
 
     def _on_show_imports(self) -> None:
@@ -2863,16 +2863,15 @@ class FridaPanel(AnalysisPanelBase):
             result: List of ImportInfo from the bridge.
         """
         self._imports_table.setRowCount(0)
-        if isinstance(result, list):
-            for imp in cast("list[object]", result):
-                func = str(getattr(imp, "function", ""))
-                dll = str(getattr(imp, "dll", ""))
-                addr = getattr(imp, "address", 0)
-                row = self._imports_table.rowCount()
-                self._imports_table.insertRow(row)
-                self._imports_table.setItem(row, 0, QTableWidgetItem(func))
-                self._imports_table.setItem(row, 1, QTableWidgetItem(dll))
-                self._imports_table.setItem(row, 2, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
+        for imp in cast("list[object]", result):
+            func = str(getattr(imp, "function", ""))
+            dll = str(getattr(imp, "dll", ""))
+            addr = getattr(imp, "address", 0)
+            row = self._imports_table.rowCount()
+            self._imports_table.insertRow(row)
+            self._imports_table.setItem(row, 0, QTableWidgetItem(func))
+            self._imports_table.setItem(row, 1, QTableWidgetItem(dll))
+            self._imports_table.setItem(row, 2, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
         self._module_detail_tabs.setCurrentIndex(1)
 
     def _on_show_module_ranges(self) -> None:
@@ -2899,16 +2898,15 @@ class FridaPanel(AnalysisPanelBase):
             result: List of MemoryRegion from the bridge.
         """
         self._module_ranges_table.setRowCount(0)
-        if isinstance(result, list):
-            for region in cast("list[object]", result):
-                base = getattr(region, "base_address", 0)
-                size = getattr(region, "size", 0)
-                protection = str(getattr(region, "protection", ""))
-                row = self._module_ranges_table.rowCount()
-                self._module_ranges_table.insertRow(row)
-                self._module_ranges_table.setItem(row, 0, QTableWidgetItem(f"0x{base:X}" if isinstance(base, int) else str(base)))
-                self._module_ranges_table.setItem(row, 1, QTableWidgetItem(str(size)))
-                self._module_ranges_table.setItem(row, 2, QTableWidgetItem(protection))
+        for region in cast("list[object]", result):
+            base = getattr(region, "base_address", 0)
+            size = getattr(region, "size", 0)
+            protection = str(getattr(region, "protection", ""))
+            row = self._module_ranges_table.rowCount()
+            self._module_ranges_table.insertRow(row)
+            self._module_ranges_table.setItem(row, 0, QTableWidgetItem(f"0x{base:X}" if isinstance(base, int) else str(base)))
+            self._module_ranges_table.setItem(row, 1, QTableWidgetItem(str(size)))
+            self._module_ranges_table.setItem(row, 2, QTableWidgetItem(protection))
         self._module_detail_tabs.setCurrentIndex(2)
 
     def _on_show_sections(self) -> None:
@@ -2935,18 +2933,17 @@ class FridaPanel(AnalysisPanelBase):
             result: List of ModuleSectionInfo from the bridge.
         """
         self._sections_table.setRowCount(0)
-        if isinstance(result, list):
-            for section in cast("list[object]", result):
-                section_id = str(getattr(section, "id", ""))
-                name = str(getattr(section, "name", ""))
-                address = getattr(section, "address", 0)
-                size = getattr(section, "size", 0)
-                row = self._sections_table.rowCount()
-                self._sections_table.insertRow(row)
-                self._sections_table.setItem(row, 0, QTableWidgetItem(section_id))
-                self._sections_table.setItem(row, 1, QTableWidgetItem(name))
-                self._sections_table.setItem(row, 2, QTableWidgetItem(f"0x{address:X}" if isinstance(address, int) else str(address)))
-                self._sections_table.setItem(row, 3, QTableWidgetItem(str(size)))
+        for section in cast("list[object]", result):
+            section_id = str(getattr(section, "id", ""))
+            name = str(getattr(section, "name", ""))
+            address = getattr(section, "address", 0)
+            size = getattr(section, "size", 0)
+            row = self._sections_table.rowCount()
+            self._sections_table.insertRow(row)
+            self._sections_table.setItem(row, 0, QTableWidgetItem(section_id))
+            self._sections_table.setItem(row, 1, QTableWidgetItem(name))
+            self._sections_table.setItem(row, 2, QTableWidgetItem(f"0x{address:X}" if isinstance(address, int) else str(address)))
+            self._sections_table.setItem(row, 3, QTableWidgetItem(str(size)))
         self._module_detail_tabs.setCurrentIndex(self._sections_table_index)
 
     def _on_show_dependencies(self) -> None:
@@ -2973,14 +2970,13 @@ class FridaPanel(AnalysisPanelBase):
             result: List of ModuleDependencyInfo from the bridge.
         """
         self._dependencies_table.setRowCount(0)
-        if isinstance(result, list):
-            for dependency in cast("list[object]", result):
-                name = str(getattr(dependency, "name", ""))
-                dep_type = str(getattr(dependency, "type", ""))
-                row = self._dependencies_table.rowCount()
-                self._dependencies_table.insertRow(row)
-                self._dependencies_table.setItem(row, 0, QTableWidgetItem(name))
-                self._dependencies_table.setItem(row, 1, QTableWidgetItem(dep_type))
+        for dependency in cast("list[object]", result):
+            name = str(getattr(dependency, "name", ""))
+            dep_type = str(getattr(dependency, "type", ""))
+            row = self._dependencies_table.rowCount()
+            self._dependencies_table.insertRow(row)
+            self._dependencies_table.setItem(row, 0, QTableWidgetItem(name))
+            self._dependencies_table.setItem(row, 1, QTableWidgetItem(dep_type))
         self._module_detail_tabs.setCurrentIndex(self._dependencies_table_index)
 
     def _on_find_export_by_name(self) -> None:
@@ -3235,7 +3231,7 @@ class FridaPanel(AnalysisPanelBase):
         if isinstance(result, (bytes, bytearray)):
             self._mem_hex_display.setPlainText(format_hex_dump(bytes(result), base_addr))
         else:
-            self._mem_hex_display.setPlainText(str(result))
+            self._mem_hex_display.setPlainText(str(result))  # pragma: no cover - type narrowing
 
     def _on_write_memory(self) -> None:
         """Write memory in the target process."""
@@ -3349,14 +3345,13 @@ class FridaPanel(AnalysisPanelBase):
             result: List of MemorySearchResult from the bridge.
         """
         self._mem_scan_table.setRowCount(0)
-        if isinstance(result, list):
-            for match in cast("list[object]", result):
-                addr = getattr(match, "address", 0)
-                matched = str(getattr(match, "matched_bytes", ""))
-                row = self._mem_scan_table.rowCount()
-                self._mem_scan_table.insertRow(row)
-                self._mem_scan_table.setItem(row, 0, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
-                self._mem_scan_table.setItem(row, 1, QTableWidgetItem(matched))
+        for match in cast("list[object]", result):
+            addr = getattr(match, "address", 0)
+            matched = str(getattr(match, "matched_bytes", ""))
+            row = self._mem_scan_table.rowCount()
+            self._mem_scan_table.insertRow(row)
+            self._mem_scan_table.setItem(row, 0, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
+            self._mem_scan_table.setItem(row, 1, QTableWidgetItem(matched))
         self._mem_scan_btn.setEnabled(True)
         self._console.appendPlainText(f"[+] Scan complete: {self._mem_scan_table.rowCount()} matches")
 

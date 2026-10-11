@@ -209,10 +209,6 @@ class ComparisonMixin:
             return None
         doc_len: int = document.length()
         raw_a: object = document.read(0, doc_len)
-        if isinstance(raw_a, list):
-            return bytes(cast("list[int]", raw_a))
-        if isinstance(raw_a, bytearray):
-            return bytes(raw_a)
         return raw_a if isinstance(raw_a, bytes) else None
 
     def _on_compare(self) -> None:
@@ -244,7 +240,7 @@ class ComparisonMixin:
             except (AttributeError, ValueError):
                 _logger.exception("diff_doc_read_failed")
                 return
-            if data_a is None:
+            if data_a is None:  # pragma: no cover - type narrowing
                 return
 
             try:

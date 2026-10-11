@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import json
 import re
 import string
@@ -90,6 +91,7 @@ _ERR_EXPORT_NOT_FOUND = "export not found"
 _ERR_IMPORT_NOT_FOUND = "import enumeration failed"
 _ERR_RESOLVE_FAILED = "symbol resolution failed"
 _ERR_STALKER_FAILED = "Stalker tracing operation failed"
+_ERR_STALKER_UNFOLLOW_UNANSWERED = "Stalker unfollow was not acknowledged: the agent did not answer, so the trace is incomplete"
 _ERR_CHILD_GATING_FAILED = "child gating operation failed"
 _ERR_CHILD_GATING_NOT_SUPPORTED = "child gating is not supported on this OS"
 _ERR_CRASH_REPORTING_FAILED = "crash reporting setup failed"
@@ -117,6 +119,8 @@ _ERR_MONITOR_FAILED = "file monitoring failed"
 _ERR_PROBE_FAILED = "call probe operation failed"
 _ERR_INVALID_JSON_MESSAGE = "invalid JSON message"
 _ERR_INVALID_PROTECTION = "invalid memory protection flags"
+_ERR_CALL_TIMED_OUT = "Frida call timed out"
+_ERR_AGENT_UNRESPONSIVE = "Frida agent is not answering"
 
 _VALID_NATIVE_TYPES: frozenset[str] = frozenset({
     "void",
@@ -199,6 +203,68 @@ _TYPED_READ_ACCESSORS: dict[str, str] = {
 _SCAN_CONTEXT_BYTES: int = 16
 _SCAN_CHUNK_BYTES: int = 4 * 1024 * 1024
 _SCAN_CHUNK_TIMEOUT: float = 5.0
+_FRIDA_AGENT_CALL_TIMEOUT: float = 10.0
+"""Seconds a call the injected agent must answer (create, load, unload, post) may take.
+
+Healthy calls take 1 to 250 ms. Frida ends an unanswered agent call itself only after its 25 second
+transport timeout, so this is set just under half of that: 40 times the slowest healthy call, and short
+enough that a wedged agent is reported before the caller has waited out Frida's own limit.
+"""
+_FRIDA_DEVICE_CALL_TIMEOUT: float = 15.0
+"""Seconds a call to the device or session (attach, detach, kill, enumerate) may take.
+
+These calls do not need the agent's script thread and Frida bounds none of them, so a hung target can
+hold them forever. Attaching injects the agent and measured 7 to 200 ms; 15 seconds leaves room for a
+heavily loaded host while still bounding a target that can never finish.
+"""
+_FRIDA_USER_SCRIPT_TIMEOUT: float = 30.0
+"""Seconds loading or compiling a caller-supplied script may take.
+
+Loading runs the script's top-level code, which the caller owns and which may legitimately run for
+seconds. A timeout of this call proves nothing about the agent, so it is reported but does not mark the
+session as unresponsive.
+"""
+_OPERATION_THREAD_ENUMERATION: str = "thread enumeration"
+_OPERATION_STALKER_UNFOLLOW: str = "Stalker unfollow request"
+_FRIDA_CANCEL_GRACE: float = 2.0
+"""Seconds to wait for a cancelled call's worker thread to finish before abandoning it."""
+_SHUTDOWN_TIMEOUT: float = 60.0
+"""Seconds ``shutdown`` may spend in all, after which it clears the bridge's state and returns.
+
+One agent call can wait out its 10 second limit before the session is marked unresponsive and later
+agent calls fail at once, so the slowest orderly shutdown is that wait plus the 15 second device-level
+calls (gating, detach, kill).
+"""
+_STALKER_UNFOLLOW_ACK_TIMEOUT: float = 10.0
+"""Seconds the agent has to acknowledge a Stalker unfollow request (healthy: a few milliseconds)."""
+_FRIDA_DEVICE_OWNERS: frozenset[str] = frozenset({"Device", "DeviceManager"})
+_FRIDA_DEVICE_CALLS: frozenset[str] = frozenset({
+    "Session.detach",
+    "Session.enable_child_gating",
+    "Session.disable_child_gating",
+    "get_local_device",
+    "get_usb_device",
+    "get_device",
+    "enumerate_devices",
+})
+_THREAD_HELPER_READY_TIMEOUT: float = 5.0
+_THREAD_HELPER_SCRIPT: str = """
+function serve() {
+    recv('enumerate_threads', function (message) {
+        try {
+            var threads = Process.enumerateThreads().map(function (t) {
+                return { id: t.id, state: t.state, currentPc: t.context.pc.toString() };
+            });
+            send({ type: 'threads', request: message.request, data: threads });
+        } catch (e) {
+            send({ type: 'threads_error', request: message.request, error: e.message });
+        }
+        serve();
+    });
+}
+serve();
+send({ type: 'thread_helper_ready' });
+"""
 _ALREADY_UNLOADED_MARKERS: tuple[str, ...] = ("destroy", "detach")
 # Result key holding a ``send()`` payload that is not a JavaScript object
 # (a string, number, boolean, array or null), which cannot be merged into
@@ -1683,6 +1749,121 @@ def _write_typescript_tempfile(source: str) -> Path:
         return Path(temp_file.name)
 
 
+class _FridaCallTimeoutError(ToolError):
+    """A Frida call did not return within its limit."""
+
+    def __init__(self, operation: str, limit: float) -> None:
+        """Name the call that timed out.
+
+        Args:
+            operation: The call that did not return.
+            limit: Seconds it was allowed.
+        """
+        super().__init__(
+            f"{_ERR_CALL_TIMED_OUT}: {operation} did not return within {limit:g}s; the agent or device did not answer",
+            details={"operation": operation, "timeout_seconds": limit},
+        )
+
+
+class _AgentUnresponsiveError(ToolError):
+    """An agent call was refused because an earlier call on the same session timed out."""
+
+    def __init__(self, operation: str, first: str) -> None:
+        """Name the refused call and the call that proved the agent stuck.
+
+        Args:
+            operation: The call that was not attempted.
+            first: The earlier call that timed out.
+        """
+        super().__init__(
+            f"{_ERR_AGENT_UNRESPONSIVE}: {operation} was not attempted because {first} on this session timed out earlier; "
+            "the agent or device did not answer",
+            details={"operation": operation, "first_timed_out_operation": first},
+        )
+
+
+def _discard_worker_outcome[T](worker: asyncio.Future[T]) -> None:
+    """Mark the outcome of an abandoned worker as seen so asyncio does not log it as never retrieved.
+
+    Args:
+        worker: A worker future that nobody awaits any more.
+    """
+    with contextlib.suppress(asyncio.CancelledError):
+        _ = worker.exception()
+
+
+async def _call_with_deadline[T](
+    func: Callable[..., T],
+    args: tuple[object, ...],
+    kwargs: dict[str, object],
+    *,
+    limit: float,
+    cancellable: frida.Cancellable | None,
+    operation: str,
+) -> T:
+    """Run a blocking Frida call on a worker thread inside a cancellable scope and bound it by ``limit``.
+
+    Frida's Python API waits for a native reply with no limit, and frida-python releases the waiting
+    thread when the scoped ``Cancellable`` is cancelled. The call therefore runs in that scope and is
+    cancelled once the limit passes, instead of being abandoned on a thread that never returns. A call
+    that ignores the cancellable (an RPC) is abandoned after a short grace period.
+
+    Args:
+        func: The blocking Frida callable.
+        args: Positional arguments for ``func``.
+        kwargs: Keyword arguments for ``func``.
+        limit: Seconds the call may take.
+        cancellable: Cancellation token to scope the call with, or ``None`` for a private one.
+        operation: Name used in the error message.
+
+    Returns:
+        T: What ``func`` returned. Any exception ``func`` raised propagates unchanged.
+
+    Raises:
+        _FridaCallTimeoutError: When the call does not finish within ``limit``.
+        asyncio.CancelledError: When the awaiting task is cancelled, after the call has been cancelled too.
+    """
+    token = cancellable if cancellable is not None else frida.Cancellable()
+
+    def run() -> T:
+        """Run the call inside the cancellable scope on the worker thread.
+
+        Returns:
+            T: What ``func`` returned.
+        """
+        with token:
+            return func(*args, **kwargs)
+
+    worker = asyncio.ensure_future(asyncio.to_thread(run))
+    try:
+        done, _ = await asyncio.wait({worker}, timeout=limit)
+    except asyncio.CancelledError:
+        token.cancel()
+        worker.add_done_callback(_discard_worker_outcome)
+        raise
+    if worker in done:
+        return worker.result()
+    token.cancel()
+    worker.add_done_callback(_discard_worker_outcome)
+    _ = await asyncio.wait({worker}, timeout=_FRIDA_CANCEL_GRACE)
+    _logger.warning("frida_call_timed_out", operation=operation, timeout_seconds=limit)
+    raise _FridaCallTimeoutError(operation, limit)
+
+
+async def _call_device[T](func: Callable[..., T], *args: object) -> T:
+    """Run a blocking device-level Frida call that has no bridge instance, bounded by the device limit.
+
+    Args:
+        func: The blocking Frida callable (``frida.get_local_device`` and similar).
+        *args: Positional arguments for ``func``.
+
+    Returns:
+        T: What ``func`` returned.
+    """
+    operation = str(getattr(func, "__qualname__", None) or repr(func))
+    return await _call_with_deadline(func, args, {}, limit=_FRIDA_DEVICE_CALL_TIMEOUT, cancellable=None, operation=operation)
+
+
 class _FridaBridgeBase(InstrumentationBridge):
     """Bridge for Frida dynamic instrumentation.
 
@@ -1706,6 +1887,11 @@ class _FridaBridgeBase(InstrumentationBridge):
         self._stalker_traces: dict[int, list[StalkerEvent]] = {}
         self._stalker_traces_lock: threading.Lock = threading.Lock()
         self._stalker_scripts: dict[int, str] = {}
+        self._stalker_unfollow_status: dict[str, tuple[threading.Event, dict[str, str]]] = {}
+        self._agent_unresponsive_operation: str | None = None
+        self._thread_helper: frida.Script | None = None
+        self._thread_helper_requests: dict[int, tuple[asyncio.Event, dict[str, object]]] = {}
+        self._thread_helper_next_request: int = 0
         self._stalker_summary_scripts: dict[int, str] = {}
         self._stalker_summaries: dict[int, dict[str, int]] = {}
         self._stalker_summaries_lock: threading.Lock = threading.Lock()
@@ -1779,7 +1965,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
         del tool_path
         try:
-            self._device = await asyncio.to_thread(frida.get_local_device)
+            self._device = await self._call_frida(frida.get_local_device)
             self.state = BridgeState(
                 connected=True,
                 tool_running=True,
@@ -1838,7 +2024,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         """Disable spawn gating on the device when it was previously enabled."""
         if self._child_gating_enabled and self._device is not None:
             try:
-                await asyncio.to_thread(self._device.disable_spawn_gating)
+                await self._call_frida(self._device.disable_spawn_gating)
             except Exception:
                 _logger.exception("child_gating_disable_failed_during_shutdown")
             self._detach_spawn_gating_handlers()
@@ -1848,7 +2034,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         """Disable session-scoped child gating on the active session, if it was enabled."""
         if self._session_child_gating_enabled and self._session is not None:
             try:
-                await asyncio.to_thread(self._session.disable_child_gating)
+                await self._call_frida(self._session.disable_child_gating)
             except Exception:
                 _logger.exception("session_child_gating_disable_failed_during_shutdown")
         self._reset_session_child_gating_state()
@@ -1954,18 +2140,16 @@ class _FridaBridgeBase(InstrumentationBridge):
         added_handler = self._child_added_handler
         removed_handler = self._child_removed_handler
         if device is not None:
-            off_fn = getattr(device, "off", None)
-            if callable(off_fn):
-                if added_handler is not None:
-                    try:
-                        off_fn("child-added", added_handler)
-                    except Exception:
-                        _logger.exception("child_added_handler_detach_failed")
-                if removed_handler is not None:
-                    try:
-                        off_fn("child-removed", removed_handler)
-                    except Exception:
-                        _logger.exception("child_removed_handler_detach_failed")
+            if added_handler is not None:
+                try:
+                    device.off("child-added", added_handler)
+                except Exception:
+                    _logger.exception("child_added_handler_detach_failed")
+            if removed_handler is not None:
+                try:
+                    device.off("child-removed", removed_handler)
+                except Exception:
+                    _logger.exception("child_removed_handler_detach_failed")
         self._child_added_handler = None
         self._child_removed_handler = None
 
@@ -2021,12 +2205,10 @@ class _FridaBridgeBase(InstrumentationBridge):
         device = self._device
         handler = self._output_handler
         if device is not None and handler is not None:
-            off_fn = getattr(device, "off", None)
-            if callable(off_fn):
-                try:
-                    off_fn("output", handler)
-                except Exception:
-                    _logger.exception("output_handler_detach_failed")
+            try:
+                device.off("output", handler)
+            except Exception:
+                _logger.exception("output_handler_detach_failed")
         self._output_handler = None
 
     async def _shutdown_file_monitors(self) -> None:
@@ -2034,8 +2216,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         for monitor_id, monitor_obj in list(self._file_monitors.items()):
             try:
                 disable_fn = getattr(monitor_obj, "disable", None)
-                if callable(disable_fn):
-                    await asyncio.to_thread(disable_fn)
+                if callable(disable_fn):  # pragma: no branch - type narrowing; getattr may return None
+                    await self._call_frida(disable_fn)
             except Exception:
                 _logger.exception("file_monitor_disable_failed", monitor_id=monitor_id)
         self._file_monitors.clear()
@@ -2079,7 +2261,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         """Detach the active Frida session, if any, and drop the reference."""
         if self._session is not None:
             try:
-                await asyncio.to_thread(self._session.detach)
+                await self._call_frida(self._session.detach)
             except Exception:
                 _logger.exception("session_detach_failed", bridge="frida")
             self._session = None
@@ -2088,7 +2270,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         """Kill any process spawned by the bridge and unregister it."""
         if self._spawned_pid is not None and self._device is not None:
             try:
-                await asyncio.to_thread(self._device.kill, self._spawned_pid)
+                await self._call_frida(self._device.kill, self._spawned_pid)
                 _logger.info("spawned_process_killed", pid=self._spawned_pid)
             except Exception:
                 _logger.exception("spawned_process_kill_failed", pid=self._spawned_pid)
@@ -2096,6 +2278,27 @@ class _FridaBridgeBase(InstrumentationBridge):
             process_manager = ProcessManager.get_instance()
             process_manager.unregister_external_pid(self._spawned_pid)
             self._spawned_pid = None
+
+    def _discard_session_state(self) -> None:
+        """Forget the session and everything that lived in it, without talking to Frida.
+
+        Runs at the end of every shutdown. After an orderly release it finds nothing left to clear; after a
+        sweep that was cut short by the shutdown cap it is what leaves the registries matching reality: the
+        session and its scripts are gone from the bridge's point of view. It replaces each registry with a new
+        empty one instead of calling methods on it, so that it can run in a ``finally`` whatever the registries
+        hold and never replaces the error the release itself raised.
+        """
+        self._session = None
+        self._scripts = {}
+        self._stalker_scripts = {}
+        with self._stalker_traces_lock:
+            self._stalker_traces = {}
+        self._stalker_unfollow_status = {}
+        self._alloc_scripts = {}
+        self._call_probes = {}
+        self._exception_handler_script = None
+        self._forget_agent_state()
+        self._clear_bridge_state()
 
     def _clear_bridge_state(self) -> None:
         """Reset all in-memory bookkeeping owned by this bridge instance."""
@@ -2116,8 +2319,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             bool: True if Frida is installed and working.
         """
         try:
-            await asyncio.to_thread(frida.get_local_device)
-        except (OSError, RuntimeError) as e:
+            await self._call_frida(frida.get_local_device)
+        except (OSError, RuntimeError, ToolError) as e:
             _logger.warning("frida_availability_check_failed", error=str(e))
             return False
         else:
@@ -2171,7 +2374,15 @@ class _FridaBridgeBase(InstrumentationBridge):
                 _ERR_PROCESS_NOT_FOUND,
                 details=self._frida_error_details(e, pid=resolved_pid),
             ) from e
-        except (frida.PermissionDeniedError, frida.TransportError, frida.InvalidArgumentError, OSError) as e:
+        except (
+            frida.PermissionDeniedError,
+            frida.TransportError,
+            frida.InvalidArgumentError,
+            frida.ServerNotRunningError,
+            frida.NotSupportedError,
+            frida.OperationCancelledError,
+            OSError,
+        ) as e:
             _logger.warning(
                 "frida_attach_failed",
                 pid=resolved_pid,
@@ -2184,6 +2395,114 @@ class _FridaBridgeBase(InstrumentationBridge):
                 _ERR_ATTACH_FAILED,
                 details=self._frida_error_details(e, pid=resolved_pid),
             ) from e
+
+    @staticmethod
+    def _frida_operation(func: Callable[..., object]) -> str:
+        """Name a Frida callable the way an error message should cite it.
+
+        Args:
+            func: The callable handed to :meth:`_call_frida`.
+
+        Returns:
+            str: Its qualified name (``Script.load``, ``Session.detach``), or its ``repr`` when it has none.
+        """
+        return str(getattr(func, "__qualname__", None) or repr(func))
+
+    @staticmethod
+    def _is_device_operation(operation: str) -> bool:
+        """Report whether an operation is answered by the device or session rather than the injected agent.
+
+        Args:
+            operation: Name from :meth:`_frida_operation`.
+
+        Returns:
+            bool: ``True`` for device, device-manager and session-lifecycle calls.
+        """
+        return operation.rpartition(".")[0] in _FRIDA_DEVICE_OWNERS or operation in _FRIDA_DEVICE_CALLS
+
+    def _forget_agent_state(self) -> None:
+        """Forget what the bridge learned about the current session's agent.
+
+        Called when a session begins or ends: whether the agent stopped answering, and the helper script
+        that lived in it, both belong to the session that is gone.
+        """
+        self._agent_unresponsive_operation = None
+        self._thread_helper = None
+        self._thread_helper_requests = {}
+
+    def _begin_session(self, session: frida.Session, pid: int) -> None:
+        """Start tracking a freshly attached session.
+
+        Args:
+            session: The session just established by an attach/spawn call.
+            pid: Process ID the session is attached to.
+        """
+        self._forget_agent_state()
+        self._register_session_detached_handler(session, pid)
+
+    def _require_responsive_agent(self, operation: str) -> None:
+        """Refuse an agent call on a session whose agent already stopped answering.
+
+        Once one call the agent must answer has timed out, the agent's script thread is stuck and every
+        later call waits out its own limit and fails the same way: after a Stalker wedge every call on
+        the session failed after Frida's 25 seconds and none recovered. Failing at once with the first
+        failure named is both faster and more truthful than waiting, and detach, shutdown and kill do
+        not come through here, so the session can still be released.
+
+        Args:
+            operation: Name of the call being refused.
+
+        Raises:
+            _AgentUnresponsiveError: When an earlier agent call on this session timed out.
+        """
+        first = self._agent_unresponsive_operation
+        if first is not None:
+            raise _AgentUnresponsiveError(operation, first)
+
+    async def _call_frida[T](
+        self,
+        func: Callable[..., T],
+        /,
+        *args: object,
+        limit_seconds: float | None = None,
+        cancellable: frida.Cancellable | None = None,
+        **kwargs: object,
+    ) -> T:
+        """Run a blocking Frida call on a worker thread, under a time limit and a cancellable.
+
+        Frida's Python API waits for a native reply with no limit, so a stuck target or agent would hold
+        the caller for as long as Frida takes, or forever. The call runs inside a ``Cancellable`` scope,
+        which frida-python honors by releasing the waiting thread, and is cancelled when the limit
+        passes. Calls the injected agent must answer additionally mark the session unresponsive when
+        they time out, so later agent calls fail at once.
+
+        Args:
+            func: The blocking Frida callable.
+            *args: Positional arguments for ``func``.
+            limit_seconds: Seconds allowed. ``None`` selects the agent or device default for ``func``; an
+                explicit value is the caller's own bound and does not mark the session unresponsive.
+            cancellable: Cancellation token to scope the call with, or ``None`` for a private one.
+            **kwargs: Keyword arguments for ``func``.
+
+        Returns:
+            T: What ``func`` returned. Any exception ``func`` raised propagates unchanged. A session whose
+                agent already stopped answering refuses an agent call at once with a :class:`ToolError`.
+
+        Raises:
+            _FridaCallTimeoutError: When the call does not finish in time; it names the call.
+        """
+        operation = self._frida_operation(func)
+        device_level = self._is_device_operation(operation)
+        if not device_level:
+            self._require_responsive_agent(operation)
+        default_limit = _FRIDA_DEVICE_CALL_TIMEOUT if device_level else _FRIDA_AGENT_CALL_TIMEOUT
+        limit = default_limit if limit_seconds is None else limit_seconds
+        try:
+            return await _call_with_deadline(func, args, kwargs, limit=limit, cancellable=cancellable, operation=operation)
+        except _FridaCallTimeoutError:
+            if not device_level and limit_seconds is None:
+                self._agent_unresponsive_operation = operation
+            raise
 
     def _register_session_detached_handler(self, session: frida.Session, pid: int) -> None:
         """Register Frida's async ``session.on("detached", ...)`` signal.
@@ -2206,7 +2525,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         def on_detached(
             reason: str,
             crash: object | None,
-        ) -> None:
+        ) -> None:  # pragma: no cover - runs on Frida's thread
             """Reset attach state and publish a message when Frida detaches the session.
 
             Args:
@@ -2217,6 +2536,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             """
             _logger.warning("frida_session_detached", pid=pid, reason=reason, has_crash=crash is not None)
             self._session = None
+            self._forget_agent_state()
             self._reset_session_child_gating_state()
             self._pid = None
             self.state.process_attached = False
@@ -2256,13 +2576,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             pid: Process ID to attach to.
             cancellable: Optional Frida cancellation token.
         """
-        self._session = await asyncio.to_thread(
-            self._attach_with_cancellable,
-            device,
-            pid,
-            cancellable,
-        )
-        self._register_session_detached_handler(self._session, pid)
+        self._session = await self._call_frida(device.attach, pid, cancellable=cancellable)
+        self._begin_session(self._session, pid)
         self._pid = pid
         self.state.connected = True
         self.state.tool_running = True
@@ -2301,8 +2616,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         cancellable = self._resolve_cancellable(cancellable_id)
 
         try:
-            processes = await asyncio.to_thread(device.enumerate_processes)
-        except (frida.TransportError, frida.PermissionDeniedError, OSError) as e:
+            processes = await self._call_frida(device.enumerate_processes)
+        except (frida.TransportError, frida.PermissionDeniedError, frida.ServerNotRunningError, OSError) as e:
             _logger.warning(
                 "frida_enumerate_processes_failed",
                 error=str(e),
@@ -2318,19 +2633,22 @@ class _FridaBridgeBase(InstrumentationBridge):
             raise ToolError(_ERR_PROCESS_NOT_FOUND, details={"process_name": name})
 
         try:
-            self._session = await asyncio.to_thread(
-                self._attach_with_cancellable,
-                device,
-                target_pid,
-                cancellable,
-            )
+            self._session = await self._call_frida(device.attach, target_pid, cancellable=cancellable)
         except frida.ProcessNotFoundError as e:
             _logger.warning("frida_process_not_found_by_name", process_name=name, error=str(e))
             raise ToolError(
                 _ERR_PROCESS_NOT_FOUND,
                 details=self._frida_error_details(e, process_name=name, pid=target_pid),
             ) from e
-        except (frida.PermissionDeniedError, frida.TransportError, frida.InvalidArgumentError, OSError) as e:
+        except (
+            frida.PermissionDeniedError,
+            frida.TransportError,
+            frida.InvalidArgumentError,
+            frida.ServerNotRunningError,
+            frida.NotSupportedError,
+            frida.OperationCancelledError,
+            OSError,
+        ) as e:
             _logger.warning(
                 "frida_attach_by_name_failed",
                 process_name=name,
@@ -2342,7 +2660,7 @@ class _FridaBridgeBase(InstrumentationBridge):
                 details=self._frida_error_details(e, process_name=name, pid=target_pid),
             ) from e
 
-        self._register_session_detached_handler(self._session, target_pid)
+        self._begin_session(self._session, target_pid)
         self._pid = target_pid
         self.state.connected = True
         self.state.tool_running = True
@@ -2404,15 +2722,14 @@ class _FridaBridgeBase(InstrumentationBridge):
             spawn_argv.extend(args)
 
         try:
-            pid: int = await asyncio.to_thread(
-                self._spawn_with_cancellable,
-                device,
+            pid: int = await self._call_frida(
+                device.spawn,
                 str(path),
-                spawn_argv,
-                cancellable,
+                argv=spawn_argv,
                 env=env,
                 cwd=cwd,
                 stdio=stdio,
+                cancellable=cancellable,
             )
         except (
             frida.ExecutableNotFoundError,
@@ -2420,6 +2737,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             frida.PermissionDeniedError,
             frida.TransportError,
             frida.InvalidArgumentError,
+            frida.ServerNotRunningError,
             OSError,
         ) as e:
             _logger.warning(
@@ -2437,7 +2755,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             await self._post_spawn_attach(device, pid, path, args, cancellable)
         except (OSError, RuntimeError, frida.TransportError) as e:
             try:
-                await asyncio.to_thread(device.kill, pid)
+                await self._call_frida(device.kill, pid)
             except (OSError, RuntimeError, frida.TransportError):
                 _logger.exception(
                     "failed_to_kill_leaked_process",
@@ -2471,13 +2789,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             args: Original command-line arguments used for spawn.
             cancellable: Optional cancellation token to forward to attach.
         """
-        self._session = await asyncio.to_thread(
-            self._attach_with_cancellable,
-            device,
-            pid,
-            cancellable,
-        )
-        self._register_session_detached_handler(self._session, pid)
+        self._session = await self._call_frida(device.attach, pid, cancellable=cancellable)
+        self._begin_session(self._session, pid)
         self._pid = pid
         self._spawned_pid = pid
 
@@ -2508,7 +2821,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             raise ToolError(_ERR_NOT_ATTACHED)
 
         try:
-            await asyncio.to_thread(self._device.resume, self._pid)
+            await self._call_frida(self._device.resume, self._pid)
             _logger.info("process_resumed", pid=self._pid)
         except (frida.InvalidOperationError, frida.TransportError, OSError) as e:
             _logger.warning(
@@ -2524,6 +2837,10 @@ class _FridaBridgeBase(InstrumentationBridge):
 
     async def detach(self, *, kill_spawned: bool = True) -> None:
         """Detach from the current process.
+
+        The detach is bounded. When the target or its agent does not answer in time the call raises a
+        :class:`ToolError` naming it, and the bridge still forgets the session, its scripts and the
+        attach state, because a session that would not detach cannot be driven any further.
 
         Args:
             kill_spawned: If True and process was spawned by us, kill it.
@@ -2570,30 +2887,36 @@ class _FridaBridgeBase(InstrumentationBridge):
             return
 
         for script_id in list(self._scripts.keys()):
-            await self._unload_script(script_id)
-
-        await asyncio.to_thread(session.detach)
-        self._reset_session_child_gating_state()
-        self._session = None
-
-        if kill_spawned and self._spawned_pid is not None and self._device is not None:
             try:
-                await asyncio.to_thread(self._device.kill, self._spawned_pid)
-                _logger.info("spawned_process_killed", pid=self._spawned_pid)
-            except Exception:
-                _logger.exception("spawned_process_kill_failed", pid=self._spawned_pid)
+                await self._unload_script(script_id)
+            except ToolError:
+                _logger.warning("script_unload_unanswered_during_detach", script_id=script_id)
 
-            process_manager = ProcessManager.get_instance()
-            process_manager.unregister_external_pid(self._spawned_pid)
-            self._spawned_pid = None
+        try:
+            await self._call_frida(session.detach)
+        finally:
+            self._reset_session_child_gating_state()
+            self._session = None
+            self._forget_agent_state()
 
-        self._pid = None
-        self._hooks = {}
-        self.state.connected = True
-        self.state.tool_running = True
-        self.state.process_attached = False
-        self.state.target_pid = None
-        self._publish_tool_state()
+            if kill_spawned and self._spawned_pid is not None and self._device is not None:
+                try:
+                    await self._call_frida(self._device.kill, self._spawned_pid)
+                    _logger.info("spawned_process_killed", pid=self._spawned_pid)
+                except Exception:
+                    _logger.exception("spawned_process_kill_failed", pid=self._spawned_pid)
+
+                process_manager = ProcessManager.get_instance()
+                process_manager.unregister_external_pid(self._spawned_pid)
+                self._spawned_pid = None
+
+            self._pid = None
+            self._hooks = {}
+            self.state.connected = True
+            self.state.tool_running = True
+            self.state.process_attached = False
+            self.state.target_pid = None
+            self._publish_tool_state()
 
         _logger.info("process_detached", bridge="frida")
 
@@ -2614,8 +2937,14 @@ class _FridaBridgeBase(InstrumentationBridge):
             raise ToolError(_ERR_NO_DEVICE)
 
         try:
-            await asyncio.to_thread(device.kill, pid)
-        except (frida.ProcessNotFoundError, frida.PermissionDeniedError, frida.TransportError, OSError) as e:
+            await self._call_frida(device.kill, pid)
+        except (
+            frida.ProcessNotFoundError,
+            frida.PermissionDeniedError,
+            frida.TransportError,
+            frida.ServerNotRunningError,
+            OSError,
+        ) as e:
             _logger.warning("frida_kill_failed", pid=pid, error=str(e), error_type=type(e).__name__)
             raise ToolError(_ERR_KILL_FAILED, details=self._frida_error_details(e, pid=pid)) from e
 
@@ -2642,6 +2971,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         validated_size = self._validate_js_int(size, name="size")
         if validated_size < 0:
             raise ToolError(_ERR_READ_FAILED, details={"reason": "size must be non-negative"})
+        if validated_size == 0:
+            return b""
 
         _logger.debug("memory_read_starting", address=hex(validated_address), size=validated_size)
 
@@ -2656,10 +2987,6 @@ class _FridaBridgeBase(InstrumentationBridge):
             raise ToolError(_ERR_READ_FAILED)
 
         read_data = result.get("__binary")
-        if isinstance(read_data, (bytes, bytearray)):
-            bytes_data = bytes(read_data)
-            _logger.debug("memory_read_completed", address=hex(validated_address), size=len(bytes_data))
-            return bytes_data
         if isinstance(read_data, list):
             bytes_list = bytes(cast("list[int]", read_data))
             _logger.debug("memory_read_completed", address=hex(validated_address), size=len(bytes_list))
@@ -2739,8 +3066,6 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         result = await self._execute_script_and_wait(script_code)
 
-        if "error" in result:
-            raise ToolError(_ERR_WRITE_FAILED)
         if not result.get("success", False):
             raise ToolError(_ERR_WRITE_FAILED, details={"reason": str(result.get("error", ""))})
 
@@ -2794,8 +3119,6 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
 
         result = await self._execute_script_and_wait(script_code)
-        if "error" in result:
-            raise ToolError(_ERR_READ_FAILED)
         if not result.get("success", False):
             raise ToolError(_ERR_READ_FAILED, details={"reason": str(result.get("error", ""))})
 
@@ -2853,8 +3176,6 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
 
         result = await self._execute_script_and_wait(script_code)
-        if "error" in result:
-            raise ToolError(_ERR_WRITE_FAILED)
         if not result.get("success", False):
             raise ToolError(_ERR_WRITE_FAILED, details={"reason": str(result.get("error", ""))})
         return True
@@ -2946,26 +3267,23 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         regions: list[MemoryRegion] = []
         range_data = result.get("data", [])
-        if isinstance(range_data, list):
-            for raw_item in cast("list[object]", range_data):
-                if not isinstance(raw_item, dict):
-                    continue
-                r = cast("dict[str, object]", raw_item)
-                base_str = str(r.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                size_val = r.get("size", 0)
-                protection_val = r.get("protection", "")
-                file_val = r.get("file")
-                regions.append(
-                    MemoryRegion(
-                        base_address=base,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                        protection=str(protection_val) if protection_val else "",
-                        state="committed",
-                        type="image" if file_val is not None else "private",
-                        module_name=str(file_val) if file_val is not None else None,
-                    ),
-                )
+        for raw_item in cast("list[object]", range_data):
+            r = cast("dict[str, object]", raw_item)
+            base_str = str(r.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            size_val = r.get("size", 0)
+            protection_val = r.get("protection", "")
+            file_val = r.get("file")
+            regions.append(
+                MemoryRegion(
+                    base_address=base,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    protection=str(protection_val) if protection_val else "",
+                    state="committed",
+                    type="image" if file_val is not None else "private",
+                    module_name=str(file_val) if file_val is not None else None,
+                ),
+            )
 
         _logger.debug("memory_regions_enumerated", count=len(regions))
         return regions
@@ -3013,25 +3331,22 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         regions: list[MemoryRegion] = []
         range_data = result.get("data", [])
-        if isinstance(range_data, list):
-            for raw_item in cast("list[object]", range_data):
-                if not isinstance(raw_item, dict):
-                    continue
-                r = cast("dict[str, object]", raw_item)
-                base_str = str(r.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                size_val = r.get("size", 0)
-                protection_val = r.get("protection", "")
-                regions.append(
-                    MemoryRegion(
-                        base_address=base,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                        protection=str(protection_val) if protection_val else "",
-                        state="committed",
-                        type="image",
-                        module_name=module_name,
-                    ),
-                )
+        for raw_item in cast("list[object]", range_data):
+            r = cast("dict[str, object]", raw_item)
+            base_str = str(r.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            size_val = r.get("size", 0)
+            protection_val = r.get("protection", "")
+            regions.append(
+                MemoryRegion(
+                    base_address=base,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    protection=str(protection_val) if protection_val else "",
+                    state="committed",
+                    type="image",
+                    module_name=module_name,
+                ),
+            )
 
         _logger.debug("module_ranges_enumerated", module_name=module_name, count=len(regions))
         return regions
@@ -3140,20 +3455,17 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         ranges: list[tuple[int, int]] = []
         range_data = result.get("data", [])
-        if isinstance(range_data, list):
-            for raw_item in cast("list[object]", range_data):
-                if not isinstance(raw_item, dict):
-                    continue
-                item = cast("dict[str, object]", raw_item)
-                protection = str(item.get("protection", ""))
-                if "r" not in protection:
-                    continue
-                base_str = str(item.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                size_val = item.get("size", 0)
-                size = int(size_val) if isinstance(size_val, (int, float)) else 0
-                if size > 0:
-                    ranges.append((base, size))
+        for raw_item in cast("list[object]", range_data):
+            item = cast("dict[str, object]", raw_item)
+            protection = str(item.get("protection", ""))
+            if "r" not in protection:
+                continue
+            base_str = str(item.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            size_val = item.get("size", 0)
+            size = int(size_val) if isinstance(size_val, (int, float)) else 0
+            if size > 0:
+                ranges.append((base, size))
         return ranges
 
     async def _scan_ranges_chunked(
@@ -3353,25 +3665,22 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         modules: list[ModuleInfo] = []
         mod_data = result.get("data", [])
-        if isinstance(mod_data, list):
-            for raw_mod in cast("list[object]", mod_data):
-                if not isinstance(raw_mod, dict):
-                    continue
-                m = cast("dict[str, object]", raw_mod)
-                base_str = str(m.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                name_val = m.get("name", "")
-                path_val = m.get("path", "")
-                size_val = m.get("size", 0)
-                modules.append(
-                    ModuleInfo(
-                        name=str(name_val) if name_val else "",
-                        path=Path(str(path_val) if path_val else ""),
-                        base_address=base,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                        entry_point=0,
-                    ),
-                )
+        for raw_mod in cast("list[object]", mod_data):
+            m = cast("dict[str, object]", raw_mod)
+            base_str = str(m.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            name_val = m.get("name", "")
+            path_val = m.get("path", "")
+            size_val = m.get("size", 0)
+            modules.append(
+                ModuleInfo(
+                    name=str(name_val) if name_val else "",
+                    path=Path(str(path_val) if path_val else ""),
+                    base_address=base,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    entry_point=0,
+                ),
+            )
 
         _logger.debug("modules_enumerated", count=len(modules))
         return modules
@@ -3423,21 +3732,18 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         exports: list[ExportInfo] = []
         export_data = result.get("data", [])
-        if isinstance(export_data, list):
-            for idx, raw_export in enumerate(cast("list[object]", export_data)):
-                if not isinstance(raw_export, dict):
-                    continue
-                e = cast("dict[str, object]", raw_export)
-                addr_str = str(e.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                name_val = e.get("name", "")
-                exports.append(
-                    ExportInfo(
-                        name=str(name_val) if name_val else "",
-                        ordinal=idx,
-                        address=addr,
-                    ),
-                )
+        for idx, raw_export in enumerate(cast("list[object]", export_data)):
+            e = cast("dict[str, object]", raw_export)
+            addr_str = str(e.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            name_val = e.get("name", "")
+            exports.append(
+                ExportInfo(
+                    name=str(name_val) if name_val else "",
+                    ordinal=idx,
+                    address=addr,
+                ),
+            )
 
         _logger.debug("exports_enumerated", module_name=module_name, count=len(exports))
         return exports
@@ -3526,15 +3832,15 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
 
         try:
-            script = await asyncio.to_thread(self._session.create_script, script_code)
+            script = await self._call_frida(self._session.create_script, script_code)
         except Exception as e:
             _logger.warning("hook_create_script_failed", target=target, error=str(e))
             raise ToolError(_ERR_HOOK_FAILED) from e
 
         messages, on_message, installed_event = self._make_install_waiter({"hooked", "hook_error"})
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
-        await asyncio.to_thread(
+        await self._call_frida(script.load)
+        await self._call_frida(
             script.post,
             {"type": "install_hook", "onEnter": on_enter_code, "onLeave": on_leave_code},
         )
@@ -3542,7 +3848,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         try:
             await asyncio.wait_for(installed_event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("hook_install_timeout", target=target)
             raise ToolError(_ERR_HOOK_FAILED) from e
 
@@ -3664,7 +3970,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         script_id = str(uuid.uuid4())[:8]
 
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await self._call_frida(self._session.create_script, script_code)
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
             """Forward persistent script messages to the bridge dispatcher.
@@ -3677,7 +3983,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        self._forward_script_logs(script)
+        await self._call_frida(script.load, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
 
         self._scripts[script_id] = script
         _logger.info("persistent_script_loaded", script_id=script_id)
@@ -3685,6 +3992,9 @@ class _FridaBridgeBase(InstrumentationBridge):
 
     async def unload_script(self, script_id: str) -> bool:
         """Unload a specific script by ID.
+
+        The script is forgotten by the bridge even when the agent does not answer the unload, in which case a
+        :class:`ToolError` naming the unload is raised.
 
         Args:
             script_id: Script ID returned by execute_persistent_script.
@@ -3719,7 +4029,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             raise ToolError(_ERR_NOT_ATTACHED)
 
         try:
-            bytecode: bytes = await asyncio.to_thread(self._session.compile_script, source)
+            bytecode: bytes = await self._call_frida(self._session.compile_script, source, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
         except Exception as e:
             _logger.warning("frida_compile_script_failed", error=str(e))
             raise ToolError(_ERR_SCRIPT_COMPILE_FAILED, details=self._frida_error_details(e)) from e
@@ -3751,7 +4061,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         script_id = str(uuid.uuid4())[:8]
         try:
-            script = await asyncio.to_thread(self._session.create_script_from_bytes, data)
+            script = await self._call_frida(self._session.create_script_from_bytes, data)
         except Exception as e:
             _logger.warning("frida_load_compiled_script_failed", error=str(e))
             raise ToolError(_ERR_SCRIPT_COMPILE_FAILED, details=self._frida_error_details(e)) from e
@@ -3767,7 +4077,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        self._forward_script_logs(script)
+        await self._call_frida(script.load, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
 
         self._scripts[script_id] = script
         _logger.info("compiled_script_loaded", script_id=script_id)
@@ -3801,11 +4112,12 @@ class _FridaBridgeBase(InstrumentationBridge):
             raise ToolError(_ERR_NOT_ATTACHED)
 
         try:
-            snapshot: bytes = await asyncio.to_thread(
+            snapshot: bytes = await self._call_frida(
                 self._session.snapshot_script,
                 embed_script,
                 warmup_script,
                 _SNAPSHOT_SCRIPT_RUNTIME,
+                limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT,
             )
         except Exception as e:
             _logger.warning("frida_snapshot_script_failed", error=str(e))
@@ -3843,12 +4155,13 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         script_id = str(uuid.uuid4())[:8]
         try:
-            script = await asyncio.to_thread(
+            script = await self._call_frida(
                 self._session.create_script,
                 source,
                 None,
                 snapshot,
                 _SNAPSHOT_SCRIPT_RUNTIME,
+                limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT,
             )
         except Exception as e:
             _logger.warning("frida_load_script_with_snapshot_failed", error=str(e))
@@ -3865,7 +4178,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        self._forward_script_logs(script)
+        await self._call_frida(script.load, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
 
         self._scripts[script_id] = script
         _logger.info("snapshot_script_loaded", script_id=script_id)
@@ -3983,6 +4297,17 @@ class _FridaBridgeBase(InstrumentationBridge):
         _logger.debug("function_called", address=hex(validated_address), return_value=coerced)
         return coerced
 
+    def _forward_script_logs(self, script: frida.Script) -> None:
+        """Republish a script's ``console`` output as ``log`` messages.
+
+        frida-python hands ``console.log`` output to the script's log handler and never to its ``message`` signal, so the handler
+        installed here forwards each line to the registered message handler.
+
+        Args:
+            script: The script whose log output is forwarded.
+        """
+        script.set_log_handler(lambda level, text: self._dispatch_message({"type": "log", "level": level, "payload": text}))
+
     async def _execute_script_and_wait(
         self,
         script_code: str,
@@ -4015,7 +4340,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         result: dict[str, Any] = {}
         event = asyncio.Event()
 
-        def on_message(message: ScriptMessage, data: bytes | None) -> None:
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:  # pragma: no cover - runs on Frida's thread
             """Capture the first send/error response and release the waiter.
 
             ``console.log`` messages (``type == "log"``) do not complete the
@@ -4054,14 +4379,10 @@ class _FridaBridgeBase(InstrumentationBridge):
                 return
             self._set_event_threadsafe(event)
 
-        script = await asyncio.to_thread(
-            self._create_script_with_cancellable,
-            self._session,
-            script_code,
-            cancellable,
-        )
+        script = await self._call_frida(self._session.create_script, script_code, cancellable=cancellable)
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        self._forward_script_logs(script)
+        await self._call_frida(script.load, limit_seconds=max_wait if max_wait > _FRIDA_AGENT_CALL_TIMEOUT else None)
 
         timed_out = False
         try:
@@ -4071,7 +4392,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             _logger.warning("frida_script_execution_timeout", max_wait=max_wait)
 
         try:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
         except (frida.TransportError, frida.InvalidOperationError) as e:
             if timed_out or self._is_already_unloaded_error(e):
                 _logger.debug("frida_script_unload_tolerated", error=str(e), timed_out=timed_out)
@@ -4198,25 +4519,32 @@ class _FridaBridgeBase(InstrumentationBridge):
         reports the script as destroyed, and tolerates
         ``InvalidOperationError``/``TransportError`` raised for an
         already-destroyed or detached script by treating them as a
-        successful no-op rather than a failure. Any other exception is
-        logged but never re-raised, so callers can always proceed to clear
-        their bookkeeping -- a single misbehaving script must never abort a
-        Stop-All sweep or leave stale registry entries behind.
+        successful no-op rather than a failure. An unload the agent does not
+        answer in time raises its :class:`ToolError`, so a caller never takes
+        a hung unload for a success; every other exception is logged and not
+        re-raised. Callers clear their bookkeeping whatever happens here, so
+        a single misbehaving script must never abort a Stop-All sweep or
+        leave stale registry entries behind.
 
         Args:
             script_id: Script ID used for log correlation.
             script: The Frida script handle to unload.
+
+        Raises:
+            ToolError: When the unload timed out or the agent had already stopped answering.
         """
         if script.is_destroyed:
             _logger.debug("script_already_destroyed", script_id=script_id)
             return
         try:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
         except (frida.InvalidOperationError, frida.TransportError) as e:
             if self._is_already_unloaded_error(e):
                 _logger.debug("script_already_unloaded", script_id=script_id, reason=str(e))
             else:
                 _logger.warning("script_unload_failed", script_id=script_id, error=str(e))
+        except ToolError:
+            raise
         except Exception:
             _logger.exception("script_unload_failed", script_id=script_id)
 
@@ -4236,6 +4564,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             script_id: Script ID to purge from every registry.
         """
         self._scripts.pop(script_id, None)
+        self._stalker_unfollow_status.pop(script_id, None)
 
         for alloc_addr, alloc_sid in list(self._alloc_scripts.items()):
             if alloc_sid == script_id:
@@ -4253,15 +4582,17 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._exception_handler_script = None
 
     async def _unload_script(self, script_id: str) -> None:
-        """Unload a script and reap every registry that referenced it.
+        """Unload a script and reap every registry that referenced it, even when the unload fails.
 
         Args:
             script_id: Script ID to unload.
         """
         script = self._scripts.get(script_id)
-        if script is not None:
-            await self._unload_script_handle(script_id, script)
-        self._forget_script_registries(script_id)
+        try:
+            if script is not None:
+                await self._unload_script_handle(script_id, script)
+        finally:
+            self._forget_script_registries(script_id)
 
     async def _unload_stalker_script(self, tid: int, script_id: str) -> None:
         """Issue ``Stalker.unfollow`` on the script that owns the trace and unload it.
@@ -4281,7 +4612,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         script = self._scripts.get(script_id)
         if script is not None:
             try:
-                await asyncio.to_thread(
+                await self._call_frida(
                     script.post,
                     {"type": "stalker_unfollow_request", "tid": tid},
                 )
@@ -4292,6 +4623,83 @@ class _FridaBridgeBase(InstrumentationBridge):
                     script_id=script_id,
                 )
         await self._unload_script(script_id)
+
+    @staticmethod
+    def _note_stalker_unfollow_message(
+        inner_type: object,
+        payload: dict[str, object],
+        reply: threading.Event,
+        info: dict[str, str],
+    ) -> None:
+        """Record the agent's answer to an unfollow request.
+
+        Args:
+            inner_type: The ``type`` field of the script's ``send`` payload.
+            payload: The whole ``send`` payload.
+            reply: Event set when the script reports its unfollow finished or failed.
+            info: Mapping that receives the script's ``error`` text when the unfollow failed.
+        """
+        if inner_type == "stalker_unfollowed":
+            reply.set()
+        elif inner_type == "stalker_unfollow_error":
+            info["error"] = str(payload.get("error", ""))
+            reply.set()
+
+    async def _await_stalker_unfollow(self, tid: int, script_id: str) -> None:
+        """Ask the owning script to stop its Stalker trace and wait until it says it has.
+
+        The script answers ``stalker_unfollowed`` once ``Stalker.unfollow`` and ``Stalker.flush`` have
+        returned, which is also the point by which every batch of the trace has been delivered. Without
+        that answer the trace cannot be trusted: a stuck agent used to leave this call unloading the
+        script and returning an empty trace as though the unfollow had worked.
+
+        Args:
+            tid: Effective thread id whose trace is being stopped.
+            script_id: Identifier of the script that owns the trace.
+
+        Raises:
+            ToolError: When the agent reports that the unfollow failed, or does not answer in time.
+        """
+        script = self._scripts.get(script_id)
+        if script is None:
+            return
+        status = self._stalker_unfollow_status.get(script_id)
+        if status is None:
+            await self._call_frida(script.post, {"type": "stalker_unfollow_request", "tid": tid})
+            return
+        reply, info = status
+        if not reply.is_set():
+            await self._call_frida(script.post, {"type": "stalker_unfollow_request", "tid": tid})
+            answered = await asyncio.to_thread(reply.wait, _STALKER_UNFOLLOW_ACK_TIMEOUT)
+            if not answered:
+                self._agent_unresponsive_operation = self._agent_unresponsive_operation or _OPERATION_STALKER_UNFOLLOW
+                _logger.warning("stalker_unfollow_unanswered", thread_id=tid, script_id=script_id)
+                raise ToolError(
+                    _ERR_STALKER_UNFOLLOW_UNANSWERED,
+                    details={"thread_id": tid, "timeout_seconds": _STALKER_UNFOLLOW_ACK_TIMEOUT},
+                )
+        if "error" in info:
+            raise ToolError(_ERR_STALKER_FAILED, details={"thread_id": tid, "reason": info["error"]})
+
+    def _discard_stalker_trace(self, tid: int) -> None:
+        """Drop the events collected for a thread whose trace could not be confirmed or torn down.
+
+        Args:
+            tid: Effective thread id of the abandoned trace.
+        """
+        with self._stalker_traces_lock:
+            self._stalker_traces.pop(tid, None)
+
+    async def _release_stalker_script(self, script_id: str) -> None:
+        """Unload a Stalker script after its trace was collected or abandoned, without failing the caller.
+
+        Args:
+            script_id: Identifier of the script to unload.
+        """
+        try:
+            await self._unload_script(script_id)
+        except ToolError:
+            _logger.warning("stalker_script_unload_unanswered", script_id=script_id)
 
     async def unload_all_scripts(self) -> None:
         """Unload every active script, tolerating individual failures.
@@ -4338,8 +4746,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         if handler is not None:
             handler(message)
 
-    @staticmethod
     async def _resolve_install_address(
+        self,
         *,
         script: frida.Script,
         messages: list[ScriptMessage],
@@ -4388,7 +4796,7 @@ class _FridaBridgeBase(InstrumentationBridge):
                         address = int(addr_val, 16) if addr_val.startswith("0x") else int(addr_val)
                 elif ptype == error_type:
                     err_msg = str(payload_dict.get("error", ""))
-                    await asyncio.to_thread(script.unload)
+                    await self._call_frida(script.unload)
                     _logger.warning(
                         "frida_injection_failed",
                         log_prefix=log_prefix,
@@ -4397,7 +4805,7 @@ class _FridaBridgeBase(InstrumentationBridge):
                     )
                     raise ToolError(error_constant, details={"error": err_msg})
             elif msg_type == "error":
-                await asyncio.to_thread(script.unload)
+                await self._call_frida(script.unload)
                 description = msg.get("description", "")
                 _logger.warning(
                     "frida_script_attach_failed",
@@ -4408,7 +4816,7 @@ class _FridaBridgeBase(InstrumentationBridge):
                 raise ToolError(error_constant, details={"reason": str(description)})
 
         if address is None:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning(
                 "frida_attach_no_ack",
                 log_prefix=log_prefix,
@@ -4514,23 +4922,20 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         imports: list[ImportInfo] = []
         import_data = result.get("data", [])
-        if isinstance(import_data, list):
-            for raw_import in cast("list[object]", import_data):
-                if not isinstance(raw_import, dict):
-                    continue
-                entry = cast("dict[str, object]", raw_import)
-                addr_str = str(entry.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                name_val = entry.get("name", "")
-                module_val = entry.get("module", "")
-                imports.append(
-                    ImportInfo(
-                        dll=str(module_val) if module_val else "",
-                        function=str(name_val) if name_val else "",
-                        ordinal=None,
-                        address=addr,
-                    ),
-                )
+        for raw_import in cast("list[object]", import_data):
+            entry = cast("dict[str, object]", raw_import)
+            addr_str = str(entry.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            name_val = entry.get("name", "")
+            module_val = entry.get("module", "")
+            imports.append(
+                ImportInfo(
+                    dll=str(module_val) if module_val else "",
+                    function=str(name_val) if name_val else "",
+                    ordinal=None,
+                    address=addr,
+                ),
+            )
 
         _logger.debug("imports_enumerated", module_name=module_name, count=len(imports))
         return imports
@@ -4575,22 +4980,19 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         sections: list[ModuleSectionInfo] = []
         section_data = result.get("data", [])
-        if isinstance(section_data, list):
-            for raw_section in cast("list[object]", section_data):
-                if not isinstance(raw_section, dict):
-                    continue
-                entry = cast("dict[str, object]", raw_section)
-                addr_str = str(entry.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                size_val = entry.get("size", 0)
-                sections.append(
-                    ModuleSectionInfo(
-                        id=str(entry.get("id", "")),
-                        name=str(entry.get("name", "")),
-                        address=addr,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                    ),
-                )
+        for raw_section in cast("list[object]", section_data):
+            entry = cast("dict[str, object]", raw_section)
+            addr_str = str(entry.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            size_val = entry.get("size", 0)
+            sections.append(
+                ModuleSectionInfo(
+                    id=str(entry.get("id", "")),
+                    name=str(entry.get("name", "")),
+                    address=addr,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                ),
+            )
 
         _logger.debug("module_sections_enumerated", module_name=module_name, count=len(sections))
         return sections
@@ -4635,17 +5037,80 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         dependencies: list[ModuleDependencyInfo] = []
         dep_data = result.get("data", [])
-        if isinstance(dep_data, list):
-            for raw_dep in cast("list[object]", dep_data):
-                if not isinstance(raw_dep, dict):
-                    continue
-                entry = cast("dict[str, object]", raw_dep)
-                dependencies.append(
-                    ModuleDependencyInfo(name=str(entry.get("name", "")), type=str(entry.get("type", ""))),
-                )
+        for raw_dep in cast("list[object]", dep_data):
+            entry = cast("dict[str, object]", raw_dep)
+            dependencies.append(
+                ModuleDependencyInfo(name=str(entry.get("name", "")), type=str(entry.get("type", ""))),
+            )
 
         _logger.debug("module_dependencies_enumerated", module_name=module_name, count=len(dependencies))
         return dependencies
+
+    async def _ensure_thread_helper(self, session: frida.Session) -> frida.Script:
+        """Return the session's thread-listing helper script, loading it on first use.
+
+        Args:
+            session: The attached session that will own the helper.
+
+        Returns:
+            frida.Script: The loaded helper, which answers ``enumerate_threads`` requests with the thread list.
+        """
+        helper = self._thread_helper
+        if helper is not None and not helper.is_destroyed:
+            return helper
+
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:  # pragma: no cover - runs on Frida's thread
+            """Hand a helper reply to the request that is waiting for it.
+
+            Args:
+                message: Message payload emitted by the helper script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            payload = message.get("payload", {}) if message["type"] == "send" else {}
+            if not isinstance(payload, dict):
+                return
+            payload_dict = cast("dict[str, object]", payload)
+            request = payload_dict.get("request")
+            entry = self._thread_helper_requests.get(request) if isinstance(request, int) else None
+            if entry is not None:
+                entry[1].update(payload_dict)
+                self._set_event_threadsafe(entry[0])
+
+        script = await self._call_frida(session.create_script, _THREAD_HELPER_SCRIPT)
+        script.on("message", on_message)
+        await self._call_frida(script.load)
+        self._thread_helper = script
+        return script
+
+    async def _query_threads(self, session: frida.Session) -> dict[str, object]:
+        """Ask the thread-listing helper for the process's threads and wait for its reply.
+
+        Args:
+            session: The attached session whose process is listed.
+
+        Returns:
+            dict[str, object]: The helper's reply: ``type`` ``"threads"`` with ``data``, or ``"threads_error"`` with ``error``.
+
+        Raises:
+            _FridaCallTimeoutError: When the helper does not reply in time, which marks the session's agent unresponsive.
+        """
+        helper = await self._ensure_thread_helper(session)
+        self._thread_helper_next_request += 1
+        request = self._thread_helper_next_request
+        replied = asyncio.Event()
+        reply: dict[str, object] = {}
+        self._thread_helper_requests[request] = (replied, reply)
+        try:
+            await self._call_frida(helper.post, {"type": "enumerate_threads", "request": request})
+            try:
+                await asyncio.wait_for(replied.wait(), timeout=_FRIDA_AGENT_CALL_TIMEOUT)
+            except TimeoutError:
+                self._agent_unresponsive_operation = self._agent_unresponsive_operation or _OPERATION_THREAD_ENUMERATION
+                raise _FridaCallTimeoutError(_OPERATION_THREAD_ENUMERATION, _FRIDA_AGENT_CALL_TIMEOUT) from None
+        finally:
+            self._thread_helper_requests.pop(request, None)
+        return reply
 
     @override
     async def enumerate_threads(self) -> list[ThreadInfo]:
@@ -4659,6 +5124,12 @@ class _FridaBridgeBase(InstrumentationBridge):
         that need a real entry point should pair this call with an
         x64dbg / Toolhelp32 enumeration on Windows.
 
+        The enumeration is answered by one helper script that stays loaded for the life of the session
+        instead of a script created and unloaded for each call. Unloading a script that has just listed the
+        process's threads, shortly before ``Stalker.follow`` on one of them, left the agent unable to
+        answer in about a third of the sequences measured (a follow of a thread created moments earlier
+        wedged in about 70 percent), and the usual use of this call is to find the thread to follow.
+
         Returns:
             list[ThreadInfo]: List of thread information.
 
@@ -4669,43 +5140,28 @@ class _FridaBridgeBase(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
-        script_code = """
-        var threads = Process.enumerateThreads();
-        var result = threads.map(function(t) {
-            return {
-                id: t.id,
-                state: t.state,
-                currentPc: t.context.pc.toString()
-            };
-        });
-        send({ type: 'threads', data: result });
-        """
+        result = await self._query_threads(self._session)
 
-        result = await self._execute_script_and_wait(script_code)
-
-        if "error" in result:
+        if result.get("type") != "threads":
             raise ToolError(_ERR_ENUMERATE_FAILED)
 
         threads: list[ThreadInfo] = []
         thread_data = result.get("data", [])
-        if isinstance(thread_data, list):
-            for raw_thread in cast("list[object]", thread_data):
-                if not isinstance(raw_thread, dict):
-                    continue
-                t = cast("dict[str, object]", raw_thread)
-                tid_val = t.get("id", 0)
-                state_val = t.get("state", "waiting")
-                current_pc_val = t.get("currentPc", "0")
-                pc_str = str(current_pc_val)
-                current_pc = int(pc_str, 16) if pc_str.startswith("0x") else int(pc_str)
-                threads.append(
-                    ThreadInfo(
-                        tid=int(tid_val) if isinstance(tid_val, (int, float)) else 0,
-                        start_address=0,
-                        current_pc=current_pc,
-                        state=str(state_val) if state_val else "waiting",
-                    ),
-                )
+        for raw_thread in cast("list[object]", thread_data):
+            t = cast("dict[str, object]", raw_thread)
+            tid_val = t.get("id", 0)
+            state_val = t.get("state", "waiting")
+            current_pc_val = t.get("currentPc", "0")
+            pc_str = str(current_pc_val)
+            current_pc = int(pc_str, 16) if pc_str.startswith("0x") else int(pc_str)
+            threads.append(
+                ThreadInfo(
+                    tid=int(tid_val) if isinstance(tid_val, (int, float)) else 0,
+                    start_address=0,
+                    current_pc=current_pc,
+                    state=str(state_val) if state_val else "waiting",
+                ),
+            )
 
         _logger.debug("threads_enumerated", count=len(threads))
         return threads
@@ -4742,36 +5198,32 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
 
         script_id = str(uuid.uuid4())[:8]
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await self._call_frida(self._session.create_script, script_code)
 
         messages: list[ScriptMessage] = []
         on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
         try:
             await asyncio.wait_for(event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("allocate_memory_timeout", size=validated_size)
             raise ToolError(_ERR_ALLOC_FAILED) from e
 
         addr: int | None = None
-        for msg in messages:
+        for msg in messages:  # pragma: no branch - type narrowing; the buffer is never empty
             if msg["type"] == "send":
-                payload = msg.get("payload", {})
-                if isinstance(payload, dict):
-                    payload_dict = cast("dict[str, object]", payload)
-                    if payload_dict.get("type") == "alloc":
-                        addr_str = str(payload_dict.get("address", "0"))
-                        addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                        break
-            elif msg["type"] == "error":
-                await asyncio.to_thread(script.unload)
-                raise ToolError(_ERR_ALLOC_FAILED)
+                payload_dict = cast("dict[str, object]", msg.get("payload", {}))
+                addr_str = str(payload_dict.get("address", "0"))
+                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+                break
+            await self._call_frida(script.unload)
+            raise ToolError(_ERR_ALLOC_FAILED)
 
         if addr is None or addr == 0:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             raise ToolError(_ERR_ALLOC_FAILED)
 
         self._scripts[script_id] = script
@@ -4810,8 +5262,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         escaped_protection = self._escape_js_string(protection)
         script_code = f"""
         try {{
-            Memory.protect(ptr({validated_address}), {validated_size}, '{escaped_protection}');
-            send({{ type: 'protect', success: true }});
+            var changed = Memory.protect(ptr({validated_address}), {validated_size}, '{escaped_protection}');
+            send({{ type: 'protect', success: changed }});
         }} catch (e) {{
             send({{ type: 'protect', success: false, error: e.message }});
         }}
@@ -4820,7 +5272,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         result = await self._execute_script_and_wait(script_code)
 
         if "error" in result:
-            raise ToolError(_ERR_PROTECT_FAILED)
+            raise ToolError(_ERR_PROTECT_FAILED, details={"reason": str(result["error"])})
 
         success = result.get("success", False)
         if not success:
@@ -4868,9 +5320,6 @@ class _FridaBridgeBase(InstrumentationBridge):
         """
 
         result = await self._execute_script_and_wait(script_code)
-
-        if "error" in result:
-            raise ToolError(_ERR_READ_FAILED)
 
         if not result.get("success", False):
             raise ToolError(_ERR_READ_FAILED, details={"reason": str(result.get("error", ""))})
@@ -5025,25 +5474,22 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         symbols: list[SymbolInfo] = []
         func_data = result.get("data", [])
-        if isinstance(func_data, list):
-            for raw_sym in cast("list[object]", func_data):
-                if not isinstance(raw_sym, dict):
-                    continue
-                s = cast("dict[str, object]", raw_sym)
-                addr_str = str(s.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                mod_name = s.get("moduleName")
-                file_name = s.get("fileName")
-                line_num = s.get("lineNumber")
-                symbols.append(
-                    SymbolInfo(
-                        name=name,
-                        address=addr,
-                        module_name=str(mod_name) if mod_name else None,
-                        file_name=str(file_name) if file_name else None,
-                        line_number=int(line_num) if isinstance(line_num, (int, float)) else None,
-                    ),
-                )
+        for raw_sym in cast("list[object]", func_data):
+            s = cast("dict[str, object]", raw_sym)
+            addr_str = str(s.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            mod_name = s.get("moduleName")
+            file_name = s.get("fileName")
+            line_num = s.get("lineNumber")
+            symbols.append(
+                SymbolInfo(
+                    name=name,
+                    address=addr,
+                    module_name=str(mod_name) if mod_name else None,
+                    file_name=str(file_name) if file_name else None,
+                    line_number=int(line_num) if isinstance(line_num, (int, float)) else None,
+                ),
+            )
 
         _logger.debug("functions_found", func_name=name, count=len(symbols))
         return symbols
@@ -5093,20 +5539,17 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         matches: list[ApiResolverMatch] = []
         api_data = result.get("data", [])
-        if isinstance(api_data, list):
-            for raw_match in cast("list[object]", api_data):
-                if not isinstance(raw_match, dict):
-                    continue
-                m = cast("dict[str, object]", raw_match)
-                addr_str = str(m.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                name_val = m.get("name", "")
-                matches.append(
-                    ApiResolverMatch(
-                        name=str(name_val) if name_val else "",
-                        address=addr,
-                    ),
-                )
+        for raw_match in cast("list[object]", api_data):
+            m = cast("dict[str, object]", raw_match)
+            addr_str = str(m.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            name_val = m.get("name", "")
+            matches.append(
+                ApiResolverMatch(
+                    name=str(name_val) if name_val else "",
+                    address=addr,
+                ),
+            )
 
         _logger.debug("api_resolved", query=query, matches=len(matches))
         return matches
@@ -5159,14 +5602,14 @@ class _FridaBridgeBase(InstrumentationBridge):
         send({{ type: 'replace_ready' }});
         """
 
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await self._call_frida(self._session.create_script, script_code)
 
         messages, on_message, installed_event = self._make_install_waiter({"replaced", "replace_error"})
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
 
         cc_payload = calling_convention if calling_convention != "default" else None
-        await asyncio.to_thread(
+        await self._call_frida(
             script.post,
             {"type": "install_replacement", "replacementCode": replacement_code, "callingConvention": cc_payload},
         )
@@ -5174,7 +5617,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         try:
             await asyncio.wait_for(installed_event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("replace_install_timeout", target=target)
             raise ToolError(_ERR_REPLACE_FAILED) from e
 
@@ -5257,14 +5700,14 @@ class _FridaBridgeBase(InstrumentationBridge):
         send({{ type: 'replace_fast_ready' }});
         """
 
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await self._call_frida(self._session.create_script, script_code)
 
         messages, on_message, installed_event = self._make_install_waiter({"replaced_fast", "replace_fast_error"})
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
 
         cc_payload = calling_convention if calling_convention != "default" else None
-        await asyncio.to_thread(
+        await self._call_frida(
             script.post,
             {"type": "install_replacement_fast", "replacementCode": replacement_code, "callingConvention": cc_payload},
         )
@@ -5272,7 +5715,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         try:
             await asyncio.wait_for(installed_event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("replace_fast_install_timeout", target=target)
             raise ToolError(_ERR_REPLACE_FAILED) from e
 
@@ -5344,7 +5787,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             )
 
         try:
-            processes = await asyncio.to_thread(device.enumerate_processes)
+            processes = await self._call_frida(device.enumerate_processes)
         except (frida.ServerNotRunningError, frida.TransportError, frida.InvalidOperationError, OSError) as e:
             _logger.warning(
                 "frida_enumerate_processes_failed",
@@ -5547,7 +5990,8 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         Escapes characters that are unsafe in single-quoted, double-quoted, and
         template-literal JavaScript contexts. All non-ASCII and control characters
-        are converted to their four-digit hexadecimal unicode escapes so the
+        are converted to four-digit hexadecimal unicode escapes of their UTF-16
+        code units, so a character above U+FFFF becomes a surrogate pair and the
         resulting literal is ASCII-only and cannot terminate or escape any
         enclosing context.
 
@@ -5586,7 +6030,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             elif ch == "\0":
                 out.append("\\u0000")
             elif code < _ASCII_PRINTABLE_MIN or code == _ASCII_DEL or code > _ASCII_PRINTABLE_MAX:
-                out.append("\\u" + format(code, "04x"))
+                units = ch.encode("utf-16-be", "surrogatepass")
+                out.extend(f"\\u{int.from_bytes(units[index : index + 2], 'big'):04x}" for index in range(0, len(units), 2))
             else:
                 out.append(ch)
         return "".join(out)
@@ -5653,81 +6098,6 @@ class _FridaBridgeBase(InstrumentationBridge):
             )
         return cancellable
 
-    @staticmethod
-    def _attach_with_cancellable(
-        device: frida.Device,
-        pid: int,
-        cancellable: frida.Cancellable | None,
-    ) -> frida.Session:
-        """Invoke ``Device.attach`` honoring an optional cancellation token.
-
-        Args:
-            device: Frida device to attach through.
-            pid: Target process identifier.
-            cancellable: Optional cancellation token; entered as Frida's
-                thread-local cancellable scope around the call when provided.
-
-        Returns:
-            frida.Session: The attached Frida session.
-        """
-        if cancellable is not None:
-            with cancellable:
-                return device.attach(pid)
-        return device.attach(pid)
-
-    @staticmethod
-    def _spawn_with_cancellable(
-        device: frida.Device,
-        program: str,
-        argv: Sequence[str | bytes],
-        cancellable: frida.Cancellable | None,
-        *,
-        env: dict[str, str] | None = None,
-        cwd: str | None = None,
-        stdio: str | None = None,
-    ) -> int:
-        """Invoke ``Device.spawn`` honoring an optional cancellation token.
-
-        Args:
-            device: Frida device to spawn on.
-            program: Path to the executable.
-            argv: Argument vector for the spawned process.
-            cancellable: Optional cancellation token; entered as Frida's
-                thread-local cancellable scope around the call when provided.
-            env: Environment variables to merge onto the inherited environment.
-            cwd: Working directory for the spawned process.
-            stdio: Stdio mode for the spawned process ("inherit" or "pipe").
-
-        Returns:
-            int: PID of the spawned process.
-        """
-        if cancellable is not None:
-            with cancellable:
-                return device.spawn(program, argv=list(argv), env=env, cwd=cwd, stdio=stdio)
-        return device.spawn(program, argv=list(argv), env=env, cwd=cwd, stdio=stdio)
-
-    @staticmethod
-    def _create_script_with_cancellable(
-        session: frida.Session,
-        source: str,
-        cancellable: frida.Cancellable | None,
-    ) -> frida.Script:
-        """Invoke ``Session.create_script`` honoring an optional cancellation token.
-
-        Args:
-            session: Frida session that will own the script.
-            source: JavaScript source to compile.
-            cancellable: Optional cancellation token; entered as Frida's
-                thread-local cancellable scope around the call when provided.
-
-        Returns:
-            frida.Script: The created Frida script.
-        """
-        if cancellable is not None:
-            with cancellable:
-                return session.create_script(source)
-        return session.create_script(source)
-
     def _teardown_crash_handler(self) -> None:
         """Best-effort detach of the crash handler called from :meth:`shutdown`.
 
@@ -5749,9 +6119,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         device = self._device
         handler = self._crash_handler
         if device is not None and handler is not None:
-            off_fn = getattr(device, "off", None)
-            if callable(off_fn):
-                off_fn("process-crashed", handler)
+            device.off("process-crashed", handler)
         self._crash_handler = None
         self._crash_reporting_enabled = False
 
@@ -5776,9 +6144,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         handler = self._device_manager_changed_handler
         if handler is not None:
             manager = frida.get_device_manager()
-            off_fn = getattr(manager, "off", None)
-            if callable(off_fn):
-                off_fn("changed", handler)
+            manager.off("changed", handler)
         self._device_manager_changed_handler = None
         self._device_change_notifications_enabled = False
 
@@ -5806,9 +6172,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         device = self._device_lost_handler_target
         handler = self._device_lost_handler
         if device is not None and handler is not None:
-            off_fn = getattr(device, "off", None)
-            if callable(off_fn):
-                off_fn("lost", handler)
+            device.off("lost", handler)
         self._device_lost_handler = None
         self._device_lost_handler_target = None
         self._device_lost_notifications_enabled = False
@@ -5958,7 +6322,7 @@ class _FridaBridgeSessionChildGatingMixin(_FridaBridgeBase):
 
         try:
             self._register_session_child_gating_handlers(device, on_child_added, on_child_removed)
-            await asyncio.to_thread(session.enable_child_gating)
+            await self._call_frida(session.enable_child_gating)
             self._session_child_gating_enabled = True
             _logger.info("session_child_gating_enabled")
         except frida.NotSupportedError as e:
@@ -5991,7 +6355,7 @@ class _FridaBridgeSessionChildGatingMixin(_FridaBridgeBase):
             return
 
         try:
-            await asyncio.to_thread(session.disable_child_gating)
+            await self._call_frida(session.disable_child_gating)
             self._reset_session_child_gating_state()
             _logger.info("session_child_gating_disabled")
         except frida.NotSupportedError as e:
@@ -6030,7 +6394,7 @@ class _FridaBridgeSessionChildGatingMixin(_FridaBridgeBase):
             raise ToolError(_ERR_NO_DEVICE)
 
         try:
-            pending = await asyncio.to_thread(device.enumerate_pending_children)
+            pending = await self._call_frida(device.enumerate_pending_children)
         except frida.NotSupportedError as e:
             _logger.warning("pending_session_children_query_not_supported", error=str(e))
             raise ToolError(
@@ -6076,7 +6440,7 @@ class _FridaBridgeSessionChildGatingMixin(_FridaBridgeBase):
             raise ToolError(_ERR_NO_DEVICE)
 
         try:
-            await asyncio.to_thread(device.resume, pid)
+            await self._call_frida(device.resume, pid)
             self._remove_session_gated_child(pid)
             _logger.info("session_child_resumed", pid=pid)
         except Exception as e:
@@ -6115,7 +6479,7 @@ class _FridaBridgeScriptControlMixin(_FridaBridgeSessionChildGatingMixin):
 
         script = self._scripts[script_id]
         try:
-            await asyncio.to_thread(script.enable_debugger, port)
+            await self._call_frida(script.enable_debugger, port)
         except Exception as e:
             _logger.warning("frida_enable_script_debugger_failed", script_id=script_id, port=port, error=str(e))
             raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e, script_id=script_id, port=port)) from e
@@ -6141,7 +6505,7 @@ class _FridaBridgeScriptControlMixin(_FridaBridgeSessionChildGatingMixin):
 
         script = self._scripts[script_id]
         try:
-            await asyncio.to_thread(script.disable_debugger)
+            await self._call_frida(script.disable_debugger)
         except Exception as e:
             _logger.warning("frida_disable_script_debugger_failed", script_id=script_id, error=str(e))
             raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e, script_id=script_id)) from e
@@ -6173,7 +6537,7 @@ class _FridaBridgeScriptControlMixin(_FridaBridgeSessionChildGatingMixin):
 
         script = self._scripts[script_id]
         try:
-            await asyncio.to_thread(script.terminate)
+            await self._call_frida(script.terminate)
         except Exception as e:
             _logger.warning("frida_terminate_script_failed", script_id=script_id, error=str(e))
             raise ToolError(_ERR_SCRIPT_FAILED, details=self._frida_error_details(e, script_id=script_id)) from e
@@ -6285,14 +6649,16 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         script_id = str(uuid.uuid4())[:8]
         try:
-            script = await asyncio.to_thread(self._session.create_script, script_code)
+            script = await self._call_frida(self._session.create_script, script_code)
         except Exception as e:
             _logger.warning("stalker_create_script_failed", thread_id=effective_tid, error=str(e))
-            raise ToolError(_ERR_STALKER_FAILED) from e
+            raise ToolError(_ERR_STALKER_FAILED, details=self._frida_error_details(e)) from e
 
         captured_tid = effective_tid
         started_event = asyncio.Event()
         start_status: dict[str, object] = {}
+        unfollow_reply = threading.Event()
+        unfollow_info: dict[str, str] = {}
 
         def on_stalker_message(message: ScriptMessage, data: bytes | None) -> None:
             """Parse Stalker batch payloads and forward messages downstream.
@@ -6320,6 +6686,8 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
                     elif inner_type == "stalker_started":
                         start_status["started"] = True
                         self._set_event_threadsafe(started_event)
+                    else:
+                        self._note_stalker_unfollow_message(inner_type, payload_dict, unfollow_reply, unfollow_info)
             elif message["type"] == "error":
                 start_status["error"] = message["description"]
                 self._set_event_threadsafe(started_event)
@@ -6327,20 +6695,20 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         script.on("message", on_stalker_message)
         try:
-            await asyncio.to_thread(script.load)
+            await self._call_frida(script.load)
         except Exception as e:
             _logger.warning("stalker_load_failed", thread_id=effective_tid, error=str(e))
-            raise ToolError(_ERR_STALKER_FAILED) from e
+            raise ToolError(_ERR_STALKER_FAILED, details=self._frida_error_details(e)) from e
 
         try:
             await asyncio.wait_for(started_event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("stalker_start_timeout", thread_id=effective_tid)
             raise ToolError(_ERR_STALKER_FAILED) from e
 
         if "error" in start_status:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning(
                 "stalker_start_failed",
                 thread_id=effective_tid,
@@ -6349,12 +6717,13 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(start_status.get("error", ""))})
 
         if not start_status.get("started"):
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("stalker_not_started", thread_id=effective_tid)
             raise ToolError(_ERR_STALKER_FAILED)
 
         self._scripts[script_id] = script
         self._stalker_scripts[effective_tid] = script_id
+        self._stalker_unfollow_status[script_id] = (unfollow_reply, unfollow_info)
 
         _logger.info(
             "stalker_follow_started",
@@ -6368,6 +6737,15 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
     async def stalker_unfollow(self, thread_id: int | None = None) -> StalkerTrace:
         """Stop Stalker tracing and retrieve collected events.
 
+        The trace is returned only after the agent has acknowledged the unfollow, which is also the point by
+        which every batch of events has been delivered, and after the Stalker script has been unloaded. An
+        agent that does not acknowledge in time raises instead, and so does one that acknowledges but then
+        does not answer the unload: in the sandbox every such case was a followed thread that never
+        produced an event followed by a script that could not be torn down, and an empty trace from it is
+        not a result. The trace collected so far is discarded. An unfollow that is acknowledged and
+        unloaded cleanly returns its trace even when it holds no events, since a thread that made no
+        traced calls is a legitimate empty trace.
+
         Args:
             thread_id: Thread ID to stop tracing. None for current thread.
 
@@ -6375,7 +6753,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             StalkerTrace: StalkerTrace with collected events and duration.
 
         Raises:
-            ToolError: If unfollow fails.
+            ToolError: If the agent reports the unfollow failed or does not acknowledge it in time.
         """
         _logger.info("frida_stalker_unfollow_started", thread_id=thread_id)
         if self._session is None:
@@ -6387,7 +6765,17 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         script_id = self._stalker_scripts.pop(effective_tid, None)
         if script_id is not None:
-            await self._unload_stalker_script(effective_tid, script_id)
+            try:
+                await self._await_stalker_unfollow(effective_tid, script_id)
+            except ToolError:
+                self._discard_stalker_trace(effective_tid)
+                await self._release_stalker_script(script_id)
+                raise
+            try:
+                await self._unload_script(script_id)
+            except ToolError:
+                self._discard_stalker_trace(effective_tid)
+                raise
 
         with self._stalker_traces_lock:
             collected_events = self._stalker_traces.pop(effective_tid, [])
@@ -6484,7 +6872,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         try:
             self._register_spawn_gating_handlers(device, on_spawn_added, on_spawn_removed)
-            await asyncio.to_thread(device.enable_spawn_gating)
+            await self._call_frida(device.enable_spawn_gating)
             self._child_gating_enabled = True
             _logger.info("child_gating_enabled")
         except frida.NotSupportedError as e:
@@ -6515,7 +6903,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             return
 
         try:
-            await asyncio.to_thread(device.disable_spawn_gating)
+            await self._call_frida(device.disable_spawn_gating)
             self._detach_spawn_gating_handlers()
             self._child_gating_enabled = False
             self._clear_gated_children()
@@ -6552,7 +6940,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             raise ToolError(_ERR_NO_DEVICE)
 
         try:
-            pending = await asyncio.to_thread(device.enumerate_pending_spawn)
+            pending = await self._call_frida(device.enumerate_pending_spawn)
         except frida.NotSupportedError as e:
             _logger.warning("pending_children_query_not_supported", error=str(e))
             raise ToolError(
@@ -6596,7 +6984,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             raise ToolError(_ERR_NO_DEVICE)
 
         try:
-            await asyncio.to_thread(device.resume, pid)
+            await self._call_frida(device.resume, pid)
             self._remove_gated_child(pid)
             _logger.info("child_resumed", pid=pid)
         except Exception as e:
@@ -6809,7 +7197,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         Returns:
             list[FridaDeviceInfo]: List of device information.
         """
-        devices = await asyncio.to_thread(frida.enumerate_devices)
+        devices = await _call_device(frida.enumerate_devices)
         _logger.debug("devices_enumerated", count=len(devices))
         return [
             FridaDeviceInfo(
@@ -6841,15 +7229,15 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             frida.Device: The resolved Frida device handle.
         """
         if device_type == "local":
-            return await asyncio.to_thread(frida.get_local_device)
+            return await _call_device(frida.get_local_device)
         if device_type == "usb":
-            return await asyncio.to_thread(frida.get_usb_device)
+            return await _call_device(frida.get_usb_device)
         if device_type == "enumerated":
             device_id: str = host if host is not None else ""
-            return await asyncio.to_thread(frida.get_device, device_id)
+            return await _call_device(frida.get_device, device_id)
         manager = frida.get_device_manager()
         remote_host: str = host if host is not None else ""
-        return await asyncio.to_thread(manager.add_remote_device, remote_host)
+        return await _call_device(manager.add_remote_device, remote_host)
 
     async def connect_device(
         self,
@@ -6857,6 +7245,9 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         host: str | None = None,
     ) -> FridaDeviceInfo:
         """Switch to a different Frida device.
+
+        The request is validated before the current session is released, so a
+        rejected request leaves the attached session in place.
 
         Args:
             device_type: Device type (``'local'``, ``'usb'``, ``'remote'``, or
@@ -6873,12 +7264,6 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         Raises:
             ToolError: If connection fails.
         """
-        if self._session is not None:
-            try:
-                await self.detach(kill_spawned=False)
-            except ToolError:
-                _logger.exception("session_release_before_device_switch_failed")
-
         if device_type == "remote" and not host:
             raise ToolError(_ERR_DEVICE_FAILED, details={"reason": "host required for remote device"})
 
@@ -6887,6 +7272,12 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         if device_type not in {"local", "usb", "remote", "enumerated"}:
             raise ToolError(_ERR_DEVICE_FAILED, details={"reason": f"unknown device type: {device_type}"})
+
+        if self._session is not None:
+            try:
+                await self.detach(kill_spawned=False)
+            except ToolError:
+                _logger.exception("session_release_before_device_switch_failed")
 
         try:
             device = await self._resolve_frida_device(device_type, host)
@@ -6919,12 +7310,14 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         """
         manager = frida.get_device_manager()
         try:
-            await asyncio.to_thread(manager.remove_remote_device, host)
+            await self._call_frida(manager.remove_remote_device, host)
         except Exception as e:
             _logger.warning("remote_device_remove_failed", host=host, error=str(e))
             raise ToolError(_ERR_DEVICE_FAILED, details=self._frida_error_details(e, host=host)) from e
 
-        if self._device is not None and str(getattr(self._device, "type", "")) == "remote" and str(getattr(self._device, "id", "")) == host:
+        device = self._device
+        endpoint = str(getattr(device, "id", "")).rpartition("@")[2]
+        if device is not None and str(getattr(device, "type", "")) == "remote" and endpoint == host:
             if self._session is not None:
                 try:
                     await self.detach(kill_spawned=False)
@@ -6958,7 +7351,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         except (JSONDecodeError, TypeError) as e:
             _logger.warning("post_message_invalid_json", script_id=script_id, error=str(e))
             raise ToolError(_ERR_INVALID_JSON_MESSAGE) from e
-        await asyncio.to_thread(script.post, parsed)
+        await self._call_frida(script.post, parsed)
         _logger.debug("message_posted", script_id=script_id)
         return True
 
@@ -6982,7 +7375,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             raise ToolError(_ERR_SCRIPT_NOT_FOUND)
 
         script = self._scripts[script_id]
-        await asyncio.to_thread(script.eternalize)
+        await self._call_frida(script.eternalize)
         del self._scripts[script_id]
         _logger.info("script_eternalized", script_id=script_id)
         return True
@@ -7015,7 +7408,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         if not callable(rpc_method):
             raise ToolError(_ERR_RPC_FAILED, details={"reason": f"'{method_name}' is not callable"})
         try:
-            result: object = await asyncio.to_thread(rpc_method, *args_list)
+            result: object = await self._call_frida(rpc_method, *args_list, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
         except Exception as e:
             _logger.warning("rpc_call_failed", script_id=script_id, method=method_name, error=str(e))
             raise ToolError(_ERR_RPC_FAILED) from e
@@ -7043,7 +7436,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         script = self._scripts[script_id]
         try:
-            exports: list[str] = await asyncio.to_thread(script.list_exports_sync)
+            exports: list[str] = await self._call_frida(script.list_exports_sync, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
         except Exception as e:
             _logger.warning("frida_list_rpc_exports_failed", script_id=script_id, error=str(e))
             raise ToolError(_ERR_RPC_FAILED, details=self._frida_error_details(e, script_id=script_id)) from e
@@ -7153,36 +7546,32 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         """
 
         script_id = str(uuid.uuid4())[:8]
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await self._call_frida(self._session.create_script, script_code)
 
         messages: list[ScriptMessage] = []
         on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
         try:
             await asyncio.wait_for(event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("allocate_string_timeout", encoding=encoding)
             raise ToolError(_ERR_STRING_ALLOC_FAILED) from e
 
         addr: int | None = None
-        for msg in messages:
+        for msg in messages:  # pragma: no branch - type narrowing; the buffer is never empty
             if msg["type"] == "send":
-                payload = msg.get("payload", {})
-                if isinstance(payload, dict):
-                    payload_dict = cast("dict[str, object]", payload)
-                    if payload_dict.get("type") == "string_alloc":
-                        addr_str = str(payload_dict.get("address", "0"))
-                        addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                        break
-            elif msg["type"] == "error":
-                await asyncio.to_thread(script.unload)
-                raise ToolError(_ERR_STRING_ALLOC_FAILED)
+                payload_dict = cast("dict[str, object]", msg.get("payload", {}))
+                addr_str = str(payload_dict.get("address", "0"))
+                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+                break
+            await self._call_frida(script.unload)
+            raise ToolError(_ERR_STRING_ALLOC_FAILED)
 
         if addr is None or addr == 0:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             raise ToolError(_ERR_STRING_ALLOC_FAILED)
 
         self._scripts[script_id] = script
@@ -7231,22 +7620,19 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         symbols: list[SymbolInfo] = []
         sym_data = result.get("data", [])
-        if isinstance(sym_data, list):
-            for raw_sym in cast("list[object]", sym_data):
-                if not isinstance(raw_sym, dict):
-                    continue
-                s = cast("dict[str, object]", raw_sym)
-                addr_str = str(s.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                symbols.append(
-                    SymbolInfo(
-                        name=str(s.get("name", "")),
-                        address=addr,
-                        module_name=module_name,
-                        file_name=None,
-                        line_number=None,
-                    ),
-                )
+        for raw_sym in cast("list[object]", sym_data):
+            s = cast("dict[str, object]", raw_sym)
+            addr_str = str(s.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            symbols.append(
+                SymbolInfo(
+                    name=str(s.get("name", "")),
+                    address=addr,
+                    module_name=module_name,
+                    file_name=None,
+                    line_number=None,
+                ),
+            )
 
         _logger.debug("symbols_enumerated", module_name=module_name, count=len(symbols))
         return symbols
@@ -7380,22 +7766,19 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         symbols: list[SymbolInfo] = []
         func_data = result.get("data", [])
-        if isinstance(func_data, list):
-            for raw_sym in cast("list[object]", func_data):
-                if not isinstance(raw_sym, dict):
-                    continue
-                s = cast("dict[str, object]", raw_sym)
-                addr_str = str(s.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                symbols.append(
-                    SymbolInfo(
-                        name=str(s.get("name", "")),
-                        address=addr,
-                        module_name=str(s.get("moduleName")) if s.get("moduleName") else None,
-                        file_name=str(s.get("fileName")) if s.get("fileName") else None,
-                        line_number=int(cast("int | float", s["lineNumber"])) if isinstance(s.get("lineNumber"), (int, float)) else None,
-                    ),
-                )
+        for raw_sym in cast("list[object]", func_data):
+            s = cast("dict[str, object]", raw_sym)
+            addr_str = str(s.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            symbols.append(
+                SymbolInfo(
+                    name=str(s.get("name", "")),
+                    address=addr,
+                    module_name=str(s.get("moduleName")) if s.get("moduleName") else None,
+                    file_name=str(s.get("fileName")) if s.get("fileName") else None,
+                    line_number=int(cast("int | float", s["lineNumber"])) if isinstance(s.get("lineNumber"), (int, float)) else None,
+                ),
+            )
 
         _logger.debug("functions_matching", pattern=pattern, count=len(symbols))
         return symbols
@@ -7509,22 +7892,19 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         frames: list[SymbolInfo] = []
         bt_data = result.get("data", [])
-        if isinstance(bt_data, list):
-            for raw_frame in cast("list[object]", bt_data):
-                if not isinstance(raw_frame, dict):
-                    continue
-                f = cast("dict[str, object]", raw_frame)
-                addr_str = str(f.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                frames.append(
-                    SymbolInfo(
-                        name=str(f.get("name", "")),
-                        address=addr,
-                        module_name=str(f.get("moduleName")) if f.get("moduleName") else None,
-                        file_name=str(f.get("fileName")) if f.get("fileName") else None,
-                        line_number=int(cast("int | float", f["lineNumber"])) if isinstance(f.get("lineNumber"), (int, float)) else None,
-                    ),
-                )
+        for raw_frame in cast("list[object]", bt_data):
+            f = cast("dict[str, object]", raw_frame)
+            addr_str = str(f.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            frames.append(
+                SymbolInfo(
+                    name=str(f.get("name", "")),
+                    address=addr,
+                    module_name=str(f.get("moduleName")) if f.get("moduleName") else None,
+                    file_name=str(f.get("fileName")) if f.get("fileName") else None,
+                    line_number=int(cast("int | float", f["lineNumber"])) if isinstance(f.get("lineNumber"), (int, float)) else None,
+                ),
+            )
 
         _logger.debug("backtrace_captured", frame_count=len(frames))
         return frames
@@ -7560,7 +7940,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         script_id = str(uuid.uuid4())[:8]
         try:
-            script = await asyncio.to_thread(self._session.create_script, script_code)
+            script = await self._call_frida(self._session.create_script, script_code)
         except Exception as e:
             _logger.warning(
                 "frida_set_exception_handler_failed",
@@ -7582,7 +7962,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
 
         self._scripts[script_id] = script
         self._exception_handler_script = script_id
@@ -7775,7 +8155,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         script_id = str(uuid.uuid4())[:8]
         try:
-            script = await asyncio.to_thread(self._session.create_script, script_code)
+            script = await self._call_frida(self._session.create_script, script_code)
         except Exception as e:
             _logger.warning(
                 "frida_stalker_add_call_probe_failed",
@@ -7799,7 +8179,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
 
         self._scripts[script_id] = script
         self._call_probes[probe_id] = script_id
@@ -7975,7 +8355,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
                 details={"reason": "bridge not initialised; call initialize() first"},
             )
 
-        apps = await asyncio.to_thread(device.enumerate_applications)
+        apps = await self._call_frida(device.enumerate_applications)
         _logger.debug("applications_enumerated", count=len(apps))
         return [
             FridaApplicationInfo(
@@ -8006,15 +8386,15 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             raise ToolError(_ERR_NO_DEVICE, details={"reason": "bridge not initialised; call initialize() first"})
 
         try:
-            app = await asyncio.to_thread(device.get_frontmost_application)
+            app = await self._call_frida(device.get_frontmost_application)
         except frida.NotSupportedError as e:
             raise ToolError(_ERR_ENUMERATE_FAILED, details=self._frida_error_details(e)) from e
         except (frida.ServerNotRunningError, frida.TransportError, frida.InvalidOperationError, OSError) as e:
             raise ToolError(_ERR_ENUMERATE_FAILED, details=self._frida_error_details(e)) from e
 
-        if app is None:
+        if app is None:  # pragma: no cover - needs a non-Windows device
             return None
-        return FridaApplicationInfo(
+        return FridaApplicationInfo(  # pragma: no cover - needs a non-Windows device
             identifier=str(getattr(app, "identifier", "")),
             name=str(getattr(app, "name", "")),
             pid=int(getattr(app, "pid", 0)),
@@ -8040,7 +8420,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
             raise ToolError(_ERR_NO_DEVICE)
 
         try:
-            inject_id: int = await asyncio.to_thread(
+            inject_id: int = await self._call_frida(
                 self._device.inject_library_file,
                 pid,
                 path,
@@ -8075,7 +8455,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
 
         blob_bytes = bytes.fromhex(blob_hex.replace(" ", ""))
         try:
-            inject_id: int = await asyncio.to_thread(
+            inject_id: int = await self._call_frida(
                 self._device.inject_library_blob,
                 pid,
                 blob_bytes,
@@ -8333,16 +8713,16 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
         }}
         """
 
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await self._call_frida(self._session.create_script, script_code)
         messages: list[ScriptMessage] = []
         on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
         try:
             await asyncio.wait_for(event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("objc_hook_timeout", class_name=class_name, method=method_name)
             raise ToolError(_ERR_HOOK_FAILED) from e
 
@@ -8353,14 +8733,14 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeScriptControlMixin):
                 if isinstance(payload, dict):
                     payload_dict = cast("dict[str, object]", payload)
                     if payload_dict.get("type") == "objc_error":
-                        await asyncio.to_thread(script.unload)
+                        await self._call_frida(script.unload)
                         raise ToolError(_ERR_OBJC_UNAVAILABLE)
                     if payload_dict.get("type") == "objc_hooked":
                         addr_val = payload_dict.get("address", "0")
                         if isinstance(addr_val, str):
                             address = int(addr_val, 16) if addr_val.startswith("0x") else int(addr_val)
             elif msg["type"] == "error":
-                await asyncio.to_thread(script.unload)
+                await self._call_frida(script.unload)
                 raise ToolError(_ERR_HOOK_FAILED)
 
         self._scripts[hook_id] = script
@@ -8493,7 +8873,7 @@ class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
 
         script_id = str(uuid.uuid4())[:8]
         try:
-            script = await asyncio.to_thread(self._session.create_script, script_code)
+            script = await self._call_frida(self._session.create_script, script_code)
         except Exception as e:
             _logger.warning("stalker_transform_create_script_failed", thread_id=effective_tid, error=str(e))
             raise ToolError(_ERR_STALKER_FAILED) from e
@@ -8501,6 +8881,8 @@ class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
         captured_tid = effective_tid
         started_event = asyncio.Event()
         start_status: dict[str, object] = {}
+        unfollow_reply = threading.Event()
+        unfollow_info: dict[str, str] = {}
 
         def on_stalker_transform_message(message: ScriptMessage, data: bytes | None) -> None:
             """Parse Stalker batch payloads and forward messages downstream.
@@ -8528,6 +8910,8 @@ class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
                     elif inner_type == "stalker_started":
                         start_status["started"] = True
                         self._set_event_threadsafe(started_event)
+                    else:
+                        self._note_stalker_unfollow_message(inner_type, payload_dict, unfollow_reply, unfollow_info)
             elif message["type"] == "error":
                 start_status["error"] = message["description"]
                 self._set_event_threadsafe(started_event)
@@ -8535,7 +8919,7 @@ class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
 
         script.on("message", on_stalker_transform_message)
         try:
-            await asyncio.to_thread(script.load)
+            await self._call_frida(script.load)
         except Exception as e:
             _logger.warning("stalker_transform_load_failed", thread_id=effective_tid, error=str(e))
             raise ToolError(_ERR_STALKER_FAILED) from e
@@ -8543,12 +8927,12 @@ class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
         try:
             await asyncio.wait_for(started_event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("stalker_transform_start_timeout", thread_id=effective_tid)
             raise ToolError(_ERR_STALKER_FAILED) from e
 
         if "error" in start_status:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning(
                 "stalker_transform_start_failed",
                 thread_id=effective_tid,
@@ -8557,12 +8941,13 @@ class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
             raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(start_status.get("error", ""))})
 
         if not start_status.get("started"):
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("stalker_transform_not_started", thread_id=effective_tid)
             raise ToolError(_ERR_STALKER_FAILED)
 
         self._scripts[script_id] = script
         self._stalker_scripts[effective_tid] = script_id
+        self._stalker_unfollow_status[script_id] = (unfollow_reply, unfollow_info)
 
         _logger.info(
             "stalker_follow_with_transform_started",
@@ -8605,7 +8990,7 @@ class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
             raise ToolError(_ERR_STALKER_FAILED, details={"reason": "stalker script handle missing"})
 
         try:
-            await asyncio.to_thread(script.post, {"type": "stalker_flush_request", "tid": effective_tid})
+            await self._call_frida(script.post, {"type": "stalker_flush_request", "tid": effective_tid})
         except Exception as e:
             _logger.warning("frida_stalker_flush_failed", thread_id=effective_tid, error=str(e))
             raise ToolError(_ERR_STALKER_FAILED, details=self._frida_error_details(e)) from e
@@ -8672,7 +9057,7 @@ class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
         send({{ type: 'stalker_summary_started', tid: tid }});
         """
 
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await self._call_frida(self._session.create_script, script_code)
 
         captured_tid = effective_tid
         started_event = asyncio.Event()
@@ -8708,15 +9093,15 @@ class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_summary_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
 
         try:
             await asyncio.wait_for(started_event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             raise ToolError(_ERR_STALKER_FAILED) from e
         if "error" in start_status or not start_status.get("started"):
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(start_status.get("error", ""))})
 
         script_id = str(uuid.uuid4())[:8]
@@ -8762,7 +9147,7 @@ class _FridaBridgeStalkerTransformMixin(_FridaBridgeAnalysisMixin):
 
         script.on("message", on_unfollow_ack)
         try:
-            await asyncio.to_thread(script.post, {"type": "stalker_summary_unfollow_request", "tid": tid})
+            await self._call_frida(script.post, {"type": "stalker_summary_unfollow_request", "tid": tid})
             try:
                 await asyncio.wait_for(ack_event.wait(), timeout=5.0)
             except TimeoutError:
@@ -8875,12 +9260,17 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
     async def shutdown(self) -> None:
         """Shutdown Frida and cleanup resources.
 
-        The base class ``shutdown`` is invoked from a ``finally`` block so the shared ``BridgeState`` reset always runs even when one of the
-        per-resource cleanup steps raises an unexpected error.
+        Every Frida call made while releasing resources is bounded, and the sweep as a whole is capped at
+        ``_SHUTDOWN_TIMEOUT`` seconds. Whatever the agent or device does, this returns: when the cap passes, the sweep is cancelled and
+        the bridge forgets its session, scripts and device, which leaves it cleanly closed. The base class ``shutdown`` is invoked from
+        a ``finally`` block so the shared ``BridgeState`` reset always runs even when one of the per-resource cleanup steps raises an
+        unexpected error.
         """
         try:
-            await self._release_frida_resources()
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(self._release_frida_resources(), timeout=_SHUTDOWN_TIMEOUT)
         finally:
+            self._discard_session_state()
             await super().shutdown()
             _logger.info("frida_bridge_shutdown", bridge="frida")
 
@@ -9093,16 +9483,16 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
         }}
         """
 
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await self._call_frida(self._session.create_script, script_code)
         messages: list[ScriptMessage] = []
         on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
         try:
             await asyncio.wait_for(event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("java_hook_timeout", class_name=class_name, method=method_name)
             raise ToolError(_ERR_HOOK_FAILED) from e
 
@@ -9112,10 +9502,10 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
                 if isinstance(payload, dict):
                     payload_dict = cast("dict[str, object]", payload)
                     if payload_dict.get("type") == "java_error":
-                        await asyncio.to_thread(script.unload)
+                        await self._call_frida(script.unload)
                         raise ToolError(_ERR_JAVA_UNAVAILABLE)
             elif msg["type"] == "error":
-                await asyncio.to_thread(script.unload)
+                await self._call_frida(script.unload)
                 raise ToolError(_ERR_HOOK_FAILED)
 
         self._scripts[hook_id] = script
@@ -9197,16 +9587,16 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
         """
 
         script_id = str(uuid.uuid4())[:8]
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await self._call_frida(self._session.create_script, script_code)
         messages: list[ScriptMessage] = []
         on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
         try:
             await asyncio.wait_for(event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning(
                 "cmodule_load_timeout",
                 error=str(e),
@@ -9220,10 +9610,10 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
                 if isinstance(payload, dict):
                     payload_dict = cast("dict[str, object]", payload)
                     if payload_dict.get("type") == "cmodule_error":
-                        await asyncio.to_thread(script.unload)
+                        await self._call_frida(script.unload)
                         raise ToolError(_ERR_CMODULE_FAILED, details={"reason": str(payload_dict.get("error", ""))})
             elif msg["type"] == "error":
-                await asyncio.to_thread(script.unload)
+                await self._call_frida(script.unload)
                 raise ToolError(_ERR_CMODULE_FAILED)
 
         self._scripts[script_id] = script
@@ -9262,23 +9652,20 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
 
         modules: list[ModuleInfo] = []
         mod_data = result.get("data", [])
-        if isinstance(mod_data, list):
-            for raw_mod in cast("list[object]", mod_data):
-                if not isinstance(raw_mod, dict):
-                    continue
-                m = cast("dict[str, object]", raw_mod)
-                base_str = str(m.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                size_val = m.get("size", 0)
-                modules.append(
-                    ModuleInfo(
-                        name=str(m.get("name", "")),
-                        path=Path(),
-                        base_address=base,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                        entry_point=0,
-                    ),
-                )
+        for raw_mod in cast("list[object]", mod_data):
+            m = cast("dict[str, object]", raw_mod)
+            base_str = str(m.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            size_val = m.get("size", 0)
+            modules.append(
+                ModuleInfo(
+                    name=str(m.get("name", "")),
+                    path=Path(),
+                    base_address=base,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    entry_point=0,
+                ),
+            )
         _logger.debug("frida_kernel_enumerate_modules_completed", count=len(modules))
         return modules
 
@@ -9320,24 +9707,21 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
 
         regions: list[MemoryRegion] = []
         range_data = result.get("data", [])
-        if isinstance(range_data, list):
-            for raw_r in cast("list[object]", range_data):
-                if not isinstance(raw_r, dict):
-                    continue
-                r = cast("dict[str, object]", raw_r)
-                base_str = str(r.get("base", "0"))
-                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
-                size_val = r.get("size", 0)
-                regions.append(
-                    MemoryRegion(
-                        base_address=base,
-                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
-                        protection=str(r.get("protection", "")),
-                        state="committed",
-                        type="kernel",
-                        module_name=None,
-                    ),
-                )
+        for raw_r in cast("list[object]", range_data):
+            r = cast("dict[str, object]", raw_r)
+            base_str = str(r.get("base", "0"))
+            base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+            size_val = r.get("size", 0)
+            regions.append(
+                MemoryRegion(
+                    base_address=base,
+                    size=int(size_val) if isinstance(size_val, (int, float)) else 0,
+                    protection=str(r.get("protection", "")),
+                    state="committed",
+                    type="kernel",
+                    module_name=None,
+                ),
+            )
         _logger.debug("frida_kernel_enumerate_ranges_completed", protection=protection, count=len(regions))
         return regions
 
@@ -9534,7 +9918,7 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
         """
 
         script_id = str(uuid.uuid4())[:8]
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await self._call_frida(self._session.create_script, script_code)
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
             """Forward socket-listener messages to the bridge dispatcher.
@@ -9547,7 +9931,7 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
 
         self._scripts[script_id] = script
         _logger.info("socket_listening", port=port, family=family)
@@ -9725,9 +10109,9 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
         script_code = f"""
         try {{
             var f = new File('{escaped}', 'rb');
-            var data = f.readBytes(-1);
+            var data = f.readBytes();
             f.close();
-            send({{ type: 'file_read' }}, data);
+            send({{ type: 'file_read', size: data.byteLength }}, data);
         }} catch (e) {{
             send({{ type: 'file_error', error: e.message }});
         }}
@@ -9736,12 +10120,11 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
         result = await self._execute_script_and_wait(script_code, max_wait=10.0)
         if "error" in result or result.get("type") == "file_error":
             raise ToolError(_ERR_FILE_FAILED)
+        if result.get("size") == 0:
+            _logger.debug("frida_file_read_target_completed", path=path, bytes_read=0)
+            return ""
 
         read_data = result.get("__binary")
-        if isinstance(read_data, (bytes, bytearray)):
-            hex_str = bytes(read_data).hex()
-            _logger.debug("frida_file_read_target_completed", path=path, bytes_read=len(read_data))
-            return hex_str
         if isinstance(read_data, list):
             list_bytes = bytes(cast("list[int]", read_data))
             _logger.debug("frida_file_read_target_completed", path=path, bytes_read=len(list_bytes))
@@ -9825,39 +10208,28 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
         """
 
         script_id = str(uuid.uuid4())[:8]
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await self._call_frida(self._session.create_script, script_code)
         messages: list[ScriptMessage] = []
         on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
-        await asyncio.to_thread(script.load)
+        await self._call_frida(script.load)
         try:
             await asyncio.wait_for(event.wait(), timeout=5.0)
         except TimeoutError as e:
-            await asyncio.to_thread(script.unload)
+            await self._call_frida(script.unload)
             _logger.warning("sqlite_open_timeout", path=path)
             raise ToolError(_ERR_SQLITE_FAILED) from e
 
-        opened = False
         for msg in messages:
             if msg["type"] == "send":
-                payload = msg.get("payload", {})
-                if isinstance(payload, dict):
-                    payload_dict = cast("dict[str, object]", payload)
-                    inner_type = payload_dict.get("type")
-                    if inner_type == "sqlite_error":
-                        await asyncio.to_thread(script.unload)
-                        raise ToolError(_ERR_SQLITE_FAILED, details={"reason": str(payload_dict.get("error", ""))})
-                    if inner_type == "sqlite_opened":
-                        opened = True
-            elif msg["type"] == "error":
-                await asyncio.to_thread(script.unload)
+                payload_dict = cast("dict[str, object]", msg.get("payload", {}))
+                if payload_dict.get("type") == "sqlite_error":
+                    await self._call_frida(script.unload)
+                    raise ToolError(_ERR_SQLITE_FAILED, details={"reason": str(payload_dict.get("error", ""))})
+            else:
+                await self._call_frida(script.unload)
                 raise ToolError(_ERR_SQLITE_FAILED)
-
-        if not opened:
-            await asyncio.to_thread(script.unload)
-            _logger.warning("sqlite_open_no_ack", path=path)
-            raise ToolError(_ERR_SQLITE_FAILED)
 
         self._scripts[script_id] = script
         _logger.info("sqlite_database_opened", path=path, script_id=script_id)
@@ -9882,7 +10254,7 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
 
         script = self._scripts[script_id]
         try:
-            result: object = await asyncio.to_thread(script.exports_sync.exec, sql)
+            result: object = await self._call_frida(script.exports_sync.exec, sql, limit_seconds=_FRIDA_USER_SCRIPT_TIMEOUT)
         except Exception as e:
             _logger.warning("sqlite_exec_failed", script_id=script_id, error=str(e))
             raise ToolError(_ERR_SQLITE_FAILED) from e
@@ -10294,7 +10666,7 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
             _logger.warning("file_monitor_create_failed", path=path, error=str(e))
             raise ToolError(_ERR_MONITOR_FAILED) from e
 
-        def on_change(changed_path: str, other_path: str | None, event_type: str) -> None:
+        def on_change(changed_path: str, other_path: str | None, event_type: str) -> None:  # pragma: no cover - runs on Frida's thread
             """Forward file-monitor change events to the bridge dispatcher.
 
             Args:
@@ -10316,7 +10688,7 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
         monitor.on("change", on_change)
 
         try:
-            await asyncio.to_thread(monitor.enable)
+            await self._call_frida(monitor.enable)
         except Exception as e:
             _logger.warning("file_monitor_enable_failed", path=path, error=str(e))
             raise ToolError(_ERR_MONITOR_FAILED) from e
@@ -10339,7 +10711,7 @@ class FridaBridge(_FridaBridgeStalkerTransformMixin):
             return False
 
         disable_fn = getattr(monitor, "disable", None)
-        if callable(disable_fn):
-            await asyncio.to_thread(disable_fn)
+        if callable(disable_fn):  # pragma: no branch - type narrowing; getattr may return None
+            await self._call_frida(disable_fn)
         _logger.info("file_monitor_stopped", monitor_id=monitor_id)
         return True

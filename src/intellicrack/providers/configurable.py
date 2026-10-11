@@ -108,6 +108,7 @@ _DURATION_PATTERN: Final[re.Pattern[str]] = re.compile(r"^\s*(\d+(?:\.\d+)?)s\s*
 
 _ERR_NOT_CONNECTED: Final[str] = "Not connected"
 _ERR_NO_BASE_URL: Final[str] = "This provider instance has no base URL configured"
+_ERR_INVALID_BASE_URL: Final[str] = "The base URL of provider instance %s is not a valid URL: %s"
 _ERR_MISSING_KEY: Final[str] = "An API key is required for provider instance %s"
 _ERR_LIST_MODELS_FAILED: Final[str] = "Failed to list models for %s: %s"
 _ERR_REQUEST_FAILED: Final[str] = "Request to %s failed: %s"
@@ -199,7 +200,8 @@ class ConfigurableProvider(LLMProviderBase):
         Raises:
             AuthenticationError: If the endpoint requires a key and none is
                 available, or the transport policy withholds the one there is.
-            ProviderError: If no base URL is configured for this instance.
+            ProviderError: If no base URL is configured for this instance, or
+                the configured one is not a valid URL.
         """
         self._credentials = credentials
         base_url = (credentials.api_base or self.instance.api_base or "").strip()
@@ -217,11 +219,15 @@ class ConfigurableProvider(LLMProviderBase):
 
         timeout = credentials.timeout or self.instance.timeout_seconds or DEFAULT_TIMEOUT_SECONDS
         await self._close_client()
-        self._client = httpx.AsyncClient(
-            base_url=base_url.rstrip("/") + "/",
-            headers=self._request_headers(),
-            timeout=httpx.Timeout(timeout),
-        )
+        try:
+            self._client = httpx.AsyncClient(
+                base_url=base_url.rstrip("/") + "/",
+                headers=self._request_headers(),
+                timeout=httpx.Timeout(timeout),
+            )
+        except httpx.InvalidURL as exc:
+            self._logger.warning("configurable_connect_invalid_base_url", base_url=base_url, error=str(exc))
+            raise ProviderError(_ERR_INVALID_BASE_URL % (self.name, exc), provider_name=self.name) from exc
         self._client_loop = asyncio.get_running_loop()
         self.connected = True
         self._logger.info("configurable_provider_connected", base_url=base_url, dialect=self.dialect.value)

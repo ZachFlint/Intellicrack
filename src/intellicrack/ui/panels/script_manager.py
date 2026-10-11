@@ -1067,6 +1067,15 @@ class ScriptManagerPanel(QWidget):
             executor_attached=executor is not None,
         )
 
+    def get_selected_id(self) -> str | None:
+        """Get the ID of the script highlighted in the script list.
+
+        Returns:
+            str | None: The selected script ID, or None when nothing is selected.
+        """
+        selected = self._script_list.get_selected_id()
+        return selected if isinstance(selected, str) else None
+
     def get_current_script(self) -> tuple[str, str, str] | None:
         """Get the current script data.
 

@@ -62,14 +62,33 @@ def _find_free_port() -> int:
 
 
 class _Always403Handler(http.server.BaseHTTPRequestHandler):
-    """HTTP request handler that always responds 403 to POST requests."""
+    """HTTP request handler that always responds 403 to POST requests.
+
+    The request body is read in full before replying and the response carries
+    a ``Content-Length``. Closing a Windows socket that still holds unread
+    request bytes resets the connection, so a handler that replies without
+    draining the body makes the client intermittently see a read error instead
+    of the 403.
+
+    Attributes:
+        protocol_version: HTTP version advertised in the status line.
+    """
+
+    protocol_version: str = "HTTP/1.1"
 
     def do_POST(self) -> None:
-        """Return 403 Forbidden with a JSON error body."""
+        """Drain the request body, then return 403 Forbidden with a JSON error body."""
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length > 0:
+            _ = self.rfile.read(length)
+        body = json.dumps({"error": "forbidden"}).encode("utf-8")
         self.send_response(_HTTP_FORBIDDEN)
         self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
         self.end_headers()
-        self.wfile.write(json.dumps({"error": "forbidden"}).encode("utf-8"))
+        _ = self.wfile.write(body)
+        self.wfile.flush()
 
     def log_message(self, *args: object, **kwargs: object) -> None:
         """Suppress access log output.

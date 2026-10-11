@@ -1088,10 +1088,14 @@ class CutterPanel(AnalysisPanelBase):
             return None
         lowered = stripped.lower()
         try:
-            return int(stripped, 16) if lowered.startswith("0x") else int(stripped)
+            address = int(stripped, 16) if lowered.startswith("0x") else int(stripped)
         except ValueError:
             _logger.warning("cutter_address_parse_failed", input_text=stripped)
             return None
+        if address < 0:
+            _logger.warning("cutter_address_negative", input_text=stripped)
+            return None
+        return address
 
     def _apply_decompiled(self, result: object) -> None:
         """Apply decompiled code to the view.
@@ -1987,7 +1991,7 @@ class CutterPanel(AnalysisPanelBase):
             address: Address to copy.
         """
         clipboard: QClipboard | None = QApplication.clipboard()
-        if clipboard is not None:
+        if clipboard is not None:  # pragma: no branch - type narrowing
             clipboard.setText(f"0x{address:X}")
             self._set_status(f"Copied 0x{address:X}")
 

@@ -15,7 +15,6 @@ import math
 import os
 import random as _random
 import re
-import struct
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -2812,16 +2811,7 @@ class BuiltinFunctions:
                 )
                 return str(value)
 
-        try:
-            return _FORMAT_FIELD_RE.sub(_replace, fmt)
-        except (IndexError, KeyError) as exc:
-            _logger.warning(
-                "hexpat_format_string_regex_failed",
-                fmt=fmt,
-                exc_type=type(exc).__name__,
-                error=str(exc),
-            )
-            return fmt
+        return _FORMAT_FIELD_RE.sub(_replace, fmt)
 
     def _read_struct_field(self, *args: object) -> PatternValue:
         """Read a struct field as unsigned integer (internal helper).
@@ -2834,15 +2824,6 @@ class BuiltinFunctions:
         """
         offset = int(self._unwrap(args[0])) if args else 0
         size = int(self._unwrap(args[1])) if len(args) > 1 else 4
-        if size <= 8:
-            fmt_map = {1: "B", 2: "H", 4: "I", 8: "Q"}
-            fmt_char = fmt_map.get(size, "I")
-            prefix = "<" if self._endian == "little" else ">"
-            raw = self._data.read(offset, size)
-            result = struct.unpack(f"{prefix}{fmt_char}", raw)[0]
-            if isinstance(result, int):
-                return PatternValue(value=result)
-            return PatternValue(value=int(result))
         raw = self._data.read(offset, size)
         byteorder: Literal["little", "big"] = "little" if self._endian == "little" else "big"
         return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=False))

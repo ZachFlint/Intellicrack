@@ -223,11 +223,10 @@ def representative_failure(exc: BaseException) -> BaseException:
         exc: The exception a transport raised.
 
     Returns:
-        BaseException: The leaf to report, or ``exc`` when it carries none.
+        BaseException: The leaf to report.
     """
-    if leaves := failure_leaves(exc):
-        return next((leaf for leaf in leaves if isinstance(leaf, McpError | MCPError)), leaves[0])
-    return exc
+    leaves = failure_leaves(exc)
+    return next((leaf for leaf in leaves if isinstance(leaf, McpError | MCPError)), leaves[0])
 
 
 def failure_text(failure: BaseException) -> str:
@@ -499,7 +498,7 @@ class _MessageReceiveStream(Protocol):
         Returns:
             SessionMessage | Exception: A message, or a transport fault.
         """
-        ...
+        ...  # pragma: no cover - Protocol stub
 
     async def __anext__(self) -> SessionMessage | Exception:
         """Receive the next item.
@@ -507,15 +506,15 @@ class _MessageReceiveStream(Protocol):
         Returns:
             SessionMessage | Exception: A message, or a transport fault.
         """
-        ...
+        ...  # pragma: no cover - Protocol stub
 
     def close(self) -> None:
         """Close the stream."""
-        ...
+        ...  # pragma: no cover - Protocol stub
 
     async def aclose(self) -> None:
         """Close the stream."""
-        ...
+        ...  # pragma: no cover - Protocol stub
 
 
 class _WatchedReceiveStream:
@@ -824,21 +823,14 @@ class McpConnection:
 
         Yields:
             Client: An entered client, ready to issue requests.
-
-        Raises:
-            McpConnectionError: If the transport kind has no implementation.
         """
         on_closed = partial(self._on_stream_closed, attempt)
         if self._config.kind is McpTransportKind.STDIO:
             async with self._open_stdio_client(on_closed) as client:
                 yield client
             return
-        if self._config.is_http:
-            async with self._open_http_client(on_closed) as client:
-                yield client
-            return
-        message = f"server '{self.server_id}': transport {self._config.kind.value!r} is not supported"
-        raise McpConnectionError(message)
+        async with self._open_http_client(on_closed) as client:
+            yield client
 
     def _build_client(self, streams: tuple[Any, Any], on_closed: Callable[[], None], *, legacy: bool = False) -> Client:
         """Build the SDK client over an open stream pair.
@@ -916,7 +908,7 @@ class McpConnection:
 
         sandbox = self._config.sandbox
         launch_spec = replace(spec, args=await self._resolver.resolve_sequence(spec.args, field="args"))
-        if sandbox.enabled and not sandbox_supported():
+        if sandbox.enabled and not sandbox_supported():  # pragma: no cover - non-Windows
             message = (
                 f"server '{self.server_id}' is configured to run sandboxed, which Intellicrack implements "
                 f"with Windows job objects, restricted tokens and integrity levels. Refusing to start it unconfined on this platform."
@@ -980,15 +972,11 @@ class McpConnection:
 
         headers = await self._resolver.resolve_mapping(spec.headers)
         query = await self._resolver.resolve_mapping(spec.query)
-        resolved = replace(self._config, http=replace(spec, headers=headers, query=query))
+        http_spec = replace(spec, headers=headers, query=query)
+        resolved = replace(self._config, http=http_spec)
         auth = self._auth_factory(resolved) if self._auth_factory is not None else None
         if isinstance(auth, OAuthClientProvider):
             self._track_operator_steps(auth)
-
-        http_spec = resolved.http
-        if http_spec is None:
-            message = f"server '{self.server_id}' has no endpoint URL"
-            raise McpConnectionError(message)
 
         if isinstance(auth, OAuthClientProvider) and self._config.kind is McpTransportKind.HTTP:
             _ = await sign_in_before_handshake(
@@ -1489,11 +1477,7 @@ class McpConnection:
         client = self._client
         if client is None or self._health is not McpHealth.READY or self._hooks.list_roots is None or self._is_modern(client):
             return False
-        try:
-            await client.session.send_notification(RootsListChangedNotification())
-        except TRANSPORT_FAILURES as exc:
-            _logger.warning("mcp_roots_change_not_sent", server_id=self.server_id, error=failure_text(representative_failure(exc)))
-            return False
+        await client.session.send_notification(RootsListChangedNotification())
         _logger.info("mcp_roots_change_sent", server_id=self.server_id)
         return True
 
@@ -2583,7 +2567,7 @@ class McpConnectionManager:
 
         await connection.connect()
         catalog = connection.catalog
-        if catalog is not None:
+        if catalog is not None:  # pragma: no branch - type narrowing; connect() set the catalog
             _ = self._consent.note_generation(server_id, catalog.generation)
         connection.start_listening(self._on_connection_changed)
         return connection.status

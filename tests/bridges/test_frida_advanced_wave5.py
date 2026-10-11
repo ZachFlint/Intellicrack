@@ -408,12 +408,14 @@ class _StalkerInjectScript:
         self.unload_calls += 1
 
     def post(self, message: dict[str, object]) -> None:
-        """Record a posted message.
+        """Record a posted message and, for an unfollow request, acknowledge it as the real Stalker script does.
 
         Args:
             message: Message dict posted by the bridge.
         """
         self.posts.append(dict(message))
+        if message.get("type") == "stalker_unfollow_request" and self._handler is not None:
+            self._handler({"type": "send", "payload": {"type": "stalker_unfollowed", "tid": self.tid}}, None)
 
 
 class _StalkerSession:

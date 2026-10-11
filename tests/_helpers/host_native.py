@@ -90,6 +90,7 @@ _PRECOMMIT_RUFF_PIN: Final[str] = "tests/packaging/test_precommit_ruff_pin.py"
 _SECURITY_FLOORS: Final[str] = "tests/packaging/test_security_advisory_floors.py"
 _REPO_URL_CONSISTENCY: Final[str] = "tests/packaging/test_repository_url_consistency.py"
 _THIRD_PARTY_LICENSING: Final[str] = "tests/packaging/test_third_party_licensing.py"
+_CLAUDE_ATTRIBUTION: Final[str] = "tests/packaging/test_claude_attribution.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -261,6 +262,8 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_THIRD_PARTY_LICENSING, "test_corresponding_source_link_matches_the_pinned_sdk_commit"),
         (_THIRD_PARTY_LICENSING, "test_every_vendored_license_is_documented_in_the_index"),
         (_THIRD_PARTY_LICENSING, "test_installer_both_stages_and_installs_the_license_texts"),
+        (_CLAUDE_ATTRIBUTION, "test_ci_scans_pushes_and_pull_requests"),
+        (_CLAUDE_ATTRIBUTION, "test_repository_history_is_free_of_claude_attribution"),
     },
 )
 

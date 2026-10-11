@@ -483,10 +483,7 @@ def _ensure_per_monitor_dpi_awareness() -> None:
     """
     if sys.platform != "win32":
         return
-    windll = getattr(ctypes, "windll", None)
-    if windll is None:
-        _logger.debug("per_monitor_dpi_awareness_unavailable", reason="no_windll")
-        return
+    windll = ctypes.windll
     try:
         user32 = windll.user32
     except OSError:
@@ -911,25 +908,19 @@ def _saved_provider_instances(logger: BoundLogger) -> list[object]:
 
     Returns:
         list[object]: The saved instances, skipping records that name no valid
-        instance id and any that collides with a built-in, which is owned by
-        its preset.
+        instance id.
     """
     settings_mod = importlib.import_module("intellicrack.credentials.provider_settings")
     config_mod = importlib.import_module("intellicrack.core.config")
     instances_mod = importlib.import_module("intellicrack.providers.instances")
-    ids_mod = importlib.import_module("intellicrack.providers.ids")
 
     store_cls = cast("type[ProviderSettingsStore]", settings_mod.ProviderSettingsStore)
     settings_filename = cast("str", settings_mod.PROVIDER_SETTINGS_FILENAME)
     settings_path = cast("Callable[[str], Path]", config_mod.get_config_file)(settings_filename)
     from_mapping = cast("Callable[[dict[str, Any]], object | None]", instances_mod.ProviderInstance.from_mapping)
-    builtin_ids = cast("tuple[str, ...]", ids_mod.BUILTIN_PROVIDER_IDS)
 
     loaded: list[object] = []
     for instance_id, record in store_cls(settings_path).load_instances().items():
-        if instance_id in builtin_ids:
-            logger.warning("provider_instance_shadows_builtin", instance_id=instance_id)
-            continue
         instance = from_mapping(cast("dict[str, Any]", record))
         if instance is None:
             logger.warning("provider_instance_record_invalid", instance_id=instance_id)
@@ -1216,23 +1207,7 @@ def _init_template_manager(
         )
         return template_manager
 
-    hex_document_cls = getattr(hexcore_mod, "HexDocument", None)
-    if hex_document_cls is None:
-        logger.warning(
-            "template_manager_skipped_no_hex_document",
-            reason="intellicrack_hexcore.HexDocument not available",
-        )
-        return template_manager
-
-    open_bytes = getattr(hex_document_cls, "open_bytes", None)
-    if not callable(open_bytes):
-        logger.warning(
-            "template_manager_skipped_no_open_bytes",
-            reason="HexDocument.open_bytes factory not available",
-        )
-        return template_manager
-
-    document = open_bytes(b"")
+    document = hexcore_mod.HexDocument.open_bytes(b"")
     try:
         template_manager.bootstrap_builtins(cast("HexDocumentFull", document))
     except bootstrap_error_cls as exc:
@@ -1267,9 +1242,7 @@ async def _init_model_discovery(
     model_discovery = discovery_mod.ModelDiscovery(provider_registry)
     discovery_cache = config.data_directory / "model_discovery_cache.json"
     if discovery_cache.exists():
-        load_cache = getattr(model_discovery, "load_cache", None)
-        if callable(load_cache):
-            await cast("Awaitable[None]", load_cache(discovery_cache))
+        await cast("Awaitable[None]", model_discovery.load_cache(discovery_cache))
     logger.info("model_discovery_initialized")
     return model_discovery, discovery_cache
 
@@ -1333,16 +1306,12 @@ def _clear_model_cache(logger: BoundLogger) -> None:
         logger: BoundLogger instance.
     """
     model_cache_mod = importlib.import_module("intellicrack.providers.model_loader")
-    get_cache = getattr(model_cache_mod, "get_global_model_cache", None)
-    if callable(get_cache):
-        try:
-            cache = get_cache()
-            clear_fn = getattr(cache, "clear", None)
-            if callable(clear_fn):
-                clear_fn()
-            logger.info("model_cache_cleared")
-        except (ImportError, OSError, RuntimeError):
-            logger.exception("model_cache_cleanup_skipped")
+    try:
+        cache = model_cache_mod.get_global_model_cache()
+        cache.clear()
+        logger.info("model_cache_cleared")
+    except (ImportError, OSError, RuntimeError):
+        logger.exception("model_cache_cleanup_skipped")
 
 
 def _create_main_window(
@@ -1415,9 +1384,7 @@ def _wire_preregistered_sandbox(window: MainWindow, orchestrator: Orchestrator) 
     instances = list(getattr(manager, "instances", []))
     if not instances:
         return
-    sandbox = getattr(instances[0], "sandbox", None)
-    if sandbox is None:
-        return
+    sandbox = instances[0].sandbox
     window.wire_sandbox_backend(sandbox, manager)
     _logger.info(
         "preregistered_sandbox_wired_into_main_window",
@@ -1442,16 +1409,11 @@ def _detach_qt_log_handler(logger: BoundLogger) -> None:
     """
     try:
         handler_mod = importlib.import_module("intellicrack.ui.log_viewer")
-        uninstall = getattr(handler_mod, "uninstall_qt_log_handler", None)
+        uninstall = handler_mod.uninstall_qt_log_handler
     except ImportError:
         logger.info("qt_log_handler_module_unavailable_during_shutdown")
         return
-    if not callable(uninstall):
-        return
-    try:
-        uninstall()
-    except (RuntimeError, OSError, ValueError):
-        logger.warning("qt_log_handler_uninstall_failed", exc_info=True)
+    uninstall()
 
 
 async def _cancel_pending_bridge_tasks(logger: BoundLogger) -> None:
@@ -1471,11 +1433,9 @@ async def _cancel_pending_bridge_tasks(logger: BoundLogger) -> None:
     """
     try:
         bridge_mod = importlib.import_module("intellicrack.ui.panels.async_bridge")
-        cancel_pending = getattr(bridge_mod, "cancel_pending_main_loop_tasks", None)
+        cancel_pending = bridge_mod.cancel_pending_main_loop_tasks
     except ImportError:
         logger.info("async_bridge_unavailable_during_shutdown")
-        return
-    if not callable(cancel_pending):
         return
     try:
         cancelled = int(cast("Callable[[], int]", cancel_pending)())
@@ -1507,9 +1467,7 @@ def _drain_and_stop_bridge_loop(logger: BoundLogger) -> None:
     drain_fn = getattr(bridge_module, "drain_bridge_workers", None)
     if callable(drain_fn) and (drained := int(cast("Callable[[], int]", drain_fn)())):
         logger.info("bridge_workers_drained", count=drained)
-    shutdown_fn = getattr(bridge_module, "shutdown_bridge_loop", None)
-    if callable(shutdown_fn):
-        shutdown_fn()
+    bridge_module.shutdown_bridge_loop()
 
 
 async def _shutdown_application(

@@ -12,6 +12,7 @@ one of the two toolchains (for example the Cutter+rizin desktop bundle) still in
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import re
@@ -20,6 +21,7 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, cast, override
 
+import psutil
 import r2pipe
 import rzpipe
 
@@ -216,6 +218,166 @@ def _select_pipe_backend() -> _PipeBackend | None:
     if radare2_dir is not None:
         return _PipeBackend(r2pipe, "radare2", radare2_dir)
     return None
+
+
+def _file_sha256(path: Path) -> str:
+    """Hash the content of a file with SHA-256.
+
+    Args:
+        path: The file to hash.
+
+    Returns:
+        str: The lowercase hexadecimal digest.
+    """
+    with path.open("rb") as handle:
+        return hashlib.file_digest(handle, "sha256").hexdigest()
+
+
+def _string_encoding(raw_encoding: str) -> StringEncoding:
+    """Map the backend's name for a string encoding to the bridge's.
+
+    rizin writes ``utf16le``, ``utf16be`` and ``utf8``; radare2 writes
+    ``wide`` or the hyphenated names. Every other encoding is reported as
+    ``ascii``.
+
+    Args:
+        raw_encoding: The ``type`` field of a string entry.
+
+    Returns:
+        StringEncoding: The bridge's encoding label.
+    """
+    normalized = raw_encoding.replace("-", "").lower()
+    if normalized == "utf16be":
+        return "utf-16be"
+    if normalized == "utf8":
+        return "utf-8"
+    if normalized in {"wide", "utf16le"}:
+        return "utf-16le"
+    return "ascii"
+
+
+def _xref_kind(raw_type: str) -> XRefType:
+    """Map the backend's cross-reference type to the bridge's.
+
+    rizin reports ``CALL``, ``CODE``, ``DATA`` and ``STRING``; radare2
+    reports ``CALL``, ``CODE``, ``JUMP`` and ``DATA``. A code reference that
+    is not a call is a jump.
+
+    Args:
+        raw_type: The ``type`` field of a cross-reference entry.
+
+    Returns:
+        XRefType: ``"call"``, ``"jump"`` or ``"data"``.
+    """
+    if raw_type == "CALL":
+        return "call"
+    if raw_type in {"CODE", "JUMP", "JMP", "CJMP"}:
+        return "jump"
+    return "data"
+
+
+def _is_rizin_pipe(pipe: object) -> bool:
+    """Tell whether an analysis pipe talks to rizin rather than radare2.
+
+    The two backends name several debugger commands differently, so the
+    debug methods pick the command by the pipe they hold.
+
+    Args:
+        pipe: The open analysis pipe.
+
+    Returns:
+        bool: ``True`` for an ``rzpipe`` session.
+    """
+    return isinstance(pipe, rzpipe.open)
+
+
+def _json_dicts(value: object) -> list[dict[str, Any]]:
+    """Keep the JSON objects of a parsed JSON array.
+
+    Args:
+        value: A parsed JSON value.
+
+    Returns:
+        list[dict[str, Any]]: The objects in ``value`` when it is an array,
+        otherwise an empty list.
+    """
+    if not isinstance(value, list):
+        return []
+    return [cast("dict[str, Any]", item) for item in cast("list[object]", value) if isinstance(item, dict)]
+
+
+def _mapped_images(pid: int, image_ranges: list[tuple[int, int]]) -> list[ModuleInfo]:
+    """Name the image regions of a process by the files the system reports as mapped there.
+
+    Args:
+        pid: The process whose address space is inspected.
+        image_ranges: ``(start, end)`` of every region the debugger classifies as an image.
+
+    Returns:
+        list[ModuleInfo]: One entry per mapped image file, ordered by base
+        address; empty when the process cannot be inspected.
+    """
+    try:
+        regions = cast("list[object]", psutil.Process(pid).memory_maps(grouped=False))
+    except psutil.Error as exc:
+        _logger.warning("cutter_memory_maps_unavailable", pid=pid, error=str(exc))
+        return []
+    spans: dict[str, tuple[int, int]] = {}
+    for region in regions:
+        path = str(getattr(region, "path", ""))
+        start = int(str(getattr(region, "addr", "0")), 16)
+        for range_start, range_end in image_ranges:
+            if range_start <= start < range_end:
+                known = spans.get(path, (range_start, range_end))
+                spans[path] = (min(known[0], range_start), max(known[1], range_end))
+                break
+    return [
+        ModuleInfo(name=Path(path).name, path=Path(path), base_address=base, size=end - base, entry_point=0)
+        for path, (base, end) in sorted(spans.items(), key=lambda item: item[1][0])
+    ]
+
+
+_EXECUTABLE_MAGICS: Final[tuple[bytes, ...]] = (
+    b"MZ",
+    b"\x7fELF",
+    b"\xfe\xed\xfa\xce",
+    b"\xfe\xed\xfa\xcf",
+    b"\xce\xfa\xed\xfe",
+    b"\xcf\xfa\xed\xfe",
+    b"\xca\xfe\xba\xbe",
+    b"#!",
+)
+_EXECUTABLE_MAGIC_LENGTH: Final[int] = 4
+
+
+def _require_openable_target(path: Path, *, debug: bool) -> None:
+    """Refuse a target the backend cannot open, before the pipe is started.
+
+    The pipe library waits for the backend's first prompt without a limit,
+    and a backend that exits before printing one leaves that wait running
+    forever. The backend exits that way for a target that is not a regular
+    file, cannot be read, or, for a debug launch, is not an executable
+    image, so those are rejected here.
+
+    Args:
+        path: The target to open.
+        debug: Whether the target will be launched under the debugger.
+
+    Raises:
+        ToolError: If the backend could not open the target.
+    """
+    if not path.is_file():
+        _logger.warning("binary_load_target_not_a_file", path=str(path))
+        raise ToolError(_ERR_LOAD_FAILED, details={"reason": "target is not a regular file"})
+    try:
+        with path.open("rb") as handle:
+            header = handle.read(_EXECUTABLE_MAGIC_LENGTH)
+    except OSError as exc:
+        _logger.warning("binary_load_target_unreadable", path=str(path), error=str(exc))
+        raise ToolError(_ERR_LOAD_FAILED, details={"reason": f"target cannot be read: {exc}"}) from exc
+    if debug and not header.startswith(_EXECUTABLE_MAGICS):
+        _logger.warning("binary_load_target_not_executable", path=str(path))
+        raise ToolError(_ERR_LOAD_FAILED, details={"reason": "target is not an executable image"})
 
 
 def _open_analysis_pipe(target: str, flags: list[str] | None = None) -> _AnalysisPipe:
@@ -1894,8 +2056,8 @@ class _CutterBridgeBase(StaticAnalysisBridge):
     async def _release_cutter_resources(self) -> None:
         """Release rizin handles, registered PIDs, and per-binary debug state.
 
-        Each step is wrapped in its own ``try/except/finally`` so a failure cleaning up one resource does not prevent the others from being
-        released. Errors are logged but never re-raised.
+        Each step is wrapped in its own ``try``/``finally`` so the handle is always cleared. Errors closing the rizin session are logged but
+        never re-raised.
         """
         if self._r2 is not None:
             async with self._r2_lock:
@@ -1910,8 +2072,6 @@ class _CutterBridgeBase(StaticAnalysisBridge):
             try:
                 process_manager = ProcessManager.get_instance()
                 process_manager.unregister_external_pid(self._r2_pid)
-            except (OSError, RuntimeError, ValueError, KeyError) as e:
-                _logger.warning("cutter_unregister_pid_failed", pid=self._r2_pid, error=str(e))
             finally:
                 self._r2_pid = None
 
@@ -2042,10 +2202,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         Args:
             path: Path to the binary being analyzed.
         """
-        if not hasattr(self._r2, "_child"):
-            return
-
-        child: object = getattr(self._r2, "_child", None)
+        child: object = getattr(self._r2, "process", None)
         if child is None or not hasattr(child, "pid"):
             return
 
@@ -2062,24 +2219,6 @@ class _CutterBridgeBase(StaticAnalysisBridge):
             metadata={"binary": str(path)},
         )
         _logger.debug("cutter_process_registered", pid=self._r2_pid)
-
-    async def _extract_hashes(self) -> tuple[str, str]:
-        """Extract MD5 and SHA256 hashes from loaded binary.
-
-        Returns:
-            tuple[str, str]: Tuple of (md5, sha256) hash strings.
-        """
-        hashes = await self._cmd_json("itj")
-        md5 = ""
-        sha256 = ""
-        for h in hashes:
-            hash_type = _get_str(h, "type")
-            if hash_type == "md5":
-                md5 = _get_str(h, "hash")
-            elif hash_type == "sha256":
-                sha256 = _get_str(h, "hash")
-        _logger.debug("binary_hashes_extracted")
-        return md5, sha256
 
     async def _extract_binary_metadata(self) -> tuple[str, str, int, int]:
         """Extract binary metadata from Rizin.
@@ -2124,6 +2263,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
 
         if not await self.is_available():
             raise ToolError(_ERR_TOOL_NOT_AVAILABLE)
+        await asyncio.to_thread(_require_openable_target, path, debug=debug)
 
         try:
             return await self._load_binary_impl(path, debug=debug)
@@ -2162,7 +2302,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
 
         file_type, arch, bits, entry = await self._extract_binary_metadata()
         await self._r2_cmd("e io.cache=true")
-        _, sha256 = await self._extract_hashes()
+        sha256 = await asyncio.to_thread(_file_sha256, path)
 
         sections = await self._get_sections_internal()
         imports = await self._get_imports_internal()
@@ -2717,26 +2857,16 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
 
         xrefs = await self._cmd_json(f"axtj @ {address}")
 
-        result: list[CrossReference] = []
-        for x in xrefs:
-            ref_type = _get_str(x, "type")
-            xref_type: XRefType
-            if ref_type == "CALL":
-                xref_type = "call"
-            elif ref_type in {"JMP", "CJMP"}:
-                xref_type = "jump"
-            else:
-                xref_type = "data"
-
-            result.append(
-                CrossReference(
-                    from_address=_get_int(x, "from"),
-                    to_address=address,
-                    ref_type=xref_type,
-                    from_function=_get_optional_str(x, "fcn_name"),
-                    to_function=None,
-                ),
+        result = [
+            CrossReference(
+                from_address=_get_int(x, "from"),
+                to_address=address,
+                ref_type=_xref_kind(_get_str(x, "type")),
+                from_function=_get_optional_str(x, "fcn_name"),
+                to_function=None,
             )
+            for x in xrefs
+        ]
 
         _logger.debug("xrefs_to_queried", address=hex(address), result_count=len(result))
         return result
@@ -2762,26 +2892,16 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
 
         xrefs = await self._cmd_json(f"axfj @ {address}")
 
-        result: list[CrossReference] = []
-        for x in xrefs:
-            ref_type = _get_str(x, "type")
-            xref_type: XRefType
-            if ref_type == "CALL":
-                xref_type = "call"
-            elif ref_type in {"JMP", "CJMP"}:
-                xref_type = "jump"
-            else:
-                xref_type = "data"
-
-            result.append(
-                CrossReference(
-                    from_address=address,
-                    to_address=_get_int(x, "ref"),
-                    ref_type=xref_type,
-                    from_function=None,
-                    to_function=_get_optional_str(x, "fcn_name"),
-                ),
+        result = [
+            CrossReference(
+                from_address=address,
+                to_address=_get_int(x, "to", _get_int(x, "ref")),
+                ref_type=_xref_kind(_get_str(x, "type")),
+                from_function=None,
+                to_function=_get_optional_str(x, "fcn_name"),
             )
+            for x in xrefs
+        ]
 
         _logger.debug("xrefs_from_queried", address=hex(address), result_count=len(result))
         return result
@@ -2888,22 +3008,11 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
         for s in strings:
             string_val = _get_str(s, "string")
             if regex.search(string_val):
-                raw_encoding = _get_str(s, "type", "ascii")
-                encoding: StringEncoding
-                if raw_encoding == "utf-16be":
-                    encoding = "utf-16be"
-                elif raw_encoding == "utf-8":
-                    encoding = "utf-8"
-                elif raw_encoding in {"wide", "utf-16le"}:
-                    encoding = "utf-16le"
-                else:
-                    encoding = "ascii"
-
                 result.append(
                     StringInfo(
                         address=_get_int(s, "vaddr"),
                         value=string_val,
-                        encoding=encoding,
+                        encoding=_string_encoding(_get_str(s, "type", "ascii")),
                         section=_get_str(s, "section"),
                     ),
                 )
@@ -3362,26 +3471,15 @@ class CutterMetadataMixin(CutterCommandMixin):
             raise ToolError(_ERR_NO_BINARY)
 
         strings = await self._cmd_json("izzj")
-        result: list[StringInfo] = []
-        for s in strings:
-            raw_encoding = _get_str(s, "type", "ascii")
-            encoding: StringEncoding
-            if raw_encoding == "utf-16be":
-                encoding = "utf-16be"
-            elif raw_encoding == "utf-8":
-                encoding = "utf-8"
-            elif raw_encoding in {"wide", "utf-16le"}:
-                encoding = "utf-16le"
-            else:
-                encoding = "ascii"
-            result.append(
-                StringInfo(
-                    address=_get_int(s, "vaddr"),
-                    value=_get_str(s, "string"),
-                    encoding=encoding,
-                    section=_get_str(s, "section"),
-                ),
+        result = [
+            StringInfo(
+                address=_get_int(s, "vaddr"),
+                value=_get_str(s, "string"),
+                encoding=_string_encoding(_get_str(s, "type", "ascii")),
+                section=_get_str(s, "section"),
             )
+            for s in strings
+        ]
         _logger.debug("all_strings_queried", result_count=len(result))
         return result
 
@@ -5192,6 +5290,11 @@ class CutterDisplayMixin(CutterSearchOpsMixin):
     async def disassemble_function(self, address: int) -> str:
         """Disassemble a complete function.
 
+        Rizin's ``pdf`` prints nothing for some analyzed functions (observed
+        with rizin 0.9.1 on functions whose extent spans far more bytes than
+        their basic blocks), so an empty listing falls back to the recursive
+        listing ``pdr``, which follows the function's basic blocks instead.
+
         Args:
             address: Function address.
 
@@ -5206,6 +5309,8 @@ class CutterDisplayMixin(CutterSearchOpsMixin):
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(f"pdf @ {address}")
+        if not result.strip():
+            result = await self._r2_cmd(f"pdr @ {address}")
         _logger.debug("function_disassembled", address=hex(address))
         return result
 
@@ -5453,7 +5558,8 @@ class CutterDebugMixin(CutterDisplayMixin):
     async def get_breakpoints(self) -> list[BreakpointInfo]:
         """Enumerate active debugger breakpoints.
 
-        Queries rizin via ``dbj`` for the authoritative breakpoint list
+        Queries the backend for the authoritative breakpoint list
+        (``dblj`` on rizin, ``dbj`` on radare2)
         and merges it with the locally tracked map so breakpoints set
         from outside the bridge (e.g. interactive rizin sessions) are
         also surfaced. Locally tracked entries win ties so any
@@ -5467,7 +5573,7 @@ class CutterDebugMixin(CutterDisplayMixin):
             currently known by rizin or by the bridge's local cache.
         """
         self._require_attached("get_breakpoints")
-        parsed = await self._debug_cmd_json("dbj")
+        parsed = await self._debug_cmd_json("dblj" if _is_rizin_pipe(self._r2) else "dbj")
         merged: dict[int, BreakpointInfo] = dict(self._breakpoints)
         if isinstance(parsed, list):
             for entry in cast("list[object]", parsed):
@@ -5477,7 +5583,7 @@ class CutterDebugMixin(CutterDisplayMixin):
                 addr = _get_int(entry_dict, "addr", _get_int(entry_dict, "offset"))
                 if addr == 0 or addr in merged:
                     continue
-                raw_type = _get_str(entry_dict, "type", "software")
+                raw_type = _get_str(entry_dict, "type", "hardware" if entry_dict.get("hw") is True else "software")
                 bp_type_lit: Literal["software", "hardware", "memory"]
                 if raw_type in {"hardware", "hw"}:
                     bp_type_lit = "hardware"
@@ -5488,9 +5594,7 @@ class CutterDebugMixin(CutterDisplayMixin):
                 raw_enabled = entry_dict.get("enabled", True)
                 enabled = raw_enabled if isinstance(raw_enabled, bool) else True
                 hit_count = _get_int(entry_dict, "hits", _get_int(entry_dict, "hit_count"))
-                condition_str: str | None = _get_optional_str(entry_dict, "cond")
-                if condition_str is None:
-                    condition_str = _get_optional_str(entry_dict, "condition")
+                condition_str: str | None = _get_optional_str(entry_dict, "cond") or _get_optional_str(entry_dict, "condition") or None
                 merged[addr] = BreakpointInfo(
                     id=addr,
                     address=addr,
@@ -5503,11 +5607,24 @@ class CutterDebugMixin(CutterDisplayMixin):
         _logger.debug("cutter_breakpoints_queried", count=len(result))
         return result
 
+    async def _program_counter_text(self) -> str:
+        """Read the debuggee's program counter as the backend prints it.
+
+        rizin prints the register that holds the ``PC`` role as
+        ``name = value`` for ``dr PC``; radare2 prints the bare value for
+        ``dr?PC``. Either way the text after the last ``=`` is the value.
+
+        Returns:
+            str: The program counter text, empty when the backend printed none.
+        """
+        command = "dr PC" if _is_rizin_pipe(self._r2) else "dr?PC"
+        return (await self._r2_cmd(command)).rpartition("=")[2].strip()
+
     async def step_into(self) -> int:
         """Single-step into the next instruction.
 
         Issues ``ds`` to perform one source-step, then reads the program
-        counter via ``dr?PC`` so the returned value reflects the
+        counter so the returned value reflects the
         post-step instruction pointer. Propagates ``ToolError`` from
         :meth:`_require_attached` when no process is attached, and from
         :func:`_parse_int_response` when rizin returns an unparseable
@@ -5518,7 +5635,7 @@ class CutterDebugMixin(CutterDisplayMixin):
         """
         self._require_attached("step_into")
         await self._r2_cmd("ds")
-        result = (await self._r2_cmd("dr?PC")).strip()
+        result = await self._program_counter_text()
         _logger.debug("cutter_step_into_complete", pc_raw=result)
         return _parse_int_response(result)
 
@@ -5526,7 +5643,7 @@ class CutterDebugMixin(CutterDisplayMixin):
         """Single-step over the next instruction.
 
         Issues ``dso`` (step-over) which lets ``call`` instructions run
-        to completion before pausing, then reads ``dr?PC`` for the
+        to completion before pausing, then reads the program counter for the
         post-step instruction pointer. Propagates ``ToolError`` from
         :meth:`_require_attached` when no process is attached, and from
         :func:`_parse_int_response` when rizin returns an unparseable
@@ -5537,7 +5654,7 @@ class CutterDebugMixin(CutterDisplayMixin):
         """
         self._require_attached("step_over")
         await self._r2_cmd("dso")
-        result = (await self._r2_cmd("dr?PC")).strip()
+        result = await self._program_counter_text()
         _logger.debug("cutter_step_over_complete", pc_raw=result)
         return _parse_int_response(result)
 
@@ -5702,8 +5819,30 @@ class CutterDebugMixin(CutterDisplayMixin):
         _logger.info("cutter_signal_sent", signal=signal)
         return True
 
+    async def _range_is_readable(self, address: int, size: int) -> bool:
+        """Tell whether the debugger's memory map covers a range with readable pages.
+
+        Args:
+            address: First address of the range.
+            size: Number of bytes in the range.
+
+        Returns:
+            bool: ``True`` when every byte of the range lies in a readable map.
+        """
+        maps = _json_dicts(await self._debug_cmd_json("dmj"))
+        readable = [entry for entry in maps if "r" in _get_str(entry, "perm")]
+        cursor = address
+        for start, stop in sorted((_get_int(entry, "addr"), _get_int(entry, "addr_end")) for entry in readable):
+            if start <= cursor < stop:
+                cursor = stop
+        return cursor >= address + size
+
     async def read_memory(self, address: int, size: int) -> bytes:
         """Read raw memory from the attached process.
+
+        rizin and radare2 print ``0xFF`` filler for bytes they cannot read,
+        so the range is checked against the debugger's memory map before it
+        is read.
 
         Args:
             address: Address to read from in the debuggee's address
@@ -5714,8 +5853,8 @@ class CutterDebugMixin(CutterDisplayMixin):
             bytes: Bytes read from the attached process.
 
         Raises:
-            ToolError: If not attached, ``size`` is negative, or rizin
-                returns an unparseable hex response.
+            ToolError: If not attached, ``size`` is negative, the range is
+                not readable, or the backend returns an unparseable hex response.
         """
         self._require_attached("read_memory")
         if size < 0:
@@ -5723,6 +5862,10 @@ class CutterDebugMixin(CutterDisplayMixin):
             raise ToolError(msg, tool_name="cutter")
         if size == 0:
             return b""
+        if not await self._range_is_readable(address, size):
+            _logger.warning("read_memory_range_not_readable", address=hex(address), size=size)
+            msg = f"read_memory: no readable memory at {hex(address)} for {size} bytes"
+            raise ToolError(msg, tool_name="cutter")
         response = await self._r2_cmd(f"p8 {size} @ {address}")
         hex_str = response.strip()
         if not hex_str:
@@ -5821,11 +5964,11 @@ class CutterDebugMixin(CutterDisplayMixin):
         returns malformed JSON.
 
         Returns:
-            list[ThreadInfo]: Thread snapshots reported by rizin's
-            ``dptj`` command.
+            list[ThreadInfo]: Thread snapshots reported by the backend's
+            thread listing (``dpTj`` on rizin, ``dptj`` on radare2).
         """
         self._require_attached("get_threads")
-        parsed = await self._debug_cmd_json("dptj")
+        parsed = await self._debug_cmd_json("dpTj" if _is_rizin_pipe(self._r2) else "dptj")
         threads: list[ThreadInfo] = []
         thread_map: dict[int, ThreadInfo] = {}
         if not isinstance(parsed, list):
@@ -5856,7 +5999,7 @@ class CutterDebugMixin(CutterDisplayMixin):
 
         Issues rizin's ``dbtj`` (the JSON output mode of ``dbt``, the same
         ``j``-suffix convention already used throughout this mixin for
-        ``dbj``/``drj``/``dmj``/``dptj``/``dmIj``) and parses each frame
+        ``dbj``/``drj``/``dmj``/``dptj``/``dmmj``) and parses each frame
         defensively with multiple candidate key names, since rizin's public
         documentation enumerates ``dbt``'s command syntax but not ``dbtj``'s
         exact JSON field names. Unrecognized keys degrade to ``0``/``None``
@@ -5901,6 +6044,22 @@ class CutterDebugMixin(CutterDisplayMixin):
         _logger.debug("cutter_backtrace_queried", count=len(frames))
         return frames
 
+    async def _modules_from_memory_map(self, pid: int) -> list[ModuleInfo]:
+        """List the images mapped into the debuggee from the debugger's memory map.
+
+        Args:
+            pid: Process ID of the debuggee.
+
+        Returns:
+            list[ModuleInfo]: One entry per image file mapped into the process.
+        """
+        maps = _json_dicts(await self._debug_cmd_json("dmj"))
+        image_maps = [entry for entry in maps if _get_str(entry, "name").startswith("IMAGE")]
+        image_ranges = [(_get_int(entry, "addr"), _get_int(entry, "addr_end")) for entry in image_maps]
+        modules = await asyncio.to_thread(_mapped_images, pid, image_ranges)
+        _logger.debug("cutter_modules_from_memory_map", count=len(modules))
+        return modules
+
     async def get_modules(self) -> list[ModuleInfo]:
         """Enumerate loaded modules of the attached process.
 
@@ -5908,14 +6067,21 @@ class CutterDebugMixin(CutterDisplayMixin):
         process is attached, and from :meth:`_debug_cmd_json` when rizin
         returns malformed JSON.
 
+        Neither rizin nor radare2 has a module list until the debuggee has run
+        its loader. When the backend reports none, the modules are the image
+        regions of the debugger's memory map, named by the files the system
+        reports as mapped there.
+
         Returns:
-            list[ModuleInfo]: Loaded modules reported by rizin's
-            ``dmIj`` command (``ModuleInfo.entry_point`` is ``0`` when
-            rizin omits it).
+            list[ModuleInfo]: Loaded modules reported by the backend's module
+            listing (``dmmj`` on rizin and on radare2);
+            ``ModuleInfo.entry_point`` is ``0`` when the backend omits it.
         """
         self._require_attached("get_modules")
-        parsed = await self._debug_cmd_json("dmIj")
+        parsed = await self._debug_cmd_json("dmmj")
         modules: list[ModuleInfo] = []
+        if not parsed and self._attached_pid is not None:
+            return await self._modules_from_memory_map(self._attached_pid)
         if not isinstance(parsed, list):
             return modules
         for entry in cast("list[object]", parsed):

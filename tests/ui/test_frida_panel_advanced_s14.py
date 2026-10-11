@@ -40,7 +40,6 @@ import logging
 import os
 import shutil
 import sys
-import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
@@ -52,6 +51,7 @@ from intellicrack.core.subprocess_compat import DEVNULL, Popen
 from intellicrack.core.types import IntellicrackError
 from intellicrack.ui.panels import async_bridge as async_bridge_module
 from intellicrack.ui.panels.frida_panel import FridaPanel
+from tests._helpers.frida_targets import run_bounded, wait_for_gui_process_ready
 
 
 if TYPE_CHECKING:
@@ -78,7 +78,6 @@ _COL_MODULE: Final[int] = 1
 _COL_FUNCTION: Final[int] = 2
 _COL_STATUS: Final[int] = 3
 
-_NOTEPAD_STARTUP_DELAY_S: Final[float] = 1.0
 _NARROW_PANEL_WIDTH: Final[int] = 340
 _NARROW_PANEL_HEIGHT: Final[int] = 700
 
@@ -90,7 +89,7 @@ _DISPATCH_EXCEPTIONS: tuple[type[BaseException], ...] = (
 
 
 def _run_async[T](coro: Coroutine[object, object, T]) -> T:
-    """Run an async coroutine synchronously for test use.
+    """Run an async coroutine synchronously for test use, failing the test if Frida never returns.
 
     Args:
         coro: Awaitable coroutine to execute.
@@ -98,11 +97,7 @@ def _run_async[T](coro: Coroutine[object, object, T]) -> T:
     Returns:
         T: The coroutine's return value, preserving its type.
     """
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+    return run_bounded(coro)
 
 
 def _fixed_get_text(value: str) -> Callable[..., tuple[str, bool]]:
@@ -190,7 +185,7 @@ def synchronous_dispatch(monkeypatch: pytest.MonkeyPatch) -> list[Coroutine[obje
         del parent
         captured.append(coro)
         try:
-            result = drain_loop.run_until_complete(coro)
+            result = run_bounded(coro, loop=drain_loop)
         except _DISPATCH_EXCEPTIONS as exc:
             if on_error is not None:
                 on_error(exc)
@@ -211,7 +206,7 @@ def require_frida() -> None:
 
 @pytest.fixture
 def notepad_process() -> Generator[Popen[bytes]]:
-    """Spawn a real, dedicated ``notepad.exe`` target for hook-install gates.
+    """Spawn a real, dedicated ``notepad.exe`` target, once it is ready, for hook-install gates.
 
     Installing against a spawned target (rather than self-attaching to the
     pytest process) keeps ``Interceptor.replace``/``attach`` away from any
@@ -222,10 +217,12 @@ def notepad_process() -> Generator[Popen[bytes]]:
     """
     notepad_path = shutil.which("notepad.exe") or str(Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe")
     proc = Popen([notepad_path], stdout=DEVNULL, stderr=DEVNULL)
-    time.sleep(_NOTEPAD_STARTUP_DELAY_S)
-    yield proc
-    proc.terminate()
-    proc.wait(timeout=5)
+    try:
+        wait_for_gui_process_ready(proc)
+        yield proc
+    finally:
+        proc.terminate()
+        proc.wait(timeout=5)
 
 
 @pytest.fixture

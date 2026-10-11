@@ -28,7 +28,6 @@ import tempfile
 import threading
 import uuid
 import zlib
-from itertools import cycle, islice
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, get_args
 
@@ -92,7 +91,7 @@ class _FPDFProtocol(Protocol):
         """
         _ = (self, kwargs)
 
-    def set_auto_page_break(self, *, auto: bool, margin: float = 0) -> None:
+    def set_auto_page_break(self, *, auto: bool, margin: float = 0) -> None:  # pragma: no cover - needs fpdf2
         """Enable or disable automatic page breaks.
 
         Args:
@@ -101,7 +100,7 @@ class _FPDFProtocol(Protocol):
         """
         _ = (self, auto, margin)
 
-    def add_page(self) -> None:
+    def add_page(self) -> None:  # pragma: no cover - needs fpdf2
         """Add a new page to the document."""
         _ = self
 
@@ -163,7 +162,7 @@ class _FPDFProtocol(Protocol):
         """
         _ = (self, r, g, b)
 
-    def output(self, name: str = "", dest: str = "") -> bytes | bytearray | str | None:
+    def output(self, name: str = "", dest: str = "") -> bytes | bytearray | str | None:  # pragma: no cover - needs fpdf2
         """Write the document to the given destination.
 
         Args:
@@ -252,11 +251,13 @@ except (ImportError, OSError) as _exc:
 
 _pefile_mod: Any = None
 _pefile_available: bool = False
+_pe_parse_errors: tuple[type[Exception], ...] = (AttributeError, ValueError, OSError)
 try:
     import pefile as _pefile_import
 
     _pefile_mod = _pefile_import
     _pefile_available = True
+    _pe_parse_errors = (*_pe_parse_errors, _pefile_import.PEFormatError)
 except ImportError as _exc:
     _logger.debug("pefile_unavailable", error=str(_exc))
 
@@ -276,9 +277,9 @@ _BIT_INDEX_MAX = 7
 _ELF_CLASS_64 = 2
 _ELF_DATA_LE = 1
 _PE_LFANEW_OFFSET = 0x3C
-_PE_CHECKSUM_RELATIVE = 64
 _AUTO_ARCH_DETECT_BYTES = 4096
 _PE_COFF_HEADER_SIZE = 20
+_PE_CHECKSUM_FIELD_SIZE = 4
 _DOS_HEADER_SIZE = 64
 _PE_SECTION_ENTRY_SIZE = 40
 _MAX_PE_SECTIONS = 96
@@ -313,7 +314,6 @@ _ERR_UNKNOWN_FORMAT: Final[str] = "unsupported output format"
 _ERR_UNKNOWN_PATCH_FORMAT: Final[str] = "unsupported patch format"
 _ERR_UNKNOWN_PATCH_MAGIC: Final[str] = "unrecognized patch magic"
 _ERR_UNKNOWN_TRANSFORM: Final[str] = "unknown arithmetic transform"
-_ERR_PATCH_EXPORT_UNSUPPORTED: Final[str] = "patch export not supported by backend"
 _ERR_INVALID_IPS: Final[str] = "invalid IPS patch header"
 
 _READ_BYTES_MAX_LENGTH: Final[int] = 1 << 20
@@ -347,11 +347,6 @@ _IPS32_MAGIC: Final[bytes] = b"IPS32"
 _BPS_MAGIC: Final[bytes] = b"BPS1"
 _UPS_MAGIC: Final[bytes] = b"UPS1"
 _IPS_MAGIC_LEN: Final[int] = 5
-
-_CRC32_WIDTH: Final[int] = 32
-_CRC32_POLY: Final[int] = 0x04C11DB7
-_CRC32_INIT: Final[int] = 0xFFFFFFFF
-_CRC32_XOROUT: Final[int] = 0xFFFFFFFF
 
 _ANALYSIS_DOUBLE: Final[str] = "<d"
 """How the engine packs one entropy value into its buffer accessors."""
@@ -419,35 +414,6 @@ def _collect_import_entries(entry: object) -> list[dict[str, Any]]:
             },
         )
     return rows
-
-
-def _is_standard_crc32(
-    width: int,
-    poly: int,
-    init: int,
-    *,
-    refin: bool,
-    refout: bool,
-    xorout: int,
-) -> bool:
-    """Return whether the CRC parameters match the standard ``CRC-32/ISO-HDLC`` algorithm.
-
-    The match enables dispatch to :func:`zlib.crc32` instead of the
-    bit-by-bit Python fallback for the common case used by ZIP, gzip,
-    and PNG.
-
-    Args:
-        width: CRC width in bits.
-        poly: Polynomial.
-        init: Initial CRC value.
-        refin: Whether to reflect input bytes.
-        refout: Whether to reflect the output CRC.
-        xorout: XOR value applied after reflection.
-
-    Returns:
-        bool: True when the parameters match standard CRC-32.
-    """
-    return width == _CRC32_WIDTH and poly == _CRC32_POLY and init == _CRC32_INIT and refin and refout and xorout == _CRC32_XOROUT
 
 
 class _SandboxCopyProgress:
@@ -1835,9 +1801,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                 raise RuntimeError(msg)
             self._interpreter = _HexPatInterpreter(print_sink=print_sink)
         elif print_sink is not None:
-            set_sink = getattr(self._interpreter, "set_print_sink", None)
-            if callable(set_sink):
-                set_sink(print_sink)
+            self._interpreter.set_print_sink(print_sink)
         return cast("HexPatInterpreter", self._interpreter)
 
     def _get_pattern_registry(self) -> PatternRegistry:
@@ -1894,13 +1858,8 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         """
         if self.document is None:
             return
-        try:
-            inspection = self.document.inspect_at(cursor)
-            if isinstance(inspection, dict):
-                context["inspection"] = {k: str(v) for k, v in cast("dict[str, object]", inspection).items()}
-        except (RuntimeError, OSError, ValueError) as exc:
-            _logger.warning("inspect_at_failed", offset=cursor, exc_info=True)
-            context["inspection"] = {"error": str(exc)}
+        inspection = self.document.inspect_at(cursor)
+        context["inspection"] = {k: str(v) for k, v in cast("dict[str, object]", inspection).items()}
 
     def _populate_ai_selection(self, context: dict[str, Any], include_bytes: int) -> None:
         """Populate the active-selection slice of the AI context dict.
@@ -2197,7 +2156,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                 return _pefile_mod.PE(name=str(disk_path), fast_load=True)
             data = self._read_all_doc_bytes()
             return _pefile_mod.PE(data=data, fast_load=True)
-        except (AttributeError, ValueError, OSError):
+        except _pe_parse_errors:
             _logger.exception("pe_open_for_inspection_failed", source_event=error_event)
             return None
 
@@ -2493,7 +2452,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
     })
 
     def _read_doc_bytes(self, offset: int, length: int) -> bytes:
-        """Read bytes from the document, handling all return types.
+        """Read bytes from the document.
 
         Args:
             offset: Byte offset to read from.
@@ -2509,14 +2468,8 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
             raise RuntimeError(msg)
-        raw: object = self.document.read(offset, length)
-        if isinstance(raw, bytes):
-            return raw
-        if isinstance(raw, bytearray):
-            return bytes(raw)
-        if isinstance(raw, list):
-            return bytes(cast("list[int]", raw))
-        return bytes(cast("bytearray", raw))
+        data: bytes = self.document.read(offset, length)
+        return data
 
     def _read_all_doc_bytes(self) -> bytes:
         """Read the entire document contents.
@@ -2608,13 +2561,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             )
             msg = "document closed before native transform invocation"
             raise RuntimeError(msg)
-        result_raw = document.transform_data(native_op, start, length, params)
-        if isinstance(result_raw, bytes):
-            result_data = result_raw
-        elif isinstance(result_raw, list):
-            result_data = bytes(cast("list[int]", result_raw))
-        else:
-            result_data = bytes(result_raw)
+        result_data = document.transform_data(native_op, start, length, params)
         _logger.info("file_written", path="document", offset=hex(start), size=len(result_data), op=operation)
         document.write_bytes(start, result_data)
         return result_data
@@ -2777,7 +2724,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             entry = self._unpack_macho_segment_entry(cmd_offset, cmd_size, cmd_type, endian)
             if entry is not None:
                 mappings.append(entry)
-                if self.document is not None and hasattr(self.document, "add_va_mapping"):
+                if self.document is not None:  # pragma: no branch - type narrowing; the caller checked
                     self.document.add_va_mapping(entry["file_offset"], entry["virtual_address"], entry["length"])
             cmd_offset += cmd_size
         return mappings
@@ -2828,7 +2775,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
 
         try:
             mappings = self._collect_pe_va_mappings()
-        except (struct.error, RuntimeError, OSError):
+        except (struct.error, RuntimeError, OSError, ValueError):
             _logger.exception("pe_va_detection_failed")
             return []
         return mappings
@@ -2836,9 +2783,9 @@ class _HexEditorBridgeBase(ToolBridgeBase):
     def _collect_pe_va_mappings(self) -> list[dict[str, int]]:
         """Parse the PE optional header to build the document's VA mapping list.
 
-        ``struct.error``, :class:`RuntimeError`, and :class:`OSError`
-        raised while reading or unpacking propagate to the caller, which
-        catches them to return an empty list.
+        ``struct.error``, :class:`RuntimeError`, :class:`OSError`, and
+        :class:`ValueError` raised while reading or unpacking propagate to
+        the caller, which catches them to return an empty list.
 
         Returns:
             list[dict[str, int]]: VA mapping dicts covering the headers
@@ -2860,7 +2807,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         mappings: list[dict[str, int]] = [
             {"file_offset": 0, "virtual_address": image_base, "length": e_lfanew},
         ]
-        if self.document is not None and hasattr(self.document, "add_va_mapping"):
+        if self.document is not None:  # pragma: no branch - type narrowing; the caller checked
             self.document.add_va_mapping(0, image_base, e_lfanew)
 
         self._parse_pe_sections_va(
@@ -2899,7 +2846,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             virtual_size = cast("int", section["virtual_size"])
             sec_length = max(virtual_size, raw_size)
             sec_va = image_base + virtual_addr
-            if self.document is not None and hasattr(self.document, "add_va_mapping"):
+            if self.document is not None:  # pragma: no branch - type narrowing; the caller checked
                 self.document.add_va_mapping(raw_offset, sec_va, sec_length)
             mappings.append({"file_offset": raw_offset, "virtual_address": sec_va, "length": sec_length})
 
@@ -2914,7 +2861,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
 
         try:
             mappings = self._collect_elf_va_mappings()
-        except (struct.error, RuntimeError, OSError):
+        except (struct.error, RuntimeError, OSError, ValueError):
             _logger.exception("elf_va_detection_failed")
             return []
         return mappings
@@ -2922,9 +2869,9 @@ class _HexEditorBridgeBase(ToolBridgeBase):
     def _collect_elf_va_mappings(self) -> list[dict[str, int]]:
         """Parse the ELF program header table to build the VA mapping list.
 
-        ``struct.error``, :class:`RuntimeError`, and :class:`OSError`
-        raised while reading or unpacking propagate to the caller, which
-        catches them to return an empty list.
+        ``struct.error``, :class:`RuntimeError`, :class:`OSError`, and
+        :class:`ValueError` raised while reading or unpacking propagate to
+        the caller, which catches them to return an empty list.
 
         Returns:
             list[dict[str, int]]: VA mapping dicts for every ``PT_LOAD``
@@ -2941,7 +2888,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             if struct.unpack_from(f"{endian}I", phdr_data, 0)[0] != _PT_LOAD:
                 continue
             p_offset, p_vaddr, p_filesz = self._parse_elf_load_segment(phdr_data, endian, is_64=is_64)
-            if self.document is not None and hasattr(self.document, "add_va_mapping"):
+            if self.document is not None:  # pragma: no branch - type narrowing; the caller checked
                 self.document.add_va_mapping(p_offset, p_vaddr, p_filesz)
             mappings.append({"file_offset": p_offset, "virtual_address": p_vaddr, "length": p_filesz})
 
@@ -3292,8 +3239,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         """Remove bookmarks that were inserted during a failed transaction.
 
         Indices are removed in reverse insertion order so that earlier
-        indices remain valid as later ones disappear. Failures during
-        rollback are logged but do not propagate.
+        indices remain valid as later ones disappear.
 
         Args:
             added_indices: Bookmark indices to remove.
@@ -3301,10 +3247,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         if self.document is None or not added_indices:
             return
         for idx in reversed(added_indices):
-            try:
-                self.document.remove_bookmark(idx)
-            except (RuntimeError, OSError, ValueError, IndexError) as exc:
-                _logger.warning("bookmark_rollback_failed", index=idx, error=str(exc))
+            self.document.remove_bookmark(idx)
 
     def _add_bm(
         self,
@@ -3659,11 +3602,6 @@ class _HexEditorBridgeBase(ToolBridgeBase):
     def _populate_float_views(parsed: int, result: dict[str, str]) -> None:
         """Add IEEE-754 single/double views of ``parsed`` to ``result``.
 
-        ``struct.error`` and :class:`OverflowError` raised by the
-        underlying ``struct`` calls propagate to the caller, which logs
-        the failure at debug level and continues without the float
-        views.
-
         Args:
             parsed: Integer value being inspected.
             result: Output dict updated in place with ``float32_le`` and
@@ -3919,8 +3857,8 @@ class _HexEditorBridgeBase(ToolBridgeBase):
               between two anchored sub-patterns. Implemented as a
               non-greedy gap so the leftmost match wins.
 
-        Whitespace is permitted and ignored. Any other character causes
-        :func:`re.compile` to fail and the pattern is rejected.
+        Whitespace is permitted and ignored. Any other character makes
+        the pattern malformed and it is rejected.
 
         Args:
             sig_hex: Raw NDB pattern field as it appears in the database.
@@ -3951,18 +3889,14 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                 regex_parts.append(b".")
             else:
                 try:
-                    byte_val = int(pair, 16)
+                    literal = bytes.fromhex(pair)
                 except ValueError:
                     _logger.warning("clamav_ndb_pattern_bad_hex", sig_hex=sig_hex, pair=pair)
                     return None
-                regex_parts.append(re.escape(bytes([byte_val])))
+                regex_parts.append(re.escape(literal))
             min_len += 1
             i += 2
-        try:
-            compiled = re.compile(b"".join(regex_parts), re.DOTALL)
-        except re.error:
-            _logger.debug("clamav_ndb_pattern_regex_error", sig_hex=sig_hex, exc_info=True)
-            return None
+        compiled = re.compile(b"".join(regex_parts), re.DOTALL)
         return compiled, min_len
 
     @staticmethod
@@ -4077,12 +4011,10 @@ class _HexEditorBridgeBase(ToolBridgeBase):
     def _export_patches_ups_via_backend(self, original_path: str) -> bytes:
         """Invoke the Rust backend's UPS exporter without copying the source.
 
-        Prefers the path-based backend entrypoint
-        ``export_patches_ups_from_path`` (which memory-maps the source
-        inside Rust), then falls back to a buffer-protocol mmap pass-
-        through when only the legacy ``export_patches_ups`` byte-slice
-        signature is available. Either way the source file is never
-        materialised as a Python ``bytes`` value.
+        Uses the path-based backend entrypoint
+        ``export_patches_ups_from_path``, which memory-maps the source
+        inside Rust, so the source file is never materialised as a
+        Python ``bytes`` value.
 
         Args:
             original_path: Path to the unmodified original file.
@@ -4097,12 +4029,8 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             _logger.warning("export_patches_ups_via_backend_no_document")
             msg = "no document open"
             raise RuntimeError(msg)
-        path_method = getattr(self.document, "export_patches_ups_from_path", None)
-        if path_method is not None:
-            result = path_method(original_path)
-            return bytes(result)
-        with self._open_source_mmap(original_path) as source:
-            return self.document.export_patches_ups(source)
+        result = self.document.export_patches_ups_from_path(original_path)
+        return bytes(result)
 
     def _export_patches_ups_pyfallback(self, original_path: str) -> bytes:
         """Build a UPS patch in pure Python with an mmap-backed source.
@@ -4582,7 +4510,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                     target[state[0]] = source[state[1]]
                 state[1] += 1
                 state[0] += 1
-        elif command == _BPS_CMD_TARGET_COPY:
+        else:
             offset_data, pos = self._decode_bps_var_int(patch, pos)
             delta = -(offset_data >> 1) if offset_data & 1 else offset_data >> 1
             state[2] += delta
@@ -4753,39 +4681,39 @@ def _generate_pdf(
             "`pip install fpdf2`) before calling export_annotated_pdf."
         )
         raise ToolError(msg) from exc
-    fpdf_cls = cast("type[_FPDFProtocol]", fpdf_mod.FPDF)
-    pdf: _FPDFProtocol = fpdf_cls(orientation="L", unit="mm", format="A4")
-    pdf.set_auto_page_break(auto=True, margin=10)
+    fpdf_cls = cast("type[_FPDFProtocol]", fpdf_mod.FPDF)  # pragma: no cover - needs fpdf2
+    pdf: _FPDFProtocol = fpdf_cls(orientation="L", unit="mm", format="A4")  # pragma: no cover - needs fpdf2
+    pdf.set_auto_page_break(auto=True, margin=10)  # pragma: no cover - needs fpdf2
 
-    pdf.add_page()
-    pdf.set_font("Courier", "B", 14)
-    pdf.cell(0, 10, "Hex Dump Report", new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.set_font("Courier", "", 9)
-    pdf.cell(0, 6, f"Document size: {doc_size} bytes (0x{doc_size:X})", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(
+    pdf.add_page()  # pragma: no cover - needs fpdf2
+    pdf.set_font("Courier", "B", 14)  # pragma: no cover - needs fpdf2
+    pdf.cell(0, 10, "Hex Dump Report", new_x="LMARGIN", new_y="NEXT", align="C")  # pragma: no cover - needs fpdf2
+    pdf.set_font("Courier", "", 9)  # pragma: no cover - needs fpdf2
+    pdf.cell(0, 6, f"Document size: {doc_size} bytes (0x{doc_size:X})", new_x="LMARGIN", new_y="NEXT")  # pragma: no cover - needs fpdf2
+    pdf.cell(  # pragma: no cover - needs fpdf2
         0,
         6,
         f"Range: 0x{start_offset:08X} - 0x{start_offset + len(data):08X} ({len(data)} bytes)",
         new_x="LMARGIN",
         new_y="NEXT",
     )
-    pdf.ln(4)
+    pdf.ln(4)  # pragma: no cover - needs fpdf2
 
-    _pdf_render_bookmarks(pdf, bookmarks)
+    _pdf_render_bookmarks(pdf, bookmarks)  # pragma: no cover - needs fpdf2
 
-    col_widths = (22.0, 2.7 * bytes_per_row + 4, 1.8 * bytes_per_row + 2)
-    pdf.set_font("Courier", "B", 7)
-    pdf.cell(col_widths[0], 4, "Offset")
-    pdf.cell(col_widths[1], 4, "Hex")
-    pdf.cell(col_widths[2], 4, "ASCII")
-    pdf.ln(4)
-    pdf.set_font("Courier", "", 6)
+    col_widths = (22.0, 2.7 * bytes_per_row + 4, 1.8 * bytes_per_row + 2)  # pragma: no cover - needs fpdf2
+    pdf.set_font("Courier", "B", 7)  # pragma: no cover - needs fpdf2
+    pdf.cell(col_widths[0], 4, "Offset")  # pragma: no cover - needs fpdf2
+    pdf.cell(col_widths[1], 4, "Hex")  # pragma: no cover - needs fpdf2
+    pdf.cell(col_widths[2], 4, "ASCII")  # pragma: no cover - needs fpdf2
+    pdf.ln(4)  # pragma: no cover - needs fpdf2
+    pdf.set_font("Courier", "", 6)  # pragma: no cover - needs fpdf2
 
-    _pdf_render_hex_rows(pdf, data, start_offset, bytes_per_row, bookmark_map, col_widths)
-    _logger.info("generate_pdf_writing", path=output_path, byte_count=len(data))
-    pdf.output(output_path)
-    _logger.info("generate_pdf_written", path=output_path)
-    return output_path
+    _pdf_render_hex_rows(pdf, data, start_offset, bytes_per_row, bookmark_map, col_widths)  # pragma: no cover - needs fpdf2
+    _logger.info("generate_pdf_writing", path=output_path, byte_count=len(data))  # pragma: no cover - needs fpdf2
+    pdf.output(output_path)  # pragma: no cover - needs fpdf2
+    _logger.info("generate_pdf_written", path=output_path)  # pragma: no cover - needs fpdf2
+    return output_path  # pragma: no cover - needs fpdf2
 
 
 def _pdf_render_bookmarks(
@@ -4897,9 +4825,6 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
             await self.close_file()
 
         new_doc: Any = _hexcore_mod.HexDocument.open(path)
-        if new_doc is None:
-            msg = f"failed to open {path}"
-            raise RuntimeError(msg)
         rust_path: str | None = new_doc.file_path() if hasattr(new_doc, "file_path") else None
         canonical_path: Path = Path(rust_path) if rust_path is not None else Path(path)
 
@@ -4998,15 +4923,7 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
 
         _logger.debug("file_comparison_starting", path_a=path_a, path_b=path_b)
         result = _hexcore_mod.diff_files(path_a, path_b)
-        if isinstance(result, dict):
-            return cast("dict[str, Any]", result)
-        return {
-            "regions": [],
-            "total_differences": 0,
-            "files_identical": True,
-            "size_a": 0,
-            "size_b": 0,
-        }
+        return cast("dict[str, Any]", result)
 
     async def save(self, path: str | None = None) -> bool:
         """Save the document.
@@ -5185,6 +5102,11 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
             msg = "sandbox bridge not available"
             raise RuntimeError(msg)
 
+        create_fn = getattr(sandbox_bridge, "create", None)
+        if not callable(create_fn):
+            msg = "sandbox bridge does not support create"
+            raise TypeError(msg)
+
         file_path_str = self.document.file_path()
         tmp_path: str | None = None
         if file_path_str is None:
@@ -5194,11 +5116,6 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
             self.document.save(tmp_path)
             _logger.info("save_to_sandbox_temp_file_written", path=tmp_path)
             file_path_str = tmp_path
-
-        create_fn = getattr(sandbox_bridge, "create", None)
-        if not callable(create_fn):
-            msg = "sandbox bridge does not support create"
-            raise TypeError(msg)
 
         progress = _SandboxCopyProgress()
         try:
@@ -5590,15 +5507,7 @@ class HexEditorEditMixin(HexEditorFileMixin):
         start, end = self._selection
         length = end - start + 1
 
-        raw = self.document.read(start, length)
-        if isinstance(raw, bytes):
-            data = raw
-        elif isinstance(raw, bytearray):
-            data = bytes(raw)
-        elif isinstance(raw, list):
-            data = bytes(cast("list[int]", raw))
-        else:
-            data: bytes = bytes(raw)
+        data: bytes = self.document.read(start, length)
 
         _logger.debug("data_formatted", fmt=fmt, length=len(data))
         if fmt == "hex":
@@ -5667,12 +5576,7 @@ class HexEditorEditMixin(HexEditorFileMixin):
             msg = "pattern must not be empty"
             raise ValueError(msg)
 
-        if hasattr(self.document, "fill_block"):
-            self.document.fill_block(offset, length, pattern)
-        else:
-            fill_data = bytes(islice(cycle(pattern), length))
-            _logger.info("file_written", path="document", offset=hex(offset), size=len(fill_data), op="fill_block")
-            self.document.write_bytes(offset, fill_data)
+        self.document.fill_block(offset, length, pattern)
 
         _logger.info("fill_block_completed", offset=hex(offset), length=length, pattern_len=len(pattern))
         if self.state_holder is not None:
@@ -5698,12 +5602,7 @@ class HexEditorEditMixin(HexEditorFileMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "copy_block"):
-            self.document.copy_block(src_offset, length, dst_offset)
-        else:
-            data = self._read_doc_bytes(src_offset, length)
-            _logger.info("file_written", path="document", offset=hex(dst_offset), size=len(data), op="copy_block")
-            self.document.write_bytes(dst_offset, data)
+        self.document.copy_block(src_offset, length, dst_offset)
 
         _logger.info("copy_block_completed", src=hex(src_offset), dst=hex(dst_offset), length=length)
         if self.state_holder is not None:
@@ -5729,14 +5628,7 @@ class HexEditorEditMixin(HexEditorFileMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "move_block"):
-            self.document.move_block(src_offset, length, dst_offset)
-        else:
-            data = self._read_doc_bytes(src_offset, length)
-            _logger.info("file_written", path="document", offset=hex(src_offset), size=length, op="move_block_clear_src")
-            self.document.write_bytes(src_offset, bytes(length))
-            _logger.info("file_written", path="document", offset=hex(dst_offset), size=len(data), op="move_block_write_dst")
-            self.document.write_bytes(dst_offset, data)
+        self.document.move_block(src_offset, length, dst_offset)
 
         _logger.info("move_block_completed", src=hex(src_offset), dst=hex(dst_offset), length=length)
         if self.state_holder is not None:
@@ -5793,15 +5685,7 @@ class HexEditorEditMixin(HexEditorFileMixin):
             msg = "blocks overlap"
             raise ValueError(msg)
 
-        if hasattr(self.document, "swap_blocks"):
-            self.document.swap_blocks(offset_a, len_a, offset_b, len_b)
-        else:
-            data_a = self._read_doc_bytes(offset_a, len_a)
-            data_b = self._read_doc_bytes(offset_b, len_b)
-            _logger.info("file_written", path="document", offset=hex(offset_a), size=len(data_b), op="swap_blocks_a")
-            self.document.write_bytes(offset_a, data_b)
-            _logger.info("file_written", path="document", offset=hex(offset_b), size=len(data_a), op="swap_blocks_b")
-            self.document.write_bytes(offset_b, data_a)
+        self.document.swap_blocks(offset_a, len_a, offset_b, len_b)
 
         _logger.info("swap_blocks_completed", a=hex(offset_a), b=hex(offset_b))
         if self.state_holder is not None:
@@ -5867,16 +5751,15 @@ class HexEditorEditMixin(HexEditorFileMixin):
 
         used_native = False
         result_data: bytes = b""
-        if hasattr(self.document, "transform_data"):
-            params: dict[str, Any] = {}
-            if operation in {"xor", "and", "or"} and key:
-                params["key"] = key
-            if operation in {"shl", "shr", "rol", "ror"}:
-                params["count"] = bytes([count & 0xFF])
-            native_result = self._try_native_arithmetic(operation, start, length, params, transform_map[operation])
-            if native_result is not None:
-                result_data = native_result
-                used_native = True
+        params: dict[str, Any] = {}
+        if operation in {"xor", "and", "or"} and key:
+            params["key"] = key
+        if operation in {"shl", "shr", "rol", "ror"}:
+            params["count"] = bytes([count & 0xFF])
+        native_result = self._try_native_arithmetic(operation, start, length, params, transform_map[operation])
+        if native_result is not None:
+            result_data = native_result
+            used_native = True
 
         if not used_native:
             result_data = bytes(self._apply_arithmetic_fallback(data, operation, key, count))
@@ -5911,12 +5794,8 @@ class HexEditorEditMixin(HexEditorFileMixin):
             msg = f"bit_index must be 0-7, got {bit_index}"
             raise ValueError(msg)
 
-        if hasattr(self.document, "get_bit"):
-            result: bool = self.document.get_bit(offset, bit_index)
-            return result
-
-        byte_val = self._read_doc_bytes(offset, 1)[0]
-        return bool(byte_val & (1 << bit_index))
+        result: bool = self.document.get_bit(offset, bit_index)
+        return result
 
     async def set_bit(self, offset: int, bit_index: int, *, value: bool) -> bool:
         """Set or clear a specific bit at an offset.
@@ -5942,16 +5821,7 @@ class HexEditorEditMixin(HexEditorFileMixin):
             msg = f"bit_index must be 0-7, got {bit_index}"
             raise ValueError(msg)
 
-        if hasattr(self.document, "set_bit"):
-            self.document.set_bit(offset, bit_index, value)
-        else:
-            byte_val = self._read_doc_bytes(offset, 1)[0]
-            if value:
-                byte_val |= 1 << bit_index
-            else:
-                byte_val &= ~(1 << bit_index) & 0xFF
-            _logger.info("file_written", path="document", offset=hex(offset), size=1, op="set_bit")
-            self.document.write_bytes(offset, bytes([byte_val]))
+        self.document.set_bit(offset, bit_index, value)
 
         _logger.info("bit_set", offset=hex(offset), bit=bit_index, value=value)
         if self.state_holder is not None:
@@ -5981,22 +5851,12 @@ class HexEditorEditMixin(HexEditorFileMixin):
             msg = f"bit_index must be 0-7, got {bit_index}"
             raise ValueError(msg)
 
-        if hasattr(self.document, "toggle_bit"):
-            result: bool = self.document.toggle_bit(offset, bit_index)
-            _logger.info("file_written", path="document", offset=hex(offset), size=1, op="toggle_bit")
-            _logger.info("bit_toggled", offset=hex(offset), bit=bit_index)
-            if self.state_holder is not None:
-                self.state_holder.notify_data_modified(offset, 1, source="bridge")
-            return result
-
-        byte_val = self._read_doc_bytes(offset, 1)[0]
-        byte_val ^= 1 << bit_index
+        result: bool = self.document.toggle_bit(offset, bit_index)
         _logger.info("file_written", path="document", offset=hex(offset), size=1, op="toggle_bit")
-        self.document.write_bytes(offset, bytes([byte_val]))
         _logger.info("bit_toggled", offset=hex(offset), bit=bit_index)
         if self.state_holder is not None:
             self.state_holder.notify_data_modified(offset, 1, source="bridge")
-        return bool(byte_val & (1 << bit_index))
+        return result
 
 
 class HexEditorSelectionMixin(HexEditorEditMixin):
@@ -6310,8 +6170,7 @@ class HexEditorSearchMixin(HexEditorSelectionMixin):
             list[dict[str, int]]: List of dicts with offset and length.
 
         Raises:
-            RuntimeError: If no document is open or the document does
-                not expose the native search APIs.
+            RuntimeError: If no document is open.
             ValueError: If ``value_type`` or ``endianness`` is not one
                 of the documented enum values.
         """
@@ -6331,16 +6190,10 @@ class HexEditorSearchMixin(HexEditorSelectionMixin):
 
         big_endian = endianness == "big"
         if value_type == "float":
-            if not hasattr(self.document, "search_numeric_float"):
-                msg = "document backend does not expose search_numeric_float"
-                raise RuntimeError(msg)
             results = self.document.search_numeric_float(value, size, big_endian, tolerance, alignment, max_results)
             _logger.debug("search_numeric_float_completed", matches=len(results))
             return [{"offset": r[0], "length": r[1]} for r in results]
 
-        if not hasattr(self.document, "search_numeric"):
-            msg = "document backend does not expose search_numeric"
-            raise RuntimeError(msg)
         results = self.document.search_numeric(value, size, value_type == "int", big_endian, alignment, max_results)
         _logger.debug("search_numeric_completed", matches=len(results))
         return [{"offset": r[0], "length": r[1]} for r in results]
@@ -6377,46 +6230,16 @@ class HexEditorSearchMixin(HexEditorSelectionMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "search_numeric_range"):
-            results = self.document.search_numeric_range(
-                (min_val, max_val),
-                size,
-                value_type == "int",
-                endianness == "big",
-                alignment,
-                max_results,
-            )
-            _logger.debug("search_numeric_range_completed", matches=len(results))
-            return [{"offset": r[0], "length": r[1]} for r in results]
-
-        fmt = self._build_numeric_format(size, value_type, big_endian=endianness == "big")
-        doc_len: int = self.document.length()
-        matches: list[dict[str, int]] = []
-        step = max(alignment, 1)
-        pos = 0
-        while pos <= doc_len - size and len(matches) < max_results:
-            read_len = min(65536, doc_len - pos)
-            raw = self.document.read(pos, read_len)
-            chunk = raw if isinstance(raw, bytes) else bytes(raw)
-            start_rem = pos % step
-            idx = 0 if start_rem == 0 else step - start_rem
-            while idx <= len(chunk) - size and len(matches) < max_results:
-                try:
-                    (val,) = struct.unpack_from(fmt, chunk, idx)
-                except struct.error:
-                    _logger.debug("search_numeric_range_unpack_failed", offset=pos + idx, fmt=fmt, exc_info=True)
-                    idx += step
-                    continue
-                if min_val <= val <= max_val:
-                    matches.append({"offset": pos + idx, "length": size})
-                idx += step
-            advance = read_len - (size - 1)
-            if advance <= 0:
-                break
-            pos += advance
-
-        _logger.debug("search_numeric_range_completed", matches=len(matches))
-        return matches
+        results = self.document.search_numeric_range(
+            (min_val, max_val),
+            size,
+            value_type == "int",
+            endianness == "big",
+            alignment,
+            max_results,
+        )
+        _logger.debug("search_numeric_range_completed", matches=len(results))
+        return [{"offset": r[0], "length": r[1]} for r in results]
 
     async def get_strings(
         self,
@@ -6445,47 +6268,14 @@ class HexEditorSearchMixin(HexEditorSelectionMixin):
         include_ascii = encoding in {"ascii+utf16", "ascii"}
         include_utf16 = encoding in {"ascii+utf16", "utf16"}
 
-        if hasattr(self.document, "extract_strings"):
-            raw_strings: list[Any] = self.document.extract_strings(
-                min_length,
-                include_ascii,
-                include_utf16,
-                max_results,
-            )
-            _logger.debug("strings_extracted", count=len(raw_strings), backend="rust")
-            if raw_strings:
-                first_item: Any = raw_strings[0]
-                if isinstance(first_item, dict):
-                    return cast("list[dict[str, Any]]", raw_strings)
-                converted: list[dict[str, Any]] = []
-                for s_item in raw_strings:
-                    if isinstance(s_item, tuple):
-                        tpl = cast("tuple[int, int, str, str]", s_item)
-                        converted.append({
-                            "offset": tpl[0],
-                            "length": tpl[1],
-                            "encoding": tpl[2],
-                            "content": tpl[3],
-                        })
-                    else:
-                        obj: Any = s_item
-                        converted.append({
-                            "offset": int(obj.offset) if hasattr(obj, "offset") else 0,
-                            "length": int(obj.length) if hasattr(obj, "length") else 0,
-                            "encoding": str(obj.encoding) if hasattr(obj, "encoding") else "ascii",
-                            "content": str(obj.content) if hasattr(obj, "content") else "",
-                        })
-                return converted
-            return []
-
-        data = self._read_all_doc_bytes()
-        return self._extract_strings_fallback(
-            data,
+        raw_strings: list[Any] = self.document.extract_strings(
             min_length,
+            include_ascii,
+            include_utf16,
             max_results,
-            include_ascii=include_ascii,
-            include_utf16=include_utf16,
         )
+        _logger.debug("strings_extracted", count=len(raw_strings), backend="rust")
+        return cast("list[dict[str, Any]]", raw_strings)
 
 
 class HexEditorAnalysisMixin(HexEditorSearchMixin):
@@ -6510,8 +6300,6 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
 
         _logger.debug("data_inspected", offset=hex(offset))
         result = self.document.inspect_at(offset)
-        if not isinstance(result, dict):
-            return {}
         typed = cast("dict[str, object]", result)
         return {k: str(v) for k, v in typed.items()}
 
@@ -6617,12 +6405,9 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
     async def get_entropy_map(self, block_size: int = 4096) -> list[float]:
         """Get per-block entropy values across the document.
 
-        Prefers the packed ``entropy_map_bytes`` accessor, which returns
+        Uses the packed ``entropy_map_bytes`` accessor, which returns
         the same numbers as little-endian doubles instead of as a list
-        of Python floats. Falls back to the list-returning
-        ``entropy_map``, and then to a Python computation that streams
-        the document block-by-block, so the contract holds across
-        hexcore versions that expose neither.
+        of Python floats.
 
         Args:
             block_size: Block size in bytes for entropy calculation.
@@ -6645,40 +6430,17 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             msg = f"block_size must be positive, got {block_size}"
             raise ValueError(msg)
 
-        if hasattr(self.document, "entropy_map_bytes"):
-            packed = _unpack_analysis_buffer(self.document.entropy_map_bytes(block_size), _ANALYSIS_DOUBLE, "entropy_map_bytes")
-            _logger.debug("entropy_map_computed_buffer", blocks=len(packed), block_size=block_size)
-            return [float(v) for v in packed]
-
-        if hasattr(self.document, "entropy_map"):
-            result = self.document.entropy_map(block_size)
-            _logger.debug("entropy_map_computed", blocks=len(result), block_size=block_size)
-            return [float(v) for v in result]
-
-        _logger.warning("entropy_map_native_unavailable_using_python_fallback", block_size=block_size)
-        doc_len: int = self.document.length()
-        out: list[float] = []
-        offset = 0
-        while offset < doc_len:
-            length = min(block_size, doc_len - offset)
-            chunk = self._read_doc_bytes(offset, length)
-            counts = [0] * 256
-            for byte in chunk:
-                counts[byte] += 1
-            out.append(self._entropy_from_distribution(counts, length))
-            offset += length
-        _logger.debug("entropy_map_computed_python", blocks=len(out), block_size=block_size)
-        return out
+        packed = _unpack_analysis_buffer(self.document.entropy_map_bytes(block_size), _ANALYSIS_DOUBLE, "entropy_map_bytes")
+        _logger.debug("entropy_map_computed_buffer", blocks=len(packed), block_size=block_size)
+        return [float(v) for v in packed]
 
     async def get_byte_distribution(self) -> list[int]:
         """Get the 256-element byte frequency distribution.
 
         Prefers the packed ``byte_distribution_bytes`` accessor, which
         returns the same counts as little-endian unsigned 64-bit
-        integers. Falls back to the list-returning
-        ``byte_distribution_full``, and then to a Python streaming
-        computation, so the contract holds across hexcore versions that
-        expose neither. Propagates ``ValueError`` when the packed
+        integers. Falls back to a Python streaming computation when the
+        document does not expose it. Propagates ``ValueError`` when the packed
         accessor returns a payload that is not a whole number of counts.
 
         Returns:
@@ -6696,11 +6458,6 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             packed = _unpack_analysis_buffer(self.document.byte_distribution_bytes(), _ANALYSIS_COUNT, "byte_distribution_bytes")
             _logger.debug("byte_distribution_computed_buffer")
             return [int(v) for v in packed]
-
-        if hasattr(self.document, "byte_distribution_full"):
-            result = self.document.byte_distribution_full()
-            _logger.debug("byte_distribution_computed")
-            return [int(v) for v in result]
 
         _logger.warning("byte_distribution_native_unavailable_using_python_fallback")
         result_py = self._compute_byte_distribution_python()
@@ -6728,8 +6485,6 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
         if hasattr(self.document, "byte_type_distribution"):
             result: Any = self.document.byte_type_distribution()
             _logger.debug("byte_type_distribution_computed")
-            if isinstance(result, dict):
-                return cast("dict[str, int]", result)
             items: list[Any] = list(result)
             return {
                 "null_count": int(items[0]),
@@ -6781,12 +6536,10 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
         (the default) the full ``matrix`` list is included so existing
         callers that consume the row-major form still work.
 
-        Prefers the packed ``digram_matrix_bytes`` accessor, which is
+        Uses the packed ``digram_matrix_bytes`` accessor, which is
         where this operation gains most: the list form has PyO3 build
         sixty-five thousand integer objects, the packed form is one
-        512 KiB buffer of little-endian unsigned 64-bit counts. Falls
-        back to the list-returning ``digram_matrix``, and then to a
-        Python streaming computation.
+        512 KiB buffer of little-endian unsigned 64-bit counts.
 
         Args:
             top_k: When positive, return only the top ``top_k``
@@ -6816,17 +6569,8 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             msg = f"top_k must be non-negative, got {top_k}"
             raise ValueError(msg)
 
-        if hasattr(self.document, "digram_matrix_bytes"):
-            packed = _unpack_analysis_buffer(self.document.digram_matrix_bytes(), _ANALYSIS_COUNT, "digram_matrix_bytes")
-            raw_matrix = [int(v) for v in packed]
-            source = "buffer"
-        elif hasattr(self.document, "digram_matrix"):
-            raw_matrix = [int(v) for v in self.document.digram_matrix()]
-            source = "list"
-        else:
-            _logger.warning("digram_matrix_native_unavailable_using_python_fallback")
-            raw_matrix = self._compute_digram_matrix_python()
-            source = "python"
+        packed = _unpack_analysis_buffer(self.document.digram_matrix_bytes(), _ANALYSIS_COUNT, "digram_matrix_bytes")
+        raw_matrix = [int(v) for v in packed]
 
         total_pairs = sum(raw_matrix)
         unique_pairs = sum(v > 0 for v in raw_matrix)
@@ -6845,7 +6589,7 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             top_k=top_k,
             total_pairs=total_pairs,
             unique_pairs=unique_pairs,
-            source=source,
+            source="buffer",
         )
         return result
 
@@ -6909,13 +6653,7 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             _logger.info("disassemble_out_of_bounds", offset=offset, doc_len=doc_len)
             return []
 
-        raw = self.document.read(offset, read_len)
-        if isinstance(raw, bytes):
-            data = raw
-        elif isinstance(raw, bytearray) or not isinstance(raw, list):
-            data = bytes(raw)
-        else:
-            data = bytes(cast("list[int]", raw))
+        data = self.document.read(offset, read_len)
         disassembler = _get_disassembler()
         if arch == "auto":
             detect_len = min(doc_len, _AUTO_ARCH_DETECT_BYTES)
@@ -6963,22 +6701,9 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "decode_text"):
-            result: str = self.document.decode_text(offset, length, encoding)
-            _logger.debug("text_decoded", offset=hex(offset), length=length, encoding=encoding, backend="rust")
-            return result
-
-        _logger.info("decode_text_fallback_used", offset=hex(offset), length=length, encoding=encoding)
-        raw = self.document.read(offset, length)
-        if isinstance(raw, bytes):
-            data = raw
-        elif isinstance(raw, bytearray) or not isinstance(raw, list):
-            data = bytes(raw)
-        else:
-            data = bytes(cast("list[int]", raw))
-        decoded = data.decode(encoding, errors="replace")
-        _logger.debug("text_decoded", offset=hex(offset), length=length, encoding=encoding, backend="python")
-        return decoded
+        result: str = self.document.decode_text(offset, length, encoding)
+        _logger.debug("text_decoded", offset=hex(offset), length=length, encoding=encoding, backend="rust")
+        return result
 
     async def encode_text(self, text: str, encoding: str = "utf-8") -> str:
         """Encode text into bytes using the specified encoding.
@@ -6998,15 +6723,10 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "encode_text_to_bytes"):
-            raw_bytes: list[int] = self.document.encode_text_to_bytes(text, encoding)
-            result = bytes(raw_bytes).hex()
-            _logger.debug("text_encoded", encoding=encoding, length=len(raw_bytes), backend="rust")
-            return result
-
-        encoded = text.encode(encoding)
-        _logger.debug("text_encoded", encoding=encoding, length=len(encoded), backend="python")
-        return encoded.hex()
+        raw_bytes: list[int] = self.document.encode_text_to_bytes(text, encoding)
+        result = bytes(raw_bytes).hex()
+        _logger.debug("text_encoded", encoding=encoding, length=len(raw_bytes), backend="rust")
+        return result
 
     async def list_encodings(self) -> list[dict[str, str]]:
         """List all supported text encodings.
@@ -7052,6 +6772,9 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
     ) -> str:
         """Calculate a CRC with fully custom parameters over a byte range.
 
+        The native backend raises :class:`ValueError` when ``width`` is not
+        8, 16, 32, or 64.
+
         Args:
             start: Start byte offset (inclusive).
             end: End byte offset (exclusive).
@@ -7067,83 +6790,15 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
 
         Raises:
             RuntimeError: If no document is open.
-            ValueError: If width is not 8, 16, 32, or 64.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "compute_hash_custom_crc"):
-            result: str = self.document.compute_hash_custom_crc((start, end), poly, init, width, (refin, refout), xorout)
-            _logger.debug("custom_crc_computed", width=width)
-            return result
-
-        valid_widths = {8, 16, 32, 64}
-        if width not in valid_widths:
-            msg = f"unsupported CRC width {width}; must be one of {valid_widths}"
-            raise ValueError(msg)
-
-        length = end - start
-        raw = self.document.read(start, length)
-        if isinstance(raw, bytes):
-            data = raw
-        elif isinstance(raw, bytearray):
-            data = bytes(raw)
-        elif isinstance(raw, list):
-            data = bytes(cast("list[int]", raw))
-        else:
-            data = bytes(raw)
-
-        mask = (1 << width) - 1
-        hex_width = width // 4
-
-        if _is_standard_crc32(width, poly, init, refin=refin, refout=refout, xorout=xorout):
-            crc = zlib.crc32(data) & mask
-            _logger.debug("custom_crc_computed_zlib", width=width, result=hex(crc))
-            return f"{crc:0{hex_width}X}"
-
-        crc = init & mask
-
-        def reflect(val: int, bits: int) -> int:
-            """Reflect the low ``bits`` of ``val`` around its centre bit.
-
-            Implements the bitwise reflection used by CRC algorithms that
-            specify ``refin`` or ``refout`` to invert the bit order of
-            each byte or the final remainder.
-
-            Args:
-                val: Input value to be reflected.
-                bits: Number of low bits to consider during reflection.
-
-            Returns:
-                int: Value with its low ``bits`` bits reversed.
-            """
-            reflected = 0
-            for _ in range(bits):
-                reflected = (reflected << 1) | (val & 1)
-                val >>= 1
-            return reflected
-
-        table = [0] * 256
-        top_bit = 1 << (width - 1)
-        for i in range(256):
-            entry_in = reflect(i, 8) if refin else i
-            entry = entry_in << (width - 8)
-            for _ in range(8):
-                entry = ((entry << 1) ^ poly) & mask if entry & top_bit else (entry << 1) & mask
-            table[i] = entry
-
-        shift = width - 8
-        for byte in data:
-            crc = ((crc << 8) ^ table[((crc >> shift) ^ byte) & 0xFF]) & mask
-        if refout:
-            crc = reflect(crc, width)
-        crc ^= xorout
-        crc &= mask
-
-        _logger.debug("custom_crc_computed", width=width, result=hex(crc), hex_width=hex_width)
-        return f"{crc:0{hex_width}X}"
+        result: str = self.document.compute_hash_custom_crc((start, end), poly, init, width, (refin, refout), xorout)
+        _logger.debug("custom_crc_computed", width=width)
+        return result
 
     @classmethod
     async def base_convert(cls, value: str, from_base: str = "auto") -> dict[str, str]:
@@ -7206,10 +6861,7 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             result["uint64_le"] = str(parsed)
             result["int64_le"] = str(struct.unpack("<q", struct.pack("<Q", parsed))[0])
 
-        try:
-            cls._populate_float_views(parsed, result)
-        except (struct.error, OverflowError):
-            _logger.debug("base_convert_float_unpack_failed", value=value, exc_info=True)
+        cls._populate_float_views(parsed, result)
 
         _logger.debug("base_convert", input_value=value)
         return result
@@ -7244,10 +6896,6 @@ class HexEditorTemplateMixin(HexEditorAnalysisMixin):
 
         _logger.info("template_applied", template=template_name, offset=hex(offset))
         result = self.document.apply_template(template_name, offset)
-        if not isinstance(result, list):
-            if self.state_holder is not None:
-                self.state_holder.notify_pattern_executed(template_name, 0, source="bridge")
-            return []
         typed_list = cast("list[object]", result)
         fields: list[dict[str, Any]] = [cast("dict[str, Any]", entry) for entry in typed_list if isinstance(entry, dict)]
         if self.state_holder is not None:
@@ -7258,24 +6906,21 @@ class HexEditorTemplateMixin(HexEditorAnalysisMixin):
         """List all available struct templates.
 
         When no document is open the bridge constructs a throwaway
-        ``HexDocument`` just to query the template registry. If that
-        construction fails the method returns the sentinel empty list
-        so callers can distinguish "backend unavailable" from "backend
-        raised while listing", which is propagated to the caller.
+        ``HexDocument`` just to query the template registry. If the
+        hexcore backend is not available the method returns the sentinel
+        empty list so callers can distinguish "backend unavailable" from
+        "backend raised while listing", which is propagated to the
+        caller.
 
         Returns:
             list[dict[str, str]]: List of dicts with name and
                 description, or an empty list when the hexcore backend
-                cannot be instantiated.
+                is not available.
         """
         if self.document is None:
             if not self._hexcore_available or _hexcore_mod is None:
                 return []
-            try:
-                doc = _hexcore_mod.HexDocument()
-            except (RuntimeError, OSError, TypeError):
-                _logger.warning("hexdocument_default_init_failed", exc_info=True)
-                return []
+            doc = _hexcore_mod.HexDocument()
             templates = doc.list_templates()
         else:
             templates = self.document.list_templates()
@@ -7350,24 +6995,20 @@ class HexEditorTemplateMixin(HexEditorAnalysisMixin):
         """List all templates with detailed metadata.
 
         Mirrors the error contract of :meth:`list_templates`: the
-        sentinel empty list is returned when the backend cannot be
-        instantiated, while exceptions raised by the template handler
+        sentinel empty list is returned when the hexcore backend is not
+        available, while exceptions raised by the template handler
         itself (e.g. from ``doc.list_templates_detailed()``) propagate
         to the caller so failures surface explicitly.
 
         Returns:
             list[dict[str, Any]]: List of dicts with name, description,
                 category, and field_count, or an empty list when the
-                hexcore backend cannot be instantiated.
+                hexcore backend is not available.
         """
         if self.document is None:
             if not self._hexcore_available or _hexcore_mod is None:
                 return []
-            try:
-                doc = _hexcore_mod.HexDocument()
-            except (RuntimeError, OSError, TypeError):
-                _logger.warning("hexdocument_default_init_failed", exc_info=True)
-                return []
+            doc = _hexcore_mod.HexDocument()
             templates = doc.list_templates_detailed()
         else:
             templates = self.document.list_templates_detailed()
@@ -7913,17 +7554,7 @@ class HexEditorTransformMixin(HexEditorBookmarkMixin):
             else:
                 params[k] = v
 
-        if not hasattr(self.document, "transform_data"):
-            _logger.error("transform_failed_backend_unsupported")
-            msg = "backend does not support transform_data"
-            raise RuntimeError(msg)
-        result = self.document.transform_data(name, offset, length, params)
-        if isinstance(result, bytes):
-            data = result
-        elif isinstance(result, bytearray) or not isinstance(result, list):
-            data = bytes(result)
-        else:
-            data = bytes(cast("list[int]", result))
+        data = self.document.transform_data(name, offset, length, params)
 
         if in_place:
             if len(data) != length:
@@ -7989,13 +7620,7 @@ class HexEditorTransformMixin(HexEditorBookmarkMixin):
             raise RuntimeError(msg)
 
         steps = cast("list[dict[str, Any]]", json.loads(pipeline_json))
-        raw = self.document.read(offset, length)
-        if isinstance(raw, bytes):
-            data = raw
-        elif isinstance(raw, bytearray) or not isinstance(raw, list):
-            data = bytes(raw)
-        else:
-            data = bytes(cast("list[int]", raw))
+        data = self.document.read(offset, length)
 
         if self._transform_node_cache is None:
             self._transform_node_cache = {n.name: n for n in _get_all_transform_nodes()}
@@ -8071,7 +7696,6 @@ class HexEditorPatchMixin(HexEditorTransformMixin):
         Raises:
             RuntimeError: If no document is open.
             ToolError: If ``patch_format`` is not a recognized format,
-                the current backend cannot export the requested format,
                 or BPS/UPS were requested without an ``original_path``.
         """
         _logger.info("export_patches_started", patch_format=patch_format, has_original_path=original_path is not None)
@@ -8099,7 +7723,7 @@ class HexEditorPatchMixin(HexEditorTransformMixin):
         if hasattr(self.document, native_method):
             raw = getattr(self.document, native_method)()
             _logger.debug("export_patches_used_native", patch_format=normalized, method=native_method)
-        elif hasattr(self.document, "get_patches"):
+        else:
             patches: list[tuple[int, bytes]] = self.document.get_patches()
             _logger.warning(
                 "export_patches_native_unavailable_using_python_builder",
@@ -8108,10 +7732,6 @@ class HexEditorPatchMixin(HexEditorTransformMixin):
                 patch_count=len(patches),
             )
             raw = self._build_ips_from_patches(patches, ips32=(normalized == "ips32"))
-        else:
-            _logger.error("export_patches_failed_unsupported_format", patch_format=normalized)
-            msg = f"{_ERR_PATCH_EXPORT_UNSUPPORTED}: {normalized!r}"
-            raise ToolError(msg)
 
         _logger.info("patches_exported", patch_format=normalized, size=len(raw))
         return base64.b64encode(raw).decode("ascii")
@@ -8165,20 +7785,12 @@ class HexEditorPatchMixin(HexEditorTransformMixin):
 
         count: int
         if magic5 in {_IPS_MAGIC, _IPS32_MAGIC}:
-            if hasattr(self.document, "import_patches_ips"):
-                try:
-                    count = self.document.import_patches_ips(raw)
-                except (RuntimeError, ValueError, OSError) as exc:
-                    _logger.exception("import_patches_ips_native_failed")
-                    msg = f"{_ERR_INVALID_IPS}: {exc}"
-                    raise ToolError(msg) from exc
-            else:
-                try:
-                    count = self._apply_ips_patches(raw)
-                except (struct.error, ValueError, RuntimeError) as exc:
-                    _logger.exception("import_patches_ips_python_failed")
-                    msg = f"{_ERR_INVALID_IPS}: {exc}"
-                    raise ToolError(msg) from exc
+            try:
+                count = self.document.import_patches_ips(raw)
+            except (RuntimeError, ValueError, OSError) as exc:
+                _logger.exception("import_patches_ips_native_failed")
+                msg = f"{_ERR_INVALID_IPS}: {exc}"
+                raise ToolError(msg) from exc
         elif magic4 == _BPS_MAGIC:
             source = await self._resolve_patch_source(original_path)
             try:
@@ -8223,11 +7835,7 @@ class HexEditorPatchMixin(HexEditorTransformMixin):
         source is memory-mapped inside Rust and passed straight to the
         encoder; otherwise the bridge maps the source with
         :class:`mmap.mmap` and hands the mapping to the backend via the
-        buffer protocol. The pure-Python fallback also walks the source
-        through an :class:`mmap.mmap` view so no full copy of the source
-        ever lives on the Python heap; the target document is read
-        through the existing memory-mapped piece-table because the BPS
-        algorithm requires random-access lookups on both buffers.
+        buffer protocol.
 
         Args:
             original_path: Path to the original unmodified file.
@@ -8243,10 +7851,7 @@ class HexEditorPatchMixin(HexEditorTransformMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "export_patches_bps"):
-            raw: bytes = await asyncio.to_thread(self._export_patches_bps_via_backend, original_path)
-        else:
-            raw = await asyncio.to_thread(self._export_patches_bps_pyfallback, original_path)
+        raw: bytes = await asyncio.to_thread(self._export_patches_bps_via_backend, original_path)
 
         _logger.info("bps_patch_exported", size=len(raw))
         return base64.b64encode(raw).decode("ascii")
@@ -8274,12 +7879,7 @@ class HexEditorPatchMixin(HexEditorTransformMixin):
         _logger.debug("import_patches_bps_source_read", path=original_path)
         source_data = await asyncio.to_thread(Path(original_path).read_bytes)
 
-        if hasattr(self.document, "import_patches_bps"):
-            self.document.import_patches_bps(patch_data, source_data)
-        else:
-            target = self._apply_bps_patch(patch_data, source_data)
-            _logger.info("file_written", path="document", offset=hex(0), size=len(target), op="bps_patch_apply")
-            self.document.write_bytes(0, target)
+        self.document.import_patches_bps(patch_data, source_data)
 
         doc_len: int = self.document.length()
         _logger.info("bps_patch_imported", target_size=doc_len)
@@ -8310,10 +7910,7 @@ class HexEditorPatchMixin(HexEditorTransformMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "export_patches_ups"):
-            raw: bytes = await asyncio.to_thread(self._export_patches_ups_via_backend, original_path)
-        else:
-            raw = await asyncio.to_thread(self._export_patches_ups_pyfallback, original_path)
+        raw: bytes = await asyncio.to_thread(self._export_patches_ups_via_backend, original_path)
 
         _logger.info("ups_patch_exported", size=len(raw))
         return base64.b64encode(raw).decode("ascii")
@@ -8341,12 +7938,7 @@ class HexEditorPatchMixin(HexEditorTransformMixin):
         _logger.debug("import_patches_ups_source_read", path=original_path)
         source_data = await asyncio.to_thread(Path(original_path).read_bytes)
 
-        if hasattr(self.document, "import_patches_ups"):
-            self.document.import_patches_ups(patch_data, source_data)
-        else:
-            target = self._apply_ups_patch(patch_data, source_data)
-            _logger.info("file_written", path="document", offset=hex(0), size=len(target), op="ups_patch_apply")
-            self.document.write_bytes(0, target)
+        self.document.import_patches_ups(patch_data, source_data)
 
         doc_len: int = self.document.length()
         _logger.info("ups_patch_imported", target_size=doc_len)
@@ -8515,13 +8107,11 @@ class HexEditorVAMixin(HexEditorProcessMemoryMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "remove_va_mapping"):
-            result: bool = self.document.remove_va_mapping(index)
-            if result and self.state_holder is not None:
-                va_count = len(self.document.list_va_mappings()) if hasattr(self.document, "list_va_mappings") else 0
-                self.state_holder.notify_va_mapping_changed(va_count, source="bridge")
-            return result
-        return False
+        result: bool = self.document.remove_va_mapping(index)
+        if result and self.state_holder is not None:
+            va_count = len(self.document.list_va_mappings()) if hasattr(self.document, "list_va_mappings") else 0
+            self.state_holder.notify_va_mapping_changed(va_count, source="bridge")
+        return result
 
     async def list_va_mappings(self) -> list[dict[str, int]]:
         """List all virtual address mappings.
@@ -8533,10 +8123,8 @@ class HexEditorVAMixin(HexEditorProcessMemoryMixin):
         if self.document is None:
             return []
 
-        if hasattr(self.document, "list_va_mappings"):
-            mappings: list[tuple[int, int, int]] = self.document.list_va_mappings()
-            return [{"file_offset": m[0], "virtual_address": m[1], "length": m[2]} for m in mappings]
-        return []
+        mappings: list[tuple[int, int, int]] = self.document.list_va_mappings()
+        return [{"file_offset": m[0], "virtual_address": m[1], "length": m[2]} for m in mappings]
 
     async def auto_detect_va_mappings(self) -> list[dict[str, int]]:
         """Auto-detect VA mappings from PE, ELF, or Mach-O headers.
@@ -8579,10 +8167,8 @@ class HexEditorVAMixin(HexEditorProcessMemoryMixin):
         if self.document is None:
             return None
 
-        if hasattr(self.document, "file_offset_to_va"):
-            result: int | None = self.document.file_offset_to_va(offset)
-            return result
-        return None
+        result: int | None = self.document.file_offset_to_va(offset)
+        return result
 
     async def va_to_file_offset(self, va: int) -> int | None:
         """Convert a virtual address to a file offset.
@@ -8597,10 +8183,8 @@ class HexEditorVAMixin(HexEditorProcessMemoryMixin):
         if self.document is None:
             return None
 
-        if hasattr(self.document, "va_to_file_offset"):
-            result: int | None = self.document.va_to_file_offset(va)
-            return result
-        return None
+        result: int | None = self.document.va_to_file_offset(va)
+        return result
 
 
 class HexEditorExportMixin(HexEditorVAMixin):
@@ -8732,8 +8316,8 @@ class HexEditorExportMixin(HexEditorVAMixin):
             bookmarks,
             doc_len,
         )
-        _logger.info("annotated_pdf_exported", path=result, start=actual_start, end=actual_end)
-        return result
+        _logger.info("annotated_pdf_exported", path=result, start=actual_start, end=actual_end)  # pragma: no cover - needs fpdf2
+        return result  # pragma: no cover - needs fpdf2
 
 
 class HexEditorDisplayMixin(HexEditorExportMixin):
@@ -8838,12 +8422,9 @@ class HexEditorDisplayMixin(HexEditorExportMixin):
         chunk = 0
         budget = 0
         if self.document is not None:
-            if hasattr(self.document, "get_document_memory_usage"):
-                usage = int(self.document.get_document_memory_usage())
-            if hasattr(self.document, "get_chunk_size_hint"):
-                chunk = int(self.document.get_chunk_size_hint())
-            if hasattr(self.document, "get_memory_budget_hint"):
-                budget = int(self.document.get_memory_budget_hint())
+            usage = int(self.document.get_document_memory_usage())
+            chunk = int(self.document.get_chunk_size_hint())
+            budget = int(self.document.get_memory_budget_hint())
         return {"usage_bytes": usage, "chunk_size": chunk, "memory_budget": budget}
 
     async def set_memory_budget(self, budget_bytes: int) -> bool:
@@ -9078,49 +8659,23 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "verify_pe_checksum"):
+        try:
             result = self.document.verify_pe_checksum()
-            if isinstance(result, dict):
-                return cast("dict[str, Any]", result)
-
-        data = self._read_all_doc_bytes()
-        if data[:2] != b"MZ":
-            _logger.error("verify_pe_checksum_failed_not_pe", magic_hex=data[:2].hex())
-            msg = "not a PE file"
-            raise RuntimeError(msg)
-
-        e_lfanew = struct.unpack_from("<I", data, _PE_LFANEW_OFFSET)[0]
-        if data[e_lfanew : e_lfanew + 4] != b"PE\x00\x00":
-            _logger.error("verify_pe_checksum_failed_invalid_pe_sig", e_lfanew=hex(e_lfanew))
-            msg = "invalid PE signature"
-            raise RuntimeError(msg)
-
-        checksum_offset = e_lfanew + 4 + _PE_COFF_HEADER_SIZE + _PE_CHECKSUM_RELATIVE
-        if checksum_offset + 4 > len(data):
-            _logger.error("verify_pe_checksum_failed_header_too_short", checksum_offset=hex(checksum_offset))
-            msg = "PE header too short for checksum field"
-            raise RuntimeError(msg)
-
-        stored = struct.unpack_from("<I", data, checksum_offset)[0]
-        calculated = self._compute_pe_checksum_static(data, checksum_offset)
-
-        _logger.debug(
-            "pe_checksum_verified",
-            stored=hex(stored),
-            calculated=hex(calculated),
-        )
-        return {
-            "stored": stored,
-            "calculated": calculated,
-            "offset": checksum_offset,
-            "valid": stored == calculated,
-        }
+        except ValueError as exc:
+            _logger.exception("verify_pe_checksum_failed_native")
+            raise RuntimeError(str(exc)) from exc
+        return cast("dict[str, Any]", result)
 
     async def repair_pe_checksum(self) -> dict[str, Any]:
         """Recalculate and write the correct PE checksum.
 
+        The value the ``CheckSum`` field holds is read before it is overwritten,
+        and the attached state holder is told that the four bytes of the field
+        changed.
+
         Returns:
-            dict[str, Any]: Dict with old_checksum, new_checksum, offset.
+            dict[str, Any]: Dict with old_checksum (the value replaced),
+            new_checksum and offset.
 
         Raises:
             RuntimeError: If no document is open or file is not PE.
@@ -9130,35 +8685,20 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "repair_pe_checksum"):
+        try:
+            before = cast("dict[str, Any]", self.document.verify_pe_checksum())
             self.document.repair_pe_checksum()
-            verify_result = await self.verify_pe_checksum()
-            return {
-                "old_checksum": 0,
-                "new_checksum": verify_result.get("calculated", 0),
-                "offset": verify_result.get("offset", 0),
-            }
-
+        except ValueError as exc:
+            _logger.exception("repair_pe_checksum_failed_native")
+            raise RuntimeError(str(exc)) from exc
         verify_result = await self.verify_pe_checksum()
-        old_checksum = verify_result["stored"]
-        new_checksum = verify_result["calculated"]
-        checksum_offset = verify_result["offset"]
-
-        _logger.info(
-            "file_written",
-            path="document",
-            offset=hex(checksum_offset),
-            size=4,
-            op="pe_checksum_repair",
-        )
-        self.document.write_bytes(checksum_offset, struct.pack("<I", new_checksum))
-        _logger.info("pe_checksum_repaired", old=hex(old_checksum), new=hex(new_checksum))
+        offset: int = verify_result.get("offset", 0)
         if self.state_holder is not None:
-            self.state_holder.notify_data_modified(checksum_offset, 4, source="bridge")
+            self.state_holder.notify_data_modified(offset, _PE_CHECKSUM_FIELD_SIZE, source="bridge")
         return {
-            "old_checksum": old_checksum,
-            "new_checksum": new_checksum,
-            "offset": checksum_offset,
+            "old_checksum": before.get("stored", 0),
+            "new_checksum": verify_result.get("calculated", 0),
+            "offset": offset,
         }
 
 
@@ -9200,13 +8740,7 @@ class HexEditorScanMixin(HexEditorPEMixin):
             raw_matches = await scanner.scan_file_async(disk_path, compiled)
         else:
             doc_len: int = self.document.length()
-            raw = self.document.read(0, doc_len)
-            if isinstance(raw, bytes):
-                data = raw
-            elif isinstance(raw, bytearray) or not isinstance(raw, list):
-                data = bytes(raw)
-            else:
-                data = bytes(cast("list[int]", raw))
+            data = self.document.read(0, doc_len)
             raw_matches = await scanner.scan_data_async(data, compiled)
         _logger.debug("yara_scan_completed", matches=len(raw_matches))
         return [
@@ -9255,13 +8789,7 @@ class HexEditorScanMixin(HexEditorPEMixin):
             raw_matches = await scanner.scan_file_async(disk_path, compiled)
         else:
             doc_len: int = self.document.length()
-            raw = self.document.read(0, doc_len)
-            if isinstance(raw, bytes):
-                data = raw
-            elif isinstance(raw, bytearray) or not isinstance(raw, list):
-                data = bytes(raw)
-            else:
-                data = bytes(cast("list[int]", raw))
+            data = self.document.read(0, doc_len)
             raw_matches = await scanner.scan_data_async(data, compiled)
         _logger.debug("yara_scan_files_completed", rule_paths=paths, matches=len(raw_matches))
         return [
