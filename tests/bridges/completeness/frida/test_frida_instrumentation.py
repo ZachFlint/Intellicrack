@@ -35,6 +35,7 @@ import os
 import sys
 import threading
 import time
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, cast
 
 import pytest
@@ -59,6 +60,76 @@ from intellicrack.core.types import ModuleInfo, SymbolInfo, SystemCallResult, To
 
 _KERNEL32: Final[str] = "kernel32.dll"
 _ATTACH_WAIT_S: Final[float] = 5.0
+_WORKER_BACKSTOP_S: Final[float] = 30.0
+_FLUSH_WORKER_CALLS: Final[int] = 50
+_SUMMARY_WORKER_CALLS: Final[int] = 200
+
+
+@dataclass(frozen=True)
+class _ParkedWorker:
+    """Handle to a dedicated worker thread that is parked until told to make native calls.
+
+    Attributes:
+        tid: Real OS thread id of the worker, as reported by the worker itself.
+        go: Set by the test once tracing is installed; releases the worker's native calls.
+        finished: Set by the worker once its bounded native calls are done.
+        thread: The worker thread, which returns right after its calls.
+    """
+
+    tid: int
+    go: threading.Event
+    finished: threading.Event
+    thread: threading.Thread
+
+    def stop(self) -> bool:
+        """Release the worker if it is still parked and join it.
+
+        Returns:
+            bool: ``True`` when the worker thread has ended.
+        """
+        self.go.set()
+        self.thread.join(timeout=_ATTACH_WAIT_S)
+        return not self.thread.is_alive()
+
+
+def _start_parked_native_caller(call_count: int) -> _ParkedWorker:
+    """Start a dedicated worker thread that makes a bounded number of ``GetTickCount`` calls on request.
+
+    The worker reports its own OS thread id, parks on an event, makes exactly
+    ``call_count`` native calls once released, and returns right after them. The
+    thread running pytest is never the traced thread, and the worker is never
+    alive and blocked while a trace on it is stopped, provided the caller joins
+    it first.
+
+    Args:
+        call_count: Number of ``GetTickCount`` calls the worker makes after ``go`` is set.
+
+    Returns:
+        _ParkedWorker: Handle holding the worker's OS thread id, its events and the thread.
+    """
+    ready = threading.Event()
+    go = threading.Event()
+    finished = threading.Event()
+    tid_box: list[int] = []
+
+    def bounded_worker() -> None:
+        """Report the real OS thread id, then make the bounded native calls on request."""
+        tid_box.append(ctypes.windll.kernel32.GetCurrentThreadId())
+        ready.set()
+        go.wait(timeout=_WORKER_BACKSTOP_S)
+        get_tick_count = ctypes.windll.kernel32.GetTickCount
+        for _ in range(call_count):
+            get_tick_count()
+        finished.set()
+
+    thread = threading.Thread(target=bounded_worker, daemon=True)
+    thread.start()
+    reported = ready.wait(timeout=_ATTACH_WAIT_S)
+    if not reported:
+        go.set()
+        thread.join(timeout=_ATTACH_WAIT_S)
+    assert reported, "worker thread must report its real OS thread id"
+    return _ParkedWorker(tid=tid_box[0], go=go, finished=finished, thread=thread)
 
 
 def _run_async[T](coro: Coroutine[object, object, T]) -> T:
@@ -1014,7 +1085,7 @@ class TestStalkerFlushB5:
         Falsifiable: if ``stalker_flush`` were a stub that never posted into
         the script (or posted the wrong message type the script doesn't
         recognize), no ``stalker_flushed`` ack would ever arrive and the
-        polling loop times out. If it accidentally called ``stopStalker()``
+        wait for it times out. If it accidentally called ``stopStalker()``
         instead of the new flush-only handler, the subsequent
         ``stalker_unfollow`` would find no active trace at that tid. Broken
         production lines: the ``recv('stalker_flush_request', ...)`` handler
@@ -1022,39 +1093,59 @@ class TestStalkerFlushB5:
         ``script.post({...})`` call inside ``FridaBridge.stalker_flush``
         (frida_bridge.py).
 
+        The followed thread is a dedicated worker, never the thread running
+        pytest. Order of operations: start the worker parked, follow it,
+        release it, wait for its bounded native calls to finish, join it, flush
+        and wait for the ack, then unfollow. The flush is requested after the
+        worker's calls so there is real buffered activity to flush; the ack
+        comes from the trace's own script, which stays registered and running
+        until ``stalker_unfollow``, so the ack still arrives while the trace is
+        active. Stalker cannot detach a thread that is blocked in a wait, so
+        the worker has ended before the unfollow. The bridge exposes no public
+        way to ask whether a trace is registered, so the test tracks whether
+        its own body already unfollowed and only unfollows in the ``finally``
+        when it did not.
+
         Args:
             self_attached_bridge: Bridge fixture attached to the current process.
         """
-        tid = threading.get_ident()
         received: list[dict[str, object]] = []
-        self_attached_bridge.set_message_handler(received.append)
+        flush_acked = threading.Event()
 
-        _run_async(self_attached_bridge.stalker_follow(thread_id=tid, events="call", limit=100000))
+        def on_message(message: dict[str, object]) -> None:
+            """Record every script message and signal the first ``stalker_flushed`` ack.
 
-        script_id = _run_async(
-            self_attached_bridge.execute_persistent_script(
-                "var f = new NativeFunction(Process.findModuleByName('kernel32.dll').getExportByName('GetTickCount'), 'uint32', []); "
-                "for (var i = 0; i < 50; i++) { f(); }",
-            ),
-        )
-        _run_async(self_attached_bridge.unload_script(script_id))
+            Args:
+                message: Message dictionary dispatched by the bridge.
+            """
+            received.append(message)
+            payload = message.get("payload")
+            if isinstance(payload, dict) and cast("dict[str, object]", payload).get("type") == "stalker_flushed":
+                flush_acked.set()
 
-        _run_async(self_attached_bridge.stalker_flush(tid))
+        self_attached_bridge.set_message_handler(on_message)
 
-        deadline = time.monotonic() + _ATTACH_WAIT_S
+        worker = _start_parked_native_caller(_FLUSH_WORKER_CALLS)
+        tid = worker.tid
+        unfollowed = False
+        try:
+            _run_async(self_attached_bridge.stalker_follow(thread_id=tid, events="call", limit=100000))
 
-        def _flush_acked() -> bool:
-            return any(
-                isinstance(m.get("payload"), dict) and cast("dict[str, object]", m["payload"]).get("type") == "stalker_flushed"
-                for m in received
-            )
+            worker.go.set()
+            assert worker.finished.wait(timeout=_ATTACH_WAIT_S), "worker thread must finish its bounded native calls"
+            assert worker.stop(), "worker thread must have ended before the trace is stopped"
 
-        while not _flush_acked() and time.monotonic() < deadline:
-            time.sleep(0.05)
-        assert _flush_acked(), f"stalker_flush never acked; received={received!r}"
+            assert _run_async(self_attached_bridge.stalker_flush(tid)) is True
+            assert flush_acked.wait(timeout=_ATTACH_WAIT_S), f"stalker_flush never acked; received={received!r}"
 
-        trace = _run_async(self_attached_bridge.stalker_unfollow(tid))
-        assert trace.event_count >= 0
+            unfollowed = True
+            trace = _run_async(self_attached_bridge.stalker_unfollow(tid))
+            assert trace.thread_id == tid
+            assert trace.event_count == len(trace.events)
+        finally:
+            worker.stop()
+            if not unfollowed:
+                _run_async(self_attached_bridge.stalker_unfollow(tid))
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
@@ -1136,33 +1227,55 @@ class TestStalkerCallSummaryB2:
         ``onReceive`` used instead), ``self._stalker_summaries`` would stay
         empty and ``counts == {}`` forever. If the accumulation logic
         dropped repeated summary callbacks instead of summing them, the
-        total would be far lower than the real number of calls actually
-        made. Broken production line: the ``onCallSummary: function(summary)
-        { send(...) }`` wiring and the accumulation loop inside
+        count for the called target would be far lower than the real number
+        of calls actually made. Broken production line: the
+        ``onCallSummary: function(summary) { send(...) }`` wiring and the
+        accumulation loop inside
         ``FridaBridge.stalker_follow_call_summary``'s ``on_summary_message``
         closure (frida_bridge.py).
 
-        The traced calls are made via ``ctypes`` directly from this test's
-        own OS thread (the same thread passed as ``thread_id``, via
-        ``threading.get_ident()``), so the followed thread genuinely
-        executes the native calls being aggregated -- a second Frida
-        script (``execute_persistent_script``) runs on Frida's own internal
-        script-execution thread instead, which a follow targeting this
-        test's thread would never observe.
+        The followed thread is a dedicated worker, never the thread running
+        pytest. Order of operations: start the worker parked, follow it with
+        the call summary, release it, wait for its ``_SUMMARY_WORKER_CALLS``
+        ``ctypes`` calls to ``kernel32!GetTickCount`` to finish, join it, and
+        only then unfollow, because Stalker cannot detach a thread that is
+        blocked in a wait. The expected target address is the function pointer
+        ``ctypes`` itself calls, read independently of Frida. The assertion is
+        a lower bound, not an equality: the summary also counts every other
+        call instruction the interpreter executes on the worker, and only the
+        calls this worker makes to the target are known. The bridge exposes no
+        public way to ask whether a trace is registered, so the test tracks
+        whether its own body already unfollowed and only unfollows in the
+        ``finally`` when it did not.
 
         Args:
             self_attached_bridge: Bridge fixture attached to the current process.
         """
-        tid = threading.get_ident()
-        _run_async(self_attached_bridge.stalker_follow_call_summary(tid))
+        target = ctypes.cast(ctypes.windll.kernel32.GetTickCount, ctypes.c_void_p).value
+        assert target is not None
 
-        get_tick_count = ctypes.windll.kernel32.GetTickCount
-        for _ in range(500):
-            get_tick_count()
+        worker = _start_parked_native_caller(_SUMMARY_WORKER_CALLS)
+        tid = worker.tid
+        unfollowed = False
+        try:
+            _run_async(self_attached_bridge.stalker_follow_call_summary(tid))
 
-        summary = _run_async(self_attached_bridge.stalker_unfollow_call_summary(tid))
-        assert isinstance(summary.counts, dict)
-        assert sum(summary.counts.values()) > 0, f"expected real aggregated call counts, got {summary.counts!r}"
+            worker.go.set()
+            assert worker.finished.wait(timeout=_ATTACH_WAIT_S), "worker thread must finish its bounded native calls"
+            assert worker.stop(), "worker thread must have ended before the trace is stopped"
+
+            unfollowed = True
+            summary = _run_async(self_attached_bridge.stalker_unfollow_call_summary(tid))
+        finally:
+            worker.stop()
+            if not unfollowed:
+                _run_async(self_attached_bridge.stalker_unfollow_call_summary(tid))
+
+        assert summary.thread_id == tid
+        counts_by_address = {int(address, 16): count for address, count in summary.counts.items()}
+        assert counts_by_address.get(target, 0) >= _SUMMARY_WORKER_CALLS, (
+            f"expected at least {_SUMMARY_WORKER_CALLS} aggregated calls to {target:#x}, got {summary.counts!r}"
+        )
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
