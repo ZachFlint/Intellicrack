@@ -226,7 +226,7 @@ pycparser==3.0
 pydantic==2.13.5
 pydantic-core==2.46.5
 pydantic-settings==2.15.0
-pydoclint==0.10.1
+pydoclint==0.11.0
 pydocstyle==6.3.0
 pyelftools==0.33
 pyflakes==4.0.1
