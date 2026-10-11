@@ -38,6 +38,7 @@ import structlog
 from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QApplication, QWidget
 
+from intellicrack.core.hexpat.stdlib import set_print_sink
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials
 from intellicrack.credentials.env_loader import CredentialLoader
@@ -428,6 +429,26 @@ def delete_top_level_widgets_left_by_the_test() -> Generator[None]:
                 widget.deleteLater()
             if leaked:
                 app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+
+
+@pytest.fixture(autouse=True)
+def detach_pattern_print_sink_after_the_test() -> Generator[None]:
+    """Detach the pattern language's process-wide print sink once a test is over.
+
+    Running a pattern installs the caller's sink for ``std::print`` in a
+    module-level slot and nothing takes it out again. A pattern editor test
+    leaves its host widget's method there, the widget is deleted when the test
+    ends, and a later test that prints without running an interpreter first
+    calls into the deleted widget. Which test comes later depends on how xdist
+    orders the worker's tests.
+
+    Yields:
+        None: Yields control to the test.
+    """
+    try:
+        yield
+    finally:
+        set_print_sink(None)
 
 
 @pytest.fixture(scope="session")
