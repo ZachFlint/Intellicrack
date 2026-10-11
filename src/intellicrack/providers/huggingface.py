@@ -22,6 +22,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, cast, override
 
 import httpx
+import httpx2
 from huggingface_hub import (
     AsyncInferenceClient,
     ChatCompletionInputFunctionName,
@@ -286,7 +287,7 @@ class HuggingFaceProvider(LLMProviderBase):
             await self._close_client()
             self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_CONNECT_FAILED % exc) from exc
-        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as exc:
+        except (ConnectionError, TimeoutError, OSError, httpx2.HTTPError) as exc:
             self._logger.warning(
                 "huggingface_connect_failed",
                 error_type=type(exc).__name__,
@@ -311,8 +312,11 @@ class HuggingFaceProvider(LLMProviderBase):
         HuggingFace returns 503 when a model is still loading.  The body is
         usually JSON (``{"error": "...", "estimated_time": ...}``), but the
         router occasionally returns HTML, which raises ``json.JSONDecodeError``
-        / ``httpx.DecodingError`` / ``ValueError``.  This helper guards the
-        decode and falls back to a generic "Model is loading" message.
+        / ``DecodingError`` / ``ValueError``.  The response is an ``httpx2``
+        one when the Hub or inference client raised and an ``httpx`` one when
+        the router catalog query did, so the decoding error of both is
+        guarded and the helper falls back to a generic "Model is loading"
+        message.
         Accepts any ``BaseException`` so it can be passed to
         :meth:`LLMProviderBase._raise_typed_for_status` as the
         ``extract_503_message`` callable; non-``HfHubHTTPError`` exceptions
@@ -330,7 +334,7 @@ class HuggingFaceProvider(LLMProviderBase):
             return "Model is loading and not yet ready"
         try:
             body = response.json()
-        except (json.JSONDecodeError, ValueError, TypeError, httpx.DecodingError) as decode_exc:
+        except (json.JSONDecodeError, ValueError, TypeError, httpx.DecodingError, httpx2.DecodingError) as decode_exc:
             _logger.warning("hf_503_body_decode_failed", error_type=type(decode_exc).__name__)
             return "Model is loading and not yet ready"
         if isinstance(body, dict):
@@ -432,7 +436,7 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_LIST_MODELS_FAILED % exc) from exc
-        except (ConnectionError, TimeoutError, OSError, ValueError, httpx.HTTPError) as exc:
+        except (ConnectionError, TimeoutError, OSError, ValueError, httpx2.HTTPError) as exc:
             self._logger.warning(
                 "huggingface_list_models_failed",
                 error_type=type(exc).__name__,
@@ -748,14 +752,14 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_API_ERROR % exc) from exc
-        except (TimeoutError, httpx.TimeoutException) as exc:
+        except (TimeoutError, httpx2.TimeoutException) as exc:
             self._logger.warning(
                 "huggingface_chat_timeout",
                 model=model,
                 error_type=type(exc).__name__,
             )
             raise ProviderError(_ERR_TIMEOUT % exc) from exc
-        except (ConnectionError, OSError, httpx.HTTPError) as exc:
+        except (ConnectionError, OSError, httpx2.HTTPError) as exc:
             self._logger.warning(
                 "huggingface_chat_transport_error",
                 model=model,
@@ -955,14 +959,14 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_API_ERROR % exc) from exc
-        except (TimeoutError, httpx.TimeoutException) as exc:
+        except (TimeoutError, httpx2.TimeoutException) as exc:
             self._logger.warning(
                 "huggingface_stream_timeout",
                 model=model,
                 error_type=type(exc).__name__,
             )
             raise ProviderError(_ERR_TIMEOUT % exc) from exc
-        except (ConnectionError, OSError, httpx.HTTPError) as exc:
+        except (ConnectionError, OSError, httpx2.HTTPError) as exc:
             self._logger.warning(
                 "huggingface_stream_transport_error",
                 model=model,
@@ -973,7 +977,7 @@ class HuggingFaceProvider(LLMProviderBase):
         try:
             async for piece in self._consume_stream_chunks(raw_stream, model=model, tc_buffer=tc_buffer):
                 yield piece
-        except (ConnectionError, OSError, ValueError) as exc:
+        except (ConnectionError, OSError, ValueError, httpx2.HTTPError) as exc:
             if self._cancel_requested:
                 self._logger.warning(
                     "huggingface_stream_cancelled_during_transport",

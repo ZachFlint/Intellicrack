@@ -12,6 +12,9 @@
 * :class:`ScriptedHttpServer` answers every ``GET`` with a fixed status and
   body, optionally trickling the body out one chunk at a time, and counts the
   requests it receives.
+* :class:`TruncatingServer` answers every request with the start of a response
+  body and then closes the connection, the way a peer that dies mid-transfer
+  does.
 """
 
 from __future__ import annotations
@@ -260,6 +263,141 @@ class ScriptedHttpServer:
             traceback: Traceback, if the block raised.
         """
         self.shutdown()
+
+
+class TruncatingServer:
+    """A loopback HTTP server that starts a response body and closes the connection before finishing it."""
+
+    def __init__(self, *, head: bytes, content_type: str, missing_bytes: int = 64) -> None:
+        """Bind to an ephemeral loopback port and start answering.
+
+        Args:
+            head: The part of the body that is sent before the connection closes.
+            content_type: Value of the ``Content-Type`` response header.
+            missing_bytes: How many more body bytes the ``Content-Length`` header promises than are sent.
+        """
+        headers = (
+            f"HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\nContent-Length: {len(head) + missing_bytes}\r\nConnection: close\r\n\r\n"
+        )
+        self._response = headers.encode("ascii") + head
+        self._listener = socket.create_server(("127.0.0.1", 0))
+        self._listener.settimeout(_ACCEPT_POLL_SECONDS)
+        self._lock = threading.Lock()
+        self._requests = 0
+        self._stopping = threading.Event()
+        self._thread = threading.Thread(target=self._serve, name="truncating-server", daemon=True)
+        self._thread.start()
+
+    @property
+    def url(self) -> str:
+        """The server's ``http://`` origin.
+
+        Returns:
+            str: ``http://127.0.0.1:<port>``.
+        """
+        port: int = self._listener.getsockname()[1]
+        return f"http://127.0.0.1:{port}"
+
+    @property
+    def requests(self) -> int:
+        """How many complete requests have been received.
+
+        Returns:
+            int: The request count.
+        """
+        with self._lock:
+            return self._requests
+
+    def _serve(self) -> None:
+        """Accept connections and answer each one on its own thread until shutdown."""
+        while not self._stopping.is_set():
+            try:
+                connection, _ = self._listener.accept()
+            except TimeoutError:
+                continue
+            except OSError:
+                return
+            connection.settimeout(_JOIN_SECONDS)
+            threading.Thread(target=self._answer, args=(connection,), daemon=True).start()
+
+    def _answer(self, connection: socket.socket) -> None:
+        """Read one request, send the truncated response and close the connection.
+
+        Args:
+            connection: The accepted connection.
+        """
+        with connection:
+            try:
+                complete = _read_http_request(connection)
+            except OSError:
+                return
+            if not complete:
+                return
+            with self._lock:
+                self._requests += 1
+            try:
+                connection.sendall(self._response)
+                connection.shutdown(socket.SHUT_WR)
+            except OSError:
+                return
+
+    def shutdown(self) -> None:
+        """Stop accepting connections."""
+        self._stopping.set()
+        self._listener.close()
+        self._thread.join(_JOIN_SECONDS)
+
+    def __enter__(self) -> Self:
+        """Return the running server.
+
+        Returns:
+            Self: This server.
+        """
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """Shut the server down.
+
+        Args:
+            exc_type: Exception type, if the block raised.
+            exc: Exception instance, if the block raised.
+            traceback: Traceback, if the block raised.
+        """
+        self.shutdown()
+
+
+def _read_http_request(connection: socket.socket) -> bool:
+    """Read one HTTP request, headers and ``Content-Length`` body, off a connection.
+
+    Args:
+        connection: The accepted connection.
+
+    Returns:
+        bool: True when a complete request arrived, False when the peer closed first.
+    """
+    received = b""
+    while b"\r\n\r\n" not in received:
+        chunk = connection.recv(_RECV_BYTES)
+        if not chunk:
+            return False
+        received += chunk
+    head, _, body = received.partition(b"\r\n\r\n")
+    length = 0
+    for line in head.split(b"\r\n")[1:]:
+        name, _, value = line.partition(b":")
+        if name.strip().lower() == b"content-length":
+            length = int(value.strip())
+    while len(body) < length:
+        chunk = connection.recv(_RECV_BYTES)
+        if not chunk:
+            return False
+        body += chunk
+    return True
 
 
 class _Writable(Protocol):

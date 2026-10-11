@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
+import httpx2
 import pytest
 from huggingface_hub import AsyncInferenceClient, set_async_client_factory, set_client_factory
 from huggingface_hub.errors import HfHubHTTPError
@@ -42,6 +43,7 @@ from intellicrack.core.types import (
 )
 from intellicrack.providers.huggingface import HuggingFaceProvider
 from tests._helpers.scripted_sdk_server import ScriptedHTTPServer, ScriptedResponse, json_response, sse_response
+from tests._helpers.stalling_http import TruncatingServer
 
 
 if TYPE_CHECKING:
@@ -130,12 +132,12 @@ def _hub_pointed_at(origin: str) -> Generator[_HubWiring]:
         _HubWiring: Controls for the port and for queued transport faults.
     """
     http_module = importlib.import_module("huggingface_hub.utils._http")
-    previous_sync = cast("Callable[[], httpx.Client]", getattr(http_module, "_GLOBAL_CLIENT_FACTORY"))
-    previous_async = cast("Callable[[], httpx.AsyncClient]", getattr(http_module, "_GLOBAL_ASYNC_CLIENT_FACTORY"))
-    response_hook = cast("Callable[[httpx.Response], Awaitable[None]]", getattr(http_module, "async_hf_response_event_hook"))
+    previous_sync = cast("Callable[[], httpx2.Client]", getattr(http_module, "_GLOBAL_CLIENT_FACTORY"))
+    previous_async = cast("Callable[[], httpx2.AsyncClient]", getattr(http_module, "_GLOBAL_ASYNC_CLIENT_FACTORY"))
+    response_hook = cast("Callable[[httpx2.Response], Awaitable[None]]", getattr(http_module, "async_hf_response_event_hook"))
     wiring = _HubWiring(port=_port_of(origin))
 
-    def _redirect_or_fail(request: httpx.Request) -> None:
+    def _redirect_or_fail(request: httpx2.Request) -> None:
         """Rewrite a Hub request to the loopback port, or raise a queued fault.
 
         Args:
@@ -148,7 +150,7 @@ def _hub_pointed_at(origin: str) -> Generator[_HubWiring]:
             raise wiring.sync_faults.pop(0)
         request.url = request.url.copy_with(scheme="http", host="127.0.0.1", port=wiring.port)
 
-    async def _fail_if_queued(request: httpx.Request) -> None:
+    async def _fail_if_queued(request: httpx2.Request) -> None:
         """Raise a queued fault before an inference request is sent.
 
         Args:
@@ -162,21 +164,21 @@ def _hub_pointed_at(origin: str) -> Generator[_HubWiring]:
         if wiring.async_faults:
             raise wiring.async_faults.pop(0)
 
-    def _sync_client() -> httpx.Client:
+    def _sync_client() -> httpx2.Client:
         """Build the synchronous Hub client.
 
         Returns:
-            httpx.Client: A client that rewrites requests to the loopback server.
+            httpx2.Client: A client that rewrites requests to the loopback server.
         """
-        return httpx.Client(event_hooks={"request": [_redirect_or_fail]}, follow_redirects=True, timeout=10.0)
+        return httpx2.Client(event_hooks={"request": [_redirect_or_fail]}, follow_redirects=True, timeout=10.0)
 
-    def _async_client() -> httpx.AsyncClient:
+    def _async_client() -> httpx2.AsyncClient:
         """Build the asynchronous inference client.
 
         Returns:
-            httpx.AsyncClient: A client that raises queued faults and reads error bodies like the stock one.
+            httpx2.AsyncClient: A client that raises queued faults and reads error bodies like the stock one.
         """
-        return httpx.AsyncClient(
+        return httpx2.AsyncClient(
             event_hooks={"request": [_fail_if_queued], "response": [response_hook]},
             follow_redirects=True,
             timeout=_TIMEOUT,
@@ -449,7 +451,7 @@ async def _outcome(awaitable: Awaitable[object]) -> BaseException | None:
     """
     try:
         await awaitable
-    except (ProviderError, httpx.HTTPError) as exc:
+    except (ProviderError, httpx.HTTPError, httpx2.HTTPError) as exc:
         return exc
     return None
 
@@ -568,8 +570,8 @@ async def test_connect_wraps_transport_oserror_as_connect_failure() -> None:
 
 def test_extract_503_message_ignores_non_object_body() -> None:
     """A 503 whose JSON body is not an object falls back to the generic loading message."""
-    request = httpx.Request("GET", "http://127.0.0.1/")
-    response = httpx.Response(503, json=["model", "loading"], request=request)
+    request = httpx2.Request("GET", "http://127.0.0.1/")
+    response = httpx2.Response(503, json=["model", "loading"], request=request)
     error = HfHubHTTPError("service unavailable", response=response)
     extract = cast("Callable[[BaseException], str]", getattr(HuggingFaceProvider, "_extract_503_message"))
 
@@ -895,6 +897,24 @@ async def test_stream_decode_failure_after_first_piece_is_a_stream_error() -> No
     assert pieces == ["Hel"]
     assert type(info.value) is ProviderError
     assert str(info.value).startswith("HuggingFace stream failed:")
+
+
+@pytest.mark.asyncio
+async def test_stream_dropped_connection_after_first_piece_is_a_stream_error() -> None:
+    """A connection the endpoint drops mid-stream stops the stream with a stream error after the earlier text was delivered."""
+    head = f"data: {json.dumps(_chunk(content='Hel'))}\n\n".encode()
+    with _loopback(_routes()), TruncatingServer(head=head, content_type="text/event-stream") as broken:
+        async with _connected(broken.url) as provider:
+            pieces: list[str] = []
+            with pytest.raises(ProviderError) as info:
+                await _drain_into(provider, pieces.append)
+        served = broken.requests
+
+    assert pieces == ["Hel"]
+    assert type(info.value) is ProviderError
+    assert str(info.value).startswith("HuggingFace stream failed:")
+    assert isinstance(info.value.__cause__, httpx2.HTTPError)
+    assert served == 1
 
 
 @pytest.mark.asyncio
