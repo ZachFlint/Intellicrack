@@ -2115,8 +2115,7 @@ class ModelNotFoundError(ProviderError):
 class ReasoningSummaryRefusedError(ProviderError):
     """The endpoint refused to generate a reasoning summary for this organization.
 
-    OpenAI generates reasoning summaries only for verified organizations and
-    answers any other organization's request for one with ``400``.
+    OpenAI generates reasoning summaries only for verified organizations and answers any other organization's request for one with ``400``.
     """
 
 

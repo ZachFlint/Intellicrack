@@ -10,7 +10,8 @@ by call id -- so the layer has to remember which name each call used.
 
 Two Gemini-specific pieces of state matter for multi-turn tool use. Gemini 3.x signs each function call with a ``thought_signature`` that
 must be echoed back verbatim or the next request fails with ``Function call is missing a thought_signature``; and
-``functionResponse.response.output`` takes structured JSON natively, so a structured tool-result part survives here without degrading to text.
+``functionResponse.response.output`` takes structured JSON natively, so a structured tool-result part survives here without degrading to
+text.
 """
 
 from __future__ import annotations
@@ -77,7 +78,6 @@ _SSE_QUERY: Final[str] = "alt=sse"
 
 _LOCAL_CALL_ID_PREFIX: Final[str] = "gemini_call_"
 """Prefix of a call id minted locally for a function call Gemini sent without one."""
-
 
 _OUTPUT_KEY: Final[str] = "output"
 """``functionResponse.response`` key Gemini reads a function's output from."""

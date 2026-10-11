@@ -11,8 +11,8 @@ told, and would hold the server's standard output open so its exit was never see
 
 Every spawn in Intellicrack that makes a handle inheritable holds :data:`INHERITANCE_LOCK` from the moment it does so until the handle is
 closed, and every spawn that lets a child inherit without a handle list holds it for the whole spawn, so neither can overlap the other.
-:mod:`subprocess` needs no part in this: with ``close_fds`` left at its default it passes a handle list, so its children receive their
-own standard handles and nothing else.
+:mod:`subprocess` needs no part in this: with ``close_fds`` left at its default it passes a handle list, so its children receive their own
+standard handles and nothing else.
 """
 
 from __future__ import annotations
@@ -23,6 +23,5 @@ from typing import Final
 
 INHERITANCE_LOCK: Final[threading.Lock] = threading.Lock()
 """Held while any handle is inheritable for a spawn, and for any spawn that inherits without a handle list."""
-
 
 __all__ = ["INHERITANCE_LOCK"]

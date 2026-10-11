@@ -38,8 +38,8 @@ MAX_INLINE_DEPTH: Final[int] = 32
 MAX_REF_REENTRY: Final[int] = 3
 """Most times one reference may be expanded again inside its own expansion.
 
-A recursive definition is unrolled this many levels and then collapses to a permissive schema. Without the limit a definition that refers
-to itself twice doubles at every level, so thirty-two levels would produce four billion nodes.
+A recursive definition is unrolled this many levels and then collapses to a permissive schema. Without the limit a definition that refers to
+itself twice doubles at every level, so thirty-two levels would produce four billion nodes.
 """
 
 MAX_INLINE_NODES: Final[int] = 10_000
@@ -59,7 +59,10 @@ that walks it -- inlining, strict reduction, validation. No real tool nests its 
 _DEF_CONTAINERS: Final[frozenset[str]] = frozenset({"$defs", "definitions"})
 
 _REFERENCE_KEYWORDS: Final[tuple[str, ...]] = ("$ref", "$dynamicRef")
-"""Keywords that point at another schema. ``$dynamicRef`` is resolved like ``$ref``: a document has no enclosing dynamic scope here."""
+"""Keywords that point at another schema.
+
+``$dynamicRef`` is resolved like ``$ref``: a document has no enclosing dynamic scope here.
+"""
 
 _ANCHOR_KEYWORDS: Final[tuple[str, ...]] = ("$anchor", "$dynamicAnchor")
 """Keywords that name a schema so a plain-name fragment such as ``#node`` can point at it."""

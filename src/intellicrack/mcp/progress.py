@@ -4,13 +4,13 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Progress a server reports on a request that is still running.
 
-A client asks for progress by giving a request a ``progressToken`` in its ``_meta``; the server answers with
-``notifications/progress`` carrying the token, how far it has got, optionally the total, and optionally a message. Intellicrack asks for
-it on every tool call, resource read and prompt fetch, on both protocol generations, and hands each notice on as an :class:`McpProgress`.
+A client asks for progress by giving a request a ``progressToken`` in its ``_meta``; the server answers with ``notifications/progress``
+carrying the token, how far it has got, optionally the total, and optionally a message. Intellicrack asks for it on every tool call,
+resource read and prompt fetch, on both protocol generations, and hands each notice on as an :class:`McpProgress`.
 
-The message is the server's own text, so it is cleaned of hidden characters and forged fence markers and bounded before anything shows
-it. Whether a notice counts as progress for the request's deadline is decided by the connection: only a value above the last one does,
-as the protocol requires progress to increase.
+The message is the server's own text, so it is cleaned of hidden characters and forged fence markers and bounded before anything shows it.
+Whether a notice counts as progress for the request's deadline is decided by the connection: only a value above the last one does, as the
+protocol requires progress to increase.
 """
 
 from __future__ import annotations

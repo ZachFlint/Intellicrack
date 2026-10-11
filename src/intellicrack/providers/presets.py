@@ -208,13 +208,10 @@ ANTHROPIC_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
 )
 """Claude families whose thinking surface differs from the current default.
 
-The Anthropic base capabilities describe the current generation -- adaptive
-thinking with ``output_config.effort`` up to ``xhigh`` and a 1M window -- so a
-Claude model released after this table was written resolves to the surface it
-most likely has. The families listed here are the closed set that predates it:
-Opus 4.6 and Sonnet 4.6, which take adaptive thinking but no ``xhigh``, and
-every earlier model, which only takes a ``budget_tokens`` thinking budget. Fable 5.1
-and Opus 5.5 share the current surface but refuse a forced tool choice.
+The Anthropic base capabilities describe the current generation -- adaptive thinking with ``output_config.effort`` up to ``xhigh`` and a 1M
+window -- so a Claude model released after this table was written resolves to the surface it most likely has. The families listed here are
+the closed set that predates it: Opus 4.6 and Sonnet 4.6, which take adaptive thinking but no ``xhigh``, and every earlier model, which only
+takes a ``budget_tokens`` thinking budget. Fable 5.1 and Opus 5.5 share the current surface but refuse a forced tool choice.
 """
 
 _GEMINI_REASONING = ReasoningSupport(
@@ -240,8 +237,7 @@ GEMINI_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
 )
 """Gemini families whose thinking is set by level rather than by budget.
 
-Gemini 3 takes ``thinkingLevel``; Gemini 2.5, the dialect's default, takes
-``thinkingBudget``. Flash offers four levels and Pro two.
+Gemini 3 takes ``thinkingLevel``; Gemini 2.5, the dialect's default, takes ``thinkingBudget``. Flash offers four levels and Pro two.
 """
 
 _DIALECT_MODEL_PRESETS: Final[dict[ApiDialect, tuple[ModelPreset, ...]]] = {ApiDialect.GEMINI: GEMINI_MODEL_PRESETS}
@@ -398,10 +394,8 @@ GROK_MODEL_PRESETS: Final[tuple[ModelPreset, ...]] = (
 )
 """Grok families, most specific first.
 
-``reasoning_effort`` is accepted by grok-4.5 (up to ``high``), grok-4.6 and
-grok-4.7 (up to ``xhigh``), the multi-agent variants and grok-3-mini; the
-other grok-4 generations reason automatically and reject it. Grok-4 and later
-take ``max_completion_tokens``.
+``reasoning_effort`` is accepted by grok-4.5 (up to ``high``), grok-4.6 and grok-4.7 (up to ``xhigh``), the multi-agent variants and
+grok-3-mini; the other grok-4 generations reason automatically and reject it. Grok-4 and later take ``max_completion_tokens``.
 """
 
 BUILTIN_PRESETS: Final[dict[str, ProviderPreset]] = {

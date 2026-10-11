@@ -4,12 +4,12 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Browse a running server's resources and prompts from the chat, and insert them into the message being written.
 
-The browser lists the running servers that offer resources or prompts. For the chosen server it lists its resources and resource
-templates, and its prompts. A template's variables and a prompt's arguments each get a field, and as the operator types the server is
-asked to complete the value, when it offers completions, the suggestions dropping down under the field. A resource can be read and a
-prompt fetched into the preview, with the server's progress shown as it goes, and either inserted into the chat input; a resource can
-also be subscribed to, so the operator hears when it changes, and the lists are read again whenever the server says they changed. Everything a server returns is cleaned and fenced by the functions this
-module calls, the same ones the settings dialog and the model's own tools use.
+The browser lists the running servers that offer resources or prompts. For the chosen server it lists its resources and resource templates,
+and its prompts. A template's variables and a prompt's arguments each get a field, and as the operator types the server is asked to complete
+the value, when it offers completions, the suggestions dropping down under the field. A resource can be read and a prompt fetched into the
+preview, with the server's progress shown as it goes, and either inserted into the chat input; a resource can also be subscribed to, so the
+operator hears when it changes, and the lists are read again whenever the server says they changed. Everything a server returns is cleaned
+and fenced by the functions this module calls, the same ones the settings dialog and the model's own tools use.
 """
 
 from __future__ import annotations
@@ -160,8 +160,7 @@ class _ArgumentForm(QWidget):
 class McpContextBrowser(QDialog):
     """Browses one running server's resources and prompts and inserts them into the chat.
 
-    Emits ``inserted(text)`` with the rendered resource or prompt the
-    operator chose to insert.
+    Emits ``inserted(text)`` with the rendered resource or prompt the operator chose to insert.
     """
 
     inserted = pyqtSignal(str)

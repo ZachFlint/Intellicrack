@@ -4,12 +4,12 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Log messages MCP servers send, routed into Intellicrack's own logging.
 
-A server may send ``notifications/message`` log records: on a 2025-11-25 connection at or above the level ``logging/setLevel`` asked
-for, and on a 2026-07-28 connection only for requests that opt in with a ``logLevel`` in their ``_meta``. Every record is the server's
-own text, so it is cleaned of invisible characters and forged fence markers and bounded before it is logged. Each record goes to the
-structlog pipeline -- and so to the log files and the log viewer -- with the server it came from, its level mapped onto structlog's, and
-is kept in a bounded per-server buffer the MCP settings show. A server that floods is rate limited per server; what it sends over the
-limit is counted, not logged, and the count is reported once the limit allows.
+A server may send ``notifications/message`` log records: on a 2025-11-25 connection at or above the level ``logging/setLevel`` asked for,
+and on a 2026-07-28 connection only for requests that opt in with a ``logLevel`` in their ``_meta``. Every record is the server's own text,
+so it is cleaned of invisible characters and forged fence markers and bounded before it is logged. Each record goes to the structlog
+pipeline -- and so to the log files and the log viewer -- with the server it came from, its level mapped onto structlog's, and is kept in a
+bounded per-server buffer the MCP settings show. A server that floods is rate limited per server; what it sends over the limit is counted,
+not logged, and the count is reported once the limit allows.
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ _STRUCTLOG_METHODS: Final[dict[str, str]] = {
     "alert": "critical",
     "emergency": "critical",
 }
-"""structlog method each protocol level is logged with; an unknown level logs as ``warning``."""
+"""Structlog method each protocol level is logged with; an unknown level logs as ``warning``."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,8 +138,7 @@ def render_log_data(data: object) -> str:
 class McpServerLogBook:
     """Receives every server's log messages and keeps each server's recent ones.
 
-    Callbacks are invoked on the MCP event loop and listeners are called there too; a GUI listener must hand the record to its own
-    thread.
+    Callbacks are invoked on the MCP event loop and listeners are called there too; a GUI listener must hand the record to its own thread.
     """
 
     def __init__(

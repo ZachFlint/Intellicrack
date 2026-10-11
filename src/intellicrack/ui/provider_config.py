@@ -1316,9 +1316,8 @@ class ModelRefreshWorker(RetainedWorker):
     def run(self) -> None:
         """Run the model refresh in a separate thread.
 
-        Every outcome emits :attr:`refresh_finished`, including a provider
-        error, so a caller that disabled its model picker while the refresh
-        runs always gets it back.
+        Every outcome emits :attr:`refresh_finished`, including a provider error, so a caller that disabled its model picker while the
+        refresh runs always gets it back.
         """
         try:
             success, models, message = self._fetch_models()
@@ -2516,13 +2515,10 @@ class ProviderConfigDialog(QDialog):
     def _on_delete_instance(self) -> None:
         """Delete the selected instance, or restore a built-in from its preset.
 
-        Deleting an instance also disconnects and unregisters its provider, so
-        it stops serving requests and leaves the main window's selector, and
-        removes the endpoint overrides saved for it in ``.env``
-        (``<ID>_API_BASE``, ``<ID>_ORGANIZATION``, ``<ID>_PROJECT``), which
-        would otherwise silently override the base URL of an instance later
-        re-added under the same id. The stored API key is kept, as the
-        confirmation says.
+        Deleting an instance also disconnects and unregisters its provider, so it stops serving requests and leaves the main window's
+        selector, and removes the endpoint overrides saved for it in ``.env`` (``<ID>_API_BASE``, ``<ID>_ORGANIZATION``, ``<ID>_PROJECT``),
+        which would otherwise silently override the base URL of an instance later re-added under the same id. The stored API key is kept, as
+        the confirmation says.
         """
         provider_id = self._selected_provider_id()
         if not provider_id:
@@ -2614,9 +2610,9 @@ class ProviderConfigDialog(QDialog):
         """Import instances from a JSON file, confirming any unknown host or replaced instance.
 
         An instance whose base-URL host matches no known preset is shown with its host and its headers before it goes live, because an
-        imported record can point a credential at an endpoint the user did not choose. A record naming a built-in provider is refused,
-        since built-ins are owned by their presets, and so is one whose ``.env`` variables would be another provider's. A record whose id
-        is already in use replaces the existing instance only after the user confirms it.
+        imported record can point a credential at an endpoint the user did not choose. A record naming a built-in provider is refused, since
+        built-ins are owned by their presets, and so is one whose ``.env`` variables would be another provider's. A record whose id is
+        already in use replaces the existing instance only after the user confirms it.
         """
         path_text, _ = QFileDialog.getOpenFileName(self, "Import Provider Instances", "", "JSON (*.json)")
         if not path_text:

@@ -395,6 +395,7 @@ _PARAMS_READ_SIZE_X64 = 0x400
 _PARAMS_READ_SIZE_X86 = 0x2A0
 _ENV_READ_CHUNK = 0x2000
 """Bytes read per pass when walking the environment block to its terminator."""
+
 _ENV_READ_MAX = 0x200000
 """Ceiling on a single environment block read, so a corrupt size cannot drive an unbounded allocation."""
 

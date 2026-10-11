@@ -4,10 +4,10 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Progress a running tool call reports, carried from the tool back to the operator.
 
-The orchestrator runs each tool call with a reporter bound for that call. Whatever carries out the call -- a server's tool, reached
-through the MCP tool source -- picks the reporter up with :func:`current_progress_reporter` when the call starts, and reports through it
-for as long as the call runs, even from another task. The orchestrator turns each report into a :class:`ToolProgress` for the call and
-hands it to the UI, which shows it beside the running call.
+The orchestrator runs each tool call with a reporter bound for that call. Whatever carries out the call -- a server's tool, reached through
+the MCP tool source -- picks the reporter up with :func:`current_progress_reporter` when the call starts, and reports through it for as long
+as the call runs, even from another task. The orchestrator turns each report into a :class:`ToolProgress` for the call and hands it to the
+UI, which shows it beside the running call.
 
 :class:`RunningToolCalls` runs each call as a task of its own, which is what lets the operator cancel one call while the turn goes on.
 """
@@ -32,7 +32,6 @@ _T = TypeVar("_T")
 
 type ToolProgressReporter = Callable[[float, float | None, str | None], None]
 """Reports how far a call has got, its total if known, and a message."""
-
 
 _REPORTER: ContextVar[ToolProgressReporter | None] = ContextVar("intellicrack_tool_progress_reporter", default=None)
 
@@ -110,9 +109,8 @@ class ToolCallCancelledError(Exception):
 class RunningToolCalls:
     """The tool calls running now, which the operator can cancel one at a time.
 
-    Each call runs as its own task with a progress reporter bound, so the
-    operator can stop one call and let the turn go on, and see how far each
-    one has got meanwhile. Everything here runs on the orchestrator's loop.
+    Each call runs as its own task with a progress reporter bound, so the operator can stop one call and let the turn go on, and see how far
+    each one has got meanwhile. Everything here runs on the orchestrator's loop.
     """
 
     def __init__(self) -> None:
