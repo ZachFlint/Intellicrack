@@ -1363,9 +1363,9 @@ class TestGetAllStrings:
         """``get_all_strings`` must normalise unknown type strings to ``"ascii"``.
 
         Mutation caught: forwarding the raw ``type`` field → encoding is
-        ``"utf8"`` or similar non-Literal value rather than ``"ascii"``.
+        ``"ibm037"`` or similar non-Literal value rather than ``"ascii"``.
         """
-        resp = json.dumps([{"vaddr": 0x200, "string": "test", "type": "utf8", "section": ".rdata"}])
+        resp = json.dumps([{"vaddr": 0x200, "string": "test", "type": "ibm037", "section": ".rdata"}])
         bridge, _ = _make_bridge({"izzj": resp})
 
         result: list[StringInfo] = await bridge.get_all_strings()

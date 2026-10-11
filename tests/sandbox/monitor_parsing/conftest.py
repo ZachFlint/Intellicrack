@@ -8,24 +8,21 @@ The tests in this directory invoke real Windows scripts via subprocess
 (``pwsh.exe`` / ``cmd.exe``) and exercise live kernel-object polling
 and named-event signalling. They are end-to-end integration tests, so
 they are tagged ``integration`` and excluded from the default unit
-suite. A session-scoped autouse fixture also resets the shared named
-``IntellicrackMonitorStop`` event between tests so a previously
-signalled manual-reset handle cannot leak across cases.
+suite. An autouse fixture also reserves the shared named
+``IntellicrackMonitorStop`` event for each test, so a test in another
+pytest process cannot signal or reset it meanwhile, and leaves it
+unsignaled so a previously signaled manual-reset handle cannot leak
+across cases.
 """
 
 from __future__ import annotations
 
-import shutil
-import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 import pytest
 
-from intellicrack.core.subprocess_compat import (
-    SubprocessError,
-    run,
-)
+from tests._helpers.monitor_stop_event import monitor_stop_event_reserved
 
 
 if TYPE_CHECKING:
@@ -33,8 +30,6 @@ if TYPE_CHECKING:
 
 
 _THIS_DIR = Path(__file__).resolve().parent
-_STOP_EVENT_NAME: Final[str] = "IntellicrackMonitorStop"
-_RESET_TIMEOUT_SEC: Final[float] = 10.0
 
 
 def pytest_collection_modifyitems(
@@ -64,64 +59,19 @@ def pytest_collection_modifyitems(
             item.add_marker(integration)
 
 
-def _reset_named_event(event_name: str) -> None:
-    """Reset the named manual-reset event to its non-signalled state.
-
-    The helper uses ``EventWaitHandle.OpenExisting`` first; if no
-    handle exists the call is a no-op. When a handle does exist the
-    helper calls ``Reset()`` so the next monitor that opens it starts
-    from a clean non-signalled state.
-
-    Args:
-        event_name: Name of the kernel named event to reset.
-    """
-    if sys.platform != "win32":
-        return
-    pwsh = shutil.which("pwsh") or shutil.which("powershell")
-    if pwsh is None:
-        return
-    script = (
-        "$ErrorActionPreference='Stop';"
-        "try {"
-        f"  $h = [System.Threading.EventWaitHandle]::OpenExisting('{event_name}');"
-        "  try { $h.Reset() | Out-Null } finally { $h.Dispose() }"
-        "} catch {"
-        "  $null = $_"
-        "}"
-    )
-    try:
-        run(
-            [
-                pwsh,
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                script,
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=_RESET_TIMEOUT_SEC,
-        )
-    except (SubprocessError, OSError):
-        return
-
-
 @pytest.fixture(autouse=True)
 def reset_stop_event() -> Iterator[None]:
-    """Reset the shared ``IntellicrackMonitorStop`` event around each test.
+    """Reserve the shared ``IntellicrackMonitorStop`` event for each test and leave it unsignaled.
 
-    Without this fixture, a manual-reset event signalled by one test
-    would remain signalled for the next test, causing a freshly
+    Without the reset, a manual-reset event signaled by one test
+    would remain signaled for the next test, causing a freshly
     spawned monitor to short-circuit its main loop before the test had
-    a chance to observe behaviour.
+    a chance to observe behavior. Without the reservation, a test in
+    another pytest process that starts or stops monitors at the same
+    time would see this test's signal, or signal this test's monitors.
 
     Yields:
-        None: Tests run between the setup and teardown resets.
+        None: The test runs while the reservation is held.
     """
-    _reset_named_event(_STOP_EVENT_NAME)
-    yield
-    _reset_named_event(_STOP_EVENT_NAME)
+    with monitor_stop_event_reserved():
+        yield

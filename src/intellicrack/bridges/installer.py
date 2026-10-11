@@ -444,15 +444,7 @@ def _is_user_admin() -> bool:
     """
     if sys.platform != "win32":
         return True
-    windll = getattr(ctypes, "windll", None)
-    if windll is None:
-        return False
-    shell32 = getattr(windll, "shell32", None)
-    if shell32 is None:
-        return False
-    is_admin_fn = getattr(shell32, "IsUserAnAdmin", None)
-    if is_admin_fn is None:
-        return False
+    is_admin_fn = ctypes.windll.shell32.IsUserAnAdmin
     try:
         return bool(is_admin_fn())
     except OSError as exc:
@@ -521,17 +513,16 @@ def _read_pe_version_info(exe_path: Path) -> str | None:
         return None
 
     try:
-        return _extract_pe_version_string(pe, exe_path)
+        return _extract_pe_version_string(pe)
     finally:
         pe.close()
 
 
-def _extract_pe_version_string(pe: pefile.PE, exe_path: Path) -> str | None:
+def _extract_pe_version_string(pe: pefile.PE) -> str | None:
     """Walk the parsed PE structure and return the first usable version string.
 
     Args:
         pe: A parsed ``pefile.PE`` instance.
-        exe_path: Path of the PE on disk, used for logging context.
 
     Returns:
         str | None: The best version string available, or None when no
@@ -543,10 +534,7 @@ def _extract_pe_version_string(pe: pefile.PE, exe_path: Path) -> str | None:
     file_info: list[Any] = list(file_info_attr) if file_info_attr else []
     flat: list[Any] = []
     for entry in file_info:
-        if isinstance(entry, list):
-            flat.extend(cast("list[Any]", entry))
-        else:
-            flat.append(entry)
+        flat.extend(cast("list[Any]", entry))
 
     preferred_keys = ("FileVersion", "ProductVersion")
     for fi in flat:
@@ -557,11 +545,7 @@ def _extract_pe_version_string(pe: pefile.PE, exe_path: Path) -> str | None:
             entries: dict[bytes, bytes] = dict(entries_attr) if entries_attr else {}
             for key_name in preferred_keys:
                 if raw_value := entries.get(key_name.encode("utf-8")):
-                    try:
-                        return raw_value.decode("utf-8", errors="replace").strip()
-                    except (AttributeError, UnicodeError) as exc:
-                        _logger.warning("pe_version_decode_failed", exe=str(exe_path), key=key_name, error=str(exc))
-                        continue
+                    return raw_value.decode("utf-8", errors="replace").strip()
 
     vs_fixed_attr: Any = getattr(pe, "VS_FIXEDFILEINFO", None) or []
     vs_fixed: list[Any] = list(vs_fixed_attr) if vs_fixed_attr else []
@@ -1040,7 +1024,7 @@ class ToolInstaller:
                 ):
                     date_str = date_match[0]
                     version = _ToolInstallerVersion.parse(date_str)
-                    if version is not None:
+                    if version is not None:  # pragma: no branch - type narrowing; parse never returns None here
                         _logger.debug(
                             "x64dbg_version_from_release_notes",
                             path=str(candidate),
@@ -1671,7 +1655,7 @@ class ToolInstaller:
         file_handle: IO[bytes],
         total: int,
     ) -> int:
-        """Copy each non-empty chunk from ``response`` into ``file_handle``.
+        """Copy each chunk from ``response`` into ``file_handle``.
 
         Args:
             response: Open streaming HTTP response to consume.
@@ -1686,8 +1670,6 @@ class ToolInstaller:
         downloaded = 0
         bytes_since_last_log = 0
         async for chunk in response.aiter_bytes(chunk_size=_PROGRESS_CHUNK):
-            if not chunk:
-                continue
             await asyncio.to_thread(file_handle.write, chunk)
             downloaded += len(chunk)
             bytes_since_last_log += len(chunk)
@@ -2632,7 +2614,7 @@ def _default_tools_directory() -> Path:
         Path: ``%LOCALAPPDATA%/intellicrack_tools`` on Windows when
         defined, otherwise ``~/.intellicrack_tools``.
     """
-    if sys.platform == "win32":
+    if sys.platform == "win32":  # pragma: no branch - non-Windows
         if local_appdata := _env_local_appdata():
             return Path(local_appdata) / _DEFAULT_TOOLS_DIR_NAME
     return Path("~").expanduser() / f".{_DEFAULT_TOOLS_DIR_NAME}"

@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.hexpat.completer import HexPatCompleter
+from intellicrack.core.hexpat.errors import HexPatError
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import HexPatSyntaxHighlighter
 from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_callable_async, worker_is_running
@@ -117,14 +118,14 @@ class PatternEditorMixin:
             name_val = str(field.get("name", ""))
             offset_raw = field.get("offset")
             size_raw = field.get("size")
-            type_val = str(field.get("type", ""))
+            value_val = str(field.get("display_value", ""))
             offset_int = offset_raw if isinstance(offset_raw, int) else 0
             size_int = size_raw if isinstance(size_raw, int) else 0
             item = QTreeWidgetItem([
                 name_val,
                 f"0x{offset_int:08X}",
                 f"{size_int}",
-                type_val,
+                value_val,
             ])
             self._templates_tree.addTopLevelItem(item)
 
@@ -166,7 +167,7 @@ class PatternEditorMixin:
         self._pattern_library_tree.setHeaderLabels(["Templates"])
         self._pattern_library_tree.setMinimumWidth(150)
         library_header = self._pattern_library_tree.header()
-        if library_header is not None:
+        if library_header is not None:  # pragma: no branch - type narrowing
             library_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self._pattern_library_tree.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._pattern_library_tree.itemClicked.connect(self._on_pattern_library_clicked)
@@ -276,15 +277,13 @@ class PatternEditorMixin:
                 self._pattern_error_display.setPlainText("HexPat compiler not available")
             return
 
-        compiler_cls: type[Any] | None = getattr(hexpat_mod, "HexPatCompiler", None)
+        compiler_cls: type[Any] = hexpat_mod.HexPatCompiler
         error_cls: type[Any] | None = getattr(hexpat_mod, "HexPatError", None)
-        if compiler_cls is None:
-            return
 
         try:
             compiler_inst: Any = compiler_cls()
             compiled: str = compiler_inst.compile(source)
-        except (ValueError, TypeError, AttributeError) as exc:
+        except (ValueError, TypeError, AttributeError, HexPatError) as exc:
             is_hexpat_error = error_cls is not None and isinstance(exc, error_cls)
             self._compiled_json = ""
             if is_hexpat_error:
@@ -347,16 +346,12 @@ class PatternEditorMixin:
                 self._pattern_status_label.setText("Apply failed")
             _logger.exception("pattern_apply_failed")
         else:
-            field_count = 0
-            if isinstance(result, list):
-                typed_fields = cast("list[dict[str, object]]", result)
-                field_count = len(typed_fields)
-                if self._templates_tree is not None:
-                    self._templates_tree.clear()
-                    self._populate_template_tree(typed_fields)
-                    self._highlight_template_fields(typed_fields)
-            elif self._templates_tree is not None:
+            typed_fields = cast("list[dict[str, object]]", result)
+            field_count = len(typed_fields)
+            if self._templates_tree is not None:
                 self._templates_tree.clear()
+                self._populate_template_tree(typed_fields)
+                self._highlight_template_fields(typed_fields)
 
             self._populate_template_combo()
 
@@ -470,14 +465,11 @@ class PatternEditorMixin:
         self._pattern_print_buffer = []
 
         if self._interpreter is None:
-            self._interpreter = HexPatInterpreter_cls(print_sink=self._pattern_print_sink)
+            interpreter = HexPatInterpreter_cls(print_sink=self._pattern_print_sink)
+            self._interpreter = interpreter
         else:
-            set_sink = getattr(self._interpreter, "set_print_sink", None)
-            if callable(set_sink):
-                set_sink(self._pattern_print_sink)
-        interpreter = self._interpreter
-        if interpreter is None:
-            return
+            interpreter = self._interpreter
+            interpreter.set_print_sink(self._pattern_print_sink)
 
         if self._pattern_status_label is not None:
             self._pattern_status_label.setText("Executing...")
@@ -491,7 +483,7 @@ class PatternEditorMixin:
             on_success=partial(self._on_interpreter_apply_finished, offset),
             on_error=self._on_interpreter_apply_error,
             parent=self if isinstance(self, QWidget) else None,
-            exceptions=(ValueError, TypeError, AttributeError),
+            exceptions=(ValueError, TypeError, AttributeError, HexPatError),
         )
         self._pattern_apply_worker = worker
         if worker.wait(_PATTERN_APPLY_SYNC_WAIT_MS):
@@ -799,14 +791,14 @@ class PatternEditorMixin:
             return
 
         if self._pattern_registry is None:
-            project_root = Path(__file__).resolve().parents[4]
+            project_root = Path(__file__).resolve().parents[5]
             patterns_dir = project_root / "vendor" / "community-patterns" / "patterns"
             if not patterns_dir.exists():
                 return
             self._pattern_registry = PatternRegistryCls([patterns_dir])
 
         registry = self._pattern_registry
-        if registry is None:
+        if registry is None:  # pragma: no cover - type narrowing
             return
 
         try:

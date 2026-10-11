@@ -95,7 +95,7 @@ def _pid_exists(pid: int) -> bool:
 
     if sys.platform == "win32":
         return _pid_exists_windows(pid)
-    return _pid_exists_posix(pid)
+    return _pid_exists_posix(pid)  # pragma: no cover - non-Windows
 
 
 def _pid_handle_alive(kernel32: ctypes.CDLL, handle: int) -> bool:
@@ -174,7 +174,7 @@ def _pid_exists_windows(pid: int) -> bool:
         kernel32.CloseHandle(handle)
 
 
-def _pid_exists_posix(pid: int) -> bool:
+def _pid_exists_posix(pid: int) -> bool:  # pragma: no cover - non-Windows
     """Verify a PID exists on POSIX systems via ``/proc`` and ``os.kill``.
 
     Args:
@@ -424,8 +424,7 @@ class ProcessManager:
             try:
                 self._original_sigint_handler = signal.getsignal(signal.SIGINT)
                 signal.signal(signal.SIGINT, self._signal_handler)
-                if hasattr(signal, "SIGBREAK"):
-                    signal.signal(signal.SIGBREAK, self._signal_handler)
+                signal.signal(signal.SIGBREAK, self._signal_handler)
             except (ValueError, OSError) as e:
                 _logger.exception(
                     "signal_handler_install_failed",
@@ -566,6 +565,8 @@ class ProcessManager:
                 _logger.info("signal_sent", pid=p.pid, signal=_SIGNAL_SIGTERM)
             except psutil.NoSuchProcess:
                 _logger.exception("process_terminate_target_missing", pid=p.pid)
+            except psutil.AccessDenied:
+                _logger.warning("sync_cleanup_terminate_access_denied", pid=p.pid)
 
         _, alive = psutil.wait_procs(unique_procs, timeout=self.DEFAULT_GRACEFUL_TIMEOUT)
 
@@ -576,6 +577,8 @@ class ProcessManager:
                     ProcessManager._force_kill_process(p)
                 except psutil.NoSuchProcess:
                     _logger.exception("kill_process_target_missing", pid=p.pid)
+                except psutil.AccessDenied:
+                    _logger.warning("sync_cleanup_kill_access_denied", pid=p.pid)
             psutil.wait_procs(alive, timeout=self.DEFAULT_FORCE_TIMEOUT)
 
         with self._process_lock:
@@ -590,18 +593,18 @@ class ProcessManager:
         """Force-kill a single ``psutil.Process`` with platform-specific logging.
 
         Propagates :class:`psutil.NoSuchProcess` from ``kill()`` when the
-        target process has already exited so the caller can log the missing
-        target.
+        target process has already exited, and :class:`psutil.AccessDenied`
+        when the system refuses to end it, so the caller can log either.
 
         Args:
             p: The ``psutil.Process`` to kill. The caller is responsible for
-                catching :class:`psutil.NoSuchProcess` if the target has
-                already exited.
+                catching :class:`psutil.NoSuchProcess` and
+                :class:`psutil.AccessDenied`.
         """
         if sys.platform == "win32":
             p.kill()
             _logger.info("win32_terminate_signal_sent", pid=p.pid, exit_code=_WIN_PROCESS_TERMINATE)
-        else:
+        else:  # pragma: no cover - non-Windows
             p.kill()
             _logger.info("signal_sent", pid=p.pid, signal=_SIGNAL_SIGKILL)
 
@@ -662,9 +665,6 @@ class ProcessManager:
             parent = psutil.Process(pid)
         except psutil.NoSuchProcess:
             _logger.exception("terminate_tree_root_lookup_missing", pid=pid)
-            return
-        except psutil.AccessDenied:
-            _logger.warning("terminate_tree_root_access_denied", pid=pid)
             return
 
         try:
@@ -948,10 +948,7 @@ class ProcessManager:
         except TimeoutError:
             logger.warning("async_process_zombie_fallback", process_name=name)
             ProcessManager._terminate_process_sync(process)
-            try:
-                await process.wait()
-            except (OSError, RuntimeError) as exc:
-                _logger.warning("zombie_wait_fallback_failed", error=str(exc))
+            await process.wait()
 
         logger.info("async_process_terminated_tree", process_name=name)
 

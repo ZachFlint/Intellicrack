@@ -542,7 +542,7 @@ def _create_kill_on_close_job_object() -> int | None:
         int | None: The job object handle, or ``None`` on a non-Windows
         platform or if the Win32 API calls fail.
     """
-    if os.name != "nt":
+    if os.name != "nt":  # pragma: no cover - non-Windows
         return None
 
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -2575,7 +2575,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         # external ``TerminateProcess`` that never reaches either of those
         # code paths.
         job_handle = await asyncio.to_thread(_create_kill_on_close_job_object)
-        if job_handle is not None:
+        if job_handle is not None:  # pragma: no branch - type narrowing; job object creation fails only on OS error
             await asyncio.to_thread(_assign_process_to_job_object, job_handle, self._process.pid)
         self._job_object_handle = job_handle
 
@@ -4250,17 +4250,19 @@ metadata
 
         raw_bytes = pattern if isinstance(pattern, bytes) else b""
         try:
-            byte_list_str = ", ".join(str(b) for b in raw_bytes)
+            byte_list_str = ", ".join(str((b - 256) if b > _JAVA_SIGNED_THRESHOLD else b) for b in raw_bytes)
             result = await self._execute_remote(
                 f"""
+                import jpype
                 addresses = []
                 memory = currentProgram.getMemory()
                 start = memory.getMinAddress()
                 end = memory.getMaxAddress()
-                searcher = memory.findBytes(start, end, [{byte_list_str}], None, True, monitor)
+                needle = jpype.JArray(jpype.JByte)([{byte_list_str}])
+                searcher = memory.findBytes(start, end, needle, None, True, monitor)
                 while searcher is not None:
                     addresses.append(searcher.getOffset())
-                    searcher = memory.findBytes(searcher.add(1), end, [{byte_list_str}], None, True, monitor)
+                    searcher = memory.findBytes(searcher.add(1), end, needle, None, True, monitor)
                 addresses
                 """,
             )
@@ -7310,12 +7312,16 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     f"""
                     addr = toAddr({address})
                     eqTable = currentProgram.getEquateTable()
-                    existing = eqTable.getEquate({json.dumps(name)})
-                    if existing is None:
-                        eq = eqTable.createEquate({json.dumps(name)}, {value})
-                    else:
-                        eq = existing
-                    eq.addReference(addr, 0)
+                    tx_id = currentProgram.startTransaction('intellicrack.create_equate')
+                    stored = False
+                    try:
+                        eq = eqTable.getEquate({json.dumps(name)})
+                        if eq is None:
+                            eq = eqTable.createEquate({json.dumps(name)}, {value})
+                        eq.addReference(addr, 0)
+                        stored = True
+                    finally:
+                        currentProgram.endTransaction(tx_id, stored)
                     """,
                 ),
             )
@@ -7331,7 +7337,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                 textwrap.dedent(
                     f"""
                     (lambda eq: None if eq is None else {{
-                        'value': long(eq.getValue()),
+                        'value': int(eq.getValue()),
                         'addresses': [r.getAddress().getOffset() for r in eq.getReferences()],
                     }})(currentProgram.getEquateTable().getEquate({json.dumps(name)}))
                     """,
@@ -7712,11 +7718,11 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
 
         process = await asyncio.to_thread(_start_process)
         job_handle = await asyncio.to_thread(_create_kill_on_close_job_object)
-        if job_handle is not None:
+        if job_handle is not None:  # pragma: no branch - type narrowing; job object creation fails only on OS error
             await asyncio.to_thread(_assign_process_to_job_object, job_handle, process.pid)
         self._start_drain_threads(process)
         return_code = await asyncio.to_thread(process.wait)
-        if job_handle is not None:
+        if job_handle is not None:  # pragma: no branch - type narrowing; job object creation fails only on OS error
             await asyncio.to_thread(_close_job_object_handle, job_handle)
         await self._join_drain_threads()
 
@@ -10246,7 +10252,12 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
                 extMgr = currentProgram.getExternalManager()
                 addr_val = {addr_literal}
                 mem_addr = toAddr(addr_val) if addr_val is not None else None
-                ext_loc = extMgr.addExtFunction({json.dumps(library)}, {json.dumps(name)}, mem_addr, SourceType.USER_DEFINED)
+                tx_id = currentProgram.startTransaction('intellicrack.add_external_function')
+                ext_loc = None
+                try:
+                    ext_loc = extMgr.addExtFunction({json.dumps(library)}, {json.dumps(name)}, mem_addr, SourceType.USER_DEFINED)
+                finally:
+                    currentProgram.endTransaction(tx_id, ext_loc is not None)
                 {{'library': {json.dumps(library)}, 'name': {json.dumps(name)}, 'address': addr_val, 'success': ext_loc is not None}}
             """)
             return (
@@ -10283,9 +10294,13 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
         _logger.info("overlay_space_creating", overlay_name=name)
         try:
             result = await self._execute_remote(f"""
-                memory = currentProgram.getMemory()
                 default_space = currentProgram.getAddressFactory().getDefaultAddressSpace()
-                overlay_space = memory.createOverlayAddressSpace({json.dumps(name)}, default_space)
+                tx_id = currentProgram.startTransaction('intellicrack.create_overlay_space')
+                overlay_space = None
+                try:
+                    overlay_space = currentProgram.createOverlaySpace({json.dumps(name)}, default_space)
+                finally:
+                    currentProgram.endTransaction(tx_id, overlay_space is not None)
                 {{'name': overlay_space.getName() if overlay_space is not None else {json.dumps(name)}, 'success': overlay_space is not None}}
             """)
             return cast("dict[str, Any]", result) if isinstance(result, dict) else {"name": name, "success": False}

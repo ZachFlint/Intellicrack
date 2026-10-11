@@ -395,11 +395,11 @@ class HexEditorWidget(QAbstractScrollArea):
         focus_policy = getattr(Qt.FocusPolicy, "StrongFocus", Qt.FocusPolicy(11))
         self.setFocusPolicy(focus_policy)
         vp = self.viewport()
-        if vp is not None:
+        if vp is not None:  # pragma: no branch - type narrowing
             vp.setCursor(Qt.CursorShape.IBeamCursor)
 
         vbar = self.verticalScrollBar()
-        if vbar is not None:
+        if vbar is not None:  # pragma: no branch - type narrowing
             vbar.setSingleStep(1)
             vbar.setPageStep(self._visible_row_count())
             vbar.valueChanged.connect(self._on_scroll_changed)
@@ -832,13 +832,13 @@ class HexEditorWidget(QAbstractScrollArea):
 
         total = self._total_rows()
         vbar = self.verticalScrollBar()
-        if vbar is not None:
+        if vbar is not None:  # pragma: no branch - type narrowing
             vbar.setRange(0, max(0, total - self._visible_row_count()))
             vbar.setValue(0)
             vbar.setPageStep(self._visible_row_count())
 
         vp = self.viewport()
-        if vp is not None:
+        if vp is not None:  # pragma: no branch - type narrowing
             vp.update()
         if self._minimap.isVisible():
             self._refresh_minimap_entropy()
@@ -884,7 +884,7 @@ class HexEditorWidget(QAbstractScrollArea):
         """
         _ = a0
         vp = self.viewport()
-        if vp is None:
+        if vp is None:  # pragma: no cover - type narrowing
             return
         painter = QPainter(vp)
         try:
@@ -1985,7 +1985,7 @@ class HexEditorWidget(QAbstractScrollArea):
         """Copy selection to clipboard as hex string."""
         if text := self.copy_as("hex"):
             clipboard = QApplication.clipboard()
-            if clipboard is not None:
+            if clipboard is not None:  # pragma: no branch - type narrowing
                 clipboard.setText(text)
 
     def _do_paste(self) -> None:
@@ -1996,7 +1996,7 @@ class HexEditorWidget(QAbstractScrollArea):
         if self._document is None:
             return
         clipboard = QApplication.clipboard()
-        if clipboard is None:
+        if clipboard is None:  # pragma: no cover - type narrowing
             return
         text = clipboard.text()
         if not text:
@@ -2005,14 +2005,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
         data: bytes = b""
         stripped = text.replace(" ", "").replace("\n", "").replace("\r", "")
-        if all(c in string.hexdigits for c in stripped) and len(stripped) % 2 == 0:
-            try:
-                data = bytes.fromhex(stripped)
-            except ValueError:
-                _logger.warning("hex_editor_paste_hex_parse_failed_fallback_utf8", length=len(text), exc_info=True)
-                data = text.encode("utf-8")
-        else:
-            data = text.encode("utf-8")
+        data = bytes.fromhex(stripped) if all(c in string.hexdigits for c in stripped) and len(stripped) % 2 == 0 else text.encode("utf-8")
 
         if not data:
             return
@@ -2021,28 +2014,24 @@ class HexEditorWidget(QAbstractScrollArea):
             self.about_to_modify.emit(self._cursor_offset + i)
 
         if self._edit_mode == "overwrite":
-            write_fn = getattr(self._document, "write_bytes", None)
-            if callable(write_fn):
-                try:
-                    write_fn(self._cursor_offset, data)
-                    self._push_marks_undo()
-                    for i in range(len(data)):
-                        self._modified_offsets.add(self._cursor_offset + i)
-                    _logger.info("hex_editor_paste_overwrite_completed", offset=self._cursor_offset, length=len(data))
-                except (RuntimeError, ValueError, IndexError, OSError):
-                    _logger.warning("hex_editor_paste_overwrite_failed", offset=self._cursor_offset, exc_info=True)
+            try:
+                self._document.write_bytes(self._cursor_offset, data)
+                self._push_marks_undo()
+                written_end = min(self._cursor_offset + len(data), self._document.length())
+                self._modified_offsets.update(range(self._cursor_offset, written_end))
+                _logger.info("hex_editor_paste_overwrite_completed", offset=self._cursor_offset, length=len(data))
+            except (RuntimeError, ValueError, IndexError, OSError):
+                _logger.warning("hex_editor_paste_overwrite_failed", offset=self._cursor_offset, exc_info=True)
         else:
-            insert_fn = getattr(self._document, "insert_bytes", None)
-            if callable(insert_fn):
-                try:
-                    insert_fn(self._cursor_offset, data)
-                    self._push_marks_undo()
-                    self._shift_modified_offsets_for_insert(self._cursor_offset, len(data))
-                    for i in range(len(data)):
-                        self._modified_offsets.add(self._cursor_offset + i)
-                    _logger.debug("hex_editor_paste_insert_completed", offset=self._cursor_offset, length=len(data))
-                except (RuntimeError, ValueError, IndexError, OSError):
-                    _logger.warning("hex_editor_paste_insert_failed", offset=self._cursor_offset, exc_info=True)
+            try:
+                self._document.insert_bytes(self._cursor_offset, data)
+                self._push_marks_undo()
+                self._shift_modified_offsets_for_insert(self._cursor_offset, len(data))
+                for i in range(len(data)):
+                    self._modified_offsets.add(self._cursor_offset + i)
+                _logger.debug("hex_editor_paste_insert_completed", offset=self._cursor_offset, length=len(data))
+            except (RuntimeError, ValueError, IndexError, OSError):
+                _logger.warning("hex_editor_paste_insert_failed", offset=self._cursor_offset, exc_info=True)
 
         self.data_changed.emit()
         self._update_scrollbar()
@@ -2135,7 +2124,7 @@ class HexEditorWidget(QAbstractScrollArea):
         lines = _SCROLL_LINES if delta < 0 else -_SCROLL_LINES
 
         vbar = self.verticalScrollBar()
-        if vbar is not None:
+        if vbar is not None:  # pragma: no branch - type narrowing
             vbar.setValue(vbar.value() + lines)
 
     @override
@@ -2188,7 +2177,7 @@ class HexEditorWidget(QAbstractScrollArea):
         total = self._total_rows()
         visible = self._visible_row_count()
         vbar = self.verticalScrollBar()
-        if vbar is not None:
+        if vbar is not None:  # pragma: no branch - type narrowing
             vbar.setRange(0, max(0, total - visible))
             vbar.setPageStep(visible)
 
@@ -2239,7 +2228,7 @@ class HexEditorWidget(QAbstractScrollArea):
         """
         row = offset // self._bytes_per_row
         vbar = self.verticalScrollBar()
-        if vbar is None:
+        if vbar is None:  # pragma: no cover - type narrowing
             return
 
         first_row = vbar.value()
@@ -2253,7 +2242,7 @@ class HexEditorWidget(QAbstractScrollArea):
     def _update_viewport(self) -> None:
         """Trigger a viewport repaint."""
         vp = self.viewport()
-        if vp is not None:
+        if vp is not None:  # pragma: no branch - type narrowing
             vp.update()
 
     def goto_offset(self, offset: int) -> None:
@@ -2305,14 +2294,7 @@ class HexEditorWidget(QAbstractScrollArea):
         end = max(self._selection_start, self._selection_end)
         length = end - start + 1
 
-        read_fn = getattr(self._document, "read", None)
-        if callable(read_fn):
-            raw = read_fn(start, length)
-            if isinstance(raw, (bytes, bytearray)):
-                return bytes(raw)
-            if isinstance(raw, list):
-                return bytes(cast("list[int]", raw))
-        return b""
+        return self._document.read(start, length)
 
     def copy_as(self, fmt: str = "hex") -> str:
         """Format the current selection as a string.
@@ -2329,13 +2311,7 @@ class HexEditorWidget(QAbstractScrollArea):
         """
         data = self.get_selection_bytes()
         if not data and (self._document is not None and self._cursor_offset < self._doc_length()):
-            read_fn = getattr(self._document, "read", None)
-            if callable(read_fn):
-                raw = read_fn(self._cursor_offset, 1)
-                if isinstance(raw, (bytes, bytearray)):
-                    data = bytes(raw)
-                elif isinstance(raw, list):
-                    data = bytes(cast("list[int]", raw))
+            data = self._document.read(self._cursor_offset, 1)
         return self.copy_as_format(fmt, data) if data else ""
 
     def copy_as_format(self, fmt: str, data: bytes | None = None) -> str:
@@ -2452,7 +2428,7 @@ class HexEditorWidget(QAbstractScrollArea):
             ]
             for fmt_key, fmt_label in formats:
                 action = copy_as_menu.addAction(fmt_label)
-                if action is not None:
+                if action is not None:  # pragma: no branch - type narrowing
                     action.setEnabled(has_selection or has_data)
 
                     def _copy_as_slot(_checked: int, k: str = fmt_key) -> None:
@@ -2467,7 +2443,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     action.triggered.connect(_copy_as_slot)
 
         display_menu = menu.addMenu("Display Mode")
-        if display_menu is not None:
+        if display_menu is not None:  # pragma: no branch - type narrowing
             mode_labels: dict[str, str] = {
                 "hex8": "Hex 8-bit",
                 "hex16_le": "Hex 16-bit LE",
@@ -2490,7 +2466,7 @@ class HexEditorWidget(QAbstractScrollArea):
             }
             for mode_key, mode_label in mode_labels.items():
                 action = display_menu.addAction(mode_label)
-                if action is not None:
+                if action is not None:  # pragma: no branch - type narrowing
                     action.setCheckable(True)
                     action.setChecked(self._display_mode == mode_key)
 
@@ -2506,7 +2482,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     action.triggered.connect(_mode_slot)
 
         minimap_action = menu.addAction("Show Entropy Minimap")
-        if minimap_action is not None:
+        if minimap_action is not None:  # pragma: no branch - type narrowing
             minimap_action.setCheckable(True)
             minimap_action.setChecked(self._minimap.isVisible())
 
@@ -2530,7 +2506,7 @@ class HexEditorWidget(QAbstractScrollArea):
         """
         if text := self.copy_as(fmt):
             clipboard = QApplication.clipboard()
-            if clipboard is not None:
+            if clipboard is not None:  # pragma: no branch - type narrowing
                 clipboard.setText(text)
 
     def highlight_offsets(

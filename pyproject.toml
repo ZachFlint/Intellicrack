@@ -53,7 +53,7 @@ dependencies = [
   "httpcore>=1.0.9,<2",
   "httpx>=0.28.1,<0.29",
   "httpx2>=2.13.1,<3",
-  "huggingface-hub>=1.33.0,<3",
+  "huggingface-hub>=1.33.0,<2",
   "jpype1>=1.7.1,<2",
   "keyring>=25.7.0,<26",
   "keystone-engine>=0.9.2,<0.10",
@@ -64,7 +64,7 @@ dependencies = [
   "pefile>=2024.8.26,<2025",
   "psutil>=7.2.2,<8",
   "pydantic>=2.13.5,<3",
-  "pyghidra>=2.2.1,<4",
+  "pyghidra>=2.2.1,<3",
   "PyQt6>=6.11.0,<7",
   "pyyaml",
   "r2pipe>=1.9.8,<2",
@@ -384,6 +384,11 @@ report.exclude_lines = [
   "@(abc\\.)?abstractmethod",
   "def __repr__",
   "if __name__ == .__main__.:",
+  "if not _IS_WIN32:",
+  "if not _IS_WINDOWS:",
+  "if platform\\.system\\(\\) != .Windows.:",
+  "if sys\\.platform != .win32.:",
+  "if TYPE_CHECKING:",
   "pragma: no cover",
   "raise AssertionError",
   "raise NotImplementedError",
@@ -915,7 +920,7 @@ pyupgrade = ">=3.21.2, <4"
 pydocstyle = ">=6.3.0, <7"
 sourcery = ">=1.46.0, <2"
 wemake-python-styleguide = ">=1.8.1, <2"
-pydoclint = ">=0.10.1, <0.11"
+pydoclint = ">=0.11.0, <0.12"
 pyroma = ">=5.0.1, <6"
 mypy-extensions = ">=1.1.0, <2"
 dead = ">=2.1.0, <3"
@@ -1115,7 +1120,8 @@ format.max-line-length = 140
 ]
 
 [tool.pytest]
-ini_options.addopts = ["-ra", "--strict-markers"]
+# pytest-deadfixtures keeps every fixture value alive until the session ends; load it only for its own run: pytest -p deadfixtures --dead-fixtures
+ini_options.addopts = ["-ra", "--strict-markers", "-p", "no:deadfixtures"]
 ini_options.faulthandler_timeout = 300
 ini_options.markers = [
   "slow: Slow running tests",

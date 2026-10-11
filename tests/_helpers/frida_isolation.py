@@ -24,6 +24,15 @@ per-module isolation pays that start-up once per module instead. If the child
 dies part-way through, the results it already flushed are still used and only
 the tests it never reported are failed with the crash detail.
 
+A child can also deadlock instead of crashing, with every thread idle inside
+native Frida code. The parent therefore watches the result file as it grows and
+kills the child's whole process tree when no new result has been flushed for
+``_CHILD_STALL_SECONDS``, a limit sized from the normal duration of a module
+(under three minutes) rather than from the hard ceiling. The child also runs
+with a short pytest ``faulthandler_timeout`` so the all-thread traceback that
+shows where it was stuck is already on its stderr when it is killed, and that
+traceback is carried into the failure detail.
+
 A module opts in either by requesting the ``self_attached_bridge`` fixture or by
 declaring ``pytestmark`` with the ``frida_selfattach`` marker at module level.
 Self-attach that reaches frida-core any other way -- a differently named fixture,
@@ -53,6 +62,7 @@ from typing import TYPE_CHECKING, Literal, cast
 import pytest
 
 from scripts.sandbox.test_types import to_pyargs_argv
+from tests._helpers.process_cleanup import kill_pid_tree
 
 
 if TYPE_CHECKING:
@@ -70,6 +80,9 @@ _Outcome = Literal["passed", "failed", "skipped"]
 
 _SkipLocation = tuple[str, int, str]
 """The ``(path, lineno, reason)`` pytest requires as a skipped report's ``longrepr``."""
+
+_StopReason = Literal["exited", "timeout", "stalled"]
+"""Why :func:`run_child_with_progress_watch` stopped waiting for a child."""
 
 MARKER_NAME = "frida_selfattach"
 _MARKER_DESCRIPTION = (
@@ -92,8 +105,21 @@ _TEST_FILE_SUFFIX = "_test.py"
 _CHILD_ENV_FLAG = "IC_FRIDA_SELFATTACH_ISOLATED_CHILD"
 _RESULT_FILE_ENV = "IC_FRIDA_SELFATTACH_RESULT_FILE"
 _CHILD_TIMEOUT_SECONDS = 1800.0
+_CHILD_STALL_SECONDS = 300.0
+"""Longest a module's child may go without flushing a result before it is killed as hung.
+
+A healthy Frida module finishes in under three minutes in total, including the
+roughly 30 s the child spends importing PyQt6, intellicrack and frida before its
+first result, so five minutes without any new result is a deadlock and not a slow test.
+"""
+_CHILD_POLL_SECONDS = 1.0
+_CHILD_REAP_SECONDS = 30.0
+_CHILD_FAULTHANDLER_SECONDS = 120
+"""Per-test ``faulthandler_timeout`` the child runs with, well below :data:`_CHILD_STALL_SECONDS`."""
 _STDOUT_TAIL = 6000
-_STDERR_TAIL = 2000
+_STDERR_LIMIT = 8000
+"""Most stderr a failure detail carries: the start of a fatal-exception dump, which names the faulting thread, plus its end."""
+_STDERR_HEAD_SHARE = 3
 
 _MODULE_RESULTS: dict[str, ModuleResult] = {}
 """Per-module child results, keyed by the module's rootdir-relative path."""
@@ -117,6 +143,174 @@ class ModuleResult:
     skips: Mapping[str, _SkipLocation]
     detail: str | None
     complete: bool
+
+
+@dataclass(frozen=True)
+class ChildRun:
+    """What happened to one child process watched by :func:`run_child_with_progress_watch`.
+
+    Attributes:
+        stop_reason: ``"exited"`` when the child ended on its own, ``"timeout"``
+            when it outlived the hard ceiling, ``"stalled"`` when it went too
+            long without flushing a new result. Both of the latter were killed.
+        returncode: The child's exit code (the kill's exit code when it was killed).
+        stdout: Everything the child wrote to stdout.
+        stderr: Everything the child wrote to stderr, including any
+            ``faulthandler`` all-thread traceback it dumped before being killed.
+        limit_seconds: The limit that ended the wait, or ``0.0`` when the child exited on its own.
+    """
+
+    stop_reason: _StopReason
+    returncode: int | None
+    stdout: str
+    stderr: str
+    limit_seconds: float
+
+
+def _as_text(value: str | bytes | None) -> str:
+    """Return captured subprocess output as text.
+
+    Args:
+        value: Output as a partial ``TimeoutExpired`` carries it.
+
+    Returns:
+        str: ``value`` decoded when it is bytes, ``""`` when it is absent.
+    """
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value or ""
+
+
+def clip_output(text: str, limit: int) -> str:
+    """Shorten captured output to ``limit`` characters while keeping both its start and its end.
+
+    A ``faulthandler`` fatal-exception dump opens with the faulting thread, so
+    keeping only the tail of a long stderr hides the part that names the crash.
+
+    Args:
+        text: The captured output.
+        limit: Most characters of ``text`` to keep.
+
+    Returns:
+        str: ``text`` when it fits, otherwise its first third and last two thirds joined by a marker.
+    """
+    if len(text) <= limit:
+        return text
+    head = limit // _STDERR_HEAD_SHARE
+    tail = limit - head
+    return f"{text[:head]}\n...[{len(text) - limit} characters omitted]...\n{text[-tail:]}"
+
+
+def _file_size(path: str | None) -> int:
+    """Return a file's size, or ``0`` when it is absent or unnamed.
+
+    Args:
+        path: File to measure, or ``None``.
+
+    Returns:
+        int: The size in bytes.
+    """
+    if path is None:
+        return 0
+    try:
+        return Path(path).stat().st_size
+    except OSError:
+        return 0
+
+
+def _hang_reason(
+    *,
+    elapsed: float,
+    idle: float,
+    timeout_seconds: float,
+    stall_seconds: float | None,
+) -> tuple[_StopReason, float] | None:
+    """Decide whether a running child has outlived a limit.
+
+    Args:
+        elapsed: Seconds since the child started.
+        idle: Seconds since the child last flushed a result.
+        timeout_seconds: Hard ceiling on ``elapsed``.
+        stall_seconds: Ceiling on ``idle``, or ``None`` to not watch for stalls.
+
+    Returns:
+        tuple[_StopReason, float] | None: The reason and the limit that was
+            exceeded, or ``None`` while the child is still within bounds.
+    """
+    if elapsed >= timeout_seconds:
+        return "timeout", timeout_seconds
+    if stall_seconds is not None and idle >= stall_seconds:
+        return "stalled", stall_seconds
+    return None
+
+
+def run_child_with_progress_watch(
+    command: list[str],
+    *,
+    cwd: str,
+    env: Mapping[str, str],
+    timeout_seconds: float,
+    stall_seconds: float | None,
+    result_path: str | None,
+    poll_seconds: float = _CHILD_POLL_SECONDS,
+) -> ChildRun:
+    """Run ``command`` and kill its process tree if it outlives a limit or stops reporting.
+
+    Progress is the growth of ``result_path``, which the child appends to as each
+    test phase finishes. A child that is alive but has flushed nothing new for
+    ``stall_seconds`` is deadlocked rather than slow, so it is killed together
+    with every process it spawned (a hung Frida target such as ``notepad.exe``
+    would otherwise outlive it) instead of holding the caller until the hard
+    ceiling.
+
+    Args:
+        command: Child argv.
+        cwd: Working directory for the child.
+        env: Environment for the child.
+        timeout_seconds: Wall-clock ceiling for the whole run.
+        stall_seconds: Longest the child may go without growing ``result_path``,
+            or ``None`` to enforce only the ceiling.
+        result_path: File whose growth counts as progress, or ``None`` when there is none.
+        poll_seconds: How often to check the limits.
+
+    Returns:
+        ChildRun: The child's output and why the wait ended.
+    """
+    process = subprocess.Popen(
+        command,
+        cwd=cwd,
+        env=dict(env),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    started = time.monotonic()
+    last_progress = started
+    last_size = _file_size(result_path)
+    hang: tuple[_StopReason, float] | None = None
+    while hang is None:
+        try:
+            stdout, stderr = process.communicate(timeout=poll_seconds)
+        except subprocess.TimeoutExpired:
+            now = time.monotonic()
+            size = _file_size(result_path)
+            if size != last_size:
+                last_size = size
+                last_progress = now
+            hang = _hang_reason(
+                elapsed=now - started,
+                idle=now - last_progress,
+                timeout_seconds=timeout_seconds,
+                stall_seconds=stall_seconds if result_path is not None else None,
+            )
+        else:
+            return ChildRun("exited", process.returncode, stdout, stderr, 0.0)
+    kill_pid_tree(process.pid)
+    try:
+        stdout, stderr = process.communicate(timeout=_CHILD_REAP_SECONDS)
+    except subprocess.TimeoutExpired as exc:
+        stdout, stderr = _as_text(exc.stdout), _as_text(exc.stderr)
+    return ChildRun(hang[0], process.returncode, stdout, stderr, hang[1])
 
 
 def in_isolated_child() -> bool:
@@ -430,6 +624,7 @@ def run_target_isolated(
     rootpath: str,
     *,
     timeout_seconds: float = _CHILD_TIMEOUT_SECONDS,
+    stall_seconds: float | None = None,
     result_path: str | None = None,
 ) -> tuple[_Outcome, str | None]:
     """Run one pytest ``target`` in a child process and classify the result.
@@ -449,42 +644,63 @@ def run_target_isolated(
         target: A pytest target such as ``tests/.../test_x.py`` or one node id.
         rootpath: Directory to run the child from (the session's rootdir).
         timeout_seconds: Wall-clock ceiling for the child run.
+        stall_seconds: Longest the child may go without flushing a new result to
+            ``result_path`` before it is killed as hung, or ``None`` to enforce
+            only ``timeout_seconds``. Ignored when there is no ``result_path``.
         result_path: Optional file the child appends per-test results to.
 
     Returns:
         tuple[_Outcome, str | None]: ``("passed", None)`` when the child exited 0,
             otherwise ``("failed", <diagnostic>)`` carrying the child's tail
             output. A native crash surfaces as a non-zero child exit code and is
-            therefore reported as a failure rather than aborting the whole run.
+            therefore reported as a failure rather than aborting the whole run,
+            and a child that hangs is killed and reported with the all-thread
+            traceback it dumped.
     """
     command = [
         sys.executable,
         "-m",
         "pytest",
-        *to_pyargs_argv([target, "-p", "no:randomly", "-p", "no:cacheprovider", "-o", "addopts=", "-q", "--no-header"]),
+        *to_pyargs_argv([
+            target,
+            "-p",
+            "no:randomly",
+            "-p",
+            "no:cacheprovider",
+            "-o",
+            "addopts=",
+            "-o",
+            f"faulthandler_timeout={_CHILD_FAULTHANDLER_SECONDS}",
+            "-q",
+            "--no-header",
+        ]),
     ]
     child_env = dict(os.environ)
     child_env[_CHILD_ENV_FLAG] = "1"
     if result_path is not None:
         child_env[_RESULT_FILE_ENV] = result_path
-    try:
-        completed = subprocess.run(
-            command,
-            cwd=rootpath,
-            env=child_env,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=timeout_seconds,
+    run = run_child_with_progress_watch(
+        command,
+        cwd=rootpath,
+        env=child_env,
+        timeout_seconds=timeout_seconds,
+        stall_seconds=stall_seconds,
+        result_path=result_path,
+    )
+    hang_detail = f"{run.stdout[-_STDOUT_TAIL:]}\n{clip_output(run.stderr, _STDERR_LIMIT)}"
+    if run.stop_reason == "timeout":
+        return "failed", f"isolated subprocess for {target} timed out after {run.limit_seconds:g}s\n{hang_detail}"
+    if run.stop_reason == "stalled":
+        return "failed", (
+            f"isolated subprocess for {target} flushed no new test result for {run.limit_seconds:g}s and was killed as hung "
+            f"(a deadlock, since a healthy module finishes in minutes). Its all-thread traceback from "
+            f"faulthandler, dumped after {_CHILD_FAULTHANDLER_SECONDS}s on one test, shows where it was stuck.\n{hang_detail}"
         )
-    except subprocess.TimeoutExpired as exc:
-        stdout_tail = exc.stdout[-_STDOUT_TAIL:] if isinstance(exc.stdout, str) else ""
-        return "failed", f"isolated subprocess for {target} timed out after {timeout_seconds:g}s\n{stdout_tail}"
-    if completed.returncode == 0:
+    if run.returncode == 0:
         return "passed", None
-    detail = f"{completed.stdout[-_STDOUT_TAIL:]}\n{completed.stderr[-_STDERR_TAIL:]}"
+    detail = f"{run.stdout[-_STDOUT_TAIL:]}\n{clip_output(run.stderr, _STDERR_LIMIT)}"
     return "failed", (
-        f"isolated subprocess for {target} exited {completed.returncode}; a native crash "
+        f"isolated subprocess for {target} exited {run.returncode}; a native crash "
         f"(such as a frida-core access violation) surfaces here as a failure of only these tests rather "
         f"than aborting the whole run.\n{detail}"
     )
@@ -556,7 +772,12 @@ def run_module_isolated(module_file: str, rootpath: str) -> ModuleResult:
     handle, result_path = tempfile.mkstemp(prefix="ic_frida_isolation_", suffix=".tsv")
     os.close(handle)
     try:
-        outcome, detail = run_target_isolated(module_file, rootpath, result_path=result_path)
+        outcome, detail = run_target_isolated(
+            module_file,
+            rootpath,
+            stall_seconds=_CHILD_STALL_SECONDS,
+            result_path=result_path,
+        )
         outcomes, skips = _read_child_results(result_path)
     finally:
         Path(result_path).unlink(missing_ok=True)

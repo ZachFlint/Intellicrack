@@ -9,21 +9,18 @@ from __future__ import annotations
 
 import os
 import shutil
-import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 import pytest
 from PyQt6.QtWidgets import QApplication
 
 from intellicrack.core.subprocess_compat import DEVNULL, Popen
+from tests._helpers.frida_targets import wait_for_gui_process_ready
 
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
-
-_NOTEPAD_STARTUP_DELAY_S: Final[float] = 1.0
 
 
 @pytest.fixture(scope="session")
@@ -47,7 +44,7 @@ def qapp() -> Generator[QApplication]:
 
 @pytest.fixture
 def notepad_process() -> Generator[Popen[bytes]]:
-    """Spawn a real, uniquely-named ``notepad.exe`` process for name-based attach gates.
+    """Spawn a real, uniquely-named ``notepad.exe`` process, once it is ready, for name-based attach gates.
 
     Attaching by process *name* is ambiguous against the current test
     process (``python.exe``/``pytest.exe``) because multiple same-named
@@ -64,7 +61,9 @@ def notepad_process() -> Generator[Popen[bytes]]:
     """
     notepad_path = shutil.which("notepad.exe") or str(Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe")
     proc = Popen([notepad_path], stdout=DEVNULL, stderr=DEVNULL)
-    time.sleep(_NOTEPAD_STARTUP_DELAY_S)
-    yield proc
-    proc.terminate()
-    proc.wait(timeout=5)
+    try:
+        wait_for_gui_process_ready(proc)
+        yield proc
+    finally:
+        proc.terminate()
+        proc.wait(timeout=5)

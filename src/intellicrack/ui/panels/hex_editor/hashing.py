@@ -495,13 +495,15 @@ class HashingMixin:
         Runs on the background ``GenericCallableWorker`` thread dispatched by
         ``_on_repair_pe_checksum``. Routes the repair itself through
         ``HexEditorBridge.repair_pe_checksum`` when a bridge is attached, falling
-        back to the document's ``repair_pe_checksum`` directly otherwise. The
-        write and this panel's own state-holder notification still run
-        back-to-back on this thread, as plain synchronous Python calls
-        regardless of which path performed the write, so observers (the hex
-        viewport, the bridge layer, the AI tool registry) learn about the
-        modified bytes the instant the write completes instead of waiting for
-        the GUI thread's event loop to marshal a queued Qt signal.
+        back to the document's ``repair_pe_checksum`` directly otherwise. A
+        bridge that shares this panel's state holder publishes the change
+        itself, so the panel adds no second event for the same bytes; in every
+        other case the panel publishes it. Either way the write and the
+        notification run back-to-back on this thread, as plain synchronous
+        Python calls, so observers (the hex viewport, the bridge layer, the AI
+        tool registry) learn about the modified bytes the instant the write
+        completes instead of waiting for the GUI thread's event loop to
+        marshal a queued Qt signal.
         ``HexDocumentState`` is documented as thread-safe and designed to be
         notified from any thread, so calling it here rather than from the
         GUI-thread completion callback is safe.
@@ -524,6 +526,9 @@ class HashingMixin:
             msg = "document became unavailable before the PE checksum repair could run"
             raise RuntimeError(msg)
         result: object = run_bridge_coroutine(bridge.repair_pe_checksum()) if bridge is not None else document.repair_pe_checksum()
+        holder = self.state_holder
+        if bridge is not None and holder is not None and bridge.state_holder is holder:
+            return result
         if checksum_offset is None:
             _logger.warning("pe_checksum_notify_skipped_unresolved_offset")
         else:

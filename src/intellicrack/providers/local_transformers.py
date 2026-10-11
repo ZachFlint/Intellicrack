@@ -351,13 +351,13 @@ class LocalTransformersProvider(LLMProviderBase):
 
         self._device_type = self._select_device()
 
-        if self._device_type == "cuda":
+        if self._device_type == "cuda":  # pragma: no cover - needs CUDA hardware
             self._logger.info(
                 "cuda_selected",
                 device_type=self._device_type,
                 device_count=self._cuda_device_count(),
             )
-        elif self._device_type == "xpu":
+        elif self._device_type == "xpu":  # pragma: no cover - needs XPU hardware
             _, warnings = await asyncio.to_thread(check_windows_requirements)
             self._windows_warnings = warnings
 
@@ -375,9 +375,9 @@ class LocalTransformersProvider(LLMProviderBase):
                     )
             else:
                 self._logger.info("xpu_selected", device_type=self._device_type)
-        elif self._xpu_available and not self._prefer_xpu:
+        elif self._xpu_available and not self._prefer_xpu:  # pragma: no cover - needs XPU hardware
             self._logger.info("cpu_selected_preference", device_type="cpu")
-        elif self._cuda_available or self._xpu_available:
+        elif self._cuda_available or self._xpu_available:  # pragma: no cover - needs CUDA or XPU hardware
             self._logger.info("cpu_selected_fallback", device_type="cpu")
         else:
             self._logger.info("cpu_selected_no_accelerator", device_type="cpu")
@@ -481,7 +481,7 @@ class LocalTransformersProvider(LLMProviderBase):
         elif self._device_type == "cuda" and _torch is not None:
             try:
                 cuda_module = getattr(_torch, "cuda", None)
-                if cuda_module is not None and cuda_module.is_available():
+                if cuda_module is not None and cuda_module.is_available():  # pragma: no cover - needs CUDA hardware
                     empty_cache = getattr(cuda_module, "empty_cache", None)
                     if callable(empty_cache):
                         empty_cache()
@@ -524,7 +524,7 @@ class LocalTransformersProvider(LLMProviderBase):
             model_id = str(model_data["model_id"])
             recommended_dtype = str(model_data.get("recommended_dtype", "float16"))
 
-            if self._device_type == "xpu" and usable_vram > 0:
+            if self._device_type == "xpu" and usable_vram > 0:  # pragma: no cover - needs XPU hardware
                 estimated = estimate_model_memory(model_id, cast("DtypeOption", recommended_dtype))
                 if estimated > usable_vram:
                     self._logger.debug(
@@ -990,36 +990,36 @@ class LocalTransformersProvider(LLMProviderBase):
             self._logger.error("cuda_load_cuda_unavailable", model_id=config.model_id)
             raise RuntimeError(_ERR_CUDA_NOT_AVAILABLE)
 
-        if _AutoModelForCausalLM is None or _AutoTokenizer is None:
+        if _AutoModelForCausalLM is None or _AutoTokenizer is None:  # pragma: no cover - needs CUDA hardware
             self._logger.error("cuda_load_transformers_unavailable", model_id=config.model_id)
             raise ImportError(_MSG_TRANSFORMERS_REQUIRED)
 
-        validate_local_checkpoint(config.model_id)
+        validate_local_checkpoint(config.model_id)  # pragma: no cover - needs CUDA hardware
 
-        cache = self._model_cache
-        dtype_str = "float16" if config.dtype == "auto" else config.dtype
-        cached = cache.get(config.model_id, dtype_str, "cuda")
-        if cached is not None:
+        cache = self._model_cache  # pragma: no cover - needs CUDA hardware
+        dtype_str = "float16" if config.dtype == "auto" else config.dtype  # pragma: no cover - needs CUDA hardware
+        cached = cache.get(config.model_id, dtype_str, "cuda")  # pragma: no cover - needs CUDA hardware
+        if cached is not None:  # pragma: no cover - needs CUDA hardware
             return cached
 
-        torch_dtype_map: dict[str, Any] = {
+        torch_dtype_map: dict[str, Any] = {  # pragma: no cover - needs CUDA hardware
             "float32": _torch.float32,
             "float16": _torch.float16,
             "bfloat16": _torch.bfloat16,
         }
-        torch_dtype = torch_dtype_map.get(dtype_str, _torch.float16)
-        device = _torch.device("cuda:0")
+        torch_dtype = torch_dtype_map.get(dtype_str, _torch.float16)  # pragma: no cover - needs CUDA hardware
+        device = _torch.device("cuda:0")  # pragma: no cover - needs CUDA hardware
 
-        start_time = time.perf_counter()
-        tokenizer = _AutoTokenizer.from_pretrained(
+        start_time = time.perf_counter()  # pragma: no cover - needs CUDA hardware
+        tokenizer = _AutoTokenizer.from_pretrained(  # pragma: no cover - needs CUDA hardware
             config.model_id,
             trust_remote_code=config.trust_remote_code,
             revision=config.revision,
         )
-        if tokenizer.pad_token is None:
+        if tokenizer.pad_token is None:  # pragma: no cover - needs CUDA hardware
             tokenizer.pad_token = tokenizer.eos_token
 
-        try:
+        try:  # pragma: no cover - needs CUDA hardware
             model = _AutoModelForCausalLM.from_pretrained(
                 config.model_id,
                 revision=config.revision,
@@ -1029,7 +1029,7 @@ class LocalTransformersProvider(LLMProviderBase):
             )
             model = model.to(device)
             model.eval()
-        except (RuntimeError, ImportError, ValueError, OSError) as exc:
+        except (RuntimeError, ImportError, ValueError, OSError) as exc:  # pragma: no cover - needs CUDA hardware
             self._logger.warning("cuda_from_pretrained_failed", model_id=config.model_id, error=str(exc))
             try:
                 empty_cache = getattr(cuda_module, "empty_cache", None)
@@ -1046,10 +1046,14 @@ class LocalTransformersProvider(LLMProviderBase):
             )
             raise
 
-        load_time = time.perf_counter() - start_time
-        memory_usage = estimate_model_memory(config.model_id, cast("DtypeOption", dtype_str), include_activations=False)
+        load_time = time.perf_counter() - start_time  # pragma: no cover - needs CUDA hardware
+        memory_usage = estimate_model_memory(  # pragma: no cover - needs CUDA hardware
+            config.model_id,
+            cast("DtypeOption", dtype_str),
+            include_activations=False,
+        )
 
-        loaded_model = LoadedModel(
+        loaded_model = LoadedModel(  # pragma: no cover - needs CUDA hardware
             model=model,
             tokenizer=tokenizer,
             device=device,
@@ -1058,8 +1062,8 @@ class LocalTransformersProvider(LLMProviderBase):
             model_id=config.model_id,
             load_time_seconds=load_time,
         )
-        cache.put(loaded_model)
-        return loaded_model
+        cache.put(loaded_model)  # pragma: no cover - needs CUDA hardware
+        return loaded_model  # pragma: no cover - needs CUDA hardware
 
     def _generate_sync(
         self,
@@ -1648,7 +1652,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
         if self._device_type == "xpu" and self._xpu_available:
             device_info = get_xpu_device_info(0)
-            if device_info is not None:
+            if device_info is not None:  # pragma: no cover - needs XPU hardware
                 info["device_name"] = device_info.device_name
                 info["total_memory_gb"] = device_info.total_memory_bytes / (1024**3)
                 info["driver_version"] = device_info.driver_version
@@ -1657,9 +1661,9 @@ class LocalTransformersProvider(LLMProviderBase):
 
             allocated, total = get_xpu_memory_info(0)
             info["allocated_memory_gb"] = allocated / (1024**3)
-            if total > 0:
+            if total > 0:  # pragma: no cover - needs XPU hardware
                 info["total_memory_gb"] = total / (1024**3)
-            elif "total_memory_gb" not in info and device_info is not None:
+            elif "total_memory_gb" not in info and device_info is not None:  # pragma: no cover - needs XPU hardware
                 info["total_memory_gb"] = device_info.total_memory_bytes / (1024**3)
 
         if self._loaded_model:

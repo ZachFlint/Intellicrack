@@ -12,6 +12,7 @@ skip conditions, and cleanup automatically.
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 import httpx
@@ -19,6 +20,7 @@ import openai
 import pytest
 import pytest_asyncio
 
+from intellicrack import providers as providers_package
 from intellicrack.core.types import ProviderCredentials, ProviderError
 from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.anthropic import AnthropicProvider
@@ -529,3 +531,21 @@ async def grok_provider(
     await provider.connect(credentials)
     yield provider
     await provider.disconnect()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _release_cached_local_models() -> Generator[None]:
+    """Empty the process-wide local model cache when a test module finishes.
+
+    A model loaded through the local provider stays in the product's cache for
+    reuse and holds several gigabytes. Left alone it stays resident in the test
+    process until the session ends, on top of whatever the next module loads.
+    The cache is touched only when the model loader was imported, so modules
+    that never load a model do not pay for importing it.
+
+    Yields:
+        None: Control passed to the module's tests.
+    """
+    yield
+    if "intellicrack.providers.model_loader" in sys.modules:
+        providers_package.clear_global_cache()
