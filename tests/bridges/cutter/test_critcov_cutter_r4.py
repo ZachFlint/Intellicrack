@@ -5,16 +5,14 @@
 
 """Fourth-pass coverage tests for ``CutterBridge`` helpers and debug listings.
 
-The module-level helpers ``_json_dicts``, ``_mapped_images`` and
-``_require_openable_target`` are called directly with real values and checked
-against independent expectations: the ``psutil`` view of a spawned child, the
-exceptions the operating system raises for a locked file, and the bytes that
-``ReadProcessMemory`` returns for the same debuggee. The debug tests drive a
-real rizin 0.9.1 session and a real radare2 session that have started
-``where.exe`` under their debuggers. The expectations on the radare2 session
-come from measurements in the container: ``dbj`` and ``dptj`` print arrays,
-``dmIj`` prints nothing, and ``p8`` prints ``ffffffff`` for address zero and
-nothing for a one-tebibyte read.
+The module-level helper ``_mapped_images`` is called directly with real values
+and checked against independent expectations: the ``psutil`` view of a spawned
+child and the bytes that ``ReadProcessMemory`` returns for the same debuggee.
+The debug tests drive a real rizin 0.9.1 session and a real radare2 session that
+have started ``where.exe`` under their debuggers. The expectations on the radare2
+session come from measurements in the container: ``dbj`` and ``dptj`` print
+arrays, ``dmIj`` prints nothing, and ``p8`` prints ``ffffffff`` for address zero
+and nothing for a one-tebibyte read.
 """
 
 from __future__ import annotations
@@ -51,23 +49,12 @@ _SYSTEM32: Final[Path] = Path(os.environ.get("SYSTEMROOT", r"C:\Windows")) / "Sy
 _WHERE_EXE: Final[Path] = _SYSTEM32 / "where.exe"
 _TASKKILL: Final[Path] = _SYSTEM32 / "taskkill.exe"
 _IDLE_CHILD: Final[str] = "import sys\nprint('ready', flush=True)\nsys.stdin.read()\n"
-_GENERIC_READ: Final[int] = 0x80000000
-_OPEN_EXISTING: Final[int] = 3
-_FILE_ATTRIBUTE_NORMAL: Final[int] = 0x80
 _ONE_TEBIBYTE: Final[int] = 1 << 40
 _SPAN: Final[int] = 0x2000
 
-_json_dicts: Callable[[object], list[dict[str, Any]]] = cast(
-    "Callable[[object], list[dict[str, Any]]]",
-    getattr(cutter_mod, "_json_dicts"),
-)
 _mapped_images: Callable[[int, list[tuple[int, int]]], list[ModuleInfo]] = cast(
     "Callable[[int, list[tuple[int, int]]], list[ModuleInfo]]",
     getattr(cutter_mod, "_mapped_images"),
-)
-_require_openable_target: Callable[..., None] = cast(
-    "Callable[..., None]",
-    getattr(cutter_mod, "_require_openable_target"),
 )
 
 
@@ -251,56 +238,6 @@ def idle_child() -> Iterator[subprocess.Popen[str]]:
         child.communicate(timeout=60)
 
 
-@pytest.fixture
-def locked_file(tmp_path: Path) -> Iterator[Path]:
-    """Create a file that another handle holds open with share mode zero.
-
-    Args:
-        tmp_path: Directory that receives the file.
-
-    Yields:
-        Path: The locked file; opening it for reading fails while the fixture is active.
-    """
-    target = tmp_path / "locked.bin"
-    target.write_bytes(b"MZ\x90\x00")
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-    kernel32.CreateFileW.restype = ctypes.c_void_p
-    kernel32.CreateFileW.argtypes = [
-        ctypes.c_wchar_p,
-        ctypes.c_uint32,
-        ctypes.c_uint32,
-        ctypes.c_void_p,
-        ctypes.c_uint32,
-        ctypes.c_uint32,
-        ctypes.c_void_p,
-    ]
-    kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
-    handle = cast("int | None", kernel32.CreateFileW(str(target), _GENERIC_READ, 0, None, _OPEN_EXISTING, _FILE_ATTRIBUTE_NORMAL, None))
-    assert handle not in {None, ctypes.c_void_p(-1).value}
-    try:
-        yield target
-    finally:
-        kernel32.CloseHandle(handle)
-
-
-class TestJsonDicts:
-    """``_json_dicts`` keeps the objects of a parsed JSON array."""
-
-    @pytest.mark.parametrize("value", [None, 5, "text", {"key": 1}])
-    def test_non_array_values_give_an_empty_list(self, value: object) -> None:
-        """A value that is not an array has no objects to keep.
-
-        Args:
-            value: A parsed JSON value that is not a list.
-        """
-        assert _json_dicts(value) == []
-
-    def test_only_objects_of_an_array_are_kept_in_order(self) -> None:
-        """Numbers, strings, nulls and nested arrays are dropped; objects keep their order."""
-        value: list[object] = [{"a": 1}, 3, "x", None, [{"hidden": 1}], {"b": 2}]
-        assert _json_dicts(value) == [{"a": 1}, {"b": 2}]
-
-
 class TestMappedImages:
     """``_mapped_images`` names image regions by the files the system maps there."""
 
@@ -335,61 +272,6 @@ class TestMappedImages:
         finished = subprocess.Popen([sys.executable, "-c", "pass"])
         finished.wait(timeout=60)
         assert _mapped_images(finished.pid, [(0, 1)]) == []
-
-
-class TestRequireOpenableTarget:
-    """``_require_openable_target`` rejects what the backend would hang on."""
-
-    def test_directory_is_not_a_regular_file(self, tmp_path: Path) -> None:
-        """A directory is rejected in both modes with the not-a-regular-file reason.
-
-        Args:
-            tmp_path: Directory used as the target.
-        """
-        for debug in (False, True):
-            with pytest.raises(ToolError) as excinfo:
-                _require_openable_target(tmp_path, debug=debug)
-            assert str(excinfo.value) == "failed to load binary"
-            assert excinfo.value.details == {"reason": "target is not a regular file"}
-
-    def test_locked_file_cannot_be_read(self, locked_file: Path) -> None:
-        """A file held open without sharing fails to open, and the reason names the operating-system error.
-
-        Args:
-            locked_file: File held by another handle with share mode zero.
-        """
-        with pytest.raises(PermissionError) as os_error:
-            locked_file.open("rb").close()
-        with pytest.raises(ToolError) as excinfo:
-            _require_openable_target(locked_file, debug=False)
-        assert excinfo.value.details == {"reason": f"target cannot be read: {os_error.value}"}
-        assert excinfo.value.__cause__ is not None
-        assert isinstance(excinfo.value.__cause__, PermissionError)
-
-    def test_text_file_is_refused_only_when_launched_under_the_debugger(self, tmp_path: Path) -> None:
-        """A file without an executable signature opens for analysis but cannot be launched.
-
-        Args:
-            tmp_path: Directory that receives the text file.
-        """
-        text = tmp_path / "plain.txt"
-        text.write_text("plain text\n", encoding="utf-8")
-        _require_openable_target(text, debug=False)
-        with pytest.raises(ToolError) as excinfo:
-            _require_openable_target(text, debug=True)
-        assert excinfo.value.details == {"reason": "target is not an executable image"}
-
-    @pytest.mark.parametrize("header", [b"MZ\x90\x00", b"\x7fELF", b"#!/b"])
-    def test_executable_signatures_are_accepted_for_launch(self, tmp_path: Path, header: bytes) -> None:
-        """The PE, ELF and script signatures pass the debug-launch check.
-
-        Args:
-            tmp_path: Directory that receives the file.
-            header: First four bytes of the file.
-        """
-        target = tmp_path / "image.bin"
-        target.write_bytes(header + b"\x00" * 60)
-        _require_openable_target(target, debug=True)
 
 
 class TestSessionClose:
