@@ -101,7 +101,7 @@ def test_a_grant_held_by_a_running_process_outlives_another_processes_sweep(tmp_
         finish.write_text("go", encoding="utf-8")
         holder.join(timeout=_CHILD_TIMEOUT_S)
 
-    assert failures == []
+    assert not failures
     assert outcomes == [{"ended_without_reverting": True}]
     assert reverted_while_held == 0, "a sweep reverted a grant whose owner was still running"
     assert _LOW in label_while_held, "the Low label was taken off a directory a running process had been granted"

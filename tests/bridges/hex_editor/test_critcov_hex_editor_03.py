@@ -187,7 +187,7 @@ def _sidecar_for(target: Path) -> Path:
     Returns:
         Path: ``target`` with ``.icbm.json`` appended to its full name.
     """
-    return target.with_name(target.name + ".icbm.json")
+    return target.with_name(f"{target.name}.icbm.json")
 
 
 def _listing(directory: Path) -> list[Path]:
@@ -798,7 +798,7 @@ async def test_remove_bookmark_without_a_target_path_writes_no_sidecar(hex_bridg
 
     rows: list[_Row] = document.list_bookmarks()
     assert removed is True
-    assert rows == []
+    assert not rows
     assert _listing(tmp_path) == []
 
 

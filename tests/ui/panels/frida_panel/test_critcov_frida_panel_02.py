@@ -812,8 +812,7 @@ def test_spawn_ignores_cancelled_or_blank_optional_answers(
         "Spawn Process": ("C:\\tools\\target.exe", True),
         "Arguments": ("", False),
         "Working Directory": ("", False),
-    }
-    answers.update(overrides)
+    } | overrides
     monkeypatch.setattr(QInputDialog, "getText", staticmethod(_text_answers(answers)))
     monkeypatch.setattr(QInputDialog, "getMultiLineText", staticmethod(_fixed_answer("", accepted=False)))
     monkeypatch.setattr(QInputDialog, "getItem", staticmethod(_fixed_answer("inherit", accepted=True)))

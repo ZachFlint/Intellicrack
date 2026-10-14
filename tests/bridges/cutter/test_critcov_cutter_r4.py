@@ -64,8 +64,7 @@ def _radare2_directory() -> Path:
     Returns:
         Path: Resolved directory that contains ``radare2``.
     """
-    home = os.environ.get("RADARE2_HOME")
-    if home:
+    if home := os.environ.get("RADARE2_HOME"):
         return (Path(home) / "bin").resolve()
     located = shutil.which("radare2")
     assert located is not None, "radare2 is not on PATH and RADARE2_HOME is not set"
@@ -299,7 +298,7 @@ class TestSessionClose:
             assert bridge.r2 is None
             assert getattr(bridge, "_debug_mode") is False
             assert getattr(bridge, "_attached_pid") is None
-            assert bridge.state.process_attached is False
+            assert not bridge.state.process_attached
             assert bridge.state.target_pid is None
             process.wait(timeout=60)
             assert process.poll() is not None

@@ -435,7 +435,7 @@ def _dos_header() -> bytes:
         bytes: The DOS header.
     """
     header = bytearray(64)
-    header[0:2] = b"MZ"
+    header[:2] = b"MZ"
     struct.pack_into("<I", header, 0x3C, _PE_OFFSET)
     return bytes(header)
 
@@ -454,7 +454,7 @@ def _pe64_nt_header(directories: dict[int, tuple[int, int]] | None = None, size:
         bytes: The NT headers padded with zeros to ``size``.
     """
     header = bytearray(size)
-    header[0:4] = b"PE\x00\x00"
+    header[:4] = b"PE\x00\x00"
     struct.pack_into("<HHIIIHH", header, 4, 0x8664, 0, 0, 0, 0, _PE32PLUS_OPTIONAL_SIZE, 0x2022)
     struct.pack_into("<H", header, 24, _PE32PLUS_MAGIC)
     for index, (rva, entry_size) in (directories or {}).items():
@@ -664,7 +664,7 @@ def test_append_token_privilege_skips_an_unknown_luid_and_names_a_known_one() ->
     append = _method(X64DbgBridge, "_append_token_privilege")
     unknown: list[dict[str, Any]] = []
     append(advapi32, struct.pack("<III", _UNNAMED_LUID_LOW, 0, 3), 0, unknown)
-    assert unknown == []
+    assert not unknown
     luid = _Luid()
     assert advapi32.LookupPrivilegeValueW(None, _HELD_PRIVILEGE, ctypes.byref(luid))
     attributes = _SE_PRIVILEGE_ENABLED | _SE_PRIVILEGE_ENABLED_BY_DEFAULT
@@ -1115,7 +1115,7 @@ async def test_terminate_falls_back_to_kill_when_the_process_ignores_terminate()
     errors: list[BaseException] = []
     try:
         await _async_method(X64DbgBridge, "_terminate_process_with_timeout")(stub, stub.pid, errors)
-        assert errors == []
+        assert not errors
         assert stub.poll() == 1
     finally:
         stub.end()

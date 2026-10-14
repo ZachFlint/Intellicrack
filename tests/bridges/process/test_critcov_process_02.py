@@ -408,7 +408,7 @@ def _module_image(
         bytearray: The assembled image.
     """
     image = bytearray(size)
-    image[0:2] = dos_signature
+    image[:2] = dos_signature
     struct.pack_into("<I", image, 0x3C, e_lfanew)
     if e_lfanew >= 0x40 and e_lfanew + _NT_HEADER_READ_SIZE <= size:
         image[e_lfanew : e_lfanew + 4] = nt_signature
@@ -914,9 +914,9 @@ def test_collection_helpers_do_nothing_without_kernel32(bare_bridge: ProcessBrid
     sync_method(bare_bridge, "_collect_system_process_entries")(0, process_entry, processes)
     sync_method(bare_bridge, "_collect_heap_list_entries")(0, heap_entry, list_heaps)
     sync_method(bare_bridge, "_collect_heap_entries")(0, heap_entry, walked_heaps, 1, None, None, time.monotonic() + _WAIT_S)
-    assert processes == []
-    assert list_heaps == []
-    assert walked_heaps == []
+    assert not processes
+    assert not list_heaps
+    assert not walked_heaps
 
 
 @pytest.mark.parametrize(
@@ -1258,7 +1258,7 @@ def test_read_peb_from_an_invalid_handle_reports_the_ntstatus(bridge: ProcessBri
     Args:
         bridge: Initialized bridge.
     """
-    with pytest.raises(ToolError, match="NtQueryInformationProcess " + _ERR_WIN32_STATUS):
+    with pytest.raises(ToolError, match=f"NtQueryInformationProcess {_ERR_WIN32_STATUS}"):
         sync_method(bridge, "_read_peb_from_handle")(0)
 
 
@@ -1298,7 +1298,7 @@ def test_read_teb_from_an_invalid_thread_handle_reports_the_ntstatus(bridge: Pro
     Args:
         bridge: Initialized bridge.
     """
-    with pytest.raises(ToolError, match="NtQueryInformationThread " + _ERR_WIN32_STATUS):
+    with pytest.raises(ToolError, match=f"NtQueryInformationThread {_ERR_WIN32_STATUS}"):
         sync_method(bridge, "_read_teb_with_thread_handle")(1, 0, [None])
 
 
@@ -1334,8 +1334,8 @@ def test_heap_walkers_return_nothing_for_an_unusable_snapshot(bridge: ProcessBri
     heap_entry.dwSize = ctypes.sizeof(HEAPLIST32)
     sync_method(bridge, "_collect_heap_list_entries")(0, heap_entry, list_heaps)
     sync_method(bridge, "_collect_heap_entries")(0, heap_entry, walked_heaps, 1, None, None, time.monotonic() + _WAIT_S)
-    assert list_heaps == []
-    assert walked_heaps == []
+    assert not list_heaps
+    assert not walked_heaps
 
 
 def test_heap_block_walker_returns_nothing_without_the_block_apis() -> None:
@@ -1417,7 +1417,7 @@ def test_process_snapshot_with_no_more_files_is_not_an_error(bridge: ProcessBrid
     results: list[dict[str, object]] = []
     ctypes.set_last_error(_ERROR_NO_MORE_FILES)
     sync_method(bridge, "_collect_system_process_entries")(0, entry, results)
-    assert results == []
+    assert not results
 
 
 def test_time_wait_on_an_invalid_handle_reports_failure(bridge: ProcessBridge) -> None:
@@ -1542,7 +1542,7 @@ def test_kernel_debugger_query_on_an_invalid_handle_reports_the_ntstatus(bridge:
     Args:
         bridge: Initialized bridge.
     """
-    with pytest.raises(ToolError, match="NtQueryInformationProcess " + _ERR_WIN32_STATUS):
+    with pytest.raises(ToolError, match=f"NtQueryInformationProcess {_ERR_WIN32_STATUS}"):
         sync_method(bridge, "_query_kernel_debugger_port")(0, 1)
 
 

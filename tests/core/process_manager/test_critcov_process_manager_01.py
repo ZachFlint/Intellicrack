@@ -461,7 +461,7 @@ def test_the_signal_handler_hands_an_interrupt_to_the_original_handler_and_nothi
     finally:
         setattr(process_manager, "_original_sigint_handler", None)
 
-    assert forwarded_for_terminate == []
+    assert not forwarded_for_terminate
     assert received == [(int(signal.SIGINT), None)]
     assert process_manager.is_shutdown_requested() is True
 

@@ -995,7 +995,7 @@ def test_tls_expansion_pointer_read_failure_leaves_the_slots_untouched(attached_
     """
     slots: list[dict[str, object]] = []
     _run(async_method(attached_bridge, "_append_tls_expansion_slots")(slots, 0x10, 128, 1, "<Q", 8))
-    assert slots == []
+    assert not slots
 
 
 def test_tls_expansion_table_read_failure_leaves_the_slots_untouched(attached_bridge: ProcessBridge) -> None:
@@ -1013,7 +1013,7 @@ def test_tls_expansion_table_read_failure_leaves_the_slots_untouched(attached_br
         sync_method(attached_bridge, "_read_tls_expansion_table")(slots, address, 128, 1, "<Q", 8)
     finally:
         assert _run(attached_bridge.free(address))
-    assert slots == []
+    assert not slots
 
 
 def test_environment_of_a_process_without_a_parameters_block_is_empty(

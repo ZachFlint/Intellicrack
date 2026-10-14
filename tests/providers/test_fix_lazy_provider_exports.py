@@ -136,7 +136,7 @@ def test_every_public_name_of_the_package_resolves() -> None:
     """Every name in ``__all__`` can be read from the package, whether it is imported eagerly or lazily."""
     missing = [name for name in providers_package.__all__ if not hasattr(providers_package, name)]
 
-    assert missing == [], f"names in __all__ that the package cannot provide: {missing}"
+    assert not missing, f"names in __all__ that the package cannot provide: {missing}"
 
 
 def test_lazy_exports_are_exactly_the_public_names() -> None:

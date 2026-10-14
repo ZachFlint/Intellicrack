@@ -87,14 +87,14 @@ def allocated_bytes(path: Path) -> int:
     Raises:
         ctypes.WinError: If Windows cannot report the file's allocation.
     """
-    if sys.platform == "win32":
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        kernel32.GetCompressedFileSizeW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(wintypes.DWORD)]
-        kernel32.GetCompressedFileSizeW.restype = wintypes.DWORD
-        high = wintypes.DWORD(0)
-        ctypes.set_last_error(_NO_ERROR)
-        low = int(kernel32.GetCompressedFileSizeW(str(path), ctypes.byref(high)))
-        if low == _INVALID_FILE_SIZE and ctypes.get_last_error() != _NO_ERROR:
-            raise ctypes.WinError(ctypes.get_last_error())
-        return (high.value << _HIGH_PART_SHIFT) | low
-    return path.stat().st_blocks * _POSIX_BLOCK_BYTES
+    if sys.platform != "win32":
+        return path.stat().st_blocks * _POSIX_BLOCK_BYTES
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.GetCompressedFileSizeW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(wintypes.DWORD)]
+    kernel32.GetCompressedFileSizeW.restype = wintypes.DWORD
+    high = wintypes.DWORD(0)
+    ctypes.set_last_error(_NO_ERROR)
+    low = int(kernel32.GetCompressedFileSizeW(str(path), ctypes.byref(high)))
+    if low == _INVALID_FILE_SIZE and ctypes.get_last_error() != _NO_ERROR:
+        raise ctypes.WinError(ctypes.get_last_error())
+    return (high.value << _HIGH_PART_SHIFT) | low

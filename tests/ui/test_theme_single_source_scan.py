@@ -115,9 +115,7 @@ def _called_name(node: ast.Call) -> str:
     callee = node.func
     if isinstance(callee, ast.Name):
         return callee.id
-    if isinstance(callee, ast.Attribute):
-        return callee.attr
-    return ""
+    return callee.attr if isinstance(callee, ast.Attribute) else ""
 
 
 def _findings(path: Path) -> set[str]:

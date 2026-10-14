@@ -260,9 +260,7 @@ def _invoke(obj: object, name: str, args: tuple[object, ...]) -> object:
         object: The method's return value, with coroutines awaited to completion.
     """
     result: object = getattr(obj, name)(*args)
-    if inspect.isawaitable(result):
-        return _run(_await_value(result))
-    return result
+    return _run(_await_value(result)) if inspect.isawaitable(result) else result
 
 
 @functools.cache
@@ -943,10 +941,10 @@ def test_snapshot_collectors_without_kernel32_leave_their_output_empty(idle_brid
     assert sync_method(idle_bridge, "_collect_module_entries")(0, MODULEENTRY32(), modules, None) is None
     assert sync_method(idle_bridge, "_collect_thread_entries")(0, THREADENTRY32(), threads, 1) is None
     assert _invoke(idle_bridge, "_iterate_process_snapshot_detailed", (0, PROCESSENTRY32(), results, None)) is None
-    assert processes == []
-    assert modules == []
-    assert threads == []
-    assert results == []
+    assert not processes
+    assert not modules
+    assert not threads
+    assert not results
 
 
 def test_get_process_memory_mb_reports_zero_without_psapi(process_bridge: ProcessBridge, target_process: Popen[bytes]) -> None:
@@ -1383,7 +1381,7 @@ def test_iterate_process_snapshot_detailed_ignores_an_unusable_snapshot(process_
     entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
     results: list[object] = []
     assert _invoke(process_bridge, "_iterate_process_snapshot_detailed", (0, entry, results, None)) is None
-    assert results == []
+    assert not results
 
 
 def test_collect_thread_entries_ignores_an_unusable_snapshot(process_bridge: ProcessBridge) -> None:
@@ -1396,7 +1394,7 @@ def test_collect_thread_entries_ignores_an_unusable_snapshot(process_bridge: Pro
     entry.dwSize = ctypes.sizeof(THREADENTRY32)
     threads: list[object] = []
     assert sync_method(process_bridge, "_collect_thread_entries")(0, entry, threads, 1) is None
-    assert threads == []
+    assert not threads
 
 
 def test_get_process_info_is_none_for_an_absent_pid(process_bridge: ProcessBridge) -> None:
@@ -1718,7 +1716,7 @@ def test_scan_region_pattern_stops_when_cancelled(attached_bridge: ProcessBridge
     assert scanned_free == 0x1000
     assert free_run == [address]
     assert scanned_cancelled == 0
-    assert cancelled_run == []
+    assert not cancelled_run
 
 
 @pytest.mark.parametrize("expected_progress", [[0x3000], []], ids=["with-callback", "without-callback"])
@@ -1736,7 +1734,7 @@ def test_scan_region_pattern_skips_a_chunk_that_cannot_be_read(attached_bridge: 
         assert _run(attached_bridge.write_memory(address, bytes([_PATTERN_BYTE]))) == 1
         scanned = sync_method(attached_bridge, "_scan_region_pattern")(address, 0x3000, [_PATTERN_BYTE], 0, matches, None, callback)
     assert scanned == 0x3000
-    assert matches == []
+    assert not matches
     assert progress == expected_progress
 
 
@@ -1752,8 +1750,8 @@ def test_scan_region_pattern_aborts_when_the_region_was_freed(attached_bridge: P
     matches: list[int] = []
     scanned = sync_method(attached_bridge, "_scan_region_pattern")(address, 0x1000, [_PATTERN_BYTE], 0, matches, None, progress.append)
     assert scanned == 0
-    assert matches == []
-    assert progress == []
+    assert not matches
+    assert not progress
 
 
 def test_scan_region_pattern_finishes_a_region_that_is_exactly_one_chunk(attached_bridge: ProcessBridge) -> None:

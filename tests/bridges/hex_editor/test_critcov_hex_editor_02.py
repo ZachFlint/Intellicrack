@@ -577,7 +577,7 @@ def test_match_die_pattern_fixed_offset_compares_bytes_at_that_offset(offset_spe
     )
 
     if expected_offset is None:
-        assert results == []
+        assert not results
     else:
         assert results == [
             {
@@ -608,7 +608,7 @@ def test_match_die_pattern_ignores_malformed_entries(pattern_info: object) -> No
 
     _method(HexEditorBridge, "_match_die_pattern")(pattern_info, ("Bad", "packer", "0"), bytes(8), bytes(8), results)
 
-    assert results == []
+    assert not results
 
 
 def test_compute_doc_md5_streaming_requires_a_document(hex_bridge: HexEditorBridge) -> None:
@@ -869,7 +869,7 @@ def test_bps_patch_round_trips_mixed_relocated_repeated_and_novel_data(hex_bridg
         hex_bridge: Bridge under test.
     """
     source = bytes((i * 37 + 11) % 251 for i in range(300))
-    target = source[120:180] + b"\xaa" * 24 + source[0:50] + b"NOVELBYTES" + source[200:260] + source[10:30] * 2 + b"\x01\x02"
+    target = source[120:180] + b"\xaa" * 24 + source[:50] + b"NOVELBYTES" + source[200:260] + source[10:30] * 2 + b"\x01\x02"
 
     patch = _method(hex_bridge, "_build_bps_patch")(source, target)
 

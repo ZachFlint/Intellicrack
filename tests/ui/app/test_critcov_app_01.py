@@ -1017,7 +1017,7 @@ def test_model_combo_cursor_reset_tolerates_a_combo_without_a_line_edit(build_wi
         combo.addItems(["alpha", "beta"])
         combo.setCurrentIndex(1)
 
-    assert [entry for entry in logs if entry["event"] == "unhandled_exception"] == []
+    assert not [entry for entry in logs if entry["event"] == "unhandled_exception"]
     assert combo.currentText() == "beta"
 
 
@@ -1869,4 +1869,4 @@ def test_confirmation_does_not_overwrite_a_future_that_is_already_resolved(build
         _ = run_bridge_coroutine(_collect_loop_errors(None), timeout_s=_BRIDGE_TIMEOUT_S)
 
     assert future.result() is True
-    assert problems == []
+    assert not problems

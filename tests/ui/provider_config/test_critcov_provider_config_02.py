@@ -637,7 +637,7 @@ def test_openrouter_listing_is_sorted_and_authenticated() -> None:
     """OpenRouter model ids come back sorted, requested from ``<base>/models`` with the key as a bearer token."""
     with ScriptedHttpServer() as server:
         server.script("GET", "/models", json_response(200, {"data": [{"id": "zeta/model"}, {"id": "alpha/model"}]}))
-        worker = ModelRefreshWorker("openrouter", _TEST_KEY, server.origin + "/")
+        worker = ModelRefreshWorker("openrouter", _TEST_KEY, f"{server.origin}/")
 
         result = _fetch(worker, "_fetch_openrouter_models")
 
@@ -722,7 +722,7 @@ def test_grok_listing_with_no_models_says_so() -> None:
 def test_grok_connect_failure_is_reported_with_the_provider_message() -> None:
     """A connect probe answered 404 surfaces the provider's own connect failure message."""
     with OpenAIModelsServer(model_ids=["grok-4"], accepted_key=_TEST_KEY) as server:
-        worker = ModelRefreshWorker("grok", _TEST_KEY, server.origin + "/missing")
+        worker = ModelRefreshWorker("grok", _TEST_KEY, f"{server.origin}/missing")
 
         ok, models, message = _fetch(worker, "_fetch_grok_models")
 
@@ -740,7 +740,7 @@ def test_grok_listing_failure_after_connect_is_reported_with_the_provider_messag
             json_response(200, {"object": "list", "data": []}),
             json_response(404, {"error": {"message": "gone"}}),
         )
-        worker = ModelRefreshWorker("grok", _TEST_KEY, server.origin + "/v1")
+        worker = ModelRefreshWorker("grok", _TEST_KEY, f"{server.origin}/v1")
 
         ok, models, message = _fetch(worker, "_fetch_grok_models")
 
@@ -1118,7 +1118,7 @@ def test_add_instance_without_an_instance_saves_nothing(
 
     assert len(watcher.seen) == 1
     assert _store().stored_instance_ids() == frozenset()
-    assert announced == []
+    assert not announced
 
 
 def test_add_instance_replaces_a_connected_provider_and_disconnects_it(
@@ -1642,7 +1642,7 @@ def test_import_skips_malformed_records_and_stores_a_known_host_without_asking(
 
     _import_text(dialog, monkeypatch, tmp_path, payload)
 
-    assert texts == []
+    assert not texts
     assert set(_store().load_instances()) == {"imp-gw"}
     assert _call(dialog, "_selected_provider_id") == "imp-gw"
     assert _shown(dialogs.information) == [("Import Complete", "Imported 1 provider instances. Their API keys were not imported.")]
@@ -1675,7 +1675,7 @@ def test_import_of_nothing_reports_zero_and_announces_nothing(
     _import_text(dialog, monkeypatch, tmp_path, _import_payload({}))
 
     assert _shown(dialogs.information) == [("Import Complete", "Imported 0 provider instances. Their API keys were not imported.")]
-    assert announced == []
+    assert not announced
 
 
 @pytest.mark.parametrize(

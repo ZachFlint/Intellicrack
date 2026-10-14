@@ -3956,9 +3956,7 @@ class ProviderSettingsWidget(QFrame):
             bool: True when ``is_xpu_available`` reports a usable device,
             False when the utility is missing.
         """
-        if is_xpu_available is None:
-            return False
-        return bool(is_xpu_available())
+        return False if is_xpu_available is None else bool(is_xpu_available())
 
     def _populate_device_combo(self) -> None:
         """Populate the device selection combo with available XPU devices."""
@@ -4256,9 +4254,7 @@ class ProviderSettingsWidget(QFrame):
             discovery.get_recommended_model(_RECOMMENDATION_TASK_TYPE),
             timeout_s=_RECOMMENDATION_TIMEOUT_S,
         )
-        if recommended is not None:
-            return f"Recommended: {recommended.name}"
-        return ""
+        return f"Recommended: {recommended.name}" if recommended is not None else ""
 
     def _update_recommended_model(self) -> None:
         """Update the recommended model label based on discovery."""

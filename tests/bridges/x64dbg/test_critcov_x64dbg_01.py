@@ -679,7 +679,7 @@ async def test_terminate_debugger_process_without_a_process_does_nothing() -> No
     bridge = X64DbgBridge()
     errors: list[BaseException] = []
     await _method(bridge, "_terminate_debugger_process")(errors)
-    assert errors == []
+    assert not errors
     assert getattr(bridge, "_process") is None
 
 
@@ -1020,8 +1020,8 @@ async def test_recover_dead_debugger_process_resets_the_session_state() -> None:
         assert await _method(bridge, "_recover_dead_debugger_process")() is True
         assert getattr(bridge, "_process") is None
         assert bridge.attached_pid is None
-        assert bridge.state.connected is False
-        assert bridge.state.tool_running is False
+        assert not bridge.state.connected
+        assert not bridge.state.tool_running
         assert getattr(bridge, "_process_handles") == {}
     finally:
         setattr(bridge, "_process", None)
@@ -1043,7 +1043,7 @@ async def test_recover_dead_debugger_process_keeps_a_process_it_cannot_probe(hid
         with _invalid_process_handle(hidden_sleeper):
             assert await _method(bridge, "_recover_dead_debugger_process")() is False
         assert getattr(bridge, "_process") is hidden_sleeper
-        assert bridge.state.connected is True
+        assert bridge.state.connected
     finally:
         setattr(bridge, "_process", None)
 

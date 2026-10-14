@@ -486,7 +486,7 @@ def _publish_screenshot(shared: Path, sentinel: Path, payload: bytes) -> str:
     """
     found = re.search(_SHOT_PATTERN, _trigger_text(shared))
     assert found is not None, "the screenshot command was never staged"
-    (shared / "output" / found.group(0)).write_bytes(payload)
+    (shared / "output" / found[0]).write_bytes(payload)
     sentinel.write_text("go", encoding="ascii")
     return found.group(0)
 

@@ -153,7 +153,7 @@ def topology(tmp_path: Path) -> Topology:
     """
     config = tmp_path / "gitconfig"
     config.write_text("[init]\n\tdefaultBranch = main\n", encoding="utf-8")
-    env = dict(os.environ) | {
+    env = os.environ | {
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_CONFIG_GLOBAL": str(config),
         "GIT_AUTHOR_NAME": "Test Human",

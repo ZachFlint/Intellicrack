@@ -382,10 +382,10 @@ def _read_http_request(connection: socket.socket) -> bool:
     """
     received = b""
     while b"\r\n\r\n" not in received:
-        chunk = connection.recv(_RECV_BYTES)
-        if not chunk:
+        if chunk := connection.recv(_RECV_BYTES):
+            received += chunk
+        else:
             return False
-        received += chunk
     head, _, body = received.partition(b"\r\n\r\n")
     length = 0
     for line in head.split(b"\r\n")[1:]:

@@ -752,7 +752,7 @@ def test_chip_widget_duplicate_tag_clears_input_without_chip_or_signal(qtbot: Qt
     _widget(chips, "_add_btn", QPushButton).click()
 
     assert not tag_input.text()
-    assert added == []
+    assert not added
     assert session.tags == ["dup"]
     assert len(chips.findChildren(QPushButton, "tagChip")) == len(["dup"])
 
@@ -775,7 +775,7 @@ def test_chip_click_for_tag_removed_elsewhere_keeps_chip_and_emits_nothing(qtbot
 
     chip.click()
 
-    assert removed == []
+    assert not removed
     assert chips.findChildren(QPushButton, "tagChip") == [chip]
 
 
@@ -797,7 +797,7 @@ def test_chip_click_after_session_cleared_does_nothing(qtbot: QtBot) -> None:
 
     chip.click()
 
-    assert removed == []
+    assert not removed
     assert session.tags == ["x"]
     assert chips.session() is None
 
@@ -845,7 +845,7 @@ def test_dialog_without_manager_edits_tags_without_persisting(make_dialog: Calla
     _widget(chips, "_add_btn", QPushButton).click()
 
     assert session.tags == ["urgent"]
-    assert list(sessions_dir.iterdir()) == []
+    assert not list(sessions_dir.iterdir())
 
 
 def test_elided_detail_shows_full_text_when_label_has_no_width() -> None:
@@ -1193,7 +1193,7 @@ def test_load_without_selection_does_nothing(make_dialog: Callable[..., SessionM
     _method(dialog, "_load_selected_session")()
 
     assert shown == []
-    assert loaded == []
+    assert not loaded
 
 
 def test_load_with_missing_name_cell_does_nothing(
@@ -1221,7 +1221,7 @@ def test_load_with_missing_name_cell_does_nothing(
     _method(dialog, "_load_selected_session")()
 
     assert shown == []
-    assert loaded == []
+    assert not loaded
 
 
 def test_load_of_active_session_is_refused_with_notice(
@@ -1247,7 +1247,7 @@ def test_load_of_active_session_is_refused_with_notice(
     _method(dialog, "_load_selected_session")()
 
     assert shown == [("information", "Session Active", "This session is already active.")]
-    assert loaded == []
+    assert not loaded
 
 
 @pytest.mark.usefixtures("decline")
@@ -1270,7 +1270,7 @@ def test_load_declined_by_user_does_nothing(make_dialog: Callable[..., SessionMa
     _method(dialog, "_load_selected_session")()
 
     assert _kinds(shown, "question") == [("Load Session", "Load this session? Current session progress will be saved.")]
-    assert loaded == []
+    assert not loaded
     assert dialog.result() != QDialog.DialogCode.Accepted.value
 
 
@@ -1416,7 +1416,7 @@ def test_sidecar_load_of_vanished_session_warns(make_dialog: Callable[..., Sessi
     _method(dialog, "_load_selected_session")()
 
     assert _kinds(shown, "warning") == [("Load Failed", "Session not found: gone-id")]
-    assert loaded == []
+    assert not loaded
 
 
 @pytest.mark.parametrize("role", ["user", "assistant", "system", "tool"])
@@ -1656,7 +1656,7 @@ def test_delete_of_active_session_is_refused(make_dialog: Callable[..., SessionM
     _method(dialog, "_delete_session")()
 
     assert shown == [("warning", "Cannot Delete", "Cannot delete the currently active session.")]
-    assert deleted == []
+    assert not deleted
     assert path.exists()
 
 
@@ -1680,7 +1680,7 @@ def test_delete_declined_by_user_keeps_file(make_dialog: Callable[..., SessionMa
     _method(dialog, "_delete_session")()
 
     assert _kinds(shown, "question") == [("Delete Session", "Delete session 'Doomed'?\n\nThis action cannot be undone.")]
-    assert deleted == []
+    assert not deleted
     assert path.exists()
     assert _ids(dialog) == ["doomed-id"]
 
@@ -1741,7 +1741,7 @@ def test_delete_sidecar_session_that_cannot_be_unlinked_warns_and_keeps_row(
     warnings = _kinds(shown, "warning")
     assert [title for title, _text in warnings] == ["Delete Failed"]
     assert warnings[0][1].startswith("Failed to delete session file:\n")
-    assert deleted == []
+    assert not deleted
     assert path.is_dir()
     assert _ids(dialog) == ["stuck"]
 
@@ -1788,7 +1788,7 @@ def test_delete_row_the_manager_no_longer_has_warns(
     _method(dialog, "_delete_session")()
 
     wait_for(("warning", "Delete Failed", "Session could not be deleted."))
-    assert deleted == []
+    assert not deleted
 
 
 def test_delete_failure_in_manager_warns_with_error_text(
@@ -1842,7 +1842,7 @@ def test_load_session_missing_from_store_warns_not_found(
     _method(dialog, "_load_selected_session")()
 
     wait_for(("warning", "Load Failed", f"Session not found: {gone.id}"))
-    assert loaded == []
+    assert not loaded
 
 
 def test_load_failure_in_manager_warns_with_error_text(
@@ -1870,7 +1870,7 @@ def test_load_failure_in_manager_warns_with_error_text(
     _method(dialog, "_load_selected_session")()
 
     wait_for(("warning", "Load Failed", "Failed to load session:\ncannot open"))
-    assert loaded == []
+    assert not loaded
 
 
 def test_load_result_without_message_list_is_reported_malformed(make_dialog: Callable[..., SessionManagerDialog], shown: _Log) -> None:
@@ -1889,7 +1889,7 @@ def test_load_result_without_message_list_is_reported_malformed(make_dialog: Cal
     _method(dialog, "_on_load_session_succeeded")("odd-id", object())
 
     assert shown == [("warning", "Load Failed", "Session file is malformed: odd-id")]
-    assert loaded == []
+    assert not loaded
     assert dialog.result() != QDialog.DialogCode.Accepted.value
 
 
@@ -2181,7 +2181,7 @@ def test_import_with_cancelled_picker_does_nothing(
     _method(dialog, "_import_session")()
 
     assert shown == []
-    assert list(sessions_dir.iterdir()) == []
+    assert not list(sessions_dir.iterdir())
 
 
 def test_import_sidecar_with_invalid_json_warns(
@@ -2211,7 +2211,7 @@ def test_import_sidecar_with_invalid_json_warns(
 
     assert [(kind, title) for kind, title, _text in shown] == [("warning", "Import Failed")]
     assert shown[0][2].startswith("Invalid JSON file:\n")
-    assert list(sessions_dir.iterdir()) == []
+    assert not list(sessions_dir.iterdir())
 
 
 def test_import_sidecar_from_unreadable_path_warns(
@@ -2241,7 +2241,7 @@ def test_import_sidecar_from_unreadable_path_warns(
 
     assert [(kind, title) for kind, title, _text in shown] == [("warning", "Import Failed")]
     assert shown[0][2].startswith("Failed to read file:\n")
-    assert list(sessions_dir.iterdir()) == []
+    assert not list(sessions_dir.iterdir())
 
 
 def test_import_sidecar_with_non_object_json_warns(
@@ -2271,7 +2271,7 @@ def test_import_sidecar_with_non_object_json_warns(
     _method(dialog, "_import_session")()
 
     assert shown == [("warning", "Import Failed", "Invalid session file format.")]
-    assert list(sessions_dir.iterdir()) == []
+    assert not list(sessions_dir.iterdir())
 
 
 def test_import_sidecar_without_id_uses_file_stem_and_lists_session(

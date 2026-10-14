@@ -294,7 +294,7 @@ def _scripted_reply(rules: list[tuple[str, object]], text: str) -> object:
             if isinstance(reply, ToolError):
                 raise ToolError(reply.message)
             return reply
-    msg = "no scripted reply for: " + text.strip().splitlines()[0]
+    msg = f"no scripted reply for: {text.strip().splitlines()[0]}"
     raise ToolError(msg)
 
 

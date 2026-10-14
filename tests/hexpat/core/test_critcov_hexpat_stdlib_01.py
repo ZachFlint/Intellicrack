@@ -520,7 +520,7 @@ class TestMemorySections:
         evaluator, stdlib = _execute(source, data)
         assert (_bound(evaluator, "sec_a"), _bound(evaluator, "sec_b")) == (1, 2)
         assert _section_bytes(stdlib, 1) == data[1:5]
-        assert _section_bytes(stdlib, 2) == data[3:5] + b"\x00" + data[0:2]
+        assert _section_bytes(stdlib, 2) == data[3:5] + b"\x00" + data[:2]
         assert (_bound(evaluator, "size_a"), _bound(evaluator, "size_b")) == (4, 5)
 
     @pytest.mark.parametrize(
@@ -597,8 +597,8 @@ class TestMemorySections:
     def test_delete_section_releases_the_handle(self) -> None:
         """A deleted section cannot be deleted or sized again."""
         source = 'auto sec_a = std::mem::create_section("a");\nstd::mem::delete_section(sec_a);\n'
-        assert _failure(source + "std::mem::delete_section(sec_a);") == "std::mem::delete_section: unknown section handle 1"
-        assert _failure(source + "std::mem::get_section_size(sec_a);") == "std::mem::get_section_size: unknown section handle"
+        assert _failure(f"{source}std::mem::delete_section(sec_a);") == "std::mem::delete_section: unknown section handle 1"
+        assert _failure(f"{source}std::mem::get_section_size(sec_a);") == "std::mem::get_section_size: unknown section handle"
 
     @pytest.mark.parametrize(
         ("statement", "message"),

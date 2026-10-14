@@ -742,7 +742,7 @@ def test_ghidra_cfg_with_an_unusable_block_list_draws_nothing(ghidra_panel: Ghid
 
     _priv(ghidra_panel, "_apply_cfg")({"function": "main", "blocks": "not-a-list"})
 
-    assert set(view.graph_scene().block_items) == set()
+    assert not set(view.graph_scene().block_items)
 
 
 def test_stalker_summary_stop_without_a_thread_id_still_asks_the_bridge(qapp: QApplication, frida_panel: FridaPanel) -> None:

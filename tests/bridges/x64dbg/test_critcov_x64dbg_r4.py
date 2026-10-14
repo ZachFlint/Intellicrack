@@ -103,4 +103,4 @@ def test_enumerate_modules_into_lists_nothing_for_a_snapshot_without_module_reco
         kernel32.CloseHandle(snapshot)
 
     assert walked is None
-    assert modules == []
+    assert not modules

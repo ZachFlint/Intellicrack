@@ -574,7 +574,7 @@ def test_requested_detach_does_not_publish_session_detached(target_process: Pope
         for message in _drain(messages)
         if isinstance(message.get("payload"), dict) and cast("dict[str, object]", message["payload"]).get("type") == "session_detached"
     ]
-    assert published == []
+    assert not published
     assert attached_bridge.state.last_error is None
 
 

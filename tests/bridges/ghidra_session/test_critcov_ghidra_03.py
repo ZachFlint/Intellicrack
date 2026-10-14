@@ -52,15 +52,13 @@ _SCRIPTED_FAILURE_TEXT: Final[str] = "scripted failure"
 _NOT_CONNECTED: Final[str] = "Ghidra not connected"
 _MISSING_BLOCK: Final[str] = "critcov_missing_block"
 _MISSING_TREE: Final[str] = "critcov_missing_tree"
-_EQUATE_NAME: Final[str] = "CRITCOV_EQUATE"
 _EQUATE_VALUE: Final[int] = 0x1337
 _BLOCK_NAMES_SCRIPT: Final[str] = '"|".join(sorted(str(block.getName()) for block in currentProgram.getMemory().getBlocks()))'
 _TREE_NAMES_SCRIPT: Final[str] = '"|".join(sorted(str(name) for name in currentProgram.getListing().getTreeNames()))'
+_EQUATE_NAME: Final[str] = "CRITCOV_EQUATE"
 _EQUATE_VALUE_SCRIPT: Final[str] = f'int(currentProgram.getEquateTable().getEquate("{_EQUATE_NAME}").getValue())'
 _EQUATE_REFS_SCRIPT: Final[str] = (
-    '"|".join(str(ref.getAddress().getOffset()) for ref in currentProgram.getEquateTable().getEquate("'
-    + _EQUATE_NAME
-    + '").getReferences())'
+    f'"|".join(str(ref.getAddress().getOffset()) for ref in currentProgram.getEquateTable().getEquate("{_EQUATE_NAME}").getReferences())'
 )
 
 _Call = Callable[[GhidraBridge, Path], Awaitable[object]]

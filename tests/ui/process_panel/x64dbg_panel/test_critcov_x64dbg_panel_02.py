@@ -671,25 +671,55 @@ _INVALID_CASES: list[tuple[str, dict[str, str], str, str | None]] = [
 ]
 
 _FAIL_CASES: list[FailCase] = [
-    FailCase("_on_detach", {}, "[-] Detach failed: " + _NO_CONSOLE + "detach", [], ["detach"]),
+    FailCase(
+        "_on_detach",
+        {},
+        f"[-] Detach failed: {_NO_CONSOLE}detach",
+        [],
+        ["detach"],
+    ),
     FailCase(
         "_on_load_library",
         {},
-        "[-] Load Library failed: " + _NO_CONSOLE + 'loadlib "{path}"',
+        f"[-] Load Library failed: {_NO_CONSOLE}" + 'loadlib "{path}"',
         [],
         ['loadlib "{path}"'],
     ),
-    FailCase("_on_spawn", {}, "[-] Spawn failed: File not found: {path}", [], []),
+    FailCase(
+        "_on_spawn",
+        {},
+        "[-] Spawn failed: File not found: {path}",
+        [],
+        [],
+    ),
     FailCase(
         "_on_run_to",
         {"_run_to_input": "0x401000"},
-        "[-] Run To failed: " + _NO_REPLY + "run_to",
+        f"[-] Run To failed: {_NO_REPLY}run_to",
         [("run_to", {"address": "0x401000"})],
         [],
     ),
-    FailCase("_on_til_ret", {}, "[-] Til Return failed: " + _NO_REPLY + "exec", [("exec", {"command": "erun"})], []),
-    FailCase("_on_skip", {}, "[-] Skip failed: " + _NO_REPLY + "reg_all", [("reg_all", None)], []),
-    FailCase("_on_instr_undo", {}, "[-] Undo failed: " + _NO_REPLY + "reg_all", [("reg_all", None)], []),
+    FailCase(
+        "_on_til_ret",
+        {},
+        "[-] Til Return failed: " + _NO_REPLY + "exec",
+        [("exec", {"command": "erun"})],
+        [],
+    ),
+    FailCase(
+        "_on_skip",
+        {},
+        "[-] Skip failed: " + _NO_REPLY + "reg_all",
+        [("reg_all", None)],
+        [],
+    ),
+    FailCase(
+        "_on_instr_undo",
+        {},
+        "[-] Undo failed: " + _NO_REPLY + "reg_all",
+        [("reg_all", None)],
+        [],
+    ),
     FailCase(
         "_on_run_to_user_code",
         {},
@@ -711,9 +741,27 @@ _FAIL_CASES: list[FailCase] = [
         [("exec", {"command": "rip=0x401000"})],
         [],
     ),
-    FailCase("_on_save_db", {}, "[-] Save DB failed: " + _NO_REPLY + "db_save", [("db_save", None)], []),
-    FailCase("_on_load_db", {}, "[-] Load DB failed: " + _NO_REPLY + "db_load", [("db_load", None)], []),
-    FailCase("_on_clear_db", {}, "[-] Clear DB failed: " + _NO_REPLY + "db_clear", [("db_clear", None)], []),
+    FailCase(
+        "_on_save_db",
+        {},
+        "[-] Save DB failed: " + _NO_REPLY + "db_save",
+        [("db_save", None)],
+        [],
+    ),
+    FailCase(
+        "_on_load_db",
+        {},
+        "[-] Load DB failed: " + _NO_REPLY + "db_load",
+        [("db_load", None)],
+        [],
+    ),
+    FailCase(
+        "_on_clear_db",
+        {},
+        "[-] Clear DB failed: " + _NO_REPLY + "db_clear",
+        [("db_clear", None)],
+        [],
+    ),
     FailCase(
         "_on_add_watchpoint",
         {"_wp_addr_input": "0x401000", "_wp_size_input": "8"},
@@ -805,7 +853,13 @@ _FAIL_CASES: list[FailCase] = [
         [],
         [],
     ),
-    FailCase("_on_alloc_memory", {}, "[-] Alloc failed: No process attached", [], []),
+    FailCase(
+        "_on_alloc_memory",
+        {},
+        "[-] Alloc failed: No process attached",
+        [],
+        [],
+    ),
 ]
 
 _OK_CASES: list[OkCase] = [
@@ -1074,7 +1128,7 @@ def test_execute_command_failure_is_reported(qtbot: QtBot, rig: Rig) -> None:
 
     _priv(panel, "_on_execute_command")()
 
-    _wait_console(qtbot, panel, "[-] Command failed: " + _NO_CONSOLE + "bpx 401000")
+    _wait_console(qtbot, panel, f"[-] Command failed: {_NO_CONSOLE}bpx 401000")
     assert "> bpx 401000" in _console(panel)
     assert bridge.sent_commands == ["bpx 401000"]
 
@@ -1226,7 +1280,7 @@ def test_register_edit_rejected_by_the_bridge_reenables_the_table(qtbot: QtBot, 
     item.setText("0x1F")
 
     assert not table.isEnabled()
-    _wait_console(qtbot, panel, "[-] Failed to set rax: " + _NO_REPLY + "reg_set")
+    _wait_console(qtbot, panel, f"[-] Failed to set rax: {_NO_REPLY}reg_set")
     assert table.isEnabled()
     assert bridge.sent_rpcs == [("reg_set", {"register": "rax", "value": 31})]
 
@@ -1281,7 +1335,11 @@ def test_extended_register_edit_rejected_by_the_bridge_restores_the_value(qtbot:
     item.setText("11" * 16)
 
     assert not table.isEnabled()
-    _wait_console(qtbot, panel, "[-] Failed to set xmm0: " + _NO_REPLY + "reg_set_extended")
+    _wait_console(
+        qtbot,
+        panel,
+        f"[-] Failed to set xmm0: {_NO_REPLY}reg_set_extended",
+    )
     assert item.text() == "00" * 16
     assert table.isEnabled()
     assert _priv(panel, "_ext_reg_values")["xmm0"] == "00" * 16
@@ -1304,7 +1362,7 @@ def test_view_refresh_failure_without_a_bridge_only_logs(panel: X64DbgPanel) -> 
 
     _priv(panel, "_on_view_refresh_failed")(ToolError("boom"), event="x64dbg_refresh_registers_failed", clear_view=clear)
 
-    assert cleared == []
+    assert not cleared
     assert _status(panel) == status
 
 
@@ -1351,7 +1409,10 @@ def test_failed_refresh_on_a_dead_pipe_clears_the_register_view(qtbot: QtBot, ri
 
     _priv(panel, refresh)()
 
-    _wait_for(qtbot, lambda: _status(panel).startswith("Session lost: " + _NO_REPLY))
+    _wait_for(
+        qtbot,
+        lambda: _status(panel).startswith(f"Session lost: {_NO_REPLY}"),
+    )
     assert table.rowCount() == 0
     assert _status(panel).endswith(f" ({_DIAGNOSTIC})")
     expected: dict[str, str] = {} if table_name == "_ext_reg_table" else {"xmm0": "00" * 16}
@@ -1384,7 +1445,7 @@ def test_view_refresh_failure_with_a_live_pipe_keeps_the_view(qtbot: QtBot, pipe
 
     _priv(panel, "_on_view_refresh_failed")(ToolError("transient"), event="x64dbg_refresh_registers_failed", clear_view=clear)
 
-    assert cleared == []
+    assert not cleared
     assert _status(panel) == status
 
 

@@ -331,7 +331,7 @@ class TestWindowsProbeWithPwshUnreachable:
         met, warnings = check_windows_requirements()
         assert met is False
         assert warnings[-1].startswith(_DRIVER_MISSING_PREFIX)
-        assert not any("Resizable BAR" in warning for warning in warnings)
+        assert all("Resizable BAR" not in warning for warning in warnings)
 
 
 @pytest.mark.spawns_process
@@ -392,4 +392,4 @@ class TestWindowsProbeWithScriptedPwsh:
         met, warnings = check_windows_requirements()
         assert met is True
         assert warnings[-1].startswith(_REBAR_UNVERIFIED_PREFIX)
-        assert not any(_DRIVER_MISSING_PREFIX in warning for warning in warnings)
+        assert all(_DRIVER_MISSING_PREFIX not in warning for warning in warnings)

@@ -1532,7 +1532,7 @@ async def test_abandoning_a_socket_that_was_never_opened_leaves_nothing_connecte
 
     await client.abandon_socket()
 
-    assert client.connected is False
+    assert not client.connected
 
 
 @pytest.mark.asyncio
@@ -1810,7 +1810,7 @@ async def test_closing_a_recorder_cancels_a_drain_that_is_still_running() -> Non
 
     assert task is None
     assert termination is None
-    assert process_still_running is True
+    assert process_still_running
 
 
 def test_invalidating_the_accelerator_cache_forces_the_next_probe() -> None:

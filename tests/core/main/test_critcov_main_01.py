@@ -1200,7 +1200,7 @@ def test_a_failing_template_export_is_logged_as_a_partial_bootstrap() -> None:
     assert Path(failed_paths[0]).name == f"{blocked_name}.json"
     assert Path(failed_paths[0]).is_dir()
     startup_successes = [entry for entry in _events(logs, "template_manager_initialized") if entry["log_level"] == "info"]
-    assert startup_successes == []
+    assert not startup_successes
 
 
 @pytest.mark.asyncio
@@ -1368,7 +1368,7 @@ async def test_cancelling_bridge_tasks_lets_them_finish_their_cancellation() -> 
 
     assert run_bridge_coroutine(sleeper()) is None
     await asyncio.sleep(0)
-    assert flags == []
+    assert not flags
 
     with capture_logs() as logs:
         await _cancel_pending_bridge_tasks(_marked_logger("cancel-normal"))
@@ -1441,7 +1441,7 @@ def test_the_bridge_loop_is_stopped_and_drained_workers_are_logged_only_when_the
         if expected:
             assert [entry["count"] for entry in drained] == [expected]
         else:
-            assert drained == []
+            assert not drained
     finally:
         shutdown_bridge_loop()
 

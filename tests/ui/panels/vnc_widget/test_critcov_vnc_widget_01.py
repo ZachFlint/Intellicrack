@@ -322,10 +322,10 @@ async def _written_by_client(rig: _Rig) -> bytes:
     rig.peer.settimeout(_WAIT_S)
     received = bytearray()
     while True:
-        piece = rig.peer.recv(4096)
-        if not piece:
+        if piece := rig.peer.recv(4096):
+            received += piece
+        else:
             return bytes(received)
-        received += piece
 
 
 async def _negotiate_security_against(server_bytes: bytes, password: str | None) -> tuple[bool, bytes]:
@@ -878,7 +878,7 @@ def test_apply_copy_rect_clips_sources_beyond_the_framebuffer() -> None:
     client.apply_copy_rect(6, 3, 0, 0, 2, 2)
     assert _rgb_at(client, 0, 0) == _seed_rgb(6, 3)
     assert _rgb_at(client, 1, 0) == _seed_rgb(7, 3)
-    outside_destination = [(x, y) for y in range(4) for x in range(8) if not (x < 2 and y < 2)]
+    outside_destination = [(x, y) for y in range(4) for x in range(8) if x >= 2 or y >= 2]
     assert all(_rgb_at(client, x, y) == _seed_rgb(x, y) for x, y in outside_destination)
 
     far = _client_with_framebuffer(8, 4)

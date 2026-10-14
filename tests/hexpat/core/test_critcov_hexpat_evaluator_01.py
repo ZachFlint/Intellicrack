@@ -93,7 +93,7 @@ def _holds(interp: HexPatInterpreter, prelude: str, condition: str, data: bytes 
     results = interp.execute_bytes(f"{prelude}\nu8 probe @ {condition} ? 3 : 5;", payload)
     probe = _field(results, "probe")
     assert probe["offset"] in {3, 5}
-    return bool(probe["offset"] == 3)
+    return probe["offset"] == 3
 
 
 def _build(source: str, data: bytes) -> tuple[HexPatEvaluator, list[DeclNode | StmtNode]]:

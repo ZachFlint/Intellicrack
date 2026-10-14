@@ -105,7 +105,7 @@ def _holds(interp: HexPatInterpreter, prelude: str, condition: str, data: bytes 
     results = interp.execute_bytes(f"{prelude}\nu8 probe @ {condition} ? 3 : 5;", _padded(data))
     probe = _field(results, "probe")
     assert probe["offset"] in {3, 5}
-    return bool(probe["offset"] == 3)
+    return probe["offset"] == 3
 
 
 def _offset_of(interp: HexPatInterpreter, prelude: str, expression: str, data: bytes | None = None) -> int:

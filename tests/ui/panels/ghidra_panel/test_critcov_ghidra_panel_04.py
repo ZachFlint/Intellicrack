@@ -651,8 +651,8 @@ def test_create_equate_sends_the_parsed_fields_then_refreshes_the_table(bridged_
     _settle(bridged_panel)
 
     assert len(bridge.scripts) == 2
-    assert f"toAddr({0x401000})" in bridge.scripts[0]
-    assert f'createEquate("MAGIC", {0x2A})' in bridge.scripts[0]
+    assert "toAddr(4198400)" in bridge.scripts[0]
+    assert 'createEquate("MAGIC", 42)' in bridge.scripts[0]
     assert len(bridge.evals) == 1
     assert 'getEquate("MAGIC")' in bridge.evals[0]
     assert _rows(_table(bridged_panel, "_equates_table")) == [["MAGIC", "42", "1"], ["COLOR_WHITE", "16777215", "3"]]

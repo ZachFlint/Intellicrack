@@ -342,7 +342,7 @@ async def test_disconnect_swallows_a_failing_client_cleanup() -> None:
 
     await provider.disconnect()
 
-    assert provider.connected is False
+    assert not provider.connected
     assert provider.is_connected is False
 
 

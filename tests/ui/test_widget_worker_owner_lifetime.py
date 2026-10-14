@@ -252,7 +252,7 @@ def test_the_requirements_worker_reports_a_probe_timeout() -> None:
         getattr(worker, "result_ready").connect(results.append)
         worker.run()
 
-    assert results == []
+    assert not results
     assert failures == [str(expired)]
 
 

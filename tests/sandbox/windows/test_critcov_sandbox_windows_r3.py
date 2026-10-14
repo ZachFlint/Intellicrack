@@ -450,7 +450,7 @@ async def test_staging_the_monitor_scripts_fails_when_the_bundled_directory_is_m
 
     assert str(excinfo.value) == "Sandbox monitor scripts directory not found"
     assert [entry.get("scripts_dir") for entry in _events(captured, "monitor_scripts_dir_not_found")] == [str(missing)]
-    assert list(monitor.iterdir()) == []
+    assert not list(monitor.iterdir())
 
 
 @pytest.mark.asyncio

@@ -76,7 +76,7 @@ def _build_pe(stored: int) -> bytes:
         bytes: The image.
     """
     image = bytearray((index * 7 + 3) & 0xFF for index in range(_E_LFANEW + 4 + 20 + 224 + _BODY_LEN))
-    image[0:2] = b"MZ"
+    image[:2] = b"MZ"
     image[0x3C:0x40] = struct.pack("<I", _E_LFANEW)
     image[_E_LFANEW : _E_LFANEW + 4] = b"PE\x00\x00"
     image[_FIELD : _FIELD + _FIELD_LEN] = struct.pack("<I", stored)

@@ -284,7 +284,7 @@ class TestDiscardWorkerOutcome:
             _discard_worker_outcome(discarded)
             del discarded
             _ = gc.collect()
-            assert reports == []
+            assert not reports
             abandoned: asyncio.Future[object] = loop.create_future()
             abandoned.set_exception(ValueError("abandoned"))
             del abandoned

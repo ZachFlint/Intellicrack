@@ -1239,7 +1239,7 @@ def test_start_headless_uses_the_directory_chosen_in_the_prompt(
     assert status(idle_panel).startswith(f"Headless start failed: {_HEADLESS_MISSING}")
     assert str(tmp_path) in status(idle_panel)
     assert button(idle_panel, "_headless_btn").isEnabled()
-    assert list(tmp_path.iterdir()) == []
+    assert not list(tmp_path.iterdir())
 
 
 def test_start_headless_does_not_ask_when_the_path_is_already_known(

@@ -487,7 +487,7 @@ def test_ai_context_helpers_leave_context_untouched_without_document(hex_bridge:
     _method(hex_bridge, "_populate_ai_selection")(context, 16)
     _method(hex_bridge, "_populate_ai_bookmarks")(context, 8)
 
-    assert context == {}
+    assert not context
 
 
 @pytest.mark.asyncio
@@ -1268,7 +1268,7 @@ def test_add_bookmark_and_rollback_without_a_document(hex_bridge: HexEditorBridg
     rollback_result = _method(hex_bridge, "_rollback_bookmark_indices")([3])
 
     assert bookmarks == [{"offset": 4, "length": 8, "label": "Label", "color": "#112233"}]
-    assert indices == []
+    assert not indices
     assert rollback_result is None
 
 

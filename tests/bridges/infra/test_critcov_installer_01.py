@@ -1663,7 +1663,7 @@ def test_build_plugin_stops_each_arch_when_configure_fails(tmp_path: Path, monke
     assert installer_mod.build_x64dbg_plugin(tmp_path / "plugin", tmp_path / "x64dbg") is False
     calls = log.read_text(encoding="utf-8").splitlines()
     assert len(calls) == 3
-    assert not any("--build" in call for call in calls)
+    assert all("--build" not in call for call in calls)
     assert (tmp_path / "plugin" / "build_x64").is_dir()
     assert (tmp_path / "plugin" / "build_x32").is_dir()
 

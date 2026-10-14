@@ -461,7 +461,7 @@ def test_thread_enumeration_lists_nothing_for_an_invalid_snapshot_handle() -> No
 
     _sync_method(bridge, "_enumerate_attached_threads")(_typed_kernel32(), INVALID_HANDLE_VALUE, _ThreadEntry32, threads)
 
-    assert threads == []
+    assert not threads
 
 
 def test_thread_enumeration_lists_nothing_when_the_entry_structure_has_the_wrong_size() -> None:
@@ -497,7 +497,7 @@ def test_thread_enumeration_lists_nothing_when_the_entry_structure_has_the_wrong
     finally:
         kernel32.CloseHandle(snapshot)
 
-    assert threads == []
+    assert not threads
 
 
 def test_parent_pid_lookup_is_zero_for_an_invalid_snapshot_handle() -> None:

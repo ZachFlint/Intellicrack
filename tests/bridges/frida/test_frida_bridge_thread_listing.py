@@ -69,11 +69,11 @@ def test_repeated_thread_listings_share_one_helper_and_unload_nothing(notepad_br
     listings = [asyncio.run(notepad_bridge.enumerate_threads()) for _ in range(_LISTINGS)]
 
     assert first
-    assert all(listing for listing in listings)
+    assert all(listings)
     assert all(thread.tid > 0 for listing in listings for thread in listing)
     assert all(len({thread.tid for thread in listing}) == len(listing) for listing in listings)
     assert _private(notepad_bridge, "_thread_helper") is helper
-    assert destroyed == []
+    assert not destroyed
     assert cast("dict[str, object]", _private(notepad_bridge, "_scripts")) == {}
 
 

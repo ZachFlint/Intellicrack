@@ -637,7 +637,7 @@ async def test_watched_stream_passes_items_and_reports_the_end_of_the_stream() -
     try:
         await send.send("hello")
         assert await watched.receive() == "hello"
-        assert ended == []
+        assert not ended
         send.close()
         with pytest.raises(anyio.EndOfStream):
             _ = await watched.receive()

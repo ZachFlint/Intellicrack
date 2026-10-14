@@ -241,8 +241,7 @@ def _build_bps(source: bytes, target: bytes) -> bytes:
     body = bytearray(b"BPS1") + _varint(len(source)) + _varint(len(target)) + _varint(0)
     if common:
         body += _varint(((common - 1) << 2) | 0)
-    rest = target[common:]
-    if rest:
+    if rest := target[common:]:
         body += _varint(((len(rest) - 1) << 2) | 1) + rest
     return _seal(bytes(body), source, target)
 

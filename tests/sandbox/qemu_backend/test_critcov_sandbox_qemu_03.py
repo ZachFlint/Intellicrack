@@ -884,7 +884,7 @@ async def test_capture_screenshot_converts_the_screendump_to_png(shared_folder: 
     png = result.read_bytes()
     assert png[:8] == PNG_SIGNATURE
     assert struct.unpack(">II", png[16:24]) == (2, 1)
-    assert list(output.glob("*.ppm")) == []
+    assert not list(output.glob("*.ppm"))
     assert _arguments(qmp.sent[0]) == {"filename": str(output / result.name.replace(".png", ".ppm"))}
 
 
@@ -925,7 +925,7 @@ async def test_capture_screenshot_reports_a_malformed_ppm_as_a_conversion_failur
         await box.capture_screenshot()
 
     assert isinstance(raised.value.__cause__, ValueError)
-    assert list((shared_folder / "output").glob("*.png")) == []
+    assert not list((shared_folder / "output").glob("*.png"))
 
 
 @pytest.mark.asyncio
@@ -1198,7 +1198,7 @@ async def test_host_collect_dropped_files_without_a_shared_folder_copies_nothing
 
     await box.host_collect_dropped_files(staging)
 
-    assert list(staging.iterdir()) == []
+    assert not list(staging.iterdir())
 
 
 def test_count_files_recursive_is_zero_for_a_missing_directory(tmp_path: Path) -> None:

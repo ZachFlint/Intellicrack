@@ -830,7 +830,7 @@ def test_drain_stream_logs_and_stops_when_the_pipe_is_unreadable() -> None:
         result = _method(GhidraBridge, "_drain_stream")(stream, "stderr", collected.append)
 
     assert result is None
-    assert collected == []
+    assert not collected
     terminated = _events_named(events, "ghidra_pipe_drain_terminated")
     assert len(terminated) == 1
     assert terminated[0]["stream"] == "stderr"

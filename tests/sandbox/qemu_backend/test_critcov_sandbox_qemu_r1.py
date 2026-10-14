@@ -601,7 +601,7 @@ async def test_bootstrap_watch_keeps_polling_until_a_guest_channel_exists() -> N
                 watcher.cancel()
             await client.disconnect()
 
-    assert polled_without_channel == []
+    assert not polled_without_channel
     assert server.exec_status_pids == [_STATUS_POLL_PID]
     assert "exited 0" in description
 

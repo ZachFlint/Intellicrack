@@ -91,7 +91,7 @@ def _run_loader(tmp_path: Path, script_text: str) -> str:
     assert depth_match is not None, (
         "dll_monitor.ps1 no longer sets $script:TraceEventSearchDepth at top level; the lifted loader needs it to bind Get-ChildItem -Depth"
     )
-    search_depth = depth_match.group(1)
+    search_depth = depth_match[1]
 
     lifted = [lift_function(script_text, name) for name in (*_LOADER_FUNCTIONS, _PROBE_FUNCTION)]
     harness = tmp_path / "harness.ps1"

@@ -205,7 +205,7 @@ def _child_env(extra: dict[str, str]) -> dict[str, str]:
     env = dict(os.environ)
     env["PYTHONPATH"] = str(_SRC_DIR)
     env.pop("PROCESSOR_ARCHITEW6432", None)
-    env.update(extra)
+    env |= extra
     return env
 
 

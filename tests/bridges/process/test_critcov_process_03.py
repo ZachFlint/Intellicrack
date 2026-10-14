@@ -282,7 +282,7 @@ def _pe_headers(
         bytearray: Zero-padded image buffer holding the DOS header, NT headers and section table.
     """
     data = bytearray(total)
-    data[0:2] = b"MZ"
+    data[:2] = b"MZ"
     struct.pack_into("<I", data, 0x3C, _NT_OFFSET)
     data[_NT_OFFSET : _NT_OFFSET + 4] = b"PE\x00\x00"
     struct.pack_into("<HHIIIHH", data, _NT_OFFSET + 4, _MACHINE_AMD64, len(sections), 0, 0, 0, _OPTIONAL_HEADER_SIZE, 0x2022)
@@ -1275,10 +1275,10 @@ def test_reg_enumeration_of_absent_key_raises(live_bridge: ProcessBridge, regist
         registry_key: Path of an existing key, used to derive an absent sibling.
         operation: Name of the enumeration coroutine under test.
     """
-    absent = registry_key + "_absent"
+    absent = f"{registry_key}_absent"
     with pytest.raises(ToolError) as excinfo:
         _run(async_method(live_bridge, operation)(absent))
-    assert excinfo.value.message == "registry key open failed: " + absent
+    assert excinfo.value.message == f"registry key open failed: {absent}"
 
 
 def test_create_section_with_zero_size_reports_creation_failure(live_bridge: ProcessBridge) -> None:

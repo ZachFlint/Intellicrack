@@ -640,7 +640,7 @@ def test_export_chat_cancelled_dialog_writes_nothing(rig: _Rig, monkeypatch: pyt
     _call(rig.window, "_on_export_chat")
 
     assert rig.information.calls == []
-    assert list(rig.tmp_path.glob("*.txt")) == []
+    assert not list(rig.tmp_path.glob("*.txt"))
 
 
 def test_export_chat_writes_each_message_with_role_and_time(rig: _Rig, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1082,7 +1082,7 @@ def test_export_analysis_cancelled_dialog_writes_nothing(rig: _Rig, monkeypatch:
     _call(rig.window, "_on_export_analysis")
 
     assert rig.information.calls == []
-    assert list(rig.tmp_path.glob("*.json")) == []
+    assert not list(rig.tmp_path.glob("*.json"))
 
 
 def test_export_analysis_writes_nested_json(rig: _Rig, monkeypatch: pytest.MonkeyPatch) -> None:

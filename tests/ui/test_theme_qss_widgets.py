@@ -675,9 +675,7 @@ class _ObjectNameIndex:
         """
         if isinstance(node, ast.Name):
             return node.id
-        if isinstance(node, ast.Attribute):
-            return node.attr
-        return ""
+        return node.attr if isinstance(node, ast.Attribute) else ""
 
     @staticmethod
     def _literals(node: ast.expr) -> list[str]:
@@ -812,7 +810,7 @@ class TestSelectorsMatchTheWidgetsTheyName:
                     problems.append(f"{selector_class}#{name}: cannot tell what Qt class {owner} is")
                 elif not issubclass(widget_type, selector_type):
                     problems.append(f"{selector_class}#{name}: set on a {owner}, which is a {widget_type.__name__}, not a {selector_class}")
-        assert problems == [], "\n".join(problems)
+        assert not problems, "\n".join(problems)
 
     @staticmethod
     def test_index_resolves_the_new_named_widgets(object_names: _ObjectNameIndex) -> None:

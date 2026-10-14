@@ -1440,9 +1440,7 @@ def _short_path(path: str) -> str:
     """
     buffer = ctypes.create_unicode_buffer(32768)
     length = ctypes.windll.kernel32.GetShortPathNameW(path, buffer, len(buffer))
-    if length == 0 or length >= len(buffer):
-        return path
-    return buffer.value
+    return path if length == 0 or length >= len(buffer) else buffer.value
 
 
 class TestSaveBinary:

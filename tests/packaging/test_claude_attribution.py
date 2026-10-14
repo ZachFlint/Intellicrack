@@ -62,7 +62,7 @@ def _git_env(home: Path, author_name: str = _HUMAN_NAME, author_email: str = _HU
     """
     global_config = home / "gitconfig"
     global_config.touch()
-    return dict(os.environ) | {
+    return os.environ | {
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_CONFIG_GLOBAL": str(global_config),
         "GIT_AUTHOR_NAME": author_name,

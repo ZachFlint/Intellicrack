@@ -668,7 +668,7 @@ async def test_chat_stream_cancelled_before_the_first_chunk_yields_nothing(loade
     for _ in range(3):
         await asyncio.sleep(0)
 
-    assert chunks == []
+    assert not chunks
 
 
 @pytest.mark.asyncio
@@ -688,7 +688,7 @@ async def test_chat_stream_failure_after_cancel_is_swallowed(loaded_model: Loade
         chunks = [chunk async for chunk in provider.chat_stream(_user(_USER_TEXT), model=_MODEL_ID, max_tokens=2)]
     await canceller
 
-    assert chunks == []
+    assert not chunks
     assert provider.current_model_id == _MODEL_ID
 
 
@@ -720,7 +720,7 @@ async def test_stream_stops_at_the_end_of_sequence_token(loaded_model: LoadedMod
 
     chunks = [chunk async for chunk in provider.chat_stream(_user(_USER_TEXT), model=_MODEL_ID, temperature=0.0, max_tokens=4)]
 
-    assert chunks == []
+    assert not chunks
     usage = _usage_of(provider)
     assert usage.prompt_tokens == _prompt_token_count(_plain_tokenizer(), _USER_TEXT)
     assert usage.completion_tokens == 0

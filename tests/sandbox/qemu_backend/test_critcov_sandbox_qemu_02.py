@@ -99,10 +99,10 @@ class _CannedGuest:
             GuestCommandResult: The first matching rule's outcome, or the fallback.
         """
         line = " ".join([path, *args])
-        for fragment, result in self.rules:
-            if fragment in line:
-                return result
-        return self.fallback
+        return next(
+            (result for fragment, result in self.rules if fragment in line),
+            self.fallback,
+        )
 
 
 class _ReplyScript:
@@ -1006,7 +1006,7 @@ async def test_spice_display_claims_a_port_in_the_display_range_and_binds_it(tmp
     spice = argv[argv.index("-spice") + 1]
     matched = re.fullmatch(r"port=(\d+),disable-ticketing=on", spice)
     assert matched is not None, f"unexpected -spice argument {spice!r}"
-    port = int(matched.group(1))
+    port = int(matched[1])
     assert _DISPLAY_PORT_FIRST <= port <= _DISPLAY_PORT_LAST
     assert port in claimed
     assert port in reserved
@@ -1941,7 +1941,7 @@ async def test_copy_to_a_running_guest_without_an_agent_is_refused(tmp_path: Pat
     with pytest.raises(SandboxError, match="qemu-guest-agent channel not connected"):
         await sandbox.copy_to_sandbox(source, "input/sample.bin")
 
-    assert list(shared.rglob("*")) == []
+    assert not list(shared.rglob("*"))
 
 
 @pytest.mark.asyncio

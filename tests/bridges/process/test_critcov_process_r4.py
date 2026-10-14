@@ -235,7 +235,7 @@ def test_iterate_process_snapshot_ends_quietly_for_a_snapshot_without_process_re
         _k32().CloseHandle(oracle_snapshot)
 
     assert walked is None
-    assert processes == []
+    assert not processes
 
 
 def test_read_and_parse_teb_refuses_an_unreadable_wow64_teb_pointer(wow64_bridge: ProcessBridge) -> None:

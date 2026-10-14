@@ -1354,7 +1354,7 @@ def test_inheriting_the_binary_needs_both_a_binary_and_the_hook(rig: _Rig, *, bi
     try:
         with capture_logs() as captured:
             _call(rig.window, "_inherit_app_binary_into_cutter", hookless)
-            _call(rig.window, "_inherit_app_binary_into_cutter", cutter if not binary_loaded else hookless)
+            _call(rig.window, "_inherit_app_binary_into_cutter", hookless if binary_loaded else cutter)
     finally:
         hookless.deleteLater()
         cutter.deleteLater()

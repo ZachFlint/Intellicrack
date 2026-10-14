@@ -604,8 +604,8 @@ def test_resolve_user_print_path_refuses_paths_outside_the_sandbox(tmp_path: Pat
     with pytest.raises(_SandboxViolationError) as excinfo:
         _resolve_user_print_path(name, sandbox, opened)
     assert str(excinfo.value) == f"print(..., file={name!r}) {reason}"
-    assert opened == {}
-    assert list(sandbox.iterdir()) == []
+    assert not opened
+    assert not list(sandbox.iterdir())
 
 
 def test_resolve_user_print_path_opens_once_and_creates_parents(tmp_path: Path) -> None:
@@ -790,7 +790,7 @@ def test_execute_script_refuses_forbidden_constructs_before_running(tmp_path: Pa
     """
     with pytest.raises(PermissionError, match="Import is not permitted in sandboxed scripts"):
         _run("import os", document)
-    assert list(tmp_path.glob(_SANDBOX_GLOB)) == []
+    assert not list(tmp_path.glob(_SANDBOX_GLOB))
 
 
 def test_read_only_script_cannot_mutate_document_via_private_attributes(document: intellicrack_hexcore.HexDocument) -> None:
@@ -828,7 +828,7 @@ def test_doc_api_write_insert_delete_edit_the_document(document: intellicrack_he
     api = _DocAPI(document, None, None)
     model = bytearray(_SAMPLE)
     api.write(0, b"\xaa\xbb")
-    model[0:2] = b"\xaa\xbb"
+    model[:2] = b"\xaa\xbb"
     api.insert(2, b"\x77\x78")
     model[2:2] = b"\x77\x78"
     api.delete(10, 3)

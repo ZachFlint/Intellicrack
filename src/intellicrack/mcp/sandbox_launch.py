@@ -1127,8 +1127,7 @@ def ensure_inheritable_console() -> None:
     saved = [kernel32.GetStdHandle(std) for std in _STD_HANDLES]
     if not kernel32.AllocConsole():
         return
-    window = kernel32.GetConsoleWindow()
-    if window:
+    if window := kernel32.GetConsoleWindow():
         _ = _user32().ShowWindow(window, _SW_HIDE)
     for std, handle in zip(_STD_HANDLES, saved, strict=True):
         _ = kernel32.SetStdHandle(std, handle)

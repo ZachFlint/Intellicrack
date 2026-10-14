@@ -466,7 +466,7 @@ def _build_pe(*, stored: int = 0, body_len: int = 200) -> bytes:
         bytes: The image.
     """
     image = bytearray((index * 7 + 3) & 0xFF for index in range(_E_LFANEW + 4 + 20 + 224 + body_len))
-    image[0:2] = b"MZ"
+    image[:2] = b"MZ"
     image[0x3C:0x40] = struct.pack("<I", _E_LFANEW)
     image[_E_LFANEW : _E_LFANEW + 4] = b"PE\x00\x00"
     image[_FIELD : _FIELD + 4] = struct.pack("<I", stored)
@@ -514,7 +514,7 @@ def _dos_image(total: int, e_lfanew: int, *, magic: bytes = b"MZ", signature_at:
         bytes: The image.
     """
     image = bytearray(total)
-    image[0:2] = magic
+    image[:2] = magic
     if total >= 0x40:
         image[0x3C:0x40] = struct.pack("<I", e_lfanew)
     if signature_at is not None:
@@ -1481,7 +1481,7 @@ def test_custom_crc_without_document_does_nothing(
 
     host.custom_crc()
 
-    assert warnings_shown == []
+    assert not warnings_shown
 
 
 def test_custom_crc_warns_when_document_length_is_unavailable(
@@ -1518,7 +1518,7 @@ def test_custom_crc_stays_silent_for_non_widget_host_when_length_is_unavailable(
 
     host.custom_crc()
 
-    assert warnings_shown == []
+    assert not warnings_shown
 
 
 @pytest.mark.parametrize("with_bridge", [False, True], ids=["document", "bridge"])

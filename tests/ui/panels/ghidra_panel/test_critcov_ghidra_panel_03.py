@@ -634,7 +634,7 @@ def _arm(panel: GhidraPanel, overrides: Mapping[str, str] | None = None) -> None
     """
     values: dict[str, str] = dict(_ARMED_TEXT)
     if overrides is not None:
-        values.update(overrides)
+        values |= overrides
     for name, text in values.items():
         _type_into(panel, name, text)
 

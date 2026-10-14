@@ -214,7 +214,7 @@ def test_remove_remote_device_that_was_never_added_fails_with_frida_reason(idle_
     assert isinstance(excinfo.value.__cause__, frida.InvalidArgumentError)
     assert priv(idle_bridge, "_device", object) is original
     assert any(entry["event"] == "remote_device_remove_failed" and entry["host"] == _UNKNOWN_HOST for entry in logs)
-    assert not any(entry["event"] == "remote_device_removed" for entry in logs)
+    assert all(entry["event"] != "remote_device_removed" for entry in logs)
 
 
 def test_remove_remote_device_other_than_the_local_current_one_keeps_device_and_session(attached_bridge: FridaBridge) -> None:

@@ -554,7 +554,7 @@ def test_compare_does_nothing_without_a_document(
     host.compare()
     assert host.worker is None
     assert not host.summary()
-    assert list(snapshot_dir.iterdir()) == []
+    assert not list(snapshot_dir.iterdir())
 
 
 def test_compare_does_nothing_without_a_bridge(
@@ -581,7 +581,7 @@ def test_compare_does_nothing_without_a_bridge(
     host.compare()
     assert host.worker is None
     assert not host.summary()
-    assert list(snapshot_dir.iterdir()) == []
+    assert not list(snapshot_dir.iterdir())
 
 
 def test_compare_cancelled_dialog_starts_nothing(
@@ -606,7 +606,7 @@ def test_compare_cancelled_dialog_starts_nothing(
     assert host.worker is None
     assert not host.summary()
     assert host.temp_path is None
-    assert list(snapshot_dir.iterdir()) == []
+    assert not list(snapshot_dir.iterdir())
 
 
 def test_compare_is_ignored_while_a_diff_is_still_running(
@@ -634,7 +634,7 @@ def test_compare_is_ignored_while_a_diff_is_still_running(
         assert host.worker is blocker
         assert not host.summary()
         assert host.temp_path is None
-        assert list(snapshot_dir.iterdir()) == []
+        assert not list(snapshot_dir.iterdir())
     finally:
         release.set()
         drain_bridge_workers()
@@ -666,7 +666,7 @@ def test_compare_uses_the_file_on_disk_instead_of_a_snapshot(
     host.compare()
     assert host.summary() == _COMPUTING
     assert host.temp_path is None
-    assert list(snapshot_dir.iterdir()) == []
+    assert not list(snapshot_dir.iterdir())
     _wait_for_result(qtbot, host)
     assert host.summary() == _expected_summary(on_disk, _DATA_B)
     assert host.rows() == [_expected_row(on_disk, _DATA_B)]
@@ -707,7 +707,7 @@ def test_compare_snapshots_an_unsaved_document_and_removes_the_snapshot(
     assert host.rows() == [_expected_row(_DATA_A, _DATA_B)]
     assert not snapshot.exists()
     assert host.temp_path is None
-    assert list(snapshot_dir.iterdir()) == []
+    assert not list(snapshot_dir.iterdir())
 
 
 def test_compare_of_identical_content_reports_identical_files(
@@ -761,7 +761,7 @@ def test_compare_with_a_missing_file_reports_the_failure_and_removes_the_snapsho
     assert host.rows() == []
     assert not snapshot.exists()
     assert host.temp_path is None
-    assert list(snapshot_dir.iterdir()) == []
+    assert not list(snapshot_dir.iterdir())
 
 
 def test_compare_with_an_unreadable_document_starts_nothing(
@@ -786,7 +786,7 @@ def test_compare_with_an_unreadable_document_starts_nothing(
     assert host.worker is None
     assert not host.summary()
     assert host.temp_path is None
-    assert list(snapshot_dir.iterdir()) == []
+    assert not list(snapshot_dir.iterdir())
 
 
 def test_compare_survives_an_unwritable_snapshot_directory(
@@ -919,5 +919,5 @@ def test_double_click_on_a_row_without_a_numeric_offset_does_not_navigate(host: 
     textual.setData(0, Qt.ItemDataRole.UserRole, "0x00000010")
     host.double_click(bare)
     host.double_click(textual)
-    assert moved == []
+    assert not moved
     assert getattr(hex_widget, "_cursor_offset") == 3

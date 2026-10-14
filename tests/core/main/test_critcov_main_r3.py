@@ -374,8 +374,11 @@ def _write_instance(instance_id: str, **fields: object) -> None:
         instance_id: The instance's id.
         **fields: Record fields that override the defaults (a local endpoint that needs no key).
     """
-    record: dict[str, object] = {"instance_id": instance_id, "api_base": "http://127.0.0.1:9", "requires_api_key": False}
-    record.update(fields)
+    record: dict[str, object] = {
+        "instance_id": instance_id,
+        "api_base": "http://127.0.0.1:9",
+        "requires_api_key": False,
+    } | fields
     path = get_config_file("providers.json")
     path.parent.mkdir(parents=True, exist_ok=True)
     _ = path.write_text(json.dumps({"instances": {instance_id: record}}), encoding="utf-8")

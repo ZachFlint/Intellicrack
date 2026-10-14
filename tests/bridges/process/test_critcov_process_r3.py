@@ -318,9 +318,7 @@ def _read_remote(handle: int, address: int, size: int) -> bytes | None:
     buffer = ctypes.create_string_buffer(size)
     count = ctypes.c_size_t(0)
     read_ok: int = _k32().ReadProcessMemory(handle, ctypes.c_void_p(address), buffer, size, ctypes.byref(count))
-    if not read_ok or count.value != size:
-        return None
-    return buffer.raw[: count.value]
+    return None if not read_ok or count.value != size else buffer.raw[: count.value]
 
 
 def _u32(handle: int, address: int) -> int:

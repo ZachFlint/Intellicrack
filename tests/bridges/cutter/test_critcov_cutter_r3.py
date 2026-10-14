@@ -270,10 +270,10 @@ def _marker_outcome(output: str) -> str:
     Returns:
         str: The reported outcome, or ``"no result"`` when the child printed none.
     """
-    for line in output.splitlines():
-        if line.startswith(_MARKER):
-            return str(json.loads(line[len(_MARKER) :])["outcome"])
-    return "no result"
+    return next(
+        (str(json.loads(line[len(_MARKER) :])["outcome"]) for line in output.splitlines() if line.startswith(_MARKER)),
+        "no result",
+    )
 
 
 def _load_outcomes(work: Path) -> dict[str, str]:
@@ -291,7 +291,7 @@ def _load_outcomes(work: Path) -> dict[str, str]:
     """
     env = dict(os.environ)
     existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(_SRC_DIR) if not existing else str(_SRC_DIR) + os.pathsep + existing
+    env["PYTHONPATH"] = str(_SRC_DIR) + os.pathsep + existing if existing else str(_SRC_DIR)
     env["PYTHONIOENCODING"] = "utf-8"
     children: dict[str, subprocess.Popen[str]] = {}
     outcomes: dict[str, str] = {}

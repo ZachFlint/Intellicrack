@@ -281,13 +281,13 @@ def test_the_unfollow_message_recorder_marks_acknowledgements_and_errors() -> No
     other_info: dict[str, str] = {}
     record("stalker_batch", {"type": "stalker_batch"}, other_reply, other_info)
     assert not other_reply.is_set()
-    assert other_info == {}
+    assert not other_info
 
     done_reply = threading.Event()
     done_info: dict[str, str] = {}
     record("stalker_unfollowed", {"type": "stalker_unfollowed"}, done_reply, done_info)
     assert done_reply.is_set()
-    assert done_info == {}
+    assert not done_info
 
     failed_reply = threading.Event()
     failed_info: dict[str, str] = {}

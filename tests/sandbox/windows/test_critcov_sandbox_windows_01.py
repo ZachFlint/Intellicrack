@@ -262,13 +262,25 @@ class _DesktopWindows:
             OSError: If Windows refuses to create the window.
         """
         instance = cast("int | None", self._kernel32.GetModuleHandleW(None))
-        handle = cast(
+        if handle := cast(
             "int | None",
-            self._user32.CreateWindowExW(0, window_class, title, style, 0, 0, 1, 1, parent, None, instance, None),
-        )
-        if not handle:
-            raise OSError(ctypes.get_last_error(), "CreateWindowExW failed")
-        return handle
+            self._user32.CreateWindowExW(
+                0,
+                window_class,
+                title,
+                style,
+                0,
+                0,
+                1,
+                1,
+                parent,
+                None,
+                instance,
+                None,
+            ),
+        ):
+            return handle
+        raise OSError(ctypes.get_last_error(), "CreateWindowExW failed")
 
     def top_level(self, window_class: int | str, title: str) -> int:
         """Create a hidden top-level window owned by this process.

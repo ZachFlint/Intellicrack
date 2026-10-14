@@ -381,9 +381,7 @@ def _compile_ndb_pattern(sig_hex: str) -> re.Pattern[bytes] | None:
             parts.append(re.escape(bytes.fromhex(pair)))
             literal_count += 1
         index += 2
-    if not literal_count:
-        return None
-    return re.compile(b"".join(parts), re.DOTALL)
+    return re.compile(b"".join(parts), re.DOTALL) if literal_count else None
 
 
 def _scan_clamav_ndb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:

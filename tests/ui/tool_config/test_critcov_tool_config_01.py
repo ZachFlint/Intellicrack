@@ -674,7 +674,7 @@ def test_install_reports_http_error_status_and_stops(tmp_path: Path) -> None:
 
     assert outcome.finished == [(False, "Download failed: HTTP 500")]
     assert outcome.progress == [3, 5, 10]
-    assert list(install_path.iterdir()) == []
+    assert not list(install_path.iterdir())
 
 
 @pytest.mark.usefixtures("direct_network")
@@ -1100,7 +1100,7 @@ def test_post_install_cutter_tolerates_missing_executable(tmp_path: Path) -> Non
     result = _call(ToolInstallWorker("cutter", install_path), "_post_install_cutter")
 
     assert result is None
-    assert list(install_path.iterdir()) == []
+    assert not list(install_path.iterdir())
 
 
 def test_post_install_ghidra_requires_an_extracted_installation(tmp_path: Path) -> None:

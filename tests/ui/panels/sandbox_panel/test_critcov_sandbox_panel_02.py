@@ -676,7 +676,7 @@ def test_diff_without_a_bridge_reports_it(error_dialogs: list[tuple[str, str]]) 
     _call(panel, "_on_diff")
 
     assert "[!] No sandbox bridge configured" in _console(panel)
-    assert error_dialogs == []
+    assert not error_dialogs
     assert not _priv(panel, "_diff_btn").isEnabled()
 
 

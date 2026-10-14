@@ -904,7 +904,7 @@ def test_walk_resource_directory_ignores_a_truncated_header() -> None:
     resources: list[dict[str, Any]] = []
     walk = cast("Callable[..., None]", getattr(bridge, "_walk_resource_directory"))
     walk(blob=b"\x00" * 15, module_base=0x10000000, dir_offset=0, depth=0, resources=resources, labels=_new_labels())
-    assert resources == []
+    assert not resources
 
 
 def test_walk_resource_directory_stops_at_truncated_entries() -> None:
@@ -920,7 +920,7 @@ def test_walk_resource_directory_stops_at_truncated_entries() -> None:
     resources: list[dict[str, Any]] = []
     walk = cast("Callable[..., None]", getattr(bridge, "_walk_resource_directory"))
     walk(blob=blob, module_base=0x10000000, dir_offset=0, depth=0, resources=resources, labels=_new_labels())
-    assert resources == []
+    assert not resources
 
 
 def test_walk_resource_entry_returns_minus_one_when_the_entry_is_truncated() -> None:

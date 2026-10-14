@@ -953,7 +953,7 @@ def test_a_refresh_with_nothing_to_restore_does_not_consult_a_remembered_model(b
     window = build_window()
     statuses = _status_log(window)
     settings = _settings()
-    settings.setValue(f"last_model/{None}", _SENTINEL_MODEL)
+    settings.setValue("last_model/None", _SENTINEL_MODEL)
     settings.sync()
     assert not _priv(window, "_pending_model_restore")
     assert _priv(window, "_pending_model_restore_provider") is None

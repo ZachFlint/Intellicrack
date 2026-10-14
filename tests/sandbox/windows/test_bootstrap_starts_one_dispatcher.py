@@ -292,9 +292,8 @@ async def _observe(root: Path) -> _Observation:
     try:
         await asyncio.to_thread(_run_bootstrap, bootstrap, root)
         dispatcher_processes = sum(
-            1
+            bool(any(name.lower() in command_line for name in started_by_bootstrap))
             for command_line in _command_lines_under(shared).values()
-            if any(name.lower() in command_line for name in started_by_bootstrap)
         )
         tracked = _tracked_names(shared / "logs" / _PID_FILE_NAME)
         if not await asyncio.to_thread(_dispatcher_signalled_ready, sandbox.ready_flag()):

@@ -2438,8 +2438,7 @@ class WindowsSandbox(SandboxBase):
             parts = line.split(maxsplit=1)
             if len(parts) < _MONITOR_PID_LINE_FIELDS:
                 continue
-            stem = Path(parts[1].strip()).stem
-            if stem:
+            if stem := Path(parts[1].strip()).stem:
                 stems.add(stem)
         return stems
 
@@ -2770,17 +2769,15 @@ class WindowsSandbox(SandboxBase):
             raise SandboxError(_ERR_WMI_HIJACK_NO_SHARED)
 
         applied: dict[str, Any] = {"profile": profile, "techniques": []}
-        techniques: list[str] = []
-
         evasion_profile = resolve_anti_evasion_profile(profile)
         machine_name = f"DESKTOP-{secrets.token_hex(3).upper()}"
 
         wmi_result = await self._apply_wmi_hijack(evasion_profile, machine_name)
-        techniques.extend([
+        techniques: list[str] = [
             "wmi_hijack_win32_computersystem",
             "wmi_hijack_win32_computersystemproduct",
             "wmi_hijack_win32_bios",
-        ])
+        ]
         applied["wmi_hijack"] = wmi_result
 
         hostname_cmd = f"powershell -Command \"Rename-Computer -NewName '{machine_name}' -Force -ErrorAction SilentlyContinue\""

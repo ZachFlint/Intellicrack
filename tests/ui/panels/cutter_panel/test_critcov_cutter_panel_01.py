@@ -1748,7 +1748,7 @@ def test_add_xref_cancelled_prompt_sends_nothing(
     monkeypatch.setattr(QInputDialog, "getText", _text_dialog(answer))
     _ = _invoke(wired_panel, "_ctx_add_xref", "code")
     _settle(wired_panel)
-    assert [name for name, _ in bridge.recorded if name == "add_xref"] == []
+    assert not [name for name, _ in bridge.recorded if name == "add_xref"]
 
 
 def test_add_xref_invalid_target_is_reported(wired_panel: CutterPanel, bridge: RecordingBridge, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1765,7 +1765,7 @@ def test_add_xref_invalid_target_is_reported(wired_panel: CutterPanel, bridge: R
     _ = _invoke(wired_panel, "_ctx_add_xref", "code")
     _settle(wired_panel)
     assert _status(wired_panel) == "Invalid target address"
-    assert [name for name, _ in bridge.recorded if name == "add_xref"] == []
+    assert not [name for name, _ in bridge.recorded if name == "add_xref"]
 
 
 def test_add_xref_failure_is_reported(wired_panel: CutterPanel, bridge: RecordingBridge, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1871,7 +1871,7 @@ def test_remove_xref_placeholder_row_cannot_be_resolved(wired_panel: CutterPanel
     _ = _invoke(wired_panel, "_ctx_remove_xref", position)
     _settle(wired_panel)
     assert _status(wired_panel) == "Cannot resolve xref address for removal"
-    assert [name for name, _ in bridge.recorded if name == "remove_xref"] == []
+    assert not [name for name, _ in bridge.recorded if name == "remove_xref"]
 
 
 def test_remove_xref_failure_is_reported(wired_panel: CutterPanel, bridge: RecordingBridge, qtbot: QtBot) -> None:
@@ -1902,7 +1902,7 @@ def test_remove_xref_outside_any_row_does_nothing(wired_panel: CutterPanel, brid
     _member(wired_panel, "_xrefs_tree", QTreeWidget).clear()
     _ = _invoke(wired_panel, "_ctx_remove_xref", QPoint(2, 2))
     _settle(wired_panel)
-    assert [name for name, _ in bridge.recorded if name == "remove_xref"] == []
+    assert not [name for name, _ in bridge.recorded if name == "remove_xref"]
 
 
 def test_remove_xref_without_current_address_or_bridge_does_nothing(panel: CutterPanel, bridge: RecordingBridge) -> None:
@@ -2237,7 +2237,7 @@ def test_goto_seek_failure_is_reported(wired_panel: CutterPanel, bridge: Recordi
     _member(wired_panel, "_goto_btn", QPushButton).click()
     _settle(wired_panel)
     assert _status(wired_panel) == "Seek failed: bad address"
-    assert [name for name, _ in bridge.recorded if name == "disassemble"] == []
+    assert not [name for name, _ in bridge.recorded if name == "disassemble"]
 
 
 def test_seek_follow_ups_are_inert_without_bridge(panel: CutterPanel) -> None:

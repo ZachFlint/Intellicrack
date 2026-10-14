@@ -248,7 +248,7 @@ def _dos_header(pe_offset: int = _PE_OFFSET) -> bytes:
         bytes: The DOS header.
     """
     header = bytearray(64)
-    header[0:2] = b"MZ"
+    header[:2] = b"MZ"
     struct.pack_into("<I", header, 0x3C, pe_offset)
     return bytes(header)
 
@@ -280,7 +280,7 @@ def _nt_header(
         bytes: The NT headers padded with zeros to ``size``.
     """
     header = bytearray(size)
-    header[0:4] = b"PE\x00\x00"
+    header[:4] = b"PE\x00\x00"
     struct.pack_into("<HHIIIHH", header, 4, 0x8664, sections, 0, 0, 0, optional_size, 0x2022)
     struct.pack_into("<H", header, 24, magic)
     struct.pack_into("<I", header, 24 + 16, entry_rva)
@@ -712,7 +712,7 @@ async def test_scan_region_chunks_stops_scanning_after_an_empty_read(scripted_br
 
     await _async_method(scripted_bridge, "_scan_region_chunks")(region, pattern, matches)
 
-    assert matches == []
+    assert not matches
 
 
 @pytest.mark.asyncio
@@ -735,7 +735,7 @@ async def test_wildcard_scan_stops_scanning_after_an_empty_read(scripted_bridge:
 
     await _async_method(scripted_bridge, "_scan_region_chunks_wildcard")(region, [0xAA, None, 0xBB], 1, matches)
 
-    assert matches == []
+    assert not matches
 
 
 @pytest.mark.asyncio
@@ -758,7 +758,7 @@ async def test_wildcard_scan_ignores_an_empty_pattern(scripted_bridge: ScriptedB
 
     await _async_method(scripted_bridge, "_scan_region_chunks_wildcard")(region, [], 1, matches)
 
-    assert matches == []
+    assert not matches
 
 
 @pytest.mark.asyncio
@@ -795,7 +795,7 @@ def test_extend_wildcard_matches_ignores_buffers_shorter_than_the_pattern() -> N
 
     _sync_method(X64DbgBridge, "_extend_wildcard_matches")(b"A", 0x1000, compiled, 2, 1, matches)
 
-    assert matches == []
+    assert not matches
 
 
 def test_extend_wildcard_matches_reports_overlapping_matches_up_to_the_buffer_end() -> None:
@@ -974,7 +974,7 @@ def test_thread_enumeration_yields_nothing_for_a_snapshot_without_thread_data(sc
     finally:
         kernel32.CloseHandle(snapshot)
 
-    assert threads == []
+    assert not threads
 
 
 def test_parent_pid_lookup_returns_zero_for_a_snapshot_without_process_data() -> None:

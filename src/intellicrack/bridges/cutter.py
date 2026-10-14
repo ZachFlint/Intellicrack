@@ -251,9 +251,7 @@ def _string_encoding(raw_encoding: str) -> StringEncoding:
         return "utf-16be"
     if normalized == "utf8":
         return "utf-8"
-    if normalized in {"wide", "utf16le"}:
-        return "utf-16le"
-    return "ascii"
+    return "utf-16le" if normalized in {"wide", "utf16le"} else "ascii"
 
 
 def _xref_kind(raw_type: str) -> XRefType:
@@ -271,9 +269,7 @@ def _xref_kind(raw_type: str) -> XRefType:
     """
     if raw_type == "CALL":
         return "call"
-    if raw_type in {"CODE", "JUMP", "JMP", "CJMP"}:
-        return "jump"
-    return "data"
+    return "jump" if raw_type in {"CODE", "JUMP", "JMP", "CJMP"} else "data"
 
 
 def _is_rizin_pipe(pipe: object) -> bool:

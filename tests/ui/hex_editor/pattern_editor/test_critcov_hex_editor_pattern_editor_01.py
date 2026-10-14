@@ -1403,7 +1403,7 @@ def test_save_does_nothing_when_the_dialog_is_cancelled(monkeypatch: pytest.Monk
     host.do_save()
     assert host.status_label.text() == "untouched"
     assert not host.compiled_json
-    assert list(tmp_path.iterdir()) == []
+    assert not list(tmp_path.iterdir())
 
 
 def test_save_writes_nothing_without_a_payload(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, bare: _PatternHost) -> None:
@@ -1416,7 +1416,7 @@ def test_save_writes_nothing_without_a_payload(monkeypatch: pytest.MonkeyPatch, 
     """
     monkeypatch.setattr(QFileDialog, "getSaveFileName", _file_picker(str(tmp_path / "out.hexpat")))
     bare.do_save()
-    assert list(tmp_path.iterdir()) == []
+    assert not list(tmp_path.iterdir())
 
 
 def test_save_reports_a_failed_write_in_the_status(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, host: _PatternHost) -> None:

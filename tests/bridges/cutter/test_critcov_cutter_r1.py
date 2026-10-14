@@ -59,8 +59,7 @@ def _radare2_directory() -> Path:
     Returns:
         Path: Resolved directory that contains ``radare2``.
     """
-    home = os.environ.get("RADARE2_HOME")
-    if home:
+    if home := os.environ.get("RADARE2_HOME"):
         return (Path(home) / "bin").resolve()
     located = shutil.which("radare2")
     assert located is not None, "radare2 is not on PATH and RADARE2_HOME is not set"

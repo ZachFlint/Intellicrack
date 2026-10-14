@@ -102,7 +102,7 @@ def test_a_change_waits_out_a_lock_held_longer_than_the_c_runtime_would(tmp_path
     finally:
         holder.join(timeout=_CHILD_TIMEOUT_S)
 
-    assert failures == []
+    assert not failures
     assert outcomes == [{"released": True}]
     assert waited > _C_RUNTIME_GIVES_UP_AFTER_S, f"the change waited only {waited:.1f}s, so the long hold was never exercised"
     assert changed == {"holder": True, "waiter": True}

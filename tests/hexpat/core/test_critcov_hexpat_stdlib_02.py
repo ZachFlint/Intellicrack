@@ -218,7 +218,7 @@ def _holds(interp: HexPatInterpreter, prelude: str, condition: str, data: bytes 
     results = interp.execute_bytes(f"{prelude}\nu8 probe @ {condition} ? 3 : 5;", payload)
     probe = _field(results, "probe")
     assert probe["offset"] in {3, 5}
-    return bool(probe["offset"] == 3)
+    return probe["offset"] == 3
 
 
 def _printed(source: str, data: bytes | None = None) -> list[str]:
@@ -869,7 +869,7 @@ class TestReflectionWired:
         rig = make_rig(source)
         rig.run()
         overrides: dict[int, dict[str, object]] = getattr(rig.evaluator, "_reflection_overrides")
-        assert overrides == {}
+        assert not overrides
 
     def test_palette_rotates_through_installed_colors(self, interp: HexPatInterpreter) -> None:
         """Installed palette entries are masked to 32 bits and cycle across placements.

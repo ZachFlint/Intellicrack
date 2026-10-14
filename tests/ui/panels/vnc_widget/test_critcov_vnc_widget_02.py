@@ -448,7 +448,7 @@ def test_tight_copy_filter_reads_rgb_triplets() -> None:
     triplets = [(10 + i, 50 + 2 * i, 90 + 3 * i) for i in range(6)]
     data = b"".join(bytes(t) for t in triplets)
     client.apply_tight_basic(1, 2, 3, 2, data, _TIGHT_COPY, b"", 0)
-    _assert_grid(client, 1, 2, [triplets[0:3], triplets[3:6]])
+    _assert_grid(client, 1, 2, [triplets[:3], triplets[3:6]])
     assert _rgb_at(client, 0, 2) == _BLACK
     assert _rgb_at(client, 4, 3) == _BLACK
     assert _rgb_at(client, 1, 1) == _BLACK
@@ -460,7 +460,7 @@ def test_tight_copy_filter_with_short_data_leaves_the_missing_pixels_black() -> 
     triplets = [(10 + i, 50 + 2 * i, 90 + 3 * i) for i in range(4)]
     data = b"".join(bytes(t) for t in triplets) + b"\x01\x02"
     client.apply_tight_basic(0, 0, 3, 2, data, _TIGHT_COPY, b"", 0)
-    _assert_grid(client, 0, 0, [triplets[0:3], [triplets[3], _BLACK, _BLACK]])
+    _assert_grid(client, 0, 0, [triplets[:3], [triplets[3], _BLACK, _BLACK]])
 
 
 def test_tight_palette_filter_unpacks_two_color_bitmaps_most_significant_bit_first() -> None:

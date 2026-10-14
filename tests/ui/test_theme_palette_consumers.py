@@ -236,9 +236,9 @@ class TestPaletteRegistry:
             theme: Theme id to read.
         """
         analysis = manager.get_analysis_colors(theme)
-        assert [key for key in _REMOVED_ANALYSIS_KEYS if key in analysis] == []
+        assert not [key for key in _REMOVED_ANALYSIS_KEYS if key in analysis]
         stack: dict[str, QColor] = dict(manager.get_stack_colors(theme))
-        assert [key for key in _REMOVED_STACK_KEYS if key in stack] == []
+        assert not [key for key in _REMOVED_STACK_KEYS if key in stack]
 
 
 class TestWidgetsShowThePaletteOfTheActiveThemeId:
