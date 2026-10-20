@@ -367,7 +367,7 @@ umf==1.1.0
 uncalled==0.1.8
 urllib3==2.8.0
 userpath==1.9.2
-uv==0.13.0
+uv==0.13.4
 uvicorn==0.54.0
 validate-pyproject==0.26
 validate-pyproject-schema-store==2026.10.12
