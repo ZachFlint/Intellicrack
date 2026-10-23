@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "mcp-server-sequential-thinking"
+      ]
+    },
+    "Screenshot": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "cd",
+        "/d",
+        "D:\\Intellicrack",
+        "&&",
+        "pixi",
+        "run",
+        "python",
+        ".claude/screenshot-mcp/server.py"
+      ]
+    },
+    "pycharm": {
+      "url": "http://127.0.0.1:64748/stream",
+      "type": "http"
+    }
+  }
+}

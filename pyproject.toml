@@ -101,7 +101,7 @@ optional-dependencies.dev = [
   "validate-pyproject",
   "skylos",
   "validate-pyproject-schema-store",
-  "vermin>=1.8.0,<2",
+  "vermin>=1.9.2,<2",
   "vulture",
   "wemake-python-styleguide",
   "wily>=1.12.2,<2",
@@ -716,12 +716,12 @@ follow_imports = "skip"
 # below, so the `runtime` environment (default feature only) is a slim, ship-ready
 # tree while the `default` environment composes every feature for development.
 dependencies.python = "3.13.*"
-dependencies.setuptools = ">=84.0.0,<85"
+dependencies.setuptools = ">=84.2.1,<85"
 dependencies.capstone = ">=5.0.9,<6"
 dependencies.pygments = ">=2.21.0,<3"
 dependencies.pyyaml = ">=6.0.3,<7"
 # Runtime PyPI dependencies (version-bounded).
-pypi-dependencies.pip = ">=26.2.1, <27"
+pypi-dependencies.pip = ">=26.2.2, <27"
 pypi-dependencies.wheel = ">=0.48.0, <0.49"
 pypi-dependencies.PyQt6 = ">=6.11.0, <7"
 pypi-dependencies.pywebview = ">=6.2.1, <7"
@@ -729,21 +729,21 @@ pypi-dependencies.pefile = ">=2024.8.26, <2025"
 pypi-dependencies.lief = ">=1.0.0, <2"
 pypi-dependencies.capstone = "*"
 pypi-dependencies.keystone-engine = ">=0.9.2, <0.10"
-pypi-dependencies.frida = ">=17.23.3, <18"
+pypi-dependencies.frida = ">=17.24.3, <18"
 pypi-dependencies.frida-tools = ">=14.11.0, <15"
-pypi-dependencies.r2pipe = ">=1.9.8, <2"
+pypi-dependencies.r2pipe = ">=2.1.0, <3"
 pypi-dependencies.rzpipe = ">=0.6.2, <0.7"
 pypi-dependencies.ghidra-bridge = ">=1.0.0, <2"
-pypi-dependencies.anthropic = ">=1.13.0, <2"
-pypi-dependencies.openai = ">=3.29.0, <4"
+pypi-dependencies.anthropic = ">=2.2.0, <3"
+pypi-dependencies.openai = ">=3.37.0, <4"
 pypi-dependencies.tiktoken = ">=0.14.0, <0.15"
-pypi-dependencies.google-genai = ">=2.30.1, <3"
+pypi-dependencies.google-genai = ">=2.33.0, <3"
 pypi-dependencies.httpx = ">=0.28.1, <0.29"
 pypi-dependencies.httpcore = ">=1.0.9, <2"
 pypi-dependencies.structlog = ">=26.1.0, <27"
 pypi-dependencies.pydantic = ">=2.14.1, <3"
 pypi-dependencies.tomli-w = ">=1.2.0, <2"
-pypi-dependencies.xxhash = ">=4.0.1, <5"
+pypi-dependencies.xxhash = ">=4.0.2, <5"
 # Security floor for the transitive pyasn1 shipped in the runtime environment
 # (google-genai -> google-auth -> pyasn1-modules -> pyasn1); >=0.6.4 clears the
 # BER/CER/DER, OBJECT IDENTIFIER, and REAL-conversion DoS advisories
@@ -757,8 +757,8 @@ pypi-dependencies.pyasn1 = ">=0.6.4, <0.7"
 # decompression-amplification advisories (CVE-2026-84378 through CVE-2026-84382);
 # httpcore2 >=2.13.0 clears its half of CVE-2026-84381. Both stay within the <3
 # bound every consumer requires.
-pypi-dependencies.httpx2 = ">=2.13.1, <3"
-pypi-dependencies.httpcore2 = ">=2.13.1, <3"
+pypi-dependencies.httpx2 = ">=2.16.0, <3"
+pypi-dependencies.httpcore2 = ">=2.16.0, <3"
 # Declared explicitly so the runtime environment cannot lose them to a re-solve:
 # each is imported by the shipped app (keyring -> credentials/store.py,
 # cryptography -> ui/panels/vnc_widget.py, psutil -> core/process_manager.py,
@@ -766,11 +766,11 @@ pypi-dependencies.httpcore2 = ">=2.13.1, <3"
 # or loaded by the shipped interpreter (pyghidra/jpype1 -> bridges/ghidra.py runs
 # `python -m pyghidra.ghidra_launch` against this very runtime).
 pypi-dependencies.cryptography = ">=50.0.2, <51"
-pypi-dependencies.huggingface-hub = ">=2.2.0, <3"
+pypi-dependencies.huggingface-hub = ">=2.3.0, <3"
 pypi-dependencies.jpype1 = ">=1.7.1, <2"
 pypi-dependencies.keyring = ">=25.7.0, <26"
 pypi-dependencies.psutil = ">=7.2.2, <8"
-pypi-dependencies.pyghidra = ">=2.2.1, <3"
+pypi-dependencies.pyghidra = ">=3.2.0, <4"
 pypi-dependencies.yara-python = ">=4.5.4, <5"
 # Imported by mcp/validation.py for ECMA-262 pattern checks; declared rather than left to arrive
 # through tiktoken.
@@ -787,15 +787,15 @@ pypi-dependencies.mcp = ">=2.3.0, <3"
 pypi-dependencies.mcp-types = ">=2.3.0, <3"
 pypi-dependencies.ollama = ">=0.6.3, <0.7"
 pypi-dependencies.cxxfilt = ">=0.3.0, <0.4"
-pypi-dependencies.dulwich = ">=1.2.17, <2"
+pypi-dependencies.dulwich = ">=1.2.19, <2"
 pypi-dependencies.msgpack = ">=1.2.3, <2"
 pypi-dependencies.python-multipart = ">=0.0.32, <0.0.33"
-pypi-dependencies.starlette = ">=1.8.0, <2"
-pypi-dependencies.tornado = ">=6.5.10, <7"
-pypi-dependencies.pydantic-settings = ">=2.15.0, <3"
+pypi-dependencies.starlette = ">=1.9.0, <2"
+pypi-dependencies.tornado = ">=6.6, <7"
+pypi-dependencies.pydantic-settings = ">=2.16.1, <3"
 # ML runtime stack.
 pypi-dependencies.torch = "*"
-pypi-dependencies.transformers = ">=5.19.0, <6"
+pypi-dependencies.transformers = ">=5.20.2, <6"
 pypi-dependencies.accelerate = ">=1.15.0, <2"
 pypi-dependencies.bitsandbytes = ">=0.50.2, <0.51"
 pypi-dependencies.sentencepiece = ">=0.2.2, <0.3"
@@ -828,7 +828,7 @@ workspace.preview = ["pixi-build"]
 [tool.pixi.feature.build.dependencies]
 rust = ">=1.99.0,<1.100"
 rust-src = ">=1.99.0,<2"
-clang-tools = ">=23.1.3,<24"
+clang-tools = ">=23.1.4,<24"
 cppcheck = ">=2.22.0,<3"
 cmake = ">=4.4.4,<5"
 cmake-format = ">=0.6.13,<0.7"
@@ -843,24 +843,24 @@ pyinstaller = ">=6.22.3, <7"
 # Developer CLI tooling (conda).
 [tool.pixi.feature.tooling.dependencies]
 git = ">=2.56.0,<3"
-just = ">=1.58.0,<2"
+just = ">=1.59.0,<2"
 shellcheck = ">=0.11.0,<0.12"
-nodejs = ">=26.10.0,<26.11"
+nodejs = ">=26.12.1,<26.13"
 yarn = ">=4.18.1,<5"
-tombi = ">=1.8.4,<2"
+tombi = ">=1.9.0,<2"
 git-cliff = ">=2.14.2,<3"
 yamlfmt = ">=0.21.0,<0.22"
 pixi-pycharm = ">=0.0.12,<0.0.13"
 
 [tool.pixi.feature.tooling.target.linux-64.dependencies]
-powershell = ">=7.6.6,<8"
-pixi = ">=0.81.0,<0.82"
+powershell = ">=7.6.8,<8"
+pixi = ">=0.83.0,<0.84"
 
 # Lint / type / format / dead-code / release tooling plus the editable install.
 [tool.pixi.feature.dev.pypi-dependencies]
 intellicrack = { path = ".", editable = true, extras = ["dev", "test", "docs", "profile", "ml"] }
-validate-pyproject = ">=0.26, <0.27"
-validate-pyproject-schema-store = ">=2026.10.12, <2027"
+validate-pyproject = ">=0.27, <0.28"
+validate-pyproject-schema-store = ">=2026.10.23, <2027"
 types-requests = ">=2.33.0.20261006, <3"
 types-pyyaml = ">=6.0.12.20260906, <7"
 mypy = ">=2.4.0, <3"
@@ -868,7 +868,7 @@ black = ">=26.10.1, <27"
 pylint = ">=4.1.3, <5"
 autopep8 = ">=2.3.2, <3"
 flake8 = ">=7.4.1, <8"
-ruff = ">=0.17.0, <0.18"
+ruff = ">=0.17.2, <0.18"
 isort = ">=9.0.2, <10"
 pycodestyle = ">=2.15.0, <3"
 bandit = ">=1.9.4, <2"
@@ -876,8 +876,8 @@ bandit = ">=1.9.4, <2"
 # pygount; >=3.1.58 clears the GitPython git-option-injection / config-injection
 # / env-exfiltration advisories. Confined to the dev feature so it never enters
 # the shipped runtime environment.
-gitpython = ">=3.2.0, <4"
-blinter = ">=1.1.35, <2"
+gitpython = ">=3.2.1, <4"
+blinter = ">=1.1.47, <2"
 vulture = ">=2.16, <3"
 pyupgrade = ">=3.22.0, <4"
 pydocstyle = ">=6.3.0, <7"
@@ -893,7 +893,7 @@ deadcode = ">=2.4.1, <3"
 pygount = ">=3.2.0, <4"
 basedpyright = ">=1.40.2, <2"
 monkeytype = ">=23.3.0, <24"
-ty = ">=0.0.87, <0.0.88"
+ty = ">=0.0.91, <0.0.92"
 mccabe = ">=0.7.0, <0.8"
 xenon = ">=0.9.3, <0.10"
 yamllint = ">=1.38.0, <2"
@@ -902,7 +902,7 @@ radon = ">=6.0.1, <7"
 pre-commit = ">=4.7.0, <5"
 commitizen = ">=4.19.2, <5"
 bumpversion = ">=0.6.0, <0.7"
-pipdeptree = ">=4.2.7, <5"
+pipdeptree = ">=4.2.9, <5"
 rope = ">=1.15.0, <2"
 astor = ">=0.8.1, <0.9"
 yapf = ">=0.43.0, <0.44"
@@ -924,7 +924,7 @@ flake8-pyproject = ">=1.2.4, <2"
 pytest = ">=9.1.1, <10"
 pytest-deadfixtures = ">=3.1.0, <4"
 pytest-cov = ">=7.1.0, <8"
-pytest-mock = ">=3.16.0, <4"
+pytest-mock = ">=3.17.0, <4"
 pytest-asyncio = ">=1.4.0, <2"
 pytest-xdist = ">=3.8.0, <4"
 pytest-timeout = ">=2.4.0, <3"
@@ -933,12 +933,12 @@ pytest-benchmark = ">=5.3.0, <6"
 pytest-html = ">=4.2.0, <5"
 pytest-randomly = ">=5.0.0, <6"
 pytest-sugar = ">=1.1.1, <2"
-pytest-env = ">=1.8.0, <2"
+pytest-env = ">=1.8.1, <2"
 pytest-instafail = ">=0.5.0, <0.6"
-hypothesis = ">=6.169.1, <7"
-tox = ">=4.65.5, <5"
-nox = ">=2026.8.17, <2027"
-coverage = ">=7.16.2, <8"
+hypothesis = ">=6.170.8, <7"
+tox = ">=4.67.1, <5"
+nox = ">=2026.10.20, <2027"
+coverage = ">=7.17.0, <8"
 freezegun = ">=1.5.5, <2"
 responses = ">=0.26.3, <0.27"
 faker = ">=40.43.0, <41"
@@ -946,27 +946,27 @@ faker = ">=40.43.0, <41"
 # operating system's own keyring (tests/_helpers/private_keyring.py).
 keyrings-alt = ">=5.0.2, <6"
 # Launchers the sandboxed-launch gates run a confined server through (tests/mcp/test_fix_r2_sandbox_launchers.py).
-uv = ">=0.13.0, <0.14"
-pipx = ">=1.17.14, <2"
+uv = ">=0.13.5, <0.14"
+pipx = ">=1.18.4, <2"
 
 # Documentation build.
 [tool.pixi.feature.docs.pypi-dependencies]
-sphinx = ">=9.1.0, <10"
+sphinx = ">=9.2.0, <10"
 sphinx-rtd-theme = ">=3.1.0, <4"
-sphinx-autodoc-typehints = ">=3.13.10, <4"
+sphinx-autodoc-typehints = ">=3.17.2, <4"
 sphinx-copybutton = ">=0.5.2, <0.6"
 sphinx-tabs = ">=3.5.0, <4"
 sphinxcontrib-mermaid = ">=2.1.1, <3"
 sphinx-autobuild = ">=2025.8.25, <2026"
 pdoc3 = ">=0.11.6, <0.12"
 mkdocs-material = ">=9.7.7, <10"
-pymdown-extensions = ">=12.2, <13"
+pymdown-extensions = ">=12.3, <13"
 myst-parser = ">=5.1.0, <6"
 
 # Profilers and interactive debuggers.
 [tool.pixi.feature.profile.pypi-dependencies]
 ipdb = ">=0.13.13, <0.14"
-line-profiler = ">=5.0.2, <6"
+line-profiler = ">=5.1.0, <6"
 memory-profiler = ">=0.61.0, <0.62"
 py-spy = ">=0.4.2, <0.5"
 snakeviz = ">=2.2.2, <3"
