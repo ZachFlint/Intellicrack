@@ -264,7 +264,7 @@ conversation_history/
 .serena/
 .zen*/
 .zen_venv/
-.mcp.json
+.mcp.json*
 
 # AI configuration files
 gemini_cli_config.json
