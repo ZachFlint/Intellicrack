@@ -27,6 +27,13 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
+      - id: verify-runtime-deps
+        name: Verify [project.dependencies] still describes the shipped runtime
+        entry: bash -c '.pixi/envs/default/python.exe packaging/check_runtime_deps.py'
+        language: system
+        pass_filenames: false
+        files: '^(pyproject\.toml|packaging/(ml_split|check_runtime_deps)\.py)$'
+        stages: [pre-commit]
       - id: generate-structure-files
         name: Generate Intellicrack Structure Files (HTA/TXT)
         entry: bash -c '.pixi/envs/default/python.exe scripts/generate_tree.py'
